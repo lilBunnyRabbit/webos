@@ -1,68 +1,74 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-background-dark: color-mix(in oklch, var(--background) 80%, black);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+}
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --radius: 0.625rem;
+  /* 
+    $background: source color
+    - Hex: #17252c
+    - HSL: hsl(200 31% 13%)
+    - OKLCH: oklch(0.26 0.0233 230.47)
+  */
+  --background: oklch(0.26 0.0233 230.47);
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /*
+    $foreground: $background HSL split complementary +55% lightness -22% saturation
+    - Hex: #b5b3a6
+    - HSL: hsl(52 9% 68%)
+    - OKLCH: oklch(0.76 0.0183 99.68)
+  */
+  --foreground: oklch(0.76 0.0183 99.68);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  /*
+    $primary: $background HSL triad +48% lightness
+    - Hex: #a6ba7d
+    - HSL: hsl(80 31% 61%)
+    - OKLCH: oklch(0.76 0.0865 123.43)
+  */
+  --primary: oklch(0.76 0.0865 123.43);
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  /*
+    $secondary: $primary Oklch complementary
+    - Hex: #bca4de
+    - HSL: hsl(264.97 47% 76%)
+    - OKLCH: oklch(0.76 0.0865 303.43)
+  */
+  --secondary: oklch(0.76 0.0865 303.43);
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  /*
+    $accent: $primary OKLCH + $background OKLCH complementary hue
+    - Hex: #dea17f
+    - HSL: hsl(21.66 59% 68%)
+    - OKLCH: oklch(0.76 0.0865 50.47)
+  */
+  --accent: oklch(0.76 0.0865 50.47);
 }
+/* TODO: Dark mode */
+/* 
+.dark {
+} */
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  * {
+    /* @apply border-border outline-ring/50; */
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+  body {
+    @apply bg-background text-foreground overflow-hidden;
   }
 }
