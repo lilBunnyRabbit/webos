@@ -161,28 +161,31 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-    const rect = windowRef.current?.parentElement?.getBoundingClientRect();
+  const handleMouseDown = React.useCallback(
+    (e: React.MouseEvent) => {
+      const rect = windowRef.current?.parentElement?.getBoundingClientRect();
 
-    if (rect) {
-      dragOffsetRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    } else {
-      dragOffsetRef.current = {
-        x: 0,
-        y: 0,
-      };
-    }
+      if (rect) {
+        dragOffsetRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+      } else {
+        dragOffsetRef.current = {
+          x: 0,
+          y: 0,
+        };
+      }
 
-    // Clear snap zone when starting to drag (unsnap the window)
-    if (instance.snapZone) {
-      dispatch({ type: "SNAP_WINDOW", windowId: instance.id, snapZone: null });
-    }
+      // Clear snap zone when starting to drag (unsnap the window)
+      if (instance.snapZone) {
+        dispatch({ type: "SNAP_WINDOW", windowId: instance.id, snapZone: null });
+      }
 
-    setIsDragging(true);
-  }, [instance.snapZone, instance.id, dispatch]);
+      setIsDragging(true);
+    },
+    [instance.snapZone, instance.id, dispatch]
+  );
 
   const handleMouseMove = React.useCallback(
     (e: MouseEvent) => {
@@ -266,7 +269,11 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
         {/* Zoom Controls */}
         <div className="flex items-center space-x-1 mr-2 pl-2 border-l border-background">
           <button
-            onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.25))}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setZoom((prev) => Math.max(prev - 0.25, 0.25));
+            }}
             className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
             title="Zoom Out (Ctrl+-)"
           >
@@ -274,14 +281,22 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
           </button>
           <span className="text-xs text-background min-w-[2rem] text-center">{Math.round(zoom * 100)}%</span>
           <button
-            onClick={() => setZoom((prev) => Math.min(prev + 0.25, 3))}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setZoom((prev) => Math.min(prev + 0.25, 3));
+            }}
             className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
             title="Zoom In (Ctrl++)"
           >
             <ZoomIn className="w-3 h-3" />
           </button>
           <button
-            onClick={() => setZoom(1)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setZoom(1);
+            }}
             className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
             title="Reset Zoom (Ctrl+0)"
           >
@@ -291,21 +306,33 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
 
         {/* Window Controls */}
         <button
-          onClick={() => dispatch({ type: "TOGGLE_WINDOW", windowId: instance.id })}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dispatch({ type: "TOGGLE_WINDOW", windowId: instance.id });
+          }}
           className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
           title="Minimize"
         >
           <Minus className="w-3 h-3" />
         </button>
         <button
-          onClick={() => dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id })}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id });
+          }}
           className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
           title={instance.isMaximized ? "Restore" : "Maximize"}
         >
           {instance.isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
         </button>
         <button
-          onClick={() => dispatch({ type: "DESTROY_WINDOW", windowId: instance.id })}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dispatch({ type: "DESTROY_WINDOW", windowId: instance.id });
+          }}
           className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-red-500 rounded transition-colors"
           title="Close"
         >
