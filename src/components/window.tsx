@@ -1,10 +1,10 @@
 import { useWindowsActions, type WindowInstance } from "@/contexts/windows";
-import { cn } from "@/lib/utils";
-import { Copy, Loader, Minus, RotateCcw, Square, X, ZoomIn, ZoomOut } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
 import { setGlobalSnapZone } from "@/contexts/windows/snap-indicator";
 import { detectSnapZone } from "@/contexts/windows/windows.helpers";
 import type { SnapZone } from "@/contexts/windows/windows.type";
+import { cn } from "@/lib/utils";
+import { Copy, Loader, Minus, RotateCcw, Square, X, ZoomIn, ZoomOut } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 
 // TODO: vibed
 
@@ -258,9 +258,11 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
         instance.snapZone && "cursor-grab"
       )}
       onMouseDown={instance.isMaximized ? undefined : handleMouseDown}
-      onDoubleClick={() => dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id })}
     >
-      <div className="flex items-center space-x-2">
+      <div
+        className="flex items-center space-x-2"
+        onDoubleClick={() => dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id })}
+      >
         <div className="flex items-center justify-center w-4 h-4">{icon}</div>
         <span className="text-sm font-medium">{title}</span>
       </div>
