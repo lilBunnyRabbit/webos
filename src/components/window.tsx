@@ -2,6 +2,9 @@ import { useWindowsActions, type WindowInstance } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import { Copy, Loader, Minus, RotateCcw, Square, X, ZoomIn, ZoomOut } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { setGlobalSnapZone } from "@/contexts/windows/snap-indicator";
+import { detectSnapZone } from "@/contexts/windows/windows.helpers";
+import type { SnapZone } from "@/contexts/windows/windows.type";
 
 // TODO: vibed
 
@@ -9,29 +12,33 @@ interface WindowProps {
   instance: WindowInstance;
   title: string;
   icon?: React.ReactNode;
-  initialSize?: { width: number; height: number };
   children: React.ReactNode;
   isFocused: boolean;
   order: number;
 }
 
-export function Window({
-  instance,
-  title,
-  icon,
-  initialSize = {
-    width: 600,
-    height: 400,
-  },
-  children,
-  isFocused,
-  order,
-}: WindowProps) {
+export function Window({ instance, title, icon, children, isFocused, order }: WindowProps) {
   const dispatch = useWindowsActions();
 
-  const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [size, setSize] = useState(initialSize);
+  const [position, setPosition] = useState(
+    instance.config.position ?? {
+      x: 100,
+      y: 100,
+    }
+  );
+  const [size, setSize] = useState(
+    instance.config.size ?? {
+      width: 600,
+      height: 400,
+    }
+  );
   const [zoomLevel, setZoomLevel] = useState(1);
+
+  // Update position and size when instance config changes (e.g., from snapping)
+  useEffect(() => {
+    setPosition(instance.config.position);
+    setSize(instance.config.size);
+  }, [instance.config.position, instance.config.size]);
 
   // Handle browser window resize - ensure window stays within viewport
   useEffect(() => {
@@ -77,12 +84,14 @@ export function Window({
 
   return (
     <div
+      data-window-id={instance.id}
       onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
       className={cn(
-        "absolute bg-primary rounded-lg shadow border border-primary focus:outline-none overflow-hidden grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
+        "absolute bg-primary shadow-window rounded-lg border-2 border-primary overflow-hidden grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
         isFocused && "",
         instance.isMaximized && "fixed top-2 left-2 right-2 bottom-14",
-        instance.isMinimized && "hidden"
+        instance.isMinimized && "hidden",
+        instance.snapZone && "transition-all duration-200"
       )}
       style={{
         ...(!instance.isMaximized && {
@@ -126,7 +135,7 @@ export function Window({
         </div>
       </div>
 
-      {!instance.isMaximized && (
+      {!instance.isMaximized && !instance.snapZone && (
         <ResizeHandlers size={size} position={position} setSize={setSize} setPosition={setPosition} />
       )}
     </div>
@@ -147,6 +156,7 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
   const dispatch = useWindowsActions();
 
   const [isDragging, setIsDragging] = useState(false);
+  const [currentSnapZone, setCurrentSnapZone] = useState<SnapZone>(null);
 
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
@@ -166,13 +176,23 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
       };
     }
 
+    // Clear snap zone when starting to drag (unsnap the window)
+    if (instance.snapZone) {
+      dispatch({ type: "SNAP_WINDOW", windowId: instance.id, snapZone: null });
+    }
+
     setIsDragging(true);
-  }, []);
+  }, [instance.snapZone, instance.id, dispatch]);
 
   const handleMouseMove = React.useCallback(
     (e: MouseEvent) => {
       const parent = windowRef.current?.parentElement;
       if (!isDragging || !parent) return;
+
+      // Detect snap zone based on cursor position
+      const snapZone = detectSnapZone(e.clientX, e.clientY);
+      setCurrentSnapZone(snapZone);
+      setGlobalSnapZone(snapZone);
 
       // Calculate new position
       let newX = e.clientX - dragOffsetRef.current.x;
@@ -189,10 +209,10 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
       newX = Math.max(minX, Math.min(newX, maxX));
 
       // Constrain Y position - ensure title bar (40px) is always visible
-      const titleBarHeight = 40;
+      const titleBarHeight = 88;
       const maxY = viewportHeight - titleBarHeight;
       const minY = -(size.height - titleBarHeight);
-      newY = Math.max(minY, Math.min(newY, maxY));
+      newY = Math.max(0, Math.max(minY, Math.min(newY, maxY)));
 
       setPosition({
         x: newX,
@@ -203,8 +223,15 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
   );
 
   const handleMouseUp = React.useCallback(() => {
+    if (currentSnapZone) {
+      // Snap the window to the detected zone
+      dispatch({ type: "SNAP_WINDOW", windowId: instance.id, snapZone: currentSnapZone });
+    }
+
     setIsDragging(false);
-  }, []);
+    setCurrentSnapZone(null);
+    setGlobalSnapZone(null);
+  }, [currentSnapZone, dispatch, instance.id]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -224,9 +251,11 @@ function WindowTitle({ instance, title, icon, zoom, setZoom, size, setPosition }
       className={cn(
         "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab",
         isDragging && "cursor-grabbing",
-        instance.isMaximized && "cursor-default"
+        instance.isMaximized && "cursor-default",
+        instance.snapZone && "cursor-grab"
       )}
       onMouseDown={instance.isMaximized ? undefined : handleMouseDown}
+      onDoubleClick={() => dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id })}
     >
       <div className="flex items-center space-x-2">
         <div className="flex items-center justify-center w-4 h-4">{icon}</div>

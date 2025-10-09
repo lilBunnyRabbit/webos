@@ -3,9 +3,17 @@ import { useState, useRef, useEffect, useCallback, memo } from "react";
 
 import { useWindowsActions } from "@/contexts/windows";
 import { Taskbar } from "./taskbar";
+import type { SnapZone } from "@/contexts/windows/windows.type";
+import { subscribeToSnapZone } from "@/contexts/windows/snap-indicator";
 
 // TODO: vibed
 export function Desktop() {
+  const [snapZone, setSnapZone] = useState<SnapZone>(null);
+
+  useEffect(() => {
+    return subscribeToSnapZone(setSnapZone);
+  }, []);
+
   return (
     <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-background-dark">
       <div className="flex-1 p-8 overflow-hidden">
@@ -13,6 +21,9 @@ export function Desktop() {
       </div>
 
       <Taskbar />
+
+      {/* Snap zone indicator */}
+      <SnapIndicator snapZone={snapZone} />
     </div>
   );
 }
@@ -317,5 +328,82 @@ function Home() {
           );
         })()}
     </div>
+  );
+}
+
+interface SnapIndicatorProps {
+  snapZone: SnapZone;
+}
+
+function SnapIndicator({ snapZone }: SnapIndicatorProps) {
+  if (!snapZone) return null;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const TASKBAR_HEIGHT = 56;
+  const PADDING = 8;
+
+  const availableHeight = viewportHeight - TASKBAR_HEIGHT - PADDING * 2;
+  const halfWidth = (viewportWidth - PADDING * 3) / 2;
+  const halfHeight = (availableHeight - PADDING) / 2;
+
+  let style: React.CSSProperties = {};
+
+  switch (snapZone) {
+    case "left":
+      style = {
+        left: PADDING,
+        top: PADDING,
+        width: halfWidth,
+        height: availableHeight,
+      };
+      break;
+    case "right":
+      style = {
+        left: halfWidth + PADDING * 2,
+        top: PADDING,
+        width: halfWidth,
+        height: availableHeight,
+      };
+      break;
+    case "top-left":
+      style = {
+        left: PADDING,
+        top: PADDING,
+        width: halfWidth,
+        height: halfHeight,
+      };
+      break;
+    case "top-right":
+      style = {
+        left: halfWidth + PADDING * 2,
+        top: PADDING,
+        width: halfWidth,
+        height: halfHeight,
+      };
+      break;
+    case "bottom-left":
+      style = {
+        left: PADDING,
+        top: halfHeight + PADDING * 2,
+        width: halfWidth,
+        height: halfHeight,
+      };
+      break;
+    case "bottom-right":
+      style = {
+        left: halfWidth + PADDING * 2,
+        top: halfHeight + PADDING * 2,
+        width: halfWidth,
+        height: halfHeight,
+      };
+      break;
+  }
+
+  return (
+    <div
+      className="fixed pointer-events-none z-[9999] bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
+      style={style}
+    />
   );
 }

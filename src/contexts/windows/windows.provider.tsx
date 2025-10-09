@@ -31,11 +31,6 @@ export const WindowsProvider: React.FC<WindowsProviderProps> = ({ children }) =>
                 title={appConfig.NAME}
                 icon={React.createElement(appConfig.ICON)}
                 order={index}
-                initialSize={
-                  "CONFIG" in appConfig
-                    ? { width: appConfig.CONFIG.window.defaultWidth, height: appConfig.CONFIG.window.defaultHeight }
-                    : undefined
-                }
                 isFocused={windows.instances[windows.instances.length - 1] === windowId}
               >
                 {app}

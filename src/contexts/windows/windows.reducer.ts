@@ -1,29 +1,46 @@
 import Apps from "@/apps";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
-import type { WindowsAction, WindowsState } from "./windows.type";
+import type { WindowInstance, WindowsAction, WindowsState } from "./windows.type";
+import { calculateWindowPosition, calculateSnapPosition } from "./windows.helpers";
 
 export function windowsReducer(state: WindowsState, action: WindowsAction) {
-  console.log(`Action::${action.type}`, action, state);
+  // console.log(`Action::${action.type}`, action, state);
 
   switch (action.type) {
     case "CREATE_WINDOW": {
       const id = uuidv4();
+      const appConfig = Apps[action.appId];
+
+      const size =
+        "CONFIG" in appConfig
+          ? {
+              width: appConfig.CONFIG.window.defaultWidth,
+              height: appConfig.CONFIG.window.defaultHeight,
+            }
+          : { width: 600, height: 400 };
+
+      const instance: WindowInstance & { app: React.ReactNode } = {
+        id,
+        appId: action.appId,
+        isMinimized: false,
+        isMaximized: false,
+        snapZone: null,
+        createdAt: new Date(),
+        config: {
+          size,
+          position: calculateWindowPosition(size, state.instances.length),
+        },
+        app: React.createElement(appConfig.App, {
+          key: `${action.appId}-${id}`,
+        }),
+      };
 
       return {
         ...state,
         index: {
           ...state.index,
-          [id]: {
-            id,
-            appId: action.appId,
-            isMinimized: false,
-            isMaximized: false,
-            createdAt: new Date(),
-            app: React.createElement(Apps[action.appId].App, {
-              key: `${action.appId}-${id}`,
-            }),
-          },
+          [id]: instance,
         },
         instances: [...state.instances, id],
       };
@@ -101,6 +118,53 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
           [action.windowId]: {
             ...window,
             isMaximized: !window.isMaximized,
+            snapZone: null, // Clear snap zone when maximizing
+          },
+        },
+      };
+    }
+
+    case "SNAP_WINDOW": {
+      const window = state.index[action.windowId];
+      if (!window) return state;
+
+      // If snapZone is null, it means we're unsnapping
+      if (action.snapZone === null) {
+        return {
+          ...state,
+          index: {
+            ...state.index,
+            [action.windowId]: {
+              ...window,
+              snapZone: null,
+              isMaximized: false,
+            },
+          },
+        };
+      }
+
+      // Calculate new position and size based on snap zone
+      const snapPosition = calculateSnapPosition(action.snapZone);
+
+      return {
+        ...state,
+        index: {
+          ...state.index,
+          [action.windowId]: {
+            ...window,
+            snapZone: action.snapZone,
+            isMaximized: false,
+            config: {
+              ...window.config,
+              position: {
+                x: snapPosition.x,
+                y: snapPosition.y,
+              },
+              size: {
+                width: snapPosition.width,
+                height: snapPosition.height,
+              },
+            },
           },
         },
       };
