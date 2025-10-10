@@ -1,4 +1,4 @@
-import { Window } from "@/components/window";
+import { Window } from "@/components/core/window/window";
 import React from "react";
 import {
   WindowsActionsContext,
