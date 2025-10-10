@@ -1,11 +1,11 @@
 import "./App.css";
-import { Desktop } from "./components/desktop";
+import { OS } from "./components/os";
 import { WindowsProvider } from "./contexts/windows";
 
 export default function App() {
   return (
     <WindowsProvider>
-      <Desktop />
+      <OS />
     </WindowsProvider>
   );
 }
