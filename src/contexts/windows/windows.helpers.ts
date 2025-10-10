@@ -38,15 +38,18 @@ export function calculateWindowPosition(
 /**
  * Detect which snap zone the cursor is in based on mouse position
  */
-export function detectSnapZone({ x, y }: Position, bounds: Bounds): SnapZone {
+export function detectSnapZone(position: Position, bounds: Bounds): SnapZone {
   const EDGE_THRESHOLD = 10; // pixels from edge to trigger snap
   const CORNER_SIZE = 200; // size of corner zones
+
+  const x = position.x - bounds.x;
+  const y = position.y - bounds.y;
 
   // Check edges
   const isAtLeftEdge = x <= EDGE_THRESHOLD;
   const isAtRightEdge = x >= bounds.width - EDGE_THRESHOLD;
   const isAtTopEdge = y <= EDGE_THRESHOLD;
-  const isAtBottomEdge = y >= bounds.height - EDGE_THRESHOLD - 56; // Account for taskbar (56px)
+  const isAtBottomEdge = y >= bounds.height - EDGE_THRESHOLD;
 
   // Check corners (smaller regions at the intersections)
   if (isAtLeftEdge && isAtTopEdge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
@@ -55,10 +58,10 @@ export function detectSnapZone({ x, y }: Position, bounds: Bounds): SnapZone {
   if (isAtRightEdge && isAtTopEdge && x >= bounds.width - CORNER_SIZE && y <= CORNER_SIZE) {
     return "top-right";
   }
-  if (isAtLeftEdge && isAtBottomEdge && x <= CORNER_SIZE && y >= bounds.height - CORNER_SIZE - 56) {
+  if (isAtLeftEdge && isAtBottomEdge && x <= CORNER_SIZE && y >= bounds.height - CORNER_SIZE) {
     return "bottom-left";
   }
-  if (isAtRightEdge && isAtBottomEdge && x >= bounds.width - CORNER_SIZE && y >= bounds.height - CORNER_SIZE - 56) {
+  if (isAtRightEdge && isAtBottomEdge && x >= bounds.width - CORNER_SIZE && y >= bounds.height - CORNER_SIZE) {
     return "bottom-right";
   }
 
@@ -274,8 +277,8 @@ export function calculateWindowMove(
   dragOffset: Position
 ): Position {
   // Calculate new position
-  let newX = position.x - dragOffset.x;
-  let newY = position.y - dragOffset.y;
+  let newX = position.x - dragOffset.x - bounds.x;
+  let newY = position.y - dragOffset.y - bounds.y;
 
   // Constrain X position - ensure at least 100px of window is visible
   const minVisibleWidth = 100;
