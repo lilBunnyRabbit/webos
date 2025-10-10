@@ -1,6 +1,10 @@
-import { useWindowsContainer } from "@/contexts/windows";
-import { calculateWindowResizeDirection } from "@/contexts/windows/windows.helpers";
-import type { Dimensions, Position, ResizeDirection } from "@/contexts/windows/windows.type";
+import {
+  calculateWindowResizeDirection,
+  useWindowsContainer,
+  type Dimensions,
+  type Position,
+  type ResizeDirection,
+} from "@/contexts/windows";
 import React from "react";
 
 interface ResizeHandlersProps {

@@ -70,7 +70,7 @@ export function detectSnapZone({ x, y }: Position, bounds: Bounds): SnapZone {
   return null;
 }
 
-const SNAP_PADDING = 8;
+export const SNAP_PADDING = 8;
 
 /**
  * Calculate position and size for a snapped window

@@ -1,32 +1,24 @@
 import Apps from "@/apps";
-import { useWindowsActions, useWindowsContainer, type WindowInstance } from "@/contexts/windows";
-import { calculateSnapPosition, calculateWindowMove, detectSnapZone } from "@/contexts/windows/windows.helpers";
-import type { Dimensions, Position, SnapZone } from "@/contexts/windows/windows.type";
+import { useWindow, useWindowToolbar } from "@/contexts/window";
+import {
+  calculateWindowMove,
+  detectSnapZone,
+  useWindowsActions,
+  useWindowsContainer,
+  type WindowInstance,
+} from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import { Copy, Minus, RotateCcw, Square, X, ZoomIn, ZoomOut } from "lucide-react";
 import React from "react";
 
 interface WindowTitleProps {
   instance: WindowInstance;
-  zoom: number;
-  setZoom: React.Dispatch<React.SetStateAction<number>>;
-  size: Dimensions;
-  setSize: (size: Dimensions) => void;
-  setPosition: (position: Position) => void;
-  snapZone: SnapZone;
-  setSnapZone: (snapZone: SnapZone) => void;
 }
 
-export function WindowTitle({
-  instance,
-  zoom,
-  setZoom,
-  size,
-  setSize,
-  setPosition,
-  snapZone,
-  setSnapZone,
-}: WindowTitleProps) {
+export function WindowTitle({ instance }: WindowTitleProps) {
+  const { zoom, setZoom } = useWindowToolbar();
+  const { setPosition, size, snapZone, setSnapZone, toSnapZone } = useWindow();
+
   const dispatch = useWindowsActions();
   const bounds = useWindowsContainer();
 
@@ -83,25 +75,7 @@ export function WindowTitle({
 
   const handleMouseUp = React.useCallback(() => {
     if (snapZone) {
-      const { x, y, width, height } = calculateSnapPosition(snapZone, bounds);
-
-      // Add a transition class to enable animation
-      const windowEl = windowRef.current?.parentElement;
-      if (windowEl) {
-        windowEl.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
-      }
-
-      setSize({ width, height });
-      setPosition({ x, y });
-
-      // After transition ends, clean up the transition style
-      if (windowEl) {
-        const cleanup = () => {
-          windowEl.style.transition = "";
-          windowEl.removeEventListener("transitionend", cleanup);
-        };
-        windowEl.addEventListener("transitionend", cleanup);
-      }
+      toSnapZone(snapZone);
     }
 
     setIsDragging(false);
@@ -110,7 +84,7 @@ export function WindowTitle({
       x: 0,
       y: 0,
     };
-  }, [snapZone, setSnapZone, setSize, setPosition, bounds]);
+  }, [snapZone, setSnapZone, toSnapZone]);
 
   React.useEffect(() => {
     if (!isDragging) return;
@@ -130,8 +104,7 @@ export function WindowTitle({
       className={cn(
         "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab",
         isDragging && "cursor-grabbing",
-        instance.isMaximized && "cursor-default",
-        instance.snapZone && "cursor-grab"
+        instance.isMaximized && "cursor-default"
       )}
       onMouseDown={instance.isMaximized ? undefined : handleMouseDown}
     >

@@ -25,7 +25,6 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
         appId: action.appId,
         isMinimized: false,
         isMaximized: false,
-        snapZone: null,
         createdAt: new Date(),
         config: {
           size,

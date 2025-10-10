@@ -20,7 +20,6 @@ export interface WindowInstance {
   createdAt: Date;
   isMinimized: boolean;
   isMaximized: boolean;
-  snapZone: SnapZone;
   config: {
     position: Position;
     size: Dimensions;
