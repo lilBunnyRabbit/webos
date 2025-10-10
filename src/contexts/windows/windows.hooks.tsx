@@ -1,5 +1,5 @@
 import React from "react";
-import { WindowsActionsContext, WindowsContext } from "./windows.context";
+import { WindowsActionsContext, WindowsContainerContext, WindowsContext } from "./windows.context";
 
 export const useWindows = () => {
   const context = React.useContext(WindowsContext);
@@ -14,6 +14,15 @@ export const useWindowsActions = () => {
   const context = React.useContext(WindowsActionsContext);
   if (!context) {
     throw new Error("useWindowsActions must be used within a WindowsProvider");
+  }
+
+  return context;
+};
+
+export const useWindowsContainer = () => {
+  const context = React.useContext(WindowsContainerContext);
+  if (!context) {
+    throw new Error("useWindowsContainer must be used within a WindowsProvider");
   }
 
   return context;

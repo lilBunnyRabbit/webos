@@ -3,7 +3,16 @@ import type React from "react";
 
 export type WindowId = string;
 
-export type SnapZone = "left" | "right" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | null;
+export type SnapZone =
+  | "left"
+  | "right"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "top"
+  | "bottom"
+  | null;
 
 export interface WindowInstance {
   id: WindowId;
@@ -13,14 +22,8 @@ export interface WindowInstance {
   isMaximized: boolean;
   snapZone: SnapZone;
   config: {
-    position: {
-      x: number;
-      y: number;
-    };
-    size: {
-      width: number;
-      height: number;
-    };
+    position: Position;
+    size: Dimensions;
   };
 }
 
@@ -49,9 +52,18 @@ export type WindowsAction =
   | {
       type: "TOGGLE_MAXIMIZE_WINDOW";
       windowId: WindowId;
-    }
-  | {
-      type: "SNAP_WINDOW";
-      windowId: WindowId;
-      snapZone: SnapZone;
     };
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface Dimensions {
+  width: number;
+  height: number;
+}
+
+export type Bounds = Position & Dimensions;
+
+export type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";

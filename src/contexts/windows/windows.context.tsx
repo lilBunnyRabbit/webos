@@ -1,5 +1,5 @@
 import React from "react";
-import type { WindowsState, WindowsAction } from "./windows.type";
+import type { WindowsState, WindowsAction, Bounds } from "./windows.type";
 
 export type WindowsContextProps = WindowsState;
 
@@ -8,3 +8,7 @@ export const WindowsContext = React.createContext<WindowsContextProps | null>(nu
 export type WindowsActionsContextProps = React.ActionDispatch<[action: WindowsAction]>;
 
 export const WindowsActionsContext = React.createContext<WindowsActionsContextProps | null>(null);
+
+export type WindowsContainerContextProps = Bounds;
+
+export const WindowsContainerContext = React.createContext<WindowsContainerContextProps | null>(null);

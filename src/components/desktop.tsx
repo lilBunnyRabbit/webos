@@ -1,29 +1,17 @@
 import Apps, { type AppId } from "@/apps";
-import { useState, useRef, useEffect, useCallback, memo } from "react";
-
-import { useWindowsActions } from "@/contexts/windows";
+import { useWindowsActions, WindowsContainerProvider } from "@/contexts/windows";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Taskbar } from "./taskbar";
-import type { SnapZone } from "@/contexts/windows/windows.type";
-import { subscribeToSnapZone } from "@/contexts/windows/snap-indicator";
 
 // TODO: vibed
 export function Desktop() {
-  const [snapZone, setSnapZone] = useState<SnapZone>(null);
-
-  useEffect(() => {
-    return subscribeToSnapZone(setSnapZone);
-  }, []);
-
   return (
-    <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-background-dark">
-      <div className="flex-1 p-8 overflow-hidden">
+    <div className="grid grid-cols-1 grid-rows-[1fr_min-content] h-[100dvh] w-full overflow-hidden bg-background-dark">
+      <WindowsContainerProvider className="relative p-8 overflow-hidden">
         <Home />
-      </div>
+      </WindowsContainerProvider>
 
       <Taskbar />
-
-      {/* Snap zone indicator */}
-      <SnapIndicator snapZone={snapZone} />
     </div>
   );
 }
@@ -82,6 +70,7 @@ DesktopItemComponent.displayName = "DesktopItemComponent";
 
 function Home() {
   const dispatch = useWindowsActions();
+
   const [items, setItems] = useState<DesktopItem[]>(() => {
     // Initialize items with default grid positions
     const appEntries = Object.entries(Apps) as [AppId, (typeof Apps)[AppId]][];
@@ -287,20 +276,22 @@ function Home() {
       )}
 
       {/* Desktop items */}
-      {gridDimensions.cols > 0 && gridDimensions.rows > 0 && items.map((item) => {
-        const isBeingDragged = isDragging && draggedItem === item.appId;
+      {gridDimensions.cols > 0 &&
+        gridDimensions.rows > 0 &&
+        items.map((item) => {
+          const isBeingDragged = isDragging && draggedItem === item.appId;
 
-        return (
-          <DesktopItemComponent
-            key={item.appId}
-            item={item}
-            isBeingDragged={isBeingDragged}
-            isClicked={clickedItem === item.appId}
-            onMouseDown={(e) => handleMouseDown(e, item.appId)}
-            onDoubleClick={() => handleItemDoubleClick(item.appId)}
-          />
-        );
-      })}
+          return (
+            <DesktopItemComponent
+              key={item.appId}
+              item={item}
+              isBeingDragged={isBeingDragged}
+              isClicked={clickedItem === item.appId}
+              onMouseDown={(e) => handleMouseDown(e, item.appId)}
+              onDoubleClick={() => handleItemDoubleClick(item.appId)}
+            />
+          );
+        })}
 
       {/* Dragged item following mouse */}
       {isDragging &&
@@ -328,82 +319,5 @@ function Home() {
           );
         })()}
     </div>
-  );
-}
-
-interface SnapIndicatorProps {
-  snapZone: SnapZone;
-}
-
-function SnapIndicator({ snapZone }: SnapIndicatorProps) {
-  if (!snapZone) return null;
-
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const TASKBAR_HEIGHT = 56;
-  const PADDING = 8;
-
-  const availableHeight = viewportHeight - TASKBAR_HEIGHT - PADDING * 2;
-  const halfWidth = (viewportWidth - PADDING * 3) / 2;
-  const halfHeight = (availableHeight - PADDING) / 2;
-
-  let style: React.CSSProperties = {};
-
-  switch (snapZone) {
-    case "left":
-      style = {
-        left: PADDING,
-        top: PADDING,
-        width: halfWidth,
-        height: availableHeight,
-      };
-      break;
-    case "right":
-      style = {
-        left: halfWidth + PADDING * 2,
-        top: PADDING,
-        width: halfWidth,
-        height: availableHeight,
-      };
-      break;
-    case "top-left":
-      style = {
-        left: PADDING,
-        top: PADDING,
-        width: halfWidth,
-        height: halfHeight,
-      };
-      break;
-    case "top-right":
-      style = {
-        left: halfWidth + PADDING * 2,
-        top: PADDING,
-        width: halfWidth,
-        height: halfHeight,
-      };
-      break;
-    case "bottom-left":
-      style = {
-        left: PADDING,
-        top: halfHeight + PADDING * 2,
-        width: halfWidth,
-        height: halfHeight,
-      };
-      break;
-    case "bottom-right":
-      style = {
-        left: halfWidth + PADDING * 2,
-        top: halfHeight + PADDING * 2,
-        width: halfWidth,
-        height: halfHeight,
-      };
-      break;
-  }
-
-  return (
-    <div
-      className="fixed pointer-events-none z-[9999] bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
-      style={style}
-    />
   );
 }

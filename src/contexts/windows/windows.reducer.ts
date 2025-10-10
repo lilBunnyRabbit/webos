@@ -1,8 +1,8 @@
 import Apps from "@/apps";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
+import { calculateWindowPosition } from "./windows.helpers";
 import type { WindowInstance, WindowsAction, WindowsState } from "./windows.type";
-import { calculateWindowPosition, calculateSnapPosition } from "./windows.helpers";
 
 export function windowsReducer(state: WindowsState, action: WindowsAction) {
   // console.log(`Action::${action.type}`, action, state);
@@ -119,52 +119,6 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
             ...window,
             isMaximized: !window.isMaximized,
             snapZone: null, // Clear snap zone when maximizing
-          },
-        },
-      };
-    }
-
-    case "SNAP_WINDOW": {
-      const window = state.index[action.windowId];
-      if (!window) return state;
-
-      // If snapZone is null, it means we're unsnapping
-      if (action.snapZone === null) {
-        return {
-          ...state,
-          index: {
-            ...state.index,
-            [action.windowId]: {
-              ...window,
-              snapZone: null,
-              isMaximized: false,
-            },
-          },
-        };
-      }
-
-      // Calculate new position and size based on snap zone
-      const snapPosition = calculateSnapPosition(action.snapZone);
-
-      return {
-        ...state,
-        index: {
-          ...state.index,
-          [action.windowId]: {
-            ...window,
-            snapZone: action.snapZone,
-            isMaximized: false,
-            config: {
-              ...window.config,
-              position: {
-                x: snapPosition.x,
-                y: snapPosition.y,
-              },
-              size: {
-                width: snapPosition.width,
-                height: snapPosition.height,
-              },
-            },
           },
         },
       };
