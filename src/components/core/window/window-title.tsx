@@ -120,6 +120,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
         {/* Zoom Controls */}
         <div className="flex items-center space-x-1 mr-2 pl-2 border-l border-background">
           <button
+            onFocus={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -132,6 +136,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
           </button>
           <span className="text-xs text-background min-w-[2rem] text-center">{Math.round(zoom * 100)}%</span>
           <button
+            onFocus={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -143,6 +151,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
             <ZoomIn className="w-3 h-3" />
           </button>
           <button
+            onFocus={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -157,6 +169,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
 
         {/* Window Controls */}
         <button
+          onFocus={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -168,6 +184,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
           <Minus className="w-3 h-3" />
         </button>
         <button
+          onFocus={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -179,6 +199,10 @@ export function WindowTitle({ instance }: WindowTitleProps) {
           {instance.isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
         </button>
         <button
+          onFocus={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
