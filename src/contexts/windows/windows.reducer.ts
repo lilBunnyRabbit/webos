@@ -106,6 +106,13 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
       };
     }
 
+    case "MINIMIZE_ALL_WINDOWS": {
+      return {
+        ...state,
+        index: Object.fromEntries(Object.entries(state.index).map(([key, value]) => [key, { ...value, isMinimized: true }])),
+      };
+    }
+
     case "TOGGLE_MAXIMIZE_WINDOW": {
       const window = state.index[action.windowId];
       if (!window) return state;

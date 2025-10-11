@@ -1,3 +1,4 @@
+import { WINDOWS_CONTAINER_ID } from "./windows.provider";
 import type { Bounds, Dimensions, Position, ResizeDirection, SnapZone } from "./windows.type";
 import type React from "react";
 
@@ -9,8 +10,18 @@ export function calculateWindowPosition(
   size: { width: number; height: number },
   windowCount: number
 ): { x: number; y: number } {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  // Try to find the windows container element by ID, otherwise fallback to window object
+  const container =
+    typeof document !== "undefined"
+      ? (document.getElementById(WINDOWS_CONTAINER_ID) as HTMLElement | null)
+      : null;
+
+  const viewportWidth = container ? container.clientWidth : window.innerWidth;
+  const viewportHeight = container ? container.clientHeight : window.innerHeight;
+
+  // Container offsets for position calculation
+  const offsetLeft = container ? container.offsetLeft : 0;
+  const offsetTop = container ? container.offsetTop : 0;
 
   const startX = 100;
   const startY = 100;
@@ -22,7 +33,7 @@ export function calculateWindowPosition(
   let x = startX + offsetMultiplier * cascadeOffset;
   let y = startY + offsetMultiplier * cascadeOffset;
 
-  // Ensure window doesn't go off screen
+  // Ensure window doesn't go off screen (using container bounds if present)
   const maxX = viewportWidth - size.width - 20;
   const maxY = viewportHeight - size.height - 80; // Account for taskbar
 
@@ -31,6 +42,10 @@ export function calculateWindowPosition(
     x = startX;
     y = startY;
   }
+
+  // Account for container offset if present
+  x += offsetLeft;
+  y += offsetTop;
 
   return { x, y };
 }

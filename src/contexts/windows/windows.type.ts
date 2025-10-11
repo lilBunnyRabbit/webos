@@ -51,6 +51,9 @@ export type WindowsAction =
   | {
       type: "TOGGLE_MAXIMIZE_WINDOW";
       windowId: WindowId;
+    }
+  | {
+      type: "MINIMIZE_ALL_WINDOWS";
     };
 
 export interface Position {
