@@ -1,6 +1,7 @@
 import { ResizeHandlers } from "@/components/core/window/resize-handlers";
 import {
   type SnapZone,
+  WindowFlag,
   type WindowInstance,
   calculateSnapPosition,
   calculateSnapPositionPreview,
@@ -25,6 +26,9 @@ export const WindowProvider = ({
 }) => {
   const bounds = useWindowsContainer();
   const dispatch = useWindowsActions();
+
+  const isMinimized = instance.flags.has(WindowFlag.MINIMIZED);
+  const isMaximized = instance.flags.has(WindowFlag.MAXIMIZED);
 
   const [position, setPosition] = React.useState(
     instance.config.position ?? {
@@ -93,9 +97,9 @@ export const WindowProvider = ({
             ref={ref}
             data-window-id={instance.id}
             onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
-            className={cn("absolute overflow-hidden", className, instance.isMinimized && "hidden")}
+            className={cn("absolute overflow-hidden", className, isMinimized && "hidden")}
             style={{
-              ...(instance.isMaximized
+              ...(isMaximized
                 ? {
                     inset: 0,
                   }
@@ -111,14 +115,14 @@ export const WindowProvider = ({
           >
             {children}
 
-            {!instance.isMaximized && !instance.isMinimized && !snapZone && (
+            {!isMaximized && !isMinimized && !snapZone && (
               <ResizeHandlers size={size} position={position} setSize={setSize} setPosition={setPosition} />
             )}
           </div>
         </WindowToolbarContext.Provider>
       </WindowContext.Provider>
 
-      {!instance.isMaximized && !instance.isMinimized && snapZone && (
+      {!isMaximized && !isMinimized && snapZone && (
         <div
           className="absolute pointer-events-none z-[9999] bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
           style={calculateSnapPositionPreview(snapZone)}

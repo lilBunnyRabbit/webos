@@ -1,5 +1,5 @@
 import Apps from "@/apps";
-import { useWindows, useWindowsActions } from "@/contexts/windows";
+import { useWindows, useWindowsActions, WindowFlag } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import { PanelBottom, PanelBottomCloseIcon, PanelLeft } from "lucide-react";
 import { StartMenu } from "./start-menu";
@@ -49,7 +49,7 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
             const appConfig = Apps[windowInstance.appId];
             const IconComponent = appConfig.ICON;
             const isFocused = windowId === focusedWindowId;
-            const isMinimized = windowInstance.isMinimized;
+            const isMinimized = windowInstance.flags.has(WindowFlag.MINIMIZED);
 
             return (
               <button
@@ -61,7 +61,7 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
                   !isMinimized && "bg-primary/10"
                 )}
                 onClick={() => {
-                  if (windowInstance.isMinimized || isFocused) {
+                  if (isMinimized || isFocused) {
                     dispatch({ type: "TOGGLE_WINDOW", windowId });
                   } else {
                     dispatch({ type: "FOCUS_WINDOW", windowId });

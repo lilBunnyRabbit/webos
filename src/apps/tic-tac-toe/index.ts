@@ -6,9 +6,9 @@ export const NAME = "Tic Tac Toe";
 export const ICON = XIcon;
 
 export const CONFIG = {
-  window: {
-    defaultWidth: 600,
-    defaultHeight: 600,
+  size: {
+    width: 600,
+    height: 600,
   },
 };
 

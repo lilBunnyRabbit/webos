@@ -1,4 +1,5 @@
 import type { AppId } from "@/apps";
+import type { Flags } from "@/lib/flags";
 import type React from "react";
 
 export type WindowId = string;
@@ -14,20 +15,30 @@ export type SnapZone =
   | "bottom"
   | null;
 
+export const WindowFlag = {
+  MINIMIZED: "minimized",
+  MAXIMIZED: "maximized",
+} as const;
+
+export type WindowFlag = typeof WindowFlag[keyof typeof WindowFlag];
+
 export interface WindowInstance {
   id: WindowId;
   appId: AppId;
   createdAt: Date;
-  isMinimized: boolean;
-  isMaximized: boolean;
+  flags: Flags<WindowFlag>;
   config: {
     position: Position;
     size: Dimensions;
   };
 }
 
+export interface WindowInstanceWithApp extends WindowInstance {
+  $app: React.ReactNode;
+}
+
 export interface WindowsState {
-  index: Record<WindowId, WindowInstance & { app: React.ReactNode }>;
+  index: Record<WindowId, WindowInstanceWithApp>;
   instances: WindowId[];
 }
 

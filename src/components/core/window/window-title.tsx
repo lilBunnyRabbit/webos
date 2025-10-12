@@ -5,6 +5,7 @@ import {
   detectSnapZone,
   useWindowsActions,
   useWindowsContainer,
+  WindowFlag,
   type WindowInstance,
 } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,8 @@ export function WindowTitle({ instance }: WindowTitleProps) {
   const bounds = useWindowsContainer();
 
   const appConfig = React.useMemo(() => Apps[instance.appId], [instance.appId]);
+
+  const isMaximized = instance.flags.has(WindowFlag.MAXIMIZED);
 
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -104,9 +107,9 @@ export function WindowTitle({ instance }: WindowTitleProps) {
       className={cn(
         "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab",
         isDragging && "cursor-grabbing",
-        instance.isMaximized && "cursor-default"
+        isMaximized && "cursor-default"
       )}
-      onMouseDown={instance.isMaximized ? undefined : handleMouseDown}
+      onMouseDown={isMaximized ? undefined : handleMouseDown}
     >
       <div
         className="flex items-center space-x-2"
@@ -214,9 +217,9 @@ export function WindowTitle({ instance }: WindowTitleProps) {
             dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id });
           }}
           className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
-          title={instance.isMaximized ? "Restore" : "Maximize"}
+          title={isMaximized ? "Restore" : "Maximize"}
         >
-          {instance.isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+          {isMaximized ? <Copy className="w-3 h-3" /> : <Square className="w-3 h-3" />}
         </button>
         <button
           onMouseDown={(e) => {

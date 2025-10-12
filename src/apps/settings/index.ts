@@ -6,9 +6,9 @@ export const NAME = "Settings";
 export const ICON = SettingsIcon;
 
 export const CONFIG = {
-  window: {
-    defaultWidth: 600,
-    defaultHeight: 420,
+  size: {
+    width: 600,
+    height: 420,
   },
 };
 

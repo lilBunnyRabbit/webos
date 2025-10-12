@@ -1,8 +1,10 @@
 import Apps from "@/apps";
+import type { AppConfig } from "@/apps/app.type";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
 import { calculateWindowPosition } from "./windows.helpers";
-import type { WindowInstance, WindowsAction, WindowsState } from "./windows.type";
+import { WindowFlag, type WindowInstanceWithApp, type WindowsAction, type WindowsState } from "./windows.type";
+import { Flags } from "@/lib/flags";
 
 export function windowsReducer(state: WindowsState, action: WindowsAction) {
   // console.log(`Action::${action.type}`, action, state);
@@ -10,27 +12,20 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
   switch (action.type) {
     case "CREATE_WINDOW": {
       const id = uuidv4();
-      const appConfig = Apps[action.appId];
+      const appConfig: AppConfig = Apps[action.appId];
 
-      const size =
-        "CONFIG" in appConfig
-          ? {
-              width: appConfig.CONFIG.window.defaultWidth,
-              height: appConfig.CONFIG.window.defaultHeight,
-            }
-          : { width: 600, height: 400 };
+      const size = appConfig.CONFIG?.size ? appConfig.CONFIG.size : { width: 600, height: 400 };
 
-      const instance: WindowInstance & { app: React.ReactNode } = {
+      const instance: WindowInstanceWithApp = {
         id,
         appId: action.appId,
-        isMinimized: false,
-        isMaximized: false,
+        flags: appConfig.CONFIG?.flags ? appConfig.CONFIG.flags.clone() : new Flags(),
         createdAt: new Date(),
         config: {
           size,
           position: calculateWindowPosition(size, state.instances.length),
         },
-        app: React.createElement(appConfig.App, {
+        $app: React.createElement(appConfig.App, {
           key: `${action.appId}-${id}`,
         }),
       };
@@ -61,13 +56,12 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
       if (!window) return state;
 
       // If window is minimized, restore it first
-      const newIndex = window.isMinimized
+      const newIndex = window.flags.has(WindowFlag.MINIMIZED)
         ? {
             ...state.index,
             [action.windowId]: {
               ...window,
-              isMinimized: false,
-              isMaximized: false,
+              flags: window.flags.clone().delete(WindowFlag.MINIMIZED),
             },
           }
         : state.index;
@@ -100,7 +94,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
           ...state.index,
           [action.windowId]: {
             ...window,
-            isMinimized: !window.isMinimized,
+            flags: window.flags.clone().toggle(WindowFlag.MINIMIZED),
           },
         },
       };
@@ -109,7 +103,12 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
     case "MINIMIZE_ALL_WINDOWS": {
       return {
         ...state,
-        index: Object.fromEntries(Object.entries(state.index).map(([key, value]) => [key, { ...value, isMinimized: true }])),
+        index: Object.fromEntries(
+          Object.entries(state.index).map(([key, value]) => [
+            key,
+            { ...value, flags: value.flags.clone().add(WindowFlag.MINIMIZED) },
+          ])
+        ),
       };
     }
 
@@ -123,8 +122,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
           ...state.index,
           [action.windowId]: {
             ...window,
-            isMaximized: !window.isMaximized,
-            snapZone: null, // Clear snap zone when maximizing
+            flags: window.flags.clone().toggle(WindowFlag.MAXIMIZED),
           },
         },
       };
