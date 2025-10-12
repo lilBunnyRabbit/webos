@@ -1,33 +1,25 @@
-import Apps from "@/apps";
-import type { AppConfig } from "@/apps/app.type";
-import React from "react";
-import { v4 as uuidv4 } from "uuid";
-import { calculateWindowPosition } from "./windows.helpers";
-import { WindowFlag, type WindowInstanceWithApp, type WindowsAction, type WindowsState } from "./windows.type";
 import { Flags } from "@/lib/flags";
+import { v4 as uuid } from "uuid";
+import { calculateWindowPosition } from "./windows.helpers";
+import { WindowFlag, type WindowId, type WindowInstance, type WindowsAction, type WindowsState } from "./windows.type";
 
-export function windowsReducer(state: WindowsState, action: WindowsAction) {
+export function windowsReducer(state: WindowsState, action: WindowsAction): WindowsState {
   // console.log(`Action::${action.type}`, action, state);
 
   switch (action.type) {
     case "CREATE_WINDOW": {
-      const id = uuidv4();
-      const appConfig: AppConfig = Apps[action.appId];
+      const id: WindowId = uuid();
 
-      const size = appConfig.CONFIG?.size ? appConfig.CONFIG.size : { width: 600, height: 400 };
-
-      const instance: WindowInstanceWithApp = {
+      const size = action.defaults?.size ? action.defaults.size : { width: 600, height: 400 };
+      const instance: WindowInstance = {
         id,
-        appId: action.appId,
-        flags: appConfig.CONFIG?.flags ? appConfig.CONFIG.flags.clone() : new Flags(),
+        flags: action.defaults?.flags ? action.defaults.flags.clone() : new Flags(),
         createdAt: new Date(),
         config: {
           size,
           position: calculateWindowPosition(size, state.instances.length),
         },
-        $app: React.createElement(appConfig.App, {
-          key: `${action.appId}-${id}`,
-        }),
+        app: action.app,
       };
 
       return {
@@ -61,7 +53,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction) {
             ...state.index,
             [action.windowId]: {
               ...window,
-              flags: window.flags.clone().delete(WindowFlag.MINIMIZED),
+              flags: window.flags.clone().remove(WindowFlag.MINIMIZED),
             },
           }
         : state.index;

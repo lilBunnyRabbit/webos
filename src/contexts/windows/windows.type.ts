@@ -1,6 +1,5 @@
-import type { AppId } from "@/apps";
 import type { Flags } from "@/lib/flags";
-import type React from "react";
+import type { AppInstance } from "../apps";
 
 export type WindowId = string;
 
@@ -20,11 +19,17 @@ export const WindowFlag = {
   MAXIMIZED: "maximized",
 } as const;
 
-export type WindowFlag = typeof WindowFlag[keyof typeof WindowFlag];
+export type WindowFlag = (typeof WindowFlag)[keyof typeof WindowFlag];
+
+export interface WindowDefaults {
+  position?: Position;
+  size?: Dimensions;
+  flags?: Flags<WindowFlag>;
+}
 
 export interface WindowInstance {
   id: WindowId;
-  appId: AppId;
+  app: AppInstance;
   createdAt: Date;
   flags: Flags<WindowFlag>;
   config: {
@@ -33,19 +38,16 @@ export interface WindowInstance {
   };
 }
 
-export interface WindowInstanceWithApp extends WindowInstance {
-  $app: React.ReactNode;
-}
-
 export interface WindowsState {
-  index: Record<WindowId, WindowInstanceWithApp>;
+  index: Record<WindowId, WindowInstance>;
   instances: WindowId[];
 }
 
 export type WindowsAction =
   | {
       type: "CREATE_WINDOW";
-      appId: AppId;
+      app: AppInstance;
+      defaults?: WindowDefaults;
     }
   | {
       type: "DESTROY_WINDOW";

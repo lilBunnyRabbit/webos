@@ -10,4 +10,6 @@ import * as Apps from "./apps";
 
 export default Apps;
 
+export type AppsConfig = typeof Apps;
+
 export type AppId = keyof typeof Apps;

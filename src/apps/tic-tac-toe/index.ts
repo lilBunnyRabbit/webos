@@ -1,3 +1,4 @@
+import type { WindowDefaults } from "@/contexts/windows";
 import { XIcon } from "lucide-react";
 import React from "react";
 
@@ -5,7 +6,7 @@ export const ID = "tic-tac-toe";
 export const NAME = "Tic Tac Toe";
 export const ICON = XIcon;
 
-export const CONFIG = {
+export const WINDOW_CONFIG: WindowDefaults = {
   size: {
     width: 600,
     height: 600,

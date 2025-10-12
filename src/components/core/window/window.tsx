@@ -1,11 +1,11 @@
 import { WindowProvider } from "@/contexts/window";
-import { WindowFlag, type WindowInstanceWithApp } from "@/contexts/windows";
+import { WindowFlag, type WindowInstance } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import { WindowContent } from "./window-content";
 import { WindowTitle } from "./window-title";
 
 interface WindowProps {
-  instance: WindowInstanceWithApp;
+  instance: WindowInstance;
   isFocused: boolean;
   order: number;
 }
@@ -26,7 +26,7 @@ export function Window({ instance, isFocused, order }: WindowProps) {
       <WindowTitle instance={instance} />
 
       <WindowContent className={cn(isMaximized && "rounded-none")}>
-        {instance.$app}
+        {instance.app.$node}
       </WindowContent>
     </WindowProvider>
   );

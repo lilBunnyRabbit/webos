@@ -1,7 +1,7 @@
 - [ ] restore pre snap size
-- [ ] flags for window config - app
+- [x] flags for window config - app
 - [ ] persist settings
 - [ ] files
 - [ ] adding apps to desktop
-- [ ] typesafe app config
+- [x] typesafe app config
 - [ ] open app with props

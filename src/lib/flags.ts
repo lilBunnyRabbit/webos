@@ -25,6 +25,11 @@ export class Flags<T> extends Set<T> {
     return this;
   }
 
+  public remove(flag: T) {
+    this.delete(flag);
+    return this;
+  }
+
   public clone() {
     return new Flags(this);
   }

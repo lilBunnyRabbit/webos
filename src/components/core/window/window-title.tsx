@@ -1,4 +1,3 @@
-import Apps from "@/apps";
 import { useWindow, useWindowToolbar } from "@/contexts/window";
 import {
   calculateWindowMove,
@@ -19,15 +18,12 @@ interface WindowTitleProps {
 export function WindowTitle({ instance }: WindowTitleProps) {
   const { zoom, setZoom } = useWindowToolbar();
   const { setPosition, size, snapZone, setSnapZone, toSnapZone } = useWindow();
-
   const dispatch = useWindowsActions();
   const bounds = useWindowsContainer();
 
-  const appConfig = React.useMemo(() => Apps[instance.appId], [instance.appId]);
+  const [isDragging, setIsDragging] = React.useState(false);
 
   const isMaximized = instance.flags.has(WindowFlag.MAXIMIZED);
-
-  const [isDragging, setIsDragging] = React.useState(false);
 
   const dragOffsetRef = React.useRef({ x: 0, y: 0 });
   const windowRef = React.useRef<HTMLDivElement>(null);
@@ -115,8 +111,8 @@ export function WindowTitle({ instance }: WindowTitleProps) {
         className="flex items-center space-x-2"
         onDoubleClick={() => dispatch({ type: "TOGGLE_MAXIMIZE_WINDOW", windowId: instance.id })}
       >
-        <div className="flex items-center justify-center w-4 h-4">{React.createElement(appConfig.ICON)}</div>
-        <span className="text-sm font-medium">{appConfig.NAME}</span>
+        <div className="flex items-center justify-center w-4 h-4">{React.createElement(instance.app.icon)}</div>
+        <span className="text-sm font-medium">{instance.app.name}</span>
       </div>
 
       <div className="flex items-center space-x-1">

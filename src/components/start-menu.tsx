@@ -9,18 +9,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useWindowsActions } from "@/contexts/windows";
+import { useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
-import {
-  CalculatorIcon,
-  FolderIcon,
-  GlobeIcon,
-  ImageIcon,
-  LayoutGridIcon,
-  MailIcon,
-  MusicIcon,
-  VideoIcon,
-} from "lucide-react";
+import { CalculatorIcon, GlobeIcon, ImageIcon, LayoutGridIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 // System apps that should appear at the bottom
@@ -32,17 +23,16 @@ const DUMMY_APPS = [
   { id: "calculator", name: "Calculator", icon: CalculatorIcon, disabled: true },
   { id: "mail", name: "Mail", icon: MailIcon, disabled: true },
   { id: "photos", name: "Photos", icon: ImageIcon, disabled: true },
-  { id: "files", name: "Files", icon: FolderIcon, disabled: true },
   { id: "music", name: "Music", icon: MusicIcon, disabled: true },
   { id: "videos", name: "Videos", icon: VideoIcon, disabled: true },
 ];
 
 export function StartMenu() {
   const [open, setOpen] = useState(false);
-  const dispatch = useWindowsActions();
+  const { open: openApp } = useApps();
 
   const handleOpenApp = (appId: AppId) => {
-    dispatch({ type: "CREATE_WINDOW", appId });
+    openApp(appId);
     setOpen(false);
   };
 

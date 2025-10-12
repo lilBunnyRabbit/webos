@@ -1,4 +1,3 @@
-import Apps from "@/apps";
 import { useWindows, useWindowsActions, WindowFlag } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import { PanelBottom, PanelBottomCloseIcon, PanelLeft } from "lucide-react";
@@ -45,11 +44,10 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
         {[...instances]
           .sort((a, b) => index[a].createdAt.getTime() - index[b].createdAt.getTime())
           .map((windowId) => {
-            const windowInstance = index[windowId];
-            const appConfig = Apps[windowInstance.appId];
-            const IconComponent = appConfig.ICON;
+            const instance = index[windowId];
+            const IconComponent = instance.app.icon;
             const isFocused = windowId === focusedWindowId;
-            const isMinimized = windowInstance.flags.has(WindowFlag.MINIMIZED);
+            const isMinimized = instance.flags.has(WindowFlag.MINIMIZED);
 
             return (
               <button
@@ -67,11 +65,11 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
                     dispatch({ type: "FOCUS_WINDOW", windowId });
                   }
                 }}
-                title={appConfig.NAME}
+                title={instance.app.name}
               >
                 <IconComponent className="w-4 h-4" />
 
-                {orientation === "horizontal" && <div className="text-xs">{appConfig.NAME}</div>}
+                {orientation === "horizontal" && <div className="text-xs">{instance.app.name}</div>}
               </button>
             );
           })}

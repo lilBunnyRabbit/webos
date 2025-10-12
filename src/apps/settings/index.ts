@@ -1,3 +1,4 @@
+import type { WindowDefaults } from "@/contexts/windows";
 import { SettingsIcon } from "lucide-react";
 import React from "react";
 
@@ -5,7 +6,7 @@ export const ID = "settings";
 export const NAME = "Settings";
 export const ICON = SettingsIcon;
 
-export const CONFIG = {
+export const WINDOW_CONFIG: WindowDefaults = {
   size: {
     width: 600,
     height: 420,

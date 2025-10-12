@@ -1,5 +1,6 @@
 import Apps from "@/apps";
-import { type Bounds, type Dimensions, type Position, useWindowsActions } from "@/contexts/windows";
+import { useApps } from "@/contexts/apps";
+import { type Bounds, type Dimensions, type Position } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
 import React, { useState } from "react";
 import type { DesktopItemConfig } from "./desktop";
@@ -15,7 +16,7 @@ export const DesktopItem = ({
   hasItemInPosition: (x: number, y: number) => boolean;
   container: { bounds: Bounds; cell: Dimensions };
 }) => {
-  const dispatch = useWindowsActions();
+  const { open: openApp } = useApps();
 
   const [gridDimensions, setGridDimensions] = useState({ cols: item.gridX + 1, rows: item.gridY + 1 });
 
@@ -145,9 +146,7 @@ export const DesktopItem = ({
         key={item.appId}
         ref={ref}
         className="group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-white/10 rounded hover:overflow-visible focus-visible:outline-2 focus-visible:outline-accent cursor-grab"
-        onDoubleClick={() => {
-          dispatch({ type: "CREATE_WINDOW", appId: item.appId });
-        }}
+        onDoubleClick={() => openApp(item.appId)}
         style={{
           gridColumn: item.gridX + 1,
           gridRow: item.gridY + 1,
@@ -192,9 +191,7 @@ export const DesktopItem = ({
               <IconComponent className="h-full w-auto" />
             </div>
 
-            <span className="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">
-              {app.NAME}
-            </span>
+            <span className="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{app.NAME}</span>
           </div>
         </>
       )}
