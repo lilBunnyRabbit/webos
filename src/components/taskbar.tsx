@@ -55,7 +55,7 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
                   !isMinimized && "bg-primary/10"
                 )}
                 onClick={() => {
-                  if (isMinimized || isFocused) {
+                  if (isFocused) {
                     dispatch({ type: "TOGGLE_WINDOW", windowId });
                   } else {
                     dispatch({ type: "FOCUS_WINDOW", windowId });
