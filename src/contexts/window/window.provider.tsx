@@ -6,6 +6,7 @@ import {
   calculateSnapPosition,
   calculateSnapPositionPreview,
   calculateWindowResize,
+  useWindows,
   useWindowsActions,
   useWindowsContainer,
 } from "@/contexts/windows";
@@ -16,14 +17,14 @@ import { WindowContext, WindowToolbarContext } from "./window.context";
 export const WindowProvider = ({
   children,
   instance,
-  order,
   className,
 }: {
   children: React.ReactNode;
   className?: string;
   instance: WindowInstance;
-  order: number;
 }) => {
+  const { order } = useWindows();
+
   const bounds = useWindowsContainer();
   const dispatch = useWindowsActions();
 
@@ -109,7 +110,7 @@ export const WindowProvider = ({
                     width: size.width,
                     height: size.height,
                   }),
-              zIndex: order,
+              zIndex: order.get(instance.id),
             }}
             tabIndex={0}
           >

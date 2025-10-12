@@ -79,14 +79,11 @@ const DEFAULT_LIGHT = {
   accent: "#d97706",
 };
 
-interface SettingsAppProps {
-  page: "theme" | "general";
-}
 
-export default function SettingsApp(props: SettingsAppProps = { page: "general" }) {
+export default function SettingsApp() {
   React.useEffect(() => {
-    console.log("~~~~~~~~~~~~~~~ SettingsApp mounted", props);
-  }, [props]);
+    console.log("~~~~~~~~~~~~~~~ SettingsApp mounted");
+  }, []);
 
   // Helper to get current CSS variable values
   function getCurrentColors() {

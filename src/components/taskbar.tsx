@@ -9,11 +9,8 @@ interface TaskbarProps {
 }
 
 export function Taskbar({ orientation = "vertical", onToggleOrientation }: TaskbarProps) {
-  const { instances, index } = useWindows();
+  const { index, order } = useWindows();
   const dispatch = useWindowsActions();
-
-  // Get the focused window (last in instances array)
-  const focusedWindowId = instances.length > 0 ? instances[instances.length - 1] : null;
 
   return (
     <div
@@ -41,12 +38,11 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
           orientation === "vertical" ? "flex-col overflow-y-auto" : "flex-row overflow-x-auto"
         )}
       >
-        {[...instances]
-          .sort((a, b) => index[a].createdAt.getTime() - index[b].createdAt.getTime())
-          .map((windowId) => {
-            const instance = index[windowId];
+        {Object.entries(index)
+          .sort((a, b) => a[1].createdAt.getTime() - b[1].createdAt.getTime())
+          .map(([windowId, instance]) => {
             const IconComponent = instance.app.icon;
-            const isFocused = windowId === focusedWindowId;
+            const isFocused = order.isFocused(windowId);
             const isMinimized = instance.flags.has(WindowFlag.MINIMIZED);
 
             return (

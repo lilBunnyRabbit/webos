@@ -17,7 +17,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         createdAt: new Date(),
         config: {
           size,
-          position: calculateWindowPosition(size, state.instances.length),
+          position: calculateWindowPosition(size, state.order.size),
         },
         app: action.app,
       };
@@ -28,7 +28,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
           ...state.index,
           [id]: instance,
         },
-        instances: [...state.instances, id],
+        order: state.order.add(id).clone(),
       };
     }
 
@@ -39,7 +39,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
       return {
         ...state,
         index,
-        instances: state.instances.filter((instance) => instance !== action.windowId),
+        order: state.order.remove(action.windowId).clone(),
       };
     }
 
@@ -59,20 +59,18 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         : state.index;
 
       // If already focused, just restore if minimized
-      if (state.instances[state.instances.length - 1] === action.windowId) {
+      if (state.order.isFocused(action.windowId)) {
         return {
           index: newIndex,
-          instances: state.instances,
+          order: state.order.clone(),
         };
       }
 
-      const newInstances = state.instances.filter((instance) => instance !== action.windowId);
-      newInstances.push(action.windowId);
 
       return {
         ...state,
         index: newIndex,
-        instances: newInstances,
+        order: state.order.toFront(action.windowId).clone(),
       };
     }
 

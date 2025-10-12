@@ -9,11 +9,13 @@ import {
 import { getElementBounds } from "./windows.helpers";
 import { useWindows } from "./windows.hooks";
 import { windowsReducer } from "./windows.reducer";
+import { Order } from "@/lib/order";
+import type { WindowId } from "./windows.type";
 
 export const WindowsProvider = ({ children }: React.PropsWithChildren) => {
   const [windows, dispatch] = React.useReducer(windowsReducer, {
     index: {},
-    instances: [],
+    order: new Order<WindowId>(),
   });
 
   return (
@@ -65,16 +67,9 @@ export const WindowsContainerProvider = ({
 };
 
 const WindowsRenderer = () => {
-  const windows = useWindows();
+  const { index } = useWindows();
 
-  return windows.instances.map((windowId, index) => {
-    return (
-      <Window
-        key={windowId}
-        instance={windows.index[windowId]}
-        order={index}
-        isFocused={windows.instances[windows.instances.length - 1] === windowId}
-      />
-    );
+  return Object.entries(index).map(([windowId, instance]) => {
+    return <Window key={windowId} instance={instance} />;
   });
 };

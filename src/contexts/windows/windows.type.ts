@@ -1,4 +1,5 @@
 import type { Flags } from "@/lib/flags";
+import type { Order } from "@/lib/order";
 import type { AppInstance } from "../apps";
 
 export type WindowId = string;
@@ -40,7 +41,7 @@ export interface WindowInstance {
 
 export interface WindowsState {
   index: Record<WindowId, WindowInstance>;
-  instances: WindowId[];
+  order: Order<WindowId>;
 }
 
 export type WindowsAction =

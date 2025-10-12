@@ -4,4 +4,4 @@
 - [ ] files
 - [ ] adding apps to desktop
 - [x] typesafe app config
-- [ ] open app with props
+- [x] open app with props
