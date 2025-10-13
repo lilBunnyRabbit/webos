@@ -139,7 +139,7 @@ export const WindowProvider = ({
 
       {!isMaximized && !isMinimized && snapZone && (
         <div
-          className="absolute pointer-events-none z-[9999] bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
+          className="absolute pointer-events-none z-[9999] bg-secondary/30 border-2 border-secondary rounded-lg transition-all duration-150"
           style={calculateSnapPositionPreview(snapZone)}
         />
       )}
