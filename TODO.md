@@ -1,4 +1,4 @@
-- [ ] restore pre snap size
+- [x] restore pre snap size
 - [x] flags for window config - app
 - [ ] persist settings
 - [ ] files

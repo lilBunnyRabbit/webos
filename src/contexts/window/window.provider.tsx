@@ -106,12 +106,12 @@ export const WindowProvider = ({
             onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
             className={cn("absolute overflow-hidden", className, isMinimized && "hidden")}
             style={{
-              ...(snapLocation
-                ? snapLocation
-                : isMaximized
+              ...(isMaximized
                 ? {
                     inset: 0,
                   }
+                : snapLocation
+                ? snapLocation
                 : {
                     left: position.x,
                     top: position.y,
@@ -125,7 +125,13 @@ export const WindowProvider = ({
             {children}
 
             {!isMaximized && !isMinimized && !snapZone && (
-              <ResizeHandlers instance={instance} size={size} position={position} setSize={setSize} setPosition={setPosition} />
+              <ResizeHandlers
+                instance={instance}
+                size={size}
+                position={position}
+                setSize={setSize}
+                setPosition={setPosition}
+              />
             )}
           </div>
         </WindowToolbarContext.Provider>

@@ -115,7 +115,6 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
           [action.windowId]: {
             ...window,
             flags,
-            config: { ...window.config, snapZone: null },
           },
         },
         order:
