@@ -15,10 +15,10 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
   return (
     <div
       className={cn(
-        "grid bg-background backdrop-blur-xl shadow-2xl py-1 px-2 border-t border-foreground/40 gap-2",
+        "grid bg-background backdrop-blur-xl shadow-2xl py-1 px-2 border-foreground/40 gap-2",
         orientation === "vertical"
-          ? "grid-columns-1 grid-rows-[min-content_min-content_1fr_min-content_min-content]"
-          : "grid-cols-[min-content_min-content_1fr_min-content_min-content] grid-rows-1"
+          ? "grid-columns-1 grid-rows-[min-content_min-content_1fr_min-content_min-content] border-r"
+          : "grid-cols-[min-content_min-content_1fr_min-content_min-content] grid-rows-1 border-t"
       )}
     >
       {/* Start Menu */}
