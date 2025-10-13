@@ -25,7 +25,7 @@ export function WindowTitle({ instance }: WindowTitleProps) {
 
   const isMaximized = instance.flags.has(WindowFlag.MAXIMIZED);
 
-  const dragOffsetRef = React.useRef({ x: 0, y: 0 });
+  const dragOffsetRef = React.useRef({ x: 0, y: 0, xPercent: 0, yPercent: 0 });
   const windowRef = React.useRef<HTMLDivElement>(null);
 
   const handleMouseDown = React.useCallback(
@@ -33,14 +33,21 @@ export function WindowTitle({ instance }: WindowTitleProps) {
       const rect = windowRef.current?.parentElement?.getBoundingClientRect();
 
       if (rect) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
         dragOffsetRef.current = {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
+          x,
+          y,
+          xPercent: x / rect.width,
+          yPercent: y / rect.height,
         };
       } else {
         dragOffsetRef.current = {
           x: 0,
           y: 0,
+          xPercent: 0,
+          yPercent: 0,
         };
       }
 
@@ -62,6 +69,13 @@ export function WindowTitle({ instance }: WindowTitleProps) {
       // Detect snap zone based on cursor position
       setSnapZone(detectSnapZone(position, bounds));
 
+      if (instance.config.snapZone) {
+        // Adjust drag offset based on the restored window size (size before snap/maximize)
+        dragOffsetRef.current.x = dragOffsetRef.current.xPercent * size.width;
+
+        dispatch({ type: "SET_SNAP_ZONE", windowId: instance.id, snapZone: null });
+      }
+
       setPosition(
         calculateWindowMove(position, size, bounds, {
           x: dragOffsetRef.current.x,
@@ -69,7 +83,7 @@ export function WindowTitle({ instance }: WindowTitleProps) {
         })
       );
     },
-    [isDragging, size, setPosition, setSnapZone, bounds]
+    [isDragging, setSnapZone, bounds, instance.config.snapZone, instance.id, setPosition, size, dispatch]
   );
 
   const handleMouseUp = React.useCallback(() => {
@@ -82,6 +96,8 @@ export function WindowTitle({ instance }: WindowTitleProps) {
     dragOffsetRef.current = {
       x: 0,
       y: 0,
+      xPercent: 0,
+      yPercent: 0,
     };
   }, [snapZone, setSnapZone, toSnapZone]);
 

@@ -3,7 +3,6 @@ import {
   type SnapZone,
   WindowFlag,
   type WindowInstance,
-  calculateSnapPosition,
   calculateSnapPositionPreview,
   calculateWindowResize,
   useWindows,
@@ -50,7 +49,7 @@ export const WindowProvider = ({
 
   const toSnapZone = React.useCallback(
     (snapZone: SnapZone) => {
-      const { x, y, width, height } = calculateSnapPosition(snapZone, bounds);
+      // const { x, y, width, height } = calculateSnapPosition(snapZone, bounds);
 
       // Add a transition class to enable animation
       const element = ref.current;
@@ -58,8 +57,9 @@ export const WindowProvider = ({
         element.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
       }
 
-      setSize({ width, height });
-      setPosition({ x, y });
+      // setSize({ width, height });
+      // setPosition({ x, y });
+      dispatch({ type: "SET_SNAP_ZONE", windowId: instance.id, snapZone });
 
       // After transition ends, clean up the transition style
       if (element) {
@@ -67,10 +67,11 @@ export const WindowProvider = ({
           element.style.transition = "";
           element.removeEventListener("transitionend", cleanup);
         };
+
         element.addEventListener("transitionend", cleanup);
       }
     },
-    [bounds]
+    [dispatch, instance.id]
   );
 
   // Handle browser window resize - ensure window stays within viewport
@@ -90,6 +91,11 @@ export const WindowProvider = ({
     };
   }, [position, size, bounds]);
 
+  const snapLocation = React.useMemo(() => {
+    if (!instance.config.snapZone) return null;
+    return calculateSnapPositionPreview(instance.config.snapZone);
+  }, [instance.config.snapZone]);
+
   return (
     <>
       <WindowContext.Provider value={{ position, setPosition, size, setSize, snapZone, setSnapZone, toSnapZone }}>
@@ -100,7 +106,9 @@ export const WindowProvider = ({
             onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
             className={cn("absolute overflow-hidden", className, isMinimized && "hidden")}
             style={{
-              ...(isMaximized
+              ...(snapLocation
+                ? snapLocation
+                : isMaximized
                 ? {
                     inset: 0,
                   }
@@ -117,7 +125,7 @@ export const WindowProvider = ({
             {children}
 
             {!isMaximized && !isMinimized && !snapZone && (
-              <ResizeHandlers size={size} position={position} setSize={setSize} setPosition={setPosition} />
+              <ResizeHandlers instance={instance} size={size} position={position} setSize={setSize} setPosition={setPosition} />
             )}
           </div>
         </WindowToolbarContext.Provider>

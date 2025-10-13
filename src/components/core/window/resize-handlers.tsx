@@ -1,32 +1,40 @@
 import {
+  calculateSnapPosition,
   calculateWindowResizeDirection,
+  useWindowsActions,
   useWindowsContainer,
   type Dimensions,
   type Position,
   type ResizeDirection,
+  type WindowInstance,
 } from "@/contexts/windows";
 import React from "react";
 
+interface StartState {
+  direction: ResizeDirection;
+  pointer: Position;
+  size: Dimensions;
+  position: Position;
+}
+
 interface ResizeHandlersProps {
+  instance: WindowInstance;
   size: Dimensions;
   setSize: (size: Dimensions) => void;
   position: Position;
   setPosition: (position: Position) => void;
 }
 
-export function ResizeHandlers({ size, setSize, position, setPosition }: ResizeHandlersProps) {
+export function ResizeHandlers({ instance, size, setSize, position, setPosition }: ResizeHandlersProps) {
+  const dispatch = useWindowsActions();
   const bounds = useWindowsContainer();
 
-  const [start, setStart] = React.useState<{
-    direction: ResizeDirection;
-    pointer: Position;
-    size: Dimensions;
-    position: Position;
-  } | null>(null);
+  const [start, setStart] = React.useState<StartState | null>(null);
 
   const handleResizeStart = (e: React.MouseEvent, direction: ResizeDirection) => {
     e.stopPropagation();
-    setStart({
+
+    const startState: StartState = {
       direction,
       pointer: {
         x: e.clientX,
@@ -40,7 +48,18 @@ export function ResizeHandlers({ size, setSize, position, setPosition }: ResizeH
         x: position.x,
         y: position.y,
       },
-    });
+    };
+
+    if (instance.config.snapZone) {
+      dispatch({ type: "SET_SNAP_ZONE", windowId: instance.id, snapZone: null });
+      const { x, y, width, height } = calculateSnapPosition(instance.config.snapZone, bounds);
+      startState.size = { width, height };
+      startState.position = { x, y };
+      setSize({ width, height });
+      setPosition({ x, y });
+    }
+
+    setStart(startState);
   };
 
   const handleMouseMove = React.useCallback(

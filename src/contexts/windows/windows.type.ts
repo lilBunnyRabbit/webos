@@ -26,6 +26,7 @@ export interface WindowDefaults {
   position?: Position;
   size?: Dimensions;
   flags?: Flags<WindowFlag>;
+  snapZone?: SnapZone;
 }
 
 export interface WindowInstance {
@@ -36,6 +37,7 @@ export interface WindowInstance {
   config: {
     position: Position;
     size: Dimensions;
+    snapZone: SnapZone;
   };
 }
 
@@ -68,6 +70,11 @@ export type WindowsAction =
     }
   | {
       type: "MINIMIZE_ALL_WINDOWS";
+    }
+  | {
+      type: "SET_SNAP_ZONE";
+      windowId: WindowId;
+      snapZone: SnapZone;
     };
 
 export interface Position {

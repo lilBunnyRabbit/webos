@@ -18,6 +18,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         config: {
           size,
           position: calculateWindowPosition(size, state.order.size),
+          snapZone: action.defaults?.snapZone ?? null,
         },
         app: action.app,
       };
@@ -66,7 +67,6 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         };
       }
 
-
       return {
         ...state,
         index: newIndex,
@@ -106,13 +106,36 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
       const window = state.index[action.windowId];
       if (!window) return state;
 
+      const flags = window.flags.clone().toggle(WindowFlag.MAXIMIZED);
+
       return {
         ...state,
         index: {
           ...state.index,
           [action.windowId]: {
             ...window,
-            flags: window.flags.clone().toggle(WindowFlag.MAXIMIZED),
+            flags,
+            config: { ...window.config, snapZone: null },
+          },
+        },
+        order:
+          flags.has(WindowFlag.MAXIMIZED) && !state.order.isFocused(action.windowId)
+            ? state.order.toFront(action.windowId).clone()
+            : state.order,
+      };
+    }
+
+    case "SET_SNAP_ZONE": {
+      const window = state.index[action.windowId];
+      if (!window) return state;
+
+      return {
+        ...state,
+        index: {
+          ...state.index,
+          [action.windowId]: {
+            ...window,
+            config: { ...window.config, snapZone: action.snapZone },
           },
         },
       };
