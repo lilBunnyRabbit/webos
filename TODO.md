@@ -1,6 +1,6 @@
 - [x] restore pre snap size
 - [x] flags for window config - app
-- [ ] persist settings - settings system
+- [x] persist settings - settings system
 - [ ] files
 - [ ] adding apps to desktop
 - [x] typesafe app config

@@ -20,6 +20,10 @@ const presets: [background: string, foreground: string, primary: string, seconda
     "oklch(0.65 0.12 303.43)",
     "oklch(0.65 0.12 50.47)",
   ],
+  // speed reader light
+  ["rgb(255 246 231)", "rgb(100 128 150)", "rgb(219 159 118)", "rgb(172 219 118)", "rgb(219 118 118)"],
+  // speed reader dark
+  ["rgb(26 43 51)", "rgb(185 182 170)", "rgb(237 203 171)", "rgb(206 237 171)", "rgb(237 171 171)"],
   // Light pastel blue
   ["oklch(0.98 0.01 250)", "oklch(0.22 0.02 80)", "oklch(0.7 0.09 200)", "oklch(0.7 0.09 20)", "oklch(0.7 0.09 320)"],
   // Red & Black (looks good)
