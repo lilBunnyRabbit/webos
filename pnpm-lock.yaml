@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@lilbunnyrabbit/event-emitter':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -958,6 +961,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lilbunnyrabbit/event-emitter@0.1.2':
+    resolution: {integrity: sha512-Nt1vqFNk+ZItyHZg3AkmlbqG9eMXKDcxS6H8Yr4ZJdmDbYahVXeVzs60KNLWZ50iSQ0fVW2Q3iEHwKclewIrOw==}
+    engines: {node: '>=14.0.0', npm: '>=6.0.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -4074,6 +4081,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@lilbunnyrabbit/event-emitter@0.1.2': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

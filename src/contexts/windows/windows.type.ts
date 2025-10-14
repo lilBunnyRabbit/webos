@@ -41,7 +41,14 @@ export interface WindowInstance {
   };
 }
 
+export const WindowsFlag = {
+  PROFILER_ENABLED: "profiler-enabled",
+} as const;
+
+export type WindowsFlag = (typeof WindowsFlag)[keyof typeof WindowsFlag];
+
 export interface WindowsState {
+  flags: Flags<WindowsFlag>;
   index: Record<WindowId, WindowInstance>;
   order: Order<WindowId>;
 }
@@ -70,6 +77,9 @@ export type WindowsAction =
     }
   | {
       type: "MINIMIZE_ALL_WINDOWS";
+    }
+  | {
+      type: "RESTORE_ALL_WINDOWS";
     }
   | {
       type: "SET_SNAP_ZONE";

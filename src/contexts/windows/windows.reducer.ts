@@ -1,7 +1,15 @@
 import { Flags } from "@/lib/flags";
 import { v4 as uuid } from "uuid";
 import { calculateWindowPosition } from "./windows.helpers";
-import { WindowFlag, type WindowId, type WindowInstance, type WindowsAction, type WindowsState } from "./windows.type";
+import {
+  WindowFlag,
+  WindowsFlag,
+  type WindowId,
+  type WindowInstance,
+  type WindowsAction,
+  type WindowsState,
+} from "./windows.type";
+import { ID as PROFILER_ID } from "@/apps/profiler";
 
 export function windowsReducer(state: WindowsState, action: WindowsAction): WindowsState {
   // console.log(`Action::${action.type}`, action, state);
@@ -23,8 +31,12 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         app: action.app,
       };
 
+      const flags =
+        action.app.id === PROFILER_ID ? new Flags<WindowsFlag>().add(WindowsFlag.PROFILER_ENABLED) : state.flags;
+
       return {
         ...state,
+        flags,
         index: {
           ...state.index,
           [id]: instance,
@@ -34,11 +46,19 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
     }
 
     case "DESTROY_WINDOW": {
+      const appId = state.index[action.windowId].app.id;
+
       const index = { ...state.index };
       delete index[action.windowId];
 
+      const flags =
+        appId === PROFILER_ID && !Object.values(index).some((value) => value.app.id === PROFILER_ID)
+          ? state.flags.remove(WindowsFlag.PROFILER_ENABLED)
+          : state.flags;
+
       return {
         ...state,
+        flags,
         index,
         order: state.order.remove(action.windowId).clone(),
       };
@@ -62,6 +82,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
       // If already focused, just restore if minimized
       if (state.order.isFocused(action.windowId)) {
         return {
+          ...state,
           index: newIndex,
           order: state.order.clone(),
         };
@@ -102,6 +123,18 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
       };
     }
 
+    case "RESTORE_ALL_WINDOWS": {
+      return {
+        ...state,
+        index: Object.fromEntries(
+          Object.entries(state.index).map(([key, value]) => [
+            key,
+            { ...value, flags: value.flags.clone().remove(WindowFlag.MINIMIZED) },
+          ])
+        ),
+      };
+    }
+
     case "TOGGLE_MAXIMIZE_WINDOW": {
       const window = state.index[action.windowId];
       if (!window) return state;
@@ -134,7 +167,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
           ...state.index,
           [action.windowId]: {
             ...window,
-            snapZone: action.snapZone
+            snapZone: action.snapZone,
           },
         },
       };

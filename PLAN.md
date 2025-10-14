@@ -579,6 +579,143 @@ Complex State (Workspace):
   - Desktop notifications API integration
   - Per-app notification settings
 
+### 7.3.5 Profiler App (Developer Tool)
+**Priority: MEDIUM** (useful for development & showcasing)
+
+- [ ] **Core Profiler App**
+  - Toggle-able system profiler (dev tool)
+  - When profiler is active, wraps all windows with profiling component
+  - Show real-time performance metrics per window/app
+  - Non-intrusive overlay or sidebar display
+  - Keyboard shortcut to toggle (Ctrl+Shift+P or F12)
+
+- [ ] **Performance Metrics**
+  - Component render count (per window)
+  - Render time / FPS for each window
+  - Memory usage estimation (if available)
+  - Re-render frequency
+  - Props/state change tracking
+  - Identify performance bottlenecks
+
+- [ ] **Window Information**
+  - Window ID and app name
+  - Current state (position, size, z-index)
+  - Props passed to window
+  - Number of child components
+  - Event listeners count
+  - Last update timestamp
+
+- [ ] **System Overview**
+  - Total windows open
+  - Total apps running
+  - Global state size
+  - Event listener count
+  - IndexedDB usage
+  - LocalStorage usage
+  - Cache statistics
+
+- [ ] **React DevTools Integration**
+  - Show component tree for selected window
+  - Props inspector
+  - State inspector
+  - Hooks inspector (if using)
+  - Performance flamegraph
+
+- [ ] **Profiler Controls**
+  - Start/Stop profiling
+  - Clear recorded data
+  - Export profile data (JSON)
+  - Filter by window/app
+  - Toggle between simple/detailed view
+  - Highlight slow renders (>16ms)
+  - Record timeline of renders
+
+- [ ] **Visual Features**
+  - Color-coded performance indicators (green/yellow/red)
+  - Mini stats overlay on window title bars (when enabled)
+  - Detailed panel (dockable sidebar or separate window)
+  - Performance warnings/alerts
+  - Render highlighting (flash on render)
+  - FPS counter overlay
+
+- [ ] **Use Cases**
+  - Debug performance issues during development
+  - Identify unnecessary re-renders
+  - Monitor app behavior in production
+  - Demonstrate architecture to employers/collaborators
+  - Educational tool for React optimization
+  - Portfolio showcase ("I built profiling into my OS!")
+
+**Technical Implementation:**
+```typescript
+// Profiler wrapper component
+function ProfilerWrapper({ children, windowId, appName }: Props) {
+  const [renderCount, setRenderCount] = useState(0);
+  const [renderTime, setRenderTime] = useState(0);
+  const { profilerEnabled } = useProfiler();
+  
+  const onRender = useCallback((
+    id: string,
+    phase: "mount" | "update",
+    actualDuration: number,
+  ) => {
+    setRenderCount(prev => prev + 1);
+    setRenderTime(actualDuration);
+    
+    // Log to profiler store
+    profilerStore.recordRender({
+      windowId,
+      appName,
+      phase,
+      duration: actualDuration,
+      timestamp: Date.now(),
+    });
+  }, [windowId, appName]);
+  
+  if (!profilerEnabled) {
+    return children;
+  }
+  
+  return (
+    <React.Profiler id={windowId} onRender={onRender}>
+      <ProfilerOverlay
+        renderCount={renderCount}
+        renderTime={renderTime}
+        windowId={windowId}
+      >
+        {children}
+      </ProfilerOverlay>
+    </React.Profiler>
+  );
+}
+
+// In window component
+function Window({ appId, windowId }: Props) {
+  const app = useApp(appId);
+  const { profilerEnabled } = useProfiler();
+  
+  return (
+    <ProfilerWrapper 
+      windowId={windowId} 
+      appName={app.name}
+    >
+      <WindowContent>
+        <app.component />
+      </WindowContent>
+    </ProfilerWrapper>
+  );
+}
+```
+
+**Profiler App UI:**
+- Main profiler window shows list of all open windows
+- Click window to see detailed metrics
+- Timeline view of render events
+- Performance graph (FPS over time)
+- Memory usage chart
+- Export report button
+- Settings (what to track, overlay style, etc.)
+
 ### 7.4 Context Menus & Shortcuts
 
 - [ ] **Global Context Menus**
@@ -586,16 +723,328 @@ Complex State (Workspace):
   - Taskbar context menus
   - Window title bar context menu
 
-- [ ] **Keyboard Shortcuts**
+- [ ] **Keyboard Shortcuts Implementation**
   - Document all shortcuts
   - Customizable shortcuts (settings)
-  - Shortcut cheat sheet app
-  - Common shortcuts:
-    - Ctrl+Shift+Esc - Task Manager
-    - Win+E - Files
-    - Win+R - Run dialog
-    - Alt+F4 - Close window
-    - Win+D - Show Desktop
+  - Shortcut cheat sheet app/dialog
+  - Show shortcuts in tooltips/menus
+  - Shortcut conflict detection
+  - Export/import custom shortcuts
+  - See detailed shortcuts list below ⬇️
+
+---
+
+## Keyboard Shortcuts Reference
+
+> **Implementation Note**: Support both Windows and Mac modifiers
+> - Windows: `Ctrl`, `Alt`, `Win`, `Shift`
+> - Mac: `⌘ Cmd`, `⌥ Option`, `⌃ Control`, `⇧ Shift`
+> - Auto-detect OS and show appropriate shortcuts
+
+### 1. Window Management
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Alt + F4` | `⌘ + Q` | Close active window | HIGH |
+| `Alt + Tab` | `⌘ + Tab` | Switch between windows | HIGH |
+| `Alt + Shift + Tab` | `⌘ + Shift + Tab` | Switch windows (reverse) | MEDIUM |
+| `Win + ↑` | `⌃ + ⌘ + F` | Maximize window | HIGH |
+| `Win + ↓` | `⌘ + M` | Minimize window | HIGH |
+| `Win + ←` | `⌃ + ⌘ + ←` | Snap window to left | MEDIUM |
+| `Win + →` | `⌃ + ⌘ + →` | Snap window to right | MEDIUM |
+| `Alt + Space` | `⌘ + Space` | Show window menu | LOW |
+| `F11` | `⌘ + ⌃ + F` | Toggle fullscreen | MEDIUM |
+| `Ctrl + W` | `⌘ + W` | Close current window/tab | HIGH |
+| `Ctrl + Shift + T` | `⌘ + Shift + T` | Reopen last closed window | MEDIUM |
+| `Alt + F5` | - | Restore window | LOW |
+| `Win + D` | `⌘ + F3` | Show Desktop (minimize all) | HIGH |
+| `Win + M` | `⌘ + Option + M` | Minimize all windows | MEDIUM |
+
+### 2. System & Apps
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + Shift + Esc` | `⌘ + Option + Esc` | Open Task Manager | HIGH |
+| `Win + E` | `⌘ + Space` (then "Files") | Open Files app | HIGH |
+| `Win + R` | `⌘ + Space` | Open Run dialog / Spotlight | MEDIUM |
+| `Win + S` | `⌘ + Space` | Open Search | MEDIUM |
+| `Win + I` | `⌘ + ,` | Open Settings | HIGH |
+| `Win + L` | `⌃ + ⌘ + Q` | Lock screen | LOW |
+| `Win + X` | - | Quick access menu | LOW |
+| `F1` | `⌘ + /` | Help / Show shortcuts | MEDIUM |
+| `Win + Tab` | - | Task view / App switcher | MEDIUM |
+| `Ctrl + Shift + N` | `⌘ + Shift + N` | New window/app instance | MEDIUM |
+| `Alt + Enter` | `⌘ + I` | Open properties | LOW |
+
+### 3. File Operations (in Files app)
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + N` | `⌘ + N` | New file/folder dialog | HIGH |
+| `Ctrl + Shift + N` | `⌘ + Shift + N` | New folder | HIGH |
+| `Ctrl + O` | `⌘ + O` | Open file | HIGH |
+| `Ctrl + S` | `⌘ + S` | Save file | HIGH |
+| `Ctrl + Shift + S` | `⌘ + Shift + S` | Save as | MEDIUM |
+| `Ctrl + C` | `⌘ + C` | Copy | HIGH |
+| `Ctrl + X` | `⌘ + X` | Cut | HIGH |
+| `Ctrl + V` | `⌘ + V` | Paste | HIGH |
+| `Ctrl + Z` | `⌘ + Z` | Undo | HIGH |
+| `Ctrl + Y` / `Ctrl + Shift + Z` | `⌘ + Shift + Z` | Redo | HIGH |
+| `Delete` | `⌫ Delete` | Delete selected file(s) | HIGH |
+| `Shift + Delete` | `⌘ + ⌫ Delete` | Permanently delete | MEDIUM |
+| `Ctrl + D` | `⌘ + D` | Duplicate file | MEDIUM |
+| `F2` | `Enter` | Rename file | HIGH |
+| `Ctrl + A` | `⌘ + A` | Select all | HIGH |
+| `Ctrl + Shift + A` | `⌘ + Shift + A` | Deselect all | LOW |
+| `Ctrl + I` | `⌘ + I` | Invert selection | LOW |
+| `Alt + ↑` | `⌘ + ↑` | Go to parent folder | MEDIUM |
+| `Alt + ←` | `⌘ + [` | Back | HIGH |
+| `Alt + →` | `⌘ + ]` | Forward | HIGH |
+| `F5` / `Ctrl + R` | `⌘ + R` | Refresh | MEDIUM |
+| `Ctrl + F` | `⌘ + F` | Search in folder | HIGH |
+| `Ctrl + Shift + C` | `⌘ + Option + C` | Copy path | LOW |
+
+### 4. Text Editing (in text editors/inputs)
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + A` | `⌘ + A` | Select all text | HIGH |
+| `Ctrl + C` | `⌘ + C` | Copy text | HIGH |
+| `Ctrl + X` | `⌘ + X` | Cut text | HIGH |
+| `Ctrl + V` | `⌘ + V` | Paste text | HIGH |
+| `Ctrl + Z` | `⌘ + Z` | Undo | HIGH |
+| `Ctrl + Y` | `⌘ + Shift + Z` | Redo | HIGH |
+| `Ctrl + B` | `⌘ + B` | Bold (if rich text) | MEDIUM |
+| `Ctrl + I` | `⌘ + I` | Italic (if rich text) | MEDIUM |
+| `Ctrl + U` | `⌘ + U` | Underline (if rich text) | MEDIUM |
+| `Ctrl + F` | `⌘ + F` | Find in document | HIGH |
+| `Ctrl + H` | `⌘ + Option + F` | Find and replace | MEDIUM |
+| `Ctrl + G` / `F3` | `⌘ + G` | Find next | MEDIUM |
+| `Ctrl + Shift + G` / `Shift + F3` | `⌘ + Shift + G` | Find previous | MEDIUM |
+| `Ctrl + Home` | `⌘ + ↑` | Go to start | MEDIUM |
+| `Ctrl + End` | `⌘ + ↓` | Go to end | MEDIUM |
+| `Ctrl + ←` | `⌥ + ←` | Jump word left | HIGH |
+| `Ctrl + →` | `⌥ + →` | Jump word right | HIGH |
+| `Ctrl + Backspace` | `⌥ + ⌫` | Delete word left | MEDIUM |
+| `Ctrl + Delete` | `⌥ + Delete` | Delete word right | MEDIUM |
+| `Shift + ←/→/↑/↓` | `Shift + ←/→/↑/↓` | Extend selection | HIGH |
+| `Ctrl + Shift + ←/→` | `⌥ + Shift + ←/→` | Select word | HIGH |
+| `Home` | `⌘ + ←` | Go to line start | HIGH |
+| `End` | `⌘ + →` | Go to line end | HIGH |
+
+### 5. Selection & Navigation
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + Click` | `⌘ + Click` | Multi-select items | HIGH |
+| `Shift + Click` | `Shift + Click` | Range select | HIGH |
+| `Ctrl + A` | `⌘ + A` | Select all | HIGH |
+| `Escape` | `Escape` | Deselect / Cancel | HIGH |
+| `Tab` | `Tab` | Focus next element | HIGH |
+| `Shift + Tab` | `Shift + Tab` | Focus previous element | HIGH |
+| `Enter` | `Enter` / `Return` | Activate/Open | HIGH |
+| `Space` | `Space` | Toggle selection | MEDIUM |
+| `↑/↓/←/→` | `↑/↓/←/→` | Navigate items | HIGH |
+| `Page Up` | `Fn + ↑` | Scroll up one page | MEDIUM |
+| `Page Down` | `Fn + ↓` | Scroll down one page | MEDIUM |
+
+### 6. Browser/View Controls
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + +` | `⌘ + +` | Zoom in | MEDIUM |
+| `Ctrl + -` | `⌘ + -` | Zoom out | MEDIUM |
+| `Ctrl + 0` | `⌘ + 0` | Reset zoom | MEDIUM |
+| `Ctrl + Scroll` | `⌘ + Scroll` | Zoom in/out | MEDIUM |
+| `F5` | `⌘ + R` | Refresh/Reload | MEDIUM |
+| `Ctrl + F5` | `⌘ + Shift + R` | Hard refresh | LOW |
+| `Ctrl + P` | `⌘ + P` | Print | LOW |
+| `Ctrl + T` | `⌘ + T` | New tab (if applicable) | MEDIUM |
+| `Ctrl + Tab` | `⌃ + Tab` | Next tab | MEDIUM |
+| `Ctrl + Shift + Tab` | `⌃ + Shift + Tab` | Previous tab | MEDIUM |
+| `Ctrl + 1-9` | `⌘ + 1-9` | Jump to tab number | LOW |
+
+### 7. Quick Actions & Utilities
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + /` | `⌘ + /` | Show keyboard shortcuts | HIGH |
+| `Ctrl + ,` | `⌘ + ,` | Open preferences/settings | HIGH |
+| `Ctrl + K` | `⌘ + K` | Command palette / Quick actions | HIGH |
+| `Ctrl + Shift + P` | `⌘ + Shift + P` | Command palette | MEDIUM |
+| `Print Screen` | `⌘ + Shift + 3` | Screenshot full screen | MEDIUM |
+| `Alt + Print Screen` | `⌘ + Shift + 4` | Screenshot region | MEDIUM |
+| `Win + V` | - | Clipboard history | LOW |
+| `Win + .` | `⌘ + ⌃ + Space` | Emoji picker | LOW |
+| `Ctrl + Space` | `⌘ + Space` | Quick launcher / Spotlight | HIGH |
+
+### 8. Media Controls (in Media apps)
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Space` | `Space` | Play/Pause | HIGH |
+| `K` | `K` | Play/Pause (alternative) | MEDIUM |
+| `←` | `←` | Rewind 5s | HIGH |
+| `→` | `→` | Forward 5s | HIGH |
+| `J` | `J` | Rewind 10s | MEDIUM |
+| `L` | `L` | Forward 10s | MEDIUM |
+| `↑` | `↑` | Volume up | HIGH |
+| `↓` | `↓` | Volume down | HIGH |
+| `M` | `M` | Mute/Unmute | HIGH |
+| `F` | `F` | Toggle fullscreen | HIGH |
+| `0-9` | `0-9` | Jump to % (0=0%, 5=50%, 9=90%) | MEDIUM |
+| `,` | `,` | Previous frame | LOW |
+| `.` | `.` | Next frame | LOW |
+| `Home` | `Home` | Jump to start | MEDIUM |
+| `End` | `End` | Jump to end | MEDIUM |
+
+### 9. App-Specific Shortcuts
+
+#### Files App
+| Shortcut (Win) | Shortcut (Mac) | Action |
+|----------------|----------------|--------|
+| `Ctrl + 1` | `⌘ + 1` | List view |
+| `Ctrl + 2` | `⌘ + 2` | Grid view |
+| `Ctrl + 3` | `⌘ + 3` | Column view |
+| `Ctrl + L` | `⌘ + L` | Focus address bar |
+| `Ctrl + Shift + F` | `⌘ + Shift + F` | Global file search |
+
+#### Settings App
+| Shortcut (Win) | Shortcut (Mac) | Action |
+|----------------|----------------|--------|
+| `Ctrl + Tab` | `⌃ + Tab` | Next settings tab |
+| `Ctrl + Shift + Tab` | `⌃ + Shift + Tab` | Previous settings tab |
+| `Ctrl + F` | `⌘ + F` | Search settings |
+
+#### Task Manager App
+| Shortcut (Win) | Shortcut (Mac) | Action |
+|----------------|----------------|--------|
+| `Ctrl + Shift + Esc` | `⌘ + Option + Esc` | Open Task Manager |
+| `Delete` | `⌘ + Delete` | End/Cancel selected task |
+| `Ctrl + R` | `⌘ + R` | Retry failed task |
+
+#### Text Editor/Notes App (quno)
+| Shortcut (Win) | Shortcut (Mac) | Action |
+|----------------|----------------|--------|
+| `Ctrl + N` | `⌘ + N` | New note |
+| `Ctrl + S` | `⌘ + S` | Save note |
+| `Ctrl + Shift + S` | `⌘ + Shift + S` | Save as |
+| `Ctrl + E` | `⌘ + E` | Export note |
+| `Ctrl + /` | `⌘ + /` | Toggle checkbox |
+
+#### Game Shortcuts (Tic-Tac-Toe, etc.)
+| Shortcut (Win) | Shortcut (Mac) | Action |
+|----------------|----------------|--------|
+| `Ctrl + N` | `⌘ + N` | New game |
+| `Ctrl + Z` | `⌘ + Z` | Undo move |
+| `R` | `R` | Restart game |
+| `H` | `H` | Hint |
+| `Escape` | `Escape` | Pause/Menu |
+
+### 10. Accessibility Shortcuts
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + +` / `-` | `⌘ + +` / `-` | Increase/decrease text size | MEDIUM |
+| `Ctrl + Shift + H` | `⌘ + Option + H` | Toggle high contrast | LOW |
+| `Alt + Shift + K` | `⌃ + ⌥ + ⌘ + K` | Show accessibility options | LOW |
+
+### 11. Developer Shortcuts (optional)
+
+| Shortcut (Win) | Shortcut (Mac) | Action | Priority |
+|----------------|----------------|--------|----------|
+| `Ctrl + Shift + P` | `⌘ + Shift + P` | Toggle Profiler app | MEDIUM |
+| `F12` | `⌘ + Option + I` | Open DevTools | LOW |
+| `Ctrl + Shift + I` | `⌘ + Option + I` | Open DevTools | LOW |
+| `Ctrl + Shift + J` | `⌘ + Option + J` | Open Console | LOW |
+| `Ctrl + Shift + C` | `⌘ + Option + C` | Inspect element | LOW |
+| `Ctrl + Alt + R` | `⌘ + Option + R` | Toggle render highlighting | LOW |
+| `Ctrl + Alt + F` | `⌘ + Option + F` | Show FPS overlay | LOW |
+
+---
+
+### Implementation Priorities
+
+**Phase 1 (MVP)** - HIGH Priority:
+- Basic window management (close, minimize, maximize, snap)
+- File operations (copy, paste, cut, delete, rename)
+- Text editing basics (undo, redo, select all)
+- Navigation (tab, enter, escape, arrows)
+- Window switching (Alt+Tab)
+- Core app launchers (Ctrl+Shift+Esc, Win+E, Win+I)
+
+**Phase 2** - MEDIUM Priority:
+- Advanced window management (Alt+Space menu, restore)
+- Media controls
+- Search and find operations
+- Tab navigation
+- View controls (zoom)
+- Advanced file operations (properties, back/forward)
+
+**Phase 3** - LOW Priority:
+- System utilities (lock screen, clipboard history)
+- Accessibility shortcuts
+- Developer tools
+- Emoji picker
+- Screenshot tools
+- App-specific advanced shortcuts
+
+### Technical Implementation Notes
+
+```typescript
+// Example: Keyboard shortcut system
+interface Shortcut {
+  id: string;
+  keys: string[]; // e.g., ['ctrl', 'shift', 'esc']
+  macKeys?: string[]; // e.g., ['cmd', 'option', 'esc']
+  action: () => void;
+  description: string;
+  category: 'window' | 'file' | 'system' | 'text' | 'app';
+  enabled: boolean;
+  global: boolean; // Works even when window not focused
+  priority: 'high' | 'medium' | 'low';
+}
+
+// Keyboard event handler
+const handleKeyDown = (e: KeyboardEvent) => {
+  const keys = [
+    e.ctrlKey && 'ctrl',
+    e.altKey && 'alt',
+    e.shiftKey && 'shift',
+    e.metaKey && 'meta',
+    e.key.toLowerCase()
+  ].filter(Boolean);
+  
+  const shortcut = findMatchingShortcut(keys);
+  if (shortcut && shortcut.enabled) {
+    e.preventDefault();
+    shortcut.action();
+  }
+};
+
+// Settings integration
+interface ShortcutSettings {
+  customShortcuts: Record<string, string[]>;
+  disabledShortcuts: string[];
+  showShortcutHints: boolean;
+}
+```
+
+### Shortcut Conflicts Resolution
+- System shortcuts (Ctrl+C, Ctrl+V) always take precedence
+- App-specific shortcuts only work when app is focused
+- Global shortcuts (Alt+Tab) work everywhere
+- Allow users to customize non-system shortcuts
+- Warn on conflicts when customizing
+- Provide "Reset to defaults" option
+
+### Keyboard Shortcut Discovery
+- [ ] Show shortcuts in context menus (e.g., "Copy    Ctrl+C")
+- [ ] Tooltips show relevant shortcuts
+- [ ] Press `Ctrl+/` or `F1` to show shortcut cheat sheet
+- [ ] First-time tutorial highlights key shortcuts
+- [ ] Search shortcuts in settings
+- [ ] Group shortcuts by category in help dialog
 
 ### 7.6 Personalization & Customization
 
@@ -806,6 +1255,7 @@ Complex State (Workspace):
 6. Static-utils imports
 7. Notification system
 8. Better icons/design
+9. Profiler app (developer tool)
 
 ### Nice to Have
 1. Work hours tracker

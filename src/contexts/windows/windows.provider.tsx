@@ -4,24 +4,54 @@ import {
   WindowsActionsContext,
   WindowsContainerContext,
   WindowsContext,
+  WindowsFlagsContext,
   type WindowsContainerContextProps,
 } from "./windows.context";
 import { getElementBounds } from "./windows.helpers";
 import { useWindows } from "./windows.hooks";
 import { windowsReducer } from "./windows.reducer";
 import { Order } from "@/lib/order";
-import type { WindowId } from "./windows.type";
+import type { WindowId, WindowsFlag } from "./windows.type";
+import { Flags } from "@/lib/flags";
 
 export const WindowsProvider = ({ children }: React.PropsWithChildren) => {
   const [windows, dispatch] = React.useReducer(windowsReducer, {
+    flags: new Flags<WindowsFlag>(),
     index: {},
     order: new Order<WindowId>(),
   });
 
+  // INSERT_YOUR_CODE
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Example: handle ctrl + arrow keys globally for window management
+      if (e.altKey) {
+        switch (e.key) {
+          case "ArrowDown":
+            dispatch({ type: "MINIMIZE_ALL_WINDOWS" });
+            e.preventDefault();
+            break;
+          case "ArrowUp":
+            dispatch({ type: "RESTORE_ALL_WINDOWS" });
+            e.preventDefault();
+            break;
+          default:
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dispatch]);
+
   return (
-    <WindowsActionsContext.Provider value={dispatch}>
-      <WindowsContext.Provider value={windows}>{children}</WindowsContext.Provider>
-    </WindowsActionsContext.Provider>
+    <WindowsFlagsContext.Provider value={windows.flags}>
+      <WindowsActionsContext.Provider value={dispatch}>
+        <WindowsContext.Provider value={windows}>{children}</WindowsContext.Provider>
+      </WindowsActionsContext.Provider>
+    </WindowsFlagsContext.Provider>
   );
 };
 
