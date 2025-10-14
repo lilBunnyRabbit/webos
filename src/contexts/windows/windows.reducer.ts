@@ -15,10 +15,10 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
         id,
         flags: action.defaults?.flags ? action.defaults.flags.clone() : new Flags(),
         createdAt: new Date(),
+        snapZone: action.defaults?.snapZone ?? null,
         config: {
           size,
           position: calculateWindowPosition(size, state.order.size),
-          snapZone: action.defaults?.snapZone ?? null,
         },
         app: action.app,
       };
@@ -134,7 +134,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
           ...state.index,
           [action.windowId]: {
             ...window,
-            config: { ...window.config, snapZone: action.snapZone },
+            snapZone: action.snapZone
           },
         },
       };

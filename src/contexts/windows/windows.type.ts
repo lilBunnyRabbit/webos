@@ -34,10 +34,10 @@ export interface WindowInstance {
   app: AppInstance;
   createdAt: Date;
   flags: Flags<WindowFlag>;
+  snapZone: SnapZone;
   config: {
     position: Position;
     size: Dimensions;
-    snapZone: SnapZone;
   };
 }
 

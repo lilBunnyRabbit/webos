@@ -92,9 +92,9 @@ export const WindowProvider = ({
   }, [position, size, bounds]);
 
   const snapLocation = React.useMemo(() => {
-    if (!instance.config.snapZone) return null;
-    return calculateSnapPositionPreview(instance.config.snapZone);
-  }, [instance.config.snapZone]);
+    if (!instance.snapZone) return null;
+    return calculateSnapPositionPreview(instance.snapZone);
+  }, [instance.snapZone]);
 
   return (
     <>

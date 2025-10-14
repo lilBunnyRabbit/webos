@@ -50,9 +50,9 @@ export function ResizeHandlers({ instance, size, setSize, position, setPosition 
       },
     };
 
-    if (instance.config.snapZone) {
+    if (instance.snapZone) {
       dispatch({ type: "SET_SNAP_ZONE", windowId: instance.id, snapZone: null });
-      const { x, y, width, height } = calculateSnapPosition(instance.config.snapZone, bounds);
+      const { x, y, width, height } = calculateSnapPosition(instance.snapZone, bounds);
       startState.size = { width, height };
       startState.position = { x, y };
       setSize({ width, height });

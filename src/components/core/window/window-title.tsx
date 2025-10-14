@@ -69,7 +69,7 @@ export function WindowTitle({ instance }: WindowTitleProps) {
       // Detect snap zone based on cursor position
       setSnapZone(detectSnapZone(position, bounds));
 
-      if (instance.config.snapZone) {
+      if (instance.snapZone) {
         // Adjust drag offset based on the restored window size (size before snap/maximize)
         dragOffsetRef.current.x = dragOffsetRef.current.xPercent * size.width;
 
@@ -83,7 +83,7 @@ export function WindowTitle({ instance }: WindowTitleProps) {
         })
       );
     },
-    [isDragging, setSnapZone, bounds, instance.config.snapZone, instance.id, setPosition, size, dispatch]
+    [isDragging, setSnapZone, bounds, instance, setPosition, size, dispatch]
   );
 
   const handleMouseUp = React.useCallback(() => {
