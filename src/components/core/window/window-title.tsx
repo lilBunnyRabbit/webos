@@ -8,7 +8,7 @@ import {
   type WindowInstance,
 } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
-import { Copy, Minus, RotateCcw, Square, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Copy, Minus, Square, X, ZoomIn, ZoomOut } from "lucide-react";
 import React from "react";
 
 interface WindowTitleProps {
@@ -153,7 +153,25 @@ export function WindowTitle({ instance }: WindowTitleProps) {
           >
             <ZoomOut className="w-3 h-3" />
           </button>
-          <span className="text-xs text-background min-w-[2rem] text-center">{Math.round(zoom * 100)}%</span>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onFocus={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setZoom(1);
+            }}
+            title="Reset Zoom (Ctrl+0)"
+            className="text-xs text-background min-w-[2rem] text-center"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
           <button
             onMouseDown={(e) => {
               e.preventDefault();
@@ -172,25 +190,6 @@ export function WindowTitle({ instance }: WindowTitleProps) {
             title="Zoom In (Ctrl++)"
           >
             <ZoomIn className="w-3 h-3" />
-          </button>
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onFocus={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setZoom(1);
-            }}
-            className="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors"
-            title="Reset Zoom (Ctrl+0)"
-          >
-            <RotateCcw className="w-3 h-3" />
           </button>
         </div>
 

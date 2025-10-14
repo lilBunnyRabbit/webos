@@ -1,24 +1,30 @@
 import { useWindows, useWindowsActions, WindowFlag } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
-import { PanelBottom, PanelBottomCloseIcon, PanelLeft } from "lucide-react";
+import { PanelBottomCloseIcon } from "lucide-react";
 import { StartMenu } from "./start-menu";
+import { useSettingsStore } from "@/stores/settings.store";
 
-interface TaskbarProps {
-  orientation?: "horizontal" | "vertical";
-  onToggleOrientation?: () => void;
-}
-
-export function Taskbar({ orientation = "vertical", onToggleOrientation }: TaskbarProps) {
+export function Taskbar() {
   const { index, order } = useWindows();
   const dispatch = useWindowsActions();
+  const taskbarPosition = useSettingsStore((state) => state.taskbar.position);
+
+  // Determine orientation based on position
+  const orientation = taskbarPosition === "left" || taskbarPosition === "right" ? "vertical" : "horizontal";
 
   return (
     <div
       className={cn(
         "grid bg-background backdrop-blur-xl shadow-2xl py-1 px-2 border-foreground/40 gap-2",
         orientation === "vertical"
-          ? "grid-columns-1 grid-rows-[min-content_min-content_1fr_min-content_min-content] border-r"
-          : "grid-cols-[min-content_min-content_1fr_min-content_min-content] grid-rows-1 border-t"
+          ? "grid-columns-1 grid-rows-[min-content_min-content_1fr_min-content_min-content]"
+          : "grid-cols-[min-content_min-content_1fr_min-content_min-content] grid-rows-1",
+        {
+          bottom: "border-t",
+          left: "border-r",
+          right: "border-l",
+          top: "border-b",
+        }[taskbarPosition]
       )}
     >
       {/* Start Menu */}
@@ -93,20 +99,6 @@ export function Taskbar({ orientation = "vertical", onToggleOrientation }: Taskb
         >
           <PanelBottomCloseIcon className="w-6 h-6 text-foreground" />
         </button>
-
-        {onToggleOrientation && (
-          <button
-            className="flex items-center justify-center hover:bg-primary/10 active:bg-primary/20 transition-colors rounded-sm w-10 h-10"
-            onClick={onToggleOrientation}
-            title={`Switch to ${orientation === "vertical" ? "horizontal" : "vertical"} taskbar`}
-          >
-            {orientation === "vertical" ? (
-              <PanelBottom className="size-6 text-foreground" />
-            ) : (
-              <PanelLeft className="size-6 text-foreground" />
-            )}
-          </button>
-        )}
       </div>
     </div>
   );

@@ -1,3 +1,6 @@
+import { cn } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings.store";
+import { LayoutDashboard, Palette, RotateCcw } from "lucide-react";
 import React from "react";
 
 const presets: [background: string, foreground: string, primary: string, secondary: string, accent: string][] = [
@@ -79,40 +82,70 @@ const DEFAULT_LIGHT = {
   accent: "#d97706",
 };
 
+type Section = "theme" | "taskbar";
 
 export default function SettingsApp() {
+  const reset = useSettingsStore((state) => state.reset);
+  const [activeSection, setActiveSection] = React.useState<Section>("theme");
+
   React.useEffect(() => {
     console.log("~~~~~~~~~~~~~~~ SettingsApp mounted");
   }, []);
 
-  // Helper to get current CSS variable values
-  function getCurrentColors() {
-    return {
-      background: getComputedStyle(document.documentElement).getPropertyValue("--background").trim(),
-      foreground: getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim(),
-      primary: getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
-      secondary: getComputedStyle(document.documentElement).getPropertyValue("--secondary").trim(),
-      accent: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim(),
-    };
-  }
+  return (
+    <div className="flex h-full">
+      {/* Sidebar */}
+      <aside className="w-48 border-r border-foreground/20 bg-background/50">
+        <nav className="p-2 space-y-1">
+          <button
+            onClick={() => setActiveSection("theme")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              activeSection === "theme"
+                ? "bg-primary/20 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+            )}
+          >
+            <Palette className="w-4 h-4" />
+            Theme
+          </button>
+          <button
+            onClick={() => setActiveSection("taskbar")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              activeSection === "taskbar"
+                ? "bg-primary/20 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+            )}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Taskbar
+          </button>
+          <button
+            onClick={() => {
+              reset();
+              useSettingsStore.persist.clearStorage();
+            }}
+            className="w-full text-accent hover:bg-accent/20 flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset Settings
+          </button>
+        </nav>
+      </aside>
 
-  const [colors, setColors] = React.useState(getCurrentColors);
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
+        {activeSection === "theme" && <ThemeSection />}
+        {activeSection === "taskbar" && <TaskbarSection />}
+      </main>
+    </div>
+  );
+}
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setColors((prev) => {
-      const updated = { ...prev, [name]: value };
-      document.documentElement.style.setProperty(`--${name}`, value);
-      return updated;
-    });
-  }
-
-  function applyTheme(theme: typeof DEFAULT_LIGHT) {
-    setColors(theme);
-    Object.entries(theme).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(`--${key}`, value);
-    });
-  }
+function ThemeSection() {
+  const theme = useSettingsStore((state) => state.theme);
+  const setTheme = useSettingsStore((state) => state.setTheme);
 
   function presetToTheme(preset: (typeof presets)[0]): typeof DEFAULT_LIGHT {
     return {
@@ -126,44 +159,45 @@ export default function SettingsApp() {
 
   function handlePresetClick(preset: (typeof presets)[0]) {
     const theme = presetToTheme(preset);
-    applyTheme(theme);
+    setTheme(theme);
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <form className="space-y-3">
-        {Object.entries(colors).map(([key, value]) => (
-          <div key={key} className="flex items-center gap-3">
-            <label htmlFor={key} className="w-28 capitalize">
-              {key}
-            </label>
-            <input
-              id={key}
-              name={key}
-              type="text"
-              value={value}
-              onChange={handleChange}
-              className="border border-foreground/30 rounded px-2 py-1 flex-1"
-              style={{
-                background: key === "background" ? value : undefined,
-                color: key === "foreground" ? value : undefined,
-              }}
-            />
-            <input
-              type="color"
-              defaultValue={value.startsWith("#") ? value : ""}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onChange={(e) => handleChange({ target: { name: key, value: e.target.value } } as any)}
-              className="w-8 h-8 border border-foreground/30 rounded"
-              // disabled={!/^#([0-9A-Fa-f]{3}){1,2}$/.test(value)}
-              title="Pick color"
-            />
-          </div>
-        ))}
-      </form>
+    <div className="p-6 space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Theme Colors</h2>
+        <form className="space-y-3">
+          {Object.entries(theme).map(([key, value]) => (
+            <div key={key} className="flex items-center gap-3">
+              <label htmlFor={key} className="w-28 capitalize text-sm">
+                {key}
+              </label>
+              <input
+                id={key}
+                name={key}
+                type="text"
+                value={value}
+                onChange={(e) => setTheme({ [key]: e.target.value })}
+                className="border border-foreground/30 rounded px-2 py-1 flex-1 text-sm bg-background"
+                style={{
+                  background: key === "background" ? value : undefined,
+                  color: key === "foreground" ? value : undefined,
+                }}
+              />
+              <input
+                type="color"
+                defaultValue={value.startsWith("#") ? value : "#000000"}
+                onChange={(e) => setTheme({ [key]: e.target.value })}
+                className="w-8 h-8 border border-foreground/30 rounded cursor-pointer"
+                title="Pick color"
+              />
+            </div>
+          ))}
+        </form>
+      </div>
 
-      <div className="mt-6">
-        <h3 className="text-md font-semibold mb-2">Presets</h3>
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Presets</h2>
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
           {presets.map((preset, i) => (
             <button
@@ -183,6 +217,42 @@ export default function SettingsApp() {
                   }}
                 />
               ))}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskbarSection() {
+  const taskbar = useSettingsStore((state) => state.taskbar);
+  const setTaskbar = useSettingsStore((state) => state.setTaskbar);
+
+  const positions: Array<{ value: "left" | "right" | "top" | "bottom"; label: string }> = [
+    { value: "top", label: "Top" },
+    { value: "bottom", label: "Bottom" },
+    { value: "left", label: "Left" },
+    { value: "right", label: "Right" },
+  ];
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Taskbar Position</h2>
+        <div className="grid grid-cols-2 gap-3 max-w-md">
+          {positions.map((pos) => (
+            <button
+              key={pos.value}
+              onClick={() => setTaskbar({ position: pos.value })}
+              className={cn(
+                "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200",
+                taskbar.position === pos.value
+                  ? "border-primary bg-primary/20 text-primary font-medium"
+                  : "border-foreground/20 hover:border-foreground/40 hover:bg-foreground/5"
+              )}
+            >
+              {pos.label}
             </button>
           ))}
         </div>
