@@ -5,3 +5,4 @@
 - [ ] adding apps to desktop
 - [x] typesafe app config
 - [x] open app with props
+- [ ] App tags - game, etc

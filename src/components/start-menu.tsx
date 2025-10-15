@@ -8,7 +8,6 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
 import { CalculatorIcon, GlobeIcon, ImageIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
@@ -98,7 +97,10 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent showCloseButton={false} className="p-0 bg-background rounded-lg border border-foreground/40 h-[50dvh] overflow-hidden w-full !max-w-3xl">
+      <DialogContent
+        showCloseButton={false}
+        className="p-0 bg-background rounded-lg border border-foreground/40 h-[50dvh] overflow-hidden w-full !max-w-3xl"
+      >
         <Command className="h-full">
           <CommandInput placeholder="Search applications..." />
           <CommandList className="max-h-full">
