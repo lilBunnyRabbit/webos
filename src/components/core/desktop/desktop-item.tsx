@@ -101,11 +101,11 @@ export const DesktopItem = ({
       // Calculate new grid position based on mouse position & grid cell size (64px)
       const newGridX = Math.max(
         0,
-        Math.min(Math.floor(x / container.cell.width), Math.floor(container.bounds.width / container.cell.width) - 1)
+        Math.min(Math.floor(x / container.cell.width), Math.floor(container.bounds.width / container.cell.width))
       );
       const newGridY = Math.max(
         0,
-        Math.min(Math.floor(y / container.cell.height), Math.floor(container.bounds.height / container.cell.height) - 1)
+        Math.min(Math.floor(y / container.cell.height), Math.floor(container.bounds.height / container.cell.height))
       );
 
       setGridDimensions({

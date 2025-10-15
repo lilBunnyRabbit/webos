@@ -13,6 +13,7 @@ import { useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
 import { CalculatorIcon, GlobeIcon, ImageIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 
 // System apps that should appear at the bottom
 const SYSTEM_APP_IDS = ["settings"];
@@ -95,18 +96,12 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent
-        className="p-0 w-96 bg-background rounded border border-foreground/40"
-        align="start"
-        side="top"
-        alignOffset={-6}
-        sideOffset={16}
-      >
-        <Command>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent showCloseButton={false} className="p-0 bg-background rounded-lg border border-foreground/40 h-[50dvh] overflow-hidden w-full !max-w-3xl">
+        <Command className="h-full">
           <CommandInput placeholder="Search applications..." />
-          <CommandList>
+          <CommandList className="max-h-full">
             <CommandEmpty>No applications found.</CommandEmpty>
 
             {/* Alphabetically Grouped Applications */}
@@ -161,7 +156,7 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
             )}
           </CommandList>
         </Command>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }
