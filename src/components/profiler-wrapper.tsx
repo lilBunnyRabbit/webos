@@ -8,7 +8,7 @@ interface ProfilerWrapperProps {
   appId: AppId;
   children: React.ReactNode;
 }
-
+// TODO: this doesnt work in production
 export const ProfilerWrapper = ({ windowId, appId, children }: ProfilerWrapperProps) => {
   const flags = useWindowsFlags();
 

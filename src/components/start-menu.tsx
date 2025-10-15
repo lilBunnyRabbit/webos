@@ -11,7 +11,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
-import { CalculatorIcon, GlobeIcon, ImageIcon, LayoutGridIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
+import { CalculatorIcon, GlobeIcon, ImageIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 // System apps that should appear at the bottom
@@ -27,7 +27,7 @@ const DUMMY_APPS = [
   { id: "videos", name: "Videos", icon: VideoIcon, disabled: true },
 ];
 
-export function StartMenu() {
+export function StartMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { open: openApp } = useApps();
 
@@ -96,22 +96,12 @@ export function StartMenu() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className={cn(
-            "flex items-center justify-center hover:bg-primary/10 active:bg-primary/20 transition-colors rounded-sm w-10 h-10",
-            open && "bg-primary/20"
-          )}
-          title="Start"
-        >
-          <LayoutGridIcon className="w-6 h-6 text-primary" />
-        </button>
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         className="p-0 w-96 bg-background rounded border border-foreground/40"
         align="start"
         side="top"
-        alignOffset={2}
+        alignOffset={-6}
         sideOffset={16}
       >
         <Command>

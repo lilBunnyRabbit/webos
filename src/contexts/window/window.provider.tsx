@@ -104,7 +104,7 @@ export const WindowProvider = ({
             ref={ref}
             data-window-id={instance.id}
             onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
-            className={cn("absolute overflow-hidden", className, isMinimized && "hidden")}
+            className={cn("absolute overflow-hidden pointer-events-auto", className, isMinimized && "hidden")}
             style={{
               ...(isMaximized
                 ? {

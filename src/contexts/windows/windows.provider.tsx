@@ -60,9 +60,11 @@ export const WINDOWS_CONTAINER_ID = "desktop";
 export const WindowsContainerProvider = ({
   children,
   className,
+  style,
 }: {
   children?: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,7 @@ export const WindowsContainerProvider = ({
 
   return (
     <WindowsContainerContext.Provider value={bounds}>
-      <div ref={ref} id={WINDOWS_CONTAINER_ID} className={className}>
+      <div ref={ref} id={WINDOWS_CONTAINER_ID} className={className} style={style}>
         {children}
         <WindowsRenderer />
       </div>

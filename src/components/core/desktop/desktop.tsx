@@ -2,6 +2,7 @@ import Apps, { type AppId } from "@/apps";
 import { type Bounds, type Dimensions } from "@/contexts/windows";
 import React, { useState } from "react";
 import { DesktopItem } from "./desktop-item";
+import { cn } from "@/lib/utils";
 
 export interface DesktopItemConfig {
   appId: AppId;
@@ -11,7 +12,7 @@ export interface DesktopItemConfig {
 
 export const CELL_SIZE = 64;
 
-export const Desktop = () => {
+export const Desktop = ({ className }: { className?: string }) => {
   const [container, setContainer] = useState<{
     bounds: Bounds;
     cell: Dimensions;
@@ -64,7 +65,7 @@ export const Desktop = () => {
   return (
     <div
       ref={ref}
-      className="grid w-full h-full overflow-hidden bg-background-dark place-items-center"
+      className={cn("grid w-full h-full overflow-hidden bg-background-dark place-items-center", className)}
       style={{
         gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(64px, 1fr))`,
         gridTemplateRows: `repeat(${gridDimensions.rows}, minmax(64px, 1fr))`,
