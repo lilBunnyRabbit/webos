@@ -6,3 +6,6 @@
 - [x] typesafe app config
 - [x] open app with props
 - [ ] App tags - game, etc
+- [x] App throwing in pwa when new version
+- [ ] broken app grid
+- [ ] pinning apps
