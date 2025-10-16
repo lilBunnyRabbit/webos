@@ -1,10 +1,12 @@
 import type { WindowDefaults } from "@/contexts/windows";
 import { ImageIcon } from "lucide-react";
 import React from "react";
+import type { AppTag } from "@/contexts/apps";
 
 export const ID = "media-preview";
 export const NAME = "Media Preview";
 export const ICON = ImageIcon;
+export const TAGS: AppTag[] = ["utility"];
 
 export const WINDOW_CONFIG: WindowDefaults = {
   size: {

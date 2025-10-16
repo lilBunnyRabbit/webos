@@ -8,33 +8,75 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { useApps } from "@/contexts/apps";
+import { AppTag, useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
 import { useDesktopStore } from "@/stores/desktop.store";
 import {
-  CalculatorIcon,
-  GlobeIcon,
+  ActivityIcon,
+  BookOpenIcon,
+  BrainIcon,
+  CircleDotIcon,
+  ClockIcon,
+  DownloadIcon,
+  FileTextIcon,
+  GridIcon,
   ImageIcon,
-  MailIcon,
-  MusicIcon,
+  PackageIcon,
+  PaletteIcon,
   PinIcon,
   PinOffIcon,
+  PuzzleIcon,
+  SearchIcon,
+  Share2Icon,
+  SquareIcon,
+  TerminalIcon,
+  TvIcon,
   VideoIcon,
+  WandIcon,
+  ZapIcon,
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 
-// System apps that should appear at the bottom
-const SYSTEM_APP_IDS = ["settings"];
+// Tag display labels
+const TAG_LABELS: Record<string, string> = {
+  [AppTag.UTILITY]: "Utilities",
+  [AppTag.GAME]: "Games",
+  [AppTag.SYSTEM]: "System",
+};
 
-// Dummy disabled apps for demonstration
-const DUMMY_APPS = [
-  { id: "browser", name: "Browser", icon: GlobeIcon, disabled: true },
-  { id: "calculator", name: "Calculator", icon: CalculatorIcon, disabled: true },
-  { id: "mail", name: "Mail", icon: MailIcon, disabled: true },
-  { id: "photos", name: "Photos", icon: ImageIcon, disabled: true },
-  { id: "music", name: "Music", icon: MusicIcon, disabled: true },
-  { id: "videos", name: "Videos", icon: VideoIcon, disabled: true },
+const COMING_SOON_APPS = [
+  // Productivity & Utilities
+  { id: "notes", name: "Quick Notes", icon: FileTextIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "speed-reader", name: "Speed Reader", icon: BookOpenIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "work-hours", name: "Work Hours", icon: ClockIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "color-tools", name: "Color Tools", icon: PaletteIcon, disabled: true, tags: [AppTag.UTILITY] },
+
+  // Media & Tools
+  { id: "series-tracker", name: "Series Tracker", icon: TvIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "image-editor", name: "Image Editor", icon: ImageIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "video-editor", name: "Video Editor", icon: VideoIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "gif-maker", name: "GIF Maker", icon: WandIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "pdf-tools", name: "PDF Tools", icon: FileTextIcon, disabled: true, tags: [AppTag.UTILITY] },
+
+  // Advanced Tools
+  { id: "compression", name: "Compression", icon: PackageIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "file-transfer", name: "File Transfer", icon: Share2Icon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "downloader", name: "Downloader", icon: DownloadIcon, disabled: true, tags: [AppTag.UTILITY] },
+  { id: "rng-tools", name: "RNG Tools", icon: ZapIcon, disabled: true, tags: [AppTag.UTILITY] },
+
+  // Games
+  { id: "nonogram", name: "Nonogram", icon: GridIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "kakuro", name: "Kakuro", icon: PuzzleIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "word-search", name: "Word Search", icon: SearchIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "maze", name: "Maze", icon: SquareIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "sudoku", name: "Sudoku", icon: GridIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "minesweeper", name: "Minesweeper", icon: CircleDotIcon, disabled: true, tags: [AppTag.GAME] },
+  { id: "chess", name: "Chess", icon: BrainIcon, disabled: true, tags: [AppTag.GAME] },
+
+  // System
+  { id: "task-manager", name: "Task Manager", icon: ActivityIcon, disabled: true, tags: [AppTag.SYSTEM] },
+  { id: "terminal", name: "Terminal", icon: TerminalIcon, disabled: true, tags: [AppTag.SYSTEM] },
 ];
 
 export function StartMenu({ children }: { children: React.ReactNode }) {
@@ -58,62 +100,68 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Separate and sort apps, grouped by first letter
-  const { groupedApps, systemApps } = useMemo(() => {
+  // Group apps by tags
+  const groupedAppsByTag = useMemo(() => {
     type AppEntry = {
       id: string;
       name: string;
       icon: React.ComponentType<{ className?: string }>;
       disabled?: boolean;
+      tags: readonly string[];
     };
 
-    const regular: AppEntry[] = [];
-    const system: AppEntry[] = [];
+    // Collect all apps (real + dummy)
+    const allApps: AppEntry[] = [];
 
     // Add real apps
     Object.entries(Apps).forEach(([appId, appConfig]) => {
-      const entry: AppEntry = {
+      allApps.push({
         id: appId,
         name: appConfig.NAME,
         icon: appConfig.ICON,
         disabled: false,
-      };
-
-      if (SYSTEM_APP_IDS.includes(appId)) {
-        system.push(entry);
-      } else {
-        regular.push(entry);
-      }
+        tags: appConfig.TAGS || [],
+      });
     });
 
     // Add dummy apps
-    DUMMY_APPS.forEach((dummyApp) => {
-      regular.push({
+    COMING_SOON_APPS.forEach((dummyApp) => {
+      allApps.push({
         id: dummyApp.id,
         name: dummyApp.name,
         icon: dummyApp.icon,
         disabled: dummyApp.disabled,
+        tags: dummyApp.tags,
       });
     });
 
-    // Sort alphabetically by name
-    regular.sort((a, b) => a.name.localeCompare(b.name));
-    system.sort((a, b) => a.name.localeCompare(b.name));
+    // Group apps by tag
+    const groupedByTag = new Map<string, AppEntry[]>();
 
-    // Group regular apps by first letter
-    const grouped = new Map<string, AppEntry[]>();
-    regular.forEach((app) => {
-      const firstLetter = app.name.charAt(0).toUpperCase();
-      if (!grouped.has(firstLetter)) {
-        grouped.set(firstLetter, []);
-      }
-      grouped.get(firstLetter)!.push(app);
+    allApps.forEach((app) => {
+      // An app can have multiple tags, add it to each tag group
+      app.tags.forEach((tag) => {
+        if (!groupedByTag.has(tag)) {
+          groupedByTag.set(tag, []);
+        }
+        groupedByTag.get(tag)!.push(app);
+      });
     });
 
-    // Convert to sorted array of entries
-    const sortedGroups = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    // Sort apps within each tag group alphabetically
+    groupedByTag.forEach((apps) => {
+      apps.sort((a, b) => a.name.localeCompare(b.name));
+    });
 
-    return { groupedApps: sortedGroups, systemApps: system };
+    // Return ordered groups based on AppTag key order
+    const tagOrder = Object.values(AppTag);
+    return tagOrder
+      .map((tag) => ({
+        tag,
+        label: TAG_LABELS[tag] || tag,
+        apps: groupedByTag.get(tag) || [],
+      }))
+      .filter((group) => group.apps.length > 0);
   }, []);
 
   return (
@@ -121,91 +169,73 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="p-0 bg-background rounded-lg border border-foreground/40 h-[50dvh] overflow-hidden w-full !max-w-3xl"
+        className="p-0 bg-foreground rounded-lg border-2 border-foreground shadow-2xl h-[60dvh] overflow-hidden w-full !max-w-4xl"
       >
-        <Command className="h-full">
-          <CommandInput placeholder="Search applications..." />
-          <CommandList className="max-h-full">
+        <Command className="h-full bg-transparent">
+          <CommandInput placeholder="Search applications..." className={{ input: "text-base", root: "bg-foreground text-background shrink-0" }} />
+          <CommandList className="max-h-full px-2 pb-2 bg-background rounded-t-sm">
             <CommandEmpty>No applications found.</CommandEmpty>
 
-            {/* Alphabetically Grouped Applications */}
-            {groupedApps.map(([letter, apps]) => (
-              <CommandGroup key={letter} heading={letter}>
-                {apps.map((app) => {
-                  const IconComponent = app.icon;
-                  const isDisabled = app.disabled;
-                  const isOnDesktop = !isDisabled && !!desktopItems[app.id as AppId];
+            {/* Applications Grouped by Tags */}
+            {groupedAppsByTag.map((group, index) => (
+              <React.Fragment key={group.tag}>
+                {index > 0 && <CommandSeparator className="my-2" />}
+                <CommandGroup heading={group.label} className="mb-2">
+                  {group.apps.map((app) => {
+                    const IconComponent = app.icon;
+                    const isDisabled = app.disabled;
+                    const isOnDesktop = !isDisabled && !!desktopItems[app.id as AppId];
 
-                  return (
-                    <CommandItem
-                      key={app.id}
-                      value={`${app.id} ${app.name}`}
-                      onSelect={() => !isDisabled && handleOpenApp(app.id as AppId)}
-                      disabled={isDisabled}
-                      className={cn(!isDisabled && "cursor-pointer")}
-                    >
-                      <IconComponent className={cn(isDisabled ? "text-muted-foreground" : "text-primary")} />
-                      <span className={cn(isDisabled && "text-muted-foreground")}>{app.name}</span>
-                      {isDisabled && <span className="ml-auto text-xs text-muted-foreground italic">Coming soon</span>}
-                      {!isDisabled && (
-                        <button
-                          className="ml-auto hover:bg-accent/20 p-1 rounded"
-                          onClick={(e) => handleToggleDesktop(app.id as AppId, e)}
-                          title={isOnDesktop ? "Remove from desktop" : "Add to desktop"}
-                        >
-                          {isOnDesktop ? (
-                            <PinOffIcon className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <PinIcon className="h-4 w-4 text-muted-foreground" />
+                    return (
+                      <CommandItem
+                        key={app.id}
+                        value={`${app.id} ${app.name}`}
+                        onSelect={() => !isDisabled && handleOpenApp(app.id as AppId)}
+                        disabled={isDisabled}
+                        className={cn(
+                          "py-3 px-3 rounded-sm transition-all duration-150",
+                          !isDisabled && "cursor-pointer",
+                          !isDisabled && "hover:bg-primary/15 data-[selected=true]:bg-primary/20",
+                          isDisabled && "opacity-60"
+                        )}
+                      >
+                        <IconComponent
+                          className={cn(
+                            "!size-5",
+                            isDisabled ? "text-muted-foreground" : "text-primary"
                           )}
-                        </button>
-                      )}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
+                        />
+                        <span className={cn("font-medium", isDisabled && "text-muted-foreground")}>
+                          {app.name}
+                        </span>
+                        {isDisabled && (
+                          <span className="ml-auto text-xs text-muted-foreground/70 italic font-normal">
+                            Coming soon
+                          </span>
+                        )}
+                        {!isDisabled && (
+                          <button
+                            className={cn(
+                              "ml-auto p-1.5 rounded-sm transition-all duration-150",
+                              "hover:bg-foreground/10 active:bg-foreground/20",
+                              isOnDesktop && "bg-primary/20"
+                            )}
+                            onClick={(e) => handleToggleDesktop(app.id as AppId, e)}
+                            title={isOnDesktop ? "Remove from desktop" : "Add to desktop"}
+                          >
+                            {isOnDesktop ? (
+                              <PinOffIcon className="h-4 w-4 text-primary" />
+                            ) : (
+                              <PinIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                            )}
+                          </button>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </React.Fragment>
             ))}
-
-            {/* Separator */}
-            {systemApps.length > 0 && groupedApps.length > 0 && <CommandSeparator />}
-
-            {/* System Applications */}
-            {systemApps.length > 0 && (
-              <CommandGroup heading="System">
-                {systemApps.map((app) => {
-                  const IconComponent = app.icon;
-                  const isDisabled = app.disabled;
-                  const isOnDesktop = !isDisabled && !!desktopItems[app.id as AppId];
-
-                  return (
-                    <CommandItem
-                      key={app.id}
-                      value={`${app.id} ${app.name}`}
-                      onSelect={() => !isDisabled && handleOpenApp(app.id as AppId)}
-                      disabled={isDisabled}
-                      className={cn(!isDisabled && "cursor-pointer")}
-                    >
-                      <IconComponent className={cn(isDisabled ? "text-muted-foreground" : "text-primary")} />
-                      <span className={cn(isDisabled && "text-muted-foreground")}>{app.name}</span>
-                      {isDisabled && <span className="ml-auto text-xs text-muted-foreground italic">Coming soon</span>}
-                      {!isDisabled && (
-                        <button
-                          className="ml-auto hover:bg-accent/20 p-1 rounded"
-                          onClick={(e) => handleToggleDesktop(app.id as AppId, e)}
-                          title={isOnDesktop ? "Remove from desktop" : "Add to desktop"}
-                        >
-                          {isOnDesktop ? (
-                            <PinOffIcon className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <PinIcon className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </button>
-                      )}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
           </CommandList>
         </Command>
       </DialogContent>

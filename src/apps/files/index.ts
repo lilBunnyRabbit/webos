@@ -1,10 +1,12 @@
 import type { WindowDefaults } from "@/contexts/windows";
 import { FolderIcon } from "lucide-react";
 import React from "react";
+import type { AppTag } from "@/contexts/apps";
 
 export const ID = "files";
 export const NAME = "Files";
 export const ICON = FolderIcon;
+export const TAGS: AppTag[] = ["system"];
 
 export const WINDOW_CONFIG: WindowDefaults = {
   size: {

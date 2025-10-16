@@ -3,14 +3,6 @@ import React from "react";
 import { useWindowsActions } from "../windows";
 import Apps from "@/apps";
 
-export interface AppInstance<Id extends AppId = AppId> {
-  id: Id;
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  props: Parameters<AppsConfig[Id]["App"]>[0];
-  $node: React.ReactNode;
-}
-
 export function useApps() {
   const dispatch = useWindowsActions();
 
@@ -28,6 +20,7 @@ export function useApps() {
           id: appId,
           name: config.NAME,
           icon: config.ICON,
+          tags: config.TAGS,
           props,
           // TODO: fix types
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
