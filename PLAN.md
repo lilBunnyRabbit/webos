@@ -48,6 +48,9 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
 
 - [ ] **Desktop Enhancements**
   - Complete "adding apps to desktop" feature (from TODO)
+    - Add apps to desktop via drag-and-drop from start menu
+    - Context menu option to add/remove from desktop
+    - Persist desktop apps in settings
   - Implement desktop grid system for icon placement
   - Add desktop context menu (right-click)
   - Add desktop icon selection/multi-selection
@@ -59,6 +62,37 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
     - Fit/fill/stretch/tile options
     - Blur/opacity controls
     - Save to settings/IndexedDB
+
+- [ ] **App Configuration & Behavior**
+  - Extend app registration system with additional configuration options
+  - Single-instance app configuration
+    - Flag apps that should only have one instance open at a time
+    - When attempting to open an already-open single-instance app:
+      - Focus the existing window instead of opening a new one
+      - Restore the window if minimized
+      - Bring to front (z-index)
+    - Examples of single-instance apps:
+      - Settings (only one settings window needed)
+      - Task Manager (only one instance makes sense)
+      - System apps that manage global state
+  - Multi-instance app support (default behavior)
+    - Most apps can have multiple windows open
+    - Examples: Files, Notes, Games, etc.
+  - App instance management utilities
+    - Helper functions to check if app is already open
+    - Focus existing window by app ID
+    - Get all windows for a specific app
+  - Update app registration type definition
+    ```typescript
+    interface AppConfig {
+      id: string;
+      name: string;
+      icon: React.ComponentType;
+      component: React.ComponentType;
+      singleInstance?: boolean; // New flag
+      // ... other properties
+    }
+    ```
 
 ### 1.2 File System Implementation
 **Priority: CRITICAL**

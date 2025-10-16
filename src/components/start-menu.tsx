@@ -10,7 +10,17 @@ import {
 } from "@/components/ui/command";
 import { useApps } from "@/contexts/apps";
 import { cn } from "@/lib/utils";
-import { CalculatorIcon, GlobeIcon, ImageIcon, MailIcon, MusicIcon, VideoIcon } from "lucide-react";
+import { useDesktopStore } from "@/stores/desktop.store";
+import {
+  CalculatorIcon,
+  GlobeIcon,
+  ImageIcon,
+  MailIcon,
+  MusicIcon,
+  PinIcon,
+  PinOffIcon,
+  VideoIcon,
+} from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 
@@ -30,10 +40,22 @@ const DUMMY_APPS = [
 export function StartMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { open: openApp } = useApps();
+  const desktopItems = useDesktopStore((state) => state.items);
+  const addDesktopItem = useDesktopStore((state) => state.addItem);
+  const removeDesktopItem = useDesktopStore((state) => state.removeItem);
 
   const handleOpenApp = (appId: AppId) => {
     openApp(appId);
     setOpen(false);
+  };
+
+  const handleToggleDesktop = (appId: AppId, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (desktopItems[appId]) {
+      removeDesktopItem(appId);
+    } else {
+      addDesktopItem(appId);
+    }
   };
 
   // Separate and sort apps, grouped by first letter
@@ -112,6 +134,7 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
                 {apps.map((app) => {
                   const IconComponent = app.icon;
                   const isDisabled = app.disabled;
+                  const isOnDesktop = !isDisabled && !!desktopItems[app.id as AppId];
 
                   return (
                     <CommandItem
@@ -124,6 +147,19 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
                       <IconComponent className={cn(isDisabled ? "text-muted-foreground" : "text-primary")} />
                       <span className={cn(isDisabled && "text-muted-foreground")}>{app.name}</span>
                       {isDisabled && <span className="ml-auto text-xs text-muted-foreground italic">Coming soon</span>}
+                      {!isDisabled && (
+                        <button
+                          className="ml-auto hover:bg-accent/20 p-1 rounded"
+                          onClick={(e) => handleToggleDesktop(app.id as AppId, e)}
+                          title={isOnDesktop ? "Remove from desktop" : "Add to desktop"}
+                        >
+                          {isOnDesktop ? (
+                            <PinOffIcon className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <PinIcon className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      )}
                     </CommandItem>
                   );
                 })}
@@ -139,6 +175,7 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
                 {systemApps.map((app) => {
                   const IconComponent = app.icon;
                   const isDisabled = app.disabled;
+                  const isOnDesktop = !isDisabled && !!desktopItems[app.id as AppId];
 
                   return (
                     <CommandItem
@@ -151,6 +188,19 @@ export function StartMenu({ children }: { children: React.ReactNode }) {
                       <IconComponent className={cn(isDisabled ? "text-muted-foreground" : "text-primary")} />
                       <span className={cn(isDisabled && "text-muted-foreground")}>{app.name}</span>
                       {isDisabled && <span className="ml-auto text-xs text-muted-foreground italic">Coming soon</span>}
+                      {!isDisabled && (
+                        <button
+                          className="ml-auto hover:bg-accent/20 p-1 rounded"
+                          onClick={(e) => handleToggleDesktop(app.id as AppId, e)}
+                          title={isOnDesktop ? "Remove from desktop" : "Add to desktop"}
+                        >
+                          {isOnDesktop ? (
+                            <PinOffIcon className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <PinIcon className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      )}
                     </CommandItem>
                   );
                 })}

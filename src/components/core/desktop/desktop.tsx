@@ -1,8 +1,8 @@
-import Apps, { type AppId } from "@/apps";
-import { type Bounds, type Dimensions } from "@/contexts/windows";
-import React, { useState } from "react";
-import { DesktopItem } from "./desktop-item";
+import { type AppId } from "@/apps";
 import { cn } from "@/lib/utils";
+import { useDesktopStore } from "@/stores/desktop.store";
+import React from "react";
+import { DesktopItem } from "./desktop-item";
 
 export interface DesktopItemConfig {
   appId: AppId;
@@ -11,22 +11,12 @@ export interface DesktopItemConfig {
 }
 
 export const CELL_SIZE = 64;
+const CONTAINER_PADDING = 4;
 
 export const Desktop = ({ className }: { className?: string }) => {
-  const [container, setContainer] = useState<{
-    bounds: Bounds;
-    cell: Dimensions;
-  } | null>(null);
-  const [gridDimensions, setGridDimensions] = useState({ cols: 0, rows: 0 });
-  const [items, setItems] = useState<DesktopItemConfig[]>(() => {
-    // Initialize items with default grid positions
-    const appEntries = Object.entries(Apps) as [AppId, (typeof Apps)[AppId]][];
-    return appEntries.map(([appId], index) => ({
-      appId,
-      gridX: 0 + (index % 4), // Arrange in rows
-      gridY: 0 + Math.floor(index / 4),
-    }));
-  });
+  const items = useDesktopStore((state) => state.items);
+  const container = useDesktopStore((state) => state.container);
+  const setContainer = useDesktopStore((state) => state.setContainer);
 
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -36,12 +26,23 @@ export const Desktop = ({ className }: { className?: string }) => {
     const updateGridDimensions = () => {
       const element = ref.current;
       if (!element) return;
-      const bounds = element.getBoundingClientRect();
-      const cols = Math.floor(bounds.width / CELL_SIZE);
+      const rect = element.getBoundingClientRect();
+
+      const bounds = {
+        width: rect.width - CONTAINER_PADDING * 2,
+        height: rect.height - CONTAINER_PADDING * 2,
+        x: rect.left + CONTAINER_PADDING,
+        y: rect.top + CONTAINER_PADDING,
+      };
+
+      const columns = Math.floor(bounds.width / CELL_SIZE);
       const rows = Math.floor(bounds.height / CELL_SIZE);
 
-      setGridDimensions({ cols, rows });
-      setContainer({ bounds, cell: { width: bounds.width / cols, height: bounds.height / rows } });
+      setContainer({
+        bounds,
+        cell: { width: bounds.width / columns, height: bounds.height / rows },
+        grid: { columns, rows },
+      });
     };
 
     const resizeObserver = new ResizeObserver(updateGridDimensions);
@@ -53,38 +54,21 @@ export const Desktop = ({ className }: { className?: string }) => {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-
-  const hasItemInPosition = React.useCallback(
-    (x: number, y: number) => {
-      return items.some((item) => item.gridX === x && item.gridY === y);
-    },
-    [items]
-  );
+  }, [setContainer]);
 
   return (
     <div
       ref={ref}
       className={cn("grid w-full h-full overflow-hidden bg-background-dark place-items-center", className)}
       style={{
-        gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(64px, 1fr))`,
-        gridTemplateRows: `repeat(${gridDimensions.rows}, minmax(64px, 1fr))`,
+        gridTemplateColumns: `repeat(${container.grid.columns}, minmax(64px, 1fr))`,
+        gridTemplateRows: `repeat(${container.grid.rows}, minmax(64px, 1fr))`,
         gridAutoFlow: "dense",
-        backgroundImage: container
-          ? `url("data:image/svg+xml,%3Csvg width='${container.cell.width}' height='${container.cell.height}' viewBox='0 0 ${container.cell.width} ${container.cell.height}' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.25'%3E%3Ccircle cx='0' cy='0' r='1.5'/%3E%3C/g%3E%3C/svg%3E")`
-          : "none",
+        padding: CONTAINER_PADDING,
       }}
     >
       {container &&
-        items.map((item, i) => (
-          <DesktopItem
-            key={item.appId}
-            item={item}
-            setItem={(newItem) => setItems((prev) => prev.map((item, j) => (i === j ? newItem : item)))}
-            hasItemInPosition={hasItemInPosition}
-            container={container}
-          />
-        ))}
+        Object.keys(items).map((appId) => <DesktopItem key={appId} appId={appId as AppId} container={container} />)}
     </div>
   );
 };

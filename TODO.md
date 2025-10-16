@@ -2,10 +2,11 @@
 - [x] flags for window config - app
 - [x] persist settings - settings system
 - [ ] files
-- [ ] adding apps to desktop
+- [x] adding apps to desktop
 - [x] typesafe app config
 - [x] open app with props
 - [ ] App tags - game, etc
 - [x] App throwing in pwa when new version
-- [ ] broken app grid
-- [ ] pinning apps
+- [x] broken app grid
+- [x] pinning apps
+- [ ] desktop background

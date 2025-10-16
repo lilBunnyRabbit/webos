@@ -1,24 +1,24 @@
-import Apps from "@/apps";
+import Apps, { type AppId } from "@/apps";
 import { useApps } from "@/contexts/apps";
 import { type Bounds, type Dimensions, type Position } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
+import { useDesktopStore } from "@/stores/desktop.store";
 import React, { useState } from "react";
-import type { DesktopItemConfig } from "./desktop";
 
-export const DesktopItem = ({
-  item,
-  setItem,
-  hasItemInPosition,
-  container,
-}: {
-  item: DesktopItemConfig;
-  setItem: (item: DesktopItemConfig) => void;
-  hasItemInPosition: (x: number, y: number) => boolean;
-  container: { bounds: Bounds; cell: Dimensions };
-}) => {
+interface DesktopItemProps {
+  appId: AppId;
+  container: { bounds: Bounds; cell: Dimensions; grid: { columns: number; rows: number } };
+}
+
+export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
   const { open: openApp } = useApps();
 
-  const [gridDimensions, setGridDimensions] = useState({ cols: item.gridX + 1, rows: item.gridY + 1 });
+  const position = useDesktopStore((state) => state.items[appId]?.grid ?? { x: 0, y: 0 });
+  const hasItemInPosition = useDesktopStore((state) => state.hasItemInPosition);
+  const setItem = useDesktopStore((state) => state.updateItem);
+  const removeItem = useDesktopStore((state) => state.removeItem);
+
+  const [gridDimensions, setGridDimensions] = useState({ cols: position.x + 1, rows: position.y + 1 });
 
   const [state, setState] = useState<
     | {
@@ -42,7 +42,7 @@ export const DesktopItem = ({
   const ref = React.useRef<HTMLButtonElement>(null);
   const previewRef = React.useRef<HTMLDivElement>(null);
 
-  const app = Apps[item.appId];
+  const app = Apps[appId];
   const IconComponent = app.ICON;
 
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
@@ -99,14 +99,8 @@ export const DesktopItem = ({
       }
 
       // Calculate new grid position based on mouse position & grid cell size (64px)
-      const newGridX = Math.max(
-        0,
-        Math.min(Math.floor(x / container.cell.width), Math.floor(container.bounds.width / container.cell.width))
-      );
-      const newGridY = Math.max(
-        0,
-        Math.min(Math.floor(y / container.cell.height), Math.floor(container.bounds.height / container.cell.height))
-      );
+      const newGridX = Math.max(0, Math.min(Math.floor(x / container.cell.width), container.grid.columns - 1));
+      const newGridY = Math.max(0, Math.min(Math.floor(y / container.cell.height), container.grid.rows - 1));
 
       setGridDimensions({
         cols: newGridX + 1,
@@ -120,13 +114,13 @@ export const DesktopItem = ({
     if (!state) return;
 
     if (!isBlocked) {
-      setItem({ ...item, gridX: gridDimensions.cols - 1, gridY: gridDimensions.rows - 1 });
+      setItem(appId, { grid: { x: gridDimensions.cols - 1, y: gridDimensions.rows - 1 } });
     } else {
-      setGridDimensions({ cols: item.gridX + 1, rows: item.gridY + 1 });
+      setGridDimensions({ cols: position.x + 1, rows: position.y + 1 });
     }
 
     setState(null);
-  }, [state, isBlocked, setItem, item, gridDimensions]);
+  }, [state, isBlocked, setItem, appId, gridDimensions.cols, gridDimensions.rows, position.x, position.y]);
 
   React.useEffect(() => {
     if (!state) return;
@@ -143,14 +137,21 @@ export const DesktopItem = ({
   return (
     <>
       <button
-        key={item.appId}
         ref={ref}
-        className="group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-white/10 rounded hover:overflow-visible focus-visible:outline-2 focus-visible:outline-accent cursor-grab"
-        onDoubleClick={() => openApp(item.appId)}
+        className={cn(
+          "group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-white/10 rounded hover:overflow-visible cursor-grab",
+          state?.type === "move" && "opacity-50",
+          !state && "focus:outline-2 focus:outline-accent focus:bg-accent/10"
+        )}
+        onDoubleClick={() => openApp(appId)}
+        onKeyUp={(e) => {
+          if (e.key === "Delete" && document.activeElement === e.currentTarget) {
+            removeItem(appId);
+          }
+        }}
         style={{
-          gridColumn: item.gridX + 1,
-          gridRow: item.gridY + 1,
-          opacity: state?.type === "move" ? 0.5 : 1,
+          gridColumn: position.x + 1,
+          gridRow: position.y + 1,
         }}
         onMouseDown={handleMouseDown}
       >
@@ -165,7 +166,7 @@ export const DesktopItem = ({
 
       {state?.type === "move" && (
         <>
-          {(item.gridX !== gridDimensions.cols - 1 || item.gridY !== gridDimensions.rows - 1) && (
+          {(position.x !== gridDimensions.cols - 1 || position.y !== gridDimensions.rows - 1) && (
             <div
               className={cn(
                 "w-full h-full bg-foreground/30 transition-all rounded-xl border-2 border-foreground/30",
