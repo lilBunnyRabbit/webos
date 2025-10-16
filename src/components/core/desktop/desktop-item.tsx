@@ -18,7 +18,7 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
   const setItem = useDesktopStore((state) => state.updateItem);
   const removeItem = useDesktopStore((state) => state.removeItem);
 
-  const [gridDimensions, setGridDimensions] = useState({ cols: position.x + 1, rows: position.y + 1 });
+  const [movePosition, setMovePosition] = useState<{ column: number; row: number } | null>(null);
 
   const [state, setState] = useState<
     | {
@@ -35,9 +35,9 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
   >();
 
   const isBlocked = React.useMemo(() => {
-    if (!state || state.type !== "move") return false;
-    return hasItemInPosition(gridDimensions.cols - 1, gridDimensions.rows - 1);
-  }, [state, hasItemInPosition, gridDimensions]);
+    if (!state || state.type !== "move" || !movePosition) return false;
+    return hasItemInPosition(movePosition.column - 1, movePosition.row - 1);
+  }, [state, hasItemInPosition, movePosition]);
 
   const ref = React.useRef<HTMLButtonElement>(null);
   const previewRef = React.useRef<HTMLDivElement>(null);
@@ -102,9 +102,9 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
       const newGridX = Math.max(0, Math.min(Math.floor(x / container.cell.width), container.grid.columns - 1));
       const newGridY = Math.max(0, Math.min(Math.floor(y / container.cell.height), container.grid.rows - 1));
 
-      setGridDimensions({
-        cols: newGridX + 1,
-        rows: newGridY + 1,
+      setMovePosition({
+        column: newGridX + 1,
+        row: newGridY + 1,
       });
     },
     [container, state]
@@ -113,14 +113,13 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
   const handleMouseUp = React.useCallback(() => {
     if (!state) return;
 
-    if (!isBlocked) {
-      setItem(appId, { grid: { x: gridDimensions.cols - 1, y: gridDimensions.rows - 1 } });
-    } else {
-      setGridDimensions({ cols: position.x + 1, rows: position.y + 1 });
+    if (!isBlocked && movePosition) {
+      setItem(appId, { grid: { x: movePosition.column - 1, y: movePosition.row - 1 } });
     }
 
     setState(null);
-  }, [state, isBlocked, setItem, appId, gridDimensions.cols, gridDimensions.rows, position.x, position.y]);
+    setMovePosition(null);
+  }, [state, isBlocked, setItem, appId, movePosition]);
 
   React.useEffect(() => {
     if (!state) return;
@@ -167,15 +166,15 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
 
       {state?.type === "move" && (
         <>
-          {(position.x !== gridDimensions.cols - 1 || position.y !== gridDimensions.rows - 1) && (
+          {movePosition && (position.x !== movePosition.column - 1 || position.y !== movePosition.row - 1) && (
             <div
               className={cn(
                 "w-full h-full bg-foreground/30 transition-all rounded-xl border-2 border-foreground/30",
                 isBlocked && "bg-red-500/30 border-red-500/30"
               )}
               style={{
-                gridColumn: gridDimensions.cols,
-                gridRow: gridDimensions.rows,
+                gridColumn: movePosition.column,
+                gridRow: movePosition.row,
               }}
             />
           )}

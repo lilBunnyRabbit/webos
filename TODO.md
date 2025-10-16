@@ -9,4 +9,4 @@
 - [x] App throwing in pwa when new version
 - [x] broken app grid
 - [x] pinning apps
-- [ ] desktop background
+- [x] desktop background
