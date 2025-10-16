@@ -51,7 +51,7 @@ writeFileSync(publicPath, JSON.stringify(version, null, 2));
 console.log('✓ Generated version.json:', version);
 
 // Also write to src for import during development
-const srcPath = join(__dirname, '../src/version.json');
+const srcPath = join(__dirname, '../src/assets/version.json');
 writeFileSync(srcPath, JSON.stringify(version, null, 2));
 
 export default version;

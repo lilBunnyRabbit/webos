@@ -13,7 +13,7 @@ dist-ssr
 *.local
 
 # Generated version files
-src/version.json
+src/assets/version.json
 public/version.json
 
 # Editor directories and files

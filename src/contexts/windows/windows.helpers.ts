@@ -20,10 +20,6 @@ export function adjustWindowSize(size: Dimensions): Dimensions {
     return size;
   }
 
-
-  console.log("maxWidth", maxWidth);
-  console.log("maxHeight", maxHeight);
-
   return {
     width: Math.min(size.width, maxWidth),
     height: Math.min(size.height, maxHeight),

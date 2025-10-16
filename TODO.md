@@ -9,5 +9,6 @@
 - [x] broken app grid
 - [x] pinning apps
 - [x] desktop background
-- [ ] window creation - check bounds and resize
+- [x] window creation - check bounds and resize
 - [ ] tanstack impl - all async calls - versioning refetching
+- [ ] task manager for update flow

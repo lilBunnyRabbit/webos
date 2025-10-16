@@ -1,10 +1,10 @@
+import { Button } from "@/components/ui/button";
+import { APP_VERSION } from "@/constants";
+import { useVersion } from "@/contexts/version";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings.store";
-import { LayoutDashboard, Palette, RotateCcw, Info, RefreshCw, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Info, LayoutDashboard, Palette, RefreshCw, RotateCcw } from "lucide-react";
 import React from "react";
-import versionService from "@/services/version.service";
-import type { VersionInfo } from "@/services/version.service";
-import { Button } from "@/components/ui/button";
 
 const presets: [background: string, foreground: string, primary: string, secondary: string, accent: string][] = [
   // Dark blue-gray
@@ -282,39 +282,23 @@ function TaskbarSection() {
 }
 
 function AboutSection() {
-  const [checking, setChecking] = React.useState(false);
-  const [isUpdating, setIsUpdating] = React.useState(false);
-  const [updateStatus, setUpdateStatus] = React.useState<'idle' | 'checking' | 'available' | 'up-to-date'>('idle');
-  const [remoteVersion, setRemoteVersion] = React.useState<VersionInfo | undefined>();
-  const currentVersion = versionService.getCurrentVersion();
+  const { newVersion, checkForUpdates, isUpdating, applyUpdate, isCheckingForUpdates } = useVersion();
 
-  const checkForUpdates = async () => {
-    setChecking(true);
-    setUpdateStatus('checking');
-    
-    const result = await versionService.checkForUpdates();
-    
-    setChecking(false);
-    if (result.hasUpdate) {
-      setUpdateStatus('available');
-      setRemoteVersion(result.remoteVersion);
-    } else {
-      setUpdateStatus('up-to-date');
+  const updateStatus = React.useMemo(() => {
+    if (isCheckingForUpdates) {
+      return "checking";
     }
-
-    // Reset status after 5 seconds
-    setTimeout(() => {
-      setUpdateStatus('idle');
-    }, 5000);
-  };
+    if (newVersion) {
+      return "available";
+    }
+    return "up-to-date";
+  }, [isCheckingForUpdates, newVersion]);
 
   return (
     <div className="p-6 space-y-6 max-w-2xl">
       <div>
         <h2 className="text-xl font-semibold mb-4">About WebOS</h2>
-        <p className="text-foreground/70 text-sm mb-6">
-          Operating System for the web
-        </p>
+        <p className="text-foreground/70 text-sm mb-6">Operating System for the web</p>
       </div>
 
       {/* Version Information */}
@@ -327,31 +311,31 @@ function AboutSection() {
             </span>
           )}
         </div>
-        
+
         <div className="space-y-2 text-sm">
           <div className="flex justify-between items-center py-2 border-b border-foreground/10">
             <span className="text-foreground/70">Version</span>
-            <span className="font-mono font-medium">{currentVersion.version}</span>
+            <span className="font-mono font-medium">{APP_VERSION.version}</span>
           </div>
-          
+
           <div className="flex justify-between items-center py-2 border-b border-foreground/10">
             <span className="text-foreground/70">Commit</span>
-            <span className="font-mono text-xs">{currentVersion.commit}</span>
+            <span className="font-mono text-xs">{APP_VERSION.commit}</span>
           </div>
-          
+
           <div className="flex justify-between items-center py-2 border-b border-foreground/10">
             <span className="text-foreground/70">Branch</span>
-            <span className="font-mono text-xs">{currentVersion.branch}</span>
+            <span className="font-mono text-xs">{APP_VERSION.branch}</span>
           </div>
-          
+
           <div className="flex justify-between items-center py-2 border-b border-foreground/10">
             <span className="text-foreground/70">Mode</span>
-            <span className="text-xs">{import.meta.env.DEV ? 'Development' : 'Production'}</span>
+            <span className="text-xs">{import.meta.env.DEV ? "Development" : "Production"}</span>
           </div>
-          
+
           <div className="flex justify-between items-center py-2">
             <span className="text-foreground/70">Build Time</span>
-            <span className="text-xs">{new Date(currentVersion.buildTime).toLocaleString()}</span>
+            <span className="text-xs">{new Date(APP_VERSION.buildTime).toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -360,64 +344,61 @@ function AboutSection() {
       {!import.meta.env.DEV && (
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Updates</h3>
-          
+
           <div className="flex items-start gap-4">
             <Button
-              onClick={checkForUpdates}
-              disabled={checking}
+              onClick={() => checkForUpdates({ cancelRefetch: true })}
+              disabled={isCheckingForUpdates}
               className="flex items-center gap-2 bg-primary text-background"
             >
-              <RefreshCw className={cn("h-4 w-4", checking && "animate-spin")} />
-              {checking ? "Checking..." : "Check for Updates"}
+              <RefreshCw className={cn("h-4 w-4", isCheckingForUpdates && "animate-spin")} />
+              {isCheckingForUpdates ? "Checking..." : "Check for Updates"}
             </Button>
-          
-          {updateStatus === 'available' && (
-            <div className="flex-1 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-medium text-blue-400">Update Available</p>
-                  {remoteVersion && (
-                    <p className="text-sm text-foreground/70 mt-1">
-                      v{remoteVersion.version} ({remoteVersion.commit})
-                    </p>
-                  )}
-                  <Button
-                    onClick={async () => {
-                      setIsUpdating(true);
-                      await versionService.applyUpdate();
-                    }}
-                    size="sm"
-                    disabled={isUpdating}
-                    className="mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    <RefreshCw className={cn("h-3 w-3 mr-1", isUpdating && "animate-spin")} />
-                    {isUpdating ? 'Updating...' : 'Refresh to Update'}
-                  </Button>
+
+            {updateStatus === "available" && (
+              <div className="flex-1 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium text-blue-400">Update Available</p>
+                    {newVersion && (
+                      <p className="text-sm text-foreground/70 mt-1">
+                        v{newVersion.version} ({newVersion.commit})
+                      </p>
+                    )}
+                    <Button
+                      onClick={() => applyUpdate()}
+                      size="sm"
+                      disabled={isUpdating}
+                      className="mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <RefreshCw className={cn("h-3 w-3 mr-1", isUpdating && "animate-spin")} />
+                      {isUpdating ? "Updating..." : "Refresh to Update"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {updateStatus === 'up-to-date' && (
-            <div className="flex-1 p-3 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-400" />
-              <p className="text-green-400 font-medium">You're up to date!</p>
-            </div>
-          )}
-          
-          {updateStatus === 'checking' && (
-            <div className="flex-1 p-3 border border-foreground/20 rounded-lg flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 animate-spin" />
-              <p className="text-foreground/70">Checking for updates...</p>
-            </div>
-          )}
+            )}
+
+            {updateStatus === "up-to-date" && (
+              <div className="flex-1 p-3 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-400" />
+                <p className="text-green-400 font-medium">You're up to date!</p>
+              </div>
+            )}
+
+            {updateStatus === "checking" && (
+              <div className="flex-1 p-3 border border-foreground/20 rounded-lg flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin" />
+                <p className="text-foreground/70">Checking for updates...</p>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-foreground/60">
+            WebOS automatically checks for updates every 5 minutes while running.
+          </p>
         </div>
-        
-        <p className="text-xs text-foreground/60">
-          WebOS automatically checks for updates every 5 minutes while running.
-        </p>
-      </div>
       )}
 
       {import.meta.env.DEV && (
@@ -433,9 +414,9 @@ function AboutSection() {
       <div className="pt-4 border-t border-foreground/20 space-y-2 text-sm text-foreground/60">
         <p>© 2025 WebOS Project</p>
         <p>
-          <a 
-            href="https://github.com/lilbunnyrabbit/webos" 
-            target="_blank" 
+          <a
+            href="https://github.com/lilbunnyrabbit/webos"
+            target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
           >
