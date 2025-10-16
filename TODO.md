@@ -1,12 +1,12 @@
 - [x] restore pre snap size
 - [x] flags for window config - app
 - [x] persist settings - settings system
-- [ ] files
 - [x] adding apps to desktop
 - [x] typesafe app config
 - [x] open app with props
-- [ ] App tags - game, etc
+- [x] App tags - game, etc
 - [x] App throwing in pwa when new version
 - [x] broken app grid
 - [x] pinning apps
 - [x] desktop background
+- [ ] window creation - check bounds and resize

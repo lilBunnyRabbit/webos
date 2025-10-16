@@ -7,6 +7,12 @@ import { Button } from './ui/button';
 export function UpdateNotification() {
   const [showNotification, setShowNotification] = useState(false);
   const [remoteVersion, setRemoteVersion] = useState<VersionInfo | undefined>();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    await versionService.applyUpdate();
+  };
 
   useEffect(() => {
     // Skip version checking in development mode
@@ -76,18 +82,20 @@ export function UpdateNotification() {
             
             <div className="flex gap-2">
               <Button
-                onClick={() => versionService.applyUpdate()}
+                onClick={handleUpdate}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isUpdating}
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Refresh Now
+                <RefreshCw className={`h-3 w-3 mr-1 ${isUpdating ? 'animate-spin' : ''}`} />
+                {isUpdating ? 'Updating...' : 'Refresh Now'}
               </Button>
               <Button
                 onClick={() => setShowNotification(false)}
                 size="sm"
                 variant="ghost"
-                className="text-zinc-400 hover:text-zinc-300"
+                disabled={isUpdating}
+                className="text-zinc-400 hover:text-zinc-300 disabled:opacity-50"
               >
                 Later
               </Button>
@@ -96,7 +104,8 @@ export function UpdateNotification() {
           
           <button
             onClick={() => setShowNotification(false)}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            disabled={isUpdating}
+            className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

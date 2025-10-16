@@ -283,6 +283,7 @@ function TaskbarSection() {
 
 function AboutSection() {
   const [checking, setChecking] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
   const [updateStatus, setUpdateStatus] = React.useState<'idle' | 'checking' | 'available' | 'up-to-date'>('idle');
   const [remoteVersion, setRemoteVersion] = React.useState<VersionInfo | undefined>();
   const currentVersion = versionService.getCurrentVersion();
@@ -382,12 +383,16 @@ function AboutSection() {
                     </p>
                   )}
                   <Button
-                    onClick={() => versionService.applyUpdate()}
+                    onClick={async () => {
+                      setIsUpdating(true);
+                      await versionService.applyUpdate();
+                    }}
                     size="sm"
-                    className="mt-2 bg-blue-600 hover:bg-blue-700"
+                    disabled={isUpdating}
+                    className="mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                   >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Refresh to Update
+                    <RefreshCw className={cn("h-3 w-3 mr-1", isUpdating && "animate-spin")} />
+                    {isUpdating ? 'Updating...' : 'Refresh to Update'}
                   </Button>
                 </div>
               </div>

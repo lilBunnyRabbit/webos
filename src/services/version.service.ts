@@ -1,4 +1,5 @@
 import localVersion from '../version.json';
+import { hardRefresh } from '@/lib/update';
 
 export interface VersionInfo {
   version: string;
@@ -105,9 +106,10 @@ class VersionService {
 
   /**
    * Reload the page to apply updates
+   * Handles service worker updates and forces a hard refresh
    */
-  applyUpdate(): void {
-    window.location.reload();
+  async applyUpdate(): Promise<void> {
+    await hardRefresh();
   }
 
   /**

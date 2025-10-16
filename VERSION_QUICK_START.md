@@ -77,6 +77,7 @@ Then rebuild and deploy. Users will be notified automatically!
 - `src/services/version.service.ts` - Version management logic
 - `src/components/update-notification.tsx` - Update notification UI
 - `src/apps/settings/settings.app.tsx` - Settings with About section
+- `src/lib/update.ts` - **Shared utilities** for hard refresh and cache management
 
 ## ⚙️ Configuration
 
@@ -128,8 +129,12 @@ getVersionString() {
 3. **Update flow:**
    - User gets notification
    - Clicks "Refresh Now"
-   - Page reloads
-   - New version loads with all updates
+   - Button shows "Updating..." with spinner
+   - Service workers are unregistered
+   - All caches are cleared
+   - Page hard reloads
+   - New version loads fresh from server
+   - ✅ No cached content issues!
 
 ## 📝 Notes
 

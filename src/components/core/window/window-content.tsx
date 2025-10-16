@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader, WifiOff, Code, ChevronDown, ChevronUp, RotateCcw, Power } from "lucide-react";
 import React, { useState } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import { hardRefresh } from "@/lib/update";
 
 export function WindowContent({ children, className }: { children: React.ReactNode; className?: string }) {
   const { zoom } = useWindowToolbar();
@@ -69,27 +70,13 @@ function getErrorDetails(error: Error): ErrorDetails {
 
 function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
   const errorDetails = getErrorDetails(error);
 
   const handleReload = async () => {
-    try {
-      // Clear all caches
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
-      }
-
-      // Unregister all service workers
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(registration => registration.unregister()));
-      }
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-    } finally {
-      // Force reload from server (hard reload)
-      window.location.replace(window.location.href);
-    }
+    setIsReloading(true);
+    // Use replace mode to prevent back button issues
+    await hardRefresh(true);
   };
 
   return (
@@ -130,16 +117,18 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       {/* Action Buttons */}
       <div className="flex gap-3 mb-4">
         <button
-          className="px-4 py-2 rounded bg-transparent text-accent font-medium hover:bg-accent hover:text-background transition flex items-center gap-2"
+          className="px-4 py-2 rounded bg-transparent text-accent font-medium hover:bg-accent hover:text-background transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleReload}
+          disabled={isReloading}
         >
-          <Power className="w-4 h-4" />
-          Restart Client
+          <Power className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
+          {isReloading ? 'Restarting...' : 'Restart Client'}
         </button>
 
         <button
-          className="px-4 py-2 rounded bg-primary text-background font-medium hover:bg-transparent hover:text-primary transition flex items-center gap-2"
+          className="px-4 py-2 rounded bg-primary text-background font-medium hover:bg-transparent hover:text-primary transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={resetErrorBoundary}
+          disabled={isReloading}
         >
           <RotateCcw className="w-4 h-4" />
           Retry

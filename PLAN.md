@@ -43,7 +43,9 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
   - Adjust auto-check interval (currently 5 min, may need tuning)
   - ✅ Check for updates when window/tab comes back into focus
   - ✅ Disable version checking in development mode
-  - Add loading states for version checks
+  - ✅ Proper service worker cleanup and cache clearing for updates
+  - ✅ Loading states during update process
+  - ✅ Shared update utility (hardRefresh) used across version service and error recovery
   - Handle network errors gracefully
   - Consider adding retry logic with exponential backoff
   - Add option to disable auto-check in settings

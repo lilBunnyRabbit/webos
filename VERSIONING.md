@@ -31,6 +31,7 @@ A service that provides:
 - Event-based notification system for version updates
 - Manual version check functionality
 - Formatted version strings for display
+- **Service worker-aware update handling** - properly clears caches and unregisters service workers
 
 **Key Methods:**
 ```typescript
@@ -38,9 +39,16 @@ versionService.getCurrentVersion() // Get current version info
 versionService.checkForUpdates()   // Manually check for updates
 versionService.startAutoCheck()    // Start automatic checking
 versionService.stopAutoCheck()     // Stop automatic checking
-versionService.applyUpdate()       // Reload page to apply update
+versionService.applyUpdate()       // Reload page with service worker cleanup (async)
 versionService.getVersionString()  // Get formatted version string
 ```
+
+**Update Process:**
+When `applyUpdate()` is called, it performs these steps:
+1. Unregisters all service workers
+2. Clears all cache storage
+3. Forces a hard reload to fetch fresh content
+4. This ensures the new version loads properly, bypassing PWA caching
 
 ### 3. Update Notification Component (`src/components/update-notification.tsx`)
 
@@ -144,12 +152,36 @@ Version checking is automatically enabled in production builds (`npm run build`)
 
 Modify `versionService.getVersionString()` in `src/services/version.service.ts` to change how version strings are formatted.
 
+### Using Hard Refresh Utility
+
+The `hardRefresh()` utility in `src/lib/update.ts` can be used anywhere you need a clean app reload:
+
+```typescript
+import { hardRefresh } from '@/lib/update';
+
+// Standard hard refresh (uses reload)
+await hardRefresh();
+
+// With location.replace (prevents back button issues)
+await hardRefresh(true);
+```
+
+**Available utilities:**
+- `hardRefresh(useReplace?)` - Full cache clear + service worker unregister + reload
+- `clearCaches()` - Clear all caches without reloading
+- `unregisterServiceWorkers()` - Unregister all service workers without reloading
+
+**Used in:**
+- Version update flow (Settings → About, Update notifications)
+- Window error recovery (chunk load errors, app crashes)
+
 ## Files Modified/Created
 
 **New Files:**
 - `scripts/generate-version.js` - Build script for version generation
 - `src/services/version.service.ts` - Version management service
 - `src/components/update-notification.tsx` - Update notification UI
+- `src/lib/update.ts` - **Shared update utilities** for hard refresh and cache clearing
 - `src/version.json.d.ts` - TypeScript declarations for version.json
 - `src/version.json` - Generated version file (git-ignored)
 - `public/version.json` - Generated version file (deployed)
@@ -158,6 +190,7 @@ Modify `versionService.getVersionString()` in `src/services/version.service.ts` 
 - `package.json` - Added version generation to build script, updated version
 - `src/App.tsx` - Added UpdateNotification component
 - `src/apps/settings/settings.app.tsx` - Added About section with version info
+- `src/components/core/window/window-content.tsx` - Uses shared update utility for error recovery
 
 ## GitHub Pages Deployment
 
@@ -171,9 +204,14 @@ When deploying to GitHub Pages:
 
 - The system uses `buildTimestamp` for accurate version comparison
 - Updates are only detected when the deployed `version.json` changes
-- The service worker (PWA) will continue to cache assets, but the version check works independently
+- **Service worker handling**: The update process properly unregisters service workers and clears caches to ensure a clean update
 - Users can continue using the app while an update is available
-- The page will reload when the user chooses to apply the update
+- When the user applies an update:
+  1. Service workers are unregistered
+  2. All caches are cleared
+  3. A hard reload is performed
+  4. The new version is fetched fresh from the server
+- This prevents the common PWA issue where cached content prevents updates from loading
 
 ## Future Enhancements
 
