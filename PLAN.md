@@ -20,6 +20,49 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
 
 ## Phase 1: Core System Polish & Foundation (Weeks 1-3)
 
+### 1.0 Versioning System Polish
+**Priority: HIGH**
+
+- [ ] **Update Notification UI Improvements**
+  - Review and improve notification styling/positioning
+  - Ensure notification doesn't interfere with desktop/windows
+  - Add animation polish (slide-in, fade effects)
+  - Test notification timing and auto-dismiss behavior
+  - Verify z-index layering with other UI elements
+  - Consider toast notification style vs persistent banner
+
+- [ ] **Settings About Section Enhancements**
+  - Improve layout and visual hierarchy
+  - Add more build information (environment, build type)
+  - Better formatting of version details
+  - Add copy-to-clipboard for version info
+  - Consider adding changelog display
+  - Improve update check status indicators
+
+- [ ] **Version Service Refinements**
+  - Adjust auto-check interval (currently 5 min, may need tuning)
+  - ✅ Check for updates when window/tab comes back into focus
+  - ✅ Disable version checking in development mode
+  - Add loading states for version checks
+  - Handle network errors gracefully
+  - Consider adding retry logic with exponential backoff
+  - Add option to disable auto-check in settings
+  - Consider user preference for update notifications
+
+- [ ] **Testing & Polish**
+  - Test version update flow end-to-end
+  - Verify behavior on GitHub Pages deployment
+  - Test with service worker caching scenarios
+  - Ensure version.json is not cached aggressively
+  - Add error handling for missing/invalid version.json
+  - Test "Refresh Now" behavior across browsers
+
+- [ ] **Documentation Updates**
+  - Add version system to main README
+  - Include screenshots of version UI
+  - Document deployment process with versioning
+  - Add troubleshooting guide
+
 ### 1.1 Design System Finalization
 **Priority: CRITICAL**
 

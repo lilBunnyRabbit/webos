@@ -1,14 +1,15 @@
 {
   "name": "webos",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/generate-version.js && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
+    "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg",
+    "generate-version": "node scripts/generate-version.js"
   },
   "dependencies": {
     "@lilbunnyrabbit/event-emitter": "^0.1.2",

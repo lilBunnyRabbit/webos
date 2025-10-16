@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Generated version files
+src/version.json
+public/version.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

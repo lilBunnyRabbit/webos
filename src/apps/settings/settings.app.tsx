@@ -1,7 +1,10 @@
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings.store";
-import { LayoutDashboard, Palette, RotateCcw } from "lucide-react";
+import { LayoutDashboard, Palette, RotateCcw, Info, RefreshCw, CheckCircle2 } from "lucide-react";
 import React from "react";
+import versionService from "@/services/version.service";
+import type { VersionInfo } from "@/services/version.service";
+import { Button } from "@/components/ui/button";
 
 const presets: [background: string, foreground: string, primary: string, secondary: string, accent: string][] = [
   // Dark blue-gray
@@ -86,7 +89,7 @@ const DEFAULT_LIGHT = {
   accent: "#d97706",
 };
 
-type Section = "theme" | "taskbar";
+type Section = "theme" | "taskbar" | "about";
 
 export default function SettingsApp() {
   const reset = useSettingsStore((state) => state.reset);
@@ -126,6 +129,18 @@ export default function SettingsApp() {
             Taskbar
           </button>
           <button
+            onClick={() => setActiveSection("about")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              activeSection === "about"
+                ? "bg-primary/20 text-primary"
+                : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+            )}
+          >
+            <Info className="w-4 h-4" />
+            About
+          </button>
+          <button
             onClick={() => {
               reset();
               useSettingsStore.persist.clearStorage();
@@ -142,6 +157,7 @@ export default function SettingsApp() {
       <main className="flex-1 overflow-y-auto">
         {activeSection === "theme" && <ThemeSection />}
         {activeSection === "taskbar" && <TaskbarSection />}
+        {activeSection === "about" && <AboutSection />}
       </main>
     </div>
   );
@@ -260,6 +276,167 @@ function TaskbarSection() {
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AboutSection() {
+  const [checking, setChecking] = React.useState(false);
+  const [updateStatus, setUpdateStatus] = React.useState<'idle' | 'checking' | 'available' | 'up-to-date'>('idle');
+  const [remoteVersion, setRemoteVersion] = React.useState<VersionInfo | undefined>();
+  const currentVersion = versionService.getCurrentVersion();
+
+  const checkForUpdates = async () => {
+    setChecking(true);
+    setUpdateStatus('checking');
+    
+    const result = await versionService.checkForUpdates();
+    
+    setChecking(false);
+    if (result.hasUpdate) {
+      setUpdateStatus('available');
+      setRemoteVersion(result.remoteVersion);
+    } else {
+      setUpdateStatus('up-to-date');
+    }
+
+    // Reset status after 5 seconds
+    setTimeout(() => {
+      setUpdateStatus('idle');
+    }, 5000);
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-xl font-semibold mb-4">About WebOS</h2>
+        <p className="text-foreground/70 text-sm mb-6">
+          Operating System for the web
+        </p>
+      </div>
+
+      {/* Version Information */}
+      <div className="space-y-4 p-4 border border-foreground/20 rounded-lg bg-background/50">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Version Information</h3>
+          {import.meta.env.DEV && (
+            <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-medium">
+              DEVELOPMENT
+            </span>
+          )}
+        </div>
+        
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between items-center py-2 border-b border-foreground/10">
+            <span className="text-foreground/70">Version</span>
+            <span className="font-mono font-medium">{currentVersion.version}</span>
+          </div>
+          
+          <div className="flex justify-between items-center py-2 border-b border-foreground/10">
+            <span className="text-foreground/70">Commit</span>
+            <span className="font-mono text-xs">{currentVersion.commit}</span>
+          </div>
+          
+          <div className="flex justify-between items-center py-2 border-b border-foreground/10">
+            <span className="text-foreground/70">Branch</span>
+            <span className="font-mono text-xs">{currentVersion.branch}</span>
+          </div>
+          
+          <div className="flex justify-between items-center py-2 border-b border-foreground/10">
+            <span className="text-foreground/70">Mode</span>
+            <span className="text-xs">{import.meta.env.DEV ? 'Development' : 'Production'}</span>
+          </div>
+          
+          <div className="flex justify-between items-center py-2">
+            <span className="text-foreground/70">Build Time</span>
+            <span className="text-xs">{new Date(currentVersion.buildTime).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Update Check */}
+      {!import.meta.env.DEV && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Updates</h3>
+          
+          <div className="flex items-start gap-4">
+            <Button
+              onClick={checkForUpdates}
+              disabled={checking}
+              className="flex items-center gap-2 bg-primary text-background"
+            >
+              <RefreshCw className={cn("h-4 w-4", checking && "animate-spin")} />
+              {checking ? "Checking..." : "Check for Updates"}
+            </Button>
+          
+          {updateStatus === 'available' && (
+            <div className="flex-1 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium text-blue-400">Update Available</p>
+                  {remoteVersion && (
+                    <p className="text-sm text-foreground/70 mt-1">
+                      v{remoteVersion.version} ({remoteVersion.commit})
+                    </p>
+                  )}
+                  <Button
+                    onClick={() => versionService.applyUpdate()}
+                    size="sm"
+                    className="mt-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh to Update
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {updateStatus === 'up-to-date' && (
+            <div className="flex-1 p-3 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-400" />
+              <p className="text-green-400 font-medium">You're up to date!</p>
+            </div>
+          )}
+          
+          {updateStatus === 'checking' && (
+            <div className="flex-1 p-3 border border-foreground/20 rounded-lg flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 animate-spin" />
+              <p className="text-foreground/70">Checking for updates...</p>
+            </div>
+          )}
+        </div>
+        
+        <p className="text-xs text-foreground/60">
+          WebOS automatically checks for updates every 5 minutes while running.
+        </p>
+      </div>
+      )}
+
+      {import.meta.env.DEV && (
+        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <p className="text-sm text-foreground/70">
+            <strong className="text-yellow-400">Development Mode:</strong> Automatic update checking is disabled.
+            Version checking will be enabled in production builds.
+          </p>
+        </div>
+      )}
+
+      {/* Additional Info */}
+      <div className="pt-4 border-t border-foreground/20 space-y-2 text-sm text-foreground/60">
+        <p>© 2025 WebOS Project</p>
+        <p>
+          <a 
+            href="https://github.com/lilbunnyrabbit/webos" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            View on GitHub
+          </a>
+        </p>
       </div>
     </div>
   );
