@@ -1,9 +1,9 @@
+import { useVersion } from "@/contexts/version";
 import { useWindowToolbar } from "@/contexts/window";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Loader, WifiOff, Code, ChevronDown, ChevronUp, RotateCcw, Power } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Code, Loader, Power, RotateCcw, WifiOff } from "lucide-react";
 import React, { useState } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
-import { hardRefresh } from "@/lib/update";
 
 export function WindowContent({ children, className }: { children: React.ReactNode; className?: string }) {
   const { zoom } = useWindowToolbar();
@@ -44,19 +44,19 @@ interface ErrorDetails {
 function getErrorDetails(error: Error): ErrorDetails {
   const errorMessage = error.message.toLowerCase();
   const errorStack = error.stack?.toLowerCase() || "";
-  
+
   // Check for lazy loading / dynamic import errors
-  const isChunkLoadError = 
+  const isChunkLoadError =
     errorMessage.includes("failed to fetch dynamically imported module") ||
     errorMessage.includes("dynamically imported module") ||
     errorMessage.includes("chunk") ||
     errorStack.includes("chunk");
-  
-  const isNetworkError = 
+
+  const isNetworkError =
     errorMessage.includes("failed to fetch") ||
     errorMessage.includes("networkerror") ||
     errorMessage.includes("network error");
-  
+
   const isLazyLoadError = isChunkLoadError || isNetworkError;
 
   return {
@@ -69,15 +69,10 @@ function getErrorDetails(error: Error): ErrorDetails {
 }
 
 function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
-  const [showDetails, setShowDetails] = useState(false);
-  const [isReloading, setIsReloading] = useState(false);
-  const errorDetails = getErrorDetails(error);
+  const { applyUpdate, isUpdating } = useVersion();
 
-  const handleReload = async () => {
-    setIsReloading(true);
-    // Use replace mode to prevent back button issues
-    await hardRefresh(true);
-  };
+  const [showDetails, setShowDetails] = useState(false);
+  const errorDetails = getErrorDetails(error);
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-6 py-8">
@@ -99,13 +94,12 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       <div className="mb-6 text-sm text-foreground/70 max-w-md">
         {errorDetails.isChunkLoadError && (
           <p>
-            The app module could not be loaded. This usually happens when the app code was updated while you were using it.
+            The app module could not be loaded. This usually happens when the app code was updated while you were using
+            it.
           </p>
         )}
         {errorDetails.isNetworkError && !errorDetails.isChunkLoadError && (
-          <p>
-            A network error occurred while loading the app. Please check your internet connection.
-          </p>
+          <p>A network error occurred while loading the app. Please check your internet connection.</p>
         )}
         {!errorDetails.isLazyLoadError && (
           <p>
@@ -118,17 +112,17 @@ function AppErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       <div className="flex gap-3 mb-4">
         <button
           className="px-4 py-2 rounded bg-transparent text-accent font-medium hover:bg-accent hover:text-background transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={handleReload}
-          disabled={isReloading}
+          onClick={() => applyUpdate()}
+          disabled={isUpdating}
         >
-          <Power className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
-          {isReloading ? 'Restarting...' : 'Restart Client'}
+          <Power className={`w-4 h-4 ${isUpdating ? "animate-spin" : ""}`} />
+          {isUpdating ? "Updating..." : "Update Client"}
         </button>
 
         <button
           className="px-4 py-2 rounded bg-primary text-background font-medium hover:bg-transparent hover:text-primary transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={resetErrorBoundary}
-          disabled={isReloading}
+          disabled={isUpdating}
         >
           <RotateCcw className="w-4 h-4" />
           Retry
