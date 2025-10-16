@@ -1,8 +1,8 @@
-import type { VersionInfo } from "@/services/version.service";
 import { RefreshCw, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { createPortal } from "react-dom";
+import type { VersionInfo } from "@/contexts/version";
 
 export function VersionNotification({
   newVersion,

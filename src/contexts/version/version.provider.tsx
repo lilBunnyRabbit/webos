@@ -13,7 +13,11 @@ const VERSION_CHECK_QUERY_KEY = ["version-check"];
 export const VersionProvider = ({ children }: React.PropsWithChildren) => {
   const queryClient = useQueryClient();
 
-  const { data: newVersion, refetch: checkForUpdates, isFetching: isCheckingForUpdates } = useQuery({
+  const {
+    data: newVersion,
+    refetch: checkForUpdates,
+    isFetching: isCheckingForUpdates,
+  } = useQuery({
     queryKey: VERSION_CHECK_QUERY_KEY,
     queryFn: async () => {
       const response = await axios.get<VersionInfo>(`${import.meta.env.BASE_URL}version.json`, {
@@ -38,6 +42,10 @@ export const VersionProvider = ({ children }: React.PropsWithChildren) => {
 
       return VERSION_CHECK_INTERVAL;
     },
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    refetchIntervalInBackground: false,
     initialData: null,
   });
 
@@ -82,18 +90,18 @@ export const VersionProvider = ({ children }: React.PropsWithChildren) => {
   );
 };
 
-  /**
-   * Get formatted version string for display
-   */
-  // getVersionString(): string {
-  //   const { version, commit, branch } = this.currentVersion;
-  //   return `v${version} (${commit}${branch !== 'master' && branch !== 'main' ? ` - ${branch}` : ''})`;
-  // }
+/**
+ * Get formatted version string for display
+ */
+// getVersionString(): string {
+//   const { version, commit, branch } = this.currentVersion;
+//   return `v${version} (${commit}${branch !== 'master' && branch !== 'main' ? ` - ${branch}` : ''})`;
+// }
 
-  /**
-   * Get formatted build time for display
-   */
-  // getBuildTimeString(): string {
-  //   const buildDate = new Date(this.currentVersion.buildTime);
-  //   return buildDate.toLocaleString();
-  // }
+/**
+ * Get formatted build time for display
+ */
+// getBuildTimeString(): string {
+//   const buildDate = new Date(this.currentVersion.buildTime);
+//   return buildDate.toLocaleString();
+// }
