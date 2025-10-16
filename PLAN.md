@@ -53,7 +53,18 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
     - Persist desktop apps in settings
   - Implement desktop grid system for icon placement
   - Add desktop context menu (right-click)
-  - Add desktop icon selection/multi-selection
+  - **Add desktop icon multi-selection system** ⭐
+    - Marquee selection: Drag rectangle on empty space to select multiple items
+    - Ctrl/Cmd+Click to toggle individual items in selection
+    - Shift+Click for range selection
+    - Visual feedback: Highlight selected items with accent color/outline
+    - Selection rectangle visualization (blue semi-transparent box)
+    - Click on background clears selection
+    - Move multiple selected items together (group drag)
+    - Delete multiple selected items at once (Delete key)
+    - Ctrl+A to select all desktop items
+    - Escape to clear selection
+    - Smart drag behavior: clicking selected item preserves multi-selection
   - Add icon auto-arrange functionality
   - Support custom desktop wallpapers
     - Upload image from user's computer

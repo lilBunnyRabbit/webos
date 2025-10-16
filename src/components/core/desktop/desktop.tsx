@@ -65,6 +65,15 @@ export const Desktop = ({ className }: { className?: string }) => {
         gridTemplateRows: `repeat(${container.grid.rows}, minmax(64px, 1fr))`,
         gridAutoFlow: "dense",
         padding: CONTAINER_PADDING,
+        backgroundImage:
+          container.cell.width > 0 && container.cell.height > 0
+            ? `radial-gradient(circle at left top, var(--foreground) 1px, transparent 1px)`
+            : undefined,
+        backgroundSize:
+          container.cell.width > 0 && container.cell.height > 0
+            ? `${container.cell.width}px ${container.cell.height}px`
+            : undefined,
+        backgroundPosition: `${CONTAINER_PADDING}px ${CONTAINER_PADDING}px`,
       }}
     >
       {container &&
