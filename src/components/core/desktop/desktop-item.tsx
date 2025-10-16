@@ -139,9 +139,10 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
       <button
         ref={ref}
         className={cn(
-          "group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-white/10 rounded hover:overflow-visible cursor-grab",
+          "group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-foreground/10 rounded hover:overflow-visible cursor-grab",
           state?.type === "move" && "opacity-50",
-          !state && "focus:outline-2 focus:outline-accent focus:bg-accent/10"
+          (!state || state.type === "start") &&
+            "focus:outline-2 focus:outline-accent focus:bg-accent/10 focus:text-accent"
         )}
         onDoubleClick={() => openApp(appId)}
         onKeyUp={(e) => {
@@ -159,7 +160,7 @@ export const DesktopItem = ({ appId, container }: DesktopItemProps) => {
           <IconComponent className="h-full w-auto" />
         </div>
 
-        <span className="text-xs text-foreground/70 max-w-full px-1 line-clamp-1 group-hover:line-clamp-none">
+        <span className="text-xs text-foreground/70 max-w-full px-1 line-clamp-1 group-hover:line-clamp-none group-focus:text-accent/70">
           {app.NAME}
         </span>
       </button>
