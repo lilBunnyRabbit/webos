@@ -31,8 +31,6 @@ export function ResizeHandlers({ instance, size, setSize, position, setPosition 
 
   const [start, setStart] = React.useState<StartState | null>(null);
 
-  console.log("size", size);
-
   const handleResizeStart = (e: React.MouseEvent, direction: ResizeDirection) => {
     e.stopPropagation();
 
