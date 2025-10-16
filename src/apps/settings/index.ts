@@ -10,8 +10,8 @@ export const TAGS: AppTag[] = ["system"];
 
 export const WINDOW_CONFIG: WindowDefaults = {
   size: {
-    width: 600,
-    height: 420,
+    width: 943,
+    height: 635,
   },
 };
 

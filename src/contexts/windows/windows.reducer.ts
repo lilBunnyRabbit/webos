@@ -1,6 +1,6 @@
 import { Flags } from "@/lib/flags";
 import { v4 as uuid } from "uuid";
-import { calculateWindowPosition } from "./windows.helpers";
+import { adjustWindowSize, calculateWindowPosition } from "./windows.helpers";
 import {
   WindowFlag,
   WindowsFlag,
@@ -18,7 +18,7 @@ export function windowsReducer(state: WindowsState, action: WindowsAction): Wind
     case "CREATE_WINDOW": {
       const id: WindowId = uuid();
 
-      const size = action.defaults?.size ? action.defaults.size : { width: 600, height: 400 };
+      const size = adjustWindowSize(action.defaults?.size ? action.defaults.size : { width: 600, height: 400 });
       const instance: WindowInstance = {
         id,
         flags: action.defaults?.flags ? action.defaults.flags.clone() : new Flags(),

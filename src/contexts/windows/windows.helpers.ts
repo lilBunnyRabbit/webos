@@ -2,6 +2,34 @@ import { WINDOWS_CONTAINER_ID } from "./windows.provider";
 import type { Bounds, Dimensions, Position, ResizeDirection, SnapZone } from "./windows.type";
 import type React from "react";
 
+export function adjustWindowSize(size: Dimensions): Dimensions {
+  // Make sure the window size does not exceed the container or window dimensions
+  let maxWidth: number, maxHeight: number;
+
+  if (typeof document !== "undefined") {
+    const container = document.getElementById(WINDOWS_CONTAINER_ID) as HTMLElement | null;
+    if (container) {
+      maxWidth = container.clientWidth;
+      maxHeight = container.clientHeight;
+    } else {
+      maxWidth = window.innerWidth;
+      maxHeight = window.innerHeight;
+    }
+  } else {
+    // In non-browser environments, just return the original size
+    return size;
+  }
+
+
+  console.log("maxWidth", maxWidth);
+  console.log("maxHeight", maxHeight);
+
+  return {
+    width: Math.min(size.width, maxWidth),
+    height: Math.min(size.height, maxHeight),
+  };
+}
+
 /**
  * Calculate a cascading position for a new window (Windows-style stacking)
  * Each window is offset diagonally down-right from the starting position

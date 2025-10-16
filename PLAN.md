@@ -50,6 +50,10 @@ A fully-featured web-based operating system built with React, TypeScript, and Vi
   - Consider adding retry logic with exponential backoff
   - Add option to disable auto-check in settings
   - Consider user preference for update notifications
+  - 🔮 GitHub Actions build status monitoring (future: when repo is public)
+    - Show "building in progress" status
+    - Link to GitHub Actions run
+    - Detect deployments before they complete
 
 - [ ] **Testing & Polish**
   - Test version update flow end-to-end

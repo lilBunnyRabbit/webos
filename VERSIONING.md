@@ -216,6 +216,11 @@ When deploying to GitHub Pages:
 ## Future Enhancements
 
 Potential improvements:
+- **GitHub Actions build status monitoring** (requires public repo or backend proxy)
+  - Show "New version building..." when deployment is in progress
+  - Link directly to GitHub Actions run
+  - Notify users before update is deployed
+  - Implementation ready, waiting for public repo
 - Add release notes/changelog display
 - Implement progressive update (update in background)
 - Add user preference for auto-update behavior
