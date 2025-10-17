@@ -68,7 +68,7 @@ export const WindowsContainerProvider = ({
 }) => {
   const ref = React.useRef<HTMLDivElement>(null);
 
-  const [bounds, setBounds] = React.useState<WindowsContainerContextProps>(() => getElementBounds(ref.current));
+  const [bounds, setBounds] = React.useState<WindowsContainerContextProps>(() => getElementBounds(null));
 
   React.useEffect(() => {
     const element = ref.current;

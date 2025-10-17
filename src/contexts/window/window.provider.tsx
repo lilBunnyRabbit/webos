@@ -10,24 +10,38 @@ import {
   useWindowsContainer,
 } from "@/contexts/windows";
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { Activity } from "react";
 import { WindowContext, WindowToolbarContext } from "./window.context";
 
-export const WindowProvider = ({
-  children,
-  instance,
-  className,
-}: {
+interface WindowProviderProps {
   children: React.ReactNode;
   className?: string;
   instance: WindowInstance;
-}) => {
+}
+
+export const WindowProvider = ({ children, instance, className }: WindowProviderProps) => {
+  const hidden = instance.flags.has(WindowFlag.MINIMIZED);
+
+  return (
+    <Activity mode={hidden ? "hidden" : "visible"}>
+      <WindowProviderActivity instance={instance} className={className} hidden={hidden}>
+        {children}
+      </WindowProviderActivity>
+    </Activity>
+  );
+};
+
+interface WindowProviderActivityProps extends WindowProviderProps {
+  // future proofing for "keep alive"
+  hidden?: boolean;
+}
+
+const WindowProviderActivity = ({ children, instance, className, hidden }: WindowProviderActivityProps) => {
   const { order } = useWindows();
 
   const bounds = useWindowsContainer();
   const dispatch = useWindowsActions();
 
-  const isMinimized = instance.flags.has(WindowFlag.MINIMIZED);
   const isMaximized = instance.flags.has(WindowFlag.MAXIMIZED);
 
   const [position, setPosition] = React.useState(
@@ -104,7 +118,7 @@ export const WindowProvider = ({
             ref={ref}
             data-window-id={instance.id}
             onFocus={() => dispatch({ type: "FOCUS_WINDOW", windowId: instance.id })}
-            className={cn("absolute overflow-hidden pointer-events-auto", className, isMinimized && "hidden")}
+            className={cn("absolute overflow-hidden pointer-events-auto", className)}
             style={{
               ...(isMaximized
                 ? {
@@ -124,7 +138,7 @@ export const WindowProvider = ({
           >
             {children}
 
-            {!isMaximized && !isMinimized && !snapZone && (
+            {!isMaximized && !hidden && !snapZone && (
               <ResizeHandlers
                 instance={instance}
                 size={size}
@@ -137,7 +151,7 @@ export const WindowProvider = ({
         </WindowToolbarContext.Provider>
       </WindowContext.Provider>
 
-      {!isMaximized && !isMinimized && snapZone && (
+      {!isMaximized && !hidden && snapZone && (
         <div
           className="absolute pointer-events-none z-[9999] bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
           style={calculateSnapPositionPreview(snapZone)}

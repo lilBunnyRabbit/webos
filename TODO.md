@@ -10,5 +10,7 @@
 - [x] pinning apps
 - [x] desktop background
 - [x] window creation - check bounds and resize
-- [ ] tanstack impl - all async calls - versioning refetching
+- [x] tanstack impl - all async calls - versioning refetching
 - [ ] task manager for update flow
+- [ ] Fix all AI shit
+- [ ] app move preview is broken with left taskbar and bottom - not calculated correctly - i think its the padding

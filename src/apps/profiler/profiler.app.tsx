@@ -124,18 +124,18 @@ export default function ProfilerApp() {
     state: {},
   });
 
+  const onRender = React.useEffectEvent((event: ProfilerEvents["render"]) => {
+    // Ignore the profiler app's own render events to prevent infinite loops
+    if (event.appId === ID) return;
+
+    dispatch({ type: "RENDER_EVENT", event });
+  });
+
   React.useEffect(() => {
-    const handleRender = (event: ProfilerEvents["render"]) => {
-      // Ignore the profiler app's own render events to prevent infinite loops
-      if (event.appId === ID) return;
-
-      dispatch({ type: "RENDER_EVENT", event });
-    };
-
-    profilerEmitter.on("render", handleRender);
+    profilerEmitter.on("render", onRender);
 
     return () => {
-      profilerEmitter.off("render", handleRender);
+      profilerEmitter.off("render", onRender);
     };
   }, []);
 

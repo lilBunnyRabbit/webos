@@ -8,7 +8,7 @@ export default function TestApp(props: TestAppProps = { random: 0 }) {
   const [seconds, setSeconds] = React.useState(0);
 
   React.useEffect(() => {
-    console.log("~~~~~~~~~~~~~~~ TestApp mounted", props);
+    console.log("~~~~~~~~~~~~~~~ TestApp mounted");
     const interval = setInterval(() => {
       setSeconds((prev) => prev + 1);
     }, 1000);
@@ -18,7 +18,7 @@ export default function TestApp(props: TestAppProps = { random: 0 }) {
 
   return (
     <div>
-      <div>TestApp</div>
+      <div>TestApp {props.random}</div>
       <div>Seconds elapsed: {seconds}</div>
     </div>
   );

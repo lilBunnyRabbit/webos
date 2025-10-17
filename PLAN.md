@@ -411,6 +411,47 @@ const downloadTask = taskManager.create({
   - Reading history and stats
   - Markdown support for documents
 
+### 4.2.5 Markdown to PDF Converter
+
+- [ ] **Core Converter App**
+  - Parse Markdown files from file system
+  - Convert Markdown to styled PDF
+  - Support common Markdown features:
+    - Headers (H1-H6)
+    - Bold, italic, strikethrough
+    - Lists (ordered, unordered)
+    - Code blocks with syntax highlighting
+    - Blockquotes
+    - Tables
+    - Links and images
+    - Horizontal rules
+  - Live preview before export
+  - Adjustable PDF settings:
+    - Page size (A4, Letter, etc.)
+    - Margins
+    - Font family and size
+    - Line height
+    - Color scheme
+  - Export to file system or download
+
+- [ ] **Advanced Features**
+  - Custom CSS styling support
+  - Template system for consistent formatting
+  - Header/footer customization (page numbers, dates)
+  - Table of contents generation
+  - Bookmark support in PDF
+  - Multiple file batch conversion
+  - Markdown extensions (GFM, footnotes, etc.)
+  - Use @lilbunnyrabbit/task-manager for conversion progress
+
+- [ ] **Technical Implementation**
+  - Use `marked` or `markdown-it` for parsing
+  - Use `jsPDF` or `pdf-lib` for PDF generation
+  - Consider `html2pdf` for HTML intermediate step
+  - Syntax highlighting with `highlight.js` or `prism`
+  - Store conversion history in IndexedDB
+  - Preset templates for common document types
+
 ### 4.3 Work Hours Tracker
 
 - [ ] **Time Tracking App**

@@ -47,8 +47,10 @@ export default function MediaPreviewApp({ file }: MediaPreviewAppProps = {}) {
 
     try {
       const url = URL.createObjectURL(file);
+      /* eslint-disable react-hooks/set-state-in-effect */
       setObjectUrl(url);
       setError(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
 
       return () => {
         URL.revokeObjectURL(url);

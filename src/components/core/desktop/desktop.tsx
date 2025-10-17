@@ -11,7 +11,7 @@ export interface DesktopItemConfig {
 }
 
 export const CELL_SIZE = 64;
-const CONTAINER_PADDING = 4;
+export const DESKTOP_PADDING = 4;
 
 export const Desktop = ({ className }: { className?: string }) => {
   const items = useDesktopStore((state) => state.items);
@@ -29,10 +29,10 @@ export const Desktop = ({ className }: { className?: string }) => {
       const rect = element.getBoundingClientRect();
 
       const bounds = {
-        width: rect.width - CONTAINER_PADDING * 2,
-        height: rect.height - CONTAINER_PADDING * 2,
-        x: rect.left + CONTAINER_PADDING,
-        y: rect.top + CONTAINER_PADDING,
+        width: rect.width - DESKTOP_PADDING * 2,
+        height: rect.height - DESKTOP_PADDING * 2,
+        x: rect.left + DESKTOP_PADDING,
+        y: rect.top + DESKTOP_PADDING,
       };
 
       const columns = Math.floor(bounds.width / CELL_SIZE);
@@ -64,7 +64,7 @@ export const Desktop = ({ className }: { className?: string }) => {
         gridTemplateColumns: `repeat(${container.grid.columns}, minmax(64px, 1fr))`,
         gridTemplateRows: `repeat(${container.grid.rows}, minmax(64px, 1fr))`,
         gridAutoFlow: "dense",
-        padding: CONTAINER_PADDING,
+        padding: DESKTOP_PADDING,
         backgroundImage:
           container.cell.width > 0 && container.cell.height > 0
             ? `radial-gradient(circle at left top, var(--foreground) 1px, transparent 1px)`
@@ -73,7 +73,7 @@ export const Desktop = ({ className }: { className?: string }) => {
           container.cell.width > 0 && container.cell.height > 0
             ? `${container.cell.width}px ${container.cell.height}px`
             : undefined,
-        backgroundPosition: `${CONTAINER_PADDING}px ${CONTAINER_PADDING}px`,
+        backgroundPosition: `${DESKTOP_PADDING}px ${DESKTOP_PADDING}px`,
       }}
     >
       {container &&
