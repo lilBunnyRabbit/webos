@@ -1,10 +1,10 @@
-import { profilerEmitter } from "@/emitters/profiler.emitter";
-import { Button } from "@/components/ui/button";
+import { profilerEmitter } from "@/core/emitters/profiler.emitter";
+import { Button } from "@/core/ui/button";
 import React from "react";
 import type { AppId } from "@/apps";
-import type { WindowId } from "@/contexts/windows";
+import type { WindowId } from "@/core/contexts/window-manager";
 import { ID } from ".";
-import type { ProfilerEvents } from "@/emitters/profiler.emitter";
+import type { ProfilerEvents } from "@/core/emitters/profiler.emitter";
 
 interface RenderingData {
   rendersCount: number;

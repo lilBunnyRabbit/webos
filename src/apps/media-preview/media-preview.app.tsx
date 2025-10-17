@@ -8,8 +8,8 @@ import {
   FileIcon,
   Maximize2Icon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/core/ui/button";
+import { cn } from "@/core/lib/utils";
 
 interface MediaPreviewAppProps {
   file?: File;

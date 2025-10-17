@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { APP_VERSION } from "@/constants";
-import { useVersion } from "@/contexts/version";
-import { cn } from "@/lib/utils";
-import { useSettingsStore } from "@/stores/settings.store";
+import { Button } from "@/core/ui/button";
+import { APP_VERSION } from "@/core/constants";
+import { useVersion } from "@/core/contexts/version";
+import { cn } from "@/core/lib/utils";
+import { useSettingsStore } from "@/core/stores/settings.store";
 import { CheckCircle2, Info, LayoutDashboard, Palette, RefreshCw, RotateCcw } from "lucide-react";
 import React from "react";
 

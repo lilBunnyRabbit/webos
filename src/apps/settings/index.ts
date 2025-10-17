@@ -1,7 +1,7 @@
-import type { WindowDefaults } from "@/contexts/windows";
+import type { WindowDefaults } from "@/core/contexts/window-manager";
 import { SettingsIcon } from "lucide-react";
 import React from "react";
-import type { AppTag } from "@/contexts/apps";
+import type { AppTag } from "@/core/contexts/apps";
 
 export const ID = "settings";
 export const NAME = "Settings";

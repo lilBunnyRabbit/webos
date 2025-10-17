@@ -9,8 +9,8 @@ import {
   Loader2Icon,
   AlertCircleIcon,
 } from "lucide-react";
-import { useApps } from "@/contexts/apps";
-import { cn } from "@/lib/utils";
+import { useApps } from "@/core/contexts/apps";
+import { cn } from "@/core/lib/utils";
 
 interface FileItem {
   name: string;

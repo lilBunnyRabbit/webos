@@ -16,3 +16,4 @@
 - [x] app move preview is broken with left taskbar and bottom - not calculated correctly - i think its the padding
 - [ ] create components - button, etc - style guide app
 - [ ] use native components for custom popovers etc
+- [x] move core os logic to /core
