@@ -42,6 +42,12 @@ export const useDesktopStore = create<DesktopStore>()(
             y: 0,
           },
         },
+        "file-explorer": {
+          grid: {
+            x: 0,
+            y: 1,
+          },
+        },
       },
       container: {
         bounds: {

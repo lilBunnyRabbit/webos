@@ -17,3 +17,12 @@
 - [ ] create components - button, etc - style guide app
 - [x] use native components for custom popovers etc
 - [x] move core os logic to /core
+- [ ] Rewrite
+  - [ ] Files
+  - [ ] File explorer
+  - [ ] Media preview
+- [ ] Fix profile to work prod
+- [ ] WindowApi
+  - [ ] confirmation modal
+  - [ ] small notifications
+  - [ ] update title, etc
