@@ -4,8 +4,15 @@ import { useSettingsStore } from "@/core/stores/settings.store";
 import { LayoutGridIcon } from "lucide-react";
 import React from "react";
 import { StartMenu } from "./start-menu";
+import { TaskbarItem } from "./taskbar-item";
+import { DateTime } from "./date-time";
 
-export function Taskbar({ className, style }: { className?: string; style?: React.CSSProperties }) {
+interface TaskbarProps {
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function Taskbar({ className, style }: TaskbarProps) {
   const { index, order } = useWindowManager();
   const dispatch = useWindowManagerActions();
   const taskbarPosition = useSettingsStore((state) => state.taskbar.position);
@@ -38,14 +45,9 @@ export function Taskbar({ className, style }: { className?: string; style?: Reac
         )}
       >
         <StartMenu>
-          <button
-            className={cn(
-              "flex items-center justify-center hover:bg-primary/10 active:bg-primary/20 transition-colors rounded-sm w-10 h-10 data-[state=open]:bg-primary/20"
-            )}
-            title="Start"
-          >
-            <LayoutGridIcon className="w-6 h-6 text-primary" />
-          </button>
+          <TaskbarItem title="Start">
+            <LayoutGridIcon className="text-primary" />
+          </TaskbarItem>
         </StartMenu>
       </div>
 
@@ -68,14 +70,11 @@ export function Taskbar({ className, style }: { className?: string; style?: Reac
             const isMinimized = instance.flags.has(WindowFlag.MINIMIZED);
 
             return (
-              <button
+              <TaskbarItem
                 key={windowId}
-                className={cn(
-                  "group relative flex justify-center items-center rounded-sm transition-all duration-150 min-w-0 flex-shrink-0 w-10 h-10",
-                  "hover:bg-foreground/10",
-                  isFocused && !isMinimized && "text-primary",
-                  !isMinimized && "bg-primary/10"
-                )}
+                title={instance.app.name}
+                isFocused={isFocused}
+                isMinimized={isMinimized}
                 onClick={() => {
                   if (isFocused) {
                     dispatch({ type: "TOGGLE_WINDOW", windowId });
@@ -83,10 +82,9 @@ export function Taskbar({ className, style }: { className?: string; style?: Reac
                     dispatch({ type: "FOCUS_WINDOW", windowId });
                   }
                 }}
-                title={instance.app.name}
               >
-                <IconComponent className="w-6 h-6" />
-              </button>
+                <IconComponent />
+              </TaskbarItem>
             );
           })}
       </div>
@@ -103,24 +101,3 @@ export function Taskbar({ className, style }: { className?: string; style?: Reac
   );
 }
 
-const DateTime = ({ className }: { className?: string }) => {
-  const [now, setNow] = React.useState(() => new Date());
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Format time, e.g., "13:05:24" or with locale options if needed
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const date = now.toLocaleDateString([], { month: "short", day: "numeric" });
-
-  return (
-    <div className={cn("flex flex-col items-end text-xs tabular-nums leading-tight select-none shrink-0", className)}>
-      <div>{time}</div>
-      <div className="opacity-70">{date}</div>
-    </div>
-  );
-};

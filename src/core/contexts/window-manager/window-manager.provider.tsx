@@ -16,7 +16,7 @@ import { Flags } from "@/core/lib/flags";
 
 export const WindowManagerProvider = ({ children }: React.PropsWithChildren) => {
   const [windows, dispatch] = React.useReducer(windowManagerReducer, {
-    flags: new Flags<WindowManager>(),
+    flags: new Flags<WindowManagerFlag>(),
     index: {},
     order: new Order<WindowId>(),
   });

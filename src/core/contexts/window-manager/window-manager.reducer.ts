@@ -32,7 +32,7 @@ export function windowManagerReducer(state: WindowManagerState, action: WindowMa
       };
 
       const flags =
-        action.app.id === PROFILER_ID ? new Flags<WindowManager>().add(WindowManagerFlag.PROFILER_ENABLED) : state.flags;
+        action.app.id === PROFILER_ID ? new Flags<WindowManagerFlag>().add(WindowManagerFlag.PROFILER_ENABLED) : state.flags;
 
       return {
         ...state,

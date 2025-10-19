@@ -14,6 +14,6 @@ export type WindowManagerContainerContextProps = Bounds;
 
 export const WindowManagerContainerContext = React.createContext<WindowManagerContainerContextProps | null>(null);
 
-export type WindowManagerFlagsContextProps = Flags<WindowManager>;
+export type WindowManagerFlagsContextProps = Flags<WindowManagerFlag>;
 
 export const WindowManagerFlagsContext = React.createContext<WindowManagerFlagsContextProps | null>(null);

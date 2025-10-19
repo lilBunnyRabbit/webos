@@ -223,11 +223,14 @@ function ThemeSection() {
             <button
               key={i}
               type="button"
-              className="flex gap-1 p-4 rounded-lg border-2 border-foreground/20 hover:border-primary/60 hover:shadow-lg transition-all duration-200 cursor-pointer justify-center items-center"
+              className="flex gap-1 p-4 rounded-lg hover:border-primary/60 hover:shadow-lg transition-all duration-200 cursor-pointer justify-center items-center"
               onClick={() => handlePresetClick(preset)}
               title={`Preset ${i + 1} - Click to apply`}
+              style={{
+                background: preset[0],
+              }}
             >
-              {preset.map((color, j) => (
+              {preset.slice(1).map((color, j) => (
                 <span
                   key={j}
                   className="flex-1 min-w-8 min-h-8 aspect-square rounded-lg shadow-md border-2 border-background"
