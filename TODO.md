@@ -17,12 +17,20 @@
 - [ ] create components - button, etc - style guide app
 - [x] use native components for custom popovers etc
 - [x] move core os logic to /core
-- [ ] Rewrite
-  - [ ] Files
-  - [ ] File explorer
-  - [ ] Media preview
+- [x] Rewrite
+  - [x] File explorer ✅ (NEW - OPFS-based with TanStack Query)
+  - [ ] Files (can be updated to use new FileAPI)
+  - [x] Media preview (integrated with File Explorer)
 - [ ] Fix profile to work prod
+- [ ] File System Enhancements (Optional)
+  - [ ] Add drag-and-drop file upload
+  - [ ] Implement file rename functionality
+  - [ ] Add file search/filter
+  - [ ] File properties dialog
+  - [ ] Copy/paste operations
+  - [ ] Back/forward navigation buttons
 - [ ] WindowApi
   - [ ] confirmation modal
   - [ ] small notifications
   - [ ] update title, etc
+  - [ ] open file - overlay
