@@ -29,6 +29,7 @@
   - [ ] File properties dialog
   - [ ] Copy/paste operations
   - [ ] Back/forward navigation buttons
+  - [ ] app data?
 - [ ] WindowApi
   - [ ] confirmation modal
   - [ ] small notifications
