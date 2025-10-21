@@ -395,13 +395,13 @@ function MyApp() {
 
 ```bash
 # Development
-pnpm dev               # Start dev server
-pnpm build             # Build for production
-pnpm lint              # Run linter
+bun dev               # Start dev server
+bun build             # Build for production
+bun lint              # Run linter
 
 # Utilities
-pnpm generate-version  # Generate version.json
-pnpm generate-pwa-assets # Generate PWA icons
+bun generate-version  # Generate version.json
+bun generate-pwa-assets # Generate PWA icons
 ```
 
 ---

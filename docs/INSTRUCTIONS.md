@@ -46,9 +46,9 @@ You are working on **WebOS** - a fully-featured, browser-based operating system 
 ## 🚀 Quick Commands
 
 ```bash
-pnpm dev          # Start development
-pnpm build        # Build for production
-pnpm lint         # Run linter
+bun dev          # Start development
+bun build        # Build for production
+bun lint         # Run linter
 ```
 
 ## 📖 Navigation

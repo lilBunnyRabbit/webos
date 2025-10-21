@@ -245,9 +245,9 @@ const windows: any = useWindowManager().windows; // Don't use 'any'
 
 ### Before Committing Code
 
-- [ ] Code builds successfully (`pnpm build`)
+- [ ] Code builds successfully (`bun build`)
 - [ ] No TypeScript errors (`tsc --noEmit`)
-- [ ] No linting errors (`pnpm lint`)
+- [ ] No linting errors (`bun lint`)
 - [ ] Tested in browser (dev server)
 - [ ] Tested relevant features (windows, files, etc.)
 - [ ] Documentation is up to date

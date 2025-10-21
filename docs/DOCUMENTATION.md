@@ -709,7 +709,7 @@ webos/
 ├── README.md                     # Project readme
 │
 ├── package.json                  # Dependencies
-├── pnpm-lock.yaml               # Lock file
+├── bun.lockb                    # Lock file
 ├── tsconfig.json                # TypeScript config
 ├── tsconfig.app.json            # App-specific TS config
 ├── tsconfig.node.json           # Node-specific TS config
@@ -1516,25 +1516,25 @@ If you're extending this project:
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Start development server
-pnpm dev
+bun dev
 
 # Build for production
-pnpm build
+bun build
 
 # Preview production build
-pnpm preview
+bun preview
 
 # Run linter
-pnpm lint
+bun lint
 
 # Generate version file
-pnpm generate-version
+bun generate-version
 
 # Generate PWA assets
-pnpm generate-pwa-assets
+bun generate-pwa-assets
 ```
 
 ### 📂 Key Directories

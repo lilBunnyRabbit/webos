@@ -94,7 +94,7 @@ This project has **comprehensive documentation** for different use cases:
 
 ### Prerequisites
 - Node.js 18+
-- pnpm (recommended) or npm
+- Bun (recommended) or npm
 
 ### Installation
 
@@ -104,10 +104,10 @@ git clone https://github.com/lilbunnyrabbit/webos.git
 cd webos
 
 # Install dependencies
-pnpm install
+bun install
 
 # Start development server
-pnpm dev
+bun dev
 ```
 
 The app will be available at `http://localhost:5173`
@@ -116,10 +116,10 @@ The app will be available at `http://localhost:5173`
 
 ```bash
 # Build the app
-pnpm build
+bun build
 
 # Preview production build
-pnpm preview
+bun preview
 ```
 
 ---
@@ -276,10 +276,10 @@ Contributions are welcome! Before contributing:
 ### Development Commands
 
 ```bash
-pnpm dev          # Start dev server
-pnpm build        # Build for production
-pnpm lint         # Run linter
-pnpm generate-version  # Generate version file
+bun dev          # Start dev server
+bun build        # Build for production
+bun lint         # Run linter
+bun generate-version  # Generate version file
 ```
 
 ---
