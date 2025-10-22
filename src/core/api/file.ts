@@ -31,7 +31,6 @@ export async function listDirectory(
   const { includeMetadata = true, sort } = options;
   const items: FileSystemItem[] = [];
 
-  // @ts-expect-error - FileSystemDirectoryHandle is an async iterable
   for await (const [name, handle] of dirHandle.entries()) {
     const item: FileSystemItem = {
       name,
