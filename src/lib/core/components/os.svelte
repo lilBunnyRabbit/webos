@@ -2,7 +2,7 @@
   import { SYS, WM } from "$lib/core/stores";
   import { cn, ov } from "$lib/core/utils/utils";
   import Taskbar from "./taskbar/taskbar.svelte";
-  import WindowManager from "./window/window-manager.svelte";
+  import WindowManager from "./window-manager/window-manager.svelte";
 
   const position = $derived(SYS.taskbar.position);
 </script>

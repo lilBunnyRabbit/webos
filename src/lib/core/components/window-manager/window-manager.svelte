@@ -2,7 +2,7 @@
   import { WM } from "$lib/core/stores";
   import { WINDOW_MANAGER_CONTAINER_ID, getElementBounds } from "$lib/core/utils/window";
   import type { SvelteHTMLElements } from "svelte/elements";
-  import Window from "./window.svelte";
+  import Window from "../window/window.svelte";
   import type { Attachment } from "svelte/attachments";
 
   let props: SvelteHTMLElements["div"] = $props();

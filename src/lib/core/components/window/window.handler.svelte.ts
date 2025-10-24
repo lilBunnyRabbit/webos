@@ -96,7 +96,13 @@ export class WindowGeometryHandler {
   public createMoveAttachment() {
     return this.createAttachment({
       disabled: (element, event) => {
-        return element !== event.target;
+        if (element === event.target) {
+          return false;
+        }
+
+        console.log(event.target, event.target instanceof HTMLButtonElement && !event.target.dataset.windowButton);
+
+        return event.target instanceof HTMLButtonElement && !event.target.dataset.windowButton;
       },
       onStart: (event) => {
         Object.assign(this.drag, {
@@ -196,7 +202,7 @@ export class WindowGeometryHandler {
     onMove: (event: PointerEvent) => void;
     onEnd: (event: PointerEvent) => void;
   }): Attachment<HTMLDivElement> {
-    return function geometryAttachment(element) {
+    return (element) => {
       let pointerId: number | null = null;
 
       const cleanup = () => {
@@ -235,6 +241,8 @@ export class WindowGeometryHandler {
 
         e.preventDefault();
         e.stopPropagation();
+
+        WM.windows.focus(this.windowId);
 
         element.setPointerCapture(e.pointerId);
         pointerId = e.pointerId;

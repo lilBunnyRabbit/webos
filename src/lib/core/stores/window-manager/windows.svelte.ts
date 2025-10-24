@@ -2,6 +2,7 @@ import { adjustWindowSize, calculateWindowPosition } from "$lib/core/utils/windo
 import { v4 as uuid } from "uuid";
 import type { WindowId, WindowInstance } from "./window-manager.type";
 import { Flags } from "$lib/core/utils/flags";
+import { WM } from "..";
 
 let _maxOrder = $state(0);
 const _index = $state<Record<WindowId, WindowInstance>>({});
@@ -43,5 +44,22 @@ export function focus(id: WindowId) {
   const instance = _index[id];
   if (!instance) return;
 
+  // If already focused, do nothing
+  if (instance.zIndex === _maxOrder) return;
+
   instance.zIndex = ++_maxOrder;
+}
+
+export function toggleMaximize(id: WindowId) {
+  const instance = _index[id];
+  if (!instance) return;
+
+  instance.flags.toggle(WM.WindowFlag.MAXIMIZED);
+}
+
+export function toggleMinimize(id: WindowId) {
+  const instance = _index[id];
+  if (!instance) return;
+
+  instance.flags.toggle(WM.WindowFlag.MINIMIZED);
 }
