@@ -1,0 +1,91 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-background-dark: color-mix(in oklch, var(--background) 80%, black);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+
+  --shadow-window: 0 0.5rem 2rem 0 color-mix(in srgb, var(--background) 24%, transparent),
+    0 0.09375rem 0.25rem 0 color-mix(in srgb, var(--background) 12%, transparent);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* 
+    $background: source color
+    - Hex: #17252c
+    - HSL: hsl(200 31% 13%)
+    - OKLCH: oklch(0.26 0.0233 230.47)
+  */
+  --background: oklch(0.26 0.0233 230.47);
+
+  /*
+    $foreground: $background HSL split complementary +55% lightness -22% saturation
+    - Hex: #b5b3a6
+    - HSL: hsl(52 9% 68%)
+    - OKLCH: oklch(0.76 0.0183 99.68)
+  */
+  --foreground: oklch(0.76 0.0183 99.68);
+
+  /*
+    $primary: $background HSL triad +48% lightness
+    - Hex: #a6ba7d
+    - HSL: hsl(80 31% 61%)
+    - OKLCH: oklch(0.76 0.0865 123.43)
+  */
+  --primary: oklch(0.76 0.0865 123.43);
+
+  /*
+    $secondary: $primary Oklch complementary
+    - Hex: #bca4de
+    - HSL: hsl(264.97 47% 76%)
+    - OKLCH: oklch(0.76 0.0865 303.43)
+  */
+  --secondary: oklch(0.76 0.0865 303.43);
+
+  /*
+    $accent: $primary OKLCH + $background OKLCH complementary hue
+    - Hex: #dea17f
+    - HSL: hsl(21.66 59% 68%)
+    - OKLCH: oklch(0.76 0.0865 50.47)
+  */
+  --accent: oklch(0.76 0.0865 50.47);
+}
+/* TODO: Dark mode */
+/* 
+.dark {
+} */
+
+@layer base {
+  * {
+    /* @apply border-border outline-ring/50; */
+  }
+  body {
+    @apply bg-background text-foreground overflow-hidden;
+  }
+  #app {
+    margin: 0;
+    padding: 0;
+    width: 100dvw;
+    height: 100dvh;
+  }
+  
+}
+
+@layer utilities {
+  body {
+    scrollbar-color: var(--background) var(--foreground);
+    scrollbar-width: thin;
+  }
+}
