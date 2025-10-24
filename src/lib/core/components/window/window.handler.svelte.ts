@@ -16,9 +16,8 @@ interface DragState {
   animationFrame: number;
 }
 
-interface ResizeState {
+interface MovingState {
   active: boolean;
-  edge: ResizeEdge | null;
   startX: number;
   startY: number;
   width: number;
@@ -28,60 +27,47 @@ interface ResizeState {
   dx: number;
   dy: number;
   animationFrame: number;
+  container: Bounds;
 }
 
 export class WindowGeometryHandler {
-  public drag = $state<DragState>({
+  public move = $state<MovingState>({
     active: false,
     startX: 0,
     startY: 0,
     startLeft: 0,
     startTop: 0,
-    dx: 0,
-    dy: 0,
-    animationFrame: 0,
-  });
-
-  private resetDrag() {
-    Object.assign(this.drag, {
-      active: false,
-      startX: 0,
-      startY: 0,
-      startLeft: 0,
-      startTop: 0,
-      dx: 0,
-      dy: 0,
-      animationFrame: 0,
-    });
-  }
-
-  public resize = $state<ResizeState>({
-    active: false,
-    edge: null,
-    startX: 0,
-    startY: 0,
     width: 0,
     height: 0,
-    startLeft: 0,
-    startTop: 0,
     dx: 0,
     dy: 0,
     animationFrame: 0,
-  });
-
-  private resetResize() {
-    Object.assign(this.resize, {
-      active: false,
-      edge: null,
-      startX: 0,
-      startY: 0,
+    container: {
       width: 0,
       height: 0,
+      x: 0,
+      y: 0,
+    },
+  });
+
+  private resetMove() {
+    Object.assign(this.move, {
+      active: false,
+      startX: 0,
+      startY: 0,
       startLeft: 0,
       startTop: 0,
+      width: 0,
+      height: 0,
       dx: 0,
       dy: 0,
       animationFrame: 0,
+      container: {
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+      },
     });
   }
 
@@ -93,115 +79,66 @@ export class WindowGeometryHandler {
     this.bounds = $derived(WM.windows.get(this.windowId)!.bounds);
   }
 
-  public createMoveAttachment() {
-    return this.createAttachment({
-      disabled: (element, event) => {
-        if (element === event.target) {
-          return false;
-        }
+  public dragAttachment() {
+    return this.createMoveAttachment((event) => {
+      const { x: cx, y: cy, width: cw, height: ch } = this.move.container;
+      const { startX: sx, startY: sy, startTop: st } = this.move;
 
-        console.log(event.target, event.target instanceof HTMLButtonElement && !event.target.dataset.windowButton);
+      this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
+      this.move.dy = Math.round(Math.max(-st, Math.min(ch + cy, event.clientY) - sy));
 
-        return event.target instanceof HTMLButtonElement && !event.target.dataset.windowButton;
-      },
-      onStart: (event) => {
-        Object.assign(this.drag, {
-          active: true,
-          startX: event.clientX,
-          startY: event.clientY,
-          startLeft: this.bounds.x,
-          startTop: this.bounds.y,
-          dx: 0,
-          dy: 0,
-        });
-      },
-      onMove: (event) => {
-        const ndx = event.clientX - this.drag.startX;
-        const ndy = event.clientY - this.drag.startY;
+      /*
+      this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
+      this.move.dy = Math.round(Math.max(-st + sy, Math.min(ch + cy, event.clientY)) - sy);
 
-        cancelAnimationFrame(this.drag.animationFrame);
-        this.drag.animationFrame = requestAnimationFrame(() => {
-          this.drag.dx = Math.round(ndx);
-          this.drag.dy = Math.round(ndy);
-        });
-      },
-      onEnd: () => {
-        cancelAnimationFrame(this.drag.animationFrame);
+      const ndx = Math.round(event.clientX - this.move.startX);
+      const ndy = Math.round(event.clientY - this.move.startY);
 
-        this.bounds.x = this.drag.startLeft + this.drag.dx;
-        this.bounds.y = this.drag.startTop + this.drag.dy;
+      const minX = Math.round(-this.move.startX + this.move.container.x);
+      const minY = -this.move.startTop;
 
-        this.resetDrag();
-      },
+      const maxX = Math.round(this.move.container.width - this.move.startX + this.move.container.x);
+      const maxY = Math.round(this.move.container.height - this.move.startY + this.move.container.y);
+
+      this.move.dx = Math.max(minX, Math.min(maxX, ndx));
+      this.move.dy = Math.max(minY, Math.min(maxY, ndy));
+      */
     });
   }
 
-  public createResizeAttachment(edge: ResizeEdge) {
-    return this.createAttachment({
-      onStart: (event) => {
-        const x = event.clientX;
-        const y = event.clientY;
+  // TODO: bounds
+  public resizeAttachment(edge: ResizeEdge) {
+    return this.createMoveAttachment((event) => {
+      const ndx = event.clientX - this.move.startX;
+      const ndy = event.clientY - this.move.startY;
 
-        Object.assign(this.resize, {
-          active: true,
-          edge,
-          startX: x,
-          startY: y,
-          width: this.bounds.width,
-          height: this.bounds.height,
-          startLeft: this.bounds.x,
-          startTop: this.bounds.y,
-          dx: 0,
-          dy: 0,
-        });
-      },
-      onMove: (event) => {
-        const x = event.clientX;
-        const y = event.clientY;
+      if (edge.includes("e")) {
+        const nw = Math.round(this.bounds.width + ndx);
+        const maxWidth = Math.round(this.move.container.width - this.move.startLeft + this.move.container.x);
 
-        cancelAnimationFrame(this.resize.animationFrame);
-        this.resize.animationFrame = requestAnimationFrame(() => {
-          const dx = x - this.resize.startX;
-          const dy = y - this.resize.startY;
+        this.move.width = Math.max(this.minW, Math.min(maxWidth, nw));
+      }
 
-          if (edge.includes("e")) {
-            this.resize.width = Math.max(this.minW, Math.round(this.bounds.width + dx));
-          }
+      if (edge.includes("w")) {
+        this.move.width = Math.max(this.minW, Math.round(this.bounds.width - ndx));
+        this.move.dx = this.bounds.width - this.move.width;
+      }
 
-          if (edge.includes("w")) {
-            this.resize.width = Math.max(this.minW, Math.round(this.bounds.width - dx));
-            this.resize.dx = this.bounds.width - this.resize.width;
-          }
+      if (edge.includes("s")) {
+        const nh = Math.round(this.bounds.height + ndy);
+        const maxHeight = Math.round(this.move.container.height - this.move.startTop + this.move.container.y);
 
-          if (edge.includes("s")) {
-            this.resize.height = Math.max(this.minH, Math.round(this.bounds.height + dy));
-          }
+        this.move.height = Math.max(this.minH, Math.min(maxHeight, nh));
+      }
 
-          if (edge.includes("n")) {
-            this.resize.height = Math.max(this.minH, Math.round(this.bounds.height - dy));
-            this.resize.dy = this.bounds.height - this.resize.height;
-          }
-        });
-      },
-      onEnd: () => {
-        cancelAnimationFrame(this.resize.animationFrame);
-
-        this.bounds.width = this.resize.width;
-        this.bounds.height = this.resize.height;
-        this.bounds.x = this.resize.startLeft + this.resize.dx;
-        this.bounds.y = this.resize.startTop + this.resize.dy;
-
-        this.resetResize();
-      },
+      if (edge.includes("n")) {
+        this.move.height = Math.max(this.minH, Math.round(this.bounds.height - ndy));
+        this.move.dy = this.bounds.height - this.move.height;
+      }
     });
   }
 
-  private createAttachment(handlers: {
-    disabled?: (element: HTMLDivElement, event: PointerEvent) => boolean;
-    onStart: (event: PointerEvent) => void;
-    onMove: (event: PointerEvent) => void;
-    onEnd: (event: PointerEvent) => void;
-  }): Attachment<HTMLDivElement> {
+  private createMoveAttachment(handleMove: (event: PointerEvent) => void): Attachment<HTMLDivElement> {
     return (element) => {
       let pointerId: number | null = null;
 
@@ -216,38 +153,64 @@ export class WindowGeometryHandler {
         }
       };
 
-      const onMove = (e: PointerEvent) => {
-        e.preventDefault();
-        handlers.onMove(e);
+      const onMove = (event: PointerEvent) => {
+        event.preventDefault();
+
+        cancelAnimationFrame(this.move.animationFrame);
+        this.move.animationFrame = requestAnimationFrame(() => {
+          handleMove(event);
+        });
       };
 
-      const onEnd = (e: PointerEvent) => {
-        e.preventDefault();
+      const onEnd = (event: PointerEvent) => {
+        event.preventDefault();
 
-        element.releasePointerCapture(e.pointerId);
+        element.releasePointerCapture(event.pointerId);
 
         element.removeEventListener("pointermove", onMove);
         element.removeEventListener("pointerup", onEnd);
         element.removeEventListener("pointercancel", onEnd);
 
-        handlers.onEnd(e);
+        cancelAnimationFrame(this.move.animationFrame);
+
+        this.bounds.width = this.move.width;
+        this.bounds.height = this.move.height;
+        this.bounds.x = this.move.startLeft + this.move.dx;
+        this.bounds.y = this.move.startTop + this.move.dy;
+
+        this.resetMove();
         pointerId = null;
       };
 
-      const onDown = (e: PointerEvent) => {
-        if (handlers.disabled && handlers.disabled(element, e)) {
+      const onDown = (event: PointerEvent) => {
+        if (
+          element !== event.target &&
+          event.target instanceof Element &&
+          event.target.closest("button[data-window-button]") !== null
+        ) {
           return;
         }
 
-        e.preventDefault();
-        e.stopPropagation();
+        event.preventDefault();
+        event.stopPropagation();
 
         WM.windows.focus(this.windowId);
 
-        element.setPointerCapture(e.pointerId);
-        pointerId = e.pointerId;
+        element.setPointerCapture(event.pointerId);
+        pointerId = event.pointerId;
 
-        handlers.onStart(e);
+        Object.assign(this.move, {
+          active: true,
+          startX: event.clientX,
+          startY: event.clientY,
+          startLeft: this.bounds.x,
+          startTop: this.bounds.y,
+          width: this.bounds.width,
+          height: this.bounds.height,
+          container: WM.container.getBounds(),
+          dx: 0,
+          dy: 0,
+        });
 
         element.addEventListener("pointermove", onMove);
         element.addEventListener("pointerup", onEnd);

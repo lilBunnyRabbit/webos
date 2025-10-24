@@ -48,6 +48,38 @@
       }[SYS.taskbar.position]
     )}
   >
+    <button
+      onclick={() => {
+        SYS.taskbar.position = "top";
+      }}
+      title="Top"
+    >
+      Top
+    </button>
+    <button
+      onclick={() => {
+        SYS.taskbar.position = "bottom";
+      }}
+      title="Bottom"
+    >
+      Bottom
+    </button>
+    <button
+      onclick={() => {
+        SYS.taskbar.position = "left";
+      }}
+      title="Left"
+    >
+      Left
+    </button>
+    <button
+      onclick={() => {
+        SYS.taskbar.position = "right";
+      }}
+      title="Right"
+    >
+      Right
+    </button>
     <!-- {#each Object.entries(index).sort((a, b) => a[1].createdAt.getTime() - b[1].createdAt.getTime()) as [windowId, instance]}
       {#if instance}
         <TaskbarItem

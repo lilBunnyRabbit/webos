@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { WM } from "$lib/core/stores";
+  import { SYS, WM } from "$lib/core/stores";
   import { WINDOW_MANAGER_CONTAINER_ID, getElementBounds } from "$lib/core/utils/window";
   import type { SvelteHTMLElements } from "svelte/elements";
   import Window from "../window/window.svelte";
@@ -12,10 +12,18 @@
       WM.container.setBounds(getElementBounds(element));
     };
 
-    updateBounds();
+    const resizeObserver = new ResizeObserver(() => {
+      console.log("update bounds on resize");
+      updateBounds();
+    });
 
-    // Update on resize
-    const resizeObserver = new ResizeObserver(updateBounds);
+    $effect(() => {
+      SYS.taskbar.position;
+      requestAnimationFrame(() => {
+        console.log("update bounds on taskbar position change");
+        updateBounds();
+      });
+    });
 
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();

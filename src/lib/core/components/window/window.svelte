@@ -12,42 +12,25 @@
   const geometryHandler = new WindowGeometryHandler(windowId);
   let zoom = $state(1);
 
-  const styles = $derived.by(() => {
-    if (isMaximized) {
-      return {
-        inset: "0px",
-      };
-    }
-
-    if (geometryHandler.drag.active) {
-      return {
-        left: `${geometryHandler.drag.startLeft}px`,
-        top: `${geometryHandler.drag.startTop}px`,
-        width: `${instance.bounds.width}px`,
-        height: `${instance.bounds.height}px`,
-        transform: `translate3d(${geometryHandler.drag.dx}px, ${geometryHandler.drag.dy}px, 0)`,
-        // willChange: "transform",
-      };
-    }
-
-    if (geometryHandler.resize.active) {
-      return {
-        left: `${geometryHandler.resize.startLeft}px`,
-        top: `${geometryHandler.resize.startTop}px`,
-        width: `${geometryHandler.resize.width}px`,
-        height: `${geometryHandler.resize.height}px`,
-        transform: `translate3d(${geometryHandler.resize.dx}px, ${geometryHandler.resize.dy}px, 0)`,
-        // willChange: "transform, width, height",
-      };
-    }
-
-    return {
-      left: `${instance.bounds.x}px`,
-      top: `${instance.bounds.y}px`,
-      width: `${instance.bounds.width}px`,
-      height: `${instance.bounds.height}px`,
-    };
-  });
+  const left = $derived(
+    isMaximized ? "0px" : geometryHandler.move.active ? `${geometryHandler.move.startLeft}px` : `${instance.bounds.x}px`
+  );
+  const top = $derived(
+    isMaximized ? "0px" : geometryHandler.move.active ? `${geometryHandler.move.startTop}px` : `${instance.bounds.y}px`
+  );
+  const width = $derived(
+    isMaximized ? "100%" : geometryHandler.move.active ? `${geometryHandler.move.width}px` : `${instance.bounds.width}px`
+  );
+  const height = $derived(
+    isMaximized ? "100%" : geometryHandler.move.active ? `${geometryHandler.move.height}px` : `${instance.bounds.height}px`
+  );
+  const transform = $derived(
+    isMaximized
+      ? "none"
+      : geometryHandler.move.active
+        ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)`
+        : "none"
+  );
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -61,22 +44,21 @@
     // instance.snapZone && !isMaximized && "bg-primary border-primary",
     // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
   )}
-  style:left={styles.left}
-  style:top={styles.top}
-  style:width={styles.width}
-  style:height={styles.height}
-  style:inset={styles.inset}
-  style:transform={styles.transform}
+  style:left
+  style:top
+  style:width
+  style:height
+  style:transform
   style:z-index={instance.zIndex}
   style:contain="size layout paint style"
   style:backface-visibility="hidden"
   tabindex={-1}
 >
   <div
-    {@attach geometryHandler.createMoveAttachment()}
+    {@attach geometryHandler.dragAttachment()}
     class={cn(
       "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab touch-none",
-      geometryHandler.drag.active && "cursor-grabbing"
+      geometryHandler.move.active && "cursor-grabbing"
     )}
   >
     <WindowTitlebar bind:zoom {windowId} />
@@ -89,8 +71,7 @@
     <WindowContent {windowId} {zoom}>
       <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
         <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-        <pre><span class="font-bold">drag:</span> {JSON.stringify(geometryHandler.drag, null, 2)}</pre>
-        <pre><span class="font-bold">resize:</span> {JSON.stringify(geometryHandler.resize, null, 2)}</pre>
+        <pre><span class="font-bold">move:</span> {JSON.stringify(geometryHandler.move, null, 2)}</pre>
       </div>
     </WindowContent>
   </div>
@@ -98,7 +79,7 @@
   <!-- Resize handles -->
   {#each RESIZE_EDGES as edge (edge)}
     <div
-      {@attach geometryHandler.createResizeAttachment(edge)}
+      {@attach geometryHandler.resizeAttachment(edge)}
       class="resize-handle {edge}"
       style:touch-action="none"
     ></div>
