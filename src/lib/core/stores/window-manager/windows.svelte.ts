@@ -30,6 +30,7 @@ export function create(content: string) {
     zIndex: ++_maxOrder,
     // app: action.app,
     tmp__content: content,
+    snapZone: null,
   };
 
   _index[id] = instance;

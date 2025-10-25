@@ -1,144 +1,151 @@
-import type { Attachment } from "svelte/attachments";
-import type { Bounds, WindowId } from "$lib/core/stores/window-manager/window-manager.type";
 import { WM } from "$lib/core/stores";
+import type { Bounds, SnapZone, WindowId, WindowInstance } from "$lib/core/stores/window-manager/window-manager.type";
+import type { Attachment } from "svelte/attachments";
+
+// TODO: cleanup snap
+// check container rounding
 
 export const RESIZE_EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
 type ResizeEdge = (typeof RESIZE_EDGES)[number];
 
-interface DragState {
-  active: boolean;
-  startX: number;
-  startY: number;
-  startLeft: number;
-  startTop: number;
-  dx: number;
-  dy: number;
-  animationFrame: number;
-}
-
 interface MovingState {
   active: boolean;
-  startX: number;
-  startY: number;
   width: number;
   height: number;
-  startLeft: number;
-  startTop: number;
   dx: number;
   dy: number;
-  animationFrame: number;
+  start: {
+    clientX: number;
+    clientY: number;
+    left: number;
+    top: number;
+  };
   container: Bounds;
+  animationFrame: number;
 }
 
 export class WindowGeometryHandler {
   public move = $state<MovingState>({
     active: false,
-    startX: 0,
-    startY: 0,
-    startLeft: 0,
-    startTop: 0,
     width: 0,
     height: 0,
     dx: 0,
     dy: 0,
-    animationFrame: 0,
+    start: {
+      clientX: 0,
+      clientY: 0,
+      left: 0,
+      top: 0,
+    },
     container: {
       width: 0,
       height: 0,
       x: 0,
       y: 0,
     },
+    animationFrame: 0,
   });
 
-  private resetMove() {
-    Object.assign(this.move, {
-      active: false,
-      startX: 0,
-      startY: 0,
-      startLeft: 0,
-      startTop: 0,
-      width: 0,
-      height: 0,
-      dx: 0,
-      dy: 0,
-      animationFrame: 0,
-      container: {
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0,
-      },
-    });
-  }
+  public snapZone = $state<SnapZone | null>(null);
 
-  private bounds: Bounds;
-  private minW = 240;
-  private minH = 140;
+  private instance: WindowInstance;
+  private static MIN_WIDTH = 240;
+  private static MIN_HEIGHT = 140;
 
   constructor(private windowId: WindowId) {
-    this.bounds = $derived(WM.windows.get(this.windowId)!.bounds);
+    this.instance = $derived(WM.windows.get(this.windowId)!);
+  }
+
+  private getSnapZone(cx: number, cy: number): SnapZone | null {
+    if (!this.move.active) return null;
+
+    const container = this.move.container;
+
+    const EDGE_THRESHOLD = 10; // pixels from edge to trigger snap
+    const CORNER_SIZE = 200; // size of corner zones
+
+    const x = cx - container.x;
+    const y = cy - container.y;
+
+    // Check edges
+    const isAtLeftEdge = x <= EDGE_THRESHOLD;
+    const isAtRightEdge = x >= container.width - EDGE_THRESHOLD;
+    const isAtTopEdge = y <= EDGE_THRESHOLD;
+    const isAtBottomEdge = y >= container.height - EDGE_THRESHOLD;
+
+    // Check corners (smaller regions at the intersections)
+    if (isAtLeftEdge && isAtTopEdge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
+      return "top-left";
+    }
+    if (isAtRightEdge && isAtTopEdge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
+      return "top-right";
+    }
+    if (isAtLeftEdge && isAtBottomEdge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+      return "bottom-left";
+    }
+    if (isAtRightEdge && isAtBottomEdge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+      return "bottom-right";
+    }
+
+    // Check edges (full height/width)
+    if (isAtLeftEdge) return "left";
+    if (isAtRightEdge) return "right";
+    if (isAtTopEdge) return "top";
+    if (isAtBottomEdge) return "bottom";
+    return null;
   }
 
   public dragAttachment() {
     return this.createMoveAttachment((event) => {
       const { x: cx, y: cy, width: cw, height: ch } = this.move.container;
-      const { startX: sx, startY: sy, startTop: st } = this.move;
+      const { clientX: sx, clientY: sy, top: st } = this.move.start;
 
+      this.snapZone = this.getSnapZone(event.clientX, event.clientY);
+
+      // optimized calculations (extracted sx and sy)
       this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
       this.move.dy = Math.round(Math.max(-st, Math.min(ch + cy, event.clientY) - sy));
-
-      /*
-      this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
-      this.move.dy = Math.round(Math.max(-st + sy, Math.min(ch + cy, event.clientY)) - sy);
-
-      const ndx = Math.round(event.clientX - this.move.startX);
-      const ndy = Math.round(event.clientY - this.move.startY);
-
-      const minX = Math.round(-this.move.startX + this.move.container.x);
-      const minY = -this.move.startTop;
-
-      const maxX = Math.round(this.move.container.width - this.move.startX + this.move.container.x);
-      const maxY = Math.round(this.move.container.height - this.move.startY + this.move.container.y);
-
-      this.move.dx = Math.max(minX, Math.min(maxX, ndx));
-      this.move.dy = Math.max(minY, Math.min(maxY, ndy));
-      */
     });
   }
 
-  // TODO: bounds
   public resizeAttachment(edge: ResizeEdge) {
     return this.createMoveAttachment((event) => {
       if (edge.includes("e")) {
-        // ok
-        const ndx = event.clientX - this.move.startX;
-        const nw = this.bounds.width + ndx
-        const maxWidth = this.move.container.width - this.move.startLeft;
+        const { width: cw } = this.move.container;
+        const { clientX: sx, left: sl } = this.move.start;
 
-        this.move.width = Math.max(this.minW, Math.round(Math.min(maxWidth, nw)));
+        const dx = event.clientX - sx;
+        const width = this.instance.bounds.width + dx;
+        const maxWidth = cw - sl;
+
+        this.move.width = Math.max(WindowGeometryHandler.MIN_WIDTH, Math.round(Math.min(maxWidth, width)));
       }
 
       if (edge.includes("w")) {
-        // ok
-        const ndx = Math.max(-this.move.startLeft, event.clientX - this.move.startX);
-        this.move.width = Math.max(this.minW, Math.round(this.bounds.width - ndx));
-        this.move.dx = this.bounds.width - this.move.width;
+        const { clientX: sx, left: sl } = this.move.start;
+
+        const dx = Math.max(-sl, event.clientX - sx);
+        this.move.width = Math.max(WindowGeometryHandler.MIN_WIDTH, Math.round(this.instance.bounds.width - dx));
+        this.move.dx = this.instance.bounds.width - this.move.width;
       }
 
       if (edge.includes("s")) {
-        // ok
-        const ndy = event.clientY - this.move.startY;
-        const nh = this.bounds.height + ndy;
-        const maxHeight = this.move.container.height - this.move.startTop;
+        const { height: ch } = this.move.container;
+        const { clientY: sy, top: st } = this.move.start;
 
-        this.move.height = Math.max(this.minH, Math.round(Math.min(maxHeight, nh)));
+        const dy = event.clientY - sy;
+        const height = this.instance.bounds.height + dy;
+        const maxHeight = ch - st;
+
+        this.move.height = Math.max(WindowGeometryHandler.MIN_HEIGHT, Math.round(Math.min(maxHeight, height)));
       }
 
       if (edge.includes("n")) {
-        // ok
-        const ndy = Math.max(-this.move.startTop, event.clientY - this.move.startY);
-        this.move.height = Math.max(this.minH, Math.round(this.bounds.height - ndy));
-        this.move.dy = this.bounds.height - this.move.height;
+        const { clientY: sy, top: st } = this.move.start;
+
+        const dy = Math.max(-st, event.clientY - sy);
+        this.move.height = Math.max(WindowGeometryHandler.MIN_HEIGHT, Math.round(this.instance.bounds.height - dy));
+        this.move.dy = this.instance.bounds.height - this.move.height;
       }
     });
   }
@@ -178,13 +185,56 @@ export class WindowGeometryHandler {
 
         cancelAnimationFrame(this.move.animationFrame);
 
-        this.bounds.width = this.move.width;
-        this.bounds.height = this.move.height;
-        this.bounds.x = this.move.startLeft + this.move.dx;
-        this.bounds.y = this.move.startTop + this.move.dy;
+        if (this.snapZone) {
+          // Add a transition class to enable animation
+          // TODO: this doesnt work anymore
+          console.log("add transition");
+          element.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
 
-        this.resetMove();
+          console.log(element.style);
+          this.instance.snapZone = this.snapZone;
+          console.log(element.style);
+
+          // After transition ends, clean up the transition style
+          const cleanup = () => {
+            console.log("cleanup transition");
+            element.style.transition = "";
+            element.removeEventListener("transitionend", cleanup);
+          };
+
+          element.addEventListener("transitionend", cleanup);
+        } else {
+          this.instance.bounds.width = this.move.width;
+          this.instance.bounds.height = this.move.height;
+          this.instance.bounds.x = this.move.start.left + this.move.dx;
+          this.instance.bounds.y = this.move.start.top + this.move.dy;
+
+          this.instance.snapZone = null;
+        }
+        this.instance.flags.delete(WM.WindowFlag.MAXIMIZED);
+
         pointerId = null;
+        Object.assign(this.move, {
+          active: false,
+          width: 0,
+          height: 0,
+          dx: 0,
+          dy: 0,
+          start: {
+            clientX: 0,
+            clientY: 0,
+            left: 0,
+            top: 0,
+          },
+          container: {
+            width: 0,
+            height: 0,
+            x: 0,
+            y: 0,
+          },
+          animationFrame: 0,
+        });
+        this.snapZone = null;
       };
 
       const onDown = (event: PointerEvent) => {
@@ -204,18 +254,41 @@ export class WindowGeometryHandler {
         element.setPointerCapture(event.pointerId);
         pointerId = event.pointerId;
 
-        Object.assign(this.move, {
-          active: true,
-          startX: event.clientX,
-          startY: event.clientY,
-          startLeft: this.bounds.x,
-          startTop: this.bounds.y,
-          width: this.bounds.width,
-          height: this.bounds.height,
-          container: WM.container.getBounds(),
-          dx: 0,
-          dy: 0,
-        });
+        if (this.instance.snapZone || this.instance.flags.has(WM.WindowFlag.MAXIMIZED)) {
+          const bounds = element.getBoundingClientRect();
+
+          const sx = (event.clientX / bounds.width) * this.instance.bounds.width;
+
+          Object.assign(this.move, {
+            active: true,
+            width: this.instance.bounds.width,
+            height: this.instance.bounds.height,
+            dx: Math.round(event.clientX - sx),
+            dy: 0,
+            start: {
+              clientX: sx,
+              clientY: event.clientY,
+              left: bounds.left,
+              top: bounds.top,
+            },
+            container: WM.container.getBounds(),
+          });
+        } else {
+          Object.assign(this.move, {
+            active: true,
+            width: this.instance.bounds.width,
+            height: this.instance.bounds.height,
+            dx: 0,
+            dy: 0,
+            start: {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              left: this.instance.bounds.x,
+              top: this.instance.bounds.y,
+            },
+            container: WM.container.getBounds(),
+          });
+        }
 
         element.addEventListener("pointermove", onMove);
         element.addEventListener("pointerup", onEnd);
@@ -225,5 +298,83 @@ export class WindowGeometryHandler {
       element.addEventListener("pointerdown", onDown);
       return cleanup;
     };
+  }
+
+  public static getSnapPosition(snapZone: SnapZone): Record<"left" | "top" | "width" | "height", string> {
+    const SNAP_PADDING = 8;
+
+    switch (snapZone) {
+      case "top":
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(100% - ${2 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      case "bottom":
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          width: `calc(100% - ${2 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      case "left":
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(100% - ${2 * SNAP_PADDING}px)`,
+        };
+
+      case "right":
+        return {
+          left: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(100% - ${2 * SNAP_PADDING}px)`,
+        };
+
+      case "top-left":
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      case "top-right":
+        return {
+          left: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      case "bottom-left":
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      case "bottom-right":
+        return {
+          left: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          top: `calc(50% + ${0.5 * SNAP_PADDING}px)`,
+          width: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+          height: `calc(50% - ${1.5 * SNAP_PADDING}px)`,
+        };
+
+      default:
+        return {
+          left: `${SNAP_PADDING}px`,
+          top: `${SNAP_PADDING}px`,
+          width: `calc(100% - ${2 * SNAP_PADDING}px)`,
+          height: `calc(100% - ${2 * SNAP_PADDING}px)`,
+        };
+    }
   }
 }

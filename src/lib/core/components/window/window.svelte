@@ -1,37 +1,76 @@
 <script lang="ts">
   import type { WindowId } from "$lib/core/stores";
   import { WM } from "$lib/core/stores";
-  import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
-  import WindowTitlebar from "./window-titlebar.svelte";
-  import WindowContent from "./window-content.svelte";
   import { cn } from "$lib/core/utils";
+  import WindowContent from "./window-content.svelte";
+  import WindowTitlebar from "./window-titlebar.svelte";
+  import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
 
   let { windowId }: { windowId: WindowId } = $props();
   const instance = $derived(WM.windows.get(windowId)!);
   const isMaximized = $derived(instance.flags.has(WM.WindowFlag.MAXIMIZED));
+  const isMinimized = $derived(instance.flags.has(WM.WindowFlag.MINIMIZED));
   const geometryHandler = new WindowGeometryHandler(windowId);
   let zoom = $state(1);
 
+  const snapPosition = $derived(instance.snapZone ? WindowGeometryHandler.getSnapPosition(instance.snapZone) : null);
+
   const left = $derived(
-    isMaximized ? "0px" : geometryHandler.move.active ? `${geometryHandler.move.startLeft}px` : `${instance.bounds.x}px`
+    geometryHandler.move.active
+      ? `${geometryHandler.move.start.left}px`
+      : snapPosition
+        ? snapPosition.left
+        : isMaximized
+          ? "0px"
+          : `${instance.bounds.x}px`
   );
   const top = $derived(
-    isMaximized ? "0px" : geometryHandler.move.active ? `${geometryHandler.move.startTop}px` : `${instance.bounds.y}px`
+    geometryHandler.move.active
+      ? `${geometryHandler.move.start.top}px`
+      : snapPosition
+        ? snapPosition.top
+        : isMaximized
+          ? "0px"
+          : `${instance.bounds.y}px`
   );
   const width = $derived(
-    isMaximized ? "100%" : geometryHandler.move.active ? `${geometryHandler.move.width}px` : `${instance.bounds.width}px`
+    geometryHandler.move.active
+      ? `${geometryHandler.move.width}px`
+      : snapPosition
+        ? snapPosition.width
+        : isMaximized
+          ? "100%"
+          : `${instance.bounds.width}px`
   );
   const height = $derived(
-    isMaximized ? "100%" : geometryHandler.move.active ? `${geometryHandler.move.height}px` : `${instance.bounds.height}px`
+    geometryHandler.move.active
+      ? `${geometryHandler.move.height}px`
+      : snapPosition
+        ? snapPosition.height
+        : isMaximized
+          ? "100%"
+          : `${instance.bounds.height}px`
   );
   const transform = $derived(
-    isMaximized
-      ? "none"
-      : geometryHandler.move.active
-        ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)`
+    geometryHandler.move.active
+      ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)`
+      : isMaximized
+        ? "none"
         : "none"
   );
 </script>
+
+{#if !isMaximized && !isMinimized && geometryHandler.snapZone}
+  {@const { left, top, width, height } = WindowGeometryHandler.getSnapPosition(geometryHandler.snapZone)}
+  <div
+    class="absolute pointer-events-none bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
+    style:left
+    style:top
+    style:width
+    style:height
+    style:z-index={instance.zIndex}
+  ></div>
+{/if}
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
@@ -40,7 +79,7 @@
   class={cn(
     "absolute overflow-hidden pointer-events-auto",
     "bg-foreground shadow-window rounded-sm border-2 border-foreground grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
-    isMaximized && "rounded-none border-none"
+    isMaximized && !geometryHandler.move.active && "rounded-none border-none"
     // instance.snapZone && !isMaximized && "bg-primary border-primary",
     // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
   )}
@@ -54,6 +93,7 @@
   style:backface-visibility="hidden"
   tabindex={-1}
 >
+  <!-- Window titlebar -->
   <div
     {@attach geometryHandler.dragAttachment()}
     class={cn(
@@ -64,8 +104,12 @@
     <WindowTitlebar bind:zoom {windowId} />
   </div>
 
+  <!-- Window content -->
   <div
-    class={cn("overflow-hidden bg-background rounded-t-sm [content-visibility:auto]", isMaximized && "rounded-none")}
+    class={cn(
+      "overflow-hidden bg-background rounded-t-sm [content-visibility:auto]",
+      isMaximized && !geometryHandler.move.active && "rounded-none"
+    )}
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
     <WindowContent {windowId} {zoom}>
@@ -78,11 +122,7 @@
 
   <!-- Resize handles -->
   {#each RESIZE_EDGES as edge (edge)}
-    <div
-      {@attach geometryHandler.resizeAttachment(edge)}
-      class="resize-handle {edge}"
-      style:touch-action="none"
-    ></div>
+    <div {@attach geometryHandler.resizeAttachment(edge)} class="resize-handle {edge}" style:touch-action="none"></div>
   {/each}
 </div>
 
@@ -91,8 +131,6 @@
     position: absolute;
     z-index: 2;
   }
-
-  /* Edge handles */
   .resize-handle.n {
     top: -2px;
     left: 0;
@@ -121,8 +159,6 @@
     width: 8px;
     cursor: ew-resize;
   }
-
-  /* Corner handles */
   .resize-handle.ne {
     top: -2px;
     right: -2px;

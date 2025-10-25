@@ -20,6 +20,9 @@ export const WindowFlag = {
 
 export type WindowFlag = (typeof WindowFlag)[keyof typeof WindowFlag];
 
+export type SnapZone = "left" | "right" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top" | "bottom";
+
+
 export interface WindowInstance {
   id: WindowId;
   // app: AppInstance;
@@ -28,5 +31,6 @@ export interface WindowInstance {
   // snapZone: SnapZone;
   tmp__content: string;
   bounds: Bounds;
+  snapZone: SnapZone | null;
   zIndex: number;
 }
