@@ -109,29 +109,34 @@ export class WindowGeometryHandler {
   // TODO: bounds
   public resizeAttachment(edge: ResizeEdge) {
     return this.createMoveAttachment((event) => {
-      const ndx = event.clientX - this.move.startX;
-      const ndy = event.clientY - this.move.startY;
-
       if (edge.includes("e")) {
-        const nw = Math.round(this.bounds.width + ndx);
-        const maxWidth = Math.round(this.move.container.width - this.move.startLeft + this.move.container.x);
+        // ok
+        const ndx = event.clientX - this.move.startX;
+        const nw = this.bounds.width + ndx
+        const maxWidth = this.move.container.width - this.move.startLeft;
 
-        this.move.width = Math.max(this.minW, Math.min(maxWidth, nw));
+        this.move.width = Math.max(this.minW, Math.round(Math.min(maxWidth, nw)));
       }
 
       if (edge.includes("w")) {
+        // ok
+        const ndx = Math.max(-this.move.startLeft, event.clientX - this.move.startX);
         this.move.width = Math.max(this.minW, Math.round(this.bounds.width - ndx));
         this.move.dx = this.bounds.width - this.move.width;
       }
 
       if (edge.includes("s")) {
-        const nh = Math.round(this.bounds.height + ndy);
-        const maxHeight = Math.round(this.move.container.height - this.move.startTop + this.move.container.y);
+        // ok
+        const ndy = event.clientY - this.move.startY;
+        const nh = this.bounds.height + ndy;
+        const maxHeight = this.move.container.height - this.move.startTop;
 
-        this.move.height = Math.max(this.minH, Math.min(maxHeight, nh));
+        this.move.height = Math.max(this.minH, Math.round(Math.min(maxHeight, nh)));
       }
 
       if (edge.includes("n")) {
+        // ok
+        const ndy = Math.max(-this.move.startTop, event.clientY - this.move.startY);
         this.move.height = Math.max(this.minH, Math.round(this.bounds.height - ndy));
         this.move.dy = this.bounds.height - this.move.height;
       }
