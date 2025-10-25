@@ -18,45 +18,41 @@
   const left = $derived(
     geometryHandler.move.active
       ? `${geometryHandler.move.start.left}px`
-      : snapPosition
-        ? snapPosition.left
-        : isMaximized
-          ? "0px"
+      : isMaximized
+        ? "0px"
+        : snapPosition
+          ? snapPosition.left
           : `${instance.bounds.x}px`
   );
   const top = $derived(
     geometryHandler.move.active
       ? `${geometryHandler.move.start.top}px`
-      : snapPosition
-        ? snapPosition.top
-        : isMaximized
-          ? "0px"
+      : isMaximized
+        ? "0px"
+        : snapPosition
+          ? snapPosition.top
           : `${instance.bounds.y}px`
   );
   const width = $derived(
     geometryHandler.move.active
       ? `${geometryHandler.move.width}px`
-      : snapPosition
-        ? snapPosition.width
-        : isMaximized
-          ? "100%"
+      : isMaximized
+        ? "100%"
+        : snapPosition
+          ? snapPosition.width
           : `${instance.bounds.width}px`
   );
   const height = $derived(
     geometryHandler.move.active
       ? `${geometryHandler.move.height}px`
-      : snapPosition
-        ? snapPosition.height
-        : isMaximized
-          ? "100%"
+      : isMaximized
+        ? "100%"
+        : snapPosition
+          ? snapPosition.height
           : `${instance.bounds.height}px`
   );
   const transform = $derived(
-    geometryHandler.move.active
-      ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)`
-      : isMaximized
-        ? "none"
-        : "none"
+    geometryHandler.move.active ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)` : "none"
   );
 </script>
 

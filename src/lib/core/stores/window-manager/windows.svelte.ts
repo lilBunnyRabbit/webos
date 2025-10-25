@@ -56,6 +56,9 @@ export function toggleMaximize(id: WindowId) {
   if (!instance) return;
 
   instance.flags.toggle(WM.WindowFlag.MAXIMIZED);
+  if (instance.flags.has(WM.WindowFlag.MAXIMIZED)) {
+    focus(id);
+  }
 }
 
 export function toggleMinimize(id: WindowId) {
