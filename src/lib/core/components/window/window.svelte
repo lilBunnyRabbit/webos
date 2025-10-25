@@ -75,8 +75,8 @@
   class={cn(
     "absolute overflow-hidden pointer-events-auto",
     "bg-foreground shadow-window rounded-sm border-2 border-foreground grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
-    isMaximized && !geometryHandler.move.active && "rounded-none border-none"
-    // instance.snapZone && !isMaximized && "bg-primary border-primary",
+    isMaximized && !geometryHandler.move.active && "rounded-none border-none",
+    snapPosition && !isMaximized && !geometryHandler.move.active && "bg-primary border-primary",
     // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
   )}
   style:left
