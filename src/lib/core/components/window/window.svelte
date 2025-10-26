@@ -8,16 +8,19 @@
 
   let { windowId }: { windowId: WindowId } = $props();
   const instance = $derived(WM.windows.get(windowId)!);
+
   const isMaximized = $derived(instance.flags.has(WM.WindowFlag.MAXIMIZED));
   const isMinimized = $derived(instance.flags.has(WM.WindowFlag.MINIMIZED));
-  const geometryHandler = new WindowGeometryHandler(windowId);
-  let zoom = $state(1);
-
   const snapPosition = $derived(instance.snapZone ? WindowGeometryHandler.getSnapPosition(instance.snapZone) : null);
 
+  const WGH = new WindowGeometryHandler(windowId);
+
+  // Internal state
+  let zoom = $state(1);
+
   const left = $derived(
-    geometryHandler.move.active
-      ? `${geometryHandler.move.start.left}px`
+    WGH.move.active
+      ? `${WGH.move.start.left}px`
       : isMaximized
         ? "0px"
         : snapPosition
@@ -25,8 +28,8 @@
           : `${instance.bounds.x}px`
   );
   const top = $derived(
-    geometryHandler.move.active
-      ? `${geometryHandler.move.start.top}px`
+    WGH.move.active
+      ? `${WGH.move.start.top}px`
       : isMaximized
         ? "0px"
         : snapPosition
@@ -34,8 +37,8 @@
           : `${instance.bounds.y}px`
   );
   const width = $derived(
-    geometryHandler.move.active
-      ? `${geometryHandler.move.width}px`
+    WGH.move.active
+      ? `${WGH.move.width}px`
       : isMaximized
         ? "100%"
         : snapPosition
@@ -43,21 +46,19 @@
           : `${instance.bounds.width}px`
   );
   const height = $derived(
-    geometryHandler.move.active
-      ? `${geometryHandler.move.height}px`
+    WGH.move.active
+      ? `${WGH.move.height}px`
       : isMaximized
         ? "100%"
         : snapPosition
           ? snapPosition.height
           : `${instance.bounds.height}px`
   );
-  const transform = $derived(
-    geometryHandler.move.active ? `translate3d(${geometryHandler.move.dx}px, ${geometryHandler.move.dy}px, 0)` : "none"
-  );
+  const transform = $derived(WGH.move.active ? `translate3d(${WGH.move.dx}px, ${WGH.move.dy}px, 0)` : "none");
 </script>
 
-{#if !isMaximized && !isMinimized && geometryHandler.snapZone}
-  {@const { left, top, width, height } = WindowGeometryHandler.getSnapPosition(geometryHandler.snapZone)}
+{#if !isMaximized && !isMinimized && WGH.snapZone}
+  {@const { left, top, width, height } = WindowGeometryHandler.getSnapPosition(WGH.snapZone)}
   <div
     class="absolute pointer-events-none bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
     style:left
@@ -75,8 +76,8 @@
   class={cn(
     "absolute overflow-hidden pointer-events-auto",
     "bg-foreground shadow-window rounded-sm border-2 border-foreground grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
-    isMaximized && !geometryHandler.move.active && "rounded-none border-none",
-    snapPosition && !isMaximized && !geometryHandler.move.active && "bg-primary border-primary",
+    isMaximized && !WGH.move.active && "rounded-none border-none",
+    snapPosition && !isMaximized && !WGH.move.active && "bg-primary border-primary"
     // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
   )}
   style:left
@@ -91,10 +92,10 @@
 >
   <!-- Window titlebar -->
   <div
-    {@attach geometryHandler.dragAttachment()}
+    {@attach WGH.dragAttachment()}
     class={cn(
       "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab touch-none",
-      geometryHandler.move.active && "cursor-grabbing"
+      WGH.move.active && "cursor-grabbing"
     )}
   >
     <WindowTitlebar bind:zoom {windowId} />
@@ -104,22 +105,24 @@
   <div
     class={cn(
       "overflow-hidden bg-background rounded-t-sm [content-visibility:auto]",
-      isMaximized && !geometryHandler.move.active && "rounded-none"
+      isMaximized && !WGH.move.active && "rounded-none"
     )}
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
     <WindowContent {windowId} {zoom}>
       <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
         <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-        <pre><span class="font-bold">move:</span> {JSON.stringify(geometryHandler.move, null, 2)}</pre>
+        <pre><span class="font-bold">move:</span> {JSON.stringify(WGH.move, null, 2)}</pre>
       </div>
     </WindowContent>
   </div>
 
   <!-- Resize handles -->
-  {#each RESIZE_EDGES as edge (edge)}
-    <div {@attach geometryHandler.resizeAttachment(edge)} class="resize-handle {edge}" style:touch-action="none"></div>
-  {/each}
+  {#if !isMaximized && !isMinimized}
+    {#each RESIZE_EDGES as edge (edge)}
+      <div {@attach WGH.resizeAttachment(edge)} class="resize-handle {edge}" style:touch-action="none"></div>
+    {/each}
+  {/if}
 </div>
 
 <style>

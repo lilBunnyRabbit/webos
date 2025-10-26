@@ -33,4 +33,8 @@ export interface WindowInstance {
   bounds: Bounds;
   snapZone: SnapZone | null;
   zIndex: number;
+  defaults: {
+    minWidth: number;
+    minHeight: number;
+  };
 }

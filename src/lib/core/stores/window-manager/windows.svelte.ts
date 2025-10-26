@@ -31,6 +31,10 @@ export function create(content: string) {
     // app: action.app,
     tmp__content: content,
     snapZone: null,
+    defaults: {
+      minWidth: 240,
+      minHeight: 140,
+    },
   };
 
   _index[id] = instance;
