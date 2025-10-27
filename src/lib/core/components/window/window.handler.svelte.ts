@@ -2,7 +2,7 @@ import { WM } from "$lib/core/stores";
 import type { Bounds, SnapZone, WindowId, WindowInstance } from "$lib/core/stores/window-manager/window-manager.type";
 import type { Attachment } from "svelte/attachments";
 
-// TODO: cleanup logic, fix snap animation
+// TODO: cleanup logic
 
 export const RESIZE_EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
 type ResizeEdge = (typeof RESIZE_EDGES)[number];
@@ -367,23 +367,21 @@ export class WindowGeometryHandler {
 
   private applyMove(element: HTMLDivElement) {
     if (this.snapZone) {
-      // Add a transition class to enable animation
-      // TODO: this doesnt work anymore
-      console.log("add transition");
-      element.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
+      const parent = element.parentElement!;
+      if (parent) {
+        parent.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
+      }
 
-      console.log(element.style);
       this.instance.snapZone = this.snapZone;
-      console.log(element.style);
 
-      // After transition ends, clean up the transition style
-      const cleanup = () => {
-        console.log("cleanup transition");
-        element.style.transition = "";
-        element.removeEventListener("transitionend", cleanup);
-      };
+      if (parent) {
+        const cleanup = () => {
+          parent.style.transition = "";
+          parent.removeEventListener("transitionend", cleanup);
+        };
 
-      element.addEventListener("transitionend", cleanup);
+        parent.addEventListener("transitionend", cleanup);
+      }
     } else {
       this.instance.bounds.width = this.move.width;
       this.instance.bounds.height = this.move.height;
