@@ -1,0 +1,2 @@
+- shadow doma
+- window events for file upload, etc

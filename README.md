@@ -1,47 +1,219 @@
-# Svelte + TS + Vite
+# WebOS
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+A modern, browser-based operating system built with Svelte 5, featuring a microkernel architecture and capability-based security.
 
-## Recommended IDE Setup
+## Features
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- 🪟 **Multi-Window Management** - Resizable, draggable windows with snap zones
+- 🔐 **Capability-Based Security** - Fine-grained permission control for apps
+- 📁 **File System** - Origin Private File System (OPFS) for persistent storage
+- ⚙️ **Background Tasks** - Task orchestration with progress tracking
+- 🔔 **Notifications** - In-OS notification center + system notifications
+- ⌨️ **Keyboard Shortcuts** - Configurable shortcuts with conflict resolution
+- 🎨 **Theming** - Customizable system themes
+- 🔌 **IPC** - Inter-process communication between apps
+- 🧩 **Plugin Architecture** - Extensible app ecosystem
 
-## Need an official Svelte framework?
+## Quick Start
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+```bash
+# Install dependencies
+npm install
 
-## Technical considerations
+# Development
+npm run dev
 
-**Why use this over SvelteKit?**
+# Build
+npm run build
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+# Preview
+npm run preview
 ```
+
+## Documentation
+
+### 📚 API Documentation
+
+Comprehensive documentation for the WebOS API architecture:
+
+- **[API Index](./docs/API_INDEX.md)** - Start here! Navigation hub for all documentation
+- **[API Specification](./docs/API_SPECIFICATION.md)** - Complete technical specification
+- **[Quick Reference](./docs/API_QUICK_REFERENCE.md)** - One-page cheat sheet
+- **[Design Decisions](./docs/API_DESIGN_DECISIONS.md)** - Architectural rationale
+- **[Implementation Roadmap](./docs/IMPLEMENTATION_ROADMAP.md)** - Development plan
+
+### 🚀 Getting Started
+
+**For Developers:**
+1. Read the [Quick Reference](./docs/API_QUICK_REFERENCE.md) to learn the API
+2. Check the [API Specification](./docs/API_SPECIFICATION.md) for detailed interfaces
+3. Review example apps in `src/apps/` (coming soon)
+
+**For Contributors:**
+1. Read [Design Decisions](./docs/API_DESIGN_DECISIONS.md) to understand the architecture
+2. Check the [Implementation Roadmap](./docs/IMPLEMENTATION_ROADMAP.md) for current status
+3. Pick a task from the roadmap and start implementing
+
+## Architecture
+
+WebOS uses a **microkernel architecture**:
+
+```
+┌─────────────────────────────────────┐
+│           Kernel (Façade)           │
+│  - Service Registry                 │
+│  - Capabilities                     │
+│  - Event Bus                        │
+└─────────────────────────────────────┘
+         │         │         │
+         ▼         ▼         ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Windows  │ │  Files   │ │  Tasks   │
+│ Service  │ │ Service  │ │ Service  │
+└──────────┘ └──────────┘ └──────────┘
+         │         │         │
+         ▼         ▼         ▼
+┌─────────────────────────────────────┐
+│              Apps                   │
+│  - Text Editor                      │
+│  - File Explorer                    │
+│  - Settings                         │
+└─────────────────────────────────────┘
+```
+
+### Core Concepts
+
+- **Services**: Singleton stores providing OS functionality (windows, files, tasks, etc.)
+- **Capabilities**: Permission tokens that control what apps can do
+- **Apps**: Svelte components with manifests declaring required capabilities
+- **Kernel**: Thin registry managing services and enforcing capabilities
+
+## Example: Creating an App
+
+```typescript
+// manifest.ts
+export const manifest: AppManifest = {
+  id: 'text-editor',
+  name: 'Text Editor',
+  icon: 'file-text',
+  version: '1.0.0',
+  component: TextEditor,
+  capabilities: [
+    'fs:read:/documents/**',
+    'fs:write:/documents/**',
+    'windows:open',
+    'notify:toast'
+  ]
+};
+```
+
+```svelte
+<!-- TextEditor.svelte -->
+<script lang="ts">
+  import { kernel } from '@/core/kernel';
+  import { useWindow } from '@/core/contexts/window-context.svelte';
+  
+  interface Props {
+    file: string;
+  }
+  
+  let { file }: Props = $props();
+  
+  const files = kernel.service<FilesService>('files');
+  const window = useWindow();
+  
+  let content = $state('');
+  
+  $effect(() => {
+    files.read(file).then(data => content = data);
+  });
+  
+  async function save() {
+    await files.write(file, content);
+  }
+</script>
+
+<div class="editor">
+  <button onclick={save}>Save</button>
+  <textarea bind:value={content} />
+</div>
+```
+
+## Technology Stack
+
+- **Svelte 5** - UI framework with runes for fine-grained reactivity
+- **TypeScript** - Type safety and developer experience
+- **Vite** - Fast build tool and dev server
+- **OPFS** - Origin Private File System for storage
+- **Tailwind CSS** - Utility-first styling
+
+## Project Structure
+
+```
+webos/
+├── src/
+│   ├── lib/
+│   │   └── core/
+│   │       ├── kernel/          # Service registry & capabilities
+│   │       ├── services/        # System services
+│   │       ├── types/           # TypeScript definitions
+│   │       └── contexts/        # Svelte contexts
+│   ├── apps/                    # Built-in apps
+│   ├── App.svelte               # Root component
+│   └── main.ts                  # Entry point
+├── docs/                        # Documentation
+└── public/                      # Static assets
+```
+
+## Development Status
+
+**Current Phase:** Planning & Design ✅  
+**Next Phase:** Implementation
+
+See [Implementation Roadmap](./docs/IMPLEMENTATION_ROADMAP.md) for detailed status and timeline.
+
+### Completed
+
+- ✅ Architecture design
+- ✅ API specification
+- ✅ Type definitions
+- ✅ Basic window management (legacy)
+
+### In Progress
+
+- 🚧 Kernel implementation
+- 🚧 Service migration
+
+### Planned
+
+- ⏳ File system service (OPFS)
+- ⏳ Task management
+- ⏳ Notification center
+- ⏳ Command palette
+- ⏳ Example apps
+
+## Contributing
+
+Contributions are welcome! Please read the [API Documentation](./docs/API_INDEX.md) to understand the architecture before contributing.
+
+### Development Guidelines
+
+1. Follow the [API Specification](./docs/API_SPECIFICATION.md) for consistency
+2. Write tests for new services
+3. Update documentation when adding features
+4. Use Svelte 5 runes patterns (see [Design Decisions](./docs/API_DESIGN_DECISIONS.md#16-svelte-5-runes-integration))
+
+## License
+
+[Your License Here]
+
+## Resources
+
+- [API Documentation Index](./docs/API_INDEX.md)
+- [Svelte 5 Documentation](https://svelte-5-preview.vercel.app/)
+- [OPFS API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_Access_API)
+- [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)
+
+---
+
+**Built with** ❤️ **using Svelte 5**
