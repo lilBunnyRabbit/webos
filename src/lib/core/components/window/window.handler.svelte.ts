@@ -1,8 +1,10 @@
-import { WM } from "$lib/core/stores";
-import type { Bounds, SnapZone, WindowId, WindowInstance } from "$lib/core/stores/window-manager/window-manager.type";
+import type { Bounds, SnapZone, WindowId, WindowInstance } from "$lib/core/api";
 import type { Attachment } from "svelte/attachments";
-
+import kernel, { type WindowsService } from "$lib/core/api";
+import { isUndefined } from "@lilbunnyrabbit/utils";
 // TODO: cleanup logic
+
+const windows = $derived(kernel.service<WindowsService>("windows"));
 
 export const RESIZE_EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
 type ResizeEdge = (typeof RESIZE_EDGES)[number];
@@ -14,13 +16,13 @@ interface MovingState {
   dx: number;
   dy: number;
   start: {
-    clientX: number;
-    clientY: number;
+    client_x: number;
+    client_y: number;
     left: number;
     top: number;
   };
   container: Bounds;
-  animationFrame: number;
+  animation_frame: number;
 }
 
 export class WindowGeometryHandler {
@@ -31,8 +33,8 @@ export class WindowGeometryHandler {
     dx: 0,
     dy: 0,
     start: {
-      clientX: 0,
-      clientY: 0,
+      client_x: 0,
+      client_y: 0,
       left: 0,
       top: 0,
     },
@@ -42,21 +44,21 @@ export class WindowGeometryHandler {
       x: 0,
       y: 0,
     },
-    animationFrame: 0,
+    animation_frame: 0,
   });
 
-  public snapZone = $state<SnapZone | null>(null);
+  public snap_zone = $state<SnapZone | null>(null);
 
   private instance: WindowInstance;
 
-  constructor(private windowId: WindowId) {
-    this.instance = $derived(WM.windows.get(this.windowId)!);
+  constructor(private id: WindowId) {
+    this.instance = $derived(windows.get(this.id)!);
   }
 
-  public static getSnapPosition(snapZone: SnapZone): Record<"left" | "top" | "width" | "height", string> {
+  public static get_snap_position(snap_zone: SnapZone): Record<"left" | "top" | "width" | "height", string> {
     const SNAP_PADDING = 8;
 
-    switch (snapZone) {
+    switch (snap_zone) {
       case "top":
         return {
           left: `${SNAP_PADDING}px`,
@@ -131,7 +133,7 @@ export class WindowGeometryHandler {
     }
   }
 
-  private getSnapZone(cx: number, cy: number): SnapZone | null {
+  private get_snap_zone(cx: number, cy: number): SnapZone | null {
     if (!this.move.active) return null;
 
     const container = this.move.container;
@@ -143,39 +145,39 @@ export class WindowGeometryHandler {
     const y = cy - container.y;
 
     // Check edges
-    const isAtLeftEdge = x <= EDGE_THRESHOLD;
-    const isAtRightEdge = x >= container.width - EDGE_THRESHOLD;
-    const isAtTopEdge = y <= EDGE_THRESHOLD;
-    const isAtBottomEdge = y >= container.height - EDGE_THRESHOLD;
+    const is_left_edge = x <= EDGE_THRESHOLD;
+    const is_right_edge = x >= container.width - EDGE_THRESHOLD;
+    const is_top_edge = y <= EDGE_THRESHOLD;
+    const is_bottom_edge = y >= container.height - EDGE_THRESHOLD;
 
     // Check corners (smaller regions at the intersections)
-    if (isAtLeftEdge && isAtTopEdge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
+    if (is_left_edge && is_top_edge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
       return "top-left";
     }
-    if (isAtRightEdge && isAtTopEdge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
+    if (is_right_edge && is_top_edge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
       return "top-right";
     }
-    if (isAtLeftEdge && isAtBottomEdge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+    if (is_left_edge && is_bottom_edge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
       return "bottom-left";
     }
-    if (isAtRightEdge && isAtBottomEdge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+    if (is_right_edge && is_bottom_edge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
       return "bottom-right";
     }
 
     // Check edges (full height/width)
-    if (isAtLeftEdge) return "left";
-    if (isAtRightEdge) return "right";
-    if (isAtTopEdge) return "top";
-    if (isAtBottomEdge) return "bottom";
+    if (is_left_edge) return "left";
+    if (is_right_edge) return "right";
+    if (is_top_edge) return "top";
+    if (is_bottom_edge) return "bottom";
     return null;
   }
 
-  public dragAttachment() {
-    return this.createMoveAttachment("drag", (event) => {
+  public drag_attachment() {
+    return this.create_move_attachment("drag", (event) => {
       const { x: cx, y: cy, width: cw, height: ch } = this.move.container;
-      const { clientX: sx, clientY: sy, top: st } = this.move.start;
+      const { client_x: sx, client_y: sy, top: st } = this.move.start;
 
-      this.snapZone = this.getSnapZone(event.clientX, event.clientY);
+      this.snap_zone = this.get_snap_zone(event.clientX, event.clientY);
 
       // optimized calculations (extracted sx and sy)
       this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
@@ -183,21 +185,26 @@ export class WindowGeometryHandler {
     });
   }
 
-  public resizeAttachment(edge: ResizeEdge) {
-    return this.createMoveAttachment("resize", (event) => {
+  public resize_attachment(edge: ResizeEdge) {
+    return this.create_move_attachment("resize", (event) => {
       if (edge.includes("e")) {
         const { width: cw } = this.move.container;
-        const { clientX: sx, left: sl } = this.move.start;
+        const { client_x: sx, left: sl } = this.move.start;
 
         const dx = event.clientX - sx;
         const width = this.instance.bounds.width + dx;
-        const maxWidth = cw - sl;
+        const max_width = cw - sl;
+        const new_width = Math.round(Math.min(max_width, width));
 
-        this.move.width = Math.max(this.instance.defaults.minWidth, Math.round(Math.min(maxWidth, width)));
+        if (isUndefined(this.instance.constraints?.width?.min)) {
+          this.move.width = new_width;
+        } else {
+          this.move.width = Math.max(this.instance.constraints.width.min, new_width);
+        }
       }
 
       if (edge.includes("w")) {
-        const { clientX: sx, left: sl } = this.move.start;
+        const { client_x: sx, left: sl } = this.move.start;
 
         const dx = Math.max(-sl, event.clientX - sx);
         this.move.width = Math.max(this.instance.defaults.minWidth, Math.round(this.instance.bounds.width - dx));
@@ -206,7 +213,7 @@ export class WindowGeometryHandler {
 
       if (edge.includes("s")) {
         const { height: ch } = this.move.container;
-        const { clientY: sy, top: st } = this.move.start;
+        const { client_y: sy, top: st } = this.move.start;
 
         const dy = event.clientY - sy;
         const height = this.instance.bounds.height + dy;
@@ -216,7 +223,7 @@ export class WindowGeometryHandler {
       }
 
       if (edge.includes("n")) {
-        const { clientY: sy, top: st } = this.move.start;
+        const { client_y: sy, top: st } = this.move.start;
 
         const dy = Math.max(-st, event.clientY - sy);
         this.move.height = Math.max(this.instance.defaults.minHeight, Math.round(this.instance.bounds.height - dy));
@@ -225,7 +232,7 @@ export class WindowGeometryHandler {
     });
   }
 
-  private createMoveAttachment(
+  private create_move_attachment(
     type: "drag" | "resize",
     handleMove: (event: PointerEvent) => void
   ): Attachment<HTMLDivElement> {
@@ -246,8 +253,8 @@ export class WindowGeometryHandler {
       const onMove = (event: PointerEvent) => {
         event.preventDefault();
 
-        cancelAnimationFrame(this.move.animationFrame);
-        this.move.animationFrame = requestAnimationFrame(() => {
+        cancelAnimationFrame(this.move.animation_frame);
+        this.move.animation_frame = requestAnimationFrame(() => {
           handleMove(event);
         });
       };
@@ -261,7 +268,7 @@ export class WindowGeometryHandler {
         element.removeEventListener("pointerup", onEnd);
         element.removeEventListener("pointercancel", onEnd);
 
-        cancelAnimationFrame(this.move.animationFrame);
+        cancelAnimationFrame(this.move.animation_frame);
 
         this.applyMove(element);
 
@@ -280,7 +287,7 @@ export class WindowGeometryHandler {
         event.preventDefault();
         event.stopPropagation();
 
-        WM.windows.focus(this.windowId);
+        WM.windows.focus(this.id);
 
         element.setPointerCapture(event.pointerId);
         pointerId = event.pointerId;
@@ -366,13 +373,13 @@ export class WindowGeometryHandler {
   }
 
   private applyMove(element: HTMLDivElement) {
-    if (this.snapZone) {
+    if (this.snap_zone) {
       const parent = element.parentElement!;
       if (parent) {
         parent.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
       }
 
-      this.instance.snapZone = this.snapZone;
+      this.instance.snapZone = this.snap_zone;
 
       if (parent) {
         const cleanup = () => {
@@ -411,6 +418,6 @@ export class WindowGeometryHandler {
       },
       animationFrame: 0,
     });
-    this.snapZone = null;
+    this.snap_zone = null;
   }
 }

@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { SYS, WM } from "$lib/core/stores";
-  import { WINDOW_MANAGER_CONTAINER_ID, getElementBounds } from "$lib/core/utils/window";
+  import kernel, { type SettingsService, type WindowsService } from "$lib/core/api";
   import type { SvelteHTMLElements } from "svelte/elements";
   import Window from "../window/window.svelte";
-  import type { Attachment } from "svelte/attachments";
+
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const windows = $derived(kernel.service<WindowsService>("windows"));
 
   let props: SvelteHTMLElements["div"] = $props();
+</script>
 
-  const resizeAttachment: Attachment<HTMLDivElement> = (element) => {
+<div
+  {@attach (element) => {
     const updateBounds = () => {
-      WM.container.setBounds(getElementBounds(element));
+      windows.set_container(element);
     };
 
     const resizeObserver = new ResizeObserver(() => {
@@ -18,7 +21,8 @@
     });
 
     $effect(() => {
-      SYS.taskbar.position;
+      // TODO: revisit
+      settings.taskbar.position;
       requestAnimationFrame(() => {
         console.log("update bounds on taskbar position change");
         updateBounds();
@@ -27,15 +31,14 @@
 
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
-  };
-</script>
-
-<div {@attach resizeAttachment} id={WINDOW_MANAGER_CONTAINER_ID} {...props}>
+  }}
+  {...props}
+>
   <div class="absolute top-12 right-0">
-    {@html JSON.stringify(WM.container.getBounds(), null, 2)}
+    {@html JSON.stringify(windows.container.bounds, null, 2)}
   </div>
 
-  {#each Object.keys(WM.windows.index) as windowId (windowId)}
-    <Window {windowId} />
+  {#each windows.list() as id (id)}
+    <Window id={id} />
   {/each}
 </div>

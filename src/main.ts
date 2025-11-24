@@ -1,9 +1,26 @@
-import { mount } from 'svelte'
-import './app.css'
-import App from './App.svelte'
+import { mount } from "svelte";
+import "./app.css";
+import App from "./App.svelte";
+import kernel from "./lib/core/api";
 
-const app = mount(App, {
-  target: document.getElementById('app')!,
-})
+async function main() {
+  // Initialize the kernel before mounting the app
+  await kernel.init();
 
-export default app
+  // TODO: intro
+  const app = mount(App, {
+    target: document.getElementById("app")!,
+    intro: true
+  });
+
+  return app;
+}
+
+// Start the application
+main()
+  .then(() => {
+    console.log("Application initialized", kernel);
+  })
+  .catch((error) => {
+    console.error("Failed to initialize application:", error);
+  });

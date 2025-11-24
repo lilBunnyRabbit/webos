@@ -1,13 +1,15 @@
 <script lang="ts">
-  import { SYS } from "$lib/core/stores";
   import { cn } from "$lib/core/utils/utils";
   import { LayoutGrid } from "@lucide/svelte";
   import type { SvelteHTMLElements } from "svelte/elements";
+  import kernel, { type SettingsService, TaskbarPosition } from "$lib/core/api";
 
   let { class: className, ...restProps }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
+  const taskbar = $derived(kernel.service<SettingsService>("settings").taskbar);
+
   const orientation = $derived(
-    SYS.taskbar.position === "left" || SYS.taskbar.position === "right" ? "vertical" : "horizontal"
+    taskbar.position === TaskbarPosition.LEFT || taskbar.position === TaskbarPosition.RIGHT ? "vertical" : "horizontal"
   );
 </script>
 
@@ -22,7 +24,7 @@
       left: "border-r",
       right: "border-l",
       top: "border-b",
-    }[SYS.taskbar.position],
+    }[taskbar.position],
     "bg-background/40 backdrop-blur-xl shadow-2xl border-foreground/20",
     className
   )}
@@ -45,12 +47,12 @@
         left: "flex-col h-full items-start overflow-y-auto py-2 px-1.5",
         right: "flex-col h-full items-end overflow-y-auto py-2 px-1.5",
         top: "flex-row w-full items-start overflow-x-auto py-1.5 px-2",
-      }[SYS.taskbar.position]
+      }[taskbar.position]
     )}
   >
     <button
       onclick={() => {
-        SYS.taskbar.position = "top";
+        taskbar.position = TaskbarPosition.TOP;
       }}
       title="Top"
     >
@@ -58,7 +60,7 @@
     </button>
     <button
       onclick={() => {
-        SYS.taskbar.position = "bottom";
+        taskbar.position = TaskbarPosition.BOTTOM;
       }}
       title="Bottom"
     >
@@ -66,7 +68,7 @@
     </button>
     <button
       onclick={() => {
-        SYS.taskbar.position = "left";
+        taskbar.position = TaskbarPosition.LEFT;
       }}
       title="Left"
     >
@@ -74,7 +76,7 @@
     </button>
     <button
       onclick={() => {
-        SYS.taskbar.position = "right";
+        taskbar.position = TaskbarPosition.RIGHT;
       }}
       title="Right"
     >

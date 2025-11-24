@@ -31,6 +31,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@lilbunnyrabbit/utils": "^0.1.1",
     "uuid": "^13.0.0"
   }
 }

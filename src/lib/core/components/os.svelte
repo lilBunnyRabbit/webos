@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { SYS, WM } from "$lib/core/stores";
   import { cn, ov } from "$lib/core/utils/utils";
   import Taskbar from "./taskbar/taskbar.svelte";
   import WindowManager from "./window-manager/window-manager.svelte";
+  import kernel, { type SettingsService, type WindowsService } from "$lib/core/api";
 
-  const position = $derived(SYS.taskbar.position);
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const windows = $derived(kernel.service<WindowsService>("windows"));
+  const position = $derived(settings.taskbar.position);
 </script>
 
 <div
@@ -35,7 +37,7 @@
       )
     )}
   >
-    <button class="bg-primary text-background p-2 rounded-md" onclick={() => WM.windows.create("Hello, world!")}>
+    <button class="bg-primary text-background p-2 rounded-md" onclick={() => windows.open({})}>
       Open Window
     </button>
   </div>

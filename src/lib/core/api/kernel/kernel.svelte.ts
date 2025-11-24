@@ -1,5 +1,6 @@
-import type { ServiceDescriptor, IService } from "./api.type";
+import type { ServiceDescriptor, IService } from "../type";
 import { SvelteMap } from "svelte/reactivity";
+import { register_default_services } from "./init";
 
 type ResolveServicePromise<T extends IService> = (service: T) => void;
 
@@ -8,9 +9,25 @@ type ResolveServicePromise<T extends IService> = (service: T) => void;
 */
 
 export class Kernel {
+  private is_initialized = false;
+
   readonly services: Map<string, IService> = new SvelteMap();
   readonly pending_services: Map<string, ServiceDescriptor<IService>> = new Map();
-  readonly service_promises: Map<string, Array<ResolveServicePromise>> = new Map();
+  readonly service_promises: Map<string, Array<ResolveServicePromise<IService>>> = new Map();
+
+  constructor() {}
+
+  public async init(): Promise<Kernel> {
+    if (this.is_initialized) {
+      return this;
+    }
+
+    register_default_services(this);
+
+    this.is_initialized = true;
+
+    return this;
+  }
 
   private has_dependencies(dependencies?: string[]) {
     return !dependencies || dependencies.every((dependency) => this.services.has(dependency));
@@ -73,9 +90,9 @@ export class Kernel {
 
     return new Promise((resolve: ResolveServicePromise<T>) => {
       if (this.service_promises.has(name)) {
-        this.service_promises.get(name)!.push(resolve);
+        this.service_promises.get(name)!.push(resolve as ResolveServicePromise<IService>);
       } else {
-        this.service_promises.set(name, [resolve]);
+        this.service_promises.set(name, [resolve as ResolveServicePromise<IService>]);
       }
     });
   }

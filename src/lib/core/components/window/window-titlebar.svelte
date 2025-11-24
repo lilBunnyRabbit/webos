@@ -1,16 +1,14 @@
 <script lang="ts">
-  import type { WindowId } from "$lib/core/stores";
-  import { WM } from "$lib/core/stores";
-  import { cn } from "$lib/core/utils";
   import { AppWindowIcon, Copy, Minus, Square, X, ZoomInIcon, ZoomOutIcon } from "@lucide/svelte";
+  import kernel, { type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
 
   let { zoom = $bindable(), windowId }: { zoom: number; windowId: WindowId } = $props();
 
-  // Reference the window instance
-  const instance = $derived(WM.windows.get(windowId)!);
+  const windows = $derived(kernel.service<WindowsService>("windows"));
+  const instance = $derived(windows.get(windowId)!);
 
   // For maximize state
-  const isMaximized = $derived(instance.flags.has(WM.WindowFlag.MAXIMIZED));
+  const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
 </script>
 
 <!-- 
@@ -62,7 +60,7 @@ ondblclick={() => WM.windows.toggleMaximize(windowId)}
     class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
     title="Minimize"
     onclick={() => {
-      WM.windows.toggleMinimize(windowId);
+      windows.toggle_minimize(windowId);
     }}
   >
     <Minus class="w-3 h-3" />
@@ -70,12 +68,12 @@ ondblclick={() => WM.windows.toggleMaximize(windowId)}
   <button
     data-window-button
     class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-    title={isMaximized ? "Restore" : "Maximize"}
+    title={is_maximized ? "Restore" : "Maximize"}
     onclick={() => {
-      WM.windows.toggleMaximize(windowId);
+      windows.toggle_maximize(windowId);
     }}
   >
-    {#if isMaximized}
+    {#if is_maximized}
       <Copy class="w-3 h-3" />
     {:else}
       <Square class="w-3 h-3" />
@@ -86,7 +84,7 @@ ondblclick={() => WM.windows.toggleMaximize(windowId)}
     class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
     title="Close"
     onclick={() => {
-      WM.windows.destroy(windowId);
+      windows.destroy(windowId);
     }}
   >
     <X class="w-3 h-3" />
