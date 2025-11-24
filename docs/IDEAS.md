@@ -1,2 +1,3 @@
 - shadow doma
 - window events for file upload, etc
+- kernel event custom event - zod vvalidation
