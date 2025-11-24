@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { WindowId } from "$lib/core/stores";
+  import type { WindowId } from "$lib/core/api";
 
   let { zoom, windowId, children }: { zoom: number; windowId: WindowId; children?: any } = $props();
 

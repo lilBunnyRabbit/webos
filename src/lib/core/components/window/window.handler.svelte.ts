@@ -1,9 +1,14 @@
-import type { Bounds, SnapZone, WindowId, WindowInstance } from "$lib/core/api";
+import kernel, {
+  WindowFlag,
+  type SnapZone,
+  type WindowId,
+  type WindowInstance,
+  type WindowsService,
+} from "$lib/core/api";
+import type { Bounds } from "$lib/core/utils/type";
 import type { Attachment } from "svelte/attachments";
-import kernel, { type WindowsService } from "$lib/core/api";
-import { isUndefined } from "@lilbunnyrabbit/utils";
-// TODO: cleanup logic
 
+// TODO: cleanup logic
 const windows = $derived(kernel.service<WindowsService>("windows"));
 
 export const RESIZE_EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
@@ -26,6 +31,10 @@ interface MovingState {
 }
 
 export class WindowGeometryHandler {
+  // TODO: do I want defaults? or required constraints?
+  static MIN_WIDTH = 400;
+  static MIN_HEIGHT = 300;
+
   public move = $state<MovingState>({
     active: false,
     width: 0,
@@ -145,30 +154,30 @@ export class WindowGeometryHandler {
     const y = cy - container.y;
 
     // Check edges
-    const is_left_edge = x <= EDGE_THRESHOLD;
-    const is_right_edge = x >= container.width - EDGE_THRESHOLD;
-    const is_top_edge = y <= EDGE_THRESHOLD;
-    const is_bottom_edge = y >= container.height - EDGE_THRESHOLD;
+    const left_edge = x <= EDGE_THRESHOLD;
+    const right_edge = x >= container.width - EDGE_THRESHOLD;
+    const top_edge = y <= EDGE_THRESHOLD;
+    const bottom_edge = y >= container.height - EDGE_THRESHOLD;
 
     // Check corners (smaller regions at the intersections)
-    if (is_left_edge && is_top_edge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
+    if (left_edge && top_edge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
       return "top-left";
     }
-    if (is_right_edge && is_top_edge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
+    if (right_edge && top_edge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
       return "top-right";
     }
-    if (is_left_edge && is_bottom_edge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+    if (left_edge && bottom_edge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
       return "bottom-left";
     }
-    if (is_right_edge && is_bottom_edge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
+    if (right_edge && bottom_edge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
       return "bottom-right";
     }
 
     // Check edges (full height/width)
-    if (is_left_edge) return "left";
-    if (is_right_edge) return "right";
-    if (is_top_edge) return "top";
-    if (is_bottom_edge) return "bottom";
+    if (left_edge) return "left";
+    if (right_edge) return "right";
+    if (top_edge) return "top";
+    if (bottom_edge) return "bottom";
     return null;
   }
 
@@ -196,18 +205,17 @@ export class WindowGeometryHandler {
         const max_width = cw - sl;
         const new_width = Math.round(Math.min(max_width, width));
 
-        if (isUndefined(this.instance.constraints?.width?.min)) {
-          this.move.width = new_width;
-        } else {
-          this.move.width = Math.max(this.instance.constraints.width.min, new_width);
-        }
+        this.move.width = Math.max(this.instance.constraints.width?.min ?? WindowGeometryHandler.MIN_WIDTH, new_width);
       }
 
       if (edge.includes("w")) {
         const { client_x: sx, left: sl } = this.move.start;
 
         const dx = Math.max(-sl, event.clientX - sx);
-        this.move.width = Math.max(this.instance.defaults.minWidth, Math.round(this.instance.bounds.width - dx));
+        this.move.width = Math.max(
+          this.instance.constraints.width?.min ?? WindowGeometryHandler.MIN_WIDTH,
+          Math.round(this.instance.bounds.width - dx)
+        );
         this.move.dx = this.instance.bounds.width - this.move.width;
       }
 
@@ -219,14 +227,20 @@ export class WindowGeometryHandler {
         const height = this.instance.bounds.height + dy;
         const maxHeight = ch - st;
 
-        this.move.height = Math.max(this.instance.defaults.minHeight, Math.round(Math.min(maxHeight, height)));
+        this.move.height = Math.max(
+          this.instance.constraints.height?.min ?? WindowGeometryHandler.MIN_HEIGHT,
+          Math.round(Math.min(maxHeight, height))
+        );
       }
 
       if (edge.includes("n")) {
         const { client_y: sy, top: st } = this.move.start;
 
         const dy = Math.max(-st, event.clientY - sy);
-        this.move.height = Math.max(this.instance.defaults.minHeight, Math.round(this.instance.bounds.height - dy));
+        this.move.height = Math.max(
+          this.instance.constraints.height?.min ?? WindowGeometryHandler.MIN_HEIGHT,
+          Math.round(this.instance.bounds.height - dy)
+        );
         this.move.dy = this.instance.bounds.height - this.move.height;
       }
     });
@@ -234,48 +248,48 @@ export class WindowGeometryHandler {
 
   private create_move_attachment(
     type: "drag" | "resize",
-    handleMove: (event: PointerEvent) => void
+    handle_move: (event: PointerEvent) => void
   ): Attachment<HTMLDivElement> {
     return (element) => {
-      let pointerId: number | null = null;
+      let pointer_id: number | null = null;
 
       const cleanup = () => {
-        element.removeEventListener("pointerdown", onDown);
-        element.removeEventListener("pointermove", onMove);
-        element.removeEventListener("pointerup", onEnd);
-        element.removeEventListener("pointercancel", onEnd);
+        element.removeEventListener("pointerdown", on_down);
+        element.removeEventListener("pointermove", on_move);
+        element.removeEventListener("pointerup", on_end);
+        element.removeEventListener("pointercancel", on_end);
 
-        if (pointerId !== null && element.hasPointerCapture(pointerId)) {
-          element.releasePointerCapture(pointerId);
+        if (pointer_id !== null && element.hasPointerCapture(pointer_id)) {
+          element.releasePointerCapture(pointer_id);
         }
       };
 
-      const onMove = (event: PointerEvent) => {
+      const on_move = (event: PointerEvent) => {
         event.preventDefault();
 
         cancelAnimationFrame(this.move.animation_frame);
         this.move.animation_frame = requestAnimationFrame(() => {
-          handleMove(event);
+          handle_move(event);
         });
       };
 
-      const onEnd = (event: PointerEvent) => {
+      const on_end = (event: PointerEvent) => {
         event.preventDefault();
 
         element.releasePointerCapture(event.pointerId);
 
-        element.removeEventListener("pointermove", onMove);
-        element.removeEventListener("pointerup", onEnd);
-        element.removeEventListener("pointercancel", onEnd);
+        element.removeEventListener("pointermove", on_move);
+        element.removeEventListener("pointerup", on_end);
+        element.removeEventListener("pointercancel", on_end);
 
         cancelAnimationFrame(this.move.animation_frame);
 
-        this.applyMove(element);
+        this.apply_move(element);
 
-        pointerId = null;
+        pointer_id = null;
       };
 
-      const onDown = (event: PointerEvent) => {
+      const on_down = (event: PointerEvent) => {
         if (
           element !== event.target &&
           event.target instanceof Element &&
@@ -287,25 +301,25 @@ export class WindowGeometryHandler {
         event.preventDefault();
         event.stopPropagation();
 
-        WM.windows.focus(this.id);
+        windows.focus(this.id);
 
         element.setPointerCapture(event.pointerId);
-        pointerId = event.pointerId;
+        pointer_id = event.pointerId;
 
-        this.initMove(type, element, event);
+        this.init_move(type, element, event);
 
-        element.addEventListener("pointermove", onMove);
-        element.addEventListener("pointerup", onEnd);
-        element.addEventListener("pointercancel", onEnd);
+        element.addEventListener("pointermove", on_move);
+        element.addEventListener("pointerup", on_end);
+        element.addEventListener("pointercancel", on_end);
       };
 
-      element.addEventListener("pointerdown", onDown);
+      element.addEventListener("pointerdown", on_down);
       return cleanup;
     };
   }
 
-  private initMove(type: "drag" | "resize", element: HTMLDivElement, event: PointerEvent) {
-    if (this.instance.snapZone || this.instance.flags.has(WM.WindowFlag.MAXIMIZED)) {
+  private init_move(type: "drag" | "resize", element: HTMLDivElement, event: PointerEvent) {
+    if (this.instance.snap_zone || this.instance.flags.has(WindowFlag.MAXIMIZED)) {
       const rect = element.parentElement!.getBoundingClientRect();
       const bounds: Bounds = {
         width: Math.round(rect.width),
@@ -329,12 +343,12 @@ export class WindowGeometryHandler {
           dx: 0,
           dy: 0,
           start: {
-            clientX: event.clientX,
-            clientY: event.clientY,
+            client_x: event.clientX,
+            client_y: event.clientY,
             left: this.instance.bounds.x,
             top: this.instance.bounds.y,
           },
-          container: WM.container.getBounds(),
+          container: windows.container.bounds,
         });
       } else {
         const sx = (event.clientX / bounds.width) * this.instance.bounds.width;
@@ -346,12 +360,12 @@ export class WindowGeometryHandler {
           dx: Math.round(event.clientX - sx),
           dy: 0,
           start: {
-            clientX: sx,
-            clientY: event.clientY,
+            client_x: sx,
+            client_y: event.clientY,
             left: bounds.x,
             top: bounds.y,
           },
-          container: WM.container.getBounds(),
+          container: windows.container.bounds,
         });
       }
     } else {
@@ -362,24 +376,24 @@ export class WindowGeometryHandler {
         dx: 0,
         dy: 0,
         start: {
-          clientX: event.clientX,
-          clientY: event.clientY,
+          client_x: event.clientX,
+          client_y: event.clientY,
           left: this.instance.bounds.x,
           top: this.instance.bounds.y,
         },
-        container: WM.container.getBounds(),
+        container: windows.container.bounds,
       });
     }
   }
 
-  private applyMove(element: HTMLDivElement) {
+  private apply_move(element: HTMLDivElement) {
     if (this.snap_zone) {
       const parent = element.parentElement!;
       if (parent) {
         parent.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
       }
 
-      this.instance.snapZone = this.snap_zone;
+      this.instance.snap_zone = this.snap_zone;
 
       if (parent) {
         const cleanup = () => {
@@ -395,9 +409,9 @@ export class WindowGeometryHandler {
       this.instance.bounds.x = this.move.start.left + this.move.dx;
       this.instance.bounds.y = this.move.start.top + this.move.dy;
 
-      this.instance.snapZone = null;
+      this.instance.snap_zone = null;
     }
-    this.instance.flags.delete(WM.WindowFlag.MAXIMIZED);
+    this.instance.flags.delete(WindowFlag.MAXIMIZED);
     Object.assign(this.move, {
       active: false,
       width: 0,
@@ -405,8 +419,8 @@ export class WindowGeometryHandler {
       dx: 0,
       dy: 0,
       start: {
-        clientX: 0,
-        clientY: 0,
+        client_x: 0,
+        client_y: 0,
         left: 0,
         top: 0,
       },
@@ -416,7 +430,7 @@ export class WindowGeometryHandler {
         x: 0,
         y: 0,
       },
-      animationFrame: 0,
+      animation_frame: 0,
     });
     this.snap_zone = null;
   }
