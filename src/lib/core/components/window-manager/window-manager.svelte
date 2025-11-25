@@ -16,7 +16,6 @@
     };
 
     const resizeObserver = new ResizeObserver(() => {
-      console.log("update bounds on resize");
       updateBounds();
     });
 
@@ -24,7 +23,6 @@
       // TODO: revisit
       settings.taskbar.position;
       requestAnimationFrame(() => {
-        console.log("update bounds on taskbar position change");
         updateBounds();
       });
     });
@@ -34,10 +32,6 @@
   }}
   {...props}
 >
-  <div class="absolute top-12 right-0">
-    {@html JSON.stringify(windows.container.bounds, null, 2)}
-  </div>
-
   {#each windows.list() as id (id)}
     <Window id={id} />
   {/each}

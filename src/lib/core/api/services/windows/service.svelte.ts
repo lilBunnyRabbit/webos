@@ -1,11 +1,9 @@
-import type { IService } from "../../type";
-import type { WindowConstraints, WindowId, WindowInstance, WindowOpenOptions, SnapZone } from "./type";
-import { WindowFlag } from "./type";
-import { v4 as uuid } from "uuid";
 import { Flags } from "$lib/core/utils/flags";
-import { WindowsHelper } from "./helper";
 import type { Bounds } from "$lib/core/utils/type";
-import type { WindowsService as IWindowsService } from "./type";
+import { v4 as uuid } from "uuid";
+import { WindowsHelper } from "./helper";
+import type { WindowsService as IWindowsService, SnapZone, WindowId, WindowInstance, WindowOpenOptions } from "./type";
+import { WindowFlag } from "./type";
 
 export class WindowsService implements IWindowsService {
   name = "WindowsService";
@@ -31,19 +29,7 @@ export class WindowsService implements IWindowsService {
   }
 
   public set_container(element?: HTMLElement | null): Bounds {
-    if (element) {
-      const rect = element.getBoundingClientRect();
-
-      this.container = {
-        bounds: {
-          x: rect.left,
-          y: rect.top,
-          width: rect.width,
-          height: rect.height,
-        },
-        element,
-      };
-    } else {
+    if (!element) {
       this.container = {
         bounds: {
           x: 0,
@@ -53,7 +39,25 @@ export class WindowsService implements IWindowsService {
         },
         element: null,
       };
+
+      console.log("WindowService:set_container", this.container);
+
+      return this.container.bounds;
     }
+
+    const rect = element.getBoundingClientRect();
+
+    this.container = {
+      bounds: {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      },
+      element,
+    };
+
+    console.log("WindowService:set_container", this.container);
 
     return this.container.bounds;
   }
