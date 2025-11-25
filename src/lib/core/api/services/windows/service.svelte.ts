@@ -135,6 +135,7 @@ export class WindowsService implements IWindowsService {
         this.container.bounds,
         Object.keys(this.index).length
       ),
+      app: options.app,
     };
 
     return id;
@@ -161,6 +162,7 @@ export class WindowsService implements IWindowsService {
       instance.flags.delete(WindowFlag.MAXIMIZED);
     } else {
       instance.flags.add(WindowFlag.MAXIMIZED);
+      this.focus(id);
     }
 
     return !is_maximized;
@@ -176,6 +178,7 @@ export class WindowsService implements IWindowsService {
 
     if (is_minimized) {
       instance.flags.delete(WindowFlag.MINIMIZED);
+      this.focus(id);
     } else {
       instance.flags.add(WindowFlag.MINIMIZED);
     }

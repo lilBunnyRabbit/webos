@@ -55,7 +55,7 @@ export class Kernel {
     // if service is not pending, add it to the services
     // if pending service resolves this service then add it to the services (circular dependency)
     if (this.has_dependencies(service.dependencies)) {
-      const instance = new service.instance();
+      const instance = new service.instance(this);
       this.services.set(name, instance);
 
       const promises = this.service_promises.get(name);

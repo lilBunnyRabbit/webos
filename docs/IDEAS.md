@@ -1,3 +1,4 @@
 - shadow doma
 - window events for file upload, etc
 - kernel event custom event - zod vvalidation
+- "app store" - load apps into cache, only show loaded apps, version management, (auto update) if not open

@@ -1,6 +1,7 @@
 import type { IService } from "../../type";
 import { Flags } from "$lib/core/utils/flags";
 import type { Bounds, PartialRecord } from "$lib/core/utils/type";
+import type { AppInstance } from "../apps/type";
 
 /**
  * Service for managing windows lifecycle, state, and operations.
@@ -132,8 +133,10 @@ export interface WindowInstance {
   snap_zone: SnapZone | null;
   constraints: WindowConstraints;
   bounds: Bounds;
+  app: AppInstance;
 }
 
 export interface WindowOpenOptions {
+  app: AppInstance;
   constraints?: WindowConstraints;
 }

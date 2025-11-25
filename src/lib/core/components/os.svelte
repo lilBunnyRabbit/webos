@@ -2,10 +2,10 @@
   import { cn, ov } from "$lib/core/utils/utils";
   import Taskbar from "./taskbar/taskbar.svelte";
   import WindowManager from "./window-manager/window-manager.svelte";
-  import kernel, { type SettingsService, type WindowsService } from "$lib/core/api";
+  import kernel, { type SettingsService, type AppsService } from "$lib/core/api";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const windows = $derived(kernel.service<WindowsService>("windows"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
   const position = $derived(settings.taskbar.position);
 </script>
 
@@ -37,7 +37,7 @@
       )
     )}
   >
-    <button class="bg-primary text-background p-2 rounded-md" onclick={() => windows.open({})}>
+    <button class="bg-primary text-background p-2 rounded-md" onclick={() => apps.launch("example")}>
       Open Window
     </button>
   </div>
