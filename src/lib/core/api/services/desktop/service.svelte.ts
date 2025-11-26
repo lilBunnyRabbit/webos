@@ -1,4 +1,4 @@
-import type { DesktopGrid, DesktopService as IDesktopService } from "./type";
+import type { DesktopGrid, DesktopGridItem, DesktopService as IDesktopService } from "./type";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 import type { AppId } from "..";
 import { DesktopHelper } from "./helper";
@@ -36,7 +36,7 @@ export class DesktopService implements IDesktopService {
     element: null,
   });
 
-  private grid = $state<DesktopGrid>([["example", "example"]]);
+  private grid = $state<DesktopGrid>([[{ app_id: "example" }]]);
 
   public set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void {
     if (!element) {
@@ -59,7 +59,7 @@ export class DesktopService implements IDesktopService {
         element: null,
       };
 
-      console.log("DesktopService:set_container", this.container);
+      // console.log("DesktopService:set_container", this.container);
 
       return;
     }
@@ -79,6 +79,8 @@ export class DesktopService implements IDesktopService {
     const columns = Math.floor(bounds.width / cell_size);
     const rows = Math.floor(bounds.height / cell_size);
 
+    const is_grid_changed = columns !== this.container.grid.columns || rows !== this.container.grid.rows;
+
     this.container = {
       bounds,
       cell: { width: bounds.width / columns, height: bounds.height / rows },
@@ -90,13 +92,22 @@ export class DesktopService implements IDesktopService {
       element,
     };
 
-    console.log("DesktopService:set_container", this.container);
-    //         return set(() => ({ container, items: recalculateGridPositions(container.grid, get().items) }));
+    if (is_grid_changed) {
+      // console.log("DesktopService:grid changed", this.container.grid, this.grid);
+      this.grid = DesktopHelper.recalculate_grid_positions(this.container.grid, this.grid);
+    }
+
+    // console.log("DesktopService:set_container", this.container);
   }
 
-  public add_item(appId: AppId): void {
-    const [x, y] = DesktopHelper.calculate_item_position(this.container.grid, this.grid);
-    this.set_item({ x, y }, appId);
+  public add_item(app_id: AppId): Position | null {
+    const position = DesktopHelper.calculate_item_position(this.container.grid, this.grid);
+    if (!position) {
+      console.warn("No available position found for item");
+      return null;
+    }
+
+    return this.set_item(position, { app_id });
   }
 
   public remove_item(position: Position): void {
@@ -111,24 +122,28 @@ export class DesktopService implements IDesktopService {
     return this.get_item(position) !== undefined;
   }
 
-  private get_item(position: Position): AppId | undefined {
+  private get_item(position: Position): DesktopGridItem | undefined {
     return this.grid[position.y]?.[position.x];
   }
 
-  private set_item(position: Position, appId: AppId | undefined): void {
+  private set_item(position: Position, item: DesktopGridItem | undefined): Position {
     if (!this.grid[position.y]) {
       this.grid[position.y] = [];
     }
 
-    this.grid[position.y][position.x] = appId;
+    this.grid[position.y][position.x] = item;
+
+    return position;
   }
 
-  public move_item(from: Position, to: Position): void {
-    if (from.x === to.x && from.y === to.y) return;
+  public move_item(from: Position, to: Position): Position {
+    if (from.x === to.x && from.y === to.y) {
+      return from;
+    }
 
     this.set_item(to, this.get_item(from));
     this.set_item(from, undefined);
 
-    console.log("DesktopService:move_item", from, to, this.grid);
+    return to;
   }
 }

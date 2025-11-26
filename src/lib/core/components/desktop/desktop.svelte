@@ -19,7 +19,7 @@
   style:grid-template-columns={`repeat(${desktop.container.grid.columns}, minmax(64px, 1fr))`}
   style:grid-template-rows={`repeat(${desktop.container.grid.rows}, minmax(64px, 1fr))`}
   style:grid-auto-flow="dense"
-  style:padding={desktop.container.config.padding}
+  style:padding={`${desktop.container.config.padding}px`}
   style:background-image={desktop.container.cell.width > 0 && desktop.container.cell.height > 0
     ? `radial-gradient(circle at left top, var(--foreground) 1px, transparent 1px)`
     : undefined}
@@ -28,11 +28,13 @@
     : undefined}
   style:background-position={`${desktop.container.config.padding}px ${desktop.container.config.padding}px`}
 >
-  {#each desktop.list() as row, rowIndex (rowIndex)}
-    {#each row as id, index (index)}
-      {#if id}
-        <DesktopItem {id} x={index} y={rowIndex} />
-      {/if}
+  {#if desktop.container.grid.columns > 0 && desktop.container.grid.rows > 0}
+    {#each desktop.list() as row, rowIndex (rowIndex)}
+      {#each row as item, index (index)}
+        {#if item}
+          <DesktopItem id={item.app_id} x={index} y={rowIndex} />
+        {/if}
+      {/each}
     {/each}
-  {/each}
+  {/if}
 </div>

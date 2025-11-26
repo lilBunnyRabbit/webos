@@ -2,11 +2,12 @@
   import { cn } from "$lib/core/utils/utils";
   import { LayoutGrid } from "@lucide/svelte";
   import type { SvelteHTMLElements } from "svelte/elements";
-  import kernel, { type SettingsService, TaskbarPosition } from "$lib/core/api";
+  import kernel, { type SettingsService, TaskbarPosition, type DesktopService } from "$lib/core/api";
 
   let { class: className, ...restProps }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
   const taskbar = $derived(kernel.service<SettingsService>("settings").taskbar);
+  const desktop = $derived(kernel.service<DesktopService>("desktop"));
 
   const orientation = $derived(
     taskbar.position === TaskbarPosition.LEFT || taskbar.position === TaskbarPosition.RIGHT ? "vertical" : "horizontal"
@@ -81,6 +82,13 @@
       title="Right"
     >
       Right
+    </button>
+    <button
+      class="px-3 py-1.5 rounded bg-accent/10 hover:bg-accent/20 text-sm font-medium transition-colors border border-accent/20"
+      onclick={() => desktop.add_item("example")}
+      title="Add item to desktop"
+    >
+      + Add to Desktop
     </button>
     <!-- {#each Object.entries(index).sort((a, b) => a[1].createdAt.getTime() - b[1].createdAt.getTime()) as [windowId, instance]}
       {#if instance}

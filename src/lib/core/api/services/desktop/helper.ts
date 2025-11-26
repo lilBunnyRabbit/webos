@@ -1,107 +1,112 @@
-import type { AppId, DesktopGrid } from "..";
+import type { AppId, DesktopGrid, DesktopGridItem } from "..";
+import type { Position } from "$lib/core/utils/type";
 
 export class DesktopHelper {
   public static calculate_item_position(
     dimensions: { columns: number; rows: number },
     grid: DesktopGrid
-  ): [x: number, y: number] {
-    return [0, 0];
-  }
-}
+  ): Position | null {
+    for (let y = 0; y < dimensions.rows; y++) {
+      if (!grid[y] || !grid[y].length) {
+        return { x: 0, y };
+      }
 
-/*
-function recalculateGridPositions(
-  grid: ContainerConfig["grid"],
-  items: Partial<Record<AppId, ItemConfig>>
-): Partial<Record<AppId, ItemConfig>> {
-  const recalculatedItems: Partial<Record<AppId, ItemConfig>> = {};
-  const occupiedPositions = new Set<string>();
-
-  // Helper to mark a position as occupied
-  const markPosition = (x: number, y: number) => occupiedPositions.add(`${x},${y}`);
-  
-  // Helper to check if a position is valid and available
-  const isPositionValid = (x: number, y: number) => {
-    return x >= 0 && x < grid.columns && y >= 0 && y < grid.rows && !occupiedPositions.has(`${x},${y}`);
-  };
-
-  // Helper to find the first available position
-  const findNextAvailablePosition = (): { x: number; y: number } => {
-    for (let y = 0; y < grid.rows; y++) {
-      for (let x = 0; x < grid.columns; x++) {
-        if (isPositionValid(x, y)) {
+      for (let x = 0; x < dimensions.columns; x++) {
+        if (grid[y][x] === undefined) {
           return { x, y };
         }
       }
     }
-    // If grid is full, place at 0,0 (shouldn't happen in normal usage)
-    return { x: 0, y: 0 };
-  };
 
-  // Iterate over all items
-  Object.entries(items).forEach(([appId, itemConfig]) => {
-    if (!itemConfig) return;
-
-    const { x, y } = itemConfig.grid;
-
-    // Check if current position is valid
-    if (isPositionValid(x, y)) {
-      // Keep the item in its current position
-      recalculatedItems[appId as AppId] = itemConfig;
-      markPosition(x, y);
-    } else {
-      // Find a new position for the item
-      const newPosition = findNextAvailablePosition();
-      recalculatedItems[appId as AppId] = {
-        ...itemConfig,
-        grid: newPosition,
-      };
-      markPosition(newPosition.x, newPosition.y);
-    }
-  });
-
-  return recalculatedItems;
-}
-
-function calculateNewItemPosition(
-  grid: ContainerConfig["grid"],
-  items: Partial<Record<AppId, ItemConfig>>,
-  item?: ItemConfig
-): ItemConfig {
-  // Helper to check if a position is taken
-  const isPositionTaken = (x: number, y: number): boolean => {
-    return Object.values(items).some((existingItem) => existingItem?.grid.x === x && existingItem?.grid.y === y);
-  };
-
-  // Helper to check if a position is valid (within bounds and not taken)
-  const isPositionValid = (x: number, y: number): boolean => {
-    return x >= 0 && x < grid.columns && y >= 0 && y < grid.rows && !isPositionTaken(x, y);
-  };
-
-  // If item config exists, validate it
-  if (item) {
-    const { x, y } = item.grid;
-    // Check if position is valid and not taken
-    if (isPositionValid(x, y)) {
-      return item;
-    }
+    return null;
   }
 
-  // Find the first empty position in the grid (column by column, top to bottom)
-  for (let y = 0; y < grid.rows; y++) {
-    for (let x = 0; x < grid.columns; x++) {
-      if (isPositionValid(x, y)) {
-        return {
-          grid: { x, y },
-        };
+  // TODO: more complex logic for moving items - persist original position for restore
+  public static recalculate_grid_positions(
+    dimensions: { columns: number; rows: number },
+    grid: DesktopGrid
+  ): DesktopGrid {
+    const recalculated: DesktopGrid = [];
+
+    const add_from_start = (item: DesktopGridItem) => {
+      console.log("add_from_start", item.app_id);
+      for (let y = 0; y < dimensions.rows; y++) {
+        if (!recalculated[y] || !recalculated[y].length) {
+          recalculated[y] = [item];
+          return;
+        }
+  
+        for (let x = 0; x < dimensions.columns; x++) {
+          if (recalculated[y][x] === undefined) {
+            recalculated[y][x] = item;
+            return;
+          }
+        }
       }
     }
+
+    // const top_down_move = (from: Position, item: DesktopGridItem) => {
+    //   console.log("TOP DOWN", from, item.app_id, [...recalculated]);
+
+    //   // Check if row has empty space
+    //   if (!recalculated[from.y]) {
+    //     recalculated[from.y] = [];
+    //   }
+
+    //   const start_x = Math.min(Math.max(from.x - 1, 0), dimensions.columns - 1);
+    //   console.log("start_x", start_x);
+    //   // Into row from right to left
+    //   console.log("into row from right to left", start_x);
+    //   for (let x = start_x; x >= 0; x--) {
+    //     if (recalculated[from.y][x] === undefined) {
+    //       console.log("input item rl", { x, y: from.y }, item.app_id);
+    //       recalculated[from.y][x] = item;
+    //       return;
+    //     }
+    //   }
+
+    //   // Go to next row and input from left
+    //   console.log("go to next row and input from left", from.y + 1);
+    //   for (let y = from.y + 1; y < dimensions.rows; y++) {
+    //     console.log("recalculated[y]", recalculated[y], [...recalculated]);
+    //     if (recalculated[y] === undefined) {
+    //       recalculated[y] = [];
+    //       console.log("input item yl", { x: 0, y: from.y + 1 }, item.app_id);
+
+    //       recalculated[y][0] = item;
+    //       return;
+    //     }
+
+    //     for (let x = 0; x < dimensions.columns; x++) {
+    //       if (recalculated[y][x] === undefined) {
+    //         console.log("input item yl0", { x,y }, item.app_id)
+    //         recalculated[y][x] = item;
+    //         return;
+    //       }
+    //     }
+    //   }
+    // };
+
+    for (let y = 0; y < grid.length; y++) {
+      const row = grid[y];
+      if (!row) continue;
+
+      for (let x = 0; x < row.length; x++) {
+        const item = row[x];
+        if (item === undefined) continue;
+
+        if (x > dimensions.columns - 1 || y > dimensions.rows - 1 || recalculated[y]?.[x] !== undefined) {
+          add_from_start(item);
+        } else {
+          if (!recalculated[y]) {
+            recalculated[y] = [];
+          }
+
+          recalculated[y][x] = item;
+        }
+      }
+    }
+
+    return recalculated;
   }
-
-  // Fallback to 0,0 if grid is full (shouldn't happen in normal usage)
-  return {
-    grid: { x: 0, y: 0 },
-  };
 }
-
-*/

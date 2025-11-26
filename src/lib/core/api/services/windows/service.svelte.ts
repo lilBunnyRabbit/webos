@@ -40,7 +40,7 @@ export class WindowsService implements IWindowsService {
         element: null,
       };
 
-      console.log("WindowService:set_container", this.container);
+      // console.log("WindowService:set_container", this.container);
 
       return this.container.bounds;
     }
@@ -57,7 +57,7 @@ export class WindowsService implements IWindowsService {
       element,
     };
 
-    console.log("WindowService:set_container", this.container);
+    // console.log("WindowService:set_container", this.container);
 
     return this.container.bounds;
   }

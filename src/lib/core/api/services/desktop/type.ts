@@ -19,15 +19,19 @@ export interface DesktopService extends IService {
 
   set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void;
 
-  add_item(appId: AppId): void;
+  add_item(app_id: AppId): Position | null;
 
   remove_item(position: Position): void;
 
   has_item_in_position(position: Position): boolean;
 
-  move_item(from: Position, to: Position): void;
+  move_item(from: Position, to: Position): Position;
 
   list(): DesktopGrid;
 }
 
-export type DesktopGrid = Array<Array<AppId | undefined>>;
+export type DesktopGrid = Array<Array<DesktopGridItem | undefined>>;
+
+export type DesktopGridItem = {
+  app_id: AppId;
+}
