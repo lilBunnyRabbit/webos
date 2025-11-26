@@ -1,4 +1,4 @@
-import type { AppsService as IAppsService, AppId, AppManifest } from "./type";
+import type { AppsService as IAppsService, AppId, AppManifest, AppProps } from "./type";
 import type { Kernel, WindowsService, WindowId } from "$lib/core/api";
 import { SvelteMap } from "svelte/reactivity";
 import { register_apps } from "$lib/apps";
@@ -6,6 +6,10 @@ import { register_apps } from "$lib/apps";
 export class AppsService implements AppsService {
   name = "AppsService";
   description = "AppsService";
+
+  to_string(): string {
+    return `AppsService: ${this.registry.size} apps registered`;
+  }
 
   private windows_service!: WindowsService;
 
@@ -21,21 +25,23 @@ export class AppsService implements AppsService {
     this.registry.set(manifest.id, manifest);
   }
 
-  public launch(id: AppId): WindowId {
+  public get(id: AppId): AppManifest | undefined {
+    return this.registry.get(id);
+  }
+
+  public launch(id: AppId, props?: AppProps): WindowId {
     const manifest = this.registry.get(id);
     if (!manifest) {
       throw new Error(`App ${id} not found`);
     }
 
+    const { component: component, ...partial_manifest } = manifest;
+
     return this.windows_service.open({
-      app: {
-        id,
-        manifest: {
-          id,
-          name: manifest.name,
-        },
-        component: manifest.component(),
-      },
+      id,
+      manifest: partial_manifest,
+      component: manifest.component(),
+      props,
     });
   }
 }

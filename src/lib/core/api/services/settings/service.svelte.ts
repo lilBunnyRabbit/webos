@@ -10,6 +10,10 @@ export class SettingsService implements ISettingsService {
   name = "SettingsService";
   description = "SettingsService";
 
+  to_string(): string {
+    return `SettingsService: ${this.taskbar.position} ${this.theme.background} ${this.theme.foreground} ${this.theme.primary} ${this.theme.secondary} ${this.theme.accent}`;
+  }
+
   public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM });
   public theme = $state<Theme>(this.load_theme());
 

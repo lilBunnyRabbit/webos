@@ -1,7 +1,9 @@
 <script lang="ts">
-  // Example Svelte component
-  let count = $state(0);
 
+  const { count: initialCount }: { count: number } = $props();
+  // Example Svelte component
+  let count = $state(initialCount);
+  console.log("initialCount", initialCount);
 </script>
 
 <div>

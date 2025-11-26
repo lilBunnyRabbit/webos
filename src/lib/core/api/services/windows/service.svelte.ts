@@ -2,12 +2,20 @@ import { Flags } from "$lib/core/utils/flags";
 import type { Bounds } from "$lib/core/utils/type";
 import { v4 as uuid } from "uuid";
 import { WindowsHelper } from "./helper";
-import type { WindowsService as IWindowsService, SnapZone, WindowId, WindowInstance, WindowOpenOptions } from "./type";
+import type { WindowsService as IWindowsService, SnapZone, WindowId, WindowInstance, WindowOptions } from "./type";
 import { WindowFlag } from "./type";
+import type { AppInstance } from "../apps/type";
 
 export class WindowsService implements IWindowsService {
   name = "WindowsService";
   description = "WindowsService";
+
+  to_string(): string {
+    const windows = $derived(this.index);
+    return Object.entries(windows)
+      .map(([id, window]) => `- ${id}: ${window.app.manifest.name}`)
+      .join("\n");
+  }
 
   public container = $state.raw<{ bounds: Bounds; element: HTMLElement | null }>({
     bounds: {
@@ -124,23 +132,27 @@ export class WindowsService implements IWindowsService {
     return Object.keys(this.index) as WindowId[];
   }
 
-  public open(options: WindowOpenOptions): WindowId {
+  public open(app: AppInstance): WindowId {
     const id = uuid();
+
+    const options = app.manifest.window_options ?? {};
 
     this.index[id] = {
       id,
       created_at: new Date(),
       order: ++this.max_order,
-      flags: new Flags(),
-      snap_zone: null,
+      flags: new Flags(options.flags ?? []),
+      snap_zone: options.snap_zone ?? null,
       constraints: options.constraints ?? {},
       bounds: WindowsHelper.legacy_calculate_bounds(
         options.constraints ?? {},
         this.container.bounds,
         Object.keys(this.index).length
       ),
-      app: options.app,
+      app,
     };
+
+    console.log("WindowsService:open", this.index[id], app);
 
     return id;
   }

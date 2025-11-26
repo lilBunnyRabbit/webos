@@ -5,6 +5,7 @@ import type { Kernel } from "./kernel/kernel.svelte";
 export interface IService {
   name: string;
   description: string;
+  to_string(): string;
 }
 
 export interface ServiceDescriptor<T extends IService> {

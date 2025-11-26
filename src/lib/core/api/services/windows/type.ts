@@ -77,7 +77,7 @@ export interface WindowsService extends IService {
    * @param options - Window creation options including constraints
    * @returns The newly created window ID
    */
-  open(options: WindowOpenOptions): WindowId;
+  open(app: AppInstance): WindowId;
 
   /**
    * Snaps a window to a specific zone (edge or corner).
@@ -102,12 +102,12 @@ export interface WindowsService extends IService {
   toggle_minimize(id: WindowId): boolean;
 }
 
-
 export type WindowId = string;
 
 export const WindowFlag = {
   MINIMIZED: "minimized",
   MAXIMIZED: "maximized",
+  DEBUG: "debug",
 } as const;
 export type WindowFlag = (typeof WindowFlag)[keyof typeof WindowFlag];
 
@@ -131,12 +131,14 @@ export interface WindowInstance {
   order: number;
   flags: Flags<WindowFlag>;
   snap_zone: SnapZone | null;
+  // TODO: max size is not used
   constraints: WindowConstraints;
   bounds: Bounds;
   app: AppInstance;
 }
 
-export interface WindowOpenOptions {
-  app: AppInstance;
+export interface WindowOptions {
   constraints?: WindowConstraints;
+  flags?: Iterable<WindowFlag>;
+  snap_zone?: SnapZone | null;
 }

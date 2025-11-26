@@ -6,7 +6,11 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const windows = $derived(kernel.service<WindowsService>("windows"));
 
+  const list = $derived(windows.list());
+
   let props: SvelteHTMLElements["div"] = $props();
+
+  $inspect("list", list);
 </script>
 
 <div
@@ -32,7 +36,7 @@
   }}
   {...props}
 >
-  {#each windows.list() as id (id)}
+  {#each list as id (id)}
     <Window id={id} />
   {/each}
 </div>

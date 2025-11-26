@@ -15,8 +15,8 @@
 ondblclick={() => WM.windows.toggleMaximize(windowId)}
 -->
 <div class="flex items-center space-x-2">
-  <div class="flex items-center justify-center w-4 h-4"><AppWindowIcon /></div>
-  <span class="text-sm font-medium">{windowId}</span>
+  <div class="flex items-center justify-center w-4 h-4"><instance.app.manifest.icon class="w-4 h-4" /></div>
+  <span class="text-sm font-medium">{instance.app.manifest.name}</span>
 </div>
 
 <div class="flex items-center space-x-1">

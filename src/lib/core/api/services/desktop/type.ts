@@ -1,6 +1,6 @@
 import type { IService } from "../../type";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
-import type { AppId } from "..";
+import type { AppId, AppProps } from "..";
 
 export interface DesktopService extends IService {
   readonly container: {
@@ -34,4 +34,5 @@ export type DesktopGrid = Array<Array<DesktopGridItem | undefined>>;
 
 export type DesktopGridItem = {
   app_id: AppId;
+  props?: AppProps;
 }

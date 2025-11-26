@@ -12,6 +12,10 @@ export class DesktopService implements IDesktopService {
   name = "DesktopService";
   description = "DesktopService";
 
+  to_string(): string {
+    return `DesktopService: ${this.grid.length} items`;
+  }
+
   private static DEFAULT_CONFIG = {
     cell_size: 64,
     padding: 4,
@@ -36,7 +40,21 @@ export class DesktopService implements IDesktopService {
     element: null,
   });
 
-  private grid = $state<DesktopGrid>([[{ app_id: "example" }]]);
+  private grid = $state<DesktopGrid>([
+    [
+      { app_id: "kernel" },
+      { app_id: "settings" },
+      { app_id: "example", props: { count: 1 } },
+      { app_id: "example", props: { count: 2 } },
+      { app_id: "example", props: { count: 3 } },
+      { app_id: "example", props: { count: 4 } },
+      { app_id: "example", props: { count: 5 } },
+      { app_id: "example", props: { count: 6 } },
+      undefined,
+      undefined,
+      { app_id: "9" },
+    ],
+  ]);
 
   public set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void {
     if (!element) {

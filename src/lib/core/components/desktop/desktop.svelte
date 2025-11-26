@@ -32,7 +32,7 @@
     {#each desktop.list() as row, rowIndex (rowIndex)}
       {#each row as item, index (index)}
         {#if item}
-          <DesktopItem id={item.app_id} x={index} y={rowIndex} />
+          <DesktopItem item={item} x={index} y={rowIndex} />
         {/if}
       {/each}
     {/each}

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import kernel, { type AppId, type DesktopService, type AppsService } from "$lib/core/api";
-  import type { Position } from "$lib/core/utils/type";
+  import kernel, { type DesktopGridItem, type DesktopService, type AppsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
-  import { PiIcon } from "@lucide/svelte";
 
-  let { id, x, y }: { id: AppId; x: number; y: number } = $props();
+  let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+
+  const manifest = $derived(apps.get(item.app_id));
 
   const item_handler = new ItemHandler({ x, y }, (position) => {
     desktop.move_item({ x, y }, position);
@@ -23,7 +23,11 @@
   )}
   style:grid-column={x + 1}
   style:grid-row={y + 1}
-  ondblclick={() => apps.launch(id)}
+  ondblclick={() => {
+    if (manifest) {
+      apps.launch(item.app_id, item.props);
+    }
+  }}
   onkeyup={(e) => {
     if (e.key === "Delete" && document.activeElement === e.currentTarget) {
       desktop.remove_item({ x, y });
@@ -31,14 +35,14 @@
   }}
   {@attach item_handler.drag_attachment.bind(item_handler)}
 >
-  <div class="h-8 w-8 overflow-hidden shrink-0">
-    <PiIcon class="h-full w-auto" />
-  </div>
-  <span
-    class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1 group-hover:line-clamp-none group-focus:text-accent/70"
-  >
-    {id}
-  </span>
+  {#if manifest}
+    <div class="h-8 w-8 overflow-hidden shrink-0">
+      <manifest.icon class="h-full w-auto" />
+    </div>
+    <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{manifest.name}</span>
+  {:else}
+    <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-4">Unknown ({item.app_id})</span>
+  {/if}
 </button>
 
 {#if item_handler.move_state?.type === "move"}
@@ -59,10 +63,14 @@
     style:width={desktop.container.cell.width}
     style:height={desktop.container.cell.height}
   >
-    <div class="h-8 w-8 overflow-hidden shrink-0">
-      <PiIcon class="h-full w-auto" />
-    </div>
+    {#if manifest}
+      <div class="h-8 w-8 overflow-hidden shrink-0">
+        <manifest.icon class="h-full w-auto" />
+      </div>
 
-    <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{id}</span>
+      <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{manifest.name}</span>
+    {:else}
+      <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-4">Unknown ({item.app_id})</span>
+    {/if}
   </div>
 {/if}
