@@ -6,6 +6,7 @@ export interface AppsService extends IService {
   register(manifest: AppManifest): void;
   launch(id: AppId, props?: AppProps): WindowId;
   get(id: AppId): AppManifest | undefined;
+  list(): IterableIterator<[AppId, AppManifest]>;
 }
 
 export type AppId = string;

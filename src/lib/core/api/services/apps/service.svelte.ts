@@ -21,6 +21,10 @@ export class AppsService implements AppsService {
     register_apps(this.register.bind(this));
   }
 
+  public list(): IterableIterator<[AppId, AppManifest]> {
+    return this.registry.entries();
+  }
+
   public register(manifest: AppManifest): void {
     this.registry.set(manifest.id, manifest);
   }

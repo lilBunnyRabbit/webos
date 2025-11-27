@@ -73,6 +73,15 @@ export interface WindowsService extends IService {
   list(): WindowId[];
 
   /**
+   * Lists all windows sorted by order.
+   * @param compare - A comparison function to sort the windows
+   * @returns An array of all windows sorted by order
+   */
+  sorted_list(
+    compare?: (a: [WindowId, WindowInstance], b: [WindowId, WindowInstance]) => number
+  ): [WindowId, WindowInstance][];
+
+  /**
    * Opens a new window with the given options.
    * @param options - Window creation options including constraints
    * @returns The newly created window ID

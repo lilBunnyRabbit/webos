@@ -78,7 +78,8 @@
     "absolute overflow-hidden pointer-events-auto",
     "bg-foreground shadow-window rounded-sm border-2 border-foreground grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
     is_maximized && !geometry_handler.move.active && "rounded-none border-none",
-    snap_position && !is_maximized && !geometry_handler.move.active && "bg-primary border-primary"
+    snap_position && !is_maximized && !geometry_handler.move.active && "bg-primary border-primary",
+    is_minimized && "hidden",
     // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
   )}
   style:left

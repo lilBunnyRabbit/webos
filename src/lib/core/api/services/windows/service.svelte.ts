@@ -67,6 +67,8 @@ export class WindowsService implements IWindowsService {
 
     // console.log("WindowService:set_container", this.container);
 
+    // TODO: recalculate bounds for all windows
+
     return this.container.bounds;
   }
 
@@ -130,6 +132,12 @@ export class WindowsService implements IWindowsService {
 
   public list(): WindowId[] {
     return Object.keys(this.index) as WindowId[];
+  }
+
+  public sorted_list(
+    compare?: (a: [WindowId, WindowInstance], b: [WindowId, WindowInstance]) => number
+  ): [WindowId, WindowInstance][] {
+    return Object.entries(this.index).sort(compare) as [WindowId, WindowInstance][];
   }
 
   public open(app: AppInstance): WindowId {

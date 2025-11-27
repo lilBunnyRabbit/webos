@@ -1,13 +1,18 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils/utils";
-  import { LayoutGrid } from "@lucide/svelte";
   import type { SvelteHTMLElements } from "svelte/elements";
-  import kernel, { type SettingsService, TaskbarPosition, type DesktopService } from "$lib/core/api";
-
+  import kernel, {
+    type SettingsService,
+    TaskbarPosition,
+    type WindowsService,
+  } from "$lib/core/api";
+  import TaskbarItem from "./taskbar-item.svelte";
+  import StartMenu from "./start-menu.svelte";
   let { class: className, ...restProps }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
   const taskbar = $derived(kernel.service<SettingsService>("settings").taskbar);
-  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const windows = $derived(kernel.service<WindowsService>("windows"));
+  const list = $derived(windows.sorted_list((a, b) => a[1].created_at.getTime() - b[1].created_at.getTime()));
 
   const orientation = $derived(
     taskbar.position === TaskbarPosition.LEFT || taskbar.position === TaskbarPosition.RIGHT ? "vertical" : "horizontal"
@@ -32,12 +37,7 @@
   {...restProps}
 >
   <div class={cn("border-foreground/20", orientation === "vertical" ? "border-b py-2 px-1.5" : "border-r py-1.5 px-2")}>
-    <!-- <StartMenu>
-      <TaskbarItem title="Start">
-        <LayoutGrid class="text-primary" />
-      </TaskbarItem>
-    </StartMenu> -->
-    <LayoutGrid class="text-primary" />
+    <StartMenu />
   </div>
 
   <div
@@ -51,63 +51,9 @@
       }[taskbar.position]
     )}
   >
-    <button
-      onclick={() => {
-        taskbar.position = TaskbarPosition.TOP;
-      }}
-      title="Top"
-    >
-      Top
-    </button>
-    <button
-      onclick={() => {
-        taskbar.position = TaskbarPosition.BOTTOM;
-      }}
-      title="Bottom"
-    >
-      Bottom
-    </button>
-    <button
-      onclick={() => {
-        taskbar.position = TaskbarPosition.LEFT;
-      }}
-      title="Left"
-    >
-      Left
-    </button>
-    <button
-      onclick={() => {
-        taskbar.position = TaskbarPosition.RIGHT;
-      }}
-      title="Right"
-    >
-      Right
-    </button>
-    <button
-      class="px-3 py-1.5 rounded bg-accent/10 hover:bg-accent/20 text-sm font-medium transition-colors border border-accent/20"
-      onclick={() => desktop.add_item("example")}
-      title="Add item to desktop"
-    >
-      + Add to Desktop
-    </button>
-    <!-- {#each Object.entries(index).sort((a, b) => a[1].createdAt.getTime() - b[1].createdAt.getTime()) as [windowId, instance]}
-      {#if instance}
-        <TaskbarItem
-          title={instance.app.name}
-          isFocused={order.isFocused(windowId)}
-          isMinimized={instance.flags.has(WindowFlag.MINIMIZED)}
-          on:click={() => {
-            if (order.isFocused(windowId)) {
-              dispatch({ type: "TOGGLE_WINDOW", windowId });
-            } else {
-              dispatch({ type: "FOCUS_WINDOW", windowId });
-            }
-          }}
-        >
-          <svelte:component this={instance.app.icon} />
-        </TaskbarItem>
-      {/if}
-    {/each} -->
+    {#each list as [id, instance] (id)}
+      <TaskbarItem {instance} />
+    {/each}
   </div>
 
   <div
