@@ -14,6 +14,8 @@
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
 
   const geometry_handler = new WindowGeometryHandler(id);
+
+  // TODO: focus not triggered if the other window is resized
   
   // Internal state
   let zoom = $state(1);
