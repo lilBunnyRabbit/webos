@@ -2,10 +2,12 @@ import type { AppManifest } from "$lib/core/api";
 import example from "./user/example";
 import kernel from "./system/kernel";
 import settings from "./system/settings";
+import fileExplorer from "./system/file-explorer";
 
 // TODO: temporary solution
 export function register_apps(register: (app: AppManifest) => void): void {
   register(example);
   register(kernel);
   register(settings);
+  register(fileExplorer);
 }

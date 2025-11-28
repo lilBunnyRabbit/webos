@@ -3,6 +3,7 @@ import { SettingsService } from "../services/settings/service.svelte";
 import { WindowsService } from "../services/windows/service.svelte";
 import { AppsService } from "../services/apps/service.svelte";
 import { DesktopService } from "../services/desktop/service.svelte";
+import { FilesService } from "../services/files/service.svelte";
 
 export function register_default_services(kernel: Kernel) {
   kernel.register("settings", {
@@ -12,6 +13,11 @@ export function register_default_services(kernel: Kernel) {
 
   kernel.register("windows", {
     instance: WindowsService,
+    dependencies: [],
+  });
+
+  kernel.register("files", {
+    instance: FilesService,
     dependencies: [],
   });
 
