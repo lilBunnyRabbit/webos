@@ -1,7 +1,6 @@
 import { formatBytes } from "@/core/api/file";
 import { FileIcon } from "@/core/components/file-explorer/file-icon";
 import { useApps } from "@/core/contexts/apps";
-import { useWindowInteraction } from "@/core/contexts/window";
 import React from "react";
 
 interface TestAppProps {
@@ -10,24 +9,10 @@ interface TestAppProps {
 
 export default function TestApp(props: TestAppProps = {}) {
   const apps = useApps();
-  const { openInteraction } = useWindowInteraction();
-
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
 
   return (
     <div className="flex flex-col gap-2 p-4">
-      <button
-        className="bg-primary text-background rounded-sm px-2 py-1.5"
-        onClick={() =>
-          openInteraction({
-            type: "OPEN_FILE_PICKER",
-            callback: (file) => setSelectedFiles((f) => [...f, file]),
-          })
-        }
-      >
-        Open File Picker ({props.random})
-      </button>
-
       <div className="flex flex-col gap-2">
         {selectedFiles.map((file, i) => (
           <button
