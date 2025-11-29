@@ -9,7 +9,9 @@ interface TestAppProps {
 
 export default function TestApp(props: TestAppProps = {}) {
   const apps = useApps();
-  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
+  const [selectedFiles] = React.useState<File[]>([]);
+
+  console.log(props);
 
   return (
     <div className="flex flex-col gap-2 p-4">
