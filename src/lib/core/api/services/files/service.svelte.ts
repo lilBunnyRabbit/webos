@@ -9,13 +9,13 @@ export class FilesService implements IFilesService {
     return `FilesService`;
   }
 
-  private root: Promise<FileSystemDirectoryHandle> | null = null;
+  private root: Promise<DirectoryHandler> | null = null;
 
-  private cache = new SvelteMap<FileSystemDirectoryHandle, DirectoryHandler>();
+  private cache: DirectoryHandler[] = [];
 
-  private async get_root(): Promise<FileSystemDirectoryHandle> {
+  private async get_root(): Promise<DirectoryHandler> {
     if (!this.root) {
-      this.root = navigator.storage.getDirectory();
+      this.root = navigator.storage.getDirectory().then((handle) => new DirectoryHandler(this, handle, [], true));
 
       try {
         const persisted = await navigator.storage.persist();
@@ -32,13 +32,17 @@ export class FilesService implements IFilesService {
     return await this.root;
   }
 
-  public async get_directory(handle: FileSystemDirectoryHandle | null = null): Promise<DirectoryHandler> {
-    const directory_handle: FileSystemDirectoryHandle = handle ?? (await this.get_root());
-
+  public async get_directory(
+    directory_handle: FileSystemDirectoryHandle | null = null,
+    path?: DirectoryHandler[]
+  ): Promise<DirectoryHandler> {
+    if (!directory_handle) {
+      return await this.get_root();
+    }
 
     // TODO: this works but clearly could be better - path system
-    for (const [key, value] of this.cache.entries()) {
-      if (await directory_handle.isSameEntry(key)) {
+    for (const value of this.cache) {
+      if (await directory_handle.isSameEntry(value.instance.handle)) {
         return value;
       }
     }
@@ -53,14 +57,14 @@ export class FilesService implements IFilesService {
     //   }
     // }
 
-    const handler = new DirectoryHandler(directory_handle);
-    this.cache.set(directory_handle, handler);
-    console.log("🗃️ Cache set", this.cache.size, handler);
+    const handler = new DirectoryHandler(this, directory_handle, path);
+    this.cache.push(handler);
+    console.log("🗃️ Cache set", this.cache.length, handler);
     return handler;
   }
 
   public async upload_file(handle: FileSystemDirectoryHandle | null = null, file: File) {
-    const directory_handle: FileSystemDirectoryHandle = handle ?? (await this.get_root());
+    const directory_handle: FileSystemDirectoryHandle = handle ?? (await this.get_root()).instance.handle;
     const file_handle = await directory_handle.getFileHandle(file.name, { create: true });
     const writable = await file_handle.createWritable();
     await writable.write(file);
@@ -70,11 +74,21 @@ export class FilesService implements IFilesService {
 
 export class DirectoryHandler {
   public instance: { handle: FileSystemDirectoryHandle; created_at: Date };
-  constructor(handle: FileSystemDirectoryHandle) {
+
+  constructor(
+    readonly service: FilesService,
+    handle: FileSystemDirectoryHandle,
+    readonly path: DirectoryHandler[] = [],
+    readonly is_root: boolean = false
+  ) {
     this.instance = $state.raw({
       handle,
       created_at: new Date(),
     });
+  }
+
+  public get name(): string {
+    return this.is_root ? "~" : this.instance.handle.name;
   }
 
   // TODO: needs work
@@ -87,10 +101,34 @@ export class DirectoryHandler {
   }
 
   // Svelte doesn't support async iterators, so we need to return a promise
-  public async values(): Promise<FileSystemHandle[]> {
-    const items: FileSystemHandle[] = [];
+  public async values(): Promise<
+    Array<
+      | {
+          type: "file";
+          handle: FileSystemFileHandle;
+        }
+      | {
+          type: "directory";
+          handle: FileSystemDirectoryHandle;
+        }
+    >
+  > {
+    const items: Array<
+      | {
+          type: "file";
+          handle: FileSystemFileHandle;
+        }
+      | {
+          type: "directory";
+          handle: FileSystemDirectoryHandle;
+        }
+    > = [];
     for await (const handle of this.instance.handle.values()) {
-      items.push(handle);
+      if (handle.kind === "file") {
+        items.push({ type: "file", handle: handle as FileSystemFileHandle });
+      } else if (handle.kind === "directory") {
+        items.push({ type: "directory", handle: handle as FileSystemDirectoryHandle });
+      }
     }
     return items;
   }
@@ -108,5 +146,15 @@ export class DirectoryHandler {
     await this.instance.handle.removeEntry(handle.name, { recursive: false });
 
     this.reload();
+  }
+
+  public async remove_directory(handle: FileSystemDirectoryHandle) {
+    await this.instance.handle.removeEntry(handle.name, { recursive: true });
+
+    this.reload();
+  }
+
+  public async open_directory(handle: FileSystemDirectoryHandle): Promise<DirectoryHandler> {
+    return this.service.get_directory(handle, [...this.path, this]);
   }
 }

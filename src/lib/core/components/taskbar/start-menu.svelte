@@ -25,8 +25,9 @@
     margin: auto;
 
     &:popover-open {
-      width: fit-content;
-      height: 200px;
+      width: 100%;
+      max-width: min(calc(100% - 4rem), 40rem);
+      height: min(calc(100% - 4rem), 40rem);
       padding: 0 10px;
       border-radius: 10px;
       overflow-y: auto;

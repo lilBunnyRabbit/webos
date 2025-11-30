@@ -1,7 +1,6 @@
 <!-- TODO: vibed for testing -->
 
 <script lang="ts">
-  import { Button } from "$lib/core/ui/button";
   import { cn } from "$lib/core/utils";
   import kernel, { type SettingsService } from "$lib/core/api";
   import { TaskbarPosition } from "$lib/core/api/services/settings/type";
@@ -392,14 +391,14 @@
             <h3 class="text-lg font-medium">Updates</h3>
 
             <div class="flex items-start gap-4">
-              <Button
+              <button
                 onclick={checkForUpdates}
                 disabled={isCheckingForUpdates}
                 class="flex items-center gap-2 bg-primary text-background"
               >
                 <RefreshCw class={cn("h-4 w-4", isCheckingForUpdates && "animate-spin")} />
                 {isCheckingForUpdates ? "Checking..." : "Check for Updates"}
-              </Button>
+              </button>
 
               {#if updateStatus() === "available"}
                 <div class="flex-1 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
@@ -412,15 +411,14 @@
                           v{newVersion.version} ({newVersion.commit})
                         </p>
                       {/if}
-                      <Button
+                      <button
                         onclick={applyUpdate}
-                        size="sm"
                         disabled={isUpdating}
                         class="mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                       >
                         <RefreshCw class={cn("h-3 w-3 mr-1", isUpdating && "animate-spin")} />
                         {isUpdating ? "Updating..." : "Refresh to Update"}
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>

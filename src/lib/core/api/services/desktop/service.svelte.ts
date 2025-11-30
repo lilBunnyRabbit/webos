@@ -40,7 +40,7 @@ export class DesktopService implements IDesktopService {
     element: null,
   });
 
-  private grid = $state<DesktopGrid>([[{ app_id: "settings" }]]);
+  private grid = $state<DesktopGrid>([[{ app_id: "settings" }, { app_id: "file-explorer" }]]);
 
   public set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void {
     if (!element) {

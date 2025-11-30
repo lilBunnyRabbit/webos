@@ -4,3 +4,4 @@
 - "app store" - load apps into cache, only show loaded apps, version management, (auto update) if not open
 - version report changelog
 - window grouping by app
+- settings - desktop logic app sorting

@@ -1,0 +1,28 @@
+# WebOS - Svelte 5 Project
+
+## Project Overview
+Browser-based operating system with microkernel architecture and capability-based security. Built with Svelte 5, TypeScript, and OPFS. Features multi-window management, file system, background tasks, notifications, and extensible app ecosystem.
+
+**Architecture:** Microkernel (thin registry) → Services (Windows, Files, Apps, Tasks, etc.) → Apps (Svelte components)
+
+## Svelte 5 Runes (REQUIRED)
+
+**Use:** `$props()`, `$state()`, `$derived()`, `$effect()`, `$bindable()`  
+**Forbidden:** `export let`, `$:` reactive statements, legacy lifecycle hooks, `createEventDispatcher()`
+
+```svelte
+<script lang="ts">
+  interface Props { name: string; optional?: string; }
+  let { name, optional = "default" }: Props = $props();
+  let count = $state(0);
+  let doubled = $derived(count * 2);
+  $effect(() => console.log(count));
+</script>
+```
+
+## Code Style
+- TypeScript with `<script lang="ts">`
+- Explicit prop interfaces (no `any`)
+- Icons: `phosphor-svelte` (no "Icon" suffix) or `@lucide/svelte`
+
+**NO LEGACY SVELTE PATTERNS. Use runes only.**
