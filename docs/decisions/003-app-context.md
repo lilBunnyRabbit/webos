@@ -1,0 +1,295 @@
+# ADR-003: App Context & AppData Abstraction
+**Date:** 2026-01-24
+**Status:** Accepted
+
+## Context
+
+Apps need access to:
+- Their window (for events, controls)
+- Kernel services
+- Persistent storage (small settings)
+- File storage (large data)
+
+Need a clean pattern that doesn't require prop drilling and uses Svelte's native capabilities.
+
+## Decision
+
+### 1. Use Svelte Context for App Context
+
+Apps receive context via Svelte's built-in `setContext`/`getContext`:
+
+```typescript
+// $lib/core/contexts/app-context.svelte.ts
+import { getContext, setContext } from 'svelte';
+
+const APP_CONTEXT_KEY = Symbol('app-context');
+
+export interface AppContext {
+  windowId: WindowId;
+  appId: AppId;
+  kernel: Kernel;
+  window: WindowHandle;
+  storage: StorageHandle;
+  appData: AppDataHandle;
+}
+
+export function setAppContext(ctx: AppContext) {
+  setContext(APP_CONTEXT_KEY, ctx);
+}
+
+export function getAppContext(): AppContext {
+  const ctx = getContext<AppContext>(APP_CONTEXT_KEY);
+  if (!ctx) {
+    throw new Error('getAppContext must be called within an app component');
+  }
+  return ctx;
+}
+```
+
+### 2. Window Handle (Event Subscription)
+
+Apps get a window reference to subscribe to events and control their window:
+
+```typescript
+interface WindowHandle {
+  // Reactive state
+  readonly isFocused: boolean;
+  readonly isMaximized: boolean;
+  readonly isMinimized: boolean;
+  readonly bounds: Bounds;
+
+  // Event subscription (returns unsubscribe function)
+  on(event: 'focus' | 'blur' | 'close' | 'resize' | 'move', callback: () => void): () => void;
+
+  // Actions
+  close(): void;
+  minimize(): void;
+  maximize(): void;
+  restore(): void;
+  setTitle?(title: string): void;
+}
+```
+
+### 3. Storage Handle (localStorage, small data)
+
+For app settings and small persistent data:
+
+```typescript
+interface StorageHandle {
+  // Manual get/set
+  get<T>(key: string): T | null;
+  set<T>(key: string, value: T): void;
+  remove(key: string): void;
+
+  // Auto-persisted reactive state
+  persisted<T>(key: string, initial: T): { value: T };
+}
+```
+
+**Storage location:** `localStorage['app.{appId}.{key}']`
+
+**Implementation of persisted():**
+```typescript
+function createStorageHandle(appId: string): StorageHandle {
+  const prefix = `app.${appId}.`;
+
+  return {
+    get<T>(key: string): T | null {
+      const raw = localStorage.getItem(prefix + key);
+      return raw ? JSON.parse(raw) : null;
+    },
+
+    set<T>(key: string, value: T): void {
+      localStorage.setItem(prefix + key, JSON.stringify(value));
+    },
+
+    remove(key: string): void {
+      localStorage.removeItem(prefix + key);
+    },
+
+    persisted<T>(key: string, initial: T) {
+      const stored = localStorage.getItem(prefix + key);
+      let value = $state<T>(stored ? JSON.parse(stored) : initial);
+
+      $effect(() => {
+        localStorage.setItem(prefix + key, JSON.stringify(value));
+      });
+
+      return {
+        get value() { return value; },
+        set value(v: T) { value = v; },
+      };
+    },
+  };
+}
+```
+
+### 4. AppData Handle (OPFS, large data)
+
+For large files, documents, and binary data:
+
+```typescript
+interface AppDataHandle {
+  // Binary data
+  read(path: string): Promise<Uint8Array>;
+  write(path: string, data: Uint8Array): Promise<void>;
+
+  // Text convenience
+  readText(path: string): Promise<string>;
+  writeText(path: string, content: string): Promise<void>;
+
+  // Directory operations
+  list(path: string): Promise<string[]>;
+  exists(path: string): Promise<boolean>;
+  delete(path: string): Promise<void>;
+  mkdir(path: string): Promise<void>;
+}
+```
+
+**Storage location:** OPFS at `/apps/{appId}/...`
+
+**Implementation** wraps FilesService with app-specific root:
+
+```typescript
+function createAppDataHandle(appId: string, filesService: FilesService): AppDataHandle {
+  const root = `/apps/${appId}`;
+
+  return {
+    async read(path: string): Promise<Uint8Array> {
+      return filesService.read(`${root}/${path}`);
+    },
+
+    async write(path: string, data: Uint8Array): Promise<void> {
+      return filesService.write(`${root}/${path}`, data);
+    },
+
+    async readText(path: string): Promise<string> {
+      const data = await this.read(path);
+      return new TextDecoder().decode(data);
+    },
+
+    async writeText(path: string, content: string): Promise<void> {
+      const data = new TextEncoder().encode(content);
+      return this.write(path, data);
+    },
+
+    async list(path: string): Promise<string[]> {
+      return filesService.list(`${root}/${path}`);
+    },
+
+    async exists(path: string): Promise<boolean> {
+      return filesService.exists(`${root}/${path}`);
+    },
+
+    async delete(path: string): Promise<void> {
+      return filesService.delete(`${root}/${path}`);
+    },
+
+    async mkdir(path: string): Promise<void> {
+      return filesService.mkdir(`${root}/${path}`);
+    },
+  };
+}
+```
+
+### 5. Context Setup (Window Component)
+
+```svelte
+<!-- window-content.svelte -->
+<script lang="ts">
+  import { setAppContext } from '$lib/core/contexts/app-context.svelte';
+  import kernel from '$lib/core/api';
+
+  let { windowId, app } = $props();
+
+  const filesService = kernel.service('files');
+
+  // Set context BEFORE app mounts (Svelte requirement)
+  setAppContext({
+    windowId,
+    appId: app.id,
+    kernel,
+    window: createWindowHandle(windowId),
+    storage: createStorageHandle(app.id),
+    appData: createAppDataHandle(app.id, filesService),
+  });
+</script>
+
+{#await app.component then Component}
+  <Component {...app.props} />
+{/await}
+```
+
+### 6. Usage in App
+
+```svelte
+<!-- calculator.app.svelte -->
+<script lang="ts">
+  import { getAppContext } from '$lib/core/api';
+  import { onMount } from 'svelte';
+
+  const { window, storage, appData } = getAppContext();
+
+  // Auto-persisted state (localStorage)
+  let history = storage.persisted('history', []);
+
+  // Regular state
+  let currentValue = $state(0);
+
+  onMount(() => {
+    // Subscribe to window events
+    const unsub = window.on('focus', () => {
+      console.log('Calculator focused');
+    });
+
+    return unsub;
+  });
+
+  async function saveToFile() {
+    // Save to OPFS
+    await appData.writeText('history.json', JSON.stringify(history.value));
+  }
+</script>
+```
+
+## Alternatives Considered
+
+### 1. Manifest callbacks (onMount, onFocus, etc.)
+```typescript
+defineApp({
+  onMount: (ctx) => { ... },
+  onFocus: (ctx) => { ... },
+});
+```
+**Rejected:** Doesn't use Svelte's native patterns, less flexible.
+
+### 2. Props drilling
+```typescript
+<Calculator windowId={windowId} kernel={kernel} storage={storage} />
+```
+**Rejected:** Verbose, every component needs all props.
+
+### 3. Global imports
+```typescript
+import { kernel } from '$lib/core/api';
+import { getWindowId } from '$lib/core/window';
+```
+**Rejected:** Can't have multiple windows of same app (no isolation).
+
+## Consequences
+
+### Positive
+- Uses Svelte's native context system
+- Apps use familiar `onMount`/`onDestroy` patterns
+- Clean separation: small data (storage) vs large data (appData)
+- Apps are isolated - each has its own storage namespace
+- Window reference gives apps control without tight coupling
+
+### Negative
+- `getAppContext()` must be called during component init (Svelte limitation)
+- Apps must understand storage vs appData distinction
+
+## Related
+- ADR-001: App Manifest Structure
+- ADR-002: Service Lifecycle
+- Brainstorm: `/docs/brainstorm/2026-01-24_lifecycles-persistence.md`
