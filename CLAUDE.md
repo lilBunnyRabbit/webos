@@ -4,8 +4,8 @@ A browser-based desktop environment migrating from React to Svelte 5. Provides a
 
 ## Quick Start
 ```bash
-npm install
-npm run dev
+bun install
+bun dev
 ```
 
 ## Architecture
@@ -42,23 +42,25 @@ Central kernel manages service registry with dependency injection. Services are 
 ## Adding New Apps
 
 1. Create app folder in `/src/lib/apps/user/`
-2. Create manifest with `AppManifest` interface
+2. Create `index.ts` manifest using `defineApp()`
 3. Create `.app.svelte` component
-4. Register in `/src/lib/apps/index.ts`
+4. App is auto-discovered (no registration needed)
 
 Example manifest:
 ```typescript
-export default {
-  id: "my-app",
-  name: "My App",
-  icon: IconComponent,
+import { defineApp } from "$lib/core/api";
+import { CalculatorIcon } from "@lucide/svelte";
+
+export default defineApp({
+  id: "calculator",
+  name: "Calculator",
+  icon: CalculatorIcon,
   version: "1.0.0",
-  categories: ["user"],
-  window_options: {
+  defaults: {
     constraints: { width: { min: 300 } }
   },
-  component: () => import("./my-app.app.svelte"),
-} satisfies AppManifest;
+  component: () => import("./calculator.app.svelte"),
+});
 ```
 
 ## Key Directories
@@ -110,6 +112,11 @@ Examples:
 - `fs:read:/documents/**` - Read files in documents
 - `windows:open` - Open new windows
 - `notify:toast` - Show toast notifications
+
+## Code Style
+
+- **snake_case** for variables, functions, properties, and file names
+- **PascalCase** for types, interfaces, classes, and components
 
 ## Key Patterns
 

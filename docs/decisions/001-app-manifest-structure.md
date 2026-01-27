@@ -1,6 +1,6 @@
 # ADR-001: App Manifest Structure
 **Date:** 2026-01-24
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
