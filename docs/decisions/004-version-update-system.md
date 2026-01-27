@@ -1,6 +1,6 @@
 # ADR-004: Version & Update Detection System
 **Date:** 2026-01-27
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The app is a SPA hosted on GitHub Pages (static-only, no server-side control). Users need to know when a new version is deployed and be able to update. The previous React implementation used `version.json` polling, which worked well for these constraints.

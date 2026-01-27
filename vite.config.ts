@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
+import { version_plugin } from "./vite-plugin-version";
 import path from "path";
 
 // https://vite.dev/config/
@@ -14,6 +15,7 @@ export default defineConfig({
     //     runes: true,
     //   },
     // }
+    version_plugin(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],

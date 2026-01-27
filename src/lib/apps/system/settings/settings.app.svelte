@@ -2,7 +2,7 @@
 
 <script lang="ts">
   import { cn } from "$lib/core/utils";
-  import kernel, { type SettingsService } from "$lib/core/api";
+  import kernel, { type SettingsService, type VersionService } from "$lib/core/api";
   import { TaskbarPosition } from "$lib/core/api/services/settings/type";
   import {
     CheckCircle2,
@@ -16,58 +16,9 @@
   type Section = "theme" | "taskbar" | "about";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
+  const version = $derived(kernel.service<VersionService>("version"));
 
   let activeSection = $state<Section>("theme");
-
-  // Version info - placeholder implementation
-  const APP_VERSION = {
-    version: "0.0.0",
-    commit: "unknown",
-    branch: "unknown",
-    buildTime: new Date().toISOString(),
-  };
-
-  // Version checking - placeholder implementation
-  let newVersion = $state<{ version: string; commit: string } | null>(null);
-  let isCheckingForUpdates = $state(false);
-  let isUpdating = $state(false);
-
-  async function checkForUpdates() {
-    isCheckingForUpdates = true;
-    try {
-      // Placeholder: fetch version.json
-      const response = await fetch("/version.json");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.buildTimestamp > APP_VERSION.buildTime) {
-          newVersion = { version: data.version, commit: data.commit };
-        }
-      }
-    } catch (error) {
-      console.error("Failed to check for updates:", error);
-    } finally {
-      isCheckingForUpdates = false;
-    }
-  }
-
-  async function applyUpdate() {
-    isUpdating = true;
-    try {
-      // Placeholder: clear caches and reload
-      if ("caches" in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map((name) => caches.delete(name)));
-      }
-      if ("serviceWorker" in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((reg) => reg.unregister()));
-      }
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to apply update:", error);
-      isUpdating = false;
-    }
-  }
 
   function resetSettings() {
     // Placeholder: reset settings
@@ -178,10 +129,10 @@
   }
 
   const updateStatus = $derived(() => {
-    if (isCheckingForUpdates) {
+    if (version.is_checking) {
       return "checking";
     }
-    if (newVersion) {
+    if (version.update_available) {
       return "available";
     }
     return "up-to-date";
@@ -360,17 +311,17 @@
           <div class="space-y-2 text-sm">
             <div class="flex justify-between items-center py-2 border-b border-foreground/10">
               <span class="text-foreground/70">Version</span>
-              <span class="font-mono font-medium">{APP_VERSION.version}</span>
+              <span class="font-mono font-medium">{version.info.version}</span>
             </div>
 
             <div class="flex justify-between items-center py-2 border-b border-foreground/10">
               <span class="text-foreground/70">Commit</span>
-              <span class="font-mono text-xs">{APP_VERSION.commit}</span>
+              <span class="font-mono text-xs">{version.info.commit}</span>
             </div>
 
             <div class="flex justify-between items-center py-2 border-b border-foreground/10">
               <span class="text-foreground/70">Branch</span>
-              <span class="font-mono text-xs">{APP_VERSION.branch}</span>
+              <span class="font-mono text-xs">{version.info.branch}</span>
             </div>
 
             <div class="flex justify-between items-center py-2 border-b border-foreground/10">
@@ -380,7 +331,7 @@
 
             <div class="flex justify-between items-center py-2">
               <span class="text-foreground/70">Build Time</span>
-              <span class="text-xs">{new Date(APP_VERSION.buildTime).toLocaleString()}</span>
+              <span class="text-xs">{new Date(version.info.buildTime).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -392,12 +343,12 @@
 
             <div class="flex items-start gap-4">
               <button
-                onclick={checkForUpdates}
-                disabled={isCheckingForUpdates}
+                onclick={() => version.check()}
+                disabled={version.is_checking}
                 class="flex items-center gap-2 bg-primary text-background"
               >
-                <RefreshCw class={cn("h-4 w-4", isCheckingForUpdates && "animate-spin")} />
-                {isCheckingForUpdates ? "Checking..." : "Check for Updates"}
+                <RefreshCw class={cn("h-4 w-4", version.is_checking && "animate-spin")} />
+                {version.is_checking ? "Checking..." : "Check for Updates"}
               </button>
 
               {#if updateStatus() === "available"}
@@ -406,18 +357,18 @@
                     <Info class="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
                     <div class="flex-1">
                       <p class="font-medium text-blue-400">Update Available</p>
-                      {#if newVersion}
+                      {#if version.update_available}
                         <p class="text-sm text-foreground/70 mt-1">
-                          v{newVersion.version} ({newVersion.commit})
+                          v{version.update_available.version} ({version.update_available.commit})
                         </p>
                       {/if}
                       <button
-                        onclick={applyUpdate}
-                        disabled={isUpdating}
+                        onclick={() => version.apply_update()}
+                        disabled={false}
                         class="mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                       >
-                        <RefreshCw class={cn("h-3 w-3 mr-1", isUpdating && "animate-spin")} />
-                        {isUpdating ? "Updating..." : "Refresh to Update"}
+                        <RefreshCw class="h-3 w-3 mr-1" />
+                        Refresh to Update
                       </button>
                     </div>
                   </div>
@@ -440,7 +391,7 @@
             </div>
 
             <p class="text-xs text-foreground/60">
-              WebOS automatically checks for updates every 5 minutes while running.
+              WebOS automatically checks for updates every 30 minutes while running.
             </p>
           </div>
         {/if}

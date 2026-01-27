@@ -28,8 +28,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "generate:pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg",
-    "generate:version": "node scripts/generate-version.js"
+    "generate:pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
   },
   "type": "module",
   "dependencies": {
