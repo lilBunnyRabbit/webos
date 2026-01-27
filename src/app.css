@@ -22,45 +22,12 @@
 
 :root {
   --radius: 0.625rem;
-  /* 
-    $background: source color
-    - Hex: #17252c
-    - HSL: hsl(200 31% 13%)
-    - OKLCH: oklch(0.26 0.0233 230.47)
-  */
-  --background: oklch(0.26 0.0233 230.47);
 
-  /*
-    $foreground: $background HSL split complementary +55% lightness -22% saturation
-    - Hex: #b5b3a6
-    - HSL: hsl(52 9% 68%)
-    - OKLCH: oklch(0.76 0.0183 99.68)
-  */
-  --foreground: oklch(0.76 0.0183 99.68);
-
-  /*
-    $primary: $background HSL triad +48% lightness
-    - Hex: #a6ba7d
-    - HSL: hsl(80 31% 61%)
-    - OKLCH: oklch(0.76 0.0865 123.43)
-  */
-  --primary: oklch(0.76 0.0865 123.43);
-
-  /*
-    $secondary: $primary Oklch complementary
-    - Hex: #bca4de
-    - HSL: hsl(264.97 47% 76%)
-    - OKLCH: oklch(0.76 0.0865 303.43)
-  */
-  --secondary: oklch(0.76 0.0865 303.43);
-
-  /*
-    $accent: $primary OKLCH + $background OKLCH complementary hue
-    - Hex: #dea17f
-    - HSL: hsl(21.66 59% 68%)
-    - OKLCH: oklch(0.76 0.0865 50.47)
-  */
-  --accent: oklch(0.76 0.0865 50.47);
+  --background: oklch(0.255 0.0233 230.47);
+  --foreground: oklch(0.745 0.00777 50.47);
+  --primary: oklch(0.745 0.0699 122.47);
+  --secondary: oklch(0.745 0.0699 302.47);
+  --accent: oklch(0.745 0.0699 50.47);
 }
 /* TODO: Dark mode */
 /* 
