@@ -1,13 +1,12 @@
 import type { AppManifest } from "$lib/core/api";
-import example from "./user/example";
-import kernel from "./system/kernel";
-import settings from "./system/settings";
-import fileExplorer from "./system/file-explorer";
 
-// TODO: temporary solution
-export function register_apps(register: (app: AppManifest) => void): void {
-  register(example);
-  register(kernel);
-  register(settings);
-  register(fileExplorer);
-}
+// Auto-discover all app manifests via glob
+// - Metadata loads eagerly (available immediately for app listing)
+// - Components load lazily (only when app launches)
+const modules = import.meta.glob<{ default: AppManifest }>(["./system/*/index.ts", "./user/*/index.ts"], {
+  eager: true,
+});
+
+export const apps: AppManifest[] = Object.values(modules).map((m) => m.default);
+
+console.log("Apps Found", { apps });

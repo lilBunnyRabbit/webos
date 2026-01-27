@@ -13,16 +13,27 @@ export type AppId = string;
 export type AppCategory = "system" | "user" | `custom-${string}`;
 export type AppProps<TProps extends Record<string, any> = {}> = TProps;
 
+/** Resolved app manifest with normalized fields */
 export interface AppManifest<TProps extends AppProps = AppProps> {
   id: AppId;
   name: string;
-  description?: string;
-  icon: Component;
   version: string;
-  author?: string;
+  icon: Component;
+  description?: string;
   categories: AppCategory[];
-  window_options?: WindowOptions;
+  keywords?: string[];
+  author?: string;
+  license?: string;
+  repository?: string;
+  defaults?: WindowOptions;
   component: () => Promise<Component<TProps>>;
+}
+
+/** Input type for defineApp - categories optional, component returns module */
+export interface AppConfig<TProps extends AppProps = AppProps>
+  extends Omit<AppManifest<TProps>, "categories" | "component"> {
+  categories?: AppCategory[];
+  component: () => Promise<{ default: Component<TProps> }>;
 }
 
 export interface AppInstance<TProps extends AppProps = AppProps> {

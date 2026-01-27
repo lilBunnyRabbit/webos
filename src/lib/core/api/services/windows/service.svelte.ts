@@ -143,7 +143,7 @@ export class WindowsService implements IWindowsService {
   public open(app: AppInstance): WindowId {
     const id = uuid();
 
-    const options = app.manifest.window_options ?? {};
+    const options = app.manifest.defaults ?? {};
 
     this.index[id] = {
       id,

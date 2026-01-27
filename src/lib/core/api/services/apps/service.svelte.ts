@@ -1,7 +1,7 @@
 import type { AppsService as IAppsService, AppId, AppManifest, AppProps } from "./type";
 import type { Kernel, WindowsService, WindowId } from "$lib/core/api";
 import { SvelteMap } from "svelte/reactivity";
-import { register_apps } from "$lib/apps";
+import { apps } from "$lib/apps";
 
 export class AppsService implements AppsService {
   name = "AppsService";
@@ -18,7 +18,9 @@ export class AppsService implements AppsService {
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
 
-    register_apps(this.register.bind(this));
+    for (const app of apps) {
+      this.register(app);
+    }
   }
 
   public list(): IterableIterator<[AppId, AppManifest]> {

@@ -1,15 +1,14 @@
-import type { AppManifest } from "$lib/core/api";
-import { WindowFlag } from "$lib/core/api";
+import { defineApp, WindowFlag } from "$lib/core/api";
 import { HandIcon } from "@lucide/svelte";
 
-export default {
+export default defineApp({
   id: "example",
   name: "Example",
   icon: HandIcon,
   version: "1.0.0",
   author: "John Doe",
   categories: ["user"],
-  window_options: {
+  defaults: {
     constraints: {
       width: {
         min: 250,
@@ -18,5 +17,5 @@ export default {
     },
     flags: [WindowFlag.DEBUG],
   },
-  component: () => import("./example.app.svelte").then((m) => m.default),
-} satisfies AppManifest;
+  component: () => import("./example.app.svelte"),
+});
