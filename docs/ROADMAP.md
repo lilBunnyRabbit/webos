@@ -19,7 +19,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Upload from local filesystem
 - [x] Download to local filesystem
 - [x] `exists()` check
-- [x] `format_bytes()` utility
+- [x] `format_bytes()` utility (moved to general utils `$lib/core/utils`)
 - [x] Directory size calculation (recursive)
 - [x] File explorer: status bar (item count + storage usage)
 - [x] File explorer: create folder button

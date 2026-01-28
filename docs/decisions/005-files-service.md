@@ -140,8 +140,7 @@ function download_file(handle: FileSystemFileHandle, file_name?: string): Promis
 // Storage
 function get_storage_estimate(): Promise<{ usage: number; quota: number }>
 
-// Utility
-function format_bytes(bytes: number): string
+// Clear
 function clear_opfs(): Promise<void>
 ```
 
