@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { format_bytes } from "$lib/core/api/services/files";
   import FileIconHandler from "./file-icon.svelte";
 
   interface Props {
@@ -8,14 +9,6 @@
   let { handle: entry }: Props = $props();
 
   const file_promise = $derived(entry.getFile());
-
-  function format_bytes(bytes: number): string {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-  }
 </script>
 
 {#await file_promise}

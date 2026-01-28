@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { handlers } from "svelte/legacy";
   import FileIconHandler from "./file-icon.svelte";
   import { CaretRight as CaretRightIcon } from "phosphor-svelte";
   interface Props {

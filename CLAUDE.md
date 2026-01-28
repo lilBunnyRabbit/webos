@@ -207,8 +207,17 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 - `001-app-manifest-structure.md` - Flat structure with nested `defaults`
 - `002-service-lifecycle.md` - `init`, `destroy`, `getState`, `setState` hooks
 - `003-app-context.md` - AppContext via Svelte context, WindowHandle, StorageHandle, AppDataHandle
+- `004-version-update-system.md` - Build-generated version.json with polling
+- `005-files-service.md` - Files service API redesign (pure functions + thin service)
+
+## Implementation Roadmap
+
+**`/docs/ROADMAP.md`** tracks all planned work with priorities, completion status, and links to ADRs/brainstorm sessions.
+
+**IMPORTANT (for Claude):** At the end of every session that completes work items, update `ROADMAP.md` to reflect current status. Mark items `[x]` when done, `[-]` when partially done. This is the single source of truth for project progress.
 
 ## Related Docs
+- `/docs/ROADMAP.md` - **Prioritized implementation plan with progress tracking**
 - `/docs/DOCUMENTATION_SUMMARY.md` - All documentation overview
 - `/docs/API_*.md` - Service specifications (aspirational)
 - `/docs/cursor_*.md` - Historical design rationale

@@ -1,160 +1,165 @@
 import { SvelteMap } from "svelte/reactivity";
-import type { FilesService as IFilesService } from "./type";
+import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
+import * as opfs from "./opfs";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
   description = "FilesService";
 
   to_string(): string {
-    return `FilesService`;
+    return "FilesService";
   }
 
-  private root: Promise<DirectoryHandler> | null = null;
+  private _root: Promise<FileSystemDirectoryHandle> | null = null;
+  private _directories = new SvelteMap<string, DirectoryHandler>();
 
-  private cache: DirectoryHandler[] = [];
-
-  private async get_root(): Promise<DirectoryHandler> {
-    if (!this.root) {
-      this.root = navigator.storage.getDirectory().then((handle) => new DirectoryHandler(this, handle, [], true));
+  async get_root(): Promise<FileSystemDirectoryHandle> {
+    if (!this._root) {
+      this._root = opfs.get_root();
 
       try {
         const persisted = await navigator.storage.persist();
         if (!persisted) {
-          console.warn("🗃️ Failed to persist OPFS root");
-        } else {
-          console.log("🗃️ OPFS root persisted");
+          console.warn("FilesService: Failed to persist storage");
         }
       } catch (error) {
-        console.error("🗃️ Failed to persist OPFS root", error);
+        console.error("FilesService: Failed to persist storage", error);
       }
     }
 
-    return await this.root;
+    return await this._root;
   }
 
-  public async get_directory(
-    directory_handle: FileSystemDirectoryHandle | null = null,
-    path?: DirectoryHandler[]
-  ): Promise<DirectoryHandler> {
-    if (!directory_handle) {
-      return await this.get_root();
+  private async resolve(handle: FileSystemDirectoryHandle | null): Promise<FileSystemDirectoryHandle> {
+    return handle ?? (await this.get_root());
+  }
+
+  directory(segments: string[], handle: FileSystemDirectoryHandle): DirectoryHandler {
+    const key = "/" + segments.join("/");
+    let handler = this._directories.get(key);
+    if (!handler) {
+      handler = new DirectoryHandler(this, handle, segments);
+      this._directories.set(key, handler);
     }
-
-    // TODO: this works but clearly could be better - path system
-    for (const value of this.cache) {
-      if (await directory_handle.isSameEntry(value.instance.handle)) {
-        return value;
-      }
-    }
-
-    // const items: FileSystemHandle[] = [];
-
-    // for await (const handle of directory_handle.values()) {
-    //   if (handle.kind === "file") {
-    //     items.push(handle);
-    //   } else if (handle.kind === "directory") {
-    //     items.push(handle);
-    //   }
-    // }
-
-    const handler = new DirectoryHandler(this, directory_handle, path);
-    this.cache.push(handler);
-    console.log("🗃️ Cache set", this.cache.length, handler);
     return handler;
   }
 
-  public async upload_file(handle: FileSystemDirectoryHandle | null = null, file: File) {
-    const directory_handle: FileSystemDirectoryHandle = handle ?? (await this.get_root()).instance.handle;
-    const file_handle = await directory_handle.getFileHandle(file.name, { create: true });
-    const writable = await file_handle.createWritable();
-    await writable.write(file);
-    await writable.close();
+  async list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]> {
+    return opfs.list_directory(await this.resolve(handle ?? null), options);
+  }
+
+  async create_directory(handle: FileSystemDirectoryHandle | null, name: string): Promise<FileSystemDirectoryHandle> {
+    return opfs.create_directory(await this.resolve(handle), name);
+  }
+
+  async create_file(handle: FileSystemDirectoryHandle | null, name: string, options?: CreateFileOptions): Promise<FileSystemFileHandle> {
+    return opfs.create_file(await this.resolve(handle), name, options);
+  }
+
+  async write_file(handle: FileSystemFileHandle, content: string | Blob | BufferSource): Promise<void> {
+    return opfs.write_file(handle, content);
+  }
+
+  async read_file(handle: FileSystemFileHandle): Promise<File> {
+    return opfs.read_file(handle);
+  }
+
+  async delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void> {
+    return opfs.delete_entry(await this.resolve(handle), name, options);
+  }
+
+  async exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean> {
+    return opfs.exists(await this.resolve(handle), name, kind);
+  }
+
+  async copy_file(source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle> {
+    return opfs.copy_file(source, await this.resolve(target), new_name);
+  }
+
+  async move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<void> {
+    return opfs.move_file(await this.resolve(source_parent), source, await this.resolve(target), new_name);
+  }
+
+  async upload_files(target: FileSystemDirectoryHandle | null, options?: UploadOptions): Promise<File[]> {
+    return opfs.upload_files(await this.resolve(target), options);
+  }
+
+  async download_file(handle: FileSystemFileHandle, file_name?: string): Promise<void> {
+    return opfs.download_file(handle, file_name);
+  }
+
+  async get_storage_estimate(): Promise<{ usage: number; quota: number }> {
+    return opfs.get_storage_estimate();
+  }
+
+  async get_directory_size(handle: FileSystemDirectoryHandle | null): Promise<number> {
+    return opfs.get_directory_size(await this.resolve(handle ?? null));
+  }
+
+  async clear(): Promise<void> {
+    return opfs.clear_opfs();
   }
 }
 
 export class DirectoryHandler {
-  public instance: { handle: FileSystemDirectoryHandle; created_at: Date };
+  readonly segments: string[];
+  readonly path: string;
+  readonly handle: FileSystemDirectoryHandle;
+  readonly service: FilesService;
 
-  constructor(
-    readonly service: FilesService,
-    handle: FileSystemDirectoryHandle,
-    readonly path: DirectoryHandler[] = [],
-    readonly is_root: boolean = false
-  ) {
-    this.instance = $state.raw({
-      handle,
-      created_at: new Date(),
-    });
+  items = $state<FileSystemItem[]>([]);
+  loading = $state(false);
+
+  constructor(service: FilesService, handle: FileSystemDirectoryHandle, segments: string[]) {
+    this.service = service;
+    this.handle = handle;
+    this.segments = segments;
+    this.path = "/" + segments.join("/");
   }
 
-  public get name(): string {
-    return this.is_root ? "~" : this.instance.handle.name;
+  get name(): string {
+    return this.segments.length === 0 ? "~" : this.segments[this.segments.length - 1];
   }
 
-  // TODO: needs work
-  public reload() {
-    // TODO: this works but clearly could be better
-    this.instance = {
-      handle: this.instance.handle,
-      created_at: new Date(),
-    };
+  get is_root(): boolean {
+    return this.segments.length === 0;
   }
 
-  // Svelte doesn't support async iterators, so we need to return a promise
-  public async values(): Promise<
-    Array<
-      | {
-          type: "file";
-          handle: FileSystemFileHandle;
-        }
-      | {
-          type: "directory";
-          handle: FileSystemDirectoryHandle;
-        }
-    >
-  > {
-    const items: Array<
-      | {
-          type: "file";
-          handle: FileSystemFileHandle;
-        }
-      | {
-          type: "directory";
-          handle: FileSystemDirectoryHandle;
-        }
-    > = [];
-    for await (const handle of this.instance.handle.values()) {
-      if (handle.kind === "file") {
-        items.push({ type: "file", handle: handle as FileSystemFileHandle });
-      } else if (handle.kind === "directory") {
-        items.push({ type: "directory", handle: handle as FileSystemDirectoryHandle });
-      }
+  async reload(): Promise<void> {
+    this.loading = true;
+    try {
+      this.items = await opfs.list_directory(this.handle);
+    } finally {
+      this.loading = false;
     }
-    return items;
   }
 
-  public async create_file(file: File) {
-    const file_handle = await this.instance.handle.getFileHandle(file.name, { create: true });
-    const writable = await file_handle.createWritable();
-    await writable.write(file);
-    await writable.close();
-
-    this.reload();
+  async create_directory(name: string): Promise<FileSystemDirectoryHandle> {
+    const result = await opfs.create_directory(this.handle, name);
+    await this.reload();
+    return result;
   }
 
-  public async remove_file(handle: FileSystemFileHandle) {
-    await this.instance.handle.removeEntry(handle.name, { recursive: false });
-
-    this.reload();
+  async create_file(name: string, options?: CreateFileOptions): Promise<FileSystemFileHandle> {
+    const result = await opfs.create_file(this.handle, name, options);
+    await this.reload();
+    return result;
   }
 
-  public async remove_directory(handle: FileSystemDirectoryHandle) {
-    await this.instance.handle.removeEntry(handle.name, { recursive: true });
-
-    this.reload();
+  async delete_entry(name: string, options?: { recursive?: boolean }): Promise<void> {
+    await opfs.delete_entry(this.handle, name, options);
+    await this.reload();
   }
 
-  public async open_directory(handle: FileSystemDirectoryHandle): Promise<DirectoryHandler> {
-    return this.service.get_directory(handle, [...this.path, this]);
+  async upload_files(options?: UploadOptions): Promise<File[]> {
+    const result = await opfs.upload_files(this.handle, options);
+    if (result.length > 0) {
+      await this.reload();
+    }
+    return result;
+  }
+
+  open_directory(name: string, handle: FileSystemDirectoryHandle): DirectoryHandler {
+    return this.service.directory([...this.segments, name], handle);
   }
 }

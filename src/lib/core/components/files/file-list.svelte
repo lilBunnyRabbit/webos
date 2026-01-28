@@ -5,31 +5,21 @@
 
   interface Props {
     handler: DirectoryHandler;
-    onnavigate: (handler: Promise<DirectoryHandler>) => void;
+    on_navigate: (handler: DirectoryHandler) => void;
     search: string;
   }
 
-  let { handler, search = $bindable(), onnavigate }: Props = $props();
+  let { handler, search = $bindable(), on_navigate }: Props = $props();
 
-  const items_promise = $derived(
-    handler
-      .values()
-      .then((values) =>
-        values
-          .sort((a, b) => {
-            if (a.type === "directory" && b.type === "file") return -1;
-            if (a.type === "file" && b.type === "directory") return 1;
-            return 0;
-          })
-          .filter((item) => {
-            if (!search) return true;
-            return new RegExp(search, "i").test(item.handle.name);
-          })
-      )
-      .catch((error) => {
-        console.error(error);
-        return [];
-      })
+  const filtered_items = $derived(
+    handler.items.filter((item) => {
+      if (!search) return true;
+      try {
+        return new RegExp(search, "i").test(item.name);
+      } catch {
+        return item.name.toLowerCase().includes(search.toLowerCase());
+      }
+    })
   );
 </script>
 
@@ -40,43 +30,41 @@
     <div class="font-medium text-sm">Date</div>
   </div>
 
-  {#await items_promise}
+  {#if handler.loading}
     {#each { length: 5 }, idx (idx)}
       <div class="bg-foreground/10 animate-pulse h-10 col-span-4"></div>
     {/each}
-  {:then items}
-    {#if items.length === 0}
-      <div class="col-span-4 px-4 py-2 h-full text-accent">No files found</div>
-    {/if}
-
-    {#each items as item (item.handle.name)}
-      {#if item.type === "file"}
+  {:else if filtered_items.length === 0}
+    <div class="col-span-4 px-4 py-2 h-full text-accent">No files found</div>
+  {:else}
+    {#each filtered_items as item (item.name)}
+      {#if item.kind === "file"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
           ondblclick={() => {}}
           onkeydown={(e) => {
             if (e.key === "Delete") {
-              handler.remove_file(item.handle);
+              handler.delete_entry(item.name);
             }
           }}
         >
-          <FileRow handle={item.handle} />
+          <FileRow handle={item.handle as FileSystemFileHandle} />
         </button>
-      {:else if item.type === "directory"}
+      {:else if item.kind === "directory"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
           ondblclick={() => {
-            onnavigate(handler.open_directory(item.handle));
+            on_navigate(handler.open_directory(item.name, item.handle as FileSystemDirectoryHandle));
           }}
           onkeydown={(e) => {
             if (e.key === "Delete") {
-              handler.remove_directory(item.handle);
+              handler.delete_entry(item.name, { recursive: true });
             }
           }}
         >
-          <DirectoryRow handle={item.handle} />
+          <DirectoryRow handle={item.handle as FileSystemDirectoryHandle} />
         </button>
       {/if}
     {/each}
-  {/await}
+  {/if}
 </div>

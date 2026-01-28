@@ -5,18 +5,44 @@
     MagnifyingGlass as MagnifyingGlassIcon,
     ArrowLeft as ArrowLeftIcon,
     ArrowClockwise as ArrowClockwiseIcon,
+    FolderPlus as FolderPlusIcon,
+    UploadSimple as UploadSimpleIcon,
   } from "phosphor-svelte";
 
   interface Props {
     handler: DirectoryHandler;
-    onnavigate: (handler: DirectoryHandler) => void;
+    path_stack: DirectoryHandler[];
+    on_navigate_back: () => void;
+    on_navigate_to_index: (index: number) => void;
     search: string;
   }
 
-  let { handler, onnavigate, search = $bindable() }: Props = $props();
-</script>
+  let { handler, path_stack, on_navigate_back, on_navigate_to_index, search = $bindable() }: Props = $props();
 
-<!-- TODO: upload files (drop) -->
+  let creating_folder = $state(false);
+  let uploading = $state(false);
+
+  async function handle_create_folder() {
+    const name = prompt("Enter folder name:");
+    if (!name) return;
+
+    creating_folder = true;
+    try {
+      await handler.create_directory(name);
+    } finally {
+      creating_folder = false;
+    }
+  }
+
+  async function handle_upload() {
+    uploading = true;
+    try {
+      await handler.upload_files();
+    } finally {
+      uploading = false;
+    }
+  }
+</script>
 
 <div
   class="grid grid-cols-[min-content_3fr_1fr_min-content] grid-rows-1 items-center bg-background-dark border-b border-b-foreground/20 py-2 gap-x-2 px-2"
@@ -25,8 +51,8 @@
     <button
       class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
       title="Go back"
-      disabled={!handler.path.length}
-      onclick={() => onnavigate(handler.path[handler.path.length - 1])}
+      disabled={path_stack.length === 0}
+      onclick={on_navigate_back}
     >
       <ArrowLeftIcon className="size-4" weight="bold" />
     </button>
@@ -41,8 +67,8 @@
   </div>
 
   <nav class="flex items-center gap-1 px-2 text-sm bg-background h-6 rounded-sm">
-    {#each handler.path as dir, idx (idx)}
-      <button class="hover:underline hover:bg-foreground/10" onclick={() => onnavigate(dir)}>
+    {#each path_stack as dir, idx (idx)}
+      <button class="hover:underline hover:bg-foreground/10" onclick={() => on_navigate_to_index(idx)}>
         {dir.name}
       </button>
       <span class="mx-0.5 pointer-events-none">/</span>
@@ -53,6 +79,7 @@
     </button>
     <span class="mx-0.5 pointer-events-none">/</span>
   </nav>
+
   <div class="relative flex items-center pr-2 gap-y-1 text-sm bg-background h-6 rounded-sm">
     <input
       type="text"
@@ -71,43 +98,22 @@
   </div>
 
   <div class="flex items-center gap-1">
-    <!-- <button
-    className="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-    title="New folder"
-    onClick={() => {
-      const name = prompt("Enter folder name:");
-      if (!name) return;
+    <button
+      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
+      title="New folder"
+      disabled={creating_folder}
+      onclick={handle_create_folder}
+    >
+      <FolderPlusIcon className="size-4" weight="bold" />
+    </button>
 
-      createDirectory(name);
-    }}
-  >
-    {isPending ? <LoaderIcon className="size-4 animate-spin" /> : <FolderPlusIcon className="size-4" weight="bold" />}
-  </button>
-
-  <button
-  className="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-  title="Upload files"
-  disabled={isPending}
-  onClick={() => inputRef.current?.click()}
->
-  {isPending ? (
-    <LoaderIcon className="size-4 animate-spin" />
-  ) : (
-    <UploadSimpleIcon className="size-4" weight="bold" />
-  )}
-</button>
-
-<input
-  type="file"
-  className="hidden"
-  multiple
-  ref={inputRef}
-  onChange={(e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    uploadFiles(files);
-  }}
-/> -->
+    <button
+      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
+      title="Upload files"
+      disabled={uploading}
+      onclick={handle_upload}
+    >
+      <UploadSimpleIcon className="size-4" weight="bold" />
+    </button>
   </div>
 </div>
