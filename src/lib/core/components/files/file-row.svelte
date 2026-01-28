@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { format_bytes } from "$lib/core/api/services/files";
+  import { format_bytes } from "$lib/core/utils";
   import FileIconHandler from "./file-icon.svelte";
 
   interface Props {

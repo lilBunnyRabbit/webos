@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import type { FilesService } from "$lib/core/api/services/files";
-  import { format_bytes } from "$lib/core/api/services/files";
+  import { format_bytes } from "$lib/core/utils";
 
   interface Props {
     handler: DirectoryHandler;

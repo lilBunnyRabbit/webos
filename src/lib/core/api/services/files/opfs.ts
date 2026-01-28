@@ -1,5 +1,7 @@
 import type {
   FileSystemItem,
+  FileSystemFileItem,
+  FileSystemDirectoryItem,
   ListOptions,
   CreateFileOptions,
   UploadOptions,
@@ -21,22 +23,28 @@ export async function list_directory(
   options: ListOptions = {}
 ): Promise<FileSystemItem[]> {
   const { include_metadata = true, sort = default_sort } = options;
-  const items: FileSystemItem[] = [];
+  const items: (FileSystemFileItem | FileSystemDirectoryItem)[] = [];
 
   for await (const [name, handle] of dir.entries()) {
-    const item: FileSystemItem = { name, kind: handle.kind, handle };
+    if (handle.kind === "file") {
+      const file_handle = handle as FileSystemFileHandle;
+      const item: FileSystemFileItem = { name, kind: "file", handle: file_handle };
 
-    if (include_metadata && handle.kind === "file") {
-      try {
-        const file = await (handle as FileSystemFileHandle).getFile();
-        (item as { size?: number; last_modified?: number }).size = file.size;
-        (item as { size?: number; last_modified?: number }).last_modified = file.lastModified;
-      } catch (err) {
-        console.warn(`Failed to get file metadata for ${name}:`, err);
+      if (include_metadata) {
+        try {
+          const file = await file_handle.getFile();
+          item.size = file.size;
+          item.last_modified = file.lastModified;
+          item.type = file.type;
+        } catch (err) {
+          console.warn(`Failed to get file metadata for ${name}:`, err);
+        }
       }
-    }
 
-    items.push(item);
+      items.push(item);
+    } else {
+      items.push({ name, kind: "directory", handle: handle as FileSystemDirectoryHandle });
+    }
   }
 
   items.sort(sort);
@@ -246,7 +254,7 @@ export async function get_directory_size(dir: FileSystemDirectoryHandle): Promis
   const items = await list_directory(dir, { include_metadata: true });
 
   for (const item of items) {
-    if (item.kind === "file" && "size" in item && typeof item.size === "number") {
+    if (item.kind === "file" && item.size != null) {
       total += item.size;
     } else if (item.kind === "directory") {
       total += await get_directory_size(item.handle as FileSystemDirectoryHandle);
@@ -254,14 +262,6 @@ export async function get_directory_size(dir: FileSystemDirectoryHandle): Promis
   }
 
   return total;
-}
-
-export function format_bytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
 export async function clear_opfs(): Promise<void> {
