@@ -209,6 +209,8 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 - `003-app-context.md` - AppContext via Svelte context, WindowHandle, StorageHandle, AppDataHandle
 - `004-version-update-system.md` - Build-generated version.json with polling
 - `005-files-service.md` - Files service API redesign (pure functions + thin service)
+- `006-notifications-service.md` - Toast notifications with types, updatable, notification center
+- `007-shell-service.md` - Shell Service (command registry + parser) & Terminal App
 
 ## Implementation Roadmap
 

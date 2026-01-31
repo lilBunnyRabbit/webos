@@ -46,29 +46,78 @@ export function getAppContext(): AppContext {
 }
 ```
 
-### 2. Window Handle (Event Subscription)
+### 2. Window Handle
 
-Apps get a window reference to subscribe to events and control their window:
+Apps get a window reference to subscribe to events, control their window, and access window-scoped features.
+The window handle is defined separately from AppContext to keep concerns clean.
 
 ```typescript
 interface WindowHandle {
   // Reactive state
-  readonly isFocused: boolean;
-  readonly isMaximized: boolean;
-  readonly isMinimized: boolean;
+  readonly is_focused: boolean;
+  readonly is_maximized: boolean;
+  readonly is_minimized: boolean;
   readonly bounds: Bounds;
 
   // Event subscription (returns unsubscribe function)
   on(event: 'focus' | 'blur' | 'close' | 'resize' | 'move', callback: () => void): () => void;
 
-  // Actions
+  // Window controls
   close(): void;
   minimize(): void;
   maximize(): void;
   restore(): void;
-  setTitle?(title: string): void;
+
+  // Identity
+  set_title(title: string): void;
+  set_icon(icon: Component): void;
+
+  // Taskbar
+  request_attention(): void;
+  set_badge(count: number | null): void;
+
+  // Overlays (promise-based, rendered as full window overlay)
+  pick_file(options?: PickFileOptions): Promise<FilePickerResult | null>;
+  pick_directory(options?: PickDirectoryOptions): Promise<DirectoryPickerResult | null>;
+  confirm(message: string, options?: ConfirmOptions): Promise<boolean>;
+  prompt(message: string, options?: PromptOptions): Promise<string | null>;
+
+  // Status bar (reactive — window renders if any value is set)
+  readonly status_bar: StatusBarHandle;
+}
+
+interface PickFileOptions {
+  multiple?: boolean;
+  accept?: string[];    // e.g., [".txt", ".md"]
+  start_path?: string;  // initial directory
+}
+
+interface PickDirectoryOptions {
+  start_path?: string;
+}
+
+interface ConfirmOptions {
+  title?: string;
+  confirm_label?: string;  // default: "OK"
+  cancel_label?: string;   // default: "Cancel"
+}
+
+interface PromptOptions {
+  title?: string;
+  placeholder?: string;
+  default_value?: string;
+}
+
+interface StatusBarHandle {
+  left: string | null;
+  right: string | null;
+  progress: number | null;  // 0-1 for determinate, -1 for indeterminate, null to hide
 }
 ```
+
+**File picker** is a window-scoped overlay that wraps FilesService internally. When `pick_file()` is called,
+the window component renders a built-in file browser overlay. The promise resolves when the user picks or cancels.
+This keeps the file picker reusable across apps without each app implementing its own.
 
 ### 3. Storage Handle (localStorage, small data)
 
