@@ -211,6 +211,7 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 - `005-files-service.md` - Files service API redesign (pure functions + thin service)
 - `006-notifications-service.md` - Toast notifications with types, updatable, notification center
 - `007-shell-service.md` - Shell Service (command registry + parser) & Terminal App
+- `008-app-props-validation.md` - App props validation with zod (all-or-nothing)
 
 ## Implementation Roadmap
 
