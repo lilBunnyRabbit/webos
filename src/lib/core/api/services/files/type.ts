@@ -1,13 +1,10 @@
 import type { IService } from "../../type";
 import type { DirectoryHandler } from "./service.svelte";
 
-export interface FileSystemItem {
-  name: string;
-  kind: "file" | "directory";
-  handle: FileSystemFileHandle | FileSystemDirectoryHandle;
-}
+export type FileSystemItem = FileSystemFileItem | FileSystemDirectoryItem;
 
-export interface FileSystemFileItem extends FileSystemItem {
+export interface FileSystemFileItem {
+  name: string;
   kind: "file";
   handle: FileSystemFileHandle;
   size?: number;
@@ -15,7 +12,8 @@ export interface FileSystemFileItem extends FileSystemItem {
   type?: string;
 }
 
-export interface FileSystemDirectoryItem extends FileSystemItem {
+export interface FileSystemDirectoryItem {
+  name: string;
   kind: "directory";
   handle: FileSystemDirectoryHandle;
 }

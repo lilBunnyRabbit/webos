@@ -1,7 +1,6 @@
 import type {
   FileSystemItem,
   FileSystemFileItem,
-  FileSystemDirectoryItem,
   ListOptions,
   CreateFileOptions,
   UploadOptions,
@@ -23,7 +22,7 @@ export async function list_directory(
   options: ListOptions = {}
 ): Promise<FileSystemItem[]> {
   const { include_metadata = true, sort = default_sort } = options;
-  const items: (FileSystemFileItem | FileSystemDirectoryItem)[] = [];
+  const items: FileSystemItem[] = [];
 
   for await (const [name, handle] of dir.entries()) {
     if (handle.kind === "file") {
