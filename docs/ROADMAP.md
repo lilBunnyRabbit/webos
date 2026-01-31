@@ -67,22 +67,64 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Save timing strategy (beforeunload vs periodic)
 
 ### Notifications Service
+- **ADR:** [ADR-006](decisions/006-notifications-service.md)
+- **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
 - **Status:** Not started
-- [ ] Toast notifications
-- [ ] Notification store
-- [ ] Browser notification bridge (optional)
+- [ ] NotificationsService (notify, update, dismiss, mark_read)
+- [ ] Toast area UI (position configurable via SettingsService)
+- [ ] Notification center panel (accessible from taskbar)
+- [ ] Unread badge on taskbar icon
+- [ ] Progress notification type (determinate/indeterminate)
+
+### App Props Validation
+- **ADR:** [ADR-008](decisions/008-app-props-validation.md)
+- **Brainstorm:** [2026-01-31 App Props Validation](brainstorm/2026-01-31_app-props-validation.md)
+- **Status:** Not started
+- [ ] Install zod
+- [ ] Add `props` schema field to AppManifest / AppConfig
+- [ ] Update `defineApp` to infer TProps from schema
+- [ ] Add validation in `AppsService.launch()`
+- [ ] Update example app to use schema + handle undefined props
+
+### Window API Expansion
+- **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
+- **Status:** Not started
+- [ ] Expanded WindowHandle (set_title, set_icon, request_attention, set_badge)
+- [ ] Window overlays: file picker, confirm, prompt (promise-based)
+- [ ] Window status bar (left/right text, progress indicator)
 
 ---
 
 ## P2 — Power Features
 
+### Shell Service
+- **ADR:** [ADR-007](decisions/007-shell-service.md)
+- **Brainstorm:** [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
+- **Status:** Not started
+- [ ] ShellService (command registry, parser, executor)
+- [ ] Command definition interface (args, flags, completions)
+- [ ] Progressive prefix parser (tokenize, resolve, validate, execute)
+- [ ] Built-in commands (help, clear, echo, kernel)
+- [ ] Service-registered commands (files, windows, apps, settings)
+
+### Terminal App
+- **ADR:** [ADR-007](decisions/007-shell-service.md)
+- **Brainstorm:** [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
+- **Status:** Not started
+- [ ] Terminal system app (`/src/lib/apps/system/terminal/`)
+- [ ] Per-instance cwd state
+- [ ] Command history (localStorage via StorageHandle)
+- [ ] Output rendering (text, table, tree, error)
+- [ ] Tab autocomplete via `shell.complete()`
+
+### Command Palette
+- **Status:** Not started (depends on Shell Service)
+- [ ] Ctrl+K UI for fuzzy command search
+- [ ] Integration with Shortcuts Service
+
 ### Shortcuts Service
 - [ ] Global / app / window scoped shortcuts
 - [ ] Default OS-like shortcuts (Alt+F4, etc.)
-
-### Shell Service / Command Palette
-- [ ] Command registry with fuzzy search
-- [ ] UI component (cmdk or custom)
 
 ### Tasks Service
 - [ ] Background task orchestration
@@ -99,6 +141,11 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### New Apps
 - [ ] Text Editor (tests file ops + persistence)
 - [ ] Calculator
+
+### File Associations (Future)
+- [ ] `associations` field on app manifest (e.g., `[".png", ".jpg"]`)
+- [ ] `open` command in AppsService (resolves file → associated app)
+- [ ] Standard `file` prop for file-handling apps
 
 ---
 
@@ -124,3 +171,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File Explorer (basic browsing, navigation, search)
 - [x] System apps: Settings, File Explorer, Kernel
 - [x] App auto-discovery via glob
+- [x] ADR-006: Notifications Service design
+- [x] ADR-007: Shell Service & Terminal design
+- [x] ADR-008: App Props Validation with Zod design
+- [x] Code style decision: keeping snake_case ([brainstorm](brainstorm/2026-01-26_code-style-conventions.md))
+- [x] Version update system design ([brainstorm](brainstorm/2026-01-27_version-update-system.md))
