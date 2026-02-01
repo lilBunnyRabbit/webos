@@ -28,6 +28,12 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Cross-instance sync (shared DirectoryHandler via SvelteMap cache)
 - [ ] File explorer: file open callback (for media preview etc.)
 - [ ] File explorer: context menus (delete, rename, copy, move)
+- [ ] File search/filter
+- [ ] Drag-and-drop file operations
+- [ ] File rename functionality
+- [ ] Copy/paste operations
+- [ ] File properties dialog
+- [ ] Back/forward navigation buttons
 
 ### Service Lifecycle Hooks
 - **ADR:** [ADR-002](decisions/002-service-lifecycle.md)
@@ -49,22 +55,35 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P1 — Essential UX
 
 ### Design System
-- **ADR:** TBD
 - **Status:** Not started (color scheme exists)
 - [ ] Window chrome design
 - [ ] Typography and spacing
 - [ ] Button/input component styles
 - [ ] Consistent theming approach
 
-### Window Improvements
+### Window Enhancements
+- **ADR:** [ADR-014](decisions/014-window-enhancements.md)
+- **Status:** Not started
+- [ ] Single-instance app flag in manifest (focus existing window)
+- [ ] Window open/close/minimize/maximize animations (CSS-based)
 - [ ] Cascading window positioning (offset new windows)
+- [ ] Reopen last closed window (Ctrl+Shift+T)
 - [ ] Taskbar clock / date-time display
 
+### Window API Expansion
+- **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
+- **Status:** Not started
+- [ ] Expanded WindowHandle (set_title, set_icon, request_attention, set_badge)
+- [ ] Window overlays: file picker, confirm, prompt (promise-based)
+- [ ] Window status bar (left/right text, progress indicator)
+
 ### Session Persistence
+- **ADR:** [ADR-014](decisions/014-window-enhancements.md)
 - **Brainstorm:** [2026-01-24 Lifecycles & Persistence](brainstorm/2026-01-24_lifecycles-persistence.md)
 - **Status:** Not started
 - [ ] Save/restore open windows and positions
-- [ ] Save timing strategy (beforeunload vs periodic)
+- [ ] Save timing strategy (beforeunload + periodic)
+- [ ] Closed window stack (reopen last 10)
 
 ### Notifications Service
 - **ADR:** [ADR-006](decisions/006-notifications-service.md)
@@ -86,12 +105,24 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Add validation in `AppsService.launch()`
 - [ ] Update example app to use schema + handle undefined props
 
-### Window API Expansion
-- **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
+### Desktop Enhancements
+- **ADR:** [ADR-011](decisions/011-desktop-enhancements.md)
 - **Status:** Not started
-- [ ] Expanded WindowHandle (set_title, set_icon, request_attention, set_badge)
-- [ ] Window overlays: file picker, confirm, prompt (promise-based)
-- [ ] Window status bar (left/right text, progress indicator)
+- [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click)
+- [ ] Desktop context menu (right-click on background and icons)
+- [ ] Desktop wallpapers (solid, gradient, image with fit/blur/tint)
+- [ ] Icon auto-arrange
+- [ ] Desktop icon settings (size, labels, grid spacing)
+
+### Taskbar Enhancements
+- **ADR:** [ADR-014](decisions/014-window-enhancements.md), [ADR-015](decisions/015-customization-theming.md)
+- **Status:** Not started
+- [ ] System tray area (notifications, background tasks)
+- [ ] Context menus for taskbar items
+- [ ] Window grouping by app (badge count, expand to list)
+- [ ] Quick launch area
+- [ ] Taskbar auto-hide
+- [ ] Taskbar size options (small/medium/large)
 
 ---
 
@@ -109,7 +140,6 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Terminal App
 - **ADR:** [ADR-007](decisions/007-shell-service.md)
-- **Brainstorm:** [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
 - **Status:** Not started
 - [ ] Terminal system app (`/src/lib/apps/system/terminal/`)
 - [ ] Per-instance cwd state
@@ -123,37 +153,154 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Integration with Shortcuts Service
 
 ### Shortcuts Service
+- **ADR:** [ADR-012](decisions/012-shortcuts-service.md)
+- **Status:** Not started
 - [ ] Global / app / window scoped shortcuts
-- [ ] Default OS-like shortcuts (Alt+F4, etc.)
+- [ ] Default OS-like shortcuts (Alt+F4, Alt+Tab, Ctrl+K, etc.)
+- [ ] Conflict detection
+- [ ] Customizable shortcuts in Settings
+- [ ] Shortcut cheat sheet (Ctrl+/)
+- [ ] OS detection (Windows vs Mac modifier display)
 
-### Tasks Service
-- [ ] Background task orchestration
-- [ ] Progress tracking
+### Tasks Service & Task Manager
+- **ADR:** [ADR-013](decisions/013-tasks-service.md)
+- **Status:** Not started
+- [ ] TasksService wrapping `@lilbunnyrabbit/task-manager`
+- [ ] Task lifecycle (create, cancel, retry, remove)
+- [ ] Progress tracking (determinate/indeterminate)
+- [ ] Retry configuration (fixed/exponential backoff)
+- [ ] Task Manager system app (filter, progress bars, actions)
+- [ ] Taskbar badge for active task count
+- [ ] Notification integration on task complete/fail
+- [ ] Keyboard shortcut: Ctrl+Shift+Esc
+
+### URL Deep Linking & Share System
+- **ADR:** [ADR-010](decisions/010-url-deep-linking.md)
+- **Status:** Not started
+- [ ] Hash-based router (`#/app/{id}`, `#/file/{path}`, `#/demo/{name}`)
+- [ ] App links with query param props (validated via zod)
+- [ ] Workspace state save/restore via URL
+- [ ] Embed mode (`?embed=true` strips OS chrome)
+- [ ] Demo presets (curated workspace configurations)
+- [ ] Share dialog (copy URL, QR code)
+
+### Customization & Theming
+- **ADR:** [ADR-015](decisions/015-customization-theming.md)
+- **Status:** Not started
+- [ ] Theme system (accent color, border radius, shadows, animation speed, font)
+- [ ] CSS custom properties for all theme values
+- [ ] Theme export/import as JSON
+- [ ] Theme sharing via URL
+- [ ] Sound effects (window open/close, notifications) — low priority
 
 ---
 
 ## P3 — Apps
 
 ### Port from React
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
 - [ ] Media Preview app (image, video, audio, PDF)
-- [ ] Tic-Tac-Toe game
+- [ ] Tic-Tac-Toe game (+ AI, stats, undo)
+- [ ] Profiler app (per-window performance overlay, FPS, render counts)
 
-### New Apps
-- [ ] Text Editor (tests file ops + persistence)
+### New System Apps
 - [ ] Calculator
+- [ ] Text Editor (tests file ops + persistence)
+- [ ] Style Guide (component showcase)
 
-### File Associations (Future)
+### Games
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- [ ] Game Hub (library browser, play time tracking, categories, saves)
+- [ ] Nonogram (b&w + color, editor, hints, puzzle packs)
+- [ ] Other puzzles: Kakuro, Maze, Word Search, Nurikabe, Futoshiki
+
+### Productivity
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- [ ] Quick Notes (quno) — chronological notes, markdown, tags, search
+- [ ] Speed Reader — RSVP, adjustable WPM, library
+- [ ] Markdown-to-PDF converter — live preview, templates, TOC
+- [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
+
+### Media & Entertainment
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- [ ] Series Tracker — TMDB API, episode tracking, watchlist
+- [ ] Image Editor — crop, resize, rotate, filters
+- [ ] Video Tools — trimmer, merger, audio extraction (ffmpeg.wasm)
+- [ ] Gifski — video-to-GIF via WASM
+
+### Utilities
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim
+- [ ] RNG Tools — dice, coin, shuffler, password generator
+- [ ] QR Code Scanner — camera + image file scanning
+- [ ] Compression Tools — DEFLATE, LZ77, Huffman + WASM
+- [ ] P2P File Transfer — WebRTC, room codes, QR share
+
+### static-utils Ports
+- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- [ ] Image Combiner
+- [ ] PDF Generator
+- [ ] Video Trimmer/Cropper
+- [ ] Video Merger
+- [ ] File Download Utility
+
+### File Associations
 - [ ] `associations` field on app manifest (e.g., `[".png", ".jpg"]`)
 - [ ] `open` command in AppsService (resolves file → associated app)
 - [ ] Standard `file` prop for file-handling apps
 
 ---
 
-## P4 — Infrastructure
+## P4 — Infrastructure & Polish
 
+### Testing
 - [ ] Testing setup (Vitest + @testing-library/svelte)
+- [ ] Unit tests for core utilities and services
+- [ ] Integration tests for app launching and file operations
+- [ ] E2E tests (Playwright)
+
+### Error Handling
 - [ ] Error handling strategy
-- [ ] Workers Service (when concrete use case arises)
+- [ ] Error boundaries for app crashes
+
+### Performance
+- [ ] Lazy loading for apps (dynamic imports — already in place via `component()`)
+- [ ] Virtual scrolling for large lists (file explorer, game hub)
+- [ ] Performance targets: <100ms interaction, <3s initial load
+
+### PWA & Offline
+- [ ] Service Worker (Workbox) for offline support
+- [ ] Cache strategies (cache-first for assets, network-first for version check)
+- [ ] Background sync for queued operations
+- [ ] Install prompt customization
+
+### Workers Service
+- [ ] Web Worker pool for CPU-heavy operations
+- [ ] WASM module loading in workers (compression, image processing)
+
+### Accessibility
+- [ ] Keyboard navigation for all features
+- [ ] ARIA labels and roles
+- [ ] Focus management (window focus, modal focus trap)
+- [ ] High contrast mode
+- [ ] Screen reader testing
+
+### Mobile Support
+- [ ] Touch gestures for window management
+- [ ] Virtual keyboard handling
+- [ ] Responsive layout adaptations
+- [ ] Simplified UI for small screens
+
+### SEO & Social
+- [ ] Open Graph meta tags (dynamic per route)
+- [ ] Twitter card support
+- [ ] Demo mode preview images
+
+### CI/CD
+- [ ] GitHub Actions build pipeline
+- [ ] Automated testing on PR
+- [ ] Automated deployment to GitHub Pages
+- [ ] Version tagging
 
 ---
 
@@ -174,5 +321,13 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] ADR-006: Notifications Service design
 - [x] ADR-007: Shell Service & Terminal design
 - [x] ADR-008: App Props Validation with Zod design
+- [x] ADR-009: App Ecosystem catalogue
+- [x] ADR-010: URL Deep Linking design
+- [x] ADR-011: Desktop Enhancements design
+- [x] ADR-012: Shortcuts Service design
+- [x] ADR-013: Tasks Service design
+- [x] ADR-014: Window Enhancements design
+- [x] ADR-015: Customization & Theming design
 - [x] Code style decision: keeping snake_case ([brainstorm](brainstorm/2026-01-26_code-style-conventions.md))
 - [x] Version update system design ([brainstorm](brainstorm/2026-01-27_version-update-system.md))
+- [x] Legacy gap analysis ([brainstorm](brainstorm/2026-02-01_legacy-gap-analysis.md))

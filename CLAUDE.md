@@ -212,6 +212,13 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 - `006-notifications-service.md` - Toast notifications with types, updatable, notification center
 - `007-shell-service.md` - Shell Service (command registry + parser) & Terminal App
 - `008-app-props-validation.md` - App props validation with zod (all-or-nothing)
+- `009-app-ecosystem.md` - Full app catalogue (games, productivity, media, utilities)
+- `010-url-deep-linking.md` - Hash-based routing, app links, workspace sharing, embed mode
+- `011-desktop-enhancements.md` - Multi-selection, wallpapers, context menus, icon settings
+- `012-shortcuts-service.md` - Global/app/window scoped shortcuts, conflict detection, cheat sheet
+- `013-tasks-service.md` - @lilbunnyrabbit/task-manager integration, Task Manager app
+- `014-window-enhancements.md` - Single-instance, animations, grouping, session persistence
+- `015-customization-theming.md` - Theme system, export/import, taskbar/icon customization
 
 ## Implementation Roadmap
 

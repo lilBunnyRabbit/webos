@@ -1,0 +1,142 @@
+# ADR-013: Tasks Service & Task Manager App
+
+**Date:** 2026-02-01
+**Status:** Accepted
+
+## Context
+
+WebOS needs background task orchestration for long-running operations: file uploads, video processing, compression, batch operations. The `@lilbunnyrabbit/task-manager` npm package (your own package) provides task lifecycle, progress tracking, retry logic, and composable workflows. Integrating it into WebOS both solves a real need and serves as a showcase for the package.
+
+### Related ADRs
+
+- **ADR-006** (Notifications) — Task completion/failure triggers notifications
+- **ADR-009** (App Ecosystem) — Multiple apps use Tasks Service for heavy operations
+
+## Decision
+
+### Tasks Service — Kernel Service
+
+Registered as `"tasks"` in the kernel. Wraps `@lilbunnyrabbit/task-manager` and provides a reactive Svelte interface.
+
+```typescript
+class TasksService {
+  /** Create and start a task */
+  create(options: TaskOptions): TaskHandle;
+
+  /** Create a group of tasks */
+  create_group(options: GroupOptions): TaskGroupHandle;
+
+  /** Get a task by ID */
+  get(id: string): TaskHandle | undefined;
+
+  /** All tasks (reactive) */
+  readonly all: TaskHandle[];
+
+  /** Active tasks (reactive) */
+  readonly active: TaskHandle[];
+
+  /** Count of running tasks (for taskbar badge) */
+  readonly active_count: number;
+
+  /** Cancel a task */
+  cancel(id: string): void;
+
+  /** Retry a failed task */
+  retry(id: string): void;
+
+  /** Remove a completed/failed/cancelled task from history */
+  remove(id: string): void;
+
+  /** Clear all completed tasks */
+  clear_completed(): void;
+}
+```
+
+### Task Handle
+
+```typescript
+interface TaskHandle {
+  readonly id: string;
+  readonly name: string;
+  readonly status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  readonly progress: number | null;    // 0-1 for determinate, null for indeterminate
+  readonly message: string | null;     // current status message
+  readonly error: Error | null;
+  readonly created_at: Date;
+  readonly started_at: Date | null;
+  readonly completed_at: Date | null;
+  readonly app_id: string;            // which app created this task
+}
+```
+
+### Integration Points
+
+**File operations:**
+```typescript
+// Large file upload with progress
+const handle = tasks.create({
+  name: `Upload ${file.name}`,
+  app_id: "file-explorer",
+  execute: async (progress) => {
+    await upload_file(file, (percent) => progress.update({ progress: percent }));
+  },
+});
+```
+
+**Notifications integration:**
+When a task completes or fails, Tasks Service sends a notification via NotificationsService:
+```typescript
+notifications.notify(task.app_id, {
+  title: task.status === "completed" ? `${task.name} complete` : `${task.name} failed`,
+  type: task.status === "completed" ? "info" : "error",
+});
+```
+
+**Taskbar badge:**
+When `active_count > 0`, the taskbar shows a badge/indicator. Clicking opens Task Manager app.
+
+### Task Manager App
+
+System app providing a visual interface for all tasks.
+
+- List all tasks with status, progress, elapsed time
+- Filter by status (running, completed, failed, cancelled)
+- Cancel, retry, remove actions per task
+- Progress bars for active tasks
+- Keyboard shortcut: Ctrl+Shift+Esc
+- Single-instance app
+
+### Retry Configuration
+
+```typescript
+interface TaskOptions {
+  name: string;
+  app_id: string;
+  execute: (progress: ProgressReporter) => Promise<void>;
+  retry?: {
+    max_attempts: number;
+    backoff: "fixed" | "exponential";
+    delay_ms: number;
+  };
+}
+```
+
+## Alternatives Considered
+
+1. **No centralized task system** — each app manages its own async ops. Rejected — no unified progress view, no retry logic reuse, no taskbar integration.
+2. **Custom implementation without task-manager package** — Rejected. The package already solves this and showcasing it is valuable.
+3. **Web Workers for all tasks** — Workers Service can complement this for CPU-heavy tasks, but Tasks Service handles the lifecycle/progress layer regardless of where execution happens.
+
+## Consequences
+
+### Positive
+- Unified background task management across all apps
+- Progress tracking and retry logic built-in
+- Showcase for `@lilbunnyrabbit/task-manager` package
+- Taskbar integration provides visibility
+- Notification integration keeps users informed
+
+### Negative
+- Adds `@lilbunnyrabbit/task-manager` as dependency
+- Task Manager app needs to handle potentially many tasks efficiently
+- Memory consideration for long-running sessions with many completed tasks (need cleanup strategy)
