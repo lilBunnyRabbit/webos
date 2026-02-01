@@ -286,10 +286,19 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Screen reader testing
 
 ### Mobile Support
-- [ ] Touch gestures for window management
+- **ADR:** [ADR-016](decisions/016-mobile-support.md)
+- **Brainstorm:** [2026-02-01 Mobile Support](brainstorm/2026-02-01_mobile-support.md)
+- **Status:** Not started
+- [ ] Platform detection utility (runtime-once, `kernel.platform`)
+- [ ] Shell-level split (`os.svelte` → `<DesktopShell>` / `<MobileShell>`)
+- [ ] Shared `IWindowsService` base interface
+- [ ] `MobileWindowsService` (fullscreen-only, no drag/resize/snap)
+- [ ] `MobileDesktopService` (paged home screen, dock, app search)
+- [ ] Mobile shell components (fullscreen app container, app switcher, home screen)
+- [ ] Navigation gestures (home, back, app switcher)
+- [ ] Conditional service registration in `init.ts`
 - [ ] Virtual keyboard handling
-- [ ] Responsive layout adaptations
-- [ ] Simplified UI for small screens
+- [ ] Touch gesture support
 
 ### SEO & Social
 - [ ] Open Graph meta tags (dynamic per route)
@@ -331,3 +340,4 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Code style decision: keeping snake_case ([brainstorm](brainstorm/2026-01-26_code-style-conventions.md))
 - [x] Version update system design ([brainstorm](brainstorm/2026-01-27_version-update-system.md))
 - [x] Legacy gap analysis ([brainstorm](brainstorm/2026-02-01_legacy-gap-analysis.md))
+- [x] ADR-016: Mobile Support design

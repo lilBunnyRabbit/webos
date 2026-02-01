@@ -219,6 +219,7 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 - `013-tasks-service.md` - @lilbunnyrabbit/task-manager integration, Task Manager app
 - `014-window-enhancements.md` - Single-instance, animations, grouping, session persistence
 - `015-customization-theming.md` - Theme system, export/import, taskbar/icon customization
+- `016-mobile-support.md` - Shell-level split, service swapping, runtime-once detection
 
 ## Implementation Roadmap
 
