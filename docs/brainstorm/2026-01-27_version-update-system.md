@@ -54,4 +54,4 @@ Vite injects build hash into `index.html` meta tag. On each SPA "navigation", fe
 
 ## Decision
 
-Recorded as **ADR-004**: `/docs/decisions/004-version-update-system.md`
+Recorded as **ADR-004**: `/docs/adrs/004-version-update-system.md`

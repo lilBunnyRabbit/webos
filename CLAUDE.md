@@ -76,9 +76,10 @@ export default defineApp({
 - `user/` - Example app
 
 ### Documentation (`/docs/`)
-- `DOCUMENTATION_SUMMARY.md` - Overview of all docs
-- `API_*.md` - Service specifications (latest planning)
-- `cursor_*.md` - Design decisions and rationale
+- `ROADMAP.md` - Prioritized implementation plan with progress tracking
+- `adrs/` - Architecture Decision Records
+- `brainstorm/` - Ongoing design discussions
+- `to-be-deleted/` - Old docs pending cleanup
 
 ### React Reference (`/_old/`)
 Original implementation with more features to port:
@@ -184,7 +185,7 @@ From brainstorming sessions:
 
 ## Architecture Decision Records (ADR)
 
-When a decision is finalized but not immediately implemented, create an ADR in `/docs/decisions/`.
+When a decision is finalized but not immediately implemented, create an ADR in `/docs/adrs/`.
 
 ### When to Create ADR
 - Significant structural decisions
@@ -230,8 +231,5 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 
 ## Related Docs
 - `/docs/ROADMAP.md` - **Prioritized implementation plan with progress tracking**
-- `/docs/DOCUMENTATION_SUMMARY.md` - All documentation overview
-- `/docs/API_*.md` - Service specifications (aspirational)
-- `/docs/cursor_*.md` - Historical design rationale
+- `/docs/adrs/` - Architecture Decision Records
 - `/docs/brainstorm/` - Ongoing design discussions
-- `/docs/decisions/` - Finalized architectural decisions (ADRs)

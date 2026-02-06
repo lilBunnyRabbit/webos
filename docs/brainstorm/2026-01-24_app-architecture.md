@@ -396,7 +396,7 @@ Explored options:
 - `defineApp` helper handles `.default` extraction
 - Clear, no magic, easy to debug
 
-**See:** [ADR-001: App Manifest Structure](/docs/decisions/001-app-manifest-structure.md)
+**See:** [ADR-001: App Manifest Structure](/docs/adrs/001-app-manifest-structure.md)
 
 ---
 

@@ -9,7 +9,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P0 — Core Infrastructure
 
 ### Files Service Overhaul
-- **ADR:** [ADR-005](decisions/005-files-service.md)
+- **ADR:** [ADR-005](adrs/005-files-service.md)
 - **Status:** In Progress
 - [x] Redesign FilesService API (pure functions in opfs.ts, service + DirectoryHandler)
 - [x] File CRUD operations (create, read, write, delete)
@@ -36,14 +36,14 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Back/forward navigation buttons
 
 ### Service Lifecycle Hooks
-- **ADR:** [ADR-002](decisions/002-service-lifecycle.md)
+- **ADR:** [ADR-002](adrs/002-service-lifecycle.md)
 - **Status:** Not started
 - [ ] `init()` / `destroy()` on services
 - [ ] `get_state()` / `set_state()` for persistence/swap
 - [ ] Kernel bootstrap sequence with lifecycle
 
 ### App Context System
-- **ADR:** [ADR-003](decisions/003-app-context.md)
+- **ADR:** [ADR-003](adrs/003-app-context.md)
 - **Status:** Not started
 - [ ] `get_app_context()` / `set_app_context()` via Svelte context
 - [ ] WindowHandle (window events for apps)
@@ -62,7 +62,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Consistent theming approach
 
 ### Window Enhancements
-- **ADR:** [ADR-014](decisions/014-window-enhancements.md)
+- **ADR:** [ADR-014](adrs/014-window-enhancements.md)
 - **Status:** Not started
 - [ ] Single-instance app flag in manifest (focus existing window)
 - [ ] Window open/close/minimize/maximize animations (CSS-based)
@@ -78,7 +78,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Window status bar (left/right text, progress indicator)
 
 ### Session Persistence
-- **ADR:** [ADR-014](decisions/014-window-enhancements.md)
+- **ADR:** [ADR-014](adrs/014-window-enhancements.md)
 - **Brainstorm:** [2026-01-24 Lifecycles & Persistence](brainstorm/2026-01-24_lifecycles-persistence.md)
 - **Status:** Not started
 - [ ] Save/restore open windows and positions
@@ -86,7 +86,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Closed window stack (reopen last 10)
 
 ### Notifications Service
-- **ADR:** [ADR-006](decisions/006-notifications-service.md)
+- **ADR:** [ADR-006](adrs/006-notifications-service.md)
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
 - **Status:** Not started
 - [ ] NotificationsService (notify, update, dismiss, mark_read)
@@ -96,7 +96,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Progress notification type (determinate/indeterminate)
 
 ### App Props Validation
-- **ADR:** [ADR-008](decisions/008-app-props-validation.md)
+- **ADR:** [ADR-008](adrs/008-app-props-validation.md)
 - **Brainstorm:** [2026-01-31 App Props Validation](brainstorm/2026-01-31_app-props-validation.md)
 - **Status:** Not started
 - [ ] Install zod
@@ -106,7 +106,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Update example app to use schema + handle undefined props
 
 ### Desktop Enhancements
-- **ADR:** [ADR-011](decisions/011-desktop-enhancements.md)
+- **ADR:** [ADR-011](adrs/011-desktop-enhancements.md)
 - **Status:** Not started
 - [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click)
 - [ ] Desktop context menu (right-click on background and icons)
@@ -115,7 +115,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Desktop icon settings (size, labels, grid spacing)
 
 ### Taskbar Enhancements
-- **ADR:** [ADR-014](decisions/014-window-enhancements.md), [ADR-015](decisions/015-customization-theming.md)
+- **ADR:** [ADR-014](adrs/014-window-enhancements.md), [ADR-015](adrs/015-customization-theming.md)
 - **Status:** Not started
 - [ ] System tray area (notifications, background tasks)
 - [ ] Context menus for taskbar items
@@ -129,7 +129,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P2 — Power Features
 
 ### Shell Service
-- **ADR:** [ADR-007](decisions/007-shell-service.md)
+- **ADR:** [ADR-007](adrs/007-shell-service.md)
 - **Brainstorm:** [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
 - **Status:** Not started
 - [ ] ShellService (command registry, parser, executor)
@@ -139,7 +139,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Service-registered commands (files, windows, apps, settings)
 
 ### Terminal App
-- **ADR:** [ADR-007](decisions/007-shell-service.md)
+- **ADR:** [ADR-007](adrs/007-shell-service.md)
 - **Status:** Not started
 - [ ] Terminal system app (`/src/lib/apps/system/terminal/`)
 - [ ] Per-instance cwd state
@@ -153,7 +153,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Integration with Shortcuts Service
 
 ### Shortcuts Service
-- **ADR:** [ADR-012](decisions/012-shortcuts-service.md)
+- **ADR:** [ADR-012](adrs/012-shortcuts-service.md)
 - **Status:** Not started
 - [ ] Global / app / window scoped shortcuts
 - [ ] Default OS-like shortcuts (Alt+F4, Alt+Tab, Ctrl+K, etc.)
@@ -163,7 +163,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] OS detection (Windows vs Mac modifier display)
 
 ### Tasks Service & Task Manager
-- **ADR:** [ADR-013](decisions/013-tasks-service.md)
+- **ADR:** [ADR-013](adrs/013-tasks-service.md)
 - **Status:** Not started
 - [ ] TasksService wrapping `@lilbunnyrabbit/task-manager`
 - [ ] Task lifecycle (create, cancel, retry, remove)
@@ -175,7 +175,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Keyboard shortcut: Ctrl+Shift+Esc
 
 ### URL Deep Linking & Share System
-- **ADR:** [ADR-010](decisions/010-url-deep-linking.md)
+- **ADR:** [ADR-010](adrs/010-url-deep-linking.md)
 - **Status:** Not started
 - [ ] Hash-based router (`#/app/{id}`, `#/file/{path}`, `#/demo/{name}`)
 - [ ] App links with query param props (validated via zod)
@@ -185,7 +185,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Share dialog (copy URL, QR code)
 
 ### Customization & Theming
-- **ADR:** [ADR-015](decisions/015-customization-theming.md)
+- **ADR:** [ADR-015](adrs/015-customization-theming.md)
 - **Status:** Not started
 - [ ] Theme system (accent color, border radius, shadows, animation speed, font)
 - [ ] CSS custom properties for all theme values
@@ -198,7 +198,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P3 — Apps
 
 ### Port from React
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Media Preview app (image, video, audio, PDF)
 - [ ] Tic-Tac-Toe game (+ AI, stats, undo)
 - [ ] Profiler app (per-window performance overlay, FPS, render counts)
@@ -209,27 +209,27 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Style Guide (component showcase)
 
 ### Games
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Game Hub (library browser, play time tracking, categories, saves)
 - [ ] Nonogram (b&w + color, editor, hints, puzzle packs)
 - [ ] Other puzzles: Kakuro, Maze, Word Search, Nurikabe, Futoshiki
 
 ### Productivity
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Quick Notes (quno) — chronological notes, markdown, tags, search
 - [ ] Speed Reader — RSVP, adjustable WPM, library
 - [ ] Markdown-to-PDF converter — live preview, templates, TOC
 - [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
 
 ### Media & Entertainment
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Series Tracker — TMDB API, episode tracking, watchlist
 - [ ] Image Editor — crop, resize, rotate, filters
 - [ ] Video Tools — trimmer, merger, audio extraction (ffmpeg.wasm)
 - [ ] Gifski — video-to-GIF via WASM
 
 ### Utilities
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim
 - [ ] RNG Tools — dice, coin, shuffler, password generator
 - [ ] QR Code Scanner — camera + image file scanning
@@ -237,7 +237,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] P2P File Transfer — WebRTC, room codes, QR share
 
 ### static-utils Ports
-- **ADR:** [ADR-009](decisions/009-app-ecosystem.md)
+- **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Image Combiner
 - [ ] PDF Generator
 - [ ] Video Trimmer/Cropper
@@ -286,7 +286,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Screen reader testing
 
 ### Mobile Support
-- **ADR:** [ADR-016](decisions/016-mobile-support.md)
+- **ADR:** [ADR-016](adrs/016-mobile-support.md)
 - **Brainstorm:** [2026-02-01 Mobile Support](brainstorm/2026-02-01_mobile-support.md)
 - **Status:** Not started
 - [ ] Platform detection utility (runtime-once, `kernel.platform`)

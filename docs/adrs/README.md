@@ -44,4 +44,4 @@ What are the implications of this decision?
 ## Relationship to Brainstorm Logs
 
 - **Brainstorm logs** (`/docs/brainstorm/`) = Discussion, exploration, back-and-forth
-- **ADRs** (`/docs/decisions/`) = Final decisions, concise reference
+- **ADRs** (`/docs/adrs/`) = Final decisions, concise reference
