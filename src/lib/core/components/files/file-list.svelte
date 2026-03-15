@@ -41,14 +41,13 @@
       {#if item.kind === "file"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
-          ondblclick={() => {}}
           onkeydown={(e) => {
-            if (e.key === "Delete") {
+            if (e.key === "Delete" && confirm(`Delete "${item.name}"?`)) {
               handler.delete_entry(item.name);
             }
           }}
         >
-          <FileRow handle={item.handle as FileSystemFileHandle} />
+          <FileRow {item} />
         </button>
       {:else if item.kind === "directory"}
         <button
@@ -57,7 +56,7 @@
             onnavigate(await handler.open_directory(item.name, item.handle as FileSystemDirectoryHandle));
           }}
           onkeydown={(e) => {
-            if (e.key === "Delete") {
+            if (e.key === "Delete" && confirm(`Delete "${item.name}" and all its contents?`)) {
               handler.delete_entry(item.name, { recursive: true });
             }
           }}

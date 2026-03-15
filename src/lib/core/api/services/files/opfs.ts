@@ -85,7 +85,9 @@ export async function create_file(
       await parent.getFileHandle(name);
       throw new Error(`File "${name}" already exists`);
     } catch (err) {
-      if (err instanceof Error && err.message.includes("already exists")) {
+      if (err instanceof DOMException && err.name === "NotFoundError") {
+        // File doesn't exist - continue with creation
+      } else {
         throw err;
       }
     }
@@ -179,8 +181,7 @@ export async function move_file(
   new_name?: string
 ): Promise<void> {
   await copy_file(source, target_dir, new_name);
-  const file = await source.getFile();
-  await delete_entry(source_parent, file.name);
+  await delete_entry(source_parent, source.name);
 }
 
 export async function upload_files(
@@ -208,9 +209,7 @@ export async function upload_files(
         const uploaded: File[] = [];
         for (const file of Array.from(files)) {
           const file_handle = await target_dir.getFileHandle(file.name, { create: true });
-          const writable = await file_handle.createWritable();
-          await writable.write(file);
-          await writable.close();
+          await write_file(file_handle, file);
           uploaded.push(file);
         }
         resolve(uploaded);

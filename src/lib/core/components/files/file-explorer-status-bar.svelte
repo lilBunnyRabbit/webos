@@ -10,8 +10,16 @@
 
   let { handler, files }: Props = $props();
 
-  const folder_count = $derived(handler.items.filter((i) => i.kind === "directory").length);
-  const file_count = $derived(handler.items.filter((i) => i.kind === "file").length);
+  const counts = $derived(
+    handler.items.reduce(
+      (acc, i) => {
+        if (i.kind === "directory") acc.folders++;
+        else acc.files++;
+        return acc;
+      },
+      { folders: 0, files: 0 }
+    )
+  );
 
   let storage = $state<{ usage: number; quota: number } | null>(null);
 
@@ -31,9 +39,9 @@
   <div class="flex items-center justify-between">
     <span>
       {handler.items.length} items
-      {#if folder_count > 0 || file_count > 0}
+      {#if counts.folders > 0 || counts.files > 0}
         <span>
-          ({#if folder_count > 0}{folder_count} folder{folder_count !== 1 ? "s" : ""}{#if file_count > 0}, {/if}{/if}{#if file_count > 0}{file_count} file{file_count !== 1 ? "s" : ""}{/if})
+          ({#if counts.folders > 0}{counts.folders} folder{counts.folders !== 1 ? "s" : ""}{#if counts.files > 0}, {/if}{/if}{#if counts.files > 0}{counts.files} file{counts.files !== 1 ? "s" : ""}{/if})
         </span>
       {/if}
     </span>

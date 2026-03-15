@@ -1,24 +1,16 @@
 <script lang="ts">
+  import type { FileSystemFileItem } from "$lib/core/api/services/files";
   import { format_bytes } from "$lib/core/utils";
   import FileIconHandler from "./file-icon.svelte";
 
   interface Props {
-    handle: FileSystemFileHandle;
+    item: FileSystemFileItem;
   }
 
-  let { handle: entry }: Props = $props();
-
-  const file_promise = $derived(entry.getFile());
+  let { item }: Props = $props();
 </script>
 
-{#await file_promise}
-  <FileIconHandler name={entry.name} kind="file" weight="bold" className="fill-primary" />
-  <div class="text-left truncate">{entry.name}</div>
-  <div class="font-mono text-foreground/50">-</div>
-  <div class="font-mono text-foreground/50">-</div>
-{:then file}
-  <FileIconHandler name={entry.name} mime_type={file.type} kind="file" weight="bold" className="fill-primary" />
-  <div class="text-left truncate">{entry.name}</div>
-  <div class="font-mono text-sm">{format_bytes(file.size)}</div>
-  <div class="font-mono text-sm">{file.lastModified ? new Date(file.lastModified).toLocaleDateString() : "-"}</div>
-{/await}
+<FileIconHandler name={item.name} mime_type={item.type} kind="file" weight="bold" className="fill-primary" />
+<div class="text-left truncate">{item.name}</div>
+<div class="font-mono text-sm">{item.size != null ? format_bytes(item.size) : "-"}</div>
+<div class="font-mono text-sm">{item.last_modified ? new Date(item.last_modified).toLocaleDateString() : "-"}</div>

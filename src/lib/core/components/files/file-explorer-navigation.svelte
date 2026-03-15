@@ -57,7 +57,7 @@
   </div>
 
   <nav class="flex items-center gap-1 px-2 text-sm bg-background h-6 rounded-sm">
-    {#each path_stack as dir, idx (idx)}
+    {#each path_stack as dir, idx (dir.path)}
       <button class="hover:underline hover:bg-foreground/10" onclick={() => onnavigatetoindex(idx)}>
         {dir.name}
       </button>

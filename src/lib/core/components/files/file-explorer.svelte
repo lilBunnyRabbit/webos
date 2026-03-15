@@ -58,4 +58,9 @@
       <FileExplorerStatusBar {handler} {files} />
     </div>
   {/if}
+{:catch error}
+  <div class="p-4 w-full h-full flex flex-col items-center justify-center text-red-400">
+    <div>Failed to load filesystem</div>
+    <div class="text-xs mt-1 text-foreground/50">{error?.message ?? "Unknown error"}</div>
+  </div>
 {/await}

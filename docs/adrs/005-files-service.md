@@ -1,6 +1,6 @@
 # ADR-005: Files Service API Design
 **Date:** 2026-01-27
-**Status:** Accepted (implemented 2026-01-27)
+**Status:** Accepted (implemented 2026-01-27, revised 2026-02-07)
 
 ## Context
 
@@ -30,42 +30,24 @@ The React version had two API iterations:
 ```
 opfs.ts (pure functions)      → Stateless OPFS operations, testable, no Svelte
     ↑
-DirectoryHandler (reactive)   → Shared reactive state per directory, uses $state
+DirectoryHandler (reactive)   → Reactive state per directory, uses $state
     ↑
-FilesService (registry)       → Caches DirectoryHandlers by path, provides direct ops
+FilesService (factory)        → Creates DirectoryHandlers, provides direct ops
 ```
 
 ### 2. Path Identity System
 
-OPFS handles have no stable identity (`===` fails, `isSameEntry()` is async). Instead, use **paths** as canonical identity.
+OPFS handles have no stable identity (`===` fails, `isSameEntry()` is async). Instead, use **paths** for identity and navigation.
 
 Path has two representations:
 - **`segments: string[]`** (primary) — e.g. `[]` for root, `["documents", "photos"]` for nested
-- **`path: string`** (derived) — `"/" + segments.join("/")` — used as cache key
+- **`path: string`** (derived) — `"/" + segments.join("/")` — used for display and keying
 
-The array form is primary because it's more useful for breadcrumbs, navigation, and building child paths. The string form is derived for Map key lookups.
+The array form is primary because it's more useful for breadcrumbs, navigation, and building child paths.
 
-```typescript
-// Service maintains path-string → handler cache
-private _directories = new SvelteMap<string, DirectoryHandler>();
+### 3. DirectoryHandler (No Cross-Instance Caching)
 
-// Accepts segments array, derives string key internally
-directory(segments: string[], handle: FileSystemDirectoryHandle): DirectoryHandler {
-  const key = "/" + segments.join("/");
-  let handler = this._directories.get(key);
-  if (!handler) {
-    handler = new DirectoryHandler(this, handle, segments);
-    this._directories.set(key, handler);
-  }
-  return handler;
-}
-```
-
-This replaces the current `isSameEntry()` array scan with a sync Map lookup.
-
-### 3. Shared Reactive DirectoryHandler
-
-DirectoryHandler is a **shared reactive object** — multiple file explorer windows viewing the same directory get the same instance. Changes in one are immediately visible in the other via Svelte 5 `$state` reactivity.
+DirectoryHandler is a **reactive object** with `$state` items that auto-loads on construction.
 
 ```typescript
 class DirectoryHandler {
@@ -89,16 +71,12 @@ class DirectoryHandler {
   async delete_entry(name: string, options?: { recursive?: boolean }): Promise<void>;
   async upload_files(options?: UploadOptions): Promise<File[]>;
 
-  // Navigate to child — returns shared handler from service cache
-  // Builds child segments: [...this.segments, name]
-  open_directory(name: string, handle: FileSystemDirectoryHandle): DirectoryHandler;
+  // Navigate to child — creates new handler via service
+  async open_directory(name: string, handle: FileSystemDirectoryHandle): Promise<DirectoryHandler>;
 }
 ```
 
-**Cross-instance sync flow:**
-1. Explorer A and Explorer B both call `files.directory(["documents"], handle)` → same instance
-2. Explorer A calls `handler.create_file("notes.txt")` → OPFS write → `reload()` → `items` updates
-3. Explorer B is bound to the same `handler.items` → UI updates automatically
+**Note on cross-instance sync:** An earlier design cached DirectoryHandlers in a `SvelteMap<string, DirectoryHandler>` keyed by path, so two file explorers viewing the same directory would share state. This was removed because renaming/moving directories invalidates path-based keys, leading to stale cache entries. Each file explorer now gets its own handler instances. Cross-instance sync can be revisited later via event-based invalidation if needed.
 
 ### 4. Pure OPFS Functions (`opfs.ts`)
 
@@ -148,17 +126,15 @@ function clear_opfs(): Promise<void>
 
 Thin layer that:
 - Caches root handle (with `navigator.storage.persist()` on first access)
-- Maintains `SvelteMap<string, DirectoryHandler>` for shared handler instances
+- Creates DirectoryHandler instances via `directory(segments, handle?)` (async, defaults to root)
 - Exposes direct OPFS operations (resolving `null` handle → root) for apps that don't need DirectoryHandler
-- Exposes `directory(path, handle)` for shared reactive access
 
 ```typescript
 class FilesService implements IFilesService {
   private _root: Promise<FileSystemDirectoryHandle> | null = null;
-  private _directories = new SvelteMap<string, DirectoryHandler>();
 
   async get_root(): Promise<FileSystemDirectoryHandle>;
-  directory(segments: string[], handle: FileSystemDirectoryHandle): DirectoryHandler;
+  async directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler>;
 
   // Direct operations (delegate to opfs.ts, null → root)
   async list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]>;
@@ -227,7 +203,7 @@ Call `navigator.storage.persist()` on first `get_root()` call to request persist
 ### 9. File Explorer Updates
 
 Navigation state lives in the file explorer component (not the service):
-- `handler: DirectoryHandler` — current directory (shared reactive object)
+- `handler: DirectoryHandler` — current directory
 - `path_stack: DirectoryHandler[]` — breadcrumb trail for back navigation
 - `search: string` — filter term
 
@@ -239,28 +215,28 @@ Navigation functions:
 New UI elements:
 - **Status bar** — Item count + storage usage via `get_storage_estimate()`
 - **Create folder button** — Prompts for name, calls `handler.create_directory()`
-- **Upload button** — Calls `handler.upload_files()`
-- **File open action** — Double-click files to open in appropriate app
+- **Upload button** — Extracted component, calls `handler.upload_files()`
+- **Delete confirmation** — `confirm()` dialog before destructive operations
 
 ## Alternatives Considered
 
 ### Remove DirectoryHandler entirely (stateless service)
-Rejected — Without shared reactive state, two file explorers viewing the same directory wouldn't stay in sync. Would need a separate reactive invalidation layer (version counters + effects), which is more complex than shared instances.
+Rejected — DirectoryHandler provides a convenient reactive wrapper with `$state` items. Without it, every component would need to manage loading state and item lists manually.
 
 ### Keep current `isSameEntry()` cache scan
-Rejected — O(n) async comparison is slow and awkward. Path strings provide O(1) sync lookup via Map.
+Rejected — O(n) async comparison is slow and awkward. Path segments provide identity without async overhead.
 
 ### Path-string API everywhere (no handles)
-Rejected — OPFS API is handle-based. Converting between paths and handles on every call adds overhead. Handles are the primary identifier for OPFS operations; paths are used only for caching/identity.
+Rejected — OPFS API is handle-based. Converting between paths and handles on every call adds overhead. Handles are the primary identifier for OPFS operations; paths are used for identity and display.
 
-### Full reactive cache (service caches items per directory)
-Considered but DirectoryHandler already does this. The handler IS the reactive cache — it holds `$state` items and exposes `reload()`. No need for a separate cache layer.
+### Cache DirectoryHandlers by path in SvelteMap
+Initially implemented but removed — path-based cache keys become stale when directories are renamed or moved. The complexity of cache invalidation outweighed the benefit of cross-instance sync. Can be revisited with event-based invalidation if multiple-explorer sync becomes a priority.
 
 ## Consequences
 
 - **Breaking change** — DirectoryHandler API changes, file explorer rewrite needed
-- **Cross-instance sync** — Multiple explorers on same directory share state automatically
+- **No cross-instance sync** — Each file explorer gets independent handler instances (trade-off for correctness over stale cache)
 - **Testable** — Pure functions in `opfs.ts` can be unit tested without Svelte
 - **Composable** — Apps can use service directly (handle-based) or via DirectoryHandler (reactive)
-- **Complete** — Feature parity with React version
-- **Path dependency** — Components must track and pass path strings; path must match actual filesystem hierarchy
+- **Complete** — Feature parity with React version (except file open action, deferred)
+- **Auto-loading** — DirectoryHandler loads items on construction, callers don't need to call `reload()`
