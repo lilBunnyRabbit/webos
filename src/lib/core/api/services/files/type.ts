@@ -35,7 +35,7 @@ export interface UploadOptions {
 
 export interface FilesService extends IService {
   get_root(): Promise<FileSystemDirectoryHandle>;
-  directory(segments: string[], handle: FileSystemDirectoryHandle): DirectoryHandler;
+  directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler>;
 
   list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]>;
   create_directory(handle: FileSystemDirectoryHandle | null, name: string): Promise<FileSystemDirectoryHandle>;

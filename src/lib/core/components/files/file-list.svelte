@@ -5,11 +5,11 @@
 
   interface Props {
     handler: DirectoryHandler;
-    on_navigate: (handler: DirectoryHandler) => void;
+    onnavigate: (handler: DirectoryHandler) => void;
     search: string;
   }
 
-  let { handler, search = $bindable(), on_navigate }: Props = $props();
+  let { handler, search = $bindable(), onnavigate }: Props = $props();
 
   const filtered_items = $derived(
     handler.items.filter((item) => {
@@ -53,8 +53,8 @@
       {:else if item.kind === "directory"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
-          ondblclick={() => {
-            on_navigate(handler.open_directory(item.name, item.handle as FileSystemDirectoryHandle));
+          ondblclick={async () => {
+            onnavigate(await handler.open_directory(item.name, item.handle as FileSystemDirectoryHandle));
           }}
           onkeydown={(e) => {
             if (e.key === "Delete") {

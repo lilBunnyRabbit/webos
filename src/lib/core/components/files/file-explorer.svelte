@@ -10,20 +10,16 @@
   let handler: DirectoryHandler | null = $state(null);
   let path_stack: DirectoryHandler[] = $state([]);
   let search = $state("");
-  let initializing = $state(true);
 
-  $effect(() => {
-    files.get_root().then((root) => {
-      handler = files.directory([], root);
-      handler.reload();
-      initializing = false;
-    });
-  });
+  async function init() {
+    handler = await files.directory([]);
+  }
+
+  const init_promise = init();
 
   function navigate_to(dir_handler: DirectoryHandler) {
     if (handler) path_stack = [...path_stack, handler];
     handler = dir_handler;
-    handler.reload();
   }
 
   function navigate_back() {
@@ -38,26 +34,28 @@
   }
 </script>
 
-{#if initializing || !handler}
+{#await init_promise}
   <div class="p-4 w-full h-full flex flex-col items-center justify-center opacity-0 animate-pulse">
     <div>Loading directory...</div>
   </div>
-{:else}
-  <div class="grid grid-cols-1 grid-rows-[auto_1fr_auto] h-full overflow-hidden">
-    <FileExplorerNavigation
-      {handler}
-      {path_stack}
-      bind:search
-      on_navigate_back={navigate_back}
-      on_navigate_to_index={navigate_to_index}
-    />
+{:then}
+  {#if handler}
+    <div class="grid grid-cols-1 grid-rows-[auto_1fr_auto] h-full overflow-hidden">
+      <FileExplorerNavigation
+        {handler}
+        {path_stack}
+        bind:search
+        onnavigateback={navigate_back}
+        onnavigatetoindex={navigate_to_index}
+      />
 
-    <FileList
-      {handler}
-      bind:search
-      on_navigate={navigate_to}
-    />
+      <FileList
+        {handler}
+        bind:search
+        onnavigate={navigate_to}
+      />
 
-    <FileExplorerStatusBar {handler} {files} />
-  </div>
-{/if}
+      <FileExplorerStatusBar {handler} {files} />
+    </div>
+  {/if}
+{/await}

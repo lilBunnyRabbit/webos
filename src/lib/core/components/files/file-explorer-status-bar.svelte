@@ -15,13 +15,14 @@
 
   let storage = $state<{ usage: number; quota: number } | null>(null);
 
+  async function fetch_storage() {
+    storage = await files.get_storage_estimate();
+  }
+
+  fetch_storage();
+
   $effect(() => {
-    files.get_storage_estimate().then((s) => (storage = s));
-
-    const interval = setInterval(() => {
-      files.get_storage_estimate().then((s) => (storage = s));
-    }, 30_000);
-
+    const interval = setInterval(fetch_storage, 30_000);
     return () => clearInterval(interval);
   });
 </script>

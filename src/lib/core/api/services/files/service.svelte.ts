@@ -1,4 +1,3 @@
-import { SvelteMap } from "svelte/reactivity";
 import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
 import * as opfs from "./opfs";
 
@@ -11,7 +10,6 @@ export class FilesService implements IFilesService {
   }
 
   private _root: Promise<FileSystemDirectoryHandle> | null = null;
-  private _directories = new SvelteMap<string, DirectoryHandler>();
 
   async get_root(): Promise<FileSystemDirectoryHandle> {
     if (!this._root) {
@@ -34,14 +32,8 @@ export class FilesService implements IFilesService {
     return handle ?? (await this.get_root());
   }
 
-  directory(segments: string[], handle: FileSystemDirectoryHandle): DirectoryHandler {
-    const key = "/" + segments.join("/");
-    let handler = this._directories.get(key);
-    if (!handler) {
-      handler = new DirectoryHandler(this, handle, segments);
-      this._directories.set(key, handler);
-    }
-    return handler;
+  async directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler> {
+    return new DirectoryHandler(this, await this.resolve(handle ?? null), segments);
   }
 
   async list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]> {
@@ -115,6 +107,7 @@ export class DirectoryHandler {
     this.handle = handle;
     this.segments = segments;
     this.path = "/" + segments.join("/");
+    this.reload();
   }
 
   get name(): string {
@@ -159,7 +152,7 @@ export class DirectoryHandler {
     return result;
   }
 
-  open_directory(name: string, handle: FileSystemDirectoryHandle): DirectoryHandler {
+  async open_directory(name: string, handle: FileSystemDirectoryHandle): Promise<DirectoryHandler> {
     return this.service.directory([...this.segments, name], handle);
   }
 }

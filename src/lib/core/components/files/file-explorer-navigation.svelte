@@ -6,21 +6,20 @@
     ArrowLeft as ArrowLeftIcon,
     ArrowClockwise as ArrowClockwiseIcon,
     FolderPlus as FolderPlusIcon,
-    UploadSimple as UploadSimpleIcon,
   } from "phosphor-svelte";
+  import FileUploadButton from "./file-upload-button.svelte";
 
   interface Props {
     handler: DirectoryHandler;
     path_stack: DirectoryHandler[];
-    on_navigate_back: () => void;
-    on_navigate_to_index: (index: number) => void;
+    onnavigateback: () => void;
+    onnavigatetoindex: (index: number) => void;
     search: string;
   }
 
-  let { handler, path_stack, on_navigate_back, on_navigate_to_index, search = $bindable() }: Props = $props();
+  let { handler, path_stack, onnavigateback, onnavigatetoindex, search = $bindable() }: Props = $props();
 
   let creating_folder = $state(false);
-  let uploading = $state(false);
 
   async function handle_create_folder() {
     const name = prompt("Enter folder name:");
@@ -33,15 +32,6 @@
       creating_folder = false;
     }
   }
-
-  async function handle_upload() {
-    uploading = true;
-    try {
-      await handler.upload_files();
-    } finally {
-      uploading = false;
-    }
-  }
 </script>
 
 <div
@@ -52,7 +42,7 @@
       class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
       title="Go back"
       disabled={path_stack.length === 0}
-      onclick={on_navigate_back}
+      onclick={onnavigateback}
     >
       <ArrowLeftIcon className="size-4" weight="bold" />
     </button>
@@ -68,7 +58,7 @@
 
   <nav class="flex items-center gap-1 px-2 text-sm bg-background h-6 rounded-sm">
     {#each path_stack as dir, idx (idx)}
-      <button class="hover:underline hover:bg-foreground/10" onclick={() => on_navigate_to_index(idx)}>
+      <button class="hover:underline hover:bg-foreground/10" onclick={() => onnavigatetoindex(idx)}>
         {dir.name}
       </button>
       <span class="mx-0.5 pointer-events-none">/</span>
@@ -107,13 +97,6 @@
       <FolderPlusIcon className="size-4" weight="bold" />
     </button>
 
-    <button
-      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-      title="Upload files"
-      disabled={uploading}
-      onclick={handle_upload}
-    >
-      <UploadSimpleIcon className="size-4" weight="bold" />
-    </button>
+    <FileUploadButton {handler} />
   </div>
 </div>
