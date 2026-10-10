@@ -2,16 +2,27 @@ import type { Component } from "svelte";
 import type { ZodType } from "zod";
 import type { IService } from "../../type";
 import type { WindowId, WindowOptions } from "../windows/type";
+import type { Position } from "$lib/core/utils/type";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
   /** Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). */
   launch(id: AppId, props?: unknown): WindowId;
+  /**
+   * Opens a file in the app associated with it (ADR-018). Resolves to the new window,
+   * or `null` when the file is missing or no app matches (both notify).
+   */
+  open(path: string, options?: OpenOptions): Promise<WindowId | null>;
   get(id: AppId): AppManifest | undefined;
   list(): IterableIterator<[AppId, AppManifest]>;
 }
 
 export type AppId = string;
+
+export interface OpenOptions {
+  /** Where the user clicked; the "Open with" chooser anchors here (ADR-018). */
+  anchor?: Position;
+}
 export type AppCategory = "system" | "user" | `custom-${string}`;
 export type AppProps = Record<string, unknown>;
 
@@ -28,6 +39,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   license?: string;
   repository?: string;
   defaults?: WindowOptions;
+  /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */
+  associations?: string[];
   /** Without a schema the app never receives props. */
   props?: ZodType<TProps>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */

@@ -261,14 +261,14 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **ADR:** [ADR-018](adrs/018-file-associations.md), [ADR-019](adrs/019-system-dialogs.md)
 - **Brainstorm:** [2026-10-11 File Associations](brainstorm/2026-10-11_file-associations.md)
 - **Status:** In progress
-- [ ] `associations` manifest field (extensions + MIME patterns)
+- [x] `associations` manifest field (extensions + MIME patterns)
 - [x] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
-- [ ] `AppsService.open(path, { anchor })` with specificity tiers
+- [x] `AppsService.open(path, { anchor })` with specificity tiers (ties take the first app until the chooser exists)
 - [ ] DialogsService + dialogs host
 - [ ] "Open with" dropdown with "Always use" checkbox
 - [ ] `file_defaults` in persisted settings
 - [ ] File Explorer: double-click / Enter on files
-- [x] Text Viewer app (no associations until step 3)
+- [x] Text Viewer app (`text/*` + common text extensions)
 - [ ] Media Preview port (image, video, audio)
 
 ---

@@ -35,7 +35,7 @@ export function register_default_services(kernel: Kernel) {
 
   kernel.register("apps", {
     instance: AppsService,
-    dependencies: ["windows", "notifications"],
+    dependencies: ["windows", "notifications", "files"],
   });
 
   kernel.register("desktop", {
