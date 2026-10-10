@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: none · ADR: [ADR-004](../../adrs/004-version-update-system.md) · Source: `src/lib/core/api/services/version/`, `vite-plugin-version.ts`
+Key `version` · Depends on: none · ADR: [ADR-004](../../adrs/004-version-update-system.md) · Source: `src/lib/core/api/services/version/`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

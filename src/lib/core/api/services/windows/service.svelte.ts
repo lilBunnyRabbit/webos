@@ -8,7 +8,8 @@ import type { AppInstance } from "../apps/type";
 
 export class WindowsService implements IWindowsService {
   name = "WindowsService";
-  description = "WindowsService";
+  description = "Window lifecycle, geometry and z-order";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return Object.entries(this.index)

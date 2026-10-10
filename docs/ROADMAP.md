@@ -42,6 +42,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **Status:** Done, except swap (2026-10-10)
 - [x] `init()` / `destroy()` on services (side effects moved out of constructors)
 - [x] Kernel bootstrap sequence with lifecycle (dependency order, awaited init, `pagehide` shutdown)
+- [x] Service inspectors + Kernel app redesign: per-service basic/detailed views, expand all, persisted ([ADR-020](adrs/020-service-inspectors.md))
 - [x] Settings persisted to `localStorage["webos.settings"]` (versioned)
 - [ ] `get_state()` / `set_state()` + `kernel.swap()`: deferred until session persistence defines the state shape
 

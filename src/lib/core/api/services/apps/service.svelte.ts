@@ -7,7 +7,8 @@ import { apps } from "$lib/apps";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
-  description = "AppsService";
+  description = "App registry, launching and file associations";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return `AppsService: ${this.registry.size} apps registered`;

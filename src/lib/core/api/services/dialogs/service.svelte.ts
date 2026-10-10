@@ -6,7 +6,8 @@ import type { DialogEntry, DialogOptions, DialogProps, DialogsService as IDialog
 
 export class DialogsService implements IDialogsService {
   name = "DialogsService";
-  description = "DialogsService";
+  description = "System dialogs above windows";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return `DialogsService: ${this.stack.length} open`;

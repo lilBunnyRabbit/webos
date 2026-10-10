@@ -1,6 +1,6 @@
 # SettingsService
 
-Key `settings` · Depends on: none · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (persistence), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`) · Source: `src/lib/core/api/services/settings/`
+Key `settings` · Depends on: none · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (persistence), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
 
 | File | Contents |
 |------|----------|

@@ -1,6 +1,6 @@
 # WindowsService
 
-Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (accepted, mostly unbuilt), [ADR-016](../../adrs/016-mobile-support.md) · Source: `src/lib/core/api/services/windows/`
+Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (accepted, mostly unbuilt), [ADR-016](../../adrs/016-mobile-support.md) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

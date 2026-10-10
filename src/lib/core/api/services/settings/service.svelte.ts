@@ -5,7 +5,8 @@ import { SETTINGS_VERSION, load_settings, save_settings } from "./persistence";
 
 export class SettingsService implements ISettingsService {
   name = "SettingsService";
-  description = "SettingsService";
+  description = "Theme, taskbar and file defaults (persisted)";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return `SettingsService: taskbar ${this.taskbar.position}, theme ${JSON.stringify(this.theme)}`;

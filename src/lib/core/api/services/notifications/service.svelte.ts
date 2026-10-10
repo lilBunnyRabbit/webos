@@ -13,7 +13,8 @@ const DEFAULT_DURATION = 5000;
 
 export class NotificationsService implements INotificationsService {
   name = "NotificationsService";
-  description = "NotificationsService";
+  description = "Toasts and notification history";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return `NotificationsService: ${this.all.length} notifications, ${this.unread_count} unread, ${this.toasts.length} toasts`;

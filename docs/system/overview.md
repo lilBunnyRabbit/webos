@@ -78,7 +78,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `src/lib/core/api/kernel/` | `Kernel` class and `init.ts` (service registration) |
 | `src/lib/core/api/services/{name}/` | One folder per service: `type.ts` (public interface), `service.svelte.ts` (class), pure helpers |
 | `src/lib/core/contexts/app/` | `get_app_context()`, window handle, storage handle (ADR-003) |
-| `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, desktop, window, window-manager, taskbar, files, dialogs, notifications, brand |
+| `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, desktop, window, window-manager, taskbar, files, dialogs, notifications, brand, inspector (building blocks for service inspectors) |
 | `src/lib/core/utils/` | `cn`, `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types |
 | `src/lib/apps/index.ts` | Eager glob of `./system/*/index.ts` and `./user/*/index.ts` → `apps: AppManifest[]` |
 | `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-viewer, media-preview, pdf-viewer ([system-apps.md](system-apps.md)) |

@@ -10,7 +10,8 @@ TODO:
 
 export class DesktopService implements IDesktopService {
   name = "DesktopService";
-  description = "DesktopService";
+  description = "Desktop icon grid";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return `DesktopService: ${this.grid.flat().filter(Boolean).length} items`;

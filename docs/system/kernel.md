@@ -14,7 +14,13 @@ interface IService {
   description: string;
   init?(): Promise<void> | void;
   destroy?(): void;       // sync on purpose: pagehide never awaits
-  to_string(): string;
+  to_string(): string;    // debug text; the Kernel app's fallback when there's no inspector
+  inspector?: () => Promise<{ default: Component<InspectorProps<never>> }>;  // ADR-020
+}
+
+interface InspectorProps<T extends IService = IService> {
+  service: T;
+  detailed: boolean;      // basic view always; true adds the detailed view
 }
 
 interface ServiceDescriptor<T extends IService> {
@@ -22,6 +28,8 @@ interface ServiceDescriptor<T extends IService> {
   dependencies?: string[];               // registry keys
 }
 ```
+
+**Inspectors (ADR-020).** Every service ships `services/{key}/inspector.svelte`, wired as `inspector = () => import("./inspector.svelte")`. It's lazy, so inspector code is split out of boot and loads when the Kernel app opens. An inspector receives the concrete service and reads only its public API. It always renders the basic view (a row of `InspectorStat`s) and adds tables or other detail when `detailed` is true. Shared building blocks live in `src/lib/core/components/inspector/` (`InspectorStat`, `InspectorStats`, `InspectorTable`). The props are typed `InspectorProps<never>` so that a component typed for one service fits the shared field. The Kernel app casts once when rendering, which is safe because each service ships its own inspector.
 
 There's a `// TODO: kernel to interface` in `type.ts`. `ServiceDescriptor` references the concrete `Kernel` class.
 

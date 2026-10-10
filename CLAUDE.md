@@ -35,6 +35,8 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
 | `desktop` | DesktopService | Icon grid | apps |
 
+Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
+
 Planned services each have an ADR: shell (007), shortcuts (012), tasks (013). Add a service only when that roadmap item is picked up.
 
 ```ts

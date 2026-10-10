@@ -7,7 +7,8 @@ const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
 
 export class VersionService implements IVersionService {
   name = "VersionService";
-  description = "VersionService";
+  description = "Build info and update detection";
+  inspector = () => import("./inspector.svelte");
 
   public info = $state<VersionInfo>(__VERSION_INFO__);
   public update_available = $state<VersionInfo | null>(null);

@@ -1,6 +1,6 @@
 # FilesService
 
-Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/`
+Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

@@ -53,6 +53,7 @@ What are the implications of this decision?
 | [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Accepted |
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
 | [019](./019-system-dialogs.md) | System Dialogs Service | 2026-10-11 | Implemented |
+| [020](./020-service-inspectors.md) | Service Inspectors | 2026-10-11 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

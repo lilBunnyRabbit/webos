@@ -1,6 +1,6 @@
 # DialogsService
 
-Key `dialogs` · Depends on: `windows` · ADR: [019](../../adrs/019-system-dialogs.md) · Source: `src/lib/core/api/services/dialogs/`, `src/lib/core/components/dialogs/`
+Key `dialogs` · Depends on: `windows` · ADR: [019](../../adrs/019-system-dialogs.md) · Source: `src/lib/core/api/services/dialogs/`, `src/lib/core/components/dialogs/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

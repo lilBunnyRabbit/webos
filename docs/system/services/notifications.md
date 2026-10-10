@@ -1,6 +1,6 @@
 # NotificationsService
 
-Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/`, `src/lib/core/components/notifications/toast-area.svelte`
+Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/`, `src/lib/core/components/notifications/toast-area.svelte` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

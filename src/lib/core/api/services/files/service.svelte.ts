@@ -4,7 +4,8 @@ import { split_path } from "./path";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
-  description = "FilesService";
+  description = "OPFS file system";
+  inspector = () => import("./inspector.svelte");
 
   to_string(): string {
     return "FilesService";

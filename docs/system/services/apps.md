@@ -1,6 +1,6 @@
 # AppsService
 
-Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md) · Source: `src/lib/core/api/services/apps/`
+Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # DesktopService
 
-Key `desktop` · Depends on: `apps` (declared, never used) · ADR: [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built) · Source: `src/lib/core/api/services/desktop/`
+Key `desktop` · Depends on: `apps` (declared, never used) · ADR: [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built) · Source: `src/lib/core/api/services/desktop/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 

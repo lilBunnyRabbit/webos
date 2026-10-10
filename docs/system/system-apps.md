@@ -76,11 +76,41 @@ Every write goes straight to service state. Persistence is the settings service'
 
 `kernel` · `Brain` icon · source `system/kernel/`
 
-**Purpose.** A debug view of the service registry.
+**Purpose.** An inspector for the service registry (ADR-020).
 
-**Implementation.** Imports the `kernel` singleton directly and lists `kernel.services` (a `SvelteMap`): the count, then per service `name: description` and `to_string()` in a `<pre>`. It updates reactively as far as `to_string()` reads reactive state (for example, AppsService's registry size).
+**Implementation.** Imports the `kernel` singleton directly and lists `kernel.services` (a `SvelteMap`) in init order. Each service is a card:
 
-**Known gaps.** Read-only, with nothing beyond those three strings. Most services set `description` to the class name, so each line repeats it. No dependency graph, no init state. `author: "John Doe"` is a placeholder.
+- The header button shows a chevron, the class `name`, the registry key and the `description`.
+- The body lazily loads `service.inspector()` and renders it with `detailed` set to whether the card is open. A service without an inspector falls back to `to_string()` in a `<pre>`. A failed import shows an error line.
+
+**Interactions.**
+
+| Action | Effect |
+|--------|--------|
+| Click a card header | Toggles that card between basic and detailed. `aria-expanded`/`aria-controls` are set. |
+| Expand all / Collapse all | Opens every card, or closes all of them when all are open. |
+
+**Persistence.** The set of open cards is `storage.persisted("expanded", string[])` → localStorage `app.kernel.expanded` (ADR-003). It's shared live by every Kernel window in the tab. Another browser tab writes the same key, and the last one to write wins.
+
+**Inspectors** (basic → detailed):
+
+| Service | Basic | Detailed |
+|---------|-------|----------|
+| settings | preset name or "Custom", taskbar position, file-default count | token swatches with values; file-defaults table (extension → app, flags missing apps) |
+| windows | open count, focused app, container size | table by z-order: order, app, short id, bounds, flags and snap zone; focused row highlighted |
+| files | OPFS usage / quota, persistent or best effort | root listing: name, kind, size |
+| version | version, commit, update status | running vs available build, field by field |
+| notifications | total, unread, toasts | last 10: time, type, app, title (read ones dimmed) |
+| dialogs | open count | stack: id, component name, point, anchored or centered |
+| apps | registered, system / user, association count | registry table: icon, id, name, version, props schema, associations |
+| desktop | grid size, icon count, cell size | occupancy map of the grid; cell → app table |
+
+**Known gaps.**
+- Inspectors are read-only. Whether they get actions (check for updates, close a window) is still open.
+- The files inspector reads storage once per mount, because OPFS has no change events.
+- The desktop inspector only sees the visible grid, so icons that are hidden on a small screen don't show up.
+- No dependency graph view.
+- `author: "John Doe"` is a placeholder.
 
 ---
 
