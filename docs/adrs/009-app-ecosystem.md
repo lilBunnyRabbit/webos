@@ -9,7 +9,7 @@ WebOS needs a rich app ecosystem to demonstrate platform capabilities and provid
 
 ### Related ADRs
 
-- **ADR-001** (App Manifest) — All apps use `defineApp()`
+- **ADR-001** (App Manifest) — All apps use `define_app()`
 - **ADR-003** (App Context) — Apps access system via context
 - **ADR-008** (App Props Validation) — Apps with file input use zod schemas
 

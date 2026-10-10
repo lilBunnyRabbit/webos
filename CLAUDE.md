@@ -1,202 +1,136 @@
-# WebOS - Svelte 5 Web Operating System
+# WebOS — agent guide
 
-A browser-based desktop environment migrating from React to Svelte 5. Provides a platform for mini-features as standalone applications.
+A desktop environment in the browser, built with Svelte 5. It's a solo learning project, and the reasoning behind each technical decision matters more than the feature count.
 
-## Quick Start
+## Read first
+
+1. [docs/PRINCIPLES.md](docs/PRINCIPLES.md): why the project exists, how decisions get made, how the owner works. **Mandatory.**
+2. [docs/CONVENTIONS.md](docs/CONVENTIONS.md): where code goes, naming, Svelte and styling patterns.
+3. [docs/ROADMAP.md](docs/ROADMAP.md): what's done and what's next.
+4. [docs/adrs/README.md](docs/adrs/README.md): the ADR index, showing which are implemented and which are only accepted.
+
+Read the ADR for the area you touch before you touch it.
+
+## Quick start
+
 ```bash
 bun install
 bun dev
+bun run check   # must stay at 0 errors
 ```
 
-## Architecture
+## Architecture in one screen
 
-### Microkernel Pattern
-Central kernel manages service registry with dependency injection. Services are independent, domain-specific stores using Svelte 5 runes.
+The kernel is a service registry with dependency resolution. Services are domain classes using runes, registered in `src/lib/core/api/kernel/init.ts`. Its job is to let one implementation be swapped for another, for example mobile and desktop (ADR-016). It is not a security boundary.
 
-### Service Layer
-| Service | Purpose | Dependencies |
-|---------|---------|--------------|
-| SettingsService | Theme, taskbar position | none |
-| WindowsService | Window lifecycle, geometry, z-ordering, snapping | none |
-| FilesService | File system access (OPFS - sandboxed) | none |
-| AppsService | App registry, launching | WindowsService |
-| DesktopService | Desktop grid layout | AppsService |
+| Key | Service | Purpose | Depends on |
+|-----|---------|---------|------------|
+| `settings` | SettingsService | Theme tokens, taskbar position | none |
+| `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
+| `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
+| `version` | VersionService | `version.json` polling (ADR-004) | none |
+| `apps` | AppsService | Registry from glob, `launch()` | windows |
+| `desktop` | DesktopService | Icon grid | apps |
 
-### Planned Services (add when needed)
-- Shortcuts Service - Keyboard shortcuts with scopes
-- Notifications Service - Toasts + browser notifications
-- Tasks Service - Background task orchestration
-- Shell Service - Command palette with fuzzy search
-- Workers Service - Web Worker pool management
+Planned services each have an ADR: notifications (006), shell (007), shortcuts (012), tasks (013). Add a service only when that roadmap item is picked up.
 
-**Note:** Router is an app-level pattern, not a system service. IPC may not be needed (Svelte stores/context handle inter-component communication).
-
-### State Management
-- `$state` - Reactive state declarations
-- `$derived` - Computed values
-- `$effect` - Side effects
-- `SvelteMap`/`SvelteSet` - Reactive collections
-- `Flags<T>` - Set-based flag management (`/src/lib/core/utils/flags.ts`)
-- `Order<T>` - Z-index ordering (`/src/lib/core/utils/order.ts`)
-
-## Adding New Apps
-
-1. Create app folder in `/src/lib/apps/user/`
-2. Create `index.ts` manifest using `defineApp()`
-3. Create `.app.svelte` component
-4. App is auto-discovered (no registration needed)
-
-Example manifest:
-```typescript
-import { defineApp } from "$lib/core/api";
-import { CalculatorIcon } from "@lucide/svelte";
-
-export default defineApp({
-  id: "calculator",
-  name: "Calculator",
-  icon: CalculatorIcon,
-  version: "1.0.0",
-  defaults: {
-    constraints: { width: { min: 300 } }
-  },
-  component: () => import("./calculator.app.svelte"),
-});
-```
-
-## Key Directories
-
-### Core (`/src/lib/core/`)
-- `api/kernel/` - Kernel and service registry
-- `api/services/` - 5 service implementations
-- `components/` - Window, Desktop, Taskbar components
-- `utils/` - Flags, Order, cn(), type utilities
-
-### Apps (`/src/lib/apps/`)
-- `system/` - Kernel, Settings, File Explorer
-- `user/` - Example app
-
-### Documentation (`/docs/`)
-- `ROADMAP.md` - Prioritized implementation plan with progress tracking
-- `adrs/` - Architecture Decision Records
-- `brainstorm/` - Ongoing design discussions
-- `to-be-deleted/` - Old docs pending cleanup
-
-### React Reference (`/_old/`)
-Original implementation with more features to port:
-- Media Preview app (images, video, audio, PDF)
-- Tic-Tac-Toe game
-- Profiler app
-- Version management & update checking
-- Cascading window positioning
-- Date/time display on taskbar
-
-## Window System
-
-### Window Flags
-- `MINIMIZED` - Window hidden in taskbar
-- `MAXIMIZED` - Window fills container
-- `DEBUG` - Shows bounds overlay
-
-### Snap Zones
-8 zones: top, bottom, left, right, top-left, top-right, bottom-left, bottom-right
-
-### Key Files
-- `window.svelte` - Main window container
-- `window.handler.svelte.ts` - Drag/resize logic with snap detection
-- `window-titlebar.svelte` - Title bar with controls
-- `window-content.svelte` - Content area with zoom support
-
-## Capabilities (Planned)
-
-Format: `domain:action:scope`
-Examples:
-- `fs:read:/documents/**` - Read files in documents
-- `windows:open` - Open new windows
-- `notify:toast` - Show toast notifications
-
-## Code Style
-
-- **snake_case** for variables, functions, properties, and file names
-- **PascalCase** for types, interfaces, classes, and components
-
-## Key Patterns
-
-### Service Access
-```typescript
+```ts
 const windows = $derived(kernel.service<WindowsService>("windows"));
-const instance = $derived(windows.get(id)!);
+windows.focus(id); // always via the prefix, never destructured
 ```
 
-### Attachment Pattern (Svelte 5)
-```svelte
-{@attach geometry_handler.drag_attachment()}
-{@attach geometry_handler.resize_attachment(edge)}
-```
+Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS.
 
-### App Component Props
-```typescript
-let { id }: { id: WindowId } = $props();
-let { zoom = $bindable(), windowId }: Props = $props();
-```
+## Hard rules
 
-## Brainstorming Sessions
+- Runes only. No `any`. `interface` for object shapes.
+- `snake_case` for code identifiers, `PascalCase` for types and components, `kebab-case` for files. This is settled; don't relitigate it.
+- Const-object enums, not TS `enum`.
+- Access services through `kernel.service<T>("key")` in `$derived`. Never destructure a service.
+- Pure logic in `.ts`, reactive state in `.svelte.ts`, rendering in `.svelte`.
+- Follow the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/) (see CONVENTIONS, Styling & brand). Use theme tokens only. Tailwind's default palette is disabled, and no colour may be added.
+- Container queries in app UI, not viewport breakpoints.
+- No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
+- No backend. GitHub Pages is the host.
 
-All architecture discussions and design decisions are logged in `/docs/brainstorm/`.
+## Architecture is the owner's call, always
 
-### Logging Instructions (for Claude)
+**Never make an architectural decision yourself.** That's the most important rule in this repo. The decisions are the point of the project. An agent that decides one for the owner has taken the part they care about most.
 
-**IMPORTANT:** Always update logs during brainstorming sessions, not just at the end.
+### What counts as architectural
 
-When having design/architecture discussions:
+Anything that changes how the system is shaped and isn't already decided in an ADR or in CONVENTIONS:
 
-1. **Create a log file** at `/docs/brainstorm/{YYYY-MM-DD}_{topic}.md`
-2. **Update continuously** - Add new insights, decisions, and direction changes as they happen
-3. **Include these sections:**
-   - Date and participants
-   - Context (what prompted the discussion)
-   - Topics discussed (with decisions/conclusions)
-   - Key takeaways
-   - Action items
-   - Next session topics (if applicable)
+- a new service, or changing what a service owns or depends on
+- a new state layer: a store, context, global, or cache
+- a new abstraction, manager, registry, or event/pub-sub mechanism
+- changing a public API shape: a service interface, `define_app`, `IService`, app props, or the shape of a WindowHandle
+- a new dependency, or a new browser API that becomes part of the core
+- persistence: what gets stored, where, and in what format
+- deviating from an ADR, or from the pattern the repo already uses for the same thing
+- anything justified by "we'll need it later"
 
-4. **Naming convention:** Use lowercase, hyphens for spaces
-   - `2026-01-24_architecture-review.md`
-   - `2026-01-25_opfs-implementation.md`
-   - `2026-01-26_mobile-service-variants.md`
+### What doesn't count
 
-5. **Reference previous sessions** when relevant to maintain continuity
-6. **Multiple topics same day** - Create separate files per major topic
+Just do these:
 
-### Current Sessions
-- `2026-01-24_architecture-review.md` - Kernel pattern, service count, app store discussion
-- `2026-01-24_app-architecture.md` - App definition, metadata structure, glob loading
-- `2026-01-24_architecture-gaps-review.md` - Comprehensive gap analysis
-- `2026-01-24_lifecycles-persistence.md` - Service/app lifecycles, persistence patterns
+- implementing a component or feature inside an existing pattern
+- implementing what an ADR already specifies
+- bug fixes that don't change shape
+- renames, formatting, docs, tooling
 
-## Key Architectural Decisions
+### When in doubt
 
-From brainstorming sessions:
+Treat it as architectural.
 
-1. **Kernel pattern** - Kept for service implementation swapping (mobile/desktop variants)
-2. **OPFS for files** - Sandboxed virtual filesystem, no permission prompts
-3. **5 core services** - Windows, Apps, Desktop, Settings, Files (others added as needed)
-4. **In-app routing** - App-level pattern, not a system service
-5. **Capabilities** - Deferred until plugin/app store ecosystem exists
+### How to ask: grill the owner
 
-## Architecture Decision Records (ADR)
+Don't present a menu and wait for a click. Interrogate:
 
-When a decision is finalized but not immediately implemented, create an ADR in `/docs/adrs/`.
+1. **Stop before the first edit.** Do the investigation, then stop. Never ship a "temporary" version of the architecture to ask about later. Never "proceed under an assumption" on architecture.
+2. **State the problem and its root cause** in one or two sentences, with the evidence (file:line).
+3. **Lay out the real options**, lightest first. Show a code sketch of each and say what breaks with each one.
+4. **Recommend one, then attack it yourself.** Give the strongest argument against your own pick.
+5. **Grill.** Ask the hard questions the owner may not have considered:
+   - What breaks today without this?
+   - Which ADR does this contradict or extend?
+   - What happens with two windows of the same app open?
+   - What happens on mobile (ADR-016)?
+   - What happens when a service is swapped?
+   - How does this get persisted or restored?
+   - What's the smallest version that still answers the question?
+   Challenge assumptions in the request itself if they look wrong.
+6. **Record it.** Once the owner decides, log the discussion in `docs/brainstorm/`. If it's final, write an ADR. Only then implement.
 
-### When to Create ADR
-- Significant structural decisions
-- API design choices
-- Patterns to be used throughout codebase
+Claude Code: use `AskUserQuestion`, putting the recommended option first and a code preview per option. Never ask in prose and then carry on.
 
-### Format
+Sub-agents that implement get this section in their prompt. Otherwise scope them to investigation only.
+
+If architectural work is blocked waiting on the owner, finish everything that doesn't depend on the answer. Then stop and report.
+
+## Documentation duties
+
+### Brainstorm logs
+
+For design or architecture discussions, write `docs/brainstorm/YYYY-MM-DD_topic.md`, using lowercase and hyphens. Update it **during** the session, not only at the end. Sections:
+
+- Date and participants
+- Context
+- Topics discussed, with decisions
+- Key takeaways
+- Action items
+- Next session topics
+
+Link earlier sessions when relevant. Use one file per major topic.
+
+### ADRs
+
+Write an ADR when a decision is final but not yet implemented: structural choices, API design, patterns used across the codebase. Add it to the index in `docs/adrs/README.md`.
+
 ```markdown
 # ADR-{number}: {Title}
 **Date:** YYYY-MM-DD
-**Status:** Accepted | Superseded | Deprecated
+**Status:** Accepted | Implemented | Superseded by ADR-X | Deprecated
 
 ## Context
 ## Decision
@@ -204,32 +138,17 @@ When a decision is finalized but not immediately implemented, create an ADR in `
 ## Consequences
 ```
 
-### Current ADRs
-- `001-app-manifest-structure.md` - Flat structure with nested `defaults`
-- `002-service-lifecycle.md` - `init`, `destroy`, `getState`, `setState` hooks
-- `003-app-context.md` - AppContext via Svelte context, WindowHandle, StorageHandle, AppDataHandle
-- `004-version-update-system.md` - Build-generated version.json with polling
-- `005-files-service.md` - Files service API redesign (pure functions + thin service)
-- `006-notifications-service.md` - Toast notifications with types, updatable, notification center
-- `007-shell-service.md` - Shell Service (command registry + parser) & Terminal App
-- `008-app-props-validation.md` - App props validation with zod (all-or-nothing)
-- `009-app-ecosystem.md` - Full app catalogue (games, productivity, media, utilities)
-- `010-url-deep-linking.md` - Hash-based routing, app links, workspace sharing, embed mode
-- `011-desktop-enhancements.md` - Multi-selection, wallpapers, context menus, icon settings
-- `012-shortcuts-service.md` - Global/app/window scoped shortcuts, conflict detection, cheat sheet
-- `013-tasks-service.md` - @lilbunnyrabbit/task-manager integration, Task Manager app
-- `014-window-enhancements.md` - Single-instance, animations, grouping, session persistence
-- `015-customization-theming.md` - Theme system, export/import, taskbar/icon customization
-- `016-mobile-support.md` - Shell-level split, service swapping, runtime-once detection
-- `017-keyboard-shortcuts-strategy.md` - OS/browser shortcut conflicts, tiered capture, keybind scheme
+When implementation forces a change, add a dated revision note to the ADR (see ADR-005). Don't let code and ADR silently diverge.
 
-## Implementation Roadmap
+### Roadmap
 
-**`/docs/ROADMAP.md`** tracks all planned work with priorities, completion status, and links to ADRs/brainstorm sessions.
+At the end of every session that completes work, update `docs/ROADMAP.md`: `[x]` done, `[-]` partial. It is the single source of truth for progress. Also set the ADR's status in the index.
 
-**IMPORTANT (for Claude):** At the end of every session that completes work items, update `ROADMAP.md` to reflect current status. Mark items `[x]` when done, `[-]` when partially done. This is the single source of truth for project progress.
+## Commits
 
-## Related Docs
-- `/docs/ROADMAP.md` - **Prioritized implementation plan with progress tracking**
-- `/docs/adrs/` - Architecture Decision Records
-- `/docs/brainstorm/` - Ongoing design discussions
+Use conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Body is short bullets. Renames toward the naming rules go in their own `refactor:` commit.
+
+## Reference only
+
+- Legacy React-era docs and AI-written specs were deleted on 2026-10-10. They're in git at `6be283e:docs/to-be-deleted/` and are outdated: capabilities, IPC, 11 services, camelCase APIs. Don't revive them. The owner's quotes that still matter are in PRINCIPLES. Their ideas are in the legacy gap analysis brainstorm and the ROADMAP.
+- Branch `master`: the original React implementation. It's a source for porting (Media Preview, Tic-Tac-Toe, Profiler), not a design template.

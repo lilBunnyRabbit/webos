@@ -3,6 +3,14 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+> **Revision 2026-10-10: colours follow the lilBunnyRabbit brand** ([brainstorm](../brainstorm/2026-10-10_brand-theming.md))
+> - A theme is a palette of 11 colour tokens: `background`, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, `success`, `warning`, `error`, `info`. Values are OKLCH.
+> - **Brand Dark** (default) and **Brand Light** are the brand palettes. The other presets are kept as user themes.
+> - "Light vs dark" is a choice of palette, not a separate `mode` field. `mode` and `accent_color` below are superseded.
+> - Presets that only define the five base colours get the rest derived with the brand formula (`derive_theme()`). No hand-picked extra colours.
+> - Tailwind's default palette is disabled. No background ladder (the owner's choice).
+> - The non-colour settings below (radius, shadow, animation, font, taskbar, icons, sound, export/import) are unchanged.
+
 ## Context
 
 WebOS currently has basic theme support (light/dark) and taskbar position. The legacy plan included extensive customization: wallpapers (covered in ADR-011), sound effects, window appearance, theme export/import, and more. This ADR covers non-wallpaper customization managed by SettingsService.

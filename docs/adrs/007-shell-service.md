@@ -259,7 +259,7 @@ The Terminal App is a system app (`/src/lib/apps/system/terminal/`). Key behavio
 Apps can declare file associations in their manifest:
 
 ```typescript
-defineApp({
+define_app({
   id: "image-preview",
   // ...
   associations: [".png", ".jpg", ".webp", ".gif"],

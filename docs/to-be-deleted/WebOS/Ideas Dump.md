@@ -1,2 +1,0 @@
-- Shadow dom
-- QR Code scanner app

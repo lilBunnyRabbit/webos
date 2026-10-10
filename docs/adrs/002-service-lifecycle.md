@@ -23,8 +23,8 @@ interface IService {
   destroy?(): Promise<void> | void;
 
   // For service swapping
-  getState?(): unknown;
-  setState?(state: unknown): void;
+  get_state?(): unknown;
+  set_state?(state: unknown): void;
 
   // Debug
   to_string?(): string;
@@ -37,8 +37,8 @@ interface IService {
 |------|-------------|---------|
 | `init()` | After instantiation, before service is available | Load persisted data, set up $effect watchers |
 | `destroy()` | Before service is removed/swapped | Save final state, cleanup subscriptions |
-| `getState()` | During swap, before destroy | Export current state for migration |
-| `setState(state)` | During swap, after init | Import state from previous implementation |
+| `get_state()` | During swap, before destroy | Export current state for migration |
+| `set_state(state)` | During swap, after init | Import state from previous implementation |
 
 ### Kernel Triggers Lifecycle
 
@@ -50,14 +50,14 @@ class Kernel {
     this.services.set(name, instance);
   }
 
-  async swap<T extends IService>(name: string, newDescriptor: ServiceDescriptor<T>) {
+  async swap<T extends IService>(name: string, new_descriptor: ServiceDescriptor<T>) {
     const old = this.services.get(name);
-    const state = old?.getState?.();
+    const state = old?.get_state?.();
     await old?.destroy?.();
 
-    const instance = new newDescriptor.instance(this);
+    const instance = new new_descriptor.instance(this);
     await instance.init?.();
-    instance.setState?.(state);
+    instance.set_state?.(state);
 
     this.services.set(name, instance);
   }
@@ -102,27 +102,27 @@ class SettingsService implements IService {
     // Auto-save on changes
     $effect.root(() => {
       $effect(() => {
-        this.persistState();
+        this.persist_state();
       });
     });
   }
 
   destroy() {
-    this.persistState(); // Final save
+    this.persist_state(); // Final save
   }
 
-  private persistState() {
+  private persist_state() {
     localStorage.setItem('webos.settings', JSON.stringify({
       theme: this.theme,
       taskbar: this.taskbar,
     }));
   }
 
-  getState() {
+  get_state() {
     return { theme: this.theme, taskbar: this.taskbar };
   }
 
-  setState(state: { theme: Theme; taskbar: Taskbar }) {
+  set_state(state: { theme: Theme; taskbar: Taskbar }) {
     this.theme = state.theme;
     this.taskbar = state.taskbar;
   }

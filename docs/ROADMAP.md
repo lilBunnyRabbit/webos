@@ -25,7 +25,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: create folder button
 - [x] File explorer: upload button
 - [x] Path-string identity system (segments[] + derived path string)
-- [x] Cross-instance sync (shared DirectoryHandler via SvelteMap cache)
+- [ ] Cross-instance sync — SvelteMap cache was built then removed (stale path keys, see ADR-005). Revisit via event-based invalidation
 - [ ] File explorer: file open callback (for media preview etc.)
 - [ ] File explorer: context menus (delete, rename, copy, move)
 - [ ] File search/filter
@@ -55,7 +55,11 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P1 — Essential UX
 
 ### Design System
-- **Status:** Not started (color scheme exists)
+- **Status:** In progress. Follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/)
+- [x] Brand palettes (Brand Dark default, Brand Light) + extended tokens (tertiary, cottontail, states)
+- [x] Brand fonts (Inter, Hack), self-hosted
+- [x] Logo components (mark, lockup, badge) + placements, favicon/PWA icons, boot splash
+- [x] Tailwind default palette disabled (only theme tokens compile)
 - [ ] Window chrome design
 - [ ] Typography and spacing
 - [ ] Button/input component styles
@@ -101,7 +105,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **Status:** Not started
 - [ ] Install zod
 - [ ] Add `props` schema field to AppManifest / AppConfig
-- [ ] Update `defineApp` to infer TProps from schema
+- [ ] Update `define_app` to infer TProps from schema
 - [ ] Add validation in `AppsService.launch()`
 - [ ] Update example app to use schema + handle undefined props
 
@@ -186,8 +190,10 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Customization & Theming
 - **ADR:** [ADR-015](adrs/015-customization-theming.md)
-- **Status:** Not started
-- [ ] Theme system (accent color, border radius, shadows, animation speed, font)
+- **Status:** In progress
+- [x] Colour tokens as CSS custom properties, brand palettes as presets (see ADR-015 revision)
+- [ ] Theme persistence (blocked on ADR-002 lifecycle)
+- [ ] Theme system (border radius, shadows, animation speed, font)
 - [ ] CSS custom properties for all theme values
 - [ ] Theme export/import as JSON
 - [ ] Theme sharing via URL
@@ -313,11 +319,22 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ---
 
+## Unscheduled Ideas
+
+Owner ideas with no design yet. Each needs a brainstorm before anything is built. Source: [legacy gap analysis](brainstorm/2026-02-01_legacy-gap-analysis.md).
+
+- [ ] App isolation via Shadow DOM
+- [ ] Kernel custom events with zod-validated payloads
+- [ ] Window events for file upload (and similar app-level events)
+- [ ] "App store": load apps into cache, only show loaded apps, per-app versions, auto-update when closed
+
+---
+
 ## Completed
 
 - [x] Kernel + service registry
 - [x] WindowsService (lifecycle, geometry, z-ordering, snapping)
-- [x] AppsService (registry, launching, defineApp)
+- [x] AppsService (registry, launching, define_app)
 - [x] SettingsService (theme, taskbar position, localStorage)
 - [x] DesktopService (grid layout)
 - [x] FilesService (basic OPFS read/list/upload/delete)
@@ -341,3 +358,5 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Version update system design ([brainstorm](brainstorm/2026-01-27_version-update-system.md))
 - [x] Legacy gap analysis ([brainstorm](brainstorm/2026-02-01_legacy-gap-analysis.md))
 - [x] ADR-016: Mobile Support design
+- [x] ADR-017: Keyboard Shortcuts Strategy design
+- [x] Agent guidelines: PRINCIPLES.md, CONVENTIONS.md, CLAUDE.md rewrite ([brainstorm](brainstorm/2026-10-10_agent-guidelines.md))

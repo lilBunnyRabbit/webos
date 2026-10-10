@@ -1,28 +1,3 @@
-# WebOS - Svelte 5 Project
+Read CLAUDE.md, then docs/PRINCIPLES.md and docs/CONVENTIONS.md. They are the source of truth for this repo.
 
-## Project Overview
-Browser-based operating system with microkernel architecture and capability-based security. Built with Svelte 5, TypeScript, and OPFS. Features multi-window management, file system, background tasks, notifications, and extensible app ecosystem.
-
-**Architecture:** Microkernel (thin registry) → Services (Windows, Files, Apps, Tasks, etc.) → Apps (Svelte components)
-
-## Svelte 5 Runes (REQUIRED)
-
-**Use:** `$props()`, `$state()`, `$derived()`, `$effect()`, `$bindable()`  
-**Forbidden:** `export let`, `$:` reactive statements, legacy lifecycle hooks, `createEventDispatcher()`
-
-```svelte
-<script lang="ts">
-  interface Props { name: string; optional?: string; }
-  let { name, optional = "default" }: Props = $props();
-  let count = $state(0);
-  let doubled = $derived(count * 2);
-  $effect(() => console.log(count));
-</script>
-```
-
-## Code Style
-- TypeScript with `<script lang="ts">`
-- Explicit prop interfaces (no `any`)
-- Icons: `phosphor-svelte` (no "Icon" suffix) or `@lucide/svelte`
-
-**NO LEGACY SVELTE PATTERNS. Use runes only.**
+Short version: Svelte 5 runes only, no `any`, snake_case identifiers, kebab-case files, services via `kernel.service<T>("key")` (never destructured), theme tokens only, no new dependencies without asking, and NEVER make an architectural decision yourself: stop and question the owner (see CLAUDE.md, "Architecture is the owner's call, always").

@@ -19,10 +19,10 @@ Apps receive props when launched programmatically (e.g., opening a file in a med
 App manifests may declare an optional `props` field containing a zod schema:
 
 ```typescript
-import { defineApp } from "$lib/core/api";
+import { define_app } from "$lib/core/api";
 import { z } from "zod";
 
-export default defineApp({
+export default define_app({
   id: "media-viewer",
   name: "Media Viewer",
   // ...
@@ -60,10 +60,10 @@ console.warn(
 `TProps` is inferred from the zod schema via `z.infer<>`:
 
 ```typescript
-export function defineApp<TSchema extends ZodType>(config: AppConfig & { props?: TSchema }): AppManifest<z.infer<TSchema>>
+export function define_app<TSchema extends ZodType>(config: AppConfig & { props?: TSchema }): AppManifest<z.infer<TSchema>>
 
 // Usage — no manual generic needed
-defineApp({
+define_app({
   props: z.object({ count: z.number() }),
   // TProps automatically = { count: number }
 })

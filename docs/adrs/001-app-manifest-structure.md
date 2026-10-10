@@ -11,7 +11,7 @@ Need a consistent structure for defining app metadata, window configuration, and
 Use a **flat structure with nested `defaults`** for complex window configuration:
 
 ```typescript
-export default defineApp({
+export default define_app({
   // Identity (required)
   id: "calculator",
   name: "Calculator",
@@ -49,18 +49,18 @@ export default defineApp({
 
 ### Lazy Loading Pattern
 
-Explicit dynamic import, with `defineApp` handling `.default` extraction:
+Explicit dynamic import, with `define_app` handling `.default` extraction:
 
 ```typescript
 // What you write
 component: () => import("./calculator.app.svelte")
 
-// defineApp transforms it to
+// define_app transforms it to
 component: () => import("./calculator.app.svelte").then(m => m.default)
 ```
 
 ```typescript
-function defineApp<T>(config: AppConfig<T>): AppManifest<T> {
+function define_app<T>(config: AppConfig<T>): AppManifest<T> {
   return {
     ...config,
     component: () => config.component().then(m => m.default),
@@ -97,7 +97,7 @@ export const apps = Object.values(modules).map(m => m.default);
 
 ### 2. Fully flat
 ```typescript
-{ id, name, defaultWidth, minWidth, maxWidth, ... }
+{ id, name, default_width, min_width, max_width, ... }
 ```
 **Rejected:** Too verbose, window config has many related fields.
 
@@ -112,7 +112,7 @@ export const apps = Object.values(modules).map(m => m.default);
 ### 4. Convention-based component loading (no component field)
 ```typescript
 // Glob discovers *.app.svelte automatically based on folder
-export default defineApp({
+export default define_app({
   id: "calculator",
   // No component field - discovered by convention
 });
@@ -130,7 +130,7 @@ export default defineApp({
 
 ### Negative
 - Two files per app (index.ts + .app.svelte)
-- Must remember to use `defineApp` helper
+- Must remember to use `define_app` helper
 
 ## Related
 - Brainstorm: `/docs/brainstorm/2026-01-24_app-architecture.md`

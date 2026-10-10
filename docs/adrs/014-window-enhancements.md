@@ -20,7 +20,7 @@ The window system handles core operations (drag, resize, snap, minimize, maximiz
 App manifests can declare `single_instance: true`:
 
 ```typescript
-defineApp({
+define_app({
   id: "settings",
   single_instance: true,
   // ...
