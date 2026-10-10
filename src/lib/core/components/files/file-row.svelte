@@ -10,7 +10,7 @@
   let { item }: Props = $props();
 </script>
 
-<FileIconHandler name={item.name} mime_type={item.type} kind="file" weight="bold" className="fill-primary" />
+<FileIconHandler name={item.name} mime_type={item.type} kind="file" weight="bold" class="fill-primary" />
 <div class="text-left truncate">{item.name}</div>
 <div class="font-mono text-sm">{item.size != null ? format_bytes(item.size) : "-"}</div>
 <div class="font-mono text-sm">{item.last_modified ? new Date(item.last_modified).toLocaleDateString() : "-"}</div>

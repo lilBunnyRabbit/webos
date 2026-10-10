@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "devDependencies": {
     "@internationalized/date": "^3.8.1",
-    "@lucide/svelte": "^0.544.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.13",
     "@tsconfig/svelte": "^5.0.5",
@@ -28,7 +27,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "generate:pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
+    "generate:pwa-assets": "pwa-assets-generator"
   },
   "type": "module",
   "dependencies": {

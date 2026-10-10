@@ -1,7 +1,7 @@
 import type { AppConfig, AppManifest, AppProps } from "./type";
 
 /** Helper to define an app manifest with automatic .default extraction */
-export function defineApp<TProps extends AppProps = AppProps>(
+export function define_app<TProps extends AppProps = AppProps>(
   config: AppConfig<TProps>
 ): AppManifest<TProps> {
   return {

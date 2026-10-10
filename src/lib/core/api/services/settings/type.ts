@@ -17,4 +17,8 @@ export const TaskbarPosition = {
 } as const;
 export type TaskbarPosition = (typeof TaskbarPosition)[keyof typeof TaskbarPosition];
 
-export type Theme = Record<"background" | "foreground" | "primary" | "secondary" | "accent", string>;
+export type ThemeBaseToken = "background" | "foreground" | "primary" | "secondary" | "accent";
+export type ThemeToken = ThemeBaseToken | "tertiary" | "cottontail" | "success" | "warning" | "error" | "info";
+
+export type ThemeBase = Record<ThemeBaseToken, string>;
+export type Theme = Record<ThemeToken, string>;

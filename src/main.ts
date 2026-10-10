@@ -13,6 +13,8 @@ async function main() {
     intro: true
   });
 
+  document.getElementById("splash")?.remove();
+
   return app;
 }
 

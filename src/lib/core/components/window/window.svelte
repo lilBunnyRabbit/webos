@@ -102,7 +102,7 @@
       geometry_handler.move.active && "cursor-grabbing"
     )}
   >
-    <WindowTitlebar bind:zoom windowId={id} />
+    <WindowTitlebar bind:zoom window_id={id} />
   </div>
 
   <!-- Window content -->
@@ -113,7 +113,7 @@
     )}
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
-    <WindowContent windowId={id} {zoom}>
+    <WindowContent window_id={id} {zoom}>
       <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
         <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
         <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>

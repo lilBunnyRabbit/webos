@@ -15,24 +15,24 @@
 
 <div
   {@attach (element) => {
-    const updateBounds = () => {
+    const update_bounds = () => {
       windows.set_container(element);
     };
 
-    const resizeObserver = new ResizeObserver(() => {
-      updateBounds();
+    const resize_observer = new ResizeObserver(() => {
+      update_bounds();
     });
 
     $effect(() => {
       // TODO: revisit
       settings.taskbar.position;
       requestAnimationFrame(() => {
-        updateBounds();
+        update_bounds();
       });
     });
 
-    resizeObserver.observe(element);
-    return () => resizeObserver.disconnect();
+    resize_observer.observe(element);
+    return () => resize_observer.disconnect();
   }}
   {...props}
 >

@@ -26,7 +26,7 @@
     name: string;
     kind: "file" | "directory";
     mime_type?: string;
-    className?: string;
+    class?: string;
     weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
   }
 
@@ -34,7 +34,7 @@
     name,
     kind,
     mime_type,
-    className = "",
+    class: class_name = "",
     weight = "regular",
   }: Props = $props();
 
@@ -108,49 +108,49 @@
 </script>
 
 {#if kind === "directory"}
-  <Folder class={className} {weight} />
+  <Folder class={class_name} {weight} />
 {:else if ["jpg", "jpeg"].includes(extension)}
-  <FileJpg class={className} {weight} />
+  <FileJpg class={class_name} {weight} />
 {:else if extension === "png"}
-  <FilePng class={className} {weight} />
+  <FilePng class={class_name} {weight} />
 {:else if extension === "svg"}
-  <FileSvg class={className} {weight} />
+  <FileSvg class={class_name} {weight} />
 {:else if ["gif", "bmp", "webp", "ico", "tiff", "tif", "image"].includes(extension)}
-  <FileImage class={className} {weight} />
+  <FileImage class={class_name} {weight} />
 {:else if ["mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "video"].includes(extension)}
-  <FileVideo class={className} {weight} />
+  <FileVideo class={class_name} {weight} />
 {:else if ["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma", "opus", "audio"].includes(extension)}
-  <FileAudio class={className} {weight} />
+  <FileAudio class={class_name} {weight} />
 {:else if extension === "pdf"}
-  <FilePdf class={className} {weight} />
+  <FilePdf class={class_name} {weight} />
 {:else if ["doc", "docx"].includes(extension)}
-  <FileDoc class={className} {weight} />
+  <FileDoc class={class_name} {weight} />
 {:else if ["txt", "md", "rtf", "log", "text"].includes(extension)}
-  <FileText class={className} {weight} />
+  <FileText class={class_name} {weight} />
 {:else if ["xls", "xlsx", "csv"].includes(extension)}
-  <FileXls class={className} {weight} />
+  <FileXls class={class_name} {weight} />
 {:else if ["ppt", "pptx"].includes(extension)}
-  <FilePpt class={className} {weight} />
+  <FilePpt class={class_name} {weight} />
 {:else if extension === "html" || extension === "htm"}
-  <FileHtml class={className} {weight} />
+  <FileHtml class={class_name} {weight} />
 {:else if extension === "css" || extension === "scss" || extension === "sass" || extension === "less"}
-  <FileCss class={className} {weight} />
+  <FileCss class={class_name} {weight} />
 {:else if extension === "js" || extension === "mjs" || extension === "cjs"}
-  <FileJs class={className} {weight} />
+  <FileJs class={class_name} {weight} />
 {:else if extension === "ts" || extension === "tsx"}
-  <FileTs class={className} {weight} />
+  <FileTs class={class_name} {weight} />
 {:else if extension === "jsx"}
-  <FileJs class={className} {weight} />
+  <FileJs class={class_name} {weight} />
 {:else if extension === "py"}
-  <FilePy class={className} {weight} />
+  <FilePy class={class_name} {weight} />
 {:else if ["json", "xml", "yaml", "yml", "toml", "ini", "conf", "config", "code"].includes(extension)}
-  <FileCode class={className} {weight} />
+  <FileCode class={class_name} {weight} />
 {:else if ["c", "cpp", "h", "hpp", "java", "cs", "php", "rb", "go", "rs", "swift", "kt"].includes(extension)}
-  <FileCode class={className} {weight} />
+  <FileCode class={class_name} {weight} />
 {:else if ["sh", "bash", "zsh", "fish", "ps1", "bat", "cmd"].includes(extension)}
-  <FileCode class={className} {weight} />
+  <FileCode class={class_name} {weight} />
 {:else if ["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "iso"].includes(extension)}
-  <FileZip class={className} {weight} />
+  <FileZip class={class_name} {weight} />
 {:else}
-  <FileDefault class={className} {weight} />
+  <FileDefault class={class_name} {weight} />
 {/if}

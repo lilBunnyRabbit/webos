@@ -44,7 +44,7 @@
       disabled={path_stack.length === 0}
       onclick={onnavigateback}
     >
-      <ArrowLeftIcon className="size-4" weight="bold" />
+      <ArrowLeftIcon class="size-4" weight="bold" />
     </button>
 
     <button
@@ -52,7 +52,7 @@
       title="Reload"
       onclick={() => handler.reload()}
     >
-      <ArrowClockwiseIcon className="size-4" weight="bold" />
+      <ArrowClockwiseIcon class="size-4" weight="bold" />
     </button>
   </div>
 
@@ -64,7 +64,7 @@
       <span class="mx-0.5 pointer-events-none">/</span>
     {/each}
 
-    <button class="hover:underline text-accent-foreground cursor-default" disabled>
+    <button class="hover:underline text-accent cursor-default" disabled>
       {handler.name}
     </button>
     <span class="mx-0.5 pointer-events-none">/</span>
@@ -80,10 +80,10 @@
 
     {#if search}
       <button onclick={() => (search = "")} class="cursor-pointer">
-        <XIcon className="size-4" weight="bold" />
+        <XIcon class="size-4" weight="bold" />
       </button>
     {:else}
-      <MagnifyingGlassIcon className="size-4" weight="bold" />
+      <MagnifyingGlassIcon class="size-4" weight="bold" />
     {/if}
   </div>
 
@@ -94,7 +94,7 @@
       disabled={creating_folder}
       onclick={handle_create_folder}
     >
-      <FolderPlusIcon className="size-4" weight="bold" />
+      <FolderPlusIcon class="size-4" weight="bold" />
     </button>
 
     <FileUploadButton {handler} />

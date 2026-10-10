@@ -29,7 +29,7 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   component: () => Promise<Component<TProps>>;
 }
 
-/** Input type for defineApp - categories optional, component returns module */
+/** Input type for define_app - categories optional, component returns module */
 export interface AppConfig<TProps extends AppProps = AppProps>
   extends Omit<AppManifest<TProps>, "categories" | "component"> {
   categories?: AppCategory[];

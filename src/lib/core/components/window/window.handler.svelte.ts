@@ -225,11 +225,11 @@ export class WindowGeometryHandler {
 
         const dy = event.clientY - sy;
         const height = this.instance.bounds.height + dy;
-        const maxHeight = ch - st;
+        const max_height = ch - st;
 
         this.move.height = Math.max(
           this.instance.constraints.height?.min ?? WindowGeometryHandler.MIN_HEIGHT,
-          Math.round(Math.min(maxHeight, height))
+          Math.round(Math.min(max_height, height))
         );
       }
 

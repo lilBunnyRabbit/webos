@@ -26,5 +26,5 @@
   disabled={uploading}
   onclick={handle_upload}
 >
-  <UploadSimpleIcon className="size-4" weight="bold" />
+  <UploadSimpleIcon class="size-4" weight="bold" />
 </button>

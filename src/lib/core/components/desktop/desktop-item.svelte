@@ -50,7 +50,7 @@
     <div
       class={cn(
         "w-full h-full bg-foreground/30 transition-all rounded-xl border-2 border-foreground/30",
-        item_handler.is_blocked && "bg-red-500/30 border-red-500/30"
+        item_handler.is_blocked && "bg-error/30 border-error/30"
       )}
       style:grid-column={item_handler.move_state.new_position.x + 1}
       style:grid-row={item_handler.move_state.new_position.y + 1}

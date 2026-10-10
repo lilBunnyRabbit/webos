@@ -39,7 +39,7 @@ export class WindowsHelper {
     return { x, y, ...size };
   }
 
-  public static calculateBounds(constraints: WindowConstraints, container: Bounds): Bounds {
+  public static calculate_bounds(constraints: WindowConstraints, container: Bounds): Bounds {
     // Calculate width and height based on constraints and container size and calculated x/y
 
     // TODO: implement

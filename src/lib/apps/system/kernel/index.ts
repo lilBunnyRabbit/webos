@@ -1,7 +1,7 @@
-import { defineApp } from "$lib/core/api";
-import { BrainIcon } from "@lucide/svelte";
+import { define_app } from "$lib/core/api";
+import { Brain as BrainIcon } from "phosphor-svelte";
 
-export default defineApp({
+export default define_app({
   id: "kernel",
   name: "Kernel",
   icon: BrainIcon,

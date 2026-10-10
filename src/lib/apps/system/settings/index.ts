@@ -1,10 +1,10 @@
-import { defineApp } from "$lib/core/api";
-import { SettingsIcon } from "@lucide/svelte";
+import { define_app } from "$lib/core/api";
+import { Gear as GearIcon } from "phosphor-svelte";
 
-export default defineApp({
+export default define_app({
   id: "settings",
   name: "Settings",
-  icon: SettingsIcon,
+  icon: GearIcon,
   version: "1.0.0",
   author: "John Doe",
   categories: ["system"],

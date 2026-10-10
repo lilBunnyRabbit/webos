@@ -8,7 +8,7 @@
   } from "$lib/core/api";
   import TaskbarItem from "./taskbar-item.svelte";
   import StartMenu from "./start-menu.svelte";
-  let { class: className, ...restProps }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
+  let { class: class_name, ...rest_props }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
   const taskbar = $derived(kernel.service<SettingsService>("settings").taskbar);
   const windows = $derived(kernel.service<WindowsService>("windows"));
@@ -32,9 +32,9 @@
       top: "border-b",
     }[taskbar.position],
     "bg-background/40 backdrop-blur-xl shadow-2xl border-foreground/20",
-    className
+    class_name
   )}
-  {...restProps}
+  {...rest_props}
 >
   <div class={cn("border-foreground/20", orientation === "vertical" ? "border-b py-2 px-1.5" : "border-r py-1.5 px-2")}>
     <StartMenu />

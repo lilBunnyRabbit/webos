@@ -8,12 +8,12 @@
 <!-- TODO: remove padding -->
 <div
   {@attach (element) => {
-    const resizeObserver = new ResizeObserver(() => {
+    const resize_observer = new ResizeObserver(() => {
       desktop.set_container(element);
     });
 
-    resizeObserver.observe(element);
-    return () => resizeObserver.disconnect();
+    resize_observer.observe(element);
+    return () => resize_observer.disconnect();
   }}
   class="grid w-full h-full overflow-hidden bg-background-dark place-items-center"
   style:grid-template-columns={`repeat(${desktop.container.grid.columns}, minmax(64px, 1fr))`}
@@ -29,10 +29,10 @@
   style:background-position={`${desktop.container.config.padding}px ${desktop.container.config.padding}px`}
 >
   {#if desktop.container.grid.columns > 0 && desktop.container.grid.rows > 0}
-    {#each desktop.list() as row, rowIndex (rowIndex)}
+    {#each desktop.list() as row, row_index (row_index)}
       {#each row as item, index (index)}
         {#if item}
-          <DesktopItem item={item} x={index} y={rowIndex} />
+          <DesktopItem item={item} x={index} y={row_index} />
         {/if}
       {/each}
     {/each}

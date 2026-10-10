@@ -18,7 +18,7 @@ export default defineConfig({
     version_plugin(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
+      includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
       manifest: {
         name: "WebOS",
         short_name: "WebOS",

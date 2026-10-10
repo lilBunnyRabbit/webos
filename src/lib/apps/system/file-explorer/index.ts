@@ -1,7 +1,7 @@
-import { defineApp } from "$lib/core/api";
-import { FolderIcon } from "@lucide/svelte";
+import { define_app } from "$lib/core/api";
+import { Folder as FolderIcon } from "phosphor-svelte";
 
-export default defineApp({
+export default define_app({
   id: "file-explorer",
   name: "File Explorer",
   icon: FolderIcon,

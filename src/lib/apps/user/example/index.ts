@@ -1,7 +1,7 @@
-import { defineApp, WindowFlag } from "$lib/core/api";
-import { HandIcon } from "@lucide/svelte";
+import { define_app, WindowFlag } from "$lib/core/api";
+import { Hand as HandIcon } from "phosphor-svelte";
 
-export default defineApp({
+export default define_app({
   id: "example",
   name: "Example",
   icon: HandIcon,
