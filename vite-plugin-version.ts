@@ -34,20 +34,21 @@ function get_version_info(root: string): VersionInfo {
 }
 
 export function version_plugin(): Plugin {
-  let root = process.cwd();
+  let out_dir = "dist";
+  // One stamp per build or dev session: the bundle and version.json must match, or every check reports an update.
+  let info: VersionInfo;
 
   return {
     name: "version-plugin",
 
     configResolved(config) {
-      root = config.root;
+      out_dir = resolve(config.root, config.build.outDir);
     },
 
     // Dev: serve /version.json via middleware
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url === "/version.json") {
-          const info = get_version_info(root);
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
           res.end(JSON.stringify(info, null, 2));
@@ -58,8 +59,8 @@ export function version_plugin(): Plugin {
     },
 
     // Build: inject __VERSION_INFO__ define and write version.json to output
-    config() {
-      const info = get_version_info(root);
+    config(config) {
+      info = get_version_info(resolve(config.root ?? process.cwd()));
       return {
         define: {
           __VERSION_INFO__: JSON.stringify(info),
@@ -68,8 +69,6 @@ export function version_plugin(): Plugin {
     },
 
     closeBundle() {
-      const info = get_version_info(root);
-      const out_dir = resolve(root, "dist");
       mkdirSync(out_dir, { recursive: true });
       writeFileSync(resolve(out_dir, "version.json"), JSON.stringify(info, null, 2));
     },

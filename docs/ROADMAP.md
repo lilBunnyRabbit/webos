@@ -281,7 +281,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Found while writing `docs/system/`. Details and file:line on each page's "Known gaps".
 
-- [ ] Version: production always reports an update, because `version.json` is stamped after the bundle ([version.md](system/services/version.md))
+- [x] Version: production always reports an update, because `version.json` is stamped after the bundle ([version.md](system/services/version.md))
 - [ ] Version: VitePWA service worker runs, though ADR-004 rejected one
 - [ ] Kernel: a failed `init()` leaves the splash up forever, and services that did init are never destroyed ([kernel.md](system/kernel.md))
 - [ ] Windows: clicking the titlebar of a maximized or snapped window restores it (no move threshold) ([window.md](system/shell/window.md))

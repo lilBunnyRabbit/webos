@@ -36,9 +36,12 @@ interface VersionInfo {
 
 | Hook | Effect |
 |------|--------|
-| `config()` | Calls `get_version_info(root)` and defines `__VERSION_INFO__` as that JSON. It's baked into the bundle, in dev and in build. |
-| `closeBundle()` (build) | Calls `get_version_info(root)` **again** and writes `dist/version.json`. The path is hardcoded to `<root>/dist` and ignores `build.outDir`. |
-| `configureServer()` (dev) | Middleware answers `/version.json` with a freshly computed `get_version_info()` on every request, `Cache-Control: no-store`. |
+| `config()` | Calls `get_version_info()` **once** and keeps the result. Defines `__VERSION_INFO__` as that JSON, so it's baked into the bundle in dev and in build. |
+| `configResolved()` | Records `build.outDir` (resolved against root). |
+| `closeBundle()` (build) | Writes the same stamp to `{outDir}/version.json`. |
+| `configureServer()` (dev) | Middleware answers `/version.json` with the same stamp, `Cache-Control: no-store`. |
+
+The bundle and `version.json` always carry the same `buildTimestamp`. Only a new build (or a dev server restart) produces a newer one.
 
 `get_version_info()` reads `package.json`, runs `git rev-parse --short HEAD` and `--abbrev-ref HEAD` (falling back to `"unknown"`), and stamps `new Date()`.
 
@@ -68,8 +71,7 @@ None of its own. `apply_update()` wipes Cache Storage and service worker registr
 ## Behaviour & invariants
 
 - The comparison is strictly on `buildTimestamp`. Version string and commit are display-only.
-- **The build always reports an update.** `__VERSION_INFO__` is stamped in `config()`, at the start of the build. `version.json` is stamped in `closeBundle()`, at the end. So the deployed `version.json.buildTimestamp` is always later than the bundled one, and the first `check()` on a fresh deploy sets `update_available`. Confirmed in the current `dist/`: `version.json` has `1791671679864` and the bundle has `1791668030165`. Applying the "update" reloads into the same build, which reports an update again.
-- In dev, the middleware stamps `new Date()` per request, so every check reports an update too. The UI hides this behind `!import.meta.env.DEV`.
+- In dev, an update shows up only after the dev server restarts (vite also restarts it when config changes) while an old tab is still open. The UI hides the panel behind `!import.meta.env.DEV` anyway.
 - `fetch("/version.json")` is root-absolute. It works because Vite `base` is the default `/`. Deploying under a sub-path would break it.
 
 ## Divergence from ADR
@@ -80,6 +82,4 @@ None of its own. `apply_update()` wipes Cache Storage and service worker registr
 
 ## Known gaps
 
-- The timestamp bug above makes update detection useless in production: it always fires. Stamp once and reuse it in both hooks (for example, cache the result of the first `get_version_info()` call).
 - `update_available` is never cleared, even if a later check finds nothing newer.
-- `closeBundle` writes to a hardcoded `dist/`.
