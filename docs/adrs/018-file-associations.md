@@ -7,6 +7,9 @@
 > - The chooser focuses the first app; ArrowUp/ArrowDown move, Enter picks. A file without an extension hides "Always use".
 > - AppsService now depends on `settings` and `dialogs` as well.
 
+> **Revision 2026-10-11: PDF in its own app**
+> - PDF went into a separate PDF Viewer app (`application/pdf`, `.pdf`), not into Media Preview. It's an iframe on a blob URL showing Chrome's built-in viewer, so Media Preview's zoom/rotate toolbar doesn't apply. The rule: one app per interaction model, not per format. A format that refines an existing match (for example `.md` over `text/*`) gets its own app at a higher tier, and "Open with" picks between them.
+
 ## Context
 
 Double-clicking a file in File Explorer does nothing. The shell's `open` command (ADR-007), file deep links (ADR-010) and session restore (ADR-014) all need the same thing: given a file, pick an app and launch it with that file. ADR-007 sketched an `associations` manifest field and left the prop shape open. No app handles files yet.
@@ -80,7 +83,8 @@ SettingsService persists `file_defaults: Record<string, AppId>` (extension → a
 
 ### 7. First consumers
 
-- **Media Preview** (port from `master`): image, video, audio. PDF later.
+- **Media Preview** (port from `master`): image, video, audio.
+- **PDF Viewer** (new): native browser viewer in an iframe. See the revision note.
 - **Text Viewer** (new): plain text formats, read-only `<pre>`. Grows into the Text Editor.
 
 ## Alternatives Considered

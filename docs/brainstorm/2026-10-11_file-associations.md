@@ -68,6 +68,16 @@ Consequences found while recording:
 
 Owner standing rule from this round: use the latest web platform features, target the owner's browser only, and always check for a newer native API before building behaviour by hand.
 
+### Round 5: PDF and dedicated viewers
+
+PDFs had no app, so opening one showed the "no app" toast.
+
+| Question | Decision | Rejected |
+|----------|----------|----------|
+| How PDFs open | New PDF Viewer app: an iframe on a blob URL (retyped `application/pdf`) shows Chrome's built-in viewer. No dependency. Accepted cost: the viewer's toolbar is Chrome-styled, not branded | PDF inside Media Preview (two UIs in one component, dead zoom/rotate toolbar); pdf.js (dependency, paging/zoom/search by hand) |
+| Dedicated apps per file type? | One app per interaction model, not per format. Refinements of an existing match get their own app at a higher tier | One catch-all viewer |
+| Viewers to put on the roadmap | Markdown viewer, CSV table, HTML preview | None for now |
+
 ### Defaults Claude chose (recorded in ADR-018/019)
 
 - No match: warning notification "No app can open {name}". Round 1 covered "several match"; nothing to ask when none do.
@@ -86,6 +96,7 @@ Owner standing rule from this round: use the latest web platform features, targe
 ## Action items
 
 - [x] ADR-018, ADR-019, roadmap
+- [x] PDF Viewer app (2026-10-11)
 - [x] Implement in order: `get_file` + `FILE_PROPS`, Text Viewer, `associations` + `open()`, File Explorer wiring, DialogsService + host, Open-with dropdown + `file_defaults`, Media Preview port (all 2026-10-11)
 
 ## Next session topics
@@ -94,3 +105,4 @@ Owner standing rule from this round: use the latest web platform features, targe
 - Whether ADR-003 window overlays reuse the dialogs host.
 - Settings UI to reset `file_defaults`.
 - File Explorer context menu "Open with" (needs context menus).
+- Markdown viewer: the parser is a dependency question (hand-written or a library).

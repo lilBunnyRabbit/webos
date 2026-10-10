@@ -212,11 +212,14 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Port from React
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [-] Media Preview app (image, video, audio done; PDF not yet)
+- [x] Media Preview app (image, video, audio; PDF lives in PDF Viewer)
 - [ ] Tic-Tac-Toe game (+ AI, stats, undo)
 - [ ] Profiler app (per-window performance overlay, FPS, render counts)
 
 ### New System Apps
+- [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
+- [ ] CSV Viewer (`.csv`/`.tsv` as a table)
+- [ ] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
 - [ ] Calculator
 - [ ] Text Editor (tests file ops + persistence)
 - [ ] Style Guide (component showcase)
@@ -270,6 +273,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File Explorer: double-click / Enter on files
 - [x] Text Viewer app (`text/*` + common text extensions)
 - [x] Media Preview port (image, video, audio)
+- [x] PDF Viewer app (native browser viewer in an iframe)
 
 ---
 
