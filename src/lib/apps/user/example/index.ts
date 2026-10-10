@@ -1,5 +1,6 @@
 import { define_app, WindowFlag } from "$lib/core/api";
 import { Hand as HandIcon } from "phosphor-svelte";
+import { z } from "zod";
 
 export default define_app({
   id: "example",
@@ -17,5 +18,6 @@ export default define_app({
     },
     flags: [WindowFlag.DEBUG],
   },
+  props: z.object({ count: z.number() }),
   component: () => import("./example.app.svelte"),
 });

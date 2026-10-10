@@ -109,12 +109,12 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### App Props Validation
 - **ADR:** [ADR-008](adrs/008-app-props-validation.md)
 - **Brainstorm:** [2026-01-31 App Props Validation](brainstorm/2026-01-31_app-props-validation.md)
-- **Status:** Not started
-- [ ] Install zod
-- [ ] Add `props` schema field to AppManifest / AppConfig
-- [ ] Update `define_app` to infer TProps from schema
-- [ ] Add validation in `AppsService.launch()`
-- [ ] Update example app to use schema + handle undefined props
+- **Status:** Done (2026-10-11)
+- [x] Install zod (added with ADR-003)
+- [x] Add `props` schema field to AppManifest / AppConfig
+- [x] Update `define_app` to infer TProps from schema
+- [x] Add validation in `AppsService.launch()`
+- [x] Update example app to use schema + handle undefined props
 
 ### Desktop Enhancements
 - **ADR:** [ADR-011](adrs/011-desktop-enhancements.md)

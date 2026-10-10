@@ -1,7 +1,13 @@
 # ADR-008: App Props Validation with Zod
 
 **Date:** 2026-01-31
-**Status:** Accepted
+**Status:** Implemented (2026-10-11, see revision)
+
+> **Revision 2026-10-11: implementation** ([brainstorm](../brainstorm/2026-10-11_app-props-validation.md))
+> - **No schema, no props** (owner decision). Props passed to an app without a `props` schema are discarded the same way as invalid ones.
+> - **Discarded props also raise a warning notification** (owner decision), besides the `console.warn`. AppsService now depends on `notifications`.
+> - `launch(id, props?: unknown)`: input is untrusted until parsed. `AppProps` is `Record<string, unknown>`; the schema is `ZodType<TProps>`, so it must describe an object.
+> - The component type is `Component<Partial<TProps>>`, so the compiler rejects an app component with a required prop.
 
 ## Context
 

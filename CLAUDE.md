@@ -30,7 +30,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
-| `apps` | AppsService | Registry from glob, `launch()` | windows |
+| `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008) | windows, notifications |
 | `desktop` | DesktopService | Icon grid | apps |
 
 Planned services each have an ADR: shell (007), shortcuts (012), tasks (013). Add a service only when that roadmap item is picked up.
