@@ -1,6 +1,17 @@
 # ADR-005: Files Service API Design
 **Date:** 2026-01-27
-**Status:** Accepted (implemented 2026-01-27, revised 2026-02-07)
+**Status:** Accepted (implemented 2026-01-27, revised 2026-02-07, 2026-10-10)
+
+> **Revision 2026-10-10: review pass**
+> - **Nothing user-facing overwrites or merges** (owner decision). `create_file`, `create_directory`, `copy_file`, `move_file` and `upload_files` pick a free name via `available_name()`: `name (1).ext`, `name (2).ext`, and so on. Any future drag-and-drop or paste must do the same. Exact-name writes exist only through `create_file({ overwrite: true })` and `get_*_handle({ create: true })`. `create_file` used to throw on a clash; it now renames. `move_file` now returns the moved handle.
+> - `move_file` onto the same entry is a no-op. Copy-then-delete used to destroy the file.
+> - `write_file` aborts the writable on failure, which releases the file lock.
+> - `create_file` with `content: ""` and `overwrite: true` now truncates.
+> - Directory listing reads file metadata in parallel and sorts in natural numeric order.
+> - `DirectoryHandler.reload()` ignores stale results when reloads overlap.
+> - A failed `get_root()` is no longer cached forever. `persist()` no longer blocks the first access.
+> - Explorer errors surface as notifications (ADR-006). Search is a plain substring. Back navigation reloads the directory.
+> - Cross-instance sync is still open. It gets its own brainstorm (owner decision).
 
 ## Context
 

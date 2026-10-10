@@ -25,13 +25,15 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: create folder button
 - [x] File explorer: upload button
 - [x] Path-string identity system (segments[] + derived path string)
-- [ ] Cross-instance sync — SvelteMap cache was built then removed (stale path keys, see ADR-005). Revisit via event-based invalidation
+- [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
 - [ ] File explorer: file open callback (for media preview etc.)
 - [ ] File explorer: context menus (delete, rename, copy, move)
-- [ ] File search/filter
-- [ ] Drag-and-drop file operations
+- [x] File search/filter (case-insensitive substring)
+- [x] File explorer errors surfaced as notifications
+- [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
+- [ ] Drag-and-drop file operations (must auto-rename via `available_name()`)
 - [ ] File rename functionality
-- [ ] Copy/paste operations
+- [ ] Copy/paste operations (must auto-rename via `available_name()`)
 - [ ] File properties dialog
 - [ ] Back/forward navigation buttons
 
@@ -92,12 +94,12 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### Notifications Service
 - **ADR:** [ADR-006](adrs/006-notifications-service.md)
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
-- **Status:** Not started
-- [ ] NotificationsService (notify, update, dismiss, mark_read)
-- [ ] Toast area UI (position configurable via SettingsService)
+- **Status:** In progress
+- [x] NotificationsService (notify, update, dismiss, hide_toast, mark_read)
+- [-] Toast area UI (bottom-right; position setting not yet)
 - [ ] Notification center panel (accessible from taskbar)
 - [ ] Unread badge on taskbar icon
-- [ ] Progress notification type (determinate/indeterminate)
+- [x] Progress notification type (determinate/indeterminate)
 
 ### App Props Validation
 - **ADR:** [ADR-008](adrs/008-app-props-validation.md)
@@ -316,6 +318,26 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Automated testing on PR
 - [ ] Automated deployment to GitHub Pages
 - [ ] Version tagging
+
+---
+
+## Needs Brainstorm
+
+Owner-requested topics. Each needs a design session (brainstorm log, then an ADR) before any code. Agents: don't implement these, grill the owner.
+
+- [ ] **Multi-window sync.** Two explorers on the same folder should see each other's changes. Constraints from ADR-005: the path-keyed cache went stale on rename/move, and event-based invalidation is the recorded way back, likely via kernel events (see Unscheduled Ideas).
+- [ ] **Testing strategy.** Decide what to test and where:
+  - Pure `.ts` first (`opfs.ts`, parsers, helpers)
+  - Reactive `.svelte.ts` handlers
+  - Components
+  - E2E
+
+  Also the runner (Vitest is the P4 assumption), how to test OPFS outside a browser, and what CI runs. The P4 Testing items wait on this.
+- [ ] **Release notifications.** After an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
+  - What shows before vs after reloading into the new version?
+  - How do we track which version a user has seen?
+  - Is the changelog format structured or markdown?
+  - Is it the ADR-006 notification or a dedicated window?
 
 ---
 

@@ -202,6 +202,12 @@ Inter (`font-sans`) for everything you read. Hack (`font-mono`) for values: hexe
 
 ---
 
+## Files
+
+- No user-facing operation overwrites or merges. Anything that puts an entry into a folder (create, copy, move, upload, drop, paste) takes a free name from `available_name()`, giving `name (1).ext`. Read the returned handle's `name`.
+- Exact-name writes are for app code that owns a known path: `create_file(..., { overwrite: true })` or `get_directory_handle(..., { create: true })`.
+- User-facing file errors go to `NotificationsService`. In the explorer that's `report_file_error()`.
+
 ## Errors
 
 No error strategy yet (roadmap P4). Current de-facto rules:

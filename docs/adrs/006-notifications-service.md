@@ -1,6 +1,12 @@
 # ADR-006: Notifications Service
 **Date:** 2026-01-31
-**Status:** Accepted
+**Status:** Implemented (service + toasts; notification center and badge pending)
+
+> **Revision 2026-10-10: implementation notes**
+> - The notification type is `SystemNotification`, not `Notification`, so it doesn't shadow the DOM `Notification` global.
+> - Toasts and history are separate. `toasts` lists the notifications currently shown, and `hide_toast(id)` hides one but keeps it in `all`. `dismiss(id)` removes it from both. The ADR left this split unspecified.
+> - `duration` applies to the toast only. The notification stays in `all` until dismissed.
+> - The first consumer is the file explorer's error reporting.
 
 ## Context
 
