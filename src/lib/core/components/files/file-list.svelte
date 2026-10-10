@@ -1,7 +1,9 @@
 <script lang="ts">
+  import type { FileSystemDirectoryItem, FileSystemItem } from "$lib/core/api/services/files";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
   import DirectoryRow from "./directory-row.svelte";
+  import { report_file_error } from "./file-explorer.errors";
 
   interface Props {
     handler: DirectoryHandler;
@@ -11,16 +13,32 @@
 
   let { handler, search = $bindable(), onnavigate }: Props = $props();
 
-  const filtered_items = $derived(
-    handler.items.filter((item) => {
-      if (!search) return true;
-      try {
-        return new RegExp(search, "i").test(item.name);
-      } catch {
-        return item.name.toLowerCase().includes(search.toLowerCase());
-      }
-    })
-  );
+  const filtered_items = $derived.by(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return handler.items;
+    return handler.items.filter((item) => item.name.toLowerCase().includes(query));
+  });
+
+  function is_delete_key(e: KeyboardEvent): boolean {
+    return e.key === "Delete" || (e.key === "Backspace" && e.metaKey);
+  }
+
+  function delete_item(item: FileSystemItem) {
+    const recursive = item.kind === "directory";
+    const message = recursive ? `Delete "${item.name}" and all its contents?` : `Delete "${item.name}"?`;
+    if (!confirm(message)) return;
+
+    handler
+      .delete_entry(item.name, { recursive })
+      .catch((error) => report_file_error(`Could not delete "${item.name}"`, error));
+  }
+
+  function open_directory(item: FileSystemDirectoryItem) {
+    handler
+      .open_directory(item.name, item.handle)
+      .then(onnavigate)
+      .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
+  }
 </script>
 
 <div class="grid grid-cols-[auto_1fr_auto_auto] gap-x-4 overflow-y-auto max-h-full h-fit">
@@ -42,9 +60,7 @@
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
           onkeydown={(e) => {
-            if (e.key === "Delete" && confirm(`Delete "${item.name}"?`)) {
-              handler.delete_entry(item.name);
-            }
+            if (is_delete_key(e)) delete_item(item);
           }}
         >
           <FileRow {item} />
@@ -52,16 +68,17 @@
       {:else if item.kind === "directory"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
-          ondblclick={async () => {
-            onnavigate(await handler.open_directory(item.name, item.handle as FileSystemDirectoryHandle));
-          }}
+          ondblclick={() => open_directory(item)}
           onkeydown={(e) => {
-            if (e.key === "Delete" && confirm(`Delete "${item.name}" and all its contents?`)) {
-              handler.delete_entry(item.name, { recursive: true });
+            if (e.key === "Enter") {
+              e.preventDefault();
+              open_directory(item);
+            } else if (is_delete_key(e)) {
+              delete_item(item);
             }
           }}
         >
-          <DirectoryRow handle={item.handle as FileSystemDirectoryHandle} />
+          <DirectoryRow handle={item.handle} />
         </button>
       {/if}
     {/each}

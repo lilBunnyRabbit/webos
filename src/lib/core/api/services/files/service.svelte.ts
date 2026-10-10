@@ -13,16 +13,16 @@ export class FilesService implements IFilesService {
 
   async get_root(): Promise<FileSystemDirectoryHandle> {
     if (!this._root) {
-      this._root = opfs.get_root();
+      // A rejected root (e.g. private browsing without OPFS) must not be cached forever.
+      this._root = opfs.get_root().catch((error) => {
+        this._root = null;
+        throw error;
+      });
 
-      try {
-        const persisted = await navigator.storage.persist();
-        if (!persisted) {
-          console.warn("FilesService: Failed to persist storage");
-        }
-      } catch (error) {
-        console.error("FilesService: Failed to persist storage", error);
-      }
+      navigator.storage.persist().then(
+        (persisted) => persisted || console.warn("[FilesService] Storage not persisted"),
+        (error) => console.error("[FilesService] Failed to persist storage", error)
+      );
     }
 
     return await this._root;
@@ -68,7 +68,7 @@ export class FilesService implements IFilesService {
     return opfs.copy_file(source, await this.resolve(target), new_name);
   }
 
-  async move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<void> {
+  async move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle> {
     return opfs.move_file(await this.resolve(source_parent), source, await this.resolve(target), new_name);
   }
 
@@ -102,12 +102,14 @@ export class DirectoryHandler {
   items = $state<FileSystemItem[]>([]);
   loading = $state(false);
 
+  private reload_id = 0;
+
   constructor(service: FilesService, handle: FileSystemDirectoryHandle, segments: string[]) {
     this.service = service;
     this.handle = handle;
     this.segments = segments;
     this.path = "/" + segments.join("/");
-    this.reload();
+    this.reload().catch((error) => console.error(`[FilesService] Failed to list ${this.path}`, error));
   }
 
   get name(): string {
@@ -119,11 +121,14 @@ export class DirectoryHandler {
   }
 
   async reload(): Promise<void> {
+    const id = ++this.reload_id;
     this.loading = true;
     try {
-      this.items = await opfs.list_directory(this.handle);
+      const items = await opfs.list_directory(this.handle);
+      // An older listing resolving after a newer one would show stale contents.
+      if (id === this.reload_id) this.items = items;
     } finally {
-      this.loading = false;
+      if (id === this.reload_id) this.loading = false;
     }
   }
 

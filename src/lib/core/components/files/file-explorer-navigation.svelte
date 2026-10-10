@@ -8,6 +8,7 @@
     FolderPlus as FolderPlusIcon,
   } from "phosphor-svelte";
   import FileUploadButton from "./file-upload-button.svelte";
+  import { report_file_error } from "./file-explorer.errors";
 
   interface Props {
     handler: DirectoryHandler;
@@ -28,6 +29,8 @@
     creating_folder = true;
     try {
       await handler.create_directory(name);
+    } catch (error) {
+      report_file_error(`Could not create folder "${name}"`, error);
     } finally {
       creating_folder = false;
     }

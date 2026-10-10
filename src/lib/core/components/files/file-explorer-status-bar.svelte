@@ -24,12 +24,16 @@
   let storage = $state<{ usage: number; quota: number } | null>(null);
 
   async function fetch_storage() {
-    storage = await files.get_storage_estimate();
+    try {
+      storage = await files.get_storage_estimate();
+    } catch (error) {
+      console.error("[FileExplorer] Failed to read storage estimate", error);
+    }
   }
 
-  fetch_storage();
-
   $effect(() => {
+    void handler.items;
+    fetch_storage();
     const interval = setInterval(fetch_storage, 30_000);
     return () => clearInterval(interval);
   });

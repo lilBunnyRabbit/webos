@@ -4,6 +4,7 @@
   import FileExplorerNavigation from "./file-explorer-navigation.svelte";
   import FileList from "./file-list.svelte";
   import FileExplorerStatusBar from "./file-explorer-status-bar.svelte";
+  import { report_file_error } from "./file-explorer.errors";
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -22,14 +23,20 @@
     handler = dir_handler;
   }
 
+  // Handlers on the stack aren't watched; their contents may have changed since we left them.
+  function show(dir_handler: DirectoryHandler) {
+    handler = dir_handler;
+    dir_handler.reload().catch((error) => report_file_error(`Could not open ${dir_handler.path}`, error));
+  }
+
   function navigate_back() {
     if (path_stack.length === 0) return;
-    handler = path_stack[path_stack.length - 1];
+    show(path_stack[path_stack.length - 1]);
     path_stack = path_stack.slice(0, -1);
   }
 
   function navigate_to_index(i: number) {
-    handler = path_stack[i];
+    show(path_stack[i]);
     path_stack = path_stack.slice(0, i);
   }
 </script>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { UploadSimple as UploadSimpleIcon } from "phosphor-svelte";
+  import { report_file_error } from "./file-explorer.errors";
 
   interface Props {
     handler: DirectoryHandler;
@@ -14,6 +15,8 @@
     uploading = true;
     try {
       await handler.upload_files();
+    } catch (error) {
+      report_file_error("Upload failed", error);
     } finally {
       uploading = false;
     }

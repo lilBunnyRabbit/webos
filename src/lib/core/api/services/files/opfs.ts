@@ -14,7 +14,7 @@ export function default_sort(a: FileSystemItem, b: FileSystemItem): number {
   if (a.kind !== b.kind) {
     return a.kind === "directory" ? -1 : 1;
   }
-  return a.name.localeCompare(b.name);
+  return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 }
 
 export async function list_directory(
@@ -22,30 +22,32 @@ export async function list_directory(
   options: ListOptions = {}
 ): Promise<FileSystemItem[]> {
   const { include_metadata = true, sort = default_sort } = options;
-  const items: FileSystemItem[] = [];
+  const pending: Promise<FileSystemItem>[] = [];
 
   for await (const [name, handle] of dir.entries()) {
-    if (handle.kind === "file") {
-      const file_handle = handle as FileSystemFileHandle;
-      const item: FileSystemFileItem = { name, kind: "file", handle: file_handle };
-
-      if (include_metadata) {
-        try {
-          const file = await file_handle.getFile();
-          item.size = file.size;
-          item.last_modified = file.lastModified;
-          item.type = file.type;
-        } catch (err) {
-          console.warn(`Failed to get file metadata for ${name}:`, err);
-        }
-      }
-
-      items.push(item);
-    } else {
-      items.push({ name, kind: "directory", handle: handle as FileSystemDirectoryHandle });
+    if (handle.kind === "directory") {
+      pending.push(Promise.resolve({ name, kind: "directory", handle: handle as FileSystemDirectoryHandle }));
+      continue;
     }
+
+    const item: FileSystemFileItem = { name, kind: "file", handle: handle as FileSystemFileHandle };
+    if (!include_metadata) {
+      pending.push(Promise.resolve(item));
+      continue;
+    }
+
+    pending.push(
+      item.handle.getFile().then(
+        (file) => ({ ...item, size: file.size, last_modified: file.lastModified, type: file.type }),
+        (err) => {
+          console.warn(`Failed to get file metadata for ${name}:`, err);
+          return item;
+        }
+      )
+    );
   }
 
+  const items = await Promise.all(pending);
   items.sort(sort);
   return items;
 }
@@ -70,7 +72,7 @@ export async function create_directory(
   parent: FileSystemDirectoryHandle,
   name: string
 ): Promise<FileSystemDirectoryHandle> {
-  return await parent.getDirectoryHandle(name, { create: true });
+  return await parent.getDirectoryHandle(await available_name(parent, name), { create: true });
 }
 
 export async function create_file(
@@ -80,22 +82,10 @@ export async function create_file(
 ): Promise<FileSystemFileHandle> {
   const { content, overwrite = false } = options;
 
-  if (!overwrite) {
-    try {
-      await parent.getFileHandle(name);
-      throw new Error(`File "${name}" already exists`);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "NotFoundError") {
-        // File doesn't exist - continue with creation
-      } else {
-        throw err;
-      }
-    }
-  }
+  const target_name = overwrite ? name : await available_name(parent, name);
+  const file_handle = await parent.getFileHandle(target_name, { create: true });
 
-  const file_handle = await parent.getFileHandle(name, { create: true });
-
-  if (content) {
+  if (content !== undefined) {
     await write_file(file_handle, content);
   }
 
@@ -107,8 +97,14 @@ export async function write_file(
   content: string | Blob | BufferSource
 ): Promise<void> {
   const writable = await handle.createWritable();
-  await writable.write(content);
-  await writable.close();
+  try {
+    await writable.write(content);
+    await writable.close();
+  } catch (err) {
+    // An unclosed writable keeps the file locked until GC; abort releases it.
+    await writable.abort().catch(() => {});
+    throw err;
+  }
 }
 
 export async function read_file(handle: FileSystemFileHandle): Promise<File> {
@@ -126,8 +122,7 @@ export async function read_file_as_array_buffer(handle: FileSystemFileHandle): P
 }
 
 export async function read_file_as_blob(handle: FileSystemFileHandle): Promise<Blob> {
-  const file = await handle.getFile();
-  return new Blob([file], { type: file.type });
+  return await handle.getFile();
 }
 
 export async function delete_entry(
@@ -168,7 +163,7 @@ export async function copy_file(
   new_name?: string
 ): Promise<FileSystemFileHandle> {
   const file = await source.getFile();
-  const target_name = new_name ?? file.name;
+  const target_name = await available_name(target_dir, new_name ?? file.name);
   const target_handle = await target_dir.getFileHandle(target_name, { create: true });
   await write_file(target_handle, file);
   return target_handle;
@@ -179,9 +174,29 @@ export async function move_file(
   source: FileSystemFileHandle,
   target_dir: FileSystemDirectoryHandle,
   new_name?: string
-): Promise<void> {
-  await copy_file(source, target_dir, new_name);
+): Promise<FileSystemFileHandle> {
+  const target_name = new_name ?? source.name;
+  // Copy-then-delete onto the same entry would delete the only copy.
+  if (target_name === source.name && (await source_parent.isSameEntry(target_dir))) {
+    return source;
+  }
+
+  const moved = await copy_file(source, target_dir, target_name);
   await delete_entry(source_parent, source.name);
+  return moved;
+}
+
+/** Returns `name`, or `name (1).ext`, `name (2).ext`, … if it's taken. Dotfiles keep their leading dot. */
+export async function available_name(dir: FileSystemDirectoryHandle, name: string): Promise<string> {
+  if (!(await exists(dir, name))) return name;
+
+  const dot = name.lastIndexOf(".");
+  const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
+
+  for (let n = 1; ; n++) {
+    const candidate = `${stem} (${n})${ext}`;
+    if (!(await exists(dir, candidate))) return candidate;
+  }
 }
 
 export async function upload_files(
@@ -208,7 +223,8 @@ export async function upload_files(
       try {
         const uploaded: File[] = [];
         for (const file of Array.from(files)) {
-          const file_handle = await target_dir.getFileHandle(file.name, { create: true });
+          const name = await available_name(target_dir, file.name);
+          const file_handle = await target_dir.getFileHandle(name, { create: true });
           await write_file(file_handle, file);
           uploaded.push(file);
         }
@@ -235,8 +251,11 @@ export async function download_file(
   const a = document.createElement("a");
   a.href = url;
   a.download = file_name ?? file.name;
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Revoking synchronously can cancel the download in Firefox and Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 40_000);
 }
 
 export async function get_storage_estimate(): Promise<{ usage: number; quota: number }> {
