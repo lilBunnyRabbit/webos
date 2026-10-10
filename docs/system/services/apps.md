@@ -32,7 +32,7 @@ Pure helpers, exported from the barrel:
 
 | Function | Behaviour |
 |----------|-----------|
-| `file_extension(name)` | `"Notes.TXT"` → `".txt"`. Lowercased. Returns `""` when there's no dot **or the only dot is at index 0**, so dotfiles (`.gitignore`, `.env`) have no extension |
+| `file_extension(name)` | `"Notes.TXT"` → `".txt"`. Lowercased. A dotfile is its own extension (`.env` → `".env"`). Returns `""` only when there's no dot |
 | `association_tier(entry, file)` | `3` exact extension, `2` exact MIME, `1` MIME wildcard (`image/*`), `0` no match. Case-insensitive. Empty `file.type` never matches a MIME entry |
 | `best_apps_for(apps, file)` | Every app tied on the highest non-zero tier, in iteration order. `[]` when nothing matches |
 
@@ -104,9 +104,6 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Known gaps
 
-- `class AppsService implements AppsService` (`service.svelte.ts:8`) implements itself, not the imported `IAppsService` alias. The interface conformance is never checked and the alias import is unused.
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
-- `src/lib/apps/index.ts:12` logs `"Apps Found"` on every load.
 - No unregister, no way to change a running window's props.
-- Stale `file_defaults` entries (pointing at removed apps) stay in settings forever; there's no reset UI yet (ADR-018 calls it a later Settings item).
-- Text Viewer lists `.env`, which only matches names like `prod.env`. A file called `.env` has no extension by `file_extension()` and usually no MIME, so it gets "No app can open .env".
+- Stale `file_defaults` entries (pointing at removed apps) stay in settings until the Settings app's global Reset Settings. There's no per-extension removal (ADR-018 calls it a later Settings item).

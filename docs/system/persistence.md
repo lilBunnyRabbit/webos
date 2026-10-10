@@ -10,7 +10,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | localStorage | `app.{app_id}.{key}` | App storage handle (`contexts/app/storage-handle.svelte.ts`), one per window | `JSON.stringify(value)` | none | Optional zod schema on `get()` / `persisted()`. Invalid or corrupt → `null` / `initial`. Without a schema, anything parsed is returned unchecked. | `set()` writes immediately, or updates the live cell. `persisted()` writes via `$effect` on every change, including once on creation. |
 | OPFS | root of `navigator.storage.getDirectory()`, whole tree | FilesService (`files/opfs.ts`) | The user's files and folders, as is | n/a | None needed | User and app file operations ([services/files.md](services/files.md)) |
 | Storage persistence | `navigator.storage.persist()` | FilesService, requested on first `get_root()` | Browser permission | n/a | `false` → `console.warn("[FilesService] Storage not persisted")` | Once per page load |
-| Cache Storage + service worker | Workbox precache (`sw.js`, `workbox-*.js`, `registerSW.js`) | vite-plugin-pwa (`vite.config.ts`, `registerType: "autoUpdate"`), production only | Workbox-managed | Workbox revisions | Workbox handles it | On SW install/update. Wiped by `VersionService.apply_update()` |
+| Cache Storage + service worker | Workbox precache (`sw.js`, `workbox-*.js`, `registerSW.js`) | vite-plugin-pwa (`vite.config.ts`, `registerType: "autoUpdate"`), production only | Workbox-managed | Workbox revisions | Workbox handles it | On SW install/update. `VersionService.apply_update()` installs the new worker before reloading ([services/version.md](services/version.md#service-worker)) |
 
 Not used anywhere in OS code: `sessionStorage`, IndexedDB, cookies, the URL (no hash/query state; ADR-010 is only accepted).
 
@@ -34,8 +34,8 @@ interface StorageHandle {
 - **Save.** The cell's `$effect.root` saves `$state.snapshot(value)` whenever it changes. So the cell writes once on creation (`initial`, or the loaded value echoed back), then on every change.
 - `set(key, v)` goes through the live cell if there is one, so the cell's effect saves it. Otherwise it writes straight to localStorage.
 - `get(key)` always reads localStorage, **not** the live cell. Right after a `cell.value = …`, before effects flush, `get()` returns the previous value.
-- `remove(key)` removes the localStorage entry but leaves a live cell alone. The next change to that cell, or any other window still holding it, writes the key back.
-- Write failures go to `console.error("Failed to save app.x.y:")`. `remove()` isn't wrapped in try/catch.
+- `remove(key)` removes the localStorage entry and resets a live cell to a `structuredClone` of its `initial` without writing it, so every window shows `initial` and the key stays absent until the next change. The cell keeps its own clone of `initial` from creation, so edits to the live value never leak into the reset target.
+- Write and remove failures go to `console.error` (`Failed to save app.x.y:` / `Failed to remove app.x.y:`).
 - No cross-tab sync. There's no `storage` event listener.
 - Nothing is cleaned up when an app is removed: its `app.{id}.*` keys stay behind.
 
@@ -47,7 +47,7 @@ interface StorageHandle {
 | App data stored via `storage` | Yes | `app.{id}.*` |
 | Files and folders | Yes | OPFS. Lasts longer if `persist()` was granted. The browser may evict it otherwise. |
 | Open windows, positions, sizes, z-order, maximized/minimized | **No** | WindowsService is in-memory only (ROADMAP "Save/restore open windows and positions", open) |
-| Desktop icon layout | **No** | DesktopService `grid` is hardcoded `[[settings, file-explorer]]` at construction |
+| Desktop icon layout | **No** | DesktopService `layout` is hardcoded `[[settings, file-explorer]]` at construction |
 | Notification history | **No** | NotificationsService `all` is in-memory |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
 | File Explorer location, app UI state | **No** | Unless the app uses `storage` |
@@ -61,7 +61,7 @@ The rule for new service state ([CONVENTIONS → Services](../CONVENTIONS.md#ser
 
 | What | How |
 |------|-----|
-| Settings | `localStorage.removeItem("webos.settings")` + reload. The Settings app's Reset restores theme and taskbar but keeps `file_defaults`. |
+| Settings | `localStorage.removeItem("webos.settings")` + reload, or the Settings app's Reset (theme, taskbar and `file_defaults`, no reload). |
 | App data | `localStorage` keys `app.{id}.*` (no UI) |
 | Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`; no UI caller), or DevTools → Application → Storage |
-| SW / caches | `VersionService.apply_update()` (Settings → About → Refresh to Update) |
+| SW / caches | No UI. DevTools → Application → Storage. `apply_update()` replaces the precache with the new build's, it doesn't wipe it. |

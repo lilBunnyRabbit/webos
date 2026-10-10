@@ -49,7 +49,7 @@ Hardcoded colours outside the token system, all deliberate:
 
 | Where | Value | Why |
 |-------|-------|-----|
-| `index.html` body + `#splash`, `<meta name="theme-color">` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
+| `index.html` body + `#splash`, `<meta name="theme-color">`, PWA manifest `theme_color` + `background_color` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
 | `vite.config.ts` PWA manifest `theme_color` | `#17252C` | Same |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 | `background-dark` mix | `black` | CSS keyword inside `color-mix`, not a Tailwind colour |
@@ -60,7 +60,7 @@ Hardcoded colours outside the token system, all deliberate:
 |-------|------------------|
 | **Brand Dark** (`BRAND_DARK`) | 11 explicit OKLCH values. The default, and the merge base when loading. |
 | **Brand Light** (`BRAND_LIGHT`) | 11 explicit OKLCH values. UI only, never for the icon or splash. |
-| 21 user presets | `derive_theme({ background, foreground, primary, secondary, accent })`. Speed Reader Light/Dark use `rgb()`, the rest use OKLCH. |
+| 21 user presets | `derive_theme({ background, foreground, primary, secondary, accent })`. All base colours are OKLCH. |
 
 `derive_theme()` follows the brand formula and leaves the derived tokens as live CSS expressions:
 
@@ -72,7 +72,7 @@ success:    "oklch(from var(--primary) l 0.14 140)",   // warning 70, error 30, 
 
 Because the stored value is the expression and not a resolved colour, editing `primary` in Settings re-derives these tokens live. These strings are also what gets persisted.
 
-The Settings app (Theme section) applies a preset with `settings.theme = { ...preset.theme }` and edits single tokens through a text field and an `<input type="color">`. The colour picker only round-trips hex: it writes `#rrggbb` and shows black for OKLCH values. See [services/settings.md](services/settings.md#divergence-from-adr).
+The Settings app (Theme section) applies a preset with `settings.theme = { ...preset.theme }` and edits single tokens through a text field and an `<input type="color">`. The colour picker goes through native relative colour syntax: it shows `rgb(from <value> r g b)` as `#rrggbb` (out-of-gamut channels clipped), and a pick is stored as `oklch(from <hex> l c h)`, read back resolved from a probe element's computed style. Stored values stay OKLCH. Picking a derived token replaces its live expression with a fixed colour, so `primary`-based states stop following `primary` for that token.
 
 ## Fonts
 

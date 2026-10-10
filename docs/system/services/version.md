@@ -4,7 +4,7 @@ Key `version` · Depends on: none · ADR: [ADR-004](../../adrs/004-version-updat
 
 ## Purpose
 
-Knows which build is running and detects when a newer build has been deployed, by polling `/version.json`. It can also force-update: clear caches, unregister service workers and reload.
+Knows which build is running and detects when a newer build has been deployed, by polling `/version.json`. It can also apply the update: install the new service worker, then reload into the new build.
 
 ## Public API
 
@@ -14,7 +14,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `update_available` | `update_available: VersionInfo \| null` | The remote info, set when `remote.buildTimestamp > info.buildTimestamp`. Never reset to `null`. |
 | `is_checking` | `is_checking: boolean` | True while a `check()` is in flight. |
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running. Fetches `/version.json` with `cache: "no-store"`. A non-OK response is ignored silently. Network or parse errors go to `console.error`. Never throws. |
-| `apply_update` | `apply_update(): Promise<void>` | Deletes every Cache Storage entry, unregisters every service worker, then calls `location.reload()`. Errors go to `console.error`, and in that case there's no reload. |
+| `apply_update` | `apply_update(): Promise<void>` | If a service worker is registered: `registration.update()`, then waits for the installing or waiting worker to reach `activated`. Then `location.reload()`. Errors (including a worker that goes `redundant`) go to `console.error`, and in that case there's no reload. See [Service worker](#service-worker). |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
 
@@ -66,7 +66,7 @@ Only the Settings app's About section (`settings.app.svelte`). It shows `info`, 
 
 ## Persistence
 
-None of its own. `apply_update()` wipes Cache Storage and service worker registrations ([persistence.md](../persistence.md)).
+None of its own. The SW precache in Cache Storage belongs to Workbox ([persistence.md](../persistence.md)); `apply_update()` swaps it for the new build's, it never deletes it.
 
 ## Behaviour & invariants
 
@@ -74,12 +74,26 @@ None of its own. `apply_update()` wipes Cache Storage and service worker registr
 - In dev, an update shows up only after the dev server restarts (vite also restarts it when config changes) while an old tab is still open. The UI hides the panel behind `!import.meta.env.DEV` anyway.
 - `fetch("/version.json")` is root-absolute. It works because Vite `base` is the default `/`. Deploying under a sub-path would break it.
 
+## Service worker
+
+Production builds register a Workbox SW through `VitePWA({ registerType: "autoUpdate" })` in `vite.config.ts` (`sw.js`, `workbox-*.js`, plus `registerSW.js` injected into `index.html`). The PWA is a goal in its own right: installable, standalone, offline. The manifest's `theme_color` and `background_color` are both Brand Dark `#17252C`, so a standalone launch doesn't flash white. Dev registers no SW.
+
+Who does what:
+
+- **The SW** precaches the app shell (`js`, `css`, `html`, plus `includeAssets` and the manifest icons) and serves it, so the app boots offline. With `autoUpdate` the new worker skips waiting and claims open clients as soon as it installs. The browser also checks for a new `sw.js` on its own (on navigation, at most daily otherwise).
+- **VersionService** decides *when the user is told*. `/version.json` isn't precached and is fetched with `no-store`, so `check()` always sees the deployed build. Offline, the fetch fails and logs.
+- **`apply_update()`** bridges them. A plain reload would boot the old build from the precache. So it calls `registration.update()` to fetch the new `sw.js`, waits for that worker to activate (it skips waiting and claims this page), and only then reloads. The reload is served from the new precache, and offline keeps working afterwards.
+
+If the browser already installed the new worker before the click, `installing` and `waiting` are both `null` and it reloads straight away, which is correct: the active worker already serves the new build.
+
 ## Divergence from ADR
 
+- ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above.
 - ADR-004 calls for a toast when an update is found. There's none: VersionService doesn't depend on `notifications`, and nothing watches `update_available`.
 - ADR-004 calls for a `CHANGELOG.md` fetched and rendered in Settings. It doesn't exist (also noted in ROADMAP "Release notifications").
-- ADR-004 rejected a service worker. `vite.config.ts` includes `VitePWA({ registerType: "autoUpdate" })`, so production builds register a Workbox SW (`sw.js`, `registerSW.js`) that precaches the app shell. The SW updates itself on its own schedule, separately from VersionService. `apply_update()` unregisters it before reloading, so it re-registers on the next load.
 
 ## Known gaps
 
 - `update_available` is never cleared, even if a later check finds nothing newer.
+- The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.
+- `activated()` has no timeout. A worker stuck in `installing` (slow network on a big precache) leaves the button with no feedback until it finishes.

@@ -2,6 +2,13 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-11: the service worker stays**
+> - A standalone, installable PWA is a main goal of the project, so the VitePWA service worker that ADR-004 rejected under "Alternatives" stays. It was already registered in production (`registerType: "autoUpdate"`: Workbox precache, navigation fallback to `index.html`, `skipWaiting` + `clientsClaim`).
+> - Roles: the service worker owns caching and offline use. VersionService only detects a new build through `version.json`, which isn't precached, so it always hits the network.
+> - `apply_update()` no longer clears caches or unregisters the worker, which used to throw away offline support until the next load. It calls `registration.update()`, waits for the new worker to activate, then reloads into the new precache.
+> - The bundle and `version.json` now share one build stamp. Before this fix, every production check reported an update.
+> - Manifest `background_color` is Brand Dark, so a standalone launch doesn't flash white.
+
 ## Context
 The app is a SPA hosted on GitHub Pages (static-only, no server-side control). Users need to know when a new version is deployed and be able to update. The previous React implementation used `version.json` polling, which worked well for these constraints.
 
@@ -43,7 +50,7 @@ Use a build-generated `version.json` file with polling-based update detection.
 
 ## Alternatives Considered
 - **Build hash in `index.html` meta tag** — Fetching and parsing own HTML felt hacky; GitHub Pages CDN caching reduces reliability.
-- **Service Worker** — Overkill complexity for just update detection; no PWA/offline needs currently.
+- **Service Worker** — Overkill complexity for just update detection; no PWA/offline needs currently. *(Superseded 2026-10-11: the PWA goal brought it back, see the revision note.)*
 - **GitHub Deployments API** — No auth needed for public repos, but adds external dependency and 60 req/hour rate limit. Unnecessary when `version.json` works.
 - **Server-Sent Events** — Requires backend; not possible on GitHub Pages.
 

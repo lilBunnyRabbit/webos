@@ -51,10 +51,10 @@ The desktop's default grid places `settings` and `file-explorer` (`services/desk
 
 | Section | What it does |
 |---------|--------------|
-| Theme | One row per token in `settings.theme`: a text input (writes on every keystroke) and an `<input type="color">` (writes on change). The colour picker only reflects values starting with `#`, anything else shows black. Below that, a grid of `THEME_PRESETS` swatches. Clicking one replaces the theme with a copy ([theming](theming.md)) |
+| Theme | One row per token in `settings.theme`: a text input (writes on every keystroke) and an `<input type="color">` (writes on change). The colour picker goes through native relative colour syntax: it shows `rgb(from <value> r g b)` as `#rrggbb` (out-of-gamut channels clipped), and a pick is stored as `oklch(from <hex> l c h)`, read back resolved from a probe element's computed style. Stored values stay OKLCH. Picking a derived token replaces its live expression with a fixed colour. Below that, a grid of `THEME_PRESETS` swatches. Clicking one replaces the theme with a copy ([theming](theming.md)) |
 | Taskbar | Four buttons, top/bottom/left/right, that set `settings.taskbar.position` |
 | About | Logo, version, commit, branch, mode (dev/prod), build time from `version.info`. In prod: "Check for Updates" (`version.check()`), plus "Refresh to Update" (`version.apply_update()`) when an update is available. In dev: a notice that checking is off. Links to the GitHub repo |
-| Reset Settings | Sets taskbar to `BOTTOM` and theme to a copy of `BRAND_DARK`. It doesn't touch `file_defaults` |
+| Reset Settings | Sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK`, and `file_defaults` to `{}`. No confirmation |
 
 Every write goes straight to service state. Persistence is the settings service's job.
 
@@ -63,7 +63,8 @@ Every write goes straight to service state. Persistence is the settings service'
 **Known gaps / oddities.**
 
 - `update_status` is `$derived(() => …)`, a derived *function* called as `update_status()`. `$derived.by` was presumably meant.
-- No way to view or reset remembered file defaults (ADR-018 lists this as a later Settings item).
+- No way to view remembered file defaults or reset a single one; only the global Reset clears them (ADR-018 lists this as a later Settings item).
+- `to_hex()` appends and removes a probe `<span>` per token on every render of the Theme section.
 - The fixed-width sidebar has no `@container` responsiveness, against the app rule in CONVENTIONS.
 - `positions` is typed as a string-literal union instead of `TaskbarPosition`. The `#each` loops over tokens and positions have no keys.
 - The footer copyright is hardcoded `© 2025`. `author: "John Doe"` is a placeholder.
@@ -99,7 +100,6 @@ Every write goes straight to service state. Persistence is the settings service'
 
 - No size limit or binary check. It reads the whole file into one string and renders it in one `<pre>`.
 - No syntax highlighting, editing, or saving (`get_file` returns no handle).
-- The `.env` association never matches a file literally named `.env`: `file_extension()` treats dotfiles as having no extension (`services/apps/associations.ts:6`). It matches only names like `prod.env`. Without a MIME type, a bare `.env` gets "No app can open".
 - No window defaults, so it opens at the windows-service default size.
 
 ---

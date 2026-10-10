@@ -32,7 +32,7 @@ It uses **mouse** events, not pointer events. CONVENTIONS calls this older code.
 | `mousemove` | Moves the fixed-position preview with the pointer. Below an 8px threshold (`DRAG_THRESHOLD`) nothing else happens. After that, the state becomes `move` and the target cell is `floor((client − container.bounds) / cell)`, clamped to the grid. |
 | `mouseup` | If the state is `move` and the target cell is empty (`!is_blocked`), it calls `desktop.move_item(from, to)`. Then it clears the state. |
 
-While moving, the original icon fades to 50%. A target-cell highlight appears whenever the target isn't the current cell, in `error` tint if the cell is occupied. A ghost copy follows the cursor.
+While moving, the original icon fades to 50%. A target-cell highlight appears whenever the target isn't the current cell, in `error` tint if the cell is occupied. A ghost copy, one cell in size (`container.cell` in px), follows the cursor.
 
 ## User interactions
 
@@ -54,7 +54,6 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop").
 ## Known gaps
 
 - Mouse events only, so there's no touch drag (ADR-016) and no pointer capture. Dropping outside the window still ends the drag via the document `mouseup`.
-- The ghost preview's `style:width={desktop.container.cell.width}` gets a bare number, with no `px` (`desktop-item.svelte:63-64`). The declaration is invalid CSS and gets dropped, so the ghost sizes to its content.
 - On the first move past the threshold, the target is the item's *current* cell rather than the cell under the pointer (`desktop-item.handle.svelte.ts:105-114`). It catches up on the next `mousemove`.
 - `ItemHandler` captures `{x, y}` at construction. That's fine only because components are keyed by cell. Reusing a component across cells would break the move.
 - No keyboard launch, no context menu, no multi-select, no persistence (see [services/desktop.md](../services/desktop.md)).

@@ -61,7 +61,6 @@ States:
 ## Known gaps
 
 - "Pin to Desktop" can pin duplicates and gives no feedback when the grid is full (`desktop.add_item` returns `null` with only a `console.warn`).
-- `start-menu-popover.svelte` has an `$effect` that `console.log`s on every open and close.
 - `data-[state=open]:bg-primary/10` on the start button and the items is dead. Nothing sets `data-state`; it's left over from a component-library era.
 - The app row has `hover:bg-foreground/10` on both the wrapper and the button, which doubles the tint.
 - Taskbar items have no accessible name (icon-only, no `title`/`aria-label`).

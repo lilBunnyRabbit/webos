@@ -10,7 +10,7 @@ Holds the desktop icon grid: which app shortcut sits in which cell. It also hold
 |------|----------|
 | `type.ts` | `DesktopService` interface, `DesktopGrid`, `DesktopGridItem` |
 | `service.svelte.ts` | Implementation |
-| `helper.ts` | `DesktopHelper`: free-cell search and re-layout on grid resize |
+| `helper.ts` | `DesktopHelper`: free-cell search and `fit()`, which maps the layout onto the current grid size |
 
 ## Model
 
@@ -22,24 +22,26 @@ type DesktopGridItem = { app_id: AppId; props?: AppProps };  // `type`, not `int
 - Row-major and sparse. Rows can be missing, and cells can be `undefined` holes.
 - An item is a shortcut to an app id, with optional launch props. Nothing ever sets `props` today.
 - Ids aren't validated against the registry. Unknown ids render as "Unknown (id)".
-- The initial grid is hard-coded to `[[settings, file-explorer]]`.
+- Two grids exist. `layout` is the user's arrangement and is never trimmed. `grid` is what's shown at the current size, derived from `layout` (see [Fitting](#behaviour--invariants)).
+- The initial layout is hard-coded to `[[settings, file-explorer]]`.
 
 ## Public API
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `container` | `readonly { bounds, cell, grid: { columns, rows }, config: { cell_size, padding }, element }` | `$state.raw`. `bounds` is the element's viewport rect minus `padding` on every side. `cell` is the actual cell size (`bounds / columns`), so it's ≥ `cell_size`. `grid` is the column and row count. |
-| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 64`, `padding 4`. If the column or row count changed, it re-lays the grid (below). A falsy element resets to the viewport size with a 0×0 grid. |
-| `add_item` | `(app_id) => Position \| null` | First free cell, row-major (`calculate_item_position`). Returns `null` with a `console.warn` when the grid is full or not measured yet (0×0). No dedupe: the same app can be pinned many times. |
-| `remove_item` | `(position) => void` | Writes `undefined` into the cell. |
-| `move_item` | `(from, to) => Position` | No-op when `from` equals `to`. **Overwrites** whatever is at `to`; the shell is what prevents dropping onto an occupied cell. |
+| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 64`, `padding 4`. A new size re-derives `grid` (below); `layout` isn't touched. A falsy element resets to the viewport size with a 0×0 grid. |
+| `add_item` | `(app_id) => Position \| null` | First free cell of the visible `grid`, row-major (`calculate_item_position`), written into `layout` at that cell. Returns `null` with a `console.warn` when the grid is full or not measured yet (0×0). No dedupe: the same app can be pinned many times. |
+| `remove_item` | `(position) => void` | Looks up the item shown at `position` and clears it from wherever `layout` holds it. No-op for an empty cell. |
+| `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise clears the item from its `layout` cell and writes it at `to`, so a relocated item gets `to` as its real cell. **Overwrites** whatever `layout` holds at `to`; the shell is what prevents dropping onto an occupied cell. |
 | `has_item_in_position` | `(position) => boolean` | |
-| `list` | `() => DesktopGrid` | The live `$state` grid. |
-| `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items" but `N` is the row count (`grid.length`). |
+| `list` | `() => DesktopGrid` | The derived visible `grid`. Read-only in practice: writing into it doesn't reach `layout`. |
+| `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting the visible grid (hidden items aren't counted). |
 
 ## State
 
-- `grid`: deep `$state`, mutated in place by `set_item`.
+- `layout`: deep `$state`, mutated in place by the private `place()` and `take_from_layout()`.
+- `grid`: `$derived(DesktopHelper.fit(container.grid, layout))`.
 - `container`: `$state.raw`, replaced wholesale.
 
 ## Lifecycle
@@ -54,13 +56,15 @@ None (`// TODO: persist` at the top of `service.svelte.ts`). Pins and positions 
 
 **Placement.** `calculate_item_position` scans row by row, left to right, and takes the first `undefined` cell. A missing or empty row yields `{ x: 0, y }`. ADR-011's auto-arrange says column by column, but that isn't built.
 
-**Re-layout on grid resize** (`recalculate_grid_positions`, which runs only when `columns` or `rows` change):
+**Fitting** (`DesktopHelper.fit(dimensions, layout)`, re-run whenever the size or the layout changes):
 
-1. Walk the old grid in order. An item whose cell is still in range and free keeps its cell.
-2. Out-of-range items, and in-range items whose cell an earlier spill already took, go to the first free cell, row-major.
-3. **If there's no free cell, the item is silently dropped.** `add_from_start` returns without placing it. Shrink the window enough and pins are gone for good, since nothing is persisted.
+1. Every `layout` item whose cell is inside `columns × rows` is shown at that cell.
+2. The rest (out of range), in row-major `layout` order, take the first free cells, row-major.
+3. Items left when no free cell remains are **hidden**, not dropped. They stay in `layout`.
 
-Original positions aren't remembered. Growing the grid again doesn't move spilled items back (`// TODO: … persist original position for restore`). `add_from_start` also logs every spilled item to the console.
+Because `layout` is never trimmed, growing the window puts relocated and hidden items back in their own cells. Moving a relocated item writes its new cell into `layout`, so the move sticks. Removing one clears its `layout` cell, not the cell it was shown in.
+
+Writes go through the state proxy (`if (!layout[y]) layout[y] = []`, not `??=`): `??=` returns the raw array, and writes to it aren't tracked.
 
 **Coordinates.** `container.bounds` is viewport space. The shell's drag handler subtracts `bounds.x/y` from `clientX/Y` and divides by `cell` to get a grid cell, so the two stay consistent as long as the element doesn't move without resizing. Moves without a resize aren't observed (ResizeObserver only reports size).
 
@@ -71,7 +75,7 @@ ADR-011 is *Accepted* and none of it is built: multi-selection, wallpapers, cont
 ## Known gaps
 
 - Not persisted.
-- Items get dropped when the grid shrinks below the item count.
+- Hidden items (more pins than cells) can't be seen, launched or removed until the grid grows. Nothing tells the user they exist.
 - `add_item` doesn't dedupe and fails silently, with only a `console.warn` and no notification.
 - `move_item` overwrites the target. The service doesn't enforce the "one item per cell" invariant itself.
 - `DesktopGridItem` is a `type` object shape, against CONVENTIONS. A 0-column grid would make `cell` `Infinity`/`NaN`; the shell guards against rendering that.

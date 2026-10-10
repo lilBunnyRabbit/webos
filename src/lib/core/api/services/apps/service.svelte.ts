@@ -5,7 +5,7 @@ import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
 
-export class AppsService implements AppsService {
+export class AppsService implements IAppsService {
   name = "AppsService";
   description = "AppsService";
 

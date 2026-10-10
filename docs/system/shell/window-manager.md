@@ -36,7 +36,6 @@ None of its own. Everything happens in [window.md](window.md).
 
 ## Known gaps
 
-- `$inspect("list", list)` is left in and logs on every window open and close in dev.
 - Windows render in `list()` (insertion) order and stack by `z-index`. DOM order doesn't follow z-order, so Tab order between windows is open order.
 - When the container shrinks, nothing clamps existing windows back inside it.
 - Moving the container without a resize or a taskbar change (for example, a layout change elsewhere) isn't observed, so `container.bounds.x/y` goes stale.

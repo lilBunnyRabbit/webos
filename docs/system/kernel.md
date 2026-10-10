@@ -30,12 +30,14 @@ There's a `// TODO: kernel to interface` in `type.ts`. `ServiceDescriptor` refer
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `services` | `readonly services: Map<string, IService>` | A `SvelteMap`, so lookups inside `$derived` are reactive to set/replace. Holds only fully initialized services. Public: the Kernel app iterates it. |
-| `init` | `init(): Promise<Kernel>` | Idempotent while initialized. Calls `register_default_services(this)`, resolves order, then for each key: `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. Sets `is_initialized`. |
+| `init` | `init(): Promise<Kernel>` | Idempotent while initialized. Calls `register_default_services(this)`, resolves order, then for each key: `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. Sets `is_initialized`. If a construction or `init()` throws, it tears down what already initialized and rethrows (see [Failed init](#failed-init)). |
 | `register` | `register<T extends IService>(name: string, descriptor: ServiceDescriptor<T>): void` | Records a descriptor only, constructing nothing. Throws if called after init. Warns `Overwriting service "x"` on a duplicate key. |
 | `service` | `service<T extends IService>(name: string): T` | Synchronous lookup. Throws `Service "x" not found` if absent. Unchecked cast to `T`. |
-| `shutdown` | `shutdown(): void` | No-op unless initialized. Calls `destroy?.()` on each service in reverse init order. Each is wrapped in try/catch so one failure doesn't stop the rest (`console.error`). Then clears `is_initialized`. |
+| `shutdown` | `shutdown(): void` | No-op unless initialized. Runs the private `teardown()`, then clears `is_initialized`. |
 
-Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_order: string[]`, `resolve_order()`.
+Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_order: string[]`, `resolve_order()`, `teardown()`.
+
+`teardown()` calls `destroy?.()` on every service in `services`, in reverse init order. Each call is wrapped in try/catch so one failure doesn't stop the rest (`console.error`). Then it clears `services`, `descriptors` and `init_order`, so the next `init()` starts from nothing. Used by `shutdown()` and by a failed `init()`.
 
 ## Registration
 
@@ -99,16 +101,20 @@ Which services implement which hooks today:
 
 ### Failed init
 
-If any `init()` throws or rejects, `kernel.init()` rejects. `main.ts` logs it and never mounts, and the splash stays up. There's no partial OS (ADR-002). Services that **already** finished `init()` stay in `services` and are not destroyed. Their effects, timers and listeners keep running, and `is_initialized` stays `false`, so `shutdown()` won't clean them up either.
+If a constructor or `init()` throws or rejects, `kernel.init()` calls `teardown()` and rethrows. Services that already finished `init()` get `destroy()` in reverse order, and the kernel is left empty with `is_initialized === false`. There's no partial OS (ADR-002).
+
+`main.ts` catches the rejection, logs `Failed to initialize application:` and calls `show_boot_error()`. That appends `WebOS failed to start: <message>` to `#splash`, in monospace and the Brand Dark error colour (`oklch(0.745 0.1398 30)`, hardcoded because no theme token exists yet). Nothing mounts and the splash stays up with the message.
+
+Two cases teardown doesn't cover:
+
+- The service that failed isn't in `services` yet, so its own `destroy()` never runs. Anything its `init()` started before throwing (an effect root, a listener) leaks.
+- `resolve_order()` runs before the `try`. A missing dependency or a cycle rejects `init()` without clearing `descriptors`. Nothing was constructed, so nothing leaks, but a retry in the same page logs `Overwriting service` for every key.
 
 ### HMR
 
-`api/index.ts` reuses `window.kernel` when it exists, so a module re-evaluation keeps the same `Kernel` instance and its services. `main.ts`'s `import.meta.hot.dispose` unmounts the app and calls `kernel.shutdown()`. When `main.ts` runs again, `kernel.init()` sees `is_initialized === false` and does a full re-init. It reconstructs every service into the existing `SvelteMap`.
+`api/index.ts` reuses `window.kernel` when it exists, so a module re-evaluation keeps the same `Kernel` instance. `main.ts`'s `import.meta.hot.dispose` unmounts the app and calls `kernel.shutdown()`, which empties `services` and `descriptors`. When `main.ts` runs again, `kernel.init()` sees `is_initialized === false`, re-registers the eight services into empty maps and reconstructs them into the same `SvelteMap`. Between shutdown and re-init, `kernel.service()` throws `not found`.
 
-Side effects worth knowing:
-
-- `shutdown()` clears neither `descriptors` nor `services`. The re-init re-registers all eight keys and logs `Overwriting service "…"` eight times. Between shutdown and re-init, `kernel.service()` still returns the destroyed instances.
-- Because the old instance is reused, edits to `kernel.svelte.ts` itself don't take effect until a full reload.
+Because the old instance is reused, edits to `kernel.svelte.ts` itself don't take effect until a full reload.
 
 ## Consumer rules
 
@@ -133,5 +139,6 @@ ADR-002's revision note matches the code. The original ADR body (`swap()`, `get_
 
 - No `swap()`. `services` is reactive, but nothing replaces an entry after boot (ROADMAP: deferred until session persistence).
 - `type.ts` → `Kernel` is a class, not an interface (`TODO: kernel to interface`).
-- A failed init leaks the services that did initialize, and the splash never goes away (no boot error UI).
-- `shutdown()` leaves stale `services`/`descriptors`, which causes the overwrite warnings on HMR re-init.
+- A failed `init()` doesn't destroy the service that threw, only the ones before it.
+- A `resolve_order()` failure (missing dependency, cycle) leaves `descriptors` filled.
+- The boot error is a line of text on the splash. No retry button, no reset-settings escape hatch.

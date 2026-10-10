@@ -6,14 +6,6 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   // TODO: design, pin, etc, prevent from mounting when closed
-
-  $effect(() => {
-    console.log("start menu popover opened");
-
-    return () => {
-      console.log("start menu popover closed");
-    };
-  });
 </script>
 
 <div class="sticky top-0 flex items-center justify-between py-4 px-2 bg-background border-b border-foreground/20">

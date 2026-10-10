@@ -34,7 +34,13 @@ export class FilesService implements IFilesService {
   }
 
   async directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler> {
-    return new DirectoryHandler(this, await this.resolve(handle ?? null), segments);
+    if (handle) return new DirectoryHandler(this, handle, segments);
+
+    let resolved = await this.get_root();
+    for (const segment of segments) {
+      resolved = await resolved.getDirectoryHandle(segment);
+    }
+    return new DirectoryHandler(this, resolved, segments);
   }
 
   async list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]> {

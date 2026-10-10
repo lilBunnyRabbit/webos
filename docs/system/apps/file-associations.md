@@ -22,7 +22,7 @@ define_app({
 
 All comparisons are lowercase. The MIME is `File.type` as the browser reports it for the OPFS file, which the browser derives from the extension. An empty type matches no MIME entry.
 
-`file_extension()` is everything from the **last** dot, lowercased (`archive.tar.gz` → `.gz`). A name with no dot, or whose only dot is the first character (`.gitignore`, `.env`), has no extension.
+`file_extension()` is everything from the **last** dot, lowercased (`archive.tar.gz` → `.gz`). A dotfile is its own extension (`.env` → `.env`, `.gitignore` → `.gitignore`), so Text Viewer's `.env` entry matches both `.env` and `prod.env`. A name with no dot has no extension.
 
 An app that declares associations should also declare `props: FILE_PROPS` (or a schema that accepts `{ path: string }`). Otherwise every open discards the props with a warning and the app opens empty.
 
@@ -100,6 +100,5 @@ Handle `path` being `undefined` (launched from the start menu) and `get_file` re
 
 ## Known gaps
 
-- `.env` in Text Viewer's list only matches `something.env`; a file named `.env` has no extension and gets "No app can open .env". Same for every dotfile.
 - No "Open with…" for a single match or when a default exists: the user can't pick another app once a default is set, short of editing settings.
-- No reset UI for `file_defaults` (ADR-018 defers it to the Settings app).
+- No per-extension reset for `file_defaults`. Only the Settings app's global Reset Settings clears them, together with theme and taskbar.

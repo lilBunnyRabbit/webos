@@ -9,8 +9,6 @@
   const list = $derived(windows.list());
 
   let props: SvelteHTMLElements["div"] = $props();
-
-  $inspect("list", list);
 </script>
 
 <div

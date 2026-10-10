@@ -3,6 +3,11 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+> **Revision 2026-10-11: layout vs visible grid**
+> - DesktopService keeps the user's arrangement (`layout`) as the source of truth and derives the visible `grid` for the current container size (`DesktopHelper.fit`). Items in range keep their cell. Out-of-range items take the first free cell. Items with no free cell are hidden but never deleted, and they return to their own cells when the grid grows.
+> - Before this, shrinking the grid deleted icons that didn't fit, and a 0×0 grid at startup could delete all of them.
+> - The desktop arrangement isn't persisted yet. When persistence lands, `layout` is what gets saved.
+
 ## Context
 
 The current desktop supports placing app icons on a grid and dragging them. However, it lacks features expected in a desktop environment: multi-selection, wallpapers, context menus, and icon management. These were planned in the legacy React version but not yet carried over.

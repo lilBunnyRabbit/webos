@@ -36,7 +36,7 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 | `BRAND_DARK` | `Theme` | Default. All OKLCH literals. |
 | `BRAND_LIGHT` | `Theme` | All OKLCH literals. |
 | `derive_theme` | `(base: ThemeBase) => Theme` | Fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`. |
-| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme }`) | Brand Dark, Brand Light, then 21 `derive_theme()` presets. Two of them, Speed Reader Light and Speed Reader Dark, use `rgb()`. |
+| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme }`) | Brand Dark, Brand Light, then 21 `derive_theme()` presets. All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
 
 Token list and semantics: [theming.md](../theming.md).
@@ -90,12 +90,11 @@ Load and sanitize rules (`persistence.ts`):
 - Tokens are only ever set, never removed. A token missing from `theme` keeps its last value on `<html>`. That can't happen through the public flow, because load always fills all 11.
 - Derived presets store strings like `oklch(from var(--primary) l 0.14 140)` as the token value. They resolve at use time in CSS, so editing `primary` live re-derives the states.
 - No cross-tab sync. Two tabs each write their own state, and the last write wins on reload.
-- The Settings app's "Reset Settings" (`settings.app.svelte:30`) resets `taskbar` and `theme` but **not** `file_defaults`.
+- The Settings app's "Reset Settings" (`settings.app.svelte:30`) resets `taskbar`, `theme` and `file_defaults`.
 
 ## Divergence from ADR
 
 - ADR-002's revision note describes the stored blob as `{ version: 1, theme, taskbar }`. The code adds `file_defaults`, without a version bump (ADR-018; noted in `persistence.ts:49`).
-- ADR-015 and CONVENTIONS say token values are OKLCH. The Speed Reader presets use `rgb()`. The Settings app's colour picker writes `#rrggbb` hex and shows `#000000` for any value that isn't hex, which is every built-in value (`settings.app.svelte:131`).
 
 ## Known gaps
 

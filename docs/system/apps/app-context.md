@@ -52,7 +52,7 @@ Built by `create_storage_handle(app_id)`. Keys are stored as `app.{app_id}.{key}
 |--------|-----------|-----------|
 | `get` | `<T>(key, schema?: ZodType<T>): T \| null` | Reads and parses. Missing, unparseable JSON, a throwing `localStorage`, or a failed `schema.safeParse` → `null`. Without a schema the parsed value is cast, unchecked |
 | `set` | `<T>(key, value: T): void` | If a `persisted()` cell is live for the key, sets the cell (which then saves). Otherwise writes directly. Write errors are `console.error`ed. No schema check |
-| `remove` | `(key): void` | `localStorage.removeItem`. Does **not** touch a live cell; see below |
+| `remove` | `(key): void` | `localStorage.removeItem` (errors logged, not thrown), then resets a live cell to its `initial` without saving; see below |
 | `persisted` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | A reactive cell that saves on change. Must be called during component init |
 
 ### `persisted()`
@@ -80,7 +80,7 @@ Two windows of the Example app: incrementing in one updates the other live, and 
 
 Edge cases:
 
-- `remove(key)` while a cell is live: storage is cleared, but every window keeps showing the cell's value, and the next change writes it back.
+- `remove(key)` while a cell is live: storage is cleared and the cell resets to a clone of its `initial` in every window, without writing. The key stays absent until the next change. The reset target is the first caller's `initial`, cloned when the cell was created.
 - A launch prop used as `initial` (the Example app's `count`) only counts when nothing is stored and no cell is live. After that the stored value wins over the prop.
 - Other browser tabs aren't synced; there's no `storage` event listener.
 - Two different components in the same window calling `persisted()` on the same key also share the cell.

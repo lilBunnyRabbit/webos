@@ -13,7 +13,7 @@ export class DesktopService implements IDesktopService {
   description = "DesktopService";
 
   to_string(): string {
-    return `DesktopService: ${this.grid.length} items`;
+    return `DesktopService: ${this.grid.flat().filter(Boolean).length} items`;
   }
 
   private static DEFAULT_CONFIG = {
@@ -40,7 +40,9 @@ export class DesktopService implements IDesktopService {
     element: null,
   });
 
-  private grid = $state<DesktopGrid>([[{ app_id: "settings" }, { app_id: "file-explorer" }]]);
+  /** The user's arrangement. Survives any container size; `grid` is what fits right now. */
+  private layout = $state<DesktopGrid>([[{ app_id: "settings" }, { app_id: "file-explorer" }]]);
+  private grid = $derived(DesktopHelper.fit(this.container.grid, this.layout));
 
   public set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void {
     if (!element) {
@@ -83,8 +85,6 @@ export class DesktopService implements IDesktopService {
     const columns = Math.floor(bounds.width / cell_size);
     const rows = Math.floor(bounds.height / cell_size);
 
-    const is_grid_changed = columns !== this.container.grid.columns || rows !== this.container.grid.rows;
-
     this.container = {
       bounds,
       cell: { width: bounds.width / columns, height: bounds.height / rows },
@@ -96,11 +96,6 @@ export class DesktopService implements IDesktopService {
       element,
     };
 
-    if (is_grid_changed) {
-      // console.log("DesktopService:grid changed", this.container.grid, this.grid);
-      this.grid = DesktopHelper.recalculate_grid_positions(this.container.grid, this.grid);
-    }
-
     // console.log("DesktopService:set_container", this.container);
   }
 
@@ -111,11 +106,13 @@ export class DesktopService implements IDesktopService {
       return null;
     }
 
-    return this.set_item(position, { app_id });
+    this.place(position, { app_id });
+    return position;
   }
 
   public remove_item(position: Position): void {
-    this.set_item(position, undefined);
+    const item = this.get_item(position);
+    if (item) this.take_from_layout(item);
   }
 
   public list(): DesktopGrid {
@@ -130,14 +127,21 @@ export class DesktopService implements IDesktopService {
     return this.grid[position.y]?.[position.x];
   }
 
-  private set_item(position: Position, item: DesktopGridItem | undefined): Position {
-    if (!this.grid[position.y]) {
-      this.grid[position.y] = [];
+  private place(position: Position, item: DesktopGridItem): void {
+    // Read the row back through the state proxy: `??=` would hand back the raw array, and writes to it aren't tracked.
+    if (!this.layout[position.y]) this.layout[position.y] = [];
+    this.layout[position.y][position.x] = item;
+  }
+
+  /** Removes an item from wherever the layout holds it, which may differ from where it's shown. */
+  private take_from_layout(item: DesktopGridItem): void {
+    for (const row of this.layout) {
+      const x = row?.indexOf(item) ?? -1;
+      if (row && x >= 0) {
+        row[x] = undefined;
+        return;
+      }
     }
-
-    this.grid[position.y][position.x] = item;
-
-    return position;
   }
 
   public move_item(from: Position, to: Position): Position {
@@ -145,8 +149,11 @@ export class DesktopService implements IDesktopService {
       return from;
     }
 
-    this.set_item(to, this.get_item(from));
-    this.set_item(from, undefined);
+    const item = this.get_item(from);
+    if (!item) return from;
+
+    this.take_from_layout(item);
+    this.place(to, item);
 
     return to;
   }

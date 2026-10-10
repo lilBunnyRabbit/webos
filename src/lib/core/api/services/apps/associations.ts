@@ -1,9 +1,9 @@
 import type { AppManifest } from "./type";
 
-/** `"Notes.TXT"` → `".txt"`. Dotfiles (`.gitignore`) and names without a dot have none. */
+/** `"Notes.TXT"` → `".txt"`. A dotfile is its own extension (`.env` → `".env"`). Names without a dot have none. */
 export function file_extension(name: string): string {
   const dot = name.lastIndexOf(".");
-  return dot > 0 ? name.slice(dot).toLowerCase() : "";
+  return dot >= 0 ? name.slice(dot).toLowerCase() : "";
 }
 
 /** Exact extension 3, exact MIME 2, MIME wildcard 1, no match 0 (ADR-018). */

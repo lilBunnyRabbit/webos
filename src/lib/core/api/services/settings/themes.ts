@@ -57,8 +57,8 @@ function base(
 export const THEME_PRESETS: ThemePreset[] = [
   { name: "Brand Dark", theme: BRAND_DARK },
   { name: "Brand Light", theme: BRAND_LIGHT },
-  base("Speed Reader Light", ["rgb(255 246 231)", "rgb(100 128 150)", "rgb(219 159 118)", "rgb(172 219 118)", "rgb(219 118 118)"]),
-  base("Speed Reader Dark", ["rgb(26 43 51)", "rgb(185 182 170)", "rgb(237 203 171)", "rgb(206 237 171)", "rgb(237 171 171)"]),
+  base("Speed Reader Light", ["oklch(0.976 0.022 80.58)", "oklch(0.586 0.0467 242.26)", "oklch(0.75 0.0905 55.2)", "oklch(0.836 0.1393 129.45)", "oklch(0.679 0.1263 20.92)"]),
+  base("Speed Reader Dark", ["oklch(0.278 0.0269 229.12)", "oklch(0.775 0.0171 95.16)", "oklch(0.863 0.0575 65.19)", "oklch(0.907 0.0926 128.53)", "oklch(0.803 0.078 18.92)"]),
   base("Light Pastel Blue", ["oklch(0.98 0.01 250)", "oklch(0.22 0.02 80)", "oklch(0.7 0.09 200)", "oklch(0.7 0.09 20)", "oklch(0.7 0.09 320)"]),
   base("Red & Black", ["oklch(0.45 0.22 29)", "oklch(0.15 0.01 0)", "oklch(0.85 0.02 29)", "oklch(0.7 0.13 80)", "oklch(0.7 0.13 340)"]),
   base("Dark Warm", ["oklch(0.15 0.03 40)", "oklch(0.85 0.02 120)", "oklch(0.65 0.1 60)", "oklch(0.65 0.1 240)", "oklch(0.65 0.1 180)"]),

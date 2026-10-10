@@ -28,7 +28,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `message` | `string` | | Second line |
 | `type` | `NotificationType` | `"info"` | |
 | `icon` | `Component` | type icon | Replaces the type icon in the toast |
-| `duration` | `number \| null` | `5000` | Toast lifetime in ms. `null` keeps the toast until closed. History is unaffected |
+| `duration` | `number \| null` | `5000`; for `"progress"`, no auto-hide | Toast lifetime in ms. `null` keeps the toast until closed. History is unaffected |
 | `actions` | `NotificationAction[]` | | `{ label, on_click }`. Clicking runs `on_click` then hides the toast |
 | `progress` | `number \| null` | | `0`–`1` determinate bar, `-1` indeterminate (pulsing) bar, `null`/absent no bar |
 
@@ -67,8 +67,9 @@ None. History is in memory and gone on reload.
 
 ## Behaviour & invariants
 
-- `notify` prepends to `all` and `toast_ids`, then starts a `setTimeout(hide_toast, duration)` unless `duration === null`. Returns a uuid.
-- The timer starts at `notify` and is never restarted. `update()` on a progress notification does not extend its toast: with the default `duration` it disappears after 5 s while still in progress. Pass `duration: null` for anything long-running, as ADR-006's example does.
+- `notify` prepends to `all` and `toast_ids`, then starts the hide timer (private `schedule_hide`, which clears any existing timer for the id first). Duration: the caller's `duration` if set (`null` → no timer); otherwise none for `type: "progress"`, 5 s for every other type. Returns a uuid.
+- `update()` that switches a `"progress"` notification to another type, when the caller never set `duration` and the toast is still showing, starts the default 5 s timer. So `notify({ type: "progress" })` → `update({ type: "success" })` stays up while working and hides 5 s after it finishes.
+- A caller-set `duration` on a progress toast is a fixed lifetime from `notify`. `update()` never restarts it.
 - The toast's close button calls `hide_toast`, not `dismiss`.
 
 ### Toast area

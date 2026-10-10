@@ -37,7 +37,7 @@ Each layer only reaches down. Shell components and apps get services with `kerne
 5. **`#splash` is removed** right after `mount()` returns.
 6. **Shutdown hooks**: `pagehide` without `event.persisted` calls `kernel.shutdown()`. A bfcache-persisted pagehide keeps the services alive. HMR dispose unmounts the app and shuts the kernel down.
 
-If `kernel.init()` throws (a service `init()` rejects, a dependency is missing, or there's a cycle), `main()` rejects and logs `Failed to initialize application:`. Nothing mounts and **the splash stays up forever**. There's no error screen.
+If `kernel.init()` throws (a service `init()` rejects, a dependency is missing, or there's a cycle), the kernel tears down the services that already initialized and rethrows. `main()` rejects, logs `Failed to initialize application:`, and `show_boot_error()` appends `WebOS failed to start: <message>` to the splash in the Brand Dark error colour. Nothing mounts. See [kernel.md](kernel.md#failed-init).
 
 `App.svelte` also imports `./app.css`, which `main.ts` already imports. The duplicate is harmless.
 
@@ -68,7 +68,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | Path | What lives there |
 |------|------------------|
 | `index.html` | Splash, favicon/PWA links, `#app` mount point |
-| `src/main.ts` | Boot: `kernel.init()`, mount, splash removal, pagehide/HMR shutdown |
+| `src/main.ts` | Boot: `kernel.init()`, mount, splash removal, boot error on the splash, pagehide/HMR shutdown |
 | `src/App.svelte` | Renders `web-os.svelte` |
 | `src/app.css` | Tailwind, fonts, `@theme inline` token mapping ([theming.md](theming.md)) |
 | `src/assets/fonts/` | Self-hosted Inter and Hack with licences |
@@ -108,4 +108,4 @@ kernel.services                       // SvelteMap of live services
 kernel.service("windows").to_string()
 ```
 
-`main.ts` logs `Application initialized` with the kernel after boot, and `src/lib/apps/index.ts` logs `Apps Found`. The Kernel system app lists `kernel.services` in the UI.
+Boot logs nothing on success. The Kernel system app lists `kernel.services` in the UI.

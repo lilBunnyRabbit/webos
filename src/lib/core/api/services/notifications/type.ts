@@ -23,7 +23,7 @@ export interface NotifyOptions {
   /** Defaults to `"info"`. */
   type?: NotificationType;
   icon?: Component;
-  /** Toast lifetime in ms. `null` keeps the toast until dismissed. Defaults to 5000. */
+  /** Toast lifetime in ms. `null` keeps the toast until dismissed. Defaults to 5000, or for `"progress"` to staying until an update switches the type, then 5000. */
   duration?: number | null;
   actions?: NotificationAction[];
   /** 0-1 for determinate, -1 for indeterminate. */

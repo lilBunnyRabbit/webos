@@ -42,13 +42,9 @@ export class NotificationsService implements INotificationsService {
     ];
     this.toast_ids = [id, ...this.toast_ids];
 
-    const duration = options.duration === undefined ? DEFAULT_DURATION : options.duration;
-    if (duration !== null) {
-      this.timers.set(
-        id,
-        setTimeout(() => this.hide_toast(id), duration)
-      );
-    }
+    // A progress toast stays until its work finishes, unless the caller set a duration.
+    const duration = options.duration !== undefined ? options.duration : options.type === NotificationType.PROGRESS ? null : DEFAULT_DURATION;
+    if (duration !== null) this.schedule_hide(id, duration);
 
     return id;
   }
@@ -57,7 +53,22 @@ export class NotificationsService implements INotificationsService {
     const notification = this.all.find((item) => item.id === id);
     if (!notification) return;
 
+    const finished_progress =
+      notification.type === NotificationType.PROGRESS && update.type !== undefined && update.type !== NotificationType.PROGRESS;
+
     Object.assign(notification, update);
+
+    if (finished_progress && notification.duration === undefined && this.toast_ids.includes(id)) {
+      this.schedule_hide(id, DEFAULT_DURATION);
+    }
+  }
+
+  private schedule_hide(id: NotificationId, duration: number): void {
+    clearTimeout(this.timers.get(id));
+    this.timers.set(
+      id,
+      setTimeout(() => this.hide_toast(id), duration)
+    );
   }
 
   public dismiss(id: NotificationId): void {

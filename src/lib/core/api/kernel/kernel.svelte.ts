@@ -17,10 +17,15 @@ export class Kernel {
     register_default_services(this);
 
     this.init_order = this.resolve_order();
-    for (const name of this.init_order) {
-      const instance = new (this.descriptors.get(name)!.instance)(this);
-      await instance.init?.();
-      this.services.set(name, instance);
+    try {
+      for (const name of this.init_order) {
+        const instance = new (this.descriptors.get(name)!.instance)(this);
+        await instance.init?.();
+        this.services.set(name, instance);
+      }
+    } catch (error) {
+      this.teardown();
+      throw error;
     }
 
     this.is_initialized = true;
@@ -53,6 +58,12 @@ export class Kernel {
       return;
     }
 
+    this.teardown();
+    this.is_initialized = false;
+  }
+
+  /** Destroys every service that finished `init()`, in reverse order, and forgets the registrations so a re-init starts clean. */
+  private teardown() {
     for (const name of [...this.init_order].reverse()) {
       try {
         this.services.get(name)?.destroy?.();
@@ -61,7 +72,9 @@ export class Kernel {
       }
     }
 
-    this.is_initialized = false;
+    this.services.clear();
+    this.descriptors.clear();
+    this.init_order = [];
   }
 
   private resolve_order(): string[] {

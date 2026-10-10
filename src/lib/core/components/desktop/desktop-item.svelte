@@ -62,8 +62,8 @@
   <div
     bind:this={item_handler.preview_element}
     class="fixed flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden cursor-grabbing -left-16 -top-16"
-    style:width={desktop.container.cell.width}
-    style:height={desktop.container.cell.height}
+    style:width="{desktop.container.cell.width}px"
+    style:height="{desktop.container.cell.height}px"
   >
     {#if manifest}
       <div class="h-8 w-8 overflow-hidden shrink-0">

@@ -30,6 +30,32 @@
   function reset_settings() {
     settings.taskbar.position = TaskbarPosition.BOTTOM;
     settings.theme = { ...BRAND_DARK };
+    settings.file_defaults = {};
+  }
+
+  /** Lets the browser do the colour maths: relative colour syntax converts, the computed style reports the result. */
+  function computed_color(value: string): string {
+    const probe = document.createElement("span");
+    probe.style.color = value;
+    document.body.append(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return computed;
+  }
+
+  /** `<input type="color">` only speaks sRGB hex; out-of-gamut channels are clipped. */
+  function to_hex(color: string): string {
+    const channels = computed_color(`rgb(from ${color} r g b)`).match(/color\(srgb ([^ ]+) ([^ ]+) ([^ )]+)/);
+    if (!channels) return "#000000";
+
+    return `#${channels
+      .slice(1)
+      .map((channel) => Math.round(Math.min(1, Math.max(0, Number(channel))) * 255).toString(16).padStart(2, "0"))
+      .join("")}`;
+  }
+
+  function to_oklch(hex: string): string {
+    return computed_color(`oklch(from ${hex} l c h)`);
   }
 
   function apply_preset(preset: ThemePreset) {
@@ -131,9 +157,9 @@
                 />
                 <input
                   type="color"
-                  value={value.startsWith("#") ? value : "#000000"}
+                  value={to_hex(value)}
                   onchange={(e) => {
-                    settings.theme = { ...settings.theme, [key]: e.currentTarget.value };
+                    settings.theme = { ...settings.theme, [key]: to_oklch(e.currentTarget.value) };
                   }}
                   class="w-8 h-8 border border-foreground/30 rounded cursor-pointer"
                   title="Pick color"

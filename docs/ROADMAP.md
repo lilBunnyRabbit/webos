@@ -282,21 +282,21 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 Found while writing `docs/system/`. Details and file:line on each page's "Known gaps".
 
 - [x] Version: production always reports an update, because `version.json` is stamped after the bundle ([version.md](system/services/version.md))
-- [ ] Version: VitePWA service worker runs, though ADR-004 rejected one
-- [ ] Kernel: a failed `init()` leaves the splash up forever, and services that did init are never destroyed ([kernel.md](system/kernel.md))
+- [x] Version: VitePWA service worker runs, though ADR-004 rejected one (kept as a PWA, ADR-004 revised; `apply_update` keeps the SW)
+- [x] Kernel: a failed `init()` leaves the splash up forever, and services that did init are never destroyed ([kernel.md](system/kernel.md))
 - [x] Windows: clicking the titlebar of a maximized or snapped window restores it (no move threshold) ([window.md](system/shell/window.md))
 - [x] Windows: viewport and container coordinates are mixed, so windows shift when the taskbar is top or left
 - [x] Windows: initial size ignores `constraints`, `max` is never read
 - [x] Windows: a minimized window can stay focused, which puts dialogs at 0,0
 - [x] Windows: clicking an input in a background window doesn't raise it
 - [x] Taskbar: a minimized, unfocused window needs two clicks to restore
-- [ ] Desktop: items are dropped when the grid shrinks; the drag ghost has no width (`px` missing)
-- [ ] Notifications: progress toasts hide after 5 s while the work is still running
-- [ ] App storage: `remove()` doesn't affect a live `persisted()` cell, so the next change writes the value back
-- [ ] Associations: dotfiles like `.env` never match
-- [ ] Files: `directory(path)` without a handle ignores the path; uploads return original names after auto-rename
-- [ ] Settings app: Reset doesn't clear `file_defaults`; the colour picker writes hex, not OKLCH
-- [ ] Code hygiene:
+- [x] Desktop: items are dropped when the grid shrinks; the drag ghost has no width (`px` missing)
+- [x] Notifications: progress toasts hide after 5 s while the work is still running
+- [x] App storage: `remove()` doesn't affect a live `persisted()` cell, so the next change writes the value back
+- [x] Associations: dotfiles like `.env` never match
+- [x] Files: `directory(path)` without a handle ignores the path; uploads return original names after auto-rename
+- [x] Settings app: Reset doesn't clear `file_defaults`; the colour picker writes hex, not OKLCH
+- [x] Code hygiene:
   - `AppsService implements AppsService` (implements itself)
   - `children: any` in `window-content`
   - `$inspect` and `console.log` leftovers

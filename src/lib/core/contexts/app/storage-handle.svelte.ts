@@ -8,13 +8,33 @@ const cells = new Map<string, PersistedCell<unknown>>();
 class PersistedCell<T> {
   value = $state() as T;
   #refs = 0;
+  #skip_save = false;
   #dispose: () => void;
 
-  constructor(initial: T, save: (value: T) => void) {
-    this.value = initial;
+  readonly #initial: T;
+
+  constructor(initial: T, stored: T | null, save: (value: T) => void) {
+    // Values are JSON-persisted, so structuredClone is safe; the copy keeps edits to the live value out of the reset target.
+    this.#initial = structuredClone(initial);
+    this.value = stored ?? initial;
     this.#dispose = $effect.root(() => {
-      $effect(() => save($state.snapshot(this.value) as T));
+      $effect(() => {
+        const snapshot = $state.snapshot(this.value) as T;
+        if (this.#skip_save) {
+          this.#skip_save = false;
+          return;
+        }
+        save(snapshot);
+      });
     });
+  }
+
+  /** Back to the initial value without writing it, so the key stays removed until the next change. */
+  reset(): void {
+    // Assigning an equal primitive doesn't re-run the save effect, so the skip flag would leak into the next real change.
+    if (Object.is(this.value, this.#initial)) return;
+    this.#skip_save = true;
+    this.value = structuredClone(this.#initial);
   }
 
   retain(): void {
@@ -62,7 +82,12 @@ export function create_storage_handle(app_id: AppId): StorageHandle {
   }
 
   function remove(key: string): void {
-    localStorage.removeItem(prefix + key);
+    try {
+      localStorage.removeItem(prefix + key);
+    } catch (error) {
+      console.error(`Failed to remove ${prefix + key}:`, error);
+    }
+    cells.get(prefix + key)?.reset();
   }
 
   function persisted<T>(key: string, initial: T, schema?: ZodType<T>): { value: T } {
@@ -70,7 +95,7 @@ export function create_storage_handle(app_id: AppId): StorageHandle {
 
     let cell = cells.get(full_key) as PersistedCell<T> | undefined;
     if (!cell) {
-      cell = new PersistedCell(get(key, schema) ?? initial, (value) => write(key, value));
+      cell = new PersistedCell(initial, get(key, schema), (value) => write(key, value));
       cells.set(full_key, cell);
     }
 

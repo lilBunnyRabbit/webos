@@ -24,6 +24,8 @@ export default defineConfig({
         short_name: "WebOS",
         description: "Operating System for the web",
         theme_color: "#17252C",
+        // Matches the splash, so a standalone launch doesn't flash white before the app paints.
+        background_color: "#17252C",
         icons: [
           {
             src: "pwa-64x64.png",

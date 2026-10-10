@@ -58,17 +58,27 @@ export class VersionService implements IVersionService {
 
   async apply_update(): Promise<void> {
     try {
-      if ("caches" in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map((name) => caches.delete(name)));
-      }
-      if ("serviceWorker" in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((reg) => reg.unregister()));
+      // The service worker serves the app shell from its precache, so a plain reload would boot the old build.
+      // Fetch the new worker first; it skips waiting and claims this page, then the reload loads the new precache.
+      const registration = await navigator.serviceWorker?.getRegistration();
+      if (registration) {
+        await registration.update();
+        const worker = registration.installing ?? registration.waiting;
+        if (worker) await activated(worker);
       }
       window.location.reload();
     } catch (error) {
       console.error("Failed to apply update:", error);
     }
   }
+}
+
+function activated(worker: ServiceWorker): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (worker.state === "activated") return resolve();
+    worker.addEventListener("statechange", () => {
+      if (worker.state === "activated") resolve();
+      if (worker.state === "redundant") reject(new Error("New service worker failed to install"));
+    });
+  });
 }

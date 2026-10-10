@@ -61,7 +61,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `get_root` | `() => Promise<FileSystemDirectoryHandle>` | Cached. See [Lifecycle](#lifecycle) |
-| `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | Wraps `handle` (root if omitted) in a new handler that starts listing straight away. `segments` is only a label, see [gotchas](#behaviour--invariants) |
+| `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | New handler that starts listing straight away. Without `handle`, walks `segments` from the root (`NotFoundError` / `TypeMismatchError` if a segment is missing or a file). With `handle`, wraps it and `segments` is only a label, see [gotchas](#behaviour--invariants) |
 | `list` | `(handle?, options?) => Promise<FileSystemItem[]>` | One-shot listing, sorted |
 | `create_directory` | `(handle, name) => Promise<FileSystemDirectoryHandle>` | Auto-renames on a clash |
 | `create_file` | `(handle, name, options?) => Promise<FileSystemFileHandle>` | Auto-renames unless `overwrite`. Writes `content` if given (`""` with `overwrite` truncates) |
@@ -141,7 +141,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
 
-**Gotcha: `directory(segments)` doesn't resolve segments.** `files.directory(["docs"])` returns a handler on the root that's labelled `/docs`. Callers must pass the matching handle. File Explorer only ever does `directory([])` and `open_directory(name, handle)`, so it's consistent.
+**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["docs"])` resolves `/docs` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory([])` and `open_directory(name, handle)`, which always pass a matching pair.
 
 ### Errors
 
@@ -164,7 +164,7 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 2. `cancel` or an empty selection resolves `[]`.
 3. On `change`, each file in turn goes `available_name` → `getFileHandle(name, { create: true })` → `write_file(handle, file)`.
 4. The first failure rejects. Files already written stay written.
-5. It resolves with the picked `File` objects. Their `.name` is the original name, **not** the name they were saved under after an auto-rename.
+5. It resolves with the stored files (`file_handle.getFile()` after each write), so `.name` is the saved name after any auto-rename.
 
 `DirectoryHandler.upload_files` reloads only when the result isn't empty. If the picker is dismissed in a way that fires neither `change` nor `cancel`, the promise never settles. In File Explorer that leaves the upload button disabled.
 
@@ -242,7 +242,6 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - No cross-instance sync, and no watching for external changes (ROADMAP, needs its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
 - No rename UI, no directory move or copy, no context menu, no drag-and-drop, no file properties.
 - `get_file` returns a `File`, not a handle. A path-based app can read but can't write back without walking the tree itself.
-- `upload_files` reports original names, not the saved names.
 - Every mutation reloads through the `loading` branch, which swaps the whole list for skeletons. Focus is lost after a keyboard delete, and the list flickers.
 - The `DirectoryHandler` constructor's listing failure is invisible to the user.
 - No tests, despite `opfs.ts` being shaped for them.

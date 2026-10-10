@@ -244,7 +244,7 @@ export async function upload_files(
           const name = await available_name(target_dir, file.name);
           const file_handle = await target_dir.getFileHandle(name, { create: true });
           await write_file(file_handle, file);
-          uploaded.push(file);
+          uploaded.push(await file_handle.getFile());
         }
         resolve(uploaded);
       } catch (err) {

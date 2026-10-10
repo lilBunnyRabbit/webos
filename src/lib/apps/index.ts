@@ -9,4 +9,3 @@ const modules = import.meta.glob<{ default: AppManifest }>(["./system/*/index.ts
 
 export const apps: AppManifest[] = Object.values(modules).map((m) => m.default);
 
-console.log("Apps Found", { apps });
