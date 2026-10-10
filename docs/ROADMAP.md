@@ -260,9 +260,9 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### File Associations
 - **ADR:** [ADR-018](adrs/018-file-associations.md), [ADR-019](adrs/019-system-dialogs.md)
 - **Brainstorm:** [2026-10-11 File Associations](brainstorm/2026-10-11_file-associations.md)
-- **Status:** Accepted, not started
+- **Status:** In progress
 - [ ] `associations` manifest field (extensions + MIME patterns)
-- [ ] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
+- [x] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
 - [ ] `AppsService.open(path, { anchor })` with specificity tiers
 - [ ] DialogsService + dialogs host
 - [ ] "Open with" dropdown with "Always use" checkbox

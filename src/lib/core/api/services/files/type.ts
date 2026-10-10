@@ -45,6 +45,8 @@ export interface FilesService extends IService {
   create_file(handle: FileSystemDirectoryHandle | null, name: string, options?: CreateFileOptions): Promise<FileSystemFileHandle>;
   write_file(handle: FileSystemFileHandle, content: string | Blob | BufferSource): Promise<void>;
   read_file(handle: FileSystemFileHandle): Promise<File>;
+  /** Looks a file up by absolute path (`/docs/a.txt`). `null` when nothing is there (ADR-018). */
+  get_file(path: string): Promise<File | null>;
   delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void>;
   exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean>;
   /** Copies into `target`. A taken name becomes `name (1).ext`; read the result's `name`. */

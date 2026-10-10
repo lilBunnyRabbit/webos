@@ -1,5 +1,6 @@
 import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
 import * as opfs from "./opfs";
+import { split_path } from "./path";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
@@ -54,6 +55,10 @@ export class FilesService implements IFilesService {
 
   async read_file(handle: FileSystemFileHandle): Promise<File> {
     return opfs.read_file(handle);
+  }
+
+  async get_file(path: string): Promise<File | null> {
+    return opfs.get_file_at(await this.get_root(), split_path(path));
   }
 
   async delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void> {

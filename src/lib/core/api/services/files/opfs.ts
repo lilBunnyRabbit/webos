@@ -68,6 +68,24 @@ export async function get_file_handle(
   return await parent.getFileHandle(name, options);
 }
 
+/** Resolves a file by path segments from `root`. Missing entries, a directory at the path, or an invalid name return `null`. */
+export async function get_file_at(root: FileSystemDirectoryHandle, segments: string[]): Promise<File | null> {
+  const name = segments.at(-1);
+  if (name === undefined) return null;
+
+  try {
+    let dir = root;
+    for (const segment of segments.slice(0, -1)) {
+      dir = await dir.getDirectoryHandle(segment);
+    }
+    return await (await dir.getFileHandle(name)).getFile();
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError")) return null;
+    if (error instanceof TypeError) return null;
+    throw error;
+  }
+}
+
 export async function create_directory(
   parent: FileSystemDirectoryHandle,
   name: string
