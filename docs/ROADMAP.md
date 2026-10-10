@@ -268,7 +268,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] "Open with" dropdown with "Always use" checkbox
 - [ ] `file_defaults` in persisted settings
 - [ ] File Explorer: double-click / Enter on files
-- [ ] Text Viewer app
+- [x] Text Viewer app (no associations until step 3)
 - [ ] Media Preview port (image, video, audio)
 
 ---
