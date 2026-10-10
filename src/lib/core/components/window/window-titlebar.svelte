@@ -91,7 +91,7 @@ ondblclick={() => windows.toggle_maximize(window_id)}
     class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
     title="Close"
     onclick={() => {
-      windows.destroy(window_id);
+      windows.close(window_id);
     }}
   >
     <XIcon class="w-3 h-3" />

@@ -61,7 +61,7 @@ Define base interfaces that both desktop and mobile implementations satisfy:
 interface IWindowsService extends IService {
   open(app: AppInstance): WindowId;
   destroy(id: WindowId): void;
-  destroy_all(): void;
+  close_all(): void;
   focus(id: WindowId): void;
   is_focused(id: WindowId): boolean;
   get_focused(): WindowId | null;

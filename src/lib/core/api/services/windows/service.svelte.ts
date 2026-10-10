@@ -72,7 +72,7 @@ export class WindowsService implements IWindowsService {
     return this.container.bounds;
   }
 
-  public destroy(id: WindowId): boolean {
+  public close(id: WindowId): boolean {
     if (!this.exists(id)) {
       return false;
     }
@@ -88,7 +88,7 @@ export class WindowsService implements IWindowsService {
     return true;
   }
 
-  public destroy_all(): void {
+  public close_all(): void {
     this.reset_state();
   }
 

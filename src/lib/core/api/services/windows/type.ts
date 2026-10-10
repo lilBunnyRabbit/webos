@@ -21,16 +21,16 @@ export interface WindowsService extends IService {
   set_container(element?: HTMLElement | null): Bounds;
 
   /**
-   * Destroys a window by its ID.
-   * @param id - The window ID to destroy
-   * @returns `true` if the window was destroyed, `false` if it didn't exist
+   * Closes a window by its ID.
+   * @param id - The window ID to close
+   * @returns `true` if the window was closed, `false` if it didn't exist
    */
-  destroy(id: WindowId): boolean;
+  close(id: WindowId): boolean;
 
   /**
-   * Destroys all windows and resets the window manager state.
+   * Closes all windows and resets the window manager state.
    */
-  destroy_all(): void;
+  close_all(): void;
 
   /**
    * Checks if a window exists by its ID.
