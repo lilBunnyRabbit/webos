@@ -35,7 +35,7 @@ What are the implications of this decision?
 | ADR | Title | Date | Status |
 |-----|-------|------|--------|
 | [001](./001-app-manifest-structure.md) | App Manifest Structure | 2026-01-24 | Implemented |
-| [002](./002-service-lifecycle.md) | Service Lifecycle Hooks | 2026-01-24 | Accepted |
+| [002](./002-service-lifecycle.md) | Service Lifecycle Hooks | 2026-01-24 | Implemented (no swap/state yet) |
 | [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Accepted |
 | [004](./004-version-update-system.md) | Version & Update Detection | 2026-01-27 | Implemented |
 | [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented (explorer features pending) |

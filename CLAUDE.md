@@ -21,11 +21,11 @@ bun run check   # must stay at 0 errors
 
 ## Architecture in one screen
 
-The kernel is a service registry with dependency resolution. Services are domain classes using runes, registered in `src/lib/core/api/kernel/init.ts`. Its job is to let one implementation be swapped for another, for example mobile and desktop (ADR-016). It is not a security boundary.
+The kernel is a service registry with dependency resolution. `kernel.init()` builds services in dependency order and awaits each `init()` before the app mounts (ADR-002). Services are domain classes using runes, registered in `src/lib/core/api/kernel/init.ts`. Its job is to let one implementation be swapped for another, for example mobile and desktop (ADR-016). It is not a security boundary.
 
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
-| `settings` | SettingsService | Theme tokens, taskbar position | none |
+| `settings` | SettingsService | Theme tokens, taskbar position (persisted) | none |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |

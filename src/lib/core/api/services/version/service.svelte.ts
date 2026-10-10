@@ -14,17 +14,22 @@ export class VersionService implements IVersionService {
   public is_checking = $state(false);
 
   private last_check = 0;
+  private poll_interval?: ReturnType<typeof setInterval>;
 
-  constructor() {
-    if (typeof window === "undefined") return;
+  private on_visibility_change = () => {
+    if (document.visibilityState === "visible" && Date.now() - this.last_check > VISIBILITY_THROTTLE) {
+      this.check();
+    }
+  };
 
-    setInterval(() => this.check(), POLL_INTERVAL);
+  init() {
+    this.poll_interval = setInterval(() => this.check(), POLL_INTERVAL);
+    document.addEventListener("visibilitychange", this.on_visibility_change);
+  }
 
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && Date.now() - this.last_check > VISIBILITY_THROTTLE) {
-        this.check();
-      }
-    });
+  destroy() {
+    clearInterval(this.poll_interval);
+    document.removeEventListener("visibilitychange", this.on_visibility_change);
   }
 
   to_string(): string {

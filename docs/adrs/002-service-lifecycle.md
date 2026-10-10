@@ -1,6 +1,15 @@
 # ADR-002: Service Lifecycle Hooks
 **Date:** 2026-01-24
-**Status:** Accepted
+**Status:** Implemented (2026-10-10, partially; see revision)
+
+> **Revision 2026-10-10: implementation** (owner decisions, see [brainstorm](../brainstorm/2026-10-10_service-lifecycle.md))
+> - **Boot waits for everything.** `register()` only records the descriptor. `kernel.init()` resolves dependency order (it throws on a cycle or a missing dependency), constructs each service, awaits `init()`, and only then puts it in `kernel.services`. `main.ts` mounts after `kernel.init()`, so `kernel.service()` stays synchronous and never sees a half-ready service. Registering after init throws. `await_service()` and the pending-service machinery were removed; they had no callers.
+> - **`destroy()` is synchronous.** Unload never awaits promises, so async cleanup would silently not run.
+> - **Shutdown on `pagehide`, not `beforeunload`.** `beforeunload` is unreliable on mobile (ADR-016). It's skipped when `event.persisted` is true, because a bfcache restore needs live services. Also runs on HMR dispose. Services are destroyed in reverse init order, and one failing `destroy()` doesn't stop the rest.
+> - **No `swap()`, `get_state()` or `set_state()` yet.** Nothing calls them: ADR-016 rejected runtime swapping for v1. Add them together with session persistence, when the state shape is known.
+> - **`init()` throwing fails the boot.** No partial OS.
+> - **Settings persistence is in.** `localStorage["webos.settings"]` holds `{ version: 1, theme, taskbar }` (localStorage over IndexedDB or an OPFS dotfile: synchronous, cross-tab `storage` event, matches ADR-014). Loading keeps only known theme tokens, merged over Brand Dark, so tokens added later still get a value. An unknown version is ignored, not migrated.
+> - `WindowsService.destroy(id)` / `destroy_all()` were renamed to `close(id)` / `close_all()`. They clashed with the hook, and `close` pairs with `open` and ADR-003's `WindowHandle.close()`.
 
 ## Context
 

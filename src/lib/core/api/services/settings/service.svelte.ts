@@ -1,6 +1,7 @@
 import type { SettingsService as ISettingsService, Taskbar, Theme } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
+import { SETTINGS_VERSION, load_settings, save_settings } from "./persistence";
 
 export class SettingsService implements ISettingsService {
   name = "SettingsService";
@@ -13,15 +14,29 @@ export class SettingsService implements ISettingsService {
   public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM });
   public theme = $state<Theme>({ ...BRAND_DARK });
 
-  constructor() {
-    if (typeof window !== "undefined") {
-      $effect.root(() => {
-        $effect(() => {
-          for (const [key, value] of Object.entries(this.theme)) {
-            document.documentElement.style.setProperty(`--${key}`, value);
-          }
-        });
-      });
+  private dispose_effects?: () => void;
+
+  init() {
+    const saved = load_settings();
+    if (saved) {
+      this.theme = saved.theme;
+      this.taskbar = saved.taskbar;
     }
+
+    this.dispose_effects = $effect.root(() => {
+      $effect(() => {
+        for (const [key, value] of Object.entries(this.theme)) {
+          document.documentElement.style.setProperty(`--${key}`, value);
+        }
+      });
+
+      $effect(() => {
+        save_settings({ version: SETTINGS_VERSION, theme: this.theme, taskbar: this.taskbar });
+      });
+    });
+  }
+
+  destroy() {
+    this.dispose_effects?.();
   }
 }

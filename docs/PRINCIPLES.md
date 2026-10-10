@@ -147,13 +147,13 @@ When implementing an ADR:
 
 ## Known tensions
 
-- **Scope.** ADR-009 catalogues 30+ apps, and ADR-015 adds sound effects and theme sharing. Meanwhile the core P0 work is unfinished: lifecycle hooks and app context. The architecture review said *"Simplify before scaling."* Work P0 before P3 unless told otherwise.
+- **Scope.** ADR-009 catalogues 30+ apps, and ADR-015 adds sound effects and theme sharing. Meanwhile the core P0 work is unfinished: app context. The architecture review said *"Simplify before scaling."* Work P0 before P3 unless told otherwise.
 - **Multi-window file sync.** It was a hard requirement in the React days (*"if i have two windows open and i add a file to any of them that will reflect in both windows"*). ADR-005 dropped it for correctness. It's still wanted, just not via a path-keyed cache. Event-based invalidation is the recorded way back in.
-- **Code ahead of docs, docs ahead of code.** Lifecycle hooks (ADR-002) are designed but services still initialise in constructors. The owner approved doing them in one go if simple. App context (ADR-003) doesn't exist yet. Don't write code that assumes either one.
+- **Code ahead of docs, docs ahead of code.** App context (ADR-003) doesn't exist yet. Don't write code that assumes it.
 
 ## Settled 2026-10-10
 
 - **Icons:** `phosphor-svelte` only. Lucide was removed.
 - **Naming:** snake_case everywhere, ADR snippets included. The one exception is the deployed `version.json` wire format (see CONVENTIONS).
-- **Lifecycle (ADR-002):** implement in the kernel in one go if it stays simple. If it turns out not to be simple, that's a reason to stop and ask.
+- **Lifecycle (ADR-002):** implemented 2026-10-10 without swap. See the ADR revision.
 - **Legacy docs:** `docs/to-be-deleted/` was deleted. The owner quotes above came from its chat exports, which you can recover with `git show 6be283e:docs/to-be-deleted/<file>`.

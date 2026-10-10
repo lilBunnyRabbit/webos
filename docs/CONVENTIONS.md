@@ -49,7 +49,8 @@ Hard logic lives in plain TS so it can be tested without Svelte. ADR-005 (`opfs.
 - Registration name is lowercase singular domain: `"windows"`, `"files"`, `"apps"`. Class `name` field is the class name: `"WindowsService"`.
 - Dependencies are declared in `init.ts` (`dependencies: ["windows"]`), never assumed.
 - Pure logic beside the service: older services use a static helper class (`WindowsHelper`, `DesktopHelper`), files uses module-level functions (`opfs.ts`). New services follow the files style. Don't convert old helpers as a drive-by.
-- Lifecycle hooks (ADR-002) are designed but **not implemented**. Services currently init in the constructor. Don't fake hooks per service; implement them in the kernel when that roadmap item is picked up.
+- Constructors only set fields. Side effects (`$effect.root`, timers, listeners, storage reads) go in `init()`, and everything `init()` starts, `destroy()` stops. `destroy()` is synchronous. Service init order comes from `dependencies`, so a service may use its dependencies in `init()` (ADR-002).
+- Persisted service state: one versioned localStorage key per service (`webos.{service}`), with load/save as pure functions beside the service (`settings/persistence.ts`). Validate on load and fall back to defaults; never trust the stored shape.
 
 ### Accessing a service
 
@@ -213,7 +214,7 @@ Inter (`font-sans`) for everything you read. Hack (`font-mono`) for values: hexe
 No error strategy yet (roadmap P4). Current de-facto rules:
 
 - Missing thing that the caller must have: `throw new Error(...)` (`kernel.service`, `apps.launch`).
-- Operation that can legitimately no-op: return `boolean` (`windows.focus`, `windows.destroy`).
+- Operation that can legitimately no-op: return `boolean` (`windows.focus`, `windows.close`).
 - Soft failure the user doesn't need to see: `console.warn` with a `[ServiceName]` or descriptive prefix.
 - OPFS `NotFoundError` is checked by `DOMException.name`, not message.
 

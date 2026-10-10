@@ -39,10 +39,11 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Service Lifecycle Hooks
 - **ADR:** [ADR-002](adrs/002-service-lifecycle.md)
-- **Status:** Not started
-- [ ] `init()` / `destroy()` on services
-- [ ] `get_state()` / `set_state()` for persistence/swap
-- [ ] Kernel bootstrap sequence with lifecycle
+- **Status:** Done, except swap (2026-10-10)
+- [x] `init()` / `destroy()` on services (side effects moved out of constructors)
+- [x] Kernel bootstrap sequence with lifecycle (dependency order, awaited init, `pagehide` shutdown)
+- [x] Settings persisted to `localStorage["webos.settings"]` (versioned)
+- [ ] `get_state()` / `set_state()` + `kernel.swap()`: deferred until session persistence defines the state shape
 
 ### App Context System
 - **ADR:** [ADR-003](adrs/003-app-context.md)

@@ -1,10 +1,9 @@
-import { mount } from "svelte";
+import { mount, unmount } from "svelte";
 import "./app.css";
 import App from "./App.svelte";
 import kernel from "./lib/core/api";
 
 async function main() {
-  // Initialize the kernel before mounting the app
   await kernel.init();
 
   // TODO: intro
@@ -15,10 +14,19 @@ async function main() {
 
   document.getElementById("splash")?.remove();
 
+  // A persisted pagehide may come back from bfcache, so services must stay alive for it.
+  window.addEventListener("pagehide", (event) => {
+    if (!event.persisted) kernel.shutdown();
+  });
+
+  import.meta.hot?.dispose(() => {
+    unmount(app);
+    kernel.shutdown();
+  });
+
   return app;
 }
 
-// Start the application
 main()
   .then(() => {
     console.log("Application initialized", kernel);

@@ -26,6 +26,13 @@ export class NotificationsService implements INotificationsService {
   public toasts = $derived(this.all.filter((notification) => this.toast_ids.includes(notification.id)));
   public unread_count = $derived(this.all.filter((notification) => !notification.read).length);
 
+  destroy() {
+    for (const timer of this.timers.values()) {
+      clearTimeout(timer);
+    }
+    this.timers.clear();
+  }
+
   public notify(app_id: AppId, options: NotifyOptions): NotificationId {
     const id = uuid();
 
