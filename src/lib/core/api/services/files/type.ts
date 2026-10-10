@@ -36,6 +36,11 @@ export interface UploadOptions {
 
 export interface FilesService extends IService {
   get_root(): Promise<FileSystemDirectoryHandle>;
+  /**
+   * Reactive change counter for one directory (ADR-021). Bumped after every mutation made through FilesService in this
+   * tab; read it in an effect and re-list the directory when it changes. `0` until something changes.
+   */
+  revision(path: string): number;
   directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler>;
 
   list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]>;
@@ -47,6 +52,8 @@ export interface FilesService extends IService {
   read_file(handle: FileSystemFileHandle): Promise<File>;
   /** Looks a file up by absolute path (`/docs/a.txt`). `null` when nothing is there (ADR-018). */
   get_file(path: string): Promise<File | null>;
+  /** The directory at an absolute path, or `null` if it doesn't exist or is a file. */
+  get_directory(path: string): Promise<FileSystemDirectoryHandle | null>;
   delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void>;
   exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean>;
   /** Copies into `target`. A taken name becomes `name (1).ext`; read the result's `name`. */

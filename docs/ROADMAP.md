@@ -92,8 +92,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### Session Persistence
 - **ADRs:** [ADR-021](adrs/021-file-system-hierarchy.md) (hierarchy), [ADR-022](adrs/022-desktop-folder.md) (desktop folder), [ADR-023](adrs/023-session-persistence.md) (session; supersedes ADR-014 §Session Persistence)
 - **Brainstorm:** [2026-10-11 Session persistence](brainstorm/2026-10-11_session-persistence.md), [2026-01-24 Lifecycles & Persistence](brainstorm/2026-01-24_lifecycles-persistence.md)
-- **Status:** Accepted, not started
-- [ ] File system hierarchy: `/home`, `/etc`, `/var`, `/tmp`, one-time migration, native moves, per-directory revision (ADR-021)
+- **Status:** In progress (step 1 of 3 done)
+- [x] File system hierarchy: `/home`, `/etc`, `/var`, `/tmp`, one-time migration, native moves, per-directory revision (ADR-021)
 - [ ] Desktop folder `/home/Desktop` with `.desktop` shortcuts and `.layout.json` (ADR-022)
 - [ ] SessionService: `/var/session.json`, reactive save, restore dialog, `windows.restore` (ADR-023)
 - [ ] Closed window stack (reopen last 10)

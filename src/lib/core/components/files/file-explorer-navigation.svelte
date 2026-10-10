@@ -61,16 +61,16 @@
 
   <nav class="flex items-center gap-1 px-2 text-sm bg-background h-6 rounded-sm">
     {#each path_stack as dir, idx (dir.path)}
+      {#if idx > 0 && !path_stack[idx - 1].is_root}<span class="mx-0.5 pointer-events-none">/</span>{/if}
       <button class="hover:underline hover:bg-foreground/10" onclick={() => onnavigatetoindex(idx)}>
         {dir.name}
       </button>
-      <span class="mx-0.5 pointer-events-none">/</span>
     {/each}
 
+    {#if path_stack.length > 0 && !path_stack[path_stack.length - 1].is_root}<span class="mx-0.5 pointer-events-none">/</span>{/if}
     <button class="hover:underline text-accent cursor-default" disabled>
       {handler.name}
     </button>
-    <span class="mx-0.5 pointer-events-none">/</span>
   </nav>
 
   <div class="relative flex items-center pr-2 gap-y-1 text-sm bg-background h-6 rounded-sm">

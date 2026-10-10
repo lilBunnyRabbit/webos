@@ -2,6 +2,7 @@
   import kernel, { type AppsService } from "$lib/core/api";
   import type { FileSystemDirectoryItem, FileSystemFileItem, FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
@@ -100,7 +101,7 @@
             }
           }}
         >
-          <DirectoryRow handle={item.handle} />
+          <DirectoryRow handle={item.handle} system={is_system_path(join_path(handler.segments, item.name))} />
         </button>
       {/if}
     {/each}

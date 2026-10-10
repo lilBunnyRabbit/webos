@@ -1,6 +1,8 @@
 import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
+import { SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
-import { split_path } from "./path";
+import { ensure_hierarchy } from "./hierarchy";
+import { join_path, split_path } from "./path";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
@@ -12,6 +14,33 @@ export class FilesService implements IFilesService {
   }
 
   private _root: Promise<FileSystemDirectoryHandle> | null = null;
+  private revisions = new SvelteMap<string, number>();
+
+  async init(): Promise<void> {
+    await ensure_hierarchy(await this.get_root());
+  }
+
+  revision(path: string): number {
+    return this.revisions.get(join_path(split_path(path))) ?? 0;
+  }
+
+  /**
+   * Bumps the revision of the directory that changed. Internal: called by FilesService and DirectoryHandler after
+   * every mutation. `resolve()` maps a handle back to its path, since mutations only get handles.
+   */
+  async changed(directory: FileSystemDirectoryHandle): Promise<void> {
+    const segments = await (await this.get_root()).resolve(directory);
+    if (segments !== null) this.bump(join_path(segments));
+  }
+
+  private async changed_file(file: FileSystemFileHandle): Promise<void> {
+    const segments = await (await this.get_root()).resolve(file);
+    if (segments !== null) this.bump(join_path(segments.slice(0, -1)));
+  }
+
+  private bump(path: string): void {
+    this.revisions.set(path, (this.revisions.get(path) ?? 0) + 1);
+  }
 
   async get_root(): Promise<FileSystemDirectoryHandle> {
     if (!this._root) {
@@ -49,15 +78,22 @@ export class FilesService implements IFilesService {
   }
 
   async create_directory(handle: FileSystemDirectoryHandle | null, name: string): Promise<FileSystemDirectoryHandle> {
-    return opfs.create_directory(await this.resolve(handle), name);
+    const parent = await this.resolve(handle);
+    const result = await opfs.create_directory(parent, name);
+    await this.changed(parent);
+    return result;
   }
 
   async create_file(handle: FileSystemDirectoryHandle | null, name: string, options?: CreateFileOptions): Promise<FileSystemFileHandle> {
-    return opfs.create_file(await this.resolve(handle), name, options);
+    const parent = await this.resolve(handle);
+    const result = await opfs.create_file(parent, name, options);
+    await this.changed(parent);
+    return result;
   }
 
   async write_file(handle: FileSystemFileHandle, content: string | Blob | BufferSource): Promise<void> {
-    return opfs.write_file(handle, content);
+    await opfs.write_file(handle, content);
+    await this.changed_file(handle);
   }
 
   async read_file(handle: FileSystemFileHandle): Promise<File> {
@@ -68,8 +104,14 @@ export class FilesService implements IFilesService {
     return opfs.get_file_at(await this.get_root(), split_path(path));
   }
 
+  async get_directory(path: string): Promise<FileSystemDirectoryHandle | null> {
+    return opfs.get_directory_at(await this.get_root(), split_path(path));
+  }
+
   async delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void> {
-    return opfs.delete_entry(await this.resolve(handle), name, options);
+    const parent = await this.resolve(handle);
+    await opfs.delete_entry(parent, name, options);
+    await this.changed(parent);
   }
 
   async exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean> {
@@ -77,15 +119,26 @@ export class FilesService implements IFilesService {
   }
 
   async copy_file(source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle> {
-    return opfs.copy_file(source, await this.resolve(target), new_name);
+    const target_dir = await this.resolve(target);
+    const result = await opfs.copy_file(source, target_dir, new_name);
+    await this.changed(target_dir);
+    return result;
   }
 
   async move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle> {
-    return opfs.move_file(await this.resolve(source_parent), source, await this.resolve(target), new_name);
+    const from = await this.resolve(source_parent);
+    const to = await this.resolve(target);
+    const result = await opfs.move_file(from, source, to, new_name);
+    await this.changed(from);
+    await this.changed(to);
+    return result;
   }
 
   async upload_files(target: FileSystemDirectoryHandle | null, options?: UploadOptions): Promise<File[]> {
-    return opfs.upload_files(await this.resolve(target), options);
+    const target_dir = await this.resolve(target);
+    const result = await opfs.upload_files(target_dir, options);
+    if (result.length > 0) await this.changed(target_dir);
+    return result;
   }
 
   async download_file(handle: FileSystemFileHandle, file_name?: string): Promise<void> {
@@ -100,8 +153,13 @@ export class FilesService implements IFilesService {
     return opfs.get_directory_size(await this.resolve(handle ?? null));
   }
 
+  /** Wipes OPFS, then rebuilds the empty hierarchy so the OS keeps its folders. */
   async clear(): Promise<void> {
-    return opfs.clear_opfs();
+    await opfs.clear_opfs();
+    const root = await this.get_root();
+    await ensure_hierarchy(root);
+    this.revisions.clear();
+    await this.changed(root);
   }
 }
 
@@ -125,7 +183,7 @@ export class DirectoryHandler {
   }
 
   get name(): string {
-    return this.segments.length === 0 ? "~" : this.segments[this.segments.length - 1];
+    return this.segments.length === 0 ? "/" : this.segments[this.segments.length - 1];
   }
 
   get is_root(): boolean {
@@ -146,24 +204,28 @@ export class DirectoryHandler {
 
   async create_directory(name: string): Promise<FileSystemDirectoryHandle> {
     const result = await opfs.create_directory(this.handle, name);
+    await this.service.changed(this.handle);
     await this.reload();
     return result;
   }
 
   async create_file(name: string, options?: CreateFileOptions): Promise<FileSystemFileHandle> {
     const result = await opfs.create_file(this.handle, name, options);
+    await this.service.changed(this.handle);
     await this.reload();
     return result;
   }
 
   async delete_entry(name: string, options?: { recursive?: boolean }): Promise<void> {
     await opfs.delete_entry(this.handle, name, options);
+    await this.service.changed(this.handle);
     await this.reload();
   }
 
   async upload_files(options?: UploadOptions): Promise<File[]> {
     const result = await opfs.upload_files(this.handle, options);
     if (result.length > 0) {
+      await this.service.changed(this.handle);
       await this.reload();
     }
     return result;

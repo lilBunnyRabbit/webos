@@ -86,6 +86,23 @@ export async function get_file_at(root: FileSystemDirectoryHandle, segments: str
   }
 }
 
+export async function get_directory_at(
+  root: FileSystemDirectoryHandle,
+  segments: string[]
+): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    let dir = root;
+    for (const segment of segments) {
+      dir = await dir.getDirectoryHandle(segment);
+    }
+    return dir;
+  } catch (error) {
+    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError")) return null;
+    if (error instanceof TypeError) return null;
+    throw error;
+  }
+}
+
 export async function create_directory(
   parent: FileSystemDirectoryHandle,
   name: string
@@ -194,14 +211,36 @@ export async function move_file(
   new_name?: string
 ): Promise<FileSystemFileHandle> {
   const target_name = new_name ?? source.name;
-  // Copy-then-delete onto the same entry would delete the only copy.
   if (target_name === source.name && (await source_parent.isSameEntry(target_dir))) {
     return source;
   }
 
-  const moved = await copy_file(source, target_dir, target_name);
-  await delete_entry(source_parent, source.name);
-  return moved;
+  // Native move keeps the handle valid, now pointing at the new location.
+  await source.move(target_dir, await available_name(target_dir, target_name));
+  return source;
+}
+
+/** OPFS directory handles have no native `move()`, so the tree is recreated and each file moved natively. */
+export async function move_directory(
+  source_parent: FileSystemDirectoryHandle,
+  source: FileSystemDirectoryHandle,
+  target_dir: FileSystemDirectoryHandle,
+  new_name?: string
+): Promise<FileSystemDirectoryHandle> {
+  const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
+    create: true,
+  });
+
+  for (const item of await list_directory(source, { include_metadata: false })) {
+    if (item.kind === "file") {
+      await move_file(source, item.handle, target);
+    } else {
+      await move_directory(source, item.handle, target);
+    }
+  }
+
+  await source_parent.removeEntry(source.name);
+  return target;
 }
 
 /** Returns `name`, or `name (1).ext`, `name (2).ext`, … if it's taken. Dotfiles keep their leading dot. */

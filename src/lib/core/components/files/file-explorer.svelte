@@ -1,10 +1,15 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import kernel, { type FilesService } from "$lib/core/api";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
+  import { PATHS } from "$lib/core/api/services/files/hierarchy";
+  import { split_path } from "$lib/core/api/services/files/path";
   import FileExplorerNavigation from "./file-explorer-navigation.svelte";
   import FileList from "./file-list.svelte";
   import FileExplorerStatusBar from "./file-explorer-status-bar.svelte";
   import { report_file_error } from "./file-explorer.errors";
+
+  let { path = PATHS.home }: { path?: string } = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -12,11 +17,15 @@
   let path_stack: DirectoryHandler[] = $state([]);
   let search = $state("");
 
-  async function init() {
-    handler = await files.directory([]);
+  // Opens with / behind the start folder, so "back" and the breadcrumb reach the system folders.
+  async function init(start: string) {
+    const segments = split_path(start);
+    if (segments.length > 0) path_stack = [await files.directory([])];
+    handler = await files.directory(segments);
   }
 
-  const init_promise = init();
+  // The start folder is read once; navigating afterwards is the explorer's own state.
+  const init_promise = init(untrack(() => path));
 
   function navigate_to(dir_handler: DirectoryHandler) {
     if (handler) path_stack = [...path_stack, handler];

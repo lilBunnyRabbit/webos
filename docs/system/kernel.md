@@ -105,7 +105,8 @@ Which services implement which hooks today:
 | version | start 30-min poll, `visibilitychange` listener | clear both |
 | notifications | none | clear toast timers |
 | dialogs | none | yes (see [dialogs](services/dialogs.md)) |
-| windows, files, apps, desktop | none | none |
+| files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |
+| windows, apps, desktop | none | none |
 
 ### Failed init
 

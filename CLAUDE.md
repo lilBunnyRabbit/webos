@@ -28,7 +28,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 |-----|---------|---------|------------|
 | `settings` | SettingsService | Theme tokens, taskbar position, file defaults (persisted) | none |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
-| `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
+| `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |

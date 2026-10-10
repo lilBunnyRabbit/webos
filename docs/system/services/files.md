@@ -1,6 +1,6 @@
 # FilesService
 
-Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/` · Inspector: `inspector.svelte` (ADR-020)
+Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup), [ADR-021](../../adrs/021-file-system-hierarchy.md) (hierarchy, native moves, revisions) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -13,14 +13,17 @@ opfs.ts            pure async functions over FileSystem*Handle, no Svelte
    ↑
 DirectoryHandler   reactive snapshot of one directory ($state items, loading)
    ↑
-FilesService       caches the root handle, makes DirectoryHandlers, exposes direct ops (null → root)
+FilesService       caches the root handle, builds the hierarchy at init, tracks per-directory revisions,
+                   makes DirectoryHandlers, exposes direct ops (null → root)
 ```
 
 | File | Contents |
 |------|----------|
 | `type.ts` | `FilesService` interface, `FileSystemItem` union, option types |
-| `opfs.ts` | All OPFS calls, `available_name`, `default_sort` |
+| `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path` |
+| `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `ensure_hierarchy` (ADR-021) |
+| `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
 | `index.ts` | `export * from "./type"` |
 
@@ -28,8 +31,8 @@ FilesService       caches the root handle, makes DirectoryHandlers, exposes dire
 
 Handles are what OPFS operates on. Paths exist for identity, display, and anything that has to be JSON (app props, ADR-018).
 
-- Absolute, `/`-separated, rooted at the OPFS root: `/docs/a.txt`. Root is `/`, displayed as `~`.
-- Two forms. `segments: string[]` is primary (`[]` is root, `["docs", "photos"]`). `path` is derived as `"/" + segments.join("/")`.
+- Absolute, `/`-separated, rooted at the OPFS root: `/home/Documents/a.txt`. Root is `/`, displayed as `/`.
+- Two forms. `segments: string[]` is primary (`[]` is root, `["home", "Documents"]`). `path` is derived as `"/" + segments.join("/")`.
 - No `.`/`..` handling, no escaping. Names are whatever OPFS accepts.
 
 | Helper | Signature | Notes |
@@ -37,7 +40,38 @@ Handles are what OPFS operates on. Paths exist for identity, display, and anythi
 | `split_path` | `(path: string) => string[]` | Drops empty segments: `"//docs/"` → `["docs"]` |
 | `join_path` | `(segments: string[], name?: string) => string` | `(["docs"], "a.txt")` → `"/docs/a.txt"`, `([])` → `"/"` |
 
-Only `get_file(path)` takes a path. Every other method takes handles.
+Only `get_file(path)`, `get_directory(path)` and `revision(path)` take a path. Every other method takes handles.
+
+## Hierarchy
+
+A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
+
+```
+/
+├ home/          the user's space; File Explorer opens here
+│ ├ Desktop/
+│ ├ Documents/
+│ └ Downloads/
+├ etc/           OS config. Holds hierarchy.json, the migration marker
+├ var/           OS runtime state (nothing writes here yet)
+└ tmp/           emptied at every boot
+```
+
+| Export | What |
+|--------|------|
+| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `tmp` → the paths above |
+| `SYSTEM_DIRECTORIES` | `["/etc", "/var", "/tmp"]`, the OS-owned top-level folders |
+| `is_system_path(path)` | `true` for a system directory or anything under one. Plain string prefix check, so pass a normalised path |
+| `ensure_hierarchy(root)` | The bootstrap below. Called by `FilesService.init()` and `clear()` |
+
+`ensure_hierarchy(root)`, in order:
+
+1. Creates `/home`, `/etc`, `/var`, `/tmp` if missing.
+2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var` or `tmp` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
+3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
+4. Empties `/tmp` (every entry, recursively).
+
+Nothing protects the system folders. They're ordinary OPFS directories, and File Explorer can delete them like any other folder. Whatever is missing gets recreated on the next boot. Deleting the marker re-runs the migration, which is harmless once the root holds only the four top-level folders.
 
 ## Types
 
@@ -60,7 +94,9 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
+| `init` | `() => Promise<void>` | Kernel hook. `ensure_hierarchy(await get_root())`. See [Lifecycle](#lifecycle) |
 | `get_root` | `() => Promise<FileSystemDirectoryHandle>` | Cached. See [Lifecycle](#lifecycle) |
+| `revision` | `(path) => number` | Reactive change counter for one directory, `0` until something changes. Path is normalised (`split_path` → `join_path`). See [Revisions](#revisions) |
 | `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | New handler that starts listing straight away. Without `handle`, walks `segments` from the root (`NotFoundError` / `TypeMismatchError` if a segment is missing or a file). With `handle`, wraps it and `segments` is only a label, see [gotchas](#behaviour--invariants) |
 | `list` | `(handle?, options?) => Promise<FileSystemItem[]>` | One-shot listing, sorted |
 | `create_directory` | `(handle, name) => Promise<FileSystemDirectoryHandle>` | Auto-renames on a clash |
@@ -68,17 +104,20 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `write_file` | `(handle, content) => Promise<void>` | Replaces contents. Aborts the writable on failure so the lock is released |
 | `read_file` | `(handle) => Promise<File>` | |
 | `get_file` | `(path) => Promise<File \| null>` | Path lookup (ADR-018). `null` for missing, a directory at that path, or an invalid name. Other errors throw |
+| `get_directory` | `(path) => Promise<FileSystemDirectoryHandle \| null>` | Path lookup via `opfs.get_directory_at`. `null` for missing, a file at that path, or an invalid name. Other errors throw |
 | `delete_entry` | `(handle, name, { recursive? }) => Promise<void>` | `recursive` defaults to `false`; a non-empty directory throws without it |
 | `exists` | `(handle, name, kind?) => Promise<boolean>` | Without `kind`, tries file then directory. Any error is `false` |
 | `copy_file` | `(source, target, new_name?) => Promise<FileSystemFileHandle>` | Auto-renames. Read the result's `name` |
-| `move_file` | `(source_parent, source, target, new_name?) => Promise<FileSystemFileHandle>` | Copy then delete. Auto-renames. Same name into the same directory is a no-op that returns `source` |
+| `move_file` | `(source_parent, source, target, new_name?) => Promise<FileSystemFileHandle>` | Native `FileSystemFileHandle.move()`. Auto-renames. Returns `source`, which now points at the new location. Same name into the same directory is a no-op |
 | `upload_files` | `(target, options?) => Promise<File[]>` | Opens the native file picker. See [Upload flow](#upload-flow) |
 | `download_file` | `(handle, file_name?) => Promise<void>` | Object URL + `<a download>`. Revokes the URL after 40 s, since revoking at once cancels the download in Firefox and Safari |
 | `get_storage_estimate` | `() => Promise<{ usage; quota }>` | `navigator.storage.estimate()`, missing values become `0`. Covers the whole origin, not only OPFS |
 | `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0 |
-| `clear` | `() => Promise<void>` | Deletes every entry under root, recursively. No confirmation |
+| `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), clears every revision and bumps `/`. No confirmation |
 
-`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `clear_opfs`. Nothing outside the files folder imports them today.
+`changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
+
+`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer and DesktopService, `is_system_path` by `file-list.svelte`.
 
 ## DirectoryHandler
 
@@ -92,43 +131,48 @@ A reactive snapshot of one directory. Defined in `service.svelte.ts`, not export
 | `service` | `readonly FilesService` | The concrete class |
 | `items` | `$state<FileSystemItem[]>` | Last listing, with metadata, `default_sort` |
 | `loading` | `$state<boolean>` | True while a reload is in flight |
-| `name` | getter | Last segment, or `"~"` at root |
+| `name` | getter | Last segment, or `"/"` at root |
 | `is_root` | getter | `segments.length === 0` |
 | `reload()` | `Promise<void>` | Re-lists. Overlapping reloads: only the newest one writes `items` and clears `loading` |
-| `create_directory(name)` | | `opfs.create_directory`, then `reload()` |
-| `create_file(name, options?)` | | `opfs.create_file`, then `reload()` |
-| `delete_entry(name, options?)` | | `opfs.delete_entry`, then `reload()` |
-| `upload_files(options?)` | | Reloads only if something was uploaded |
+| `create_directory(name)` | | `opfs.create_directory`, then `service.changed(handle)`, then `reload()` |
+| `create_file(name, options?)` | | `opfs.create_file`, then `service.changed(handle)`, then `reload()` |
+| `delete_entry(name, options?)` | | `opfs.delete_entry`, then `service.changed(handle)`, then `reload()` |
+| `upload_files(options?)` | | Bumps and reloads only if something was uploaded |
 | `open_directory(name, handle)` | `Promise<DirectoryHandler>` | `service.directory([...segments, name], handle)`. A new handler each time |
 
 The constructor fires `reload()` itself. That's a side effect in a constructor, but it's intended (ADR-005 "auto-loading"). If that first listing fails, it's only `console.error`ed. `items` stays `[]` and nothing notifies.
 
-There's no handler cache and no cross-instance sync. Two handlers on the same directory are independent snapshots. Changes made through one, or through the direct service ops, or in another window, don't appear in the other until it reloads. ADR-005 records why the path-keyed cache was removed.
+There's no handler cache, and handlers don't watch anything. Two handlers on the same directory are independent snapshots. Mutations through either one, or through the direct service ops, bump the directory's [revision](#revisions), but no handler reads it, so the other snapshot stays stale until it reloads. ADR-005 records why the path-keyed cache was removed.
 
 ## State
 
 | What | Where | Lifetime |
 |------|-------|----------|
 | Root handle promise | `FilesService._root` | Until a rejection clears it |
+| Directory revisions | `FilesService.revisions`, `SvelteMap<path, number>` | Page lifetime. Emptied by `clear()`. Not persisted |
 | Directory listings | each `DirectoryHandler.items` | Owner's lifetime. Re-read on reload only |
 | File contents and metadata | never cached | Re-read on every call |
 
-The service has no `$state` of its own.
+`revisions` is the service's only reactive state.
 
 ## Lifecycle
 
-No `init()` or `destroy()`. Construction sets fields only. The first `get_root()`, called directly or through any `null` handle:
+Construction sets fields only. There's no `destroy()`.
+
+`init()` calls `get_root()` and awaits `ensure_hierarchy` ([Hierarchy](#hierarchy)), so boot now does async OPFS work, and every later service sees the folders in place. If OPFS is unavailable (for example in private browsing) or the bootstrap throws, `init()` rejects and the whole boot fails with the splash error ([kernel.md](../kernel.md#failed-init)). Before ADR-021 that failure was lazy and only File Explorer showed it.
+
+The first `get_root()`, which is now the one inside `init()`:
 
 1. Caches the `navigator.storage.getDirectory()` promise. If it rejects (for example, no OPFS in private browsing), the cache is cleared so the next call retries.
 2. Fires `navigator.storage.persist()` without awaiting it. A refusal is a `console.warn`, an error a `console.error`. It runs again only if the root cache was cleared.
 
 ## Persistence
 
-The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
+The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The only file the OS itself writes is the migration marker `/etc/hierarchy.json` (`{"version":1}`). Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
 
 ## Behaviour & invariants
 
-**Nothing user-facing overwrites.** `create_directory`, `create_file`, `copy_file`, `move_file` and `upload_files` all go through `available_name(dir, name)`:
+**Nothing user-facing overwrites.** `create_directory`, `create_file`, `copy_file`, `move_file`, `move_directory`, `upload_files` and the root migration all go through `available_name(dir, name)`:
 
 - Returns `name` if it's free.
 - Otherwise it splits at the last dot (a dot at index 0 doesn't count, so dotfiles keep their name as the stem) and tries `stem (1).ext`, `stem (2).ext`, and so on, until `exists()` says free.
@@ -137,11 +181,33 @@ The data lives in OPFS, so it survives reloads, and with `persist()` granted it'
 
 Exact-name writes exist only through `create_file({ overwrite: true })` and `opfs.get_*_handle({ create: true })`.
 
-**Move is copy + delete.** It copies only files, there's no directory move or copy. The copy gets a new `lastModified`. `source_parent` is trusted: it deletes whatever is named `source.name` there. Rename is `move_file(parent, file, parent, "new.txt")`. If `new.txt` is taken, you get `new (1).txt`.
+**Moves are native.** `move_file` calls `FileSystemFileHandle.move(target_dir, name)`, so the bytes aren't copied and the handle you passed stays valid, now at the new path. `source_parent` only feeds the same-directory no-op check. Rename is `move_file(parent, file, parent, "new.txt")`. If `new.txt` is taken, you get `new (1).txt`.
+
+`opfs.move_directory(source_parent, source, target_dir, new_name?)` exists because OPFS directory handles have no `move()` in Chrome 154. It creates the target folder (auto-renamed), moves each file natively and each subfolder recursively, then removes the now-empty source with a non-recursive `removeEntry`, and returns the new directory handle. It isn't atomic: a failure part-way leaves the tree split between source and target. Only the migration uses it; FilesService doesn't wrap it, and there's still no directory copy.
+
+### Revisions
+
+`revision(path)` reads a `SvelteMap`, so it's reactive. Read it in an effect, re-list that folder when it changes.
+
+- `changed(dir)` maps a handle back to its path with the native `root.resolve(dir)` and bumps that path. A handle outside the root (`resolve` returns `null`) is ignored.
+- Every mutation bumps only the directory it touched, never its ancestors:
+
+| Mutation | Bumps |
+|----------|-------|
+| `create_directory`, `create_file`, `delete_entry` | the parent |
+| `write_file` | the file's parent (resolved from the file handle) |
+| `copy_file` | the target directory |
+| `move_file` | source parent, then target directory |
+| `upload_files` | the target, only if something was stored |
+| `DirectoryHandler` create, delete, upload | its directory, before its own `reload()` |
+| `clear()` | all revisions are dropped, then `/` is bumped |
+
+- The bump happens after the OPFS call resolves. A failed mutation bumps nothing.
+- Raw `opfs.*` calls, including `ensure_hierarchy` at boot, bump nothing.
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
 
-**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["docs"])` resolves `/docs` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory([])` and `open_directory(name, handle)`, which always pass a matching pair.
+**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["home"])` resolves `/home` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory([])`, `directory(split_path(PATHS.home))` and `open_directory(name, handle)`, which always pass a matching pair.
 
 ### Errors
 
@@ -176,11 +242,11 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 | File | Responsibility |
 |------|----------------|
-| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `path_stack: DirectoryHandler[]`, `search`. Starts at `files.directory([])`. Layout: navigation / list / status bar. Shows "Failed to load filesystem" if the root fails |
+| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `path_stack: DirectoryHandler[]`, `search`. Starts at `/home` (`PATHS.home`) with a root handler already on `path_stack`. Layout: navigation / list / status bar. Shows "Failed to load filesystem" if either lookup fails, for example when `/home` was deleted this session |
 | `file-explorer-navigation.svelte` | Toolbar: back, reload, breadcrumbs, search input (`bind:search`), new folder, upload |
-| `file-list.svelte` | Header row plus a row per item. Filtering, open, delete. Shows 5 skeleton rows while `handler.loading`, "No files found" when empty |
+| `file-list.svelte` | Header row plus a row per item. Filtering, open, delete. Passes `system={is_system_path(path)}` to folder rows. Shows 5 skeleton rows while `handler.loading`, "No files found" when empty |
 | `file-row.svelte` | File cells: icon, name, `format_bytes(size)`, `last_modified` as a local date (`-` when missing) |
-| `directory-row.svelte` | Folder cells: icon, name, `-`, caret. No date |
+| `directory-row.svelte` | Folder cells: icon, name, `-`, caret. No date. With `system`, a small "system" badge after the name (`/etc`, `/var`, `/tmp` and anything under them) |
 | `file-explorer-status-bar.svelte` | "N items (x folders, y files)" for the unfiltered directory, plus origin storage usage/quota/% |
 | `file-upload-button.svelte` | Calls `handler.upload_files()`, disabled while it runs |
 | `file-explorer.errors.ts` | `report_file_error(title, error)`: `console.error`, then an `error` notification from source `"file-explorer"` ([notifications](notifications.md)) |
@@ -190,8 +256,9 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 - `navigate_to(child)` pushes the current handler onto `path_stack`. The child is a fresh handler and lists itself.
 - Back pops the stack. Clicking breadcrumb `i` truncates the stack to `i`. Both call `show()`, which **reloads** the target, because stacked handlers aren't watched.
-- Breadcrumbs show stack entries by `name`, root as `~`. The current directory is a disabled entry in `text-accent`.
-- There's no forward history. Back is disabled at root.
+- A new window opens at `/home` with the root handler already on the stack, so Back and the breadcrumb reach `/` and the system folders. The root handler lists itself on creation even though it isn't shown.
+- Breadcrumbs show stack entries by `name`, root as `/`. A `/` separator goes between entries, except right after the root, whose name already is `/`: `/ home / Documents`. The current directory is a disabled entry in `text-accent`.
+- There's no forward history. Back is disabled when the stack is empty, which is only at `/` after going back (or jumping there by breadcrumb).
 - `search` survives navigation. It filters the current directory only, as a case-insensitive substring of the name.
 
 ### Interactions
@@ -235,12 +302,20 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - ADR-005 §5 lists `move_file(...): Promise<void>`. The code returns the moved handle. The 2026-10-10 revision note records this, so it's only the body that's stale.
 - ADR-005 §6 types `FileSystemItem` as a base interface with `kind: "file" | "directory"`. The code uses a discriminated union, which is better and matches CONVENTIONS.
 - ADR-005 §9 specifies `confirm()`/`prompt()`. That's still true, but ADR-019 dialogs exist now and the explorer doesn't use them.
+- ADR-021 §2 triggers the migration when `/home` doesn't exist and creates every `PATHS` folder before it. The code creates the four top-level folders first, keys the migration on the `/etc/hierarchy.json` marker (so an interrupted migration resumes), and creates `Desktop`/`Documents`/`Downloads` after it (so a user's own `Documents` merges in by name).
+- ADR-021 §4 says a revision is `0` "until something under `path` changes". The code bumps only the directory a mutation touched, not its ancestors, so it's "in `path`", not "under".
 - [CONVENTIONS](../../CONVENTIONS.md#services) says `index.ts` exports types only and that only `init.ts` imports service classes. `type.ts` imports `DirectoryHandler` from the implementation file, so `FilesService.directory()` returns the concrete class, and `DirectoryHandler.service` is the concrete `FilesService`, not the interface. The UI components import the type from `service.svelte` directly. Swapping the files service (ADR-016) would have to keep this exact class.
 
 ## Known gaps
 
-- No cross-instance sync, and no watching for external changes (ROADMAP, needs its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
-- No rename UI, no directory move or copy, no context menu, no drag-and-drop, no file properties.
+- No cross-instance sync. Revisions exist, but File Explorer and `DirectoryHandler` don't read them yet, so another window or a direct service op still needs a manual reload.
+- Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (multi-window sync is its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
+- A revision bumps only the directly affected directory. A consumer of `/home` doesn't see a change inside `/home/Documents`.
+- After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped.
+- The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Failed to load filesystem") until the next boot recreates it.
+- `move_directory` isn't atomic and has no guard against moving a folder into its own subtree. An interrupted migration resumes on the next boot, but a folder that was half-moved ends up split between `/home/X` and `/home/X (1)`.
+- A root **file** named `home`, `etc`, `var` or `tmp` makes `ensure_hierarchy` throw (`TypeMismatchError` on create), which now fails the whole boot.
+- No rename UI, no directory move or copy through the service or UI, no context menu, no drag-and-drop, no file properties.
 - `get_file` returns a `File`, not a handle. A path-based app can read but can't write back without walking the tree itself.
 - Every mutation reloads through the `loading` branch, which swaps the whole list for skeletons. Focus is lost after a keyboard delete, and the list flickers.
 - The `DirectoryHandler` constructor's listing failure is invisible to the user.

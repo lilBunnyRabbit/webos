@@ -27,11 +27,13 @@ The desktop's default grid places `settings` and `file-explorer` (`services/desk
 
 **Implementation.** `file-explorer.app.svelte` only renders `<FileExplorer />` from `core/components/files/`. Everything is documented in [FilesService → File explorer components](services/files.md#file-explorer-components): navigation, interactions, opening files and error handling.
 
-**Features.** Breadcrumbs plus back, reload, substring search over the current directory, new folder (`prompt()`), upload, delete (`confirm()`; folders recursive), open a file in its associated app (double-click or Enter, through `apps.open`), and a status bar with counts and storage usage.
+**Features.** Opens at `/home`, with `/` one step back. System folders (`/etc`, `/var`, `/tmp`) are listed with a "system" badge. Breadcrumbs plus back, reload, substring search over the current directory, new folder (`prompt()`), upload, delete (`confirm()`; folders recursive), open a file in its associated app (double-click or Enter, through `apps.open`), and a status bar with counts and storage usage.
 
 **Known gaps.**
 
-- Takes no props, so it can't be opened at a path. Every window starts at `~`.
+- Takes no props, so it can't be opened at a path. Every window starts at `/home`.
+- Doesn't read `files.revision()` yet, so changes from elsewhere need a manual reload.
+- System folders are only marked, not protected: they can be deleted like any folder.
 - No associations, so a folder path can't be "opened" with it.
 - No rename, move, copy, context menu, drag-and-drop or multi-select.
 - No sync between two windows (see the files doc).
@@ -107,7 +109,7 @@ Every write goes straight to service state. Persistence is the settings service'
 
 **Known gaps.**
 - Inspectors are read-only. Whether they get actions (check for updates, close a window) is still open.
-- The files inspector reads storage once per mount, because OPFS has no change events.
+- The files inspector reads storage once per mount. It doesn't read `files.revision("/")`, so root changes made through the service don't refresh it either.
 - The desktop inspector only sees the visible grid, so icons that are hidden on a small screen don't show up.
 - No dependency graph view.
 - `author: "John Doe"` is a placeholder.

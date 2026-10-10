@@ -54,7 +54,7 @@ What are the implications of this decision?
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
 | [019](./019-system-dialogs.md) | System Dialogs Service | 2026-10-11 | Implemented |
 | [020](./020-service-inspectors.md) | Service Inspectors | 2026-10-11 | Implemented |
-| [021](./021-file-system-hierarchy.md) | File System Hierarchy | 2026-10-11 | Accepted |
+| [021](./021-file-system-hierarchy.md) | File System Hierarchy | 2026-10-11 | Implemented |
 | [022](./022-desktop-folder.md) | Desktop Folder and Shortcuts | 2026-10-11 | Accepted |
 | [023](./023-session-persistence.md) | Session Persistence | 2026-10-11 | Accepted |
 

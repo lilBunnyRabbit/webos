@@ -8,8 +8,9 @@ Every place the OS stores data in the browser, as of the current code. There's n
 |-------|-----------|-------|--------|---------|--------------------------|--------------|
 | localStorage | `webos.settings` | SettingsService (`settings/persistence.ts`) | JSON `{ version, theme, taskbar, file_defaults }` | `1` | Wrong version → discarded (no migration). Theme merged over Brand Dark, known token keys with string values only. Bad taskbar position → `bottom`. `file_defaults` keeps only `".ext" → string` entries. Parse error → defaults. | `$effect` after every change, plus once right after init. [Details](services/settings.md#persistence) |
 | localStorage | `app.{app_id}.{key}` | App storage handle (`contexts/app/storage-handle.svelte.ts`), one per window | `JSON.stringify(value)` | none | Optional zod schema on `get()` / `persisted()`. Invalid or corrupt → `null` / `initial`. Without a schema, anything parsed is returned unchecked. | `set()` writes immediately, or updates the live cell. `persisted()` writes via `$effect` on every change, including once on creation. |
-| OPFS | root of `navigator.storage.getDirectory()`, whole tree | FilesService (`files/opfs.ts`) | The user's files and folders, as is | n/a | None needed | User and app file operations ([services/files.md](services/files.md)) |
-| Storage persistence | `navigator.storage.persist()` | FilesService, requested on first `get_root()` | Browser permission | n/a | `false` → `console.warn("[FilesService] Storage not persisted")` | Once per page load |
+| OPFS | root of `navigator.storage.getDirectory()`, whole tree: `/home` (user files, with `Desktop`, `Documents`, `Downloads`), `/etc`, `/var`, `/tmp` | FilesService (`files/opfs.ts`, layout in `files/hierarchy.ts`) | Files and folders, as is | n/a | Every boot, `FilesService.init()` recreates missing folders and empties `/tmp`. Once, a flat pre-hierarchy root is moved into `/home` | User and app file operations ([services/files.md](services/files.md)) |
+| OPFS | `/etc/hierarchy.json` | FilesService (`files/hierarchy.ts`) | JSON `{ version }` | `1` | Its absence triggers the root → `/home` migration. The version isn't read | Once, after the migration finishes, and again after `clear()` |
+| Storage persistence | `navigator.storage.persist()` | FilesService, requested on first `get_root()` (during `init()`) | Browser permission | n/a | `false` → `console.warn("[FilesService] Storage not persisted")` | Once per page load |
 | Cache Storage + service worker | Workbox precache (`sw.js`, `workbox-*.js`, `registerSW.js`) | vite-plugin-pwa (`vite.config.ts`, `registerType: "autoUpdate"`), production only | Workbox-managed | Workbox revisions | Workbox handles it | On SW install/update. `VersionService.apply_update()` installs the new worker before reloading ([services/version.md](services/version.md#service-worker)) |
 
 Not used anywhere in OS code: `sessionStorage`, IndexedDB, cookies, the URL (no hash/query state; ADR-010 is only accepted).
@@ -46,6 +47,8 @@ interface StorageHandle {
 | Theme, taskbar position, Open-with defaults | Yes | `webos.settings` |
 | App data stored via `storage` | Yes | `app.{id}.*` |
 | Files and folders | Yes | OPFS. Lasts longer if `persist()` was granted. The browser may evict it otherwise. |
+| `/tmp` contents | **No** | Emptied at every boot |
+| Directory revisions | **No** | In-memory `SvelteMap` in FilesService |
 | Open windows, positions, sizes, z-order, maximized/minimized | **No** | WindowsService is in-memory only (ROADMAP "Save/restore open windows and positions", open) |
 | Desktop icon layout | **No** | DesktopService `layout` is hardcoded `[[settings, file-explorer]]` at construction |
 | Notification history | **No** | NotificationsService `all` is in-memory |
@@ -63,5 +66,5 @@ The rule for new service state ([CONVENTIONS → Services](../CONVENTIONS.md#ser
 |------|-----|
 | Settings | `localStorage.removeItem("webos.settings")` + reload, or the Settings app's Reset (theme, taskbar and `file_defaults`, no reload). |
 | App data | `localStorage` keys `app.{id}.*` (no UI) |
-| Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`; no UI caller), or DevTools → Application → Storage |
+| Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`, then rebuilds the empty hierarchy and marker; no UI caller), or DevTools → Application → Storage (the hierarchy comes back on the next boot) |
 | SW / caches | No UI. DevTools → Application → Storage. `apply_update()` replaces the precache with the new build's, it doesn't wipe it. |

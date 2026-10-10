@@ -1,6 +1,14 @@
 # ADR-021: File System Hierarchy
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Implemented (2026-10-11)
+
+> **Revision 2026-10-11: implementation notes**
+> - Migration is gated by a marker file, `/etc/hierarchy.json` (`{ "version": 1 }`), not by "`/home` doesn't exist". An interrupted migration then resumes on the next boot. Root directories named `home`, `etc`, `var` or `tmp` are adopted as-is. Root *files* with those names are moved into `/home` like everything else.
+> - `Desktop`, `Documents` and `Downloads` are created after the migration, so a user's own `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
+> - Revisions use native `FileSystemDirectoryHandle.resolve()` to map a handle back to its path. `move_file` bumps both directories, and `write_file` bumps the file's parent.
+> - `clear()` rebuilds the empty hierarchy, so the OS keeps its folders.
+> - File Explorer opens at `/home` with `/` on its back stack. The root's name is now `/` (it was `~`).
+> - On the owner's machine the migration ran through hot reload before the planned scratch test. All six root files arrived in `/home` intact (byte sizes checked).
 
 ## Context
 
