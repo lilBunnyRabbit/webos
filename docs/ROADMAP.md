@@ -300,7 +300,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
   - `AppsService implements AppsService` (implements itself)
   - `children: any` in `window-content`
   - `$inspect` and `console.log` leftovers
-  - `state_referenced_locally` warning in `WindowsService.to_string`
+  - pointless `$derived` in `WindowsService.to_string`
 
 ---
 

@@ -9,12 +9,14 @@
   const instance = $derived(windows.get(window_id)!);
 
   // Set once: a window's id and app never change, and context can only be set during init.
-  const app_id = untrack(() => instance.app.id);
-  set_app_context({
-    window_id,
-    app_id,
-    window: create_window_handle(window_id),
-    storage: create_storage_handle(app_id),
+  untrack(() => {
+    const app_id = instance.app.id;
+    set_app_context({
+      window_id,
+      app_id,
+      window: create_window_handle(window_id),
+      storage: create_storage_handle(app_id),
+    });
   });
 </script>
 

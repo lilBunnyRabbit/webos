@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { get_app_context } from "$lib/core/contexts/app";
   import { z } from "zod";
 
   const { count: initial_count }: { count?: number } = $props();
 
   const { window, storage } = get_app_context();
-  const count = storage.persisted("count", initial_count ?? 0, z.number());
+  const count = storage.persisted("count", untrack(() => initial_count) ?? 0, z.number());
 </script>
 
 <div>

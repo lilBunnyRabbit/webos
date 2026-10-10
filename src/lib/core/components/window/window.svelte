@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import kernel, { type WindowsService, type WindowId, WindowFlag } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import WindowContent from "./window-content.svelte";
@@ -13,7 +14,8 @@
   const is_minimized = $derived(instance.flags.has(WindowFlag.MINIMIZED));
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
 
-  const geometry_handler = new WindowGeometryHandler(id);
+  // The window manager keys windows by id, so it never changes for this instance.
+  const geometry_handler = new WindowGeometryHandler(untrack(() => id));
 
   // TODO: focus not triggered if the other window is resized
   

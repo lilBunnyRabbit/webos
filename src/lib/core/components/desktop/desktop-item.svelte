@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import kernel, { type DesktopGridItem, type DesktopService, type AppsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
@@ -9,7 +10,8 @@
 
   const manifest = $derived(apps.get(item.app_id));
 
-  const item_handler = new ItemHandler({ x, y }, (position) => {
+  // The desktop keys items by cell, so x and y never change for this instance.
+  const item_handler = new ItemHandler(untrack(() => ({ x, y })), (position) => {
     desktop.move_item({ x, y }, position);
   });
 </script>
