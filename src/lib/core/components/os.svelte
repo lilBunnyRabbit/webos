@@ -5,6 +5,7 @@
   import kernel, { type SettingsService } from "$lib/core/api";
   import Desktop from "./desktop/desktop.svelte";
   import ToastArea from "./notifications/toast-area.svelte";
+  import DialogsHost from "./dialogs/dialogs-host.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const position = $derived(settings.taskbar.position);
@@ -86,3 +87,5 @@
     )}
   />
 </div>
+
+<DialogsHost />

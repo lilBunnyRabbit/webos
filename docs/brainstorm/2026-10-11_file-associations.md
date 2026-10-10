@@ -59,6 +59,15 @@ Consequences found while recording:
 | No cursor position | Centered over the focused window, else the desktop | Desktop center always (Claude's pick) |
 | Dropdown UX | Light dismiss (Esc, click outside = cancel), clicking an app opens it, checkbox row "Always use for .ext" at the bottom | Two entries per app |
 
+### Round 4: building the dialogs host (step 5)
+
+| Question | Decision | Rejected |
+|----------|----------|----------|
+| Keeping anchored dialogs on screen | CSS anchor positioning with `position-try-fallbacks` | JS clamp on mount; no edge handling |
+| Dismissal, focus, stacking | Native `<dialog closedby="any">` + `showModal()`. Found by checking for a native API before hand-rolling (new standing rule in CLAUDE.md). Modal: outside click closes, doesn't pass through | `popover="manual"` with hand-written Esc/pointerdown/focus handling (non-modal) |
+
+Owner standing rule from this round: use the latest web platform features, target the owner's browser only, and always check for a newer native API before building behaviour by hand.
+
 ### Defaults Claude chose (recorded in ADR-018/019)
 
 - No match: warning notification "No app can open {name}". Round 1 covered "several match"; nothing to ask when none do.

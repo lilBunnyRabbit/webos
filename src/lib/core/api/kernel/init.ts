@@ -6,6 +6,7 @@ import { DesktopService } from "../services/desktop/service.svelte";
 import { FilesService } from "../services/files/service.svelte";
 import { VersionService } from "../services/version/service.svelte";
 import { NotificationsService } from "../services/notifications/service.svelte";
+import { DialogsService } from "../services/dialogs/service.svelte";
 
 export function register_default_services(kernel: Kernel) {
   kernel.register("settings", {
@@ -31,6 +32,11 @@ export function register_default_services(kernel: Kernel) {
   kernel.register("notifications", {
     instance: NotificationsService,
     dependencies: [],
+  });
+
+  kernel.register("dialogs", {
+    instance: DialogsService,
+    dependencies: ["windows"],
   });
 
   kernel.register("apps", {

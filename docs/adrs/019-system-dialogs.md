@@ -1,6 +1,11 @@
 # ADR-019: System Dialogs Service
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Implemented (2026-10-11, see revision)
+
+> **Revision 2026-10-11: implementation**
+> - **Native `<dialog closedby="any">` opened with `showModal()`** (owner decision, over a hand-written `popover="manual"` host). The platform handles Esc, outside-click dismissal, focus trap and return, the top layer and the stack. Dialogs are modal: an outside click closes the top dialog only and does not reach what was clicked, like OS context menus.
+> - **Placement by CSS anchor positioning** (owner decision). The host puts a 0×0 anchor at the point; anchored dialogs use `position-area: bottom span-right` with `flip-block`/`flip-inline` fallbacks, unanchored ones `position-area: center`. No JS measuring.
+> - The no-anchor fallback point is the center of the focused window's element, else the window container.
 
 ## Context
 
@@ -28,7 +33,7 @@ interface DialogProps<T> {
 ```
 
 - `show()` pushes an entry and returns a promise. The dialog component calls `resolve(value)`; the entry is removed and the promise settles.
-- `null` means cancelled. Esc and click outside resolve `null` (light dismiss).
+- `null` means cancelled. Esc and click outside resolve `null` (light dismiss, native via `closedby="any"`).
 - `anchor` positions the dialog at a point; without one the host centers it over the focused window, else over the desktop.
 - On shutdown (ADR-002 `destroy`) open dialogs resolve `null`.
 - Mobile (ADR-016) presentation is open. Because callers only use `show()`, a mobile implementation can change it without touching them.

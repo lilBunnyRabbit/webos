@@ -30,6 +30,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
+| `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files |
 | `desktop` | DesktopService | Icon grid | apps |
 
@@ -53,6 +54,7 @@ Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using 
 - Container queries in app UI, not viewport breakpoints.
 - No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
 - No backend. GitHub Pages is the host.
+- Use the latest web platform features (anchor positioning, popover, `@container`, View Transitions, and so on). The target is the owner's current browser: no polyfills, fallbacks or support checks for older ones. If it works on the owner's machine, it ships. Before building UI or browser behaviour by hand (dismissal, focus, positioning, stacking, animation), check whether a newer platform API does it natively, and bring it up.
 
 ## Architecture is the owner's call, always
 

@@ -264,7 +264,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] `associations` manifest field (extensions + MIME patterns)
 - [x] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
 - [x] `AppsService.open(path, { anchor })` with specificity tiers (ties take the first app until the chooser exists)
-- [ ] DialogsService + dialogs host
+- [x] DialogsService + dialogs host (native `<dialog closedby="any">`, anchor positioning)
 - [ ] "Open with" dropdown with "Always use" checkbox
 - [ ] `file_defaults` in persisted settings
 - [x] File Explorer: double-click / Enter on files
