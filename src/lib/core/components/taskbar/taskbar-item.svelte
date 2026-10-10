@@ -17,7 +17,7 @@
     !is_minimized && "bg-primary/10"
   )}
   onclick={() => {
-    if (is_focused) {
+    if (is_minimized || is_focused) {
       windows.toggle_minimize(instance.id);
     } else {
       windows.focus(instance.id);

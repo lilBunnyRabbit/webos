@@ -140,7 +140,6 @@ export interface WindowInstance {
   order: number;
   flags: Flags<WindowFlag>;
   snap_zone: SnapZone | null;
-  // TODO: max size is not used
   constraints: WindowConstraints;
   bounds: Bounds;
   app: AppInstance;

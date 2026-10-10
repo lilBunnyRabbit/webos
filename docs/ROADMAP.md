@@ -284,12 +284,12 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Version: production always reports an update, because `version.json` is stamped after the bundle ([version.md](system/services/version.md))
 - [ ] Version: VitePWA service worker runs, though ADR-004 rejected one
 - [ ] Kernel: a failed `init()` leaves the splash up forever, and services that did init are never destroyed ([kernel.md](system/kernel.md))
-- [ ] Windows: clicking the titlebar of a maximized or snapped window restores it (no move threshold) ([window.md](system/shell/window.md))
-- [ ] Windows: viewport and container coordinates are mixed, so windows shift when the taskbar is top or left
-- [ ] Windows: initial size ignores `constraints`, `max` is never read, and cascade spacing differs from ADR-014
-- [ ] Windows: a minimized window can stay focused, which puts dialogs at 0,0
-- [ ] Windows: clicking an input in a background window doesn't raise it
-- [ ] Taskbar: a minimized, unfocused window needs two clicks to restore
+- [x] Windows: clicking the titlebar of a maximized or snapped window restores it (no move threshold) ([window.md](system/shell/window.md))
+- [x] Windows: viewport and container coordinates are mixed, so windows shift when the taskbar is top or left
+- [x] Windows: initial size ignores `constraints`, `max` is never read
+- [x] Windows: a minimized window can stay focused, which puts dialogs at 0,0
+- [x] Windows: clicking an input in a background window doesn't raise it
+- [x] Taskbar: a minimized, unfocused window needs two clicks to restore
 - [ ] Desktop: items are dropped when the grid shrinks; the drag ghost has no width (`px` missing)
 - [ ] Notifications: progress toasts hide after 5 s while the work is still running
 - [ ] App storage: `remove()` doesn't affect a live `persisted()` cell, so the next change writes the value back
@@ -300,7 +300,6 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
   - `AppsService implements AppsService` (implements itself)
   - `children: any` in `window-content`
   - `$inspect` and `console.log` leftovers
-  - pointless `$derived` in `WindowsService.to_string`
 
 ---
 

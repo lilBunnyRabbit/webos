@@ -11,8 +11,7 @@ export class WindowsService implements IWindowsService {
   description = "WindowsService";
 
   to_string(): string {
-    const windows = $derived(this.index);
-    return Object.entries(windows)
+    return Object.entries(this.index)
       .map(([id, window]) => `- ${id}: ${window.app.manifest.name}`)
       .join("\n");
   }
@@ -77,12 +76,16 @@ export class WindowsService implements IWindowsService {
       return false;
     }
 
+    const was_focused = this.is_focused(id);
+
     // Remove window from index
     delete this.index[id];
 
     // Reset max order if no windows are left
     if (Object.keys(this.index).length === 0) {
       this.max_order = 0;
+    } else if (was_focused) {
+      this.focus_next();
     }
 
     return true;
@@ -160,8 +163,6 @@ export class WindowsService implements IWindowsService {
       app,
     };
 
-    console.log("WindowsService:open", this.index[id], app);
-
     return id;
   }
 
@@ -204,9 +205,25 @@ export class WindowsService implements IWindowsService {
       instance.flags.delete(WindowFlag.MINIMIZED);
       this.focus(id);
     } else {
+      const was_focused = this.is_focused(id);
       instance.flags.add(WindowFlag.MINIMIZED);
+      if (was_focused) this.focus_next();
     }
 
     return !is_minimized;
+  }
+
+  /** Hands focus to the topmost visible window, or to none when every window is minimized. */
+  private focus_next(): void {
+    const next = Object.values(this.index)
+      .filter((instance) => !instance.flags.has(WindowFlag.MINIMIZED))
+      .sort((a, b) => b.order - a.order)[0];
+
+    if (next) {
+      this.focus(next.id);
+    } else {
+      // No instance holds the new max order, so nothing reads as focused.
+      this.max_order++;
+    }
   }
 }

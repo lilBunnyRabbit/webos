@@ -7,9 +7,12 @@ export class WindowsHelper {
     container: Bounds,
     window_count: number
   ): Bounds {
+    const clamp = (value: number, limits: { min?: number; max?: number } = {}, available: number) =>
+      Math.min(available, Math.max(limits.min ?? 0, Math.min(limits.max ?? Infinity, value)));
+
     const size = {
-      width: Math.min(600, container.width),
-      height: Math.min(400, container.height),
+      width: clamp(600, constraints.width, container.width),
+      height: clamp(400, constraints.height, container.height),
     };
 
     const start_x = 100;
@@ -31,10 +34,6 @@ export class WindowsHelper {
       x = start_x;
       y = start_y;
     }
-
-    // Account for container offset if present
-    x += container.x;
-    y += container.y;
 
     return { x, y, ...size };
   }

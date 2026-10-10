@@ -45,7 +45,7 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 |--------|-----------|-------|
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |
 | `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Doesn't touch existing windows (TODO at `service.svelte.ts:70`). Called by the window manager. |
-| `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.legacy_calculate_bounds`. Logs to the console. |
+| `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.legacy_calculate_bounds`. |
 | `close` | `(id) => boolean` | Deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
 | `close_all` | `() => void` | Empties the index and resets `max_order`. Nothing calls it. |
 | `exists` | `(id) => boolean` | |
@@ -57,7 +57,7 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 | `get_focused` | `() => WindowId \| null` | Linear scan with `is_focused`. Used by [DialogsService](dialogs.md) to anchor dialogs. |
 | `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. Nothing calls it; the drag handler writes `instance.snap_zone` directly. |
 | `toggle_maximize` | `(id) => boolean` | Adding the flag also focuses. Removing it doesn't. Returns the new state (`false` for a missing id too). |
-| `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Adding it doesn't move focus anywhere. Returns the new state. |
+| `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Minimizing the focused window hands focus to the next one (see below). Returns the new state. |
 | `name`, `description`, `to_string()` | IService | `to_string()` lists `id: app name`. |
 
 Not on the interface: private `index: Record<WindowId, WindowInstance>` (`$state`), private `max_order: number` (`$state`), `reset_state()`.
@@ -81,18 +81,17 @@ None. A reload loses every window. Session restore is ADR-014 (accepted, not bui
 **Z-order and focus.** Focus is just "has the highest `order`". There's no separate focused id.
 
 - Opening focuses the new window.
-- Closing the focused window leaves **nothing focused**, because `max_order` still points at the closed window's order. The next `focus()` fixes it.
-- Minimizing doesn't pass focus on, so a minimized window can still be the focused one. The taskbar relies on that: clicking a focused minimized window restores it ([shell/taskbar.md](../shell/taskbar.md)).
-- `get_focused()` can therefore return a minimized window. DialogsService then measures a `display: none` element, gets a zero rect, and centers on `0,0` instead of the screen (`dialogs/service.svelte.ts:54-58`).
+- Closing or minimizing the focused window calls the private `focus_next()`. It raises the topmost window that isn't minimized. When every remaining window is minimized, it bumps `max_order` without giving it to any window, so **nothing is focused** and `get_focused()` returns `null`.
+- A minimized window is therefore never the focused one. DialogsService gets either a visible window or `null`, and falls back to the container center.
 
 **Initial bounds** (`WindowsHelper.legacy_calculate_bounds`):
 
-- Size is `min(600, container.width) × min(400, container.height)`. **`constraints` is ignored.** A manifest with `width.min: 700` still opens at 600 wide, and the 700 only applies once the user resizes.
+- Size is 600×400, clamped to the manifest's `constraints` (`min`/`max`), then capped at the container size.
 - Position cascades from `(100,100)` by 40px per already-open window (count mod 15). If that would push the window past `container − size − (20, 80)`, it resets to `(100,100)`. The `80` assumes a bottom taskbar.
-- `container.x/y` gets added to the position. But `bounds` gets rendered as `left/top` *inside* the window-manager element, which is already offset by the same amount. With the taskbar on the top or left, new windows open shifted by the taskbar's size. Container coordinates are viewport-space while bounds are container-space. That mismatch is the root cause, and it also shows up in the drag handler ([shell/window.md](../shell/window.md#known-gaps)).
+- **Coordinate spaces.** `bounds` is container-relative: it's rendered as `left/top` inside the window-manager element. `container.bounds.x/y` is the container's viewport offset, and it's only used to convert pointer `clientX/Y` into container space.
 - `WindowsHelper.calculate_bounds` is an unimplemented stub that returns zeros. Nothing calls it.
 
-**Constraints.** Only `min` is enforced, and only by the resize handler. The fallback minimum is 400×300 (`WindowGeometryHandler.MIN_WIDTH/MIN_HEIGHT`). `max` is never read (see the TODO on `WindowInstance.constraints`).
+**Constraints.** `min` and `max` apply to the initial size and to resizing. The resize fallback minimum is 400×300 (`WindowGeometryHandler.MIN_WIDTH/MIN_HEIGHT`).
 
 **Maximize / minimize / restore.** These are flags only. Maximized renders at `0,0,100%,100%` of the container. Minimized renders with `display: none`, but the app **stays mounted** and keeps its state. The WindowHandle's `maximize()` and `restore()` compose these toggles ([apps/app-context.md](../apps/app-context.md)).
 
@@ -108,9 +107,8 @@ ADR-014 is *Accepted*, not implemented, so most of it just doesn't exist yet: si
 
 ## Known gaps
 
-- `state_referenced_locally` dev warning at `service.svelte.ts:10` (after TS stripping it lands on the `return` in `to_string()`, source lines 13-17). `to_string()` declares `const windows = $derived(this.index)` inside a plain method and reads it right away. Svelte warns that this read only captures the initial value. It's harmless at runtime, because each call builds a fresh derived and reads it once. But a `$derived` in a non-reactive method is pointless. `Object.entries(this.index)` is the fix.
-- Initial bounds ignore `constraints` and mix viewport and container coordinates (above).
 - Container shrink doesn't re-clamp windows, so they can end up off-screen after a resize or a taskbar move.
-- Closing the focused window leaves no window focused. Minimizing doesn't focus the next window.
-- `snap()`, `close_all()` and `calculate_bounds()` are unused. `console.log` in `open()`.
+- `snap()`, `close_all()` and `calculate_bounds()` are unused.
+- The container is measured by a ResizeObserver plus an rAF after taskbar moves. Both are paused in hidden tabs, so a tab that starts hidden keeps the `window.innerWidth/innerHeight` default until it's shown.
+- Cascade is 40px per open window from `(100,100)`. ADR-014 specifies +30px from the last opened window (roadmap item).
 - `index` is a plain record (`// TODO: map?`). `list()` order is insertion order, not z-order.

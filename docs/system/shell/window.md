@@ -42,16 +42,16 @@ There's one handler per window component. It reads the instance as `$derived(win
 
 | Phase | What happens |
 |-------|--------------|
-| `pointerdown` | Ignored if it hit a `button[data-window-button]` (titlebar buttons). Otherwise `preventDefault` + `stopPropagation`, `windows.focus(id)`, `setPointerCapture`, `init_move()`, then `pointermove`/`pointerup`/`pointercancel` listeners go on the element. |
-| `pointermove` | Throttled to one `requestAnimationFrame`: each move cancels the pending frame. Drag updates `move.dx/dy` and `snap_zone`. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
-| `pointerup` / `pointercancel` | Release capture, remove listeners, cancel the pending frame, `apply_move()`. |
+| `pointerdown` | Ignored if it hit a `button[data-window-button]` (titlebar buttons). Otherwise `preventDefault` + `stopPropagation`, `windows.focus(id)`, `setPointerCapture`, remember the down event, then `pointermove`/`lostpointercapture` listeners go on the element. Nothing moves yet. |
+| `pointermove` | Until the pointer has travelled `DRAG_THRESHOLD` (4px) from the down point, nothing happens. Crossing it calls `init_move()` with the down event. After that, moves are throttled to one `requestAnimationFrame`: each move cancels the pending frame. Drag updates `move.dx/dy` and `snap_zone`. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
+| `lostpointercapture` | Fires for every way a gesture ends (`pointerup`, `pointercancel`, element removed). Removes listeners and cancels the pending frame. If a move started, it applies the last pending pointer event first, then `apply_move()`. A plain click therefore changes nothing: a maximized or snapped window stays put. |
 | attachment teardown | Removes every listener and releases capture if still held. |
 
 `init_move()` when the window is **snapped or maximized**:
 
-- It measures the frame (`element.parentElement.getBoundingClientRect()`).
+- It measures the frame (`element.parentElement.getBoundingClientRect()`) and converts it to container space by subtracting `container.x/y`.
 - **Resize**: writes that rect into `instance.bounds`, so the window resizes from where it visibly is.
-- **Drag**: keeps the restored `bounds` size and maps the pointer proportionally, `sx = clientX / rect.width * bounds.width`, so the restored window lands under the cursor.
+- **Drag**: keeps the restored `bounds` size. The grab point keeps its relative spot: `grab_offset = (clientX − rect.left) / rect.width × bounds.width`, and the restored window starts at `clientX − container.x − grab_offset`.
 
 `apply_move()`:
 
@@ -63,9 +63,9 @@ Clamping:
 
 - Drag clamps the *pointer* to the container horizontally and keeps the window top ≥ 0. Windows can still hang off the right or bottom edge.
 - Resize: `e`/`s` are capped at the container's right/bottom edge. `w`/`n` stop at the container's left/top edge.
-- All edges respect `constraints.width/height.min`, falling back to `MIN_WIDTH 400` / `MIN_HEIGHT 300`. `max` is ignored.
+- All edges clamp to `constraints.width/height` `min` and `max` (`clamp_width`/`clamp_height`). `min` falls back to `MIN_WIDTH 400` / `MIN_HEIGHT 300`.
 
-Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) of a container edge. Hitting two edges at once gives a corner (quarter), one edge gives a half. Snap only happens on drag, never on resize.
+Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) of a container edge. On an edge, the 200px (`CORNER_SIZE`) closest to a corner snap to that corner's quarter. The rest of the edge snaps to a half. Snap only happens on drag, never on resize.
 
 ## Titlebar
 
@@ -96,7 +96,8 @@ Every button has `data-window-button` so the drag attachment skips it.
 | Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners) | Resize. Handles are hidden when maximized or minimized. |
 | Pointer down | Titlebar or resize handle | Focus (raise) |
 | Click (no movement) | Titlebar of a maximized/snapped window | **Restores it.** See gaps. |
-| Focus | Frame (`tabindex=-1`, `onfocus`) | Focus (raise) |
+| Pointer down (capture phase) | Anywhere in the frame, content included | Focus (raise) |
+| `focusin` | Anything inside the frame gets DOM focus (Tab, programmatic) | Focus (raise) |
 | Click | Titlebar buttons | See the titlebar table |
 | Keyboard | — | Nothing. No shortcuts, Escape, or keyboard move/resize. The zoom button titles promise `Ctrl+-` / `Ctrl+0` / `Ctrl++`, which aren't implemented. |
 | Double-click | Titlebar | Nothing. The maximize toggle is commented out in `window-titlebar.svelte`. |
@@ -110,14 +111,6 @@ Every button has `data-window-button` so the drag attachment skips it.
 
 ## Known gaps
 
-- **A click on a maximized or snapped titlebar restores the window.** `apply_move()` runs on every `pointerup` regardless of movement, always deletes `MAXIMIZED`, and clears `snap_zone` when the pointer isn't at an edge (`window.handler.svelte.ts:389-414`). There's no drag threshold.
-- **Viewport vs container coordinates.** `init_move()` writes `getBoundingClientRect()` values (viewport) into `instance.bounds` (container-relative) for snapped/maximized windows (`:323-337`). The proportional drag mapping uses raw `clientX` rather than `clientX − rect.left` (`:354`). With the taskbar on the top or left, these windows jump by the taskbar's size. The same root cause affects initial placement ([services/windows.md](../services/windows.md#behaviour--invariants)).
-- Raising on content clicks depends on the frame getting a `focus` event. Clicking straight into an input in a background window focuses the input. `focus` doesn't bubble, so the window isn't raised. Clicking a window that already holds DOM focus but isn't on top doesn't raise it either.
-- `pointerup`, not `lostpointercapture`. Losing capture any other way (element removed, OS steals it) leaves `move.active` stuck.
-- The rAF throttle drops the last pending `pointermove` on release (`cancelAnimationFrame` in `on_end`), so the committed position can be up to one frame behind the pointer.
-- `CORNER_SIZE = 200` is dead. Corners need both edges within 16px, so corner zones are effectively 16×16px (`:163-174`).
-- Resize handles sit at `-2px`, but the frame has `overflow: hidden` + `contain: paint`, so the outer 2px is clipped.
 - The handler mutates the instance directly (bounds, snap_zone, flags) instead of going through the service API.
 - No `role`/`aria-*` on the frame. No titlebar `aria-label`s, only `title`.
-- `window.svelte:18`: `// TODO: focus not triggered if the other window is resized`. The resize `pointerdown` does call `windows.focus`, so this TODO looks stale.
 - ADR-014 open/close/minimize/maximize animations aren't built. The only animation is the 250ms snap transition.

@@ -17,8 +17,6 @@
   // The window manager keys windows by id, so it never changes for this instance.
   const geometry_handler = new WindowGeometryHandler(untrack(() => id));
 
-  // TODO: focus not triggered if the other window is resized
-  
   // Internal state
   let zoom = $state(1);
 
@@ -76,7 +74,8 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-  onfocus={() => windows.focus(id)}
+  onpointerdowncapture={() => windows.focus(id)}
+  onfocusin={() => windows.focus(id)}
   data-window-id={id}
   class={cn(
     "absolute overflow-hidden pointer-events-auto",
@@ -137,57 +136,57 @@
     z-index: 2;
   }
   .resize-handle.n {
-    top: -2px;
+    top: 0;
     left: 0;
     right: 0;
     height: 8px;
     cursor: ns-resize;
   }
   .resize-handle.s {
-    bottom: -2px;
+    bottom: 0;
     left: 0;
     right: 0;
     height: 8px;
     cursor: ns-resize;
   }
   .resize-handle.e {
-    right: -2px;
+    right: 0;
     top: 0;
     bottom: 0;
     width: 8px;
     cursor: ew-resize;
   }
   .resize-handle.w {
-    left: -2px;
+    left: 0;
     top: 0;
     bottom: 0;
     width: 8px;
     cursor: ew-resize;
   }
   .resize-handle.ne {
-    top: -2px;
-    right: -2px;
+    top: 0;
+    right: 0;
     width: 12px;
     height: 12px;
     cursor: nesw-resize;
   }
   .resize-handle.nw {
-    top: -2px;
-    left: -2px;
+    top: 0;
+    left: 0;
     width: 12px;
     height: 12px;
     cursor: nwse-resize;
   }
   .resize-handle.se {
-    bottom: -2px;
-    right: -2px;
+    bottom: 0;
+    right: 0;
     width: 12px;
     height: 12px;
     cursor: nwse-resize;
   }
   .resize-handle.sw {
-    bottom: -2px;
-    left: -2px;
+    bottom: 0;
+    left: 0;
     width: 12px;
     height: 12px;
     cursor: nesw-resize;

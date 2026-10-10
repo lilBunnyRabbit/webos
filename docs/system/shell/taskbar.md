@@ -43,8 +43,9 @@ States:
 
 | Input | Target | Result |
 |-------|--------|--------|
-| Click | Window item, window focused | `windows.toggle_minimize(id)`. Minimizes it, or restores it if it's already minimized. |
-| Click | Window item, not focused | `windows.focus(id)`. Raises it, but **doesn't restore a minimized window** (see gaps). |
+| Click | Window item, minimized | `windows.toggle_minimize(id)`. Restores and focuses it in one click. |
+| Click | Window item, focused | `windows.toggle_minimize(id)`. Minimizes it; focus moves to the next visible window. |
+| Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
 | Click | Start button | Toggle the start menu |
 | Click | App row in the menu | `apps.launch(id)` with no props, and close the menu (`popovertargetaction="hide"`) |
 | Click | `+` ("Pin to Desktop") | `desktop.add_item(id)`. The menu stays open. |
@@ -59,7 +60,6 @@ States:
 
 ## Known gaps
 
-- **Minimized and not focused takes two clicks.** The first click only calls `focus()`, which doesn't remove `MINIMIZED`. The second click sees the window focused and calls `toggle_minimize`, which restores it (`taskbar-item.svelte:19-25`). It works in one click only when the minimized window happens to still be the focused one. That's the usual case right after minimizing, because the service doesn't pass focus on.
 - "Pin to Desktop" can pin duplicates and gives no feedback when the grid is full (`desktop.add_item` returns `null` with only a `console.warn`).
 - `start-menu-popover.svelte` has an `$effect` that `console.log`s on every open and close.
 - `data-[state=open]:bg-primary/10` on the start button and the items is dead. Nothing sets `data-state`; it's left over from a component-library era.

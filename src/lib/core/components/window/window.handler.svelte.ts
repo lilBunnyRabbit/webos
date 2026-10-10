@@ -11,6 +11,8 @@ import type { Attachment } from "svelte/attachments";
 // TODO: cleanup logic
 const windows = $derived(kernel.service<WindowsService>("windows"));
 
+const DRAG_THRESHOLD = 4;
+
 export const RESIZE_EDGES = ["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const;
 type ResizeEdge = (typeof RESIZE_EDGES)[number];
 
@@ -148,30 +150,25 @@ export class WindowGeometryHandler {
     const container = this.move.container;
 
     const EDGE_THRESHOLD = 16; // pixels from edge to trigger snap
-    const CORNER_SIZE = 200; // size of corner zones
+    const CORNER_SIZE = 200; // how far along an edge the corner zone reaches
 
     const x = cx - container.x;
     const y = cy - container.y;
 
-    // Check edges
     const left_edge = x <= EDGE_THRESHOLD;
     const right_edge = x >= container.width - EDGE_THRESHOLD;
     const top_edge = y <= EDGE_THRESHOLD;
     const bottom_edge = y >= container.height - EDGE_THRESHOLD;
 
-    // Check corners (smaller regions at the intersections)
-    if (left_edge && top_edge && x <= CORNER_SIZE && y <= CORNER_SIZE) {
-      return "top-left";
-    }
-    if (right_edge && top_edge && x >= container.width - CORNER_SIZE && y <= CORNER_SIZE) {
-      return "top-right";
-    }
-    if (left_edge && bottom_edge && x <= CORNER_SIZE && y >= container.height - CORNER_SIZE) {
-      return "bottom-left";
-    }
-    if (right_edge && bottom_edge && x >= container.width - CORNER_SIZE && y >= container.height - CORNER_SIZE) {
-      return "bottom-right";
-    }
+    const near_left = x <= CORNER_SIZE;
+    const near_right = x >= container.width - CORNER_SIZE;
+    const near_top = y <= CORNER_SIZE;
+    const near_bottom = y >= container.height - CORNER_SIZE;
+
+    if ((left_edge && near_top) || (top_edge && near_left)) return "top-left";
+    if ((right_edge && near_top) || (top_edge && near_right)) return "top-right";
+    if ((left_edge && near_bottom) || (bottom_edge && near_left)) return "bottom-left";
+    if ((right_edge && near_bottom) || (bottom_edge && near_right)) return "bottom-right";
 
     // Check edges (full height/width)
     if (left_edge) return "left";
@@ -194,6 +191,16 @@ export class WindowGeometryHandler {
     });
   }
 
+  private clamp_width(width: number): number {
+    const { min = WindowGeometryHandler.MIN_WIDTH, max = Infinity } = this.instance.constraints.width ?? {};
+    return Math.max(min, Math.min(max, width));
+  }
+
+  private clamp_height(height: number): number {
+    const { min = WindowGeometryHandler.MIN_HEIGHT, max = Infinity } = this.instance.constraints.height ?? {};
+    return Math.max(min, Math.min(max, height));
+  }
+
   public resize_attachment(edge: ResizeEdge) {
     return this.create_move_attachment("resize", (event) => {
       if (edge.includes("e")) {
@@ -203,19 +210,14 @@ export class WindowGeometryHandler {
         const dx = event.clientX - sx;
         const width = this.instance.bounds.width + dx;
         const max_width = cw - sl;
-        const new_width = Math.round(Math.min(max_width, width));
-
-        this.move.width = Math.max(this.instance.constraints.width?.min ?? WindowGeometryHandler.MIN_WIDTH, new_width);
+        this.move.width = this.clamp_width(Math.round(Math.min(max_width, width)));
       }
 
       if (edge.includes("w")) {
         const { client_x: sx, left: sl } = this.move.start;
 
         const dx = Math.max(-sl, event.clientX - sx);
-        this.move.width = Math.max(
-          this.instance.constraints.width?.min ?? WindowGeometryHandler.MIN_WIDTH,
-          Math.round(this.instance.bounds.width - dx)
-        );
+        this.move.width = this.clamp_width(Math.round(this.instance.bounds.width - dx));
         this.move.dx = this.instance.bounds.width - this.move.width;
       }
 
@@ -227,20 +229,14 @@ export class WindowGeometryHandler {
         const height = this.instance.bounds.height + dy;
         const max_height = ch - st;
 
-        this.move.height = Math.max(
-          this.instance.constraints.height?.min ?? WindowGeometryHandler.MIN_HEIGHT,
-          Math.round(Math.min(max_height, height))
-        );
+        this.move.height = this.clamp_height(Math.round(Math.min(max_height, height)));
       }
 
       if (edge.includes("n")) {
         const { client_y: sy, top: st } = this.move.start;
 
         const dy = Math.max(-st, event.clientY - sy);
-        this.move.height = Math.max(
-          this.instance.constraints.height?.min ?? WindowGeometryHandler.MIN_HEIGHT,
-          Math.round(this.instance.bounds.height - dy)
-        );
+        this.move.height = this.clamp_height(Math.round(this.instance.bounds.height - dy));
         this.move.dy = this.instance.bounds.height - this.move.height;
       }
     });
@@ -252,12 +248,13 @@ export class WindowGeometryHandler {
   ): Attachment<HTMLDivElement> {
     return (element) => {
       let pointer_id: number | null = null;
+      let down_event: PointerEvent | null = null;
+      let pending_event: PointerEvent | null = null;
 
       const cleanup = () => {
         element.removeEventListener("pointerdown", on_down);
         element.removeEventListener("pointermove", on_move);
-        element.removeEventListener("pointerup", on_end);
-        element.removeEventListener("pointercancel", on_end);
+        element.removeEventListener("lostpointercapture", on_end);
 
         if (pointer_id !== null && element.hasPointerCapture(pointer_id)) {
           element.releasePointerCapture(pointer_id);
@@ -267,26 +264,37 @@ export class WindowGeometryHandler {
       const on_move = (event: PointerEvent) => {
         event.preventDefault();
 
+        // A click without movement must not unsnap or restore the window, so nothing starts until the pointer travels.
+        if (!this.move.active) {
+          if (!down_event) return;
+          const distance = Math.hypot(event.clientX - down_event.clientX, event.clientY - down_event.clientY);
+          if (distance < DRAG_THRESHOLD) return;
+          this.init_move(type, element, down_event);
+        }
+
+        pending_event = event;
         cancelAnimationFrame(this.move.animation_frame);
         this.move.animation_frame = requestAnimationFrame(() => {
+          pending_event = null;
           handle_move(event);
         });
       };
 
-      const on_end = (event: PointerEvent) => {
-        event.preventDefault();
-
-        element.releasePointerCapture(event.pointerId);
-
+      // lostpointercapture fires for every way a gesture can end (pointerup, pointercancel, element removed).
+      const on_end = () => {
         element.removeEventListener("pointermove", on_move);
-        element.removeEventListener("pointerup", on_end);
-        element.removeEventListener("pointercancel", on_end);
+        element.removeEventListener("lostpointercapture", on_end);
 
         cancelAnimationFrame(this.move.animation_frame);
 
-        this.apply_move(element);
+        if (this.move.active) {
+          if (pending_event) handle_move(pending_event);
+          this.apply_move(element);
+        }
 
         pointer_id = null;
+        down_event = null;
+        pending_event = null;
       };
 
       const on_down = (event: PointerEvent) => {
@@ -305,12 +313,10 @@ export class WindowGeometryHandler {
 
         element.setPointerCapture(event.pointerId);
         pointer_id = event.pointerId;
-
-        this.init_move(type, element, event);
+        down_event = event;
 
         element.addEventListener("pointermove", on_move);
-        element.addEventListener("pointerup", on_end);
-        element.addEventListener("pointercancel", on_end);
+        element.addEventListener("lostpointercapture", on_end);
       };
 
       element.addEventListener("pointerdown", on_down);
@@ -319,13 +325,16 @@ export class WindowGeometryHandler {
   }
 
   private init_move(type: "drag" | "resize", element: HTMLDivElement, event: PointerEvent) {
+    const container = windows.container.bounds;
+
     if (this.instance.snap_zone || this.instance.flags.has(WindowFlag.MAXIMIZED)) {
       const rect = element.parentElement!.getBoundingClientRect();
+      // Window bounds are relative to the container; the rect is relative to the viewport.
       const bounds: Bounds = {
         width: Math.round(rect.width),
         height: Math.round(rect.height),
-        x: Math.round(rect.left),
-        y: Math.round(rect.top),
+        x: Math.round(rect.left - container.x),
+        y: Math.round(rect.top - container.y),
       };
 
       if (type === "resize") {
@@ -348,24 +357,25 @@ export class WindowGeometryHandler {
             left: this.instance.bounds.x,
             top: this.instance.bounds.y,
           },
-          container: windows.container.bounds,
+          container,
         });
       } else {
-        const sx = (event.clientX / bounds.width) * this.instance.bounds.width;
+        // Keep the grab point at the same relative spot of the restored, narrower window.
+        const grab_offset = ((event.clientX - rect.left) / rect.width) * this.instance.bounds.width;
 
         Object.assign(this.move, {
           active: true,
           width: this.instance.bounds.width,
           height: this.instance.bounds.height,
-          dx: Math.round(event.clientX - sx),
+          dx: 0,
           dy: 0,
           start: {
-            client_x: sx,
+            client_x: event.clientX,
             client_y: event.clientY,
-            left: bounds.x,
+            left: Math.round(event.clientX - container.x - grab_offset),
             top: bounds.y,
           },
-          container: windows.container.bounds,
+          container,
         });
       }
     } else {
@@ -381,7 +391,7 @@ export class WindowGeometryHandler {
           left: this.instance.bounds.x,
           top: this.instance.bounds.y,
         },
-        container: windows.container.bounds,
+        container,
       });
     }
   }
