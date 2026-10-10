@@ -26,7 +26,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: upload button
 - [x] Path-string identity system (segments[] + derived path string)
 - [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
-- [ ] File explorer: open files in apps (see File Associations, ADR-018)
+- [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [ ] File explorer: context menus (delete, rename, copy, move)
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
@@ -267,7 +267,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] DialogsService + dialogs host
 - [ ] "Open with" dropdown with "Always use" checkbox
 - [ ] `file_defaults` in persisted settings
-- [ ] File Explorer: double-click / Enter on files
+- [x] File Explorer: double-click / Enter on files
 - [x] Text Viewer app (`text/*` + common text extensions)
 - [ ] Media Preview port (image, video, audio)
 

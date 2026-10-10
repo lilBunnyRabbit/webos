@@ -1,5 +1,8 @@
 <script lang="ts">
-  import type { FileSystemDirectoryItem, FileSystemItem } from "$lib/core/api/services/files";
+  import kernel, { type AppsService } from "$lib/core/api";
+  import type { FileSystemDirectoryItem, FileSystemFileItem, FileSystemItem } from "$lib/core/api/services/files";
+  import { join_path } from "$lib/core/api/services/files/path";
+  import type { Position } from "$lib/core/utils/type";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
   import DirectoryRow from "./directory-row.svelte";
@@ -12,6 +15,8 @@
   }
 
   let { handler, search = $bindable(), onnavigate }: Props = $props();
+
+  const apps = $derived(kernel.service<AppsService>("apps"));
 
   const filtered_items = $derived.by(() => {
     const query = search.trim().toLowerCase();
@@ -31,6 +36,17 @@
     handler
       .delete_entry(item.name, { recursive })
       .catch((error) => report_file_error(`Could not delete "${item.name}"`, error));
+  }
+
+  function open_file(item: FileSystemFileItem, anchor: Position) {
+    apps
+      .open(join_path(handler.segments, item.name), { anchor })
+      .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
+  }
+
+  function row_anchor(element: HTMLElement): Position {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left, y: rect.bottom };
   }
 
   function open_directory(item: FileSystemDirectoryItem) {
@@ -59,8 +75,14 @@
       {#if item.kind === "file"}
         <button
           class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
+          ondblclick={(e) => open_file(item, { x: e.clientX, y: e.clientY })}
           onkeydown={(e) => {
-            if (is_delete_key(e)) delete_item(item);
+            if (e.key === "Enter") {
+              e.preventDefault();
+              open_file(item, row_anchor(e.currentTarget));
+            } else if (is_delete_key(e)) {
+              delete_item(item);
+            }
           }}
         >
           <FileRow {item} />
