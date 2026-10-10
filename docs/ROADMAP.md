@@ -212,7 +212,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Port from React
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Media Preview app (image, video, audio, PDF)
+- [-] Media Preview app (image, video, audio done; PDF not yet)
 - [ ] Tic-Tac-Toe game (+ AI, stats, undo)
 - [ ] Profiler app (per-window performance overlay, FPS, render counts)
 
@@ -260,7 +260,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### File Associations
 - **ADR:** [ADR-018](adrs/018-file-associations.md), [ADR-019](adrs/019-system-dialogs.md)
 - **Brainstorm:** [2026-10-11 File Associations](brainstorm/2026-10-11_file-associations.md)
-- **Status:** In progress
+- **Status:** Done (2026-10-11)
 - [x] `associations` manifest field (extensions + MIME patterns)
 - [x] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
 - [x] `AppsService.open(path, { anchor })` with specificity tiers
@@ -269,7 +269,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] `file_defaults` in persisted settings
 - [x] File Explorer: double-click / Enter on files
 - [x] Text Viewer app (`text/*` + common text extensions)
-- [ ] Media Preview port (image, video, audio)
+- [x] Media Preview port (image, video, audio)
 
 ---
 

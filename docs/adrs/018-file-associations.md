@@ -1,6 +1,6 @@
 # ADR-018: File Associations
 **Date:** 2026-10-11
-**Status:** Accepted (implemented except Media Preview, 2026-10-11)
+**Status:** Implemented (2026-10-11)
 
 > **Revision 2026-10-11: implementation notes**
 > - `file_defaults` was added to settings without bumping `SETTINGS_VERSION`: the field is additive, so older saves load with `{}` instead of being discarded with the theme. Entries must be `".ext" → string`.

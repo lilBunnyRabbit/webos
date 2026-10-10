@@ -86,7 +86,7 @@ Owner standing rule from this round: use the latest web platform features, targe
 ## Action items
 
 - [x] ADR-018, ADR-019, roadmap
-- [ ] Implement in order: `get_file` + `FILE_PROPS`, Text Viewer, `associations` + `open()`, File Explorer wiring, DialogsService + host, Open-with dropdown + `file_defaults`, Media Preview port
+- [x] Implement in order: `get_file` + `FILE_PROPS`, Text Viewer, `associations` + `open()`, File Explorer wiring, DialogsService + host, Open-with dropdown + `file_defaults`, Media Preview port (all 2026-10-11)
 
 ## Next session topics
 
