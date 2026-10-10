@@ -1,6 +1,7 @@
 import type { AppsService as IAppsService, AppId, AppManifest, AppProps, OpenOptions } from "./type";
-import type { FilesService, Kernel, NotificationsService, WindowsService, WindowId } from "$lib/core/api";
-import { best_apps_for } from "./associations";
+import type { DialogsService, FilesService, Kernel, NotificationsService, SettingsService, WindowsService, WindowId } from "$lib/core/api";
+import { best_apps_for, file_extension } from "./associations";
+import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
 
@@ -15,6 +16,8 @@ export class AppsService implements AppsService {
   private windows_service!: WindowsService;
   private notifications_service!: NotificationsService;
   private files_service!: FilesService;
+  private settings_service!: SettingsService;
+  private dialogs_service!: DialogsService;
 
   readonly registry: Map<string, AppManifest> = new SvelteMap();
 
@@ -22,6 +25,8 @@ export class AppsService implements AppsService {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
     this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
     this.files_service = $derived(this.kernel.service<FilesService>("files"));
+    this.settings_service = $derived(this.kernel.service<SettingsService>("settings"));
+    this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
 
     for (const app of apps) {
       this.register(app);
@@ -56,25 +61,40 @@ export class AppsService implements AppsService {
     });
   }
 
-  public async open(path: string, _options?: OpenOptions): Promise<WindowId | null> {
+  public async open(path: string, options: OpenOptions = {}): Promise<WindowId | null> {
     const file = await this.files_service.get_file(path);
     if (!file) {
       this.notifications_service.notify("apps", { type: "error", title: "File not found", message: path });
       return null;
     }
 
-    const [app, ...tied] = best_apps_for(this.registry.values(), file);
-    if (!app) {
+    const extension = file_extension(file.name);
+    const default_id = extension ? this.settings_service.file_defaults[extension] : undefined;
+    if (default_id && this.registry.has(default_id)) {
+      return this.launch(default_id, { path });
+    }
+
+    const candidates = best_apps_for(this.registry.values(), file);
+    if (candidates.length === 0) {
       this.notifications_service.notify("apps", { type: "warning", title: `No app can open ${file.name}` });
       return null;
     }
 
-    // TODO(ADR-019): show the "Open with" chooser at `_options.anchor` instead of taking the first tie.
-    if (tied.length > 0) {
-      console.warn(`[AppsService] ${tied.length + 1} apps tie for "${file.name}", chooser not built yet; using "${app.id}"`);
+    if (candidates.length === 1) {
+      return this.launch(candidates[0].id, { path });
     }
 
-    return this.launch(app.id, { path });
+    const choice = await this.dialogs_service.show(
+      OpenWithDialog,
+      { file_name: file.name, extension, apps: candidates },
+      { anchor: options.anchor }
+    );
+    if (!choice) return null;
+
+    if (choice.always && extension) {
+      this.settings_service.file_defaults[extension] = choice.app_id;
+    }
+    return this.launch(choice.app_id, { path });
   }
 
   private validate_props(manifest: AppManifest, props: unknown): AppProps | undefined {

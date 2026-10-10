@@ -263,10 +263,10 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **Status:** In progress
 - [x] `associations` manifest field (extensions + MIME patterns)
 - [x] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
-- [x] `AppsService.open(path, { anchor })` with specificity tiers (ties take the first app until the chooser exists)
+- [x] `AppsService.open(path, { anchor })` with specificity tiers
 - [x] DialogsService + dialogs host (native `<dialog closedby="any">`, anchor positioning)
-- [ ] "Open with" dropdown with "Always use" checkbox
-- [ ] `file_defaults` in persisted settings
+- [x] "Open with" dropdown with "Always use" checkbox
+- [x] `file_defaults` in persisted settings
 - [x] File Explorer: double-click / Enter on files
 - [x] Text Viewer app (`text/*` + common text extensions)
 - [ ] Media Preview port (image, video, audio)

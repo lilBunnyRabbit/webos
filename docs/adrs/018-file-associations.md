@@ -1,6 +1,11 @@
 # ADR-018: File Associations
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Accepted (implemented except Media Preview, 2026-10-11)
+
+> **Revision 2026-10-11: implementation notes**
+> - `file_defaults` was added to settings without bumping `SETTINGS_VERSION`: the field is additive, so older saves load with `{}` instead of being discarded with the theme. Entries must be `".ext" → string`.
+> - The chooser focuses the first app; ArrowUp/ArrowDown move, Enter picks. A file without an extension hides "Always use".
+> - AppsService now depends on `settings` and `dialogs` as well.
 
 ## Context
 

@@ -25,13 +25,13 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
-| `settings` | SettingsService | Theme tokens, taskbar position (persisted) | none |
+| `settings` | SettingsService | Theme tokens, taskbar position, file defaults (persisted) | none |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
-| `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files |
+| `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
 | `desktop` | DesktopService | Icon grid | apps |
 
 Planned services each have an ADR: shell (007), shortcuts (012), tasks (013). Add a service only when that roadmap item is picked up.

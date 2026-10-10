@@ -1,9 +1,14 @@
 import type { IService } from "../../type";
+import type { AppId } from "../apps/type";
 
 export interface SettingsService extends IService {
   taskbar: Taskbar;
   theme: Theme;
+  /** Extension (`".svg"`) → app chosen with "Always use" in the Open-with dropdown (ADR-018). */
+  file_defaults: FileDefaults;
 }
+
+export type FileDefaults = Record<string, AppId>;
 
 export interface Taskbar {
   position: TaskbarPosition;

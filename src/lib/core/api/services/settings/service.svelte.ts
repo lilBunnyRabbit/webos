@@ -1,4 +1,4 @@
-import type { SettingsService as ISettingsService, Taskbar, Theme } from "./type";
+import type { FileDefaults, SettingsService as ISettingsService, Taskbar, Theme } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
 import { SETTINGS_VERSION, load_settings, save_settings } from "./persistence";
@@ -13,6 +13,7 @@ export class SettingsService implements ISettingsService {
 
   public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM });
   public theme = $state<Theme>({ ...BRAND_DARK });
+  public file_defaults = $state<FileDefaults>({});
 
   private dispose_effects?: () => void;
 
@@ -21,6 +22,7 @@ export class SettingsService implements ISettingsService {
     if (saved) {
       this.theme = saved.theme;
       this.taskbar = saved.taskbar;
+      this.file_defaults = saved.file_defaults;
     }
 
     this.dispose_effects = $effect.root(() => {
@@ -31,7 +33,12 @@ export class SettingsService implements ISettingsService {
       });
 
       $effect(() => {
-        save_settings({ version: SETTINGS_VERSION, theme: this.theme, taskbar: this.taskbar });
+        save_settings({
+          version: SETTINGS_VERSION,
+          theme: this.theme,
+          taskbar: this.taskbar,
+          file_defaults: this.file_defaults,
+        });
       });
     });
   }
