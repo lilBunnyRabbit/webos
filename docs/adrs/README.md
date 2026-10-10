@@ -36,7 +36,7 @@ What are the implications of this decision?
 |-----|-------|------|--------|
 | [001](./001-app-manifest-structure.md) | App Manifest Structure | 2026-01-24 | Implemented |
 | [002](./002-service-lifecycle.md) | Service Lifecycle Hooks | 2026-01-24 | Implemented (no swap/state yet) |
-| [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Accepted |
+| [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Implemented (no app_data/overlays yet) |
 | [004](./004-version-update-system.md) | Version & Update Detection | 2026-01-27 | Implemented |
 | [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented (explorer features pending) |
 | [006](./006-notifications-service.md) | Notifications Service | 2026-01-31 | Implemented (center + badge pending) |

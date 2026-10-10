@@ -1,6 +1,15 @@
 # ADR-003: App Context & AppData Abstraction
 **Date:** 2026-01-24
-**Status:** Accepted
+**Status:** Implemented (2026-10-10, partially; see revision)
+
+> **Revision 2026-10-10: implementation** ([brainstorm](../brainstorm/2026-10-10_app-context.md))
+> - **No `on()` events** (owner decision). Apps read the handle's reactive getters with `$derived`/`$effect`, and use `onDestroy` for close. An emitter would be new pub-sub infrastructure that every mutation site, including the drag handler and a mobile WindowsService, would have to call.
+> - **No `kernel` in the context** (owner decision). Apps import the singleton. `AppContext` is `{ window_id, app_id, window, storage }`.
+> - **`app_data` deferred** until an app needs it. FilesService has no path API for the sketch below to wrap.
+> - **WindowHandle is the core only:** `id`, `is_focused`, `is_maximized`, `is_minimized`, `bounds`, `focus()`, `close()`, `minimize()`, `maximize()`, `restore()`. Title/icon, taskbar, overlays and status bar are separate roadmap items.
+> - **Storage is guarded:** `get(key, schema?)` and `persisted(key, initial, schema?)` take an optional zod schema. Missing, corrupt or invalid data returns `null` / falls back to `initial`. Write failures log.
+> - Lives in `src/lib/core/contexts/app/`; import from `$lib/core/contexts/app`.
+> - **Windows of one app share `persisted()` cells** (owner decision). The storage module keeps one reactive cell per key, retained by each caller and disposed when the last one unmounts, so two windows stay in sync live. The first caller's `initial` and schema win. `set()` on a key with a live cell updates the cell. Other browser tabs are not synced; that belongs to the multi-window brainstorm.
 
 ## Context
 

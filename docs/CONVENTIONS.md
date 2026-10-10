@@ -22,6 +22,7 @@ src/lib/
 │   │       ├── type.ts           # public interface + domain types
 │   │       ├── service.svelte.ts # implementation class (runes)
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
+│   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
 │   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files
 │   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types
 └── apps/

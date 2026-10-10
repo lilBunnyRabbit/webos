@@ -40,7 +40,7 @@ const windows = $derived(kernel.service<WindowsService>("windows"));
 windows.focus(id); // always via the prefix, never destructured
 ```
 
-Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS.
+Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS. Inside an app, `get_app_context()` from `$lib/core/contexts/app` gives its window handle (reactive state, controls) and `app.{id}.*` localStorage (ADR-003).
 
 ## Hard rules
 
@@ -89,10 +89,11 @@ Treat it as architectural.
 Don't present a menu and wait for a click. Interrogate:
 
 1. **Stop before the first edit.** Do the investigation, then stop. Never ship a "temporary" version of the architecture to ask about later. Never "proceed under an assumption" on architecture.
-2. **State the problem and its root cause** in one or two sentences, with the evidence (file:line).
-3. **Lay out the real options**, lightest first. Show a code sketch of each and say what breaks with each one.
-4. **Recommend one, then attack it yourself.** Give the strongest argument against your own pick.
-5. **Grill.** Ask the hard questions the owner may not have considered:
+2. **Brief first.** Before the first question, give a short plain brief of the topic: what the ADR or area is for, what exists in the code today, and what needs deciding. The owner must never have to guess what a question is about.
+3. **State the problem and its root cause** in one or two sentences, with the evidence (file:line).
+4. **Lay out the real options**, lightest first. Show a code sketch of each and say what breaks with each one.
+5. **Recommend one, then attack it yourself.** Give the strongest argument against your own pick.
+6. **Grill.** Ask the hard questions the owner may not have considered:
    - What breaks today without this?
    - Which ADR does this contradict or extend?
    - What happens with two windows of the same app open?
@@ -101,7 +102,7 @@ Don't present a menu and wait for a click. Interrogate:
    - How does this get persisted or restored?
    - What's the smallest version that still answers the question?
    Challenge assumptions in the request itself if they look wrong.
-6. **Record it.** Once the owner decides, log the discussion in `docs/brainstorm/`. If it's final, write an ADR. Only then implement.
+7. **Record it.** Once the owner decides, log the discussion in `docs/brainstorm/`. If it's final, write an ADR. Only then implement.
 
 Claude Code: use `AskUserQuestion`, putting the recommended option first and a code preview per option. Never ask in prose and then carry on.
 

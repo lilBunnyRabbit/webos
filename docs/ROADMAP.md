@@ -47,11 +47,15 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### App Context System
 - **ADR:** [ADR-003](adrs/003-app-context.md)
-- **Status:** Not started
-- [ ] `get_app_context()` / `set_app_context()` via Svelte context
-- [ ] WindowHandle (window events for apps)
-- [ ] StorageHandle (localStorage scoped to app)
-- [ ] AppDataHandle (OPFS scoped to app)
+- **Status:** Core done
+- [x] `get_app_context()` / `set_app_context()` via Svelte context
+- [x] WindowHandle core: reactive state + controls (no `on()` events, owner decision)
+- [x] StorageHandle (localStorage scoped to app, optional zod validation)
+- [ ] AppDataHandle (OPFS scoped to app), deferred until an app needs it
+- [ ] WindowHandle: `set_title` / `set_icon`
+- [ ] WindowHandle: overlays (`pick_file`, `pick_directory`, `confirm`, `prompt`)
+- [ ] WindowHandle: status bar
+- [ ] WindowHandle: taskbar `request_attention` / `set_badge`
 
 ---
 
