@@ -23,6 +23,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path` |
 | `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `ensure_hierarchy` (ADR-021) |
+| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
 | `index.ts` | `export * from "./type"` |
@@ -52,21 +53,23 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 │ ├ Desktop/
 │ ├ Documents/
 │ └ Downloads/
-├ etc/           OS config. Holds hierarchy.json, the migration marker
-├ var/           OS runtime state (nothing writes here yet)
+├ etc/           OS config: hierarchy.json (migration marker), settings.json (SettingsService)
+├ var/
+│ └ lib/         OS component state, one folder each: desktop/layout.json (DesktopService),
+│                session/session.json (SessionService)
 └ tmp/           emptied at every boot
 ```
 
 | Export | What |
 |--------|------|
-| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `tmp` → the paths above |
+| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `var_lib`, `tmp` → the paths above |
 | `SYSTEM_DIRECTORIES` | `["/etc", "/var", "/tmp"]`, the OS-owned top-level folders |
 | `is_system_path(path)` | `true` for a system directory or anything under one. Plain string prefix check, so pass a normalised path |
 | `ensure_hierarchy(root)` | The bootstrap below. Called by `FilesService.init()` and `clear()` |
 
 `ensure_hierarchy(root)`, in order:
 
-1. Creates `/home`, `/etc`, `/var`, `/tmp` if missing.
+1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp` if missing.
 2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var` or `tmp` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
 3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
 4. Empties `/tmp` (every entry, recursively).
@@ -117,7 +120,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 
 `changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
 
-`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer and DesktopService, `is_system_path` by `file-list.svelte`.
+`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer, DesktopService, `desktop/layout.ts` and `settings/persistence.ts`, `is_system_path` by `file-list.svelte`.
 
 ## DirectoryHandler
 
@@ -168,7 +171,7 @@ The first `get_root()`, which is now the one inside `init()`:
 
 ## Persistence
 
-The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The only file the OS itself writes is the migration marker `/etc/hierarchy.json` (`{"version":1}`). Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
+The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The service itself writes only the migration marker `/etc/hierarchy.json` (`{"version":1}`). Other services write their OS files through it: `/etc/settings.json` ([settings](settings.md#persistence)), `/var/lib/desktop/layout.json` and `.desktop` shortcuts in `/home/Desktop` ([desktop](desktop.md#persistence)), `/var/lib/session/session.json` ([session](session.md#persistence)). Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
 
 ## Behaviour & invariants
 
@@ -203,11 +206,22 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 | `clear()` | all revisions are dropped, then `/` is bumped |
 
 - The bump happens after the OPFS call resolves. A failed mutation bumps nothing.
+- Readers today: DesktopService watches `/home/Desktop` ([desktop](desktop.md#lifecycle)). File Explorer doesn't read revisions.
 - Raw `opfs.*` calls, including `ensure_hierarchy` at boot, bump nothing.
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
 
-**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["home"])` resolves `/home` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory([])`, `directory(split_path(PATHS.home))` and `open_directory(name, handle)`, which always pass a matching pair.
+**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["home"])` resolves `/home` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory(segments.slice(0, depth))` for each ancestor, `directory(split_path(path))` and `open_directory(name, handle)`, which always pass a matching pair.
+
+### LatestWriter
+
+`new LatestWriter(files: () => FilesService, path, label)`, then `write(text)`. For state files that change often (ADR-023 revision; used by SettingsService and SessionService).
+
+- `write(text)` replaces the pending text and starts a flush unless one is running. Never awaits, never throws.
+- The flush loop takes the pending text, walks the parent folders from the root (`exists(dir, name, "directory")` → open it, else `create_directory`), then `create_file(parent, name, { content, overwrite: true })`. It repeats while new text arrived meanwhile, so writes never overlap and only the newest of a burst lands.
+- Errors → `console.error("Failed to save {label}:")`, and the loop continues with the next text.
+- Every write bumps the parent's revision; created folders bump theirs.
+- `create_directory` auto-renames, so a **file** squatting on a folder name makes it create `name (1)` and write there on every flush.
 
 ### Errors
 
@@ -238,14 +252,15 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 ## File explorer components
 
-`src/lib/core/components/files/`, shared OS UI. The [File Explorer app](../system-apps.md#file-explorer) is a four-line wrapper around `file-explorer.svelte`.
+`src/lib/core/components/files/`, shared OS UI. The [File Explorer app](../system-apps.md#file-explorer) is a thin wrapper that passes its `path` prop to `file-explorer.svelte`.
 
 | File | Responsibility |
 |------|----------------|
-| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `path_stack: DirectoryHandler[]`, `search`. Starts at `/home` (`PATHS.home`) with a root handler already on `path_stack`. Layout: navigation / list / status bar. Shows "Failed to load filesystem" if either lookup fails, for example when `/home` was deleted this session |
+| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `path_stack: DirectoryHandler[]`, `search`. Prop `path` (default `PATHS.home`), read once. Starts there with a handler for every ancestor already on `path_stack`. Layout: navigation / list / status bar. Shows "Failed to load filesystem" if any lookup fails, for example when the folder or `/home` was deleted this session |
 | `file-explorer-navigation.svelte` | Toolbar: back, reload, breadcrumbs, search input (`bind:search`), new folder, upload |
 | `file-list.svelte` | Header row plus a row per item. Filtering, open, delete. Passes `system={is_system_path(path)}` to folder rows. Shows 5 skeleton rows while `handler.loading`, "No files found" when empty |
-| `file-row.svelte` | File cells: icon, name, `format_bytes(size)`, `last_modified` as a local date (`-` when missing) |
+| `file-row.svelte` | File cells: icon, name, `format_bytes(size)`, `last_modified` as a local date (`-` when missing). A `.desktop` row reads and parses the file and shows `ShortcutIcon` with the target app's icon (generic glyph while loading, on error, or for a broken shortcut) |
+| `shortcut-icon.svelte` | `ShortcutIcon { app_id: AppId \| null, class? }`: the app's manifest icon, or Phosphor `AppWindow` when unknown, with an `ArrowUpRight` badge in the bottom-right corner. Also used by the desktop (ADR-022) |
 | `directory-row.svelte` | Folder cells: icon, name, `-`, caret. No date. With `system`, a small "system" badge after the name (`/etc`, `/var`, `/tmp` and anything under them) |
 | `file-explorer-status-bar.svelte` | "N items (x folders, y files)" for the unfiltered directory, plus origin storage usage/quota/% |
 | `file-upload-button.svelte` | Calls `handler.upload_files()`, disabled while it runs |
@@ -256,7 +271,7 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 - `navigate_to(child)` pushes the current handler onto `path_stack`. The child is a fresh handler and lists itself.
 - Back pops the stack. Clicking breadcrumb `i` truncates the stack to `i`. Both call `show()`, which **reloads** the target, because stacked handlers aren't watched.
-- A new window opens at `/home` with the root handler already on the stack, so Back and the breadcrumb reach `/` and the system folders. The root handler lists itself on creation even though it isn't shown.
+- A new window opens at its `path` prop (`/home` by default) with a handler for every ancestor on the stack, so Back and the breadcrumb reach `/` and the system folders. Opening `/home/Desktop` gives `/ home / Desktop`. Each ancestor handler lists itself on creation even though it isn't shown, and the lookups run one after another before the first paint.
 - Breadcrumbs show stack entries by `name`, root as `/`. A `/` separator goes between entries, except right after the root, whose name already is `/`: `/ home / Documents`. The current directory is a disabled entry in `text-accent`.
 - There's no forward history. Back is disabled when the stack is empty, which is only at `/` after going back (or jumping there by breadcrumb).
 - `search` survives navigation. It filters the current directory only, as a case-insensitive substring of the name.
@@ -308,10 +323,10 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 ## Known gaps
 
-- No cross-instance sync. Revisions exist, but File Explorer and `DirectoryHandler` don't read them yet, so another window or a direct service op still needs a manual reload.
+- No cross-instance sync in File Explorer. Revisions exist and DesktopService reads them, but File Explorer and `DirectoryHandler` don't yet, so another window or a direct service op still needs a manual reload.
 - Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (multi-window sync is its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
 - A revision bumps only the directly affected directory. A consumer of `/home` doesn't see a change inside `/home/Documents`.
-- After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped.
+- After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped. An effect that calls `revision()` directly does re-run: `SvelteMap.clear()` invalidates every key's signal and the map's version (DesktopService reloads, then re-seeds).
 - The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Failed to load filesystem") until the next boot recreates it.
 - `move_directory` isn't atomic and has no guard against moving a folder into its own subtree. An interrupted migration resumes on the next boot, but a folder that was half-moved ends up split between `/home/X` and `/home/X (1)`.
 - A root **file** named `home`, `etc`, `var` or `tmp` makes `ensure_hierarchy` throw (`TypeMismatchError` on create), which now fails the whole boot.

@@ -1,6 +1,14 @@
 # ADR-022: Desktop Folder and Shortcuts
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Implemented (2026-10-11)
+
+> **Revision 2026-10-11: implementation notes**
+> - **Positions live in system storage**, at `/var/lib/desktop/layout.json`, not in `/home/Desktop/.layout.json`. The owner: icon positions are OS state about the desktop, not the user's content. `/var/lib` (one folder per OS component) was added to `PATHS` (ADR-021). The owner confirmed one layout file over shortcuts carrying their own position, because real files can't hold one and a position means nothing outside the desktop.
+> - Entries without a saved position aren't written back. `fit()` places them in the first free cells, and positions are saved only when the user moves an icon. Each move pins every visible icon to its shown cell, so the rest don't shift, and drops positions of entries that no longer exist. Seeding still runs only when the folder is empty and there's no layout file.
+> - A `.desktop` file that doesn't parse shows up as a plain file. `apps.open()` reports "Broken shortcut".
+> - Shortcuts get their own icon everywhere (the owner: not a file icon): the target app's icon with an arrow badge (`ShortcutIcon`), in File Explorer rows and on the desktop.
+> - File Explorer takes `{ path }` (`FILE_PROPS`) for "open folder" and puts every ancestor on its back stack, so the breadcrumb reads `/ home / Desktop`.
+> - Desktop items also open with Enter.
 
 ## Context
 

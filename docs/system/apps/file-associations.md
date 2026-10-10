@@ -1,8 +1,12 @@
 # File associations
 
-ADR: [018](../../adrs/018-file-associations.md), [019](../../adrs/019-system-dialogs.md) · Source: `src/lib/core/api/services/apps/associations.ts`, `AppsService.open()`, `src/lib/core/components/dialogs/open-with-dialog.svelte`
+ADR: [018](../../adrs/018-file-associations.md), [019](../../adrs/019-system-dialogs.md), [022](../../adrs/022-desktop-folder.md) (shortcuts) · Source: `src/lib/core/api/services/apps/associations.ts`, `apps/shortcut.ts`, `AppsService.open()`, `src/lib/core/components/dialogs/open-with-dialog.svelte`
 
 Given a file path, pick an app and launch it with `{ path }`. The step-by-step flow is in [services/apps.md](../services/apps.md#openpath-options-resolution-step-by-step); this page covers the rules.
+
+## Shortcuts come first
+
+A `.desktop` file isn't matched against associations at all. `open()` checks the extension first, parses the file and launches the app it names with the shortcut's own `props` (not `{ path }`). An unparseable shortcut or an unregistered `app_id` → error toast "Broken shortcut". Remembered defaults and the Open-with dropdown never see `.desktop`, so no app can claim it. Format: [services/apps.md → Shortcuts](../services/apps.md#shortcuts-desktop-files).
 
 ## Declaring associations
 
@@ -53,12 +57,12 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 
 ## Remembered defaults
 
-`settings.file_defaults: Record<string, AppId>`: extension (`".svg"`) → app id. Persisted in `webos.settings` ([settings.md](../services/settings.md)); on load, entries whose key doesn't start with `.` or whose value isn't a string are dropped.
+`settings.file_defaults: Record<string, AppId>`: extension (`".svg"`) → app id. Persisted in `/etc/settings.json` ([settings.md](../services/settings.md)); on load, entries whose key doesn't start with `.` or whose value isn't a string are dropped.
 
 - Checked before tiers. If the file has an extension and its default names a registered app, that app opens, even if it no longer lists the extension.
 - A default naming a missing app is ignored (and left in settings).
 - Written only by the dropdown's "Always use" checkbox.
-- No UI to view or clear them yet. To reset: edit `webos.settings` in devtools.
+- No UI to view or clear them yet. To reset: the Settings app's Reset Settings, or delete `/etc/settings.json` and reload (both reset theme and taskbar too). There's no app that edits the file.
 
 ## The Open-with dropdown
 
@@ -74,8 +78,9 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 
 - No candidates → warning toast "No app can open {name}".
 - File missing at `path` → error toast "File not found", message = the path.
+- Broken `.desktop` shortcut → error toast "Broken shortcut", message = the path.
 
-Both resolve `null` and come from app id `"apps"`.
+All three resolve `null` and come from app id `"apps"`.
 
 ## Callers
 
@@ -83,8 +88,10 @@ Both resolve `null` and come from app id `"apps"`.
 |--------|--------|
 | File Explorer, double-click a file (`files/file-list.svelte`) | The pointer (`clientX`, `clientY`) |
 | File Explorer, Enter on a file row | The row's bottom-left corner |
+| Desktop, double-click a file or shortcut icon (`DesktopService.open`) | The pointer |
+| Desktop, Enter on a file or shortcut icon | The icon's bottom-left corner |
 
-Errors thrown by `open()` (for example from `files.get_file`) are caught there and reported with `report_file_error`. Shell `open` (ADR-007) and `#/file/{path}` deep links (ADR-010) are meant to call the same method; neither exists yet.
+Errors thrown by `open()` (for example from `files.get_file`) are caught there and reported with `report_file_error` (File Explorer) or `console.error` (desktop). Shell `open` (ADR-007) and `#/file/{path}` deep links (ADR-010) are meant to call the same method; neither exists yet.
 
 ## Receiving the file
 

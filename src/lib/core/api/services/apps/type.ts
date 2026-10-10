@@ -9,6 +9,11 @@ export interface AppsService extends IService {
   /** Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). */
   launch(id: AppId, props?: unknown): WindowId;
   /**
+   * The instance `launch()` would open, without opening a window or reporting problems: `null` when the app is unknown
+   * or the props fail its schema. Used by session restore (ADR-023).
+   */
+  create_instance(id: AppId, props?: unknown): AppInstance | null;
+  /**
    * Opens a file in the app associated with it (ADR-018). Resolves to the new window,
    * or `null` when the file is missing or no app matches (both notify).
    */
@@ -41,6 +46,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */
   associations?: string[];
+  /** `false` keeps the app out of saved sessions (ADR-023). Defaults to `true`. */
+  restore?: boolean;
   /** Without a schema the app never receives props. */
   props?: ZodType<TProps>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */

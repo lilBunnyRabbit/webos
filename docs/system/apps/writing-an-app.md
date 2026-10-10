@@ -74,7 +74,7 @@ export default define_app({
 
 What this shows:
 
-- **Every prop is optional.** Start menu and desktop launches pass none. The type system enforces it (`Component<Partial<TProps>>`).
+- **Every prop is optional.** Start menu launches and default pins pass none; only a shortcut file with `props` passes some. The type system enforces it (`Component<Partial<TProps>>`).
 - **Services** through `kernel.service<T>("key")` in `$derived`, never destructured.
 - **Context** via `get_app_context()` during init. `window` renamed to keep the global reachable.
 - **Per-app settings** with `storage.persisted()`, stored as `app.notes.font_size`. Shared live by every Notes window. Must be called during init.

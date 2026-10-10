@@ -87,8 +87,9 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 | Source | app id | When |
 |--------|--------|------|
 | `files/file-explorer.errors.ts` (`report_file_error`) | `"file-explorer"` | File operation failed |
-| `AppsService.open()` | `"apps"` | File not found (error), no app can open it (warning) |
+| `AppsService.open()` | `"apps"` | File not found (error), broken `.desktop` shortcut (error), no app can open it (warning) |
 | `AppsService` props validation | the app's id | Props discarded (warning) |
+| `SessionService` restore | `"session"` | Some saved windows couldn't be restored (warning, one toast with the count) |
 
 ## Divergence from ADR
 

@@ -17,10 +17,14 @@
   let path_stack: DirectoryHandler[] = $state([]);
   let search = $state("");
 
-  // Opens with / behind the start folder, so "back" and the breadcrumb reach the system folders.
+  // Every ancestor of the start folder goes on the back stack, so "back" and the breadcrumb reach up to /.
   async function init(start: string) {
     const segments = split_path(start);
-    if (segments.length > 0) path_stack = [await files.directory([])];
+    const ancestors: DirectoryHandler[] = [];
+    for (let depth = 0; depth < segments.length; depth++) {
+      ancestors.push(await files.directory(segments.slice(0, depth)));
+    }
+    path_stack = ancestors;
     handler = await files.directory(segments);
   }
 

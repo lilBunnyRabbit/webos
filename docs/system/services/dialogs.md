@@ -86,6 +86,17 @@ What the platform gives for free: the top layer (above every window and toast), 
 
 Resolves `OpenWithChoice = { app_id: AppId; always: boolean }` (exported from the component's module script). The first app button gets `autofocus`. ArrowUp/ArrowDown cycle the buttons; Enter or a click picks.
 
+### Second consumer: `RestoreSessionDialog`
+
+`src/lib/core/components/dialogs/restore-session-dialog.svelte`, shown by [SessionService](session.md) at boot when a saved session has windows. Unanchored, so centred on the fallback point. It's requested during `init()`, before mount, and renders once the host mounts. The fallback point is computed at `show()` time, when there's no window and no measured container yet, so it's the viewport centre.
+
+| Prop | Type | |
+|------|------|-|
+| `apps` | `(AppManifest \| null)[]` | One per saved window, oldest first; `null` for an app that no longer exists |
+| `resolve` | `DialogProps<boolean>["resolve"]` | |
+
+"Restore last session?", the window count, the known apps (icon + name), "N from apps that no longer exist", then **Start fresh** (`false`) and **Restore** (`true`, autofocused). Esc or outside click resolves `null`, which SessionService treats as Start fresh.
+
 ## Divergence from ADR
 
 - ADR-019 sketches `show<T>(component: Component<DialogProps<T>>, props: object, …)`. The code types `props` against the component (`P`), so wrong props don't compile.

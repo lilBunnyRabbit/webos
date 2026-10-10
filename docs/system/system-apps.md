@@ -6,7 +6,7 @@ All of them have `categories: ["system"]`. Nothing reads `categories` yet: syste
 
 | id | Name | Associations | Props | Window `defaults` | Services |
 |----|------|--------------|-------|-------------------|----------|
-| `file-explorer` | File Explorer | none | none | none | files, apps, notifications (through the shared components) |
+| `file-explorer` | File Explorer | none | `FILE_PROPS` (a folder path) | none | files, apps, notifications (through the shared components) |
 | `settings` | Settings | none | none | none | settings, version |
 | `kernel` | Kernel | none | none | none | the kernel itself |
 | `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files |
@@ -15,7 +15,7 @@ All of them have `categories: ["system"]`. Nothing reads `categories` yet: syste
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps).
 
-The desktop's default grid places `settings` and `file-explorer` (`services/desktop/service.svelte.ts:43`).
+On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DEFAULT_SHORTCUTS` in `services/desktop/service.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
 
 ---
 
@@ -25,16 +25,17 @@ The desktop's default grid places `settings` and `file-explorer` (`services/desk
 
 **Purpose.** Browse and manage OPFS.
 
-**Implementation.** `file-explorer.app.svelte` only renders `<FileExplorer />` from `core/components/files/`. Everything is documented in [FilesService → File explorer components](services/files.md#file-explorer-components): navigation, interactions, opening files and error handling.
+**Props.** `props: FILE_PROPS`, `{ path }` = the folder to open at, default `/home`. The desktop launches it with `{ path: "/home/Desktop/{folder}" }` when a desktop folder is opened. A missing folder shows "Failed to load filesystem".
 
-**Features.** Opens at `/home`, with `/` one step back. System folders (`/etc`, `/var`, `/tmp`) are listed with a "system" badge. Breadcrumbs plus back, reload, substring search over the current directory, new folder (`prompt()`), upload, delete (`confirm()`; folders recursive), open a file in its associated app (double-click or Enter, through `apps.open`), and a status bar with counts and storage usage.
+**Implementation.** `file-explorer.app.svelte` only renders `<FileExplorer {path} />` from `core/components/files/`. Everything is documented in [FilesService → File explorer components](services/files.md#file-explorer-components): navigation, interactions, opening files and error handling.
+
+**Features.** Opens at `path` (default `/home`), with every ancestor on the back stack, so the breadcrumb reads `/ home / Desktop` and Back walks up to `/`. System folders (`/etc`, `/var`, `/tmp`) are listed with a "system" badge. Breadcrumbs plus back, reload, substring search over the current directory, new folder (`prompt()`), upload, delete (`confirm()`; folders recursive), open a file in its associated app (double-click or Enter, through `apps.open`; a `.desktop` shortcut launches its target), `.desktop` rows drawn as `ShortcutIcon` with the target app's icon, and a status bar with counts and storage usage.
 
 **Known gaps.**
 
-- Takes no props, so it can't be opened at a path. Every window starts at `/home`.
-- Doesn't read `files.revision()` yet, so changes from elsewhere need a manual reload.
+- Doesn't read `files.revision()` yet, so changes from elsewhere (pinning to the desktop, another window) need a manual reload.
 - System folders are only marked, not protected: they can be deleted like any folder.
-- No associations, so a folder path can't be "opened" with it.
+- No associations, so `apps.open()` on a folder path doesn't reach it. Only `launch("file-explorer", { path })` does.
 - No rename, move, copy, context menu, drag-and-drop or multi-select.
 - No sync between two windows (see the files doc).
 - `author: "John Doe"` is a placeholder.
@@ -58,7 +59,7 @@ The desktop's default grid places `settings` and `file-explorer` (`services/desk
 | About | Logo, version, commit, branch, mode (dev/prod), build time from `version.info`. In prod: "Check for Updates" (`version.check()`), plus "Refresh to Update" (`version.apply_update()`) when an update is available. In dev: a notice that checking is off. Links to the GitHub repo |
 | Reset Settings | Sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK`, and `file_defaults` to `{}`. No confirmation |
 
-Every write goes straight to service state. Persistence is the settings service's job.
+Every write goes straight to service state. Persistence is the settings service's job (`/etc/settings.json`).
 
 **Interactions.** Mouse only. Theme text inputs accept any string, with no validation.
 
@@ -105,7 +106,8 @@ Every write goes straight to service state. Persistence is the settings service'
 | notifications | total, unread, toasts | last 10: time, type, app, title (read ones dimmed) |
 | dialogs | open count | stack: id, component name, point, anchored or centered |
 | apps | registered, system / user, association count | registry table: icon, id, name, version, props schema, associations |
-| desktop | grid size, icon count, cell size | occupancy map of the grid; cell → app table |
+| session | status (`none`/`pending`/`restored`/`declined`), saved windows, last save time | file path |
+| desktop | grid size, icon count, cell size | occupancy map of the grid; table of cell, entry name, kind (`shortcut`/`file`/`directory`) and target (the shortcut's app name, `{id} (missing)` for an unregistered app, `—` otherwise); empty text "Desktop folder is empty." |
 
 **Known gaps.**
 - Inspectors are read-only. Whether they get actions (check for updates, close a window) is still open.

@@ -89,4 +89,4 @@ Self-hosted in `src/assets/fonts/`, with licences, and declared with `@font-face
 
 - ADR-015's non-colour theming (radius, shadows, animation speed, font choice, export/import) isn't built.
 - There's no CSS fallback for the variables. A token can only be missing for the brief window before `SettingsService.init()`'s effect runs, and the splash covers it.
-- Token values aren't validated. An invalid CSS string in `webos.settings` or typed into Settings makes that variable invalid at computed-value time.
+- Token values aren't validated. An invalid CSS string in `/etc/settings.json` or typed into Settings makes that variable invalid at computed-value time.

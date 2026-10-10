@@ -1,81 +1,151 @@
 # DesktopService
 
-Key `desktop` · Depends on: `apps` (declared, never used) · ADR: [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built) · Source: `src/lib/core/api/services/desktop/` · Inspector: `inspector.svelte` (ADR-020)
+Key `desktop` · Depends on: `files`, `apps` · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts; implemented, see its revision note), [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built; only the `fit()` revision is) · Source: `src/lib/core/api/services/desktop/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-Holds the desktop icon grid: which app shortcut sits in which cell. It also holds the measured grid geometry that the shell needs to place and hit-test icons. Rendering and drag are in [shell/desktop.md](../shell/desktop.md).
+The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon. The service lists the folder, turns entries into grid items, places them using saved positions from `/var/lib/desktop/layout.json`, and fits them to the measured grid. It also opens, pins, moves and removes items. Rendering and drag are in [shell/desktop.md](../shell/desktop.md).
 
 | File | Contents |
 |------|----------|
 | `type.ts` | `DesktopService` interface, `DesktopGrid`, `DesktopGridItem` |
-| `service.svelte.ts` | Implementation |
-| `helper.ts` | `DesktopHelper`: free-cell search and `fit()`, which maps the layout onto the current grid size |
+| `service.svelte.ts` | Implementation, `DEFAULT_SHORTCUTS` |
+| `helper.ts` | `DesktopHelper.arrange()` and `DesktopHelper.fit()`, both pure |
+| `layout.ts` | `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions` |
+
+Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/shortcut.ts`, see [apps.md](apps.md#shortcuts-desktop-files).
 
 ## Model
 
 ```ts
 type DesktopGrid = Array<Array<DesktopGridItem | undefined>>; // grid[y][x], sparse
-type DesktopGridItem = { app_id: AppId; props?: AppProps };  // `type`, not `interface` (convention says interface)
+
+type DesktopGridItem =
+  | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
+  | { kind: "file"; name: string; type: string }
+  | { kind: "directory"; name: string };
+
+type Positions = Record<string, Position>; // entry name → saved cell
 ```
 
-- Row-major and sparse. Rows can be missing, and cells can be `undefined` holes.
-- An item is a shortcut to an app id, with optional launch props. Nothing ever sets `props` today.
-- Ids aren't validated against the registry. Unknown ids render as "Unknown (id)".
-- Two grids exist. `layout` is the user's arrangement and is never trimmed. `grid` is what's shown at the current size, derived from `layout` (see [Fitting](#behaviour--invariants)).
-- The initial layout is hard-coded to `[[settings, file-explorer]]`.
+| Folder entry | Item |
+|--------------|------|
+| Name starts with `.` | Hidden, not an item |
+| Folder | `directory` |
+| File whose `file_extension()` is `.desktop` and whose body parses as a shortcut | `shortcut`: `label` is the name without `.desktop`, plus `app_id` and `props` from the file |
+| `.desktop` file that doesn't parse | `file` (shown with a file icon) |
+| Any other file | `file`, `type` = the browser's MIME for it (`""` when unknown) |
+
+- `name` is the entry's file name and the key for everything: positions, removal, identity.
+- `app_id` isn't checked against the registry when listing. An unknown app shows "(missing app)" on the icon.
+- Entries come in `files.list()` order (folders first, then natural name order).
+
+Three layers of state turn the folder into a grid:
+
+| Layer | What |
+|-------|------|
+| `entries` + `positions` | Raw: what's in the folder and the saved cells |
+| `arranged` | `DesktopHelper.arrange(entries, positions)` → `{ layout, unplaced }` |
+| `grid` | `DesktopHelper.fit(container.grid, layout, unplaced)`, what's shown |
 
 ## Public API
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `container` | `readonly { bounds, cell, grid: { columns, rows }, config: { cell_size, padding }, element }` | `$state.raw`. `bounds` is the element's viewport rect minus `padding` on every side. `cell` is the actual cell size (`bounds / columns`), so it's ≥ `cell_size`. `grid` is the column and row count. |
-| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 64`, `padding 4`. A new size re-derives `grid` (below); `layout` isn't touched. A falsy element resets to the viewport size with a 0×0 grid. |
-| `add_item` | `(app_id) => Position \| null` | First free cell of the visible `grid`, row-major (`calculate_item_position`), written into `layout` at that cell. Returns `null` with a `console.warn` when the grid is full or not measured yet (0×0). No dedupe: the same app can be pinned many times. |
-| `remove_item` | `(position) => void` | Looks up the item shown at `position` and clears it from wherever `layout` holds it. No-op for an empty cell. |
-| `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise clears the item from its `layout` cell and writes it at `to`, so a relocated item gets `to` as its real cell. **Overwrites** whatever `layout` holds at `to`; the shell is what prevents dropping onto an occupied cell. |
-| `has_item_in_position` | `(position) => boolean` | |
-| `list` | `() => DesktopGrid` | The derived visible `grid`. Read-only in practice: writing into it doesn't reach `layout`. |
-| `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting the visible grid (hidden items aren't counted). |
+| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 64`, `padding 4`. A new size re-derives `grid`. A falsy element resets to the viewport size with a 0×0 grid. |
+| `list` | `() => DesktopGrid` | The derived visible `grid`. |
+| `has_item_in_position` | `(position) => boolean` | Against the visible grid |
+| `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |
+| `remove_item` | `(position) => Promise<void>` | Deletes the file of a **shortcut** shown at `position` (`files.delete_entry` in `/home/Desktop`). Files and folders: silent no-op (ADR-022 waits for window overlays to confirm). The deletion bumps the folder's revision, which reloads the desktop. |
+| `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
+| `open` | `(item, options?: OpenOptions) => void` | `shortcut` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
+| `init` / `destroy` | IService | See Lifecycle |
+| `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
 
 ## State
 
-- `layout`: deep `$state`, mutated in place by the private `place()` and `take_from_layout()`.
-- `grid`: `$derived(DesktopHelper.fit(container.grid, layout))`.
+- `entries`: `$state<DesktopGridItem[]>`, replaced wholesale by `reload()`.
+- `positions`: `$state<Positions>`, replaced by `reload()` and `move_item()`.
+- `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
+- `files_service`, `apps_service`: `$derived(kernel.service(...))` set in the constructor.
+- `reload_id`, `dispose_watch`: plain fields.
 
 ## Lifecycle
 
-No `init()` or `destroy()`. The constructor reads `window.innerWidth/innerHeight` for the initial container.
+`init()`, async:
+
+1. `await reload()`.
+2. Start an `$effect.root` with one effect that reads `files.revision("/home/Desktop")`. Its first run only subscribes (`init()` already loaded). Every later change calls `reload()`; a rejection goes to `console.error`.
+
+`destroy()` disposes the effect root.
+
+`reload()`:
+
+1. Take `id = ++reload_id`.
+2. `files.get_directory("/home/Desktop")`. Missing → throws `/home/Desktop is missing` (FilesService recreates it at boot, so this means it was deleted this session).
+3. List it, read `/var/lib/desktop/layout.json` (`files.get_file`).
+4. **Seed** when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
+5. Build `entries`. Each `.desktop` file is read and parsed here, so listing costs one read per shortcut (and opening one reads it again in `apps.open`).
+6. `parse_layout()` the layout file, or `{}`.
+7. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries` and `positions`.
+
+A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.md](../kernel.md#failed-init)).
 
 ## Persistence
 
-None (`// TODO: persist` at the top of `service.svelte.ts`). Pins and positions reset on reload.
+| | |
+|-|-|
+| Icons | The entries of `/home/Desktop` themselves (OPFS). Shortcuts are `.desktop` JSON files: `{ "app_id": "settings" }`, optionally `"props"`, pretty-printed |
+| Positions | `/var/lib/desktop/layout.json`: `{ "version": 1, "positions": { "Settings.desktop": { "x": 0, "y": 0 } } }`, pretty-printed |
+| Version | `LAYOUT_VERSION = 1` (private to `layout.ts`) |
+| Load | zod: `version` literal `1`, `positions` a record of `{ x, y }` non-negative integers. Wrong version, bad shape or bad JSON → `{}` (every icon takes a free cell), no error logged |
+| Written | Seeding, and every `move_item()`. `/var/lib/desktop` is created on first write (`files.create_directory` under `/var/lib`, which `ensure_hierarchy` guarantees). Write errors: `console.error("[DesktopService] Failed to save the layout")` |
+
+Positions are keyed by entry name, so renaming an entry in File Explorer loses its position.
 
 ## Behaviour & invariants
 
-**Placement.** `calculate_item_position` scans row by row, left to right, and takes the first `undefined` cell. A missing or empty row yields `{ x: 0, y }`. ADR-011's auto-arrange says column by column, but that isn't built.
+**Seeding.** An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` writes one shortcut per `DEFAULT_SHORTCUTS` (`settings`, `file-explorer`), named after the manifest (`Settings.desktop`, `File Explorer.desktop`), at `{ x: i, y: 0 }`, then saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.
 
-**Fitting** (`DesktopHelper.fit(dimensions, layout)`, re-run whenever the size or the layout changes):
+**Arrange** (`DesktopHelper.arrange(entries, positions)`): in entry order, each entry with a saved position takes that cell if it's still free. Entries with no position, or whose cell an earlier entry already took, go to `unplaced`. `layout` may contain cells outside the current grid.
 
-1. Every `layout` item whose cell is inside `columns × rows` is shown at that cell.
-2. The rest (out of range), in row-major `layout` order, take the first free cells, row-major.
-3. Items left when no free cell remains are **hidden**, not dropped. They stay in `layout`.
+**Fit** (`DesktopHelper.fit(dimensions, layout, unplaced)`, re-run whenever the size, entries or positions change):
 
-Because `layout` is never trimmed, growing the window puts relocated and hidden items back in their own cells. Moving a relocated item writes its new cell into `layout`, so the move sticks. Removing one clears its `layout` cell, not the cell it was shown in.
+1. Every `layout` item inside `columns × rows` is shown at its cell.
+2. Out-of-range `layout` items (row-major), then `unplaced` (entry order), take the first free cells, row-major.
+3. Whatever is left when no free cell remains is **hidden**, not dropped.
 
-Writes go through the state proxy (`if (!layout[y]) layout[y] = []`, not `??=`): `??=` returns the raw array, and writes to it aren't tracked.
+Unplaced items are never written back. Their cell is recomputed on every fit, so a new or removed entry, or a resize, can shift them.
+
+**Move** (`move_item(from, to)`) builds a fresh `positions`:
+
+1. Start from the current `positions`, minus names no longer in `entries` (stale names are pruned here and only here).
+2. Pin every item **visible** in `grid` to the cell it's shown in. Relocated and unplaced icons become real positions, so they don't jump when this cell changes hands.
+3. Set the moved item to `to`.
+4. Assign `positions` (the grid updates at once), then write the file in the background.
+
+Hidden items keep whatever position they had. If `to` is somehow occupied, both names point at one cell and `arrange()` gives it to the first in entry order; the other becomes unplaced.
+
+**Refresh.** Any mutation of `/home/Desktop` made through FilesService in this tab (File Explorer, `pin()`, `remove_item()`, an app saving there) bumps its revision and reloads the desktop. Writing `layout.json` bumps `/var/lib/desktop`, which nothing watches, so a move doesn't reload. Overlapping reloads resolve to the newest (`reload_id`).
 
 **Coordinates.** `container.bounds` is viewport space. The shell's drag handler subtracts `bounds.x/y` from `clientX/Y` and divides by `cell` to get a grid cell, so the two stay consistent as long as the element doesn't move without resizing. Moves without a resize aren't observed (ResizeObserver only reports size).
 
 ## Divergence from ADR
 
-ADR-011 is *Accepted* and none of it is built: multi-selection, wallpapers, context menu, auto-arrange, icon settings. The dependency on `apps` is declared in `kernel/init.ts`, but the service never resolves it.
+ADR-022's body puts positions in `/home/Desktop/.layout.json` and writes back the cell of every unplaced entry. The code uses `/var/lib/desktop/layout.json` and saves only on move; the ADR's 2026-10-11 revision note records both, plus the seed condition, broken-shortcut handling, `ShortcutIcon`, File Explorer's `{ path }` and Enter to open. ADR-022 says seeding happens when "the folder was just created"; the code's test is "empty and no layout file".
+
+ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context menu, auto-arrange, icon settings.
 
 ## Known gaps
 
-- Not persisted.
-- Hidden items (more pins than cells) can't be seen, launched or removed until the grid grows. Nothing tells the user they exist.
-- `add_item` doesn't dedupe and fails silently, with only a `console.warn` and no notification.
-- `move_item` overwrites the target. The service doesn't enforce the "one item per cell" invariant itself.
-- `DesktopGridItem` is a `type` object shape, against CONVENTIONS. A 0-column grid would make `cell` `Infinity`/`NaN`; the shell guards against rendering that.
+- Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
+- Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.
+- `pin()` doesn't dedupe. The start menu ignores its `null` and its errors beyond `console.error`.
+- A move saved while a reload is reading `layout.json` can be overwritten in memory by the older file contents.
+- Deleting a file or folder from the desktop silently does nothing.
+- Changes from other tabs, or OPFS writes that bypass FilesService, show up only after a reload.
+- Until `/home/Desktop` has been bumped once this session, `revision()` returns `0` for a missing `SvelteMap` key, which tracks the map's version. Any revision bump anywhere (a settings save to `/etc`, a File Explorer upload) then re-runs the watcher and reloads the desktop. Harmless but wasteful.
+- If `/home/Desktop` itself is deleted, nothing reloads (the bump is on `/home`), and the next reload throws `/home/Desktop is missing` to `console.error`; the desktop keeps the old icons until the next boot recreates the folder.
+- A 0-column grid would make `cell` `Infinity`/`NaN`; the shell guards against rendering that.

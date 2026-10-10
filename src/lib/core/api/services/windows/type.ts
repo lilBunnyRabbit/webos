@@ -1,7 +1,7 @@
 import type { IService } from "../../type";
 import { Flags } from "$lib/core/utils/flags";
 import type { Bounds, PartialRecord } from "$lib/core/utils/type";
-import type { AppInstance } from "../apps/type";
+import type { AppId, AppInstance, AppProps } from "../apps/type";
 
 /**
  * Service for managing windows lifecycle, state, and operations.
@@ -89,6 +89,13 @@ export interface WindowsService extends IService {
   open(app: AppInstance): WindowId;
 
   /**
+   * Reopens saved windows with their geometry (ADR-023). `windows` is oldest-first in z-order, so the last one ends up
+   * on top. `create` builds each app instance; returning `null` skips that window. Bounds are clamped into the
+   * container, and the topmost visible window gets focus.
+   */
+  restore(windows: WindowSnapshot[], create: (app_id: AppId, props: AppProps | undefined) => AppInstance | null): RestoreResult;
+
+  /**
    * Snaps a window to a specific zone (edge or corner).
    * @param id - The window ID to snap
    * @param zone - The snap zone to snap to, or `null` to unsnap
@@ -112,6 +119,22 @@ export interface WindowsService extends IService {
 }
 
 export type WindowId = string;
+
+/** A window as the session stores it: what to launch and where it was. */
+export interface WindowSnapshot {
+  app_id: AppId;
+  props?: AppProps;
+  bounds: Bounds;
+  /** Only `minimized` and `maximized` are kept. */
+  flags: WindowFlag[];
+  snap_zone: SnapZone | null;
+}
+
+export interface RestoreResult {
+  restored: WindowId[];
+  /** Snapshots `create` refused: app gone or props no longer valid. */
+  skipped: WindowSnapshot[];
+}
 
 export const WindowFlag = {
   MINIMIZED: "minimized",

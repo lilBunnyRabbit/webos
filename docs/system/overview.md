@@ -1,6 +1,6 @@
 # System overview
 
-WebOS is a desktop environment that runs as a single-page Svelte 5 app, hosted statically on GitHub Pages. A kernel builds a fixed set of services (windows, files, apps, settings, ...) before anything renders. The shell (desktop, window manager, taskbar, toasts, dialogs) is a set of Svelte components that read those services. Apps are lazily loaded components that run inside windows and talk to the OS through the same services plus a per-window app context. There's no backend. Everything persistent lives in the browser: localStorage, OPFS and the service worker cache.
+WebOS is a desktop environment that runs as a single-page Svelte 5 app, hosted statically on GitHub Pages. A kernel builds a fixed set of services (windows, files, apps, settings, session, ...) before anything renders. The shell (desktop, window manager, taskbar, toasts, dialogs) is a set of Svelte components that read those services. Apps are lazily loaded components that run inside windows and talk to the OS through the same services plus a per-window app context. There's no backend. Everything persistent lives in the browser: OPFS (user files plus OS config and state in `/etc` and `/var/lib`), localStorage (app storage only) and the service worker cache.
 
 This page covers the CURRENT code. For intent and history, see [ADRs](../adrs/README.md). For where code goes and naming, see [CONVENTIONS](../CONVENTIONS.md).
 
@@ -18,7 +18,7 @@ This page covers the CURRENT code. For intent and history, see [ADRs](../adrs/RE
 ├──────────────────────────────────────────────────────────────────┤
 │ Services        src/lib/core/api/services/{name}/                │
 │                 settings windows files version notifications      │
-│                 dialogs apps desktop                              │
+│                 dialogs apps desktop session                      │
 ├──────────────────────────────────────────────────────────────────┤
 │ Kernel          src/lib/core/api/kernel/                         │
 │                 registry, dependency order, init / shutdown       │
@@ -32,7 +32,7 @@ Each layer only reaches down. Shell components and apps get services with `kerne
 
 1. **`index.html`** paints a fixed full-screen `#splash` (Brand Dark `#17252c`, `/logo.svg`) and an empty `#app`. Body background is hardcoded to the same colour, so nothing flashes before the theme loads. In a production build, vite-plugin-pwa also injects `registerSW.js`.
 2. **`src/main.ts`** imports `app.css` and `App.svelte`, then imports `kernel` from `src/lib/core/api/index.ts`. Evaluating that barrel creates the `Kernel` singleton, or reuses `window.kernel` (see [Debug handle](#debug-handle)). It also eagerly evaluates every app manifest (see [Circular-import rule](#the-barrel-and-the-circular-import-rule)).
-3. **`await kernel.init()`** registers the default services (`init.ts`), resolves dependency order, then constructs each service and awaits its `init()`, one at a time. The actual order is `settings → windows → files → version → notifications → dialogs → apps → desktop` (see [kernel.md](kernel.md#init-order)). SettingsService's `init()` loads `webos.settings` and starts the effect that writes theme tokens to `<html>`. FilesService's `init()` builds the OPFS hierarchy (`/home`, `/etc`, `/var`, `/tmp`), migrates a pre-hierarchy flat root into `/home` once, and empties `/tmp` ([files](services/files.md#hierarchy)). That's async OPFS work on the boot path, and no OPFS means no boot. The splash is still showing.
+3. **`await kernel.init()`** registers the default services (`init.ts`), resolves dependency order, then constructs each service and awaits its `init()`, one at a time. The actual order is `files → settings → windows → version → notifications → dialogs → apps → desktop → session` (see [kernel.md](kernel.md#init-order)). FilesService's `init()` builds the OPFS hierarchy (`/home` with `Desktop`/`Documents`/`Downloads`, `/etc`, `/var/lib`, `/tmp`), migrates a pre-hierarchy flat root into `/home` once, and empties `/tmp` ([files](services/files.md#hierarchy)). SettingsService's `init()` reads `/etc/settings.json` (importing and removing the legacy localStorage `webos.settings` once) and starts the effect that writes theme tokens to `<html>`. DesktopService's `init()` lists `/home/Desktop`, reads `/var/lib/desktop/layout.json`, seeds two shortcuts on first boot, and starts watching the folder's revision ([desktop](services/desktop.md#lifecycle)). SessionService's `init()` reads `/var/lib/session/session.json`; if it holds windows, it requests the restore dialog without awaiting it, so the dialog appears right after mount and windows are restored only if the user picks Restore ([session](services/session.md)). That's async OPFS work on the boot path, and no OPFS means no boot. The splash is still showing.
 4. **`mount(App, { target: #app, intro: true })`**. `App.svelte` renders `web-os.svelte`, and that renders `os.svelte`. Every service exists by now, so `kernel.service()` can never throw during render.
 5. **`#splash` is removed** right after `mount()` returns.
 6. **Shutdown hooks**: `pagehide` without `event.persisted` calls `kernel.shutdown()`. A bfcache-persisted pagehide keeps the services alive. HMR dispose unmounts the app and shuts the kernel down.
@@ -58,7 +58,7 @@ App.svelte
       │  ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
       │  └─ taskbar-item.svelte  (per window)
       └─ dialogs/dialogs-host.svelte  (sibling of the grid; native <dialog>)
-         └─ (component from DialogsService.stack, e.g. open-with-dialog.svelte)
+         └─ (component from DialogsService.stack: open-with-dialog.svelte, restore-session-dialog.svelte)
 ```
 
 The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `os.svelte` pick the cells from the taskbar position. Details are in [shell/](shell/) (written separately).

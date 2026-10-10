@@ -53,35 +53,36 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 
 | Key | Class | `dependencies` |
 |-----|-------|----------------|
-| `settings` | `SettingsService` | none |
+| `settings` | `SettingsService` | `files` |
 | `windows` | `WindowsService` | none |
 | `files` | `FilesService` | none |
 | `version` | `VersionService` | none |
 | `notifications` | `NotificationsService` | none |
 | `dialogs` | `DialogsService` | `windows` |
 | `apps` | `AppsService` | `windows`, `notifications`, `files`, `settings`, `dialogs` |
-| `desktop` | `DesktopService` | `apps` |
+| `desktop` | `DesktopService` | `files`, `apps` |
+| `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
 
 ### Dependency graph
 
 ```
-settings ──────────────┐
-windows ──┬─► dialogs ─┤
-          └────────────┼─► apps ─► desktop
-files ─────────────────┤
-notifications ─────────┘
+files ──────────────────────────────────────────────► settings
+windows ────────────────────────────────────────────► dialogs
+windows, notifications, files, settings, dialogs ───► apps
+files, apps ────────────────────────────────────────► desktop
+windows, apps, files, dialogs, notifications ───────► session
 version   (standalone)
 ```
 
 ### Init order
 
-`resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. With the registrations above, the order is:
+`resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-settings → windows → files → version → notifications → dialogs → apps → desktop
+files → settings → windows → version → notifications → dialogs → apps → desktop → session
 ```
 
-Shutdown runs the reverse: `desktop → apps → dialogs → notifications → version → files → windows → settings`.
+Shutdown runs the reverse: `session → desktop → apps → dialogs → notifications → version → windows → settings → files`.
 
 Errors thrown during resolution, before anything is constructed:
 
@@ -92,7 +93,7 @@ Errors thrown during resolution, before anything is constructed:
 
 | Phase | What happens |
 |-------|--------------|
-| Construct | `new Class(kernel)`. By convention ([CONVENTIONS → Services](../CONVENTIONS.md#services)) the constructor only sets fields. Some services capture dependencies in the constructor as `$derived(kernel.service(...))`. AppsService does this, and it's safe because the dependencies are already in `services`. |
+| Construct | `new Class(kernel)`. By convention ([CONVENTIONS → Services](../CONVENTIONS.md#services)) the constructor only sets fields. Some services capture dependencies in the constructor as `$derived(kernel.service(...))`. AppsService, SettingsService, DesktopService and SessionService do this, and it's safe because the dependencies are already in `services`. |
 | `init()` | Awaited serially. A service may use its dependencies here, because they're already initialized and registered. Side effects (`$effect.root`, timers, listeners, storage reads) belong here. |
 | Registered | Only after `init()` resolves does the service enter `services`. No consumer ever sees a half-initialized service. |
 | `destroy()` | Synchronous. It must undo everything `init()` started. |
@@ -101,12 +102,14 @@ Which services implement which hooks today:
 
 | Service | `init` | `destroy` |
 |---------|--------|-----------|
-| settings | load `webos.settings`, start token + save effects | dispose effects |
+| settings | read `/etc/settings.json` (import + remove legacy `webos.settings`), start token + save effects | dispose effects |
 | version | start 30-min poll, `visibilitychange` listener | clear both |
 | notifications | none | clear toast timers |
 | dialogs | none | yes (see [dialogs](services/dialogs.md)) |
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |
-| windows, apps, desktop | none | none |
+| desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot, start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
+| session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
+| windows, apps | none | none |
 
 ### Failed init
 
@@ -121,7 +124,7 @@ Two cases teardown doesn't cover:
 
 ### HMR
 
-`api/index.ts` reuses `window.kernel` when it exists, so a module re-evaluation keeps the same `Kernel` instance. `main.ts`'s `import.meta.hot.dispose` unmounts the app and calls `kernel.shutdown()`, which empties `services` and `descriptors`. When `main.ts` runs again, `kernel.init()` sees `is_initialized === false`, re-registers the eight services into empty maps and reconstructs them into the same `SvelteMap`. Between shutdown and re-init, `kernel.service()` throws `not found`.
+`api/index.ts` reuses `window.kernel` when it exists, so a module re-evaluation keeps the same `Kernel` instance. `main.ts`'s `import.meta.hot.dispose` unmounts the app and calls `kernel.shutdown()`, which empties `services` and `descriptors`. When `main.ts` runs again, `kernel.init()` sees `is_initialized === false`, re-registers the nine services into empty maps and reconstructs them into the same `SvelteMap`. Between shutdown and re-init, `kernel.service()` throws `not found`.
 
 Because the old instance is reused, edits to `kernel.svelte.ts` itself don't take effect until a full reload.
 

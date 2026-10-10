@@ -21,7 +21,7 @@ The reference is part of the code. A change isn't finished until the page that d
 |------|--------|
 | [overview.md](overview.md) | Layers, boot sequence, shell mount tree, source map |
 | [kernel.md](kernel.md) | Service registry, dependency order, lifecycle |
-| [persistence.md](persistence.md) | Everything stored: localStorage keys, OPFS, versions, what survives reload |
+| [persistence.md](persistence.md) | Everything stored: OPFS (user files, `/etc`, `/var/lib`), localStorage keys, versions, what survives reload (including session restore) |
 | [theming.md](theming.md) | Tokens, themes, brand constraints, fonts |
 
 ### Services
@@ -36,6 +36,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/dialogs.md](services/dialogs.md) | `dialogs` |
 | [services/apps.md](services/apps.md) | `apps` |
 | [services/desktop.md](services/desktop.md) | `desktop` |
+| [services/session.md](services/session.md) | `session` |
 
 ### Shell
 

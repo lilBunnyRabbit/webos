@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AppConfig, AppManifest, AppProps } from "./type";
 
-/** Props schema for apps that open files: an absolute OPFS path, looked up with `files.get_file()` (ADR-018). */
+/** Props schema for apps that open a path: an absolute OPFS path to a file (ADR-018) or, for File Explorer, a folder. */
 export const FILE_PROPS = z.object({ path: z.string() });
 
 /** Helper to define an app manifest with automatic .default extraction */

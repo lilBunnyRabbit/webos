@@ -52,7 +52,7 @@ Hard logic lives in plain TS so it can be tested without Svelte. ADR-005 (`opfs.
 - Pure logic beside the service: older services use a static helper class (`WindowsHelper`, `DesktopHelper`), files uses module-level functions (`opfs.ts`). New services follow the files style. Don't convert old helpers as a drive-by.
 - Constructors only set fields. Side effects (`$effect.root`, timers, listeners, storage reads) go in `init()`, and everything `init()` starts, `destroy()` stops. `destroy()` is synchronous. Service init order comes from `dependencies`, so a service may use its dependencies in `init()` (ADR-002).
 - Every service ships `inspector.svelte` beside it, wired as `inspector = () => import("./inspector.svelte")`, so the Kernel app can show it (ADR-020). Basic view always; detailed view behind the `detailed` prop. Use the building blocks in `components/inspector/` and only the service's public API.
-- Persisted service state: one versioned localStorage key per service (`webos.{service}`), with load/save as pure functions beside the service (`settings/persistence.ts`). Validate on load and fall back to defaults; never trust the stored shape.
+- Persisted service state lives in the file system (ADR-021): config in `/etc/{service}.json` (`/etc/settings.json`), state in `/var/lib/{service}/` (`/var/lib/desktop/layout.json`). Versioned JSON, written through FilesService, with parse/serialize as pure functions beside the service (`settings/persistence.ts`, `desktop/layout.ts`). Validate on load and fall back to defaults; never trust the stored shape. Only app storage (`app.{id}.*`, ADR-003) stays in localStorage.
 
 ### Accessing a service
 

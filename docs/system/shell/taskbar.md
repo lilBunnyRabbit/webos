@@ -48,7 +48,7 @@ States:
 | Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
 | Click | Start button | Toggle the start menu |
 | Click | App row in the menu | `apps.launch(id)` with no props, and close the menu (`popovertargetaction="hide"`) |
-| Click | `+` ("Pin to Desktop") | `desktop.add_item(id)`. The menu stays open. |
+| Click | `+` ("Pin to Desktop") | `desktop.pin(id)`: writes `{App name}.desktop` into `/home/Desktop`, which appears on the desktop in the first free cell. Errors go to `console.error`. The menu stays open. |
 | Escape / outside click | Open menu | Close it (native light dismiss) |
 | Keyboard | Bar | Native button Tab/Enter only. No shortcuts (ADR-017 not built). |
 
@@ -60,7 +60,7 @@ States:
 
 ## Known gaps
 
-- "Pin to Desktop" can pin duplicates and gives no feedback when the grid is full (`desktop.add_item` returns `null` with only a `console.warn`).
+- "Pin to Desktop" can pin duplicates (`Settings (1).desktop`) and gives no feedback: not on success, not when the grid is full and the new icon is hidden, not on failure.
 - `data-[state=open]:bg-primary/10` on the start button and the items is dead. Nothing sets `data-state`; it's left over from a component-library era.
 - The app row has `hover:bg-foreground/10` on both the wrapper and the button, which doubles the tint.
 - Taskbar items have no accessible name (icon-only, no `title`/`aria-label`).

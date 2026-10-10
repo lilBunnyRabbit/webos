@@ -1,14 +1,18 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { type DesktopGridItem, type DesktopService, type AppsService } from "$lib/core/api";
+  import kernel, { type DesktopGridItem, type DesktopService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
+  import DesktopItemFace from "./desktop-item-face.svelte";
 
   let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
-  const apps = $derived(kernel.service<AppsService>("apps"));
 
-  const manifest = $derived(apps.get(item.app_id));
+  function open(event: MouseEvent | KeyboardEvent) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const anchor = event instanceof MouseEvent ? { x: event.clientX, y: event.clientY } : { x: rect.left, y: rect.bottom };
+    desktop.open(item, { anchor });
+  }
 
   // The desktop keys items by cell, so x and y never change for this instance.
   const item_handler = new ItemHandler(untrack(() => ({ x, y })), (position) => {
@@ -25,26 +29,17 @@
   )}
   style:grid-column={x + 1}
   style:grid-row={y + 1}
-  ondblclick={() => {
-    if (manifest) {
-      apps.launch(item.app_id, item.props);
-    }
-  }}
+  ondblclick={open}
   onkeyup={(e) => {
-    if (e.key === "Delete" && document.activeElement === e.currentTarget) {
-      desktop.remove_item({ x, y });
+    if (document.activeElement !== e.currentTarget) return;
+    if (e.key === "Enter") open(e);
+    if (e.key === "Delete") {
+      desktop.remove_item({ x, y }).catch((error) => console.error(`[Desktop] Failed to remove ${item.name}`, error));
     }
   }}
   {@attach item_handler.drag_attachment.bind(item_handler)}
 >
-  {#if manifest}
-    <div class="h-8 w-8 overflow-hidden shrink-0">
-      <manifest.icon class="h-full w-auto" />
-    </div>
-    <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{manifest.name}</span>
-  {:else}
-    <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-4">Unknown ({item.app_id})</span>
-  {/if}
+  <DesktopItemFace {item} />
 </button>
 
 {#if item_handler.move_state?.type === "move"}
@@ -65,14 +60,6 @@
     style:width="{desktop.container.cell.width}px"
     style:height="{desktop.container.cell.height}px"
   >
-    {#if manifest}
-      <div class="h-8 w-8 overflow-hidden shrink-0">
-        <manifest.icon class="h-full w-auto" />
-      </div>
-
-      <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-1">{manifest.name}</span>
-    {:else}
-      <span class="text-xs text-foreground/70 max-w-full px-1 line-clamp-4">Unknown ({item.app_id})</span>
-    {/if}
+    <DesktopItemFace {item} />
   </div>
 {/if}

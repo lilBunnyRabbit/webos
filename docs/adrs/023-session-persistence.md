@@ -1,6 +1,15 @@
 # ADR-023: Session Persistence
 **Date:** 2026-10-11
-**Status:** Accepted
+**Status:** Implemented (2026-10-11)
+
+> **Revision 2026-10-11: implementation notes**
+> - The file is `/var/lib/session/session.json`, not `/var/session.json`. It follows the convention set in the same session: OS component state goes in `/var/lib/{component}/` (ADR-021, ADR-022).
+> - `RestoreResult.skipped` is the list of skipped snapshots, not a count, so the console can show what was dropped.
+> - Dismissing the dialog (Esc, outside click; the dialogs host uses `closedby="any"`) counts as **Start fresh**. Saving then starts and overwrites the old session.
+> - Settings and session share `files/latest-writer.ts` (`LatestWriter`): writes never overlap, the newest text wins, and missing parent folders are created.
+> - `windows.restore` clamps bounds into the container (`WindowsHelper.clamp_bounds`), but skips clamping while the container is unmeasured (0×0). It then calls `focus_next()`, so a minimized top window never holds focus.
+> - SessionService has an inspector (status, saved count, last save, file path) and a `status` of `none | pending | restored | declined`.
+> - Verified in the browser: 4 windows (props, maximized, minimized, positions, z-order) restored exactly; a session with an unknown app and invalid props skipped both with one toast and clamped an oversized window; Start fresh emptied the saved session.
 
 ## Context
 

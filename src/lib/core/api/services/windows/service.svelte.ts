@@ -2,9 +2,17 @@ import { Flags } from "$lib/core/utils/flags";
 import type { Bounds } from "$lib/core/utils/type";
 import { v4 as uuid } from "uuid";
 import { WindowsHelper } from "./helper";
-import type { WindowsService as IWindowsService, SnapZone, WindowId, WindowInstance, WindowOptions } from "./type";
+import type {
+  WindowsService as IWindowsService,
+  RestoreResult,
+  SnapZone,
+  WindowId,
+  WindowInstance,
+  WindowOptions,
+  WindowSnapshot,
+} from "./type";
 import { WindowFlag } from "./type";
-import type { AppInstance } from "../apps/type";
+import type { AppId, AppInstance, AppProps } from "../apps/type";
 
 export class WindowsService implements IWindowsService {
   name = "WindowsService";
@@ -165,6 +173,39 @@ export class WindowsService implements IWindowsService {
     };
 
     return id;
+  }
+
+  public restore(
+    windows: WindowSnapshot[],
+    create: (app_id: AppId, props: AppProps | undefined) => AppInstance | null
+  ): RestoreResult {
+    const result: RestoreResult = { restored: [], skipped: [] };
+
+    for (const snapshot of windows) {
+      const app = create(snapshot.app_id, snapshot.props);
+      if (!app) {
+        result.skipped.push(snapshot);
+        continue;
+      }
+
+      const id = uuid();
+      const constraints = app.manifest.defaults?.constraints ?? {};
+      this.index[id] = {
+        id,
+        created_at: new Date(),
+        order: ++this.max_order,
+        flags: new Flags(snapshot.flags),
+        snap_zone: snapshot.snap_zone,
+        constraints,
+        bounds: WindowsHelper.clamp_bounds(snapshot.bounds, this.container.bounds),
+        app,
+      };
+      result.restored.push(id);
+    }
+
+    // The top restored window may be minimized; hand focus to the topmost visible one instead.
+    this.focus_next();
+    return result;
   }
 
   public snap(id: WindowId, zone: SnapZone | null): boolean {

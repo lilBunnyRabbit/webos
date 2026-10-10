@@ -1,6 +1,7 @@
-import type { AppsService as IAppsService, AppId, AppManifest, AppProps, OpenOptions } from "./type";
+import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppProps, OpenOptions } from "./type";
 import type { DialogsService, FilesService, Kernel, NotificationsService, SettingsService, WindowsService, WindowId } from "$lib/core/api";
 import { best_apps_for, file_extension } from "./associations";
+import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
@@ -52,14 +53,22 @@ export class AppsService implements IAppsService {
       throw new Error(`App ${id} not found`);
     }
 
-    const { component, ...partial_manifest } = manifest;
+    return this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
+  }
 
-    return this.windows_service.open({
-      id,
-      manifest: partial_manifest,
-      component: component(),
-      props: this.validate_props(manifest, props),
-    });
+  public create_instance(id: AppId, props?: unknown): AppInstance | null {
+    const manifest = this.registry.get(id);
+    if (!manifest) return null;
+    if (props === undefined) return this.instantiate(manifest, undefined);
+    if (!manifest.props) return null;
+
+    const result = manifest.props.safeParse(props);
+    return result.success ? this.instantiate(manifest, result.data) : null;
+  }
+
+  private instantiate(manifest: AppManifest, props: AppProps | undefined): AppInstance {
+    const { component, ...partial_manifest } = manifest;
+    return { id: manifest.id, manifest: partial_manifest, component: component(), props };
   }
 
   public async open(path: string, options: OpenOptions = {}): Promise<WindowId | null> {
@@ -70,6 +79,17 @@ export class AppsService implements IAppsService {
     }
 
     const extension = file_extension(file.name);
+
+    // A shortcut is an OS concept, not a file type an app opens: launch its target instead (ADR-022).
+    if (extension === SHORTCUT_EXTENSION) {
+      const shortcut = parse_shortcut(await file.text());
+      if (!shortcut || !this.registry.has(shortcut.app_id)) {
+        this.notifications_service.notify("apps", { type: "error", title: "Broken shortcut", message: path });
+        return null;
+      }
+      return this.launch(shortcut.app_id, shortcut.props);
+    }
+
     const default_id = extension ? this.settings_service.file_defaults[extension] : undefined;
     if (default_id && this.registry.has(default_id)) {
       return this.launch(default_id, { path });

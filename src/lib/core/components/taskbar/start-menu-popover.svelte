@@ -31,7 +31,7 @@
       class=" p-1 rounded hover:bg-foreground/20 transition"
       title="Pin to Desktop"
       onclick={() => {
-        desktop.add_item(id);
+        desktop.pin(id).catch((error) => console.error(`[StartMenu] Failed to pin ${id}`, error));
       }}
       style="z-index:2;"
     >

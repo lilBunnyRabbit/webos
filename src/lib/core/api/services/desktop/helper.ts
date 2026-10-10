@@ -1,31 +1,36 @@
-import type { AppId, DesktopGrid, DesktopGridItem } from "..";
-import type { Position } from "$lib/core/utils/type";
+import type { DesktopGrid, DesktopGridItem } from "./type";
+import type { Positions } from "./layout";
 
 export class DesktopHelper {
-  public static calculate_item_position(
-    dimensions: { columns: number; rows: number },
-    grid: DesktopGrid
-  ): Position | null {
-    for (let y = 0; y < dimensions.rows; y++) {
-      if (!grid[y] || !grid[y].length) {
-        return { x: 0, y };
-      }
+  /**
+   * The user's arrangement: each entry at its saved cell. Entries without a position, or whose cell is already taken,
+   * come back as `unplaced`.
+   */
+  public static arrange(entries: DesktopGridItem[], positions: Positions): { layout: DesktopGrid; unplaced: DesktopGridItem[] } {
+    const layout: DesktopGrid = [];
+    const unplaced: DesktopGridItem[] = [];
 
-      for (let x = 0; x < dimensions.columns; x++) {
-        if (grid[y][x] === undefined) {
-          return { x, y };
-        }
+    for (const entry of entries) {
+      const position = positions[entry.name];
+      if (position && layout[position.y]?.[position.x] === undefined) {
+        (layout[position.y] ??= [])[position.x] = entry;
+      } else {
+        unplaced.push(entry);
       }
     }
 
-    return null;
+    return { layout, unplaced };
   }
 
   /**
-   * The visible grid for the current size. Items inside the grid keep their cell. Items outside it take the first free
-   * cell, and items with no free cell are left out of the view; the layout itself is never trimmed.
+   * The visible grid for the current size. Items inside the grid keep their cell. Items outside it, then unplaced
+   * items, take the first free cells. Whatever still doesn't fit is left out of the view, never out of the layout.
    */
-  public static fit(dimensions: { columns: number; rows: number }, layout: DesktopGrid): DesktopGrid {
+  public static fit(
+    dimensions: { columns: number; rows: number },
+    layout: DesktopGrid,
+    unplaced: DesktopGridItem[] = []
+  ): DesktopGrid {
     const fitted: DesktopGrid = [];
     const overflow: DesktopGridItem[] = [];
 
@@ -39,6 +44,7 @@ export class DesktopHelper {
         }
       });
     });
+    overflow.push(...unplaced);
 
     for (let y = 0; y < dimensions.rows && overflow.length > 0; y++) {
       for (let x = 0; x < dimensions.columns && overflow.length > 0; x++) {

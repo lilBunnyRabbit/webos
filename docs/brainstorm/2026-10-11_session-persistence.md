@@ -63,6 +63,14 @@ Constraints from the code:
 
 **Platform check (Chrome 154, owner's browser):** `FileSystemFileHandle.move()` exists and moves files natively. `FileSystemDirectoryHandle` has no `move()`. Migration moves folders by recreating them and moving each file natively. `move_file` can switch from copy-then-delete to native `move()`.
 
+### Mid-implementation decisions (owner)
+
+| Question | Decision | Rejected |
+|----------|----------|----------|
+| Desktop positions | One layout file, kept in **system storage** at `/var/lib/desktop/layout.json` | `.layout.json` inside `/home/Desktop`; shortcuts carrying their own position; per-item sidecars |
+| Settings | Move to `/etc/settings.json` now. A slightly longer boot is fine. | Keep in localStorage until later |
+| Shortcut icon | Its own icon (the target app's icon with an arrow badge), not a file icon | |
+
 ## Key takeaways
 
 1. A Unix-lite hierarchy in OPFS (`/home`, `/etc`, `/var`, `/tmp`) becomes the OS's storage layout. User files live in `/home`.
@@ -76,7 +84,7 @@ Written up as [ADR-021](../adrs/021-file-system-hierarchy.md), [ADR-022](../adrs
 ## Action items
 
 - [x] ADR-021, ADR-022, ADR-023, roadmap
-- [ ] Implement (steps in ADR-023 § Implementation order)
+- [x] Implement: hierarchy, desktop folder, settings to `/etc`, SessionService (2026-10-11)
 
 ## Next session topics
 

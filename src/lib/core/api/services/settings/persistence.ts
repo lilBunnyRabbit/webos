@@ -1,7 +1,13 @@
 import { TaskbarPosition, type FileDefaults, type Taskbar, type Theme, type ThemeToken } from "./type";
 import { BRAND_DARK } from "./themes";
+import { PATHS } from "../files/hierarchy";
 
-const STORAGE_KEY = "webos.settings";
+/** OS config lives in system storage (ADR-021). */
+export const SETTINGS_PATH = `${PATHS.etc}/settings.json`;
+
+/** Where settings lived before `/etc`; imported once, then removed. */
+const LEGACY_STORAGE_KEY = "webos.settings";
+
 export const SETTINGS_VERSION = 1;
 
 export interface PersistedSettings {
@@ -12,11 +18,8 @@ export interface PersistedSettings {
 }
 
 // Merged over defaults so tokens added after the save still get a value.
-export function load_settings(): PersistedSettings | null {
+export function parse_settings(raw: string): PersistedSettings | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-
     const data = JSON.parse(raw);
     if (data?.version !== SETTINGS_VERSION) return null;
 
@@ -56,10 +59,18 @@ function sanitize_file_defaults(saved: unknown): FileDefaults {
   return defaults;
 }
 
-export function save_settings(settings: PersistedSettings): void {
+export function serialize_settings(settings: PersistedSettings): string {
+  return JSON.stringify(settings, null, 2);
+}
+
+/** Reads and removes the pre-`/etc` localStorage copy. */
+export function take_legacy_settings(): PersistedSettings | null {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch (error) {
-    console.error("Failed to save settings:", error);
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (raw === null) return null;
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return parse_settings(raw);
+  } catch {
+    return null;
   }
 }

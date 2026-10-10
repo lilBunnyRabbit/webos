@@ -9,6 +9,8 @@ export const PATHS = {
   downloads: "/home/Downloads",
   etc: "/etc",
   var: "/var",
+  /** Persistent state owned by OS components, one folder each (`/var/lib/desktop`). */
+  var_lib: "/var/lib",
   tmp: "/tmp",
 } as const;
 
@@ -66,7 +68,7 @@ async function empty_directory(dir: FileSystemDirectoryHandle): Promise<void> {
 export async function ensure_hierarchy(root: FileSystemDirectoryHandle): Promise<void> {
   const home = await ensure_directory(root, PATHS.home);
   const etc = await ensure_directory(root, PATHS.etc);
-  await ensure_directory(root, PATHS.var);
+  await ensure_directory(root, PATHS.var_lib);
   const tmp = await ensure_directory(root, PATHS.tmp);
 
   if (!(await has_marker(etc))) {

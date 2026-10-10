@@ -8,6 +8,8 @@
 > - Revisions use native `FileSystemDirectoryHandle.resolve()` to map a handle back to its path. `move_file` bumps both directories, and `write_file` bumps the file's parent.
 > - `clear()` rebuilds the empty hierarchy, so the OS keeps its folders.
 > - File Explorer opens at `/home` with `/` on its back stack. The root's name is now `/` (it was `~`).
+> - **Settings moved to `/etc/settings.json`** (owner, 2026-10-11: a slightly longer boot is fine). It's the same versioned JSON. SettingsService now depends on `files` and loads asynchronously in `init()`. The localStorage `webos.settings` copy is imported once and removed. Saves go through a write queue: no overlapping writes, the latest wins. Cross-tab `storage` events no longer apply. App storage stays in localStorage.
+> - `/var/lib` added for persistent state owned by OS components (`/var/lib/desktop/layout.json`, ADR-022).
 > - On the owner's machine the migration ran through hot reload before the planned scratch test. All six root files arrived in `/home` intact (byte sizes checked).
 
 ## Context

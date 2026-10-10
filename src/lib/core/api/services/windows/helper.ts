@@ -38,6 +38,21 @@ export class WindowsHelper {
     return { x, y, ...size };
   }
 
+  /** Pulls saved bounds back inside the container, which may be smaller than when they were saved. */
+  public static clamp_bounds(bounds: Bounds, container: Bounds): Bounds {
+    // An unmeasured container (0×0) can't clamp anything yet.
+    if (container.width <= 0 || container.height <= 0) return { ...bounds };
+
+    const width = Math.min(bounds.width, container.width);
+    const height = Math.min(bounds.height, container.height);
+    return {
+      width,
+      height,
+      x: Math.min(Math.max(0, bounds.x), container.width - width),
+      y: Math.min(Math.max(0, bounds.y), container.height - height),
+    };
+  }
+
   public static calculate_bounds(constraints: WindowConstraints, container: Bounds): Bounds {
     // Calculate width and height based on constraints and container size and calculated x/y
 

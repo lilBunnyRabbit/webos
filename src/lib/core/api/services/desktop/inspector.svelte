@@ -32,11 +32,13 @@
     </div>
   {/if}
 
-  <InspectorTable columns={["Cell", "App"]} empty={items.length === 0} empty_text="No desktop icons.">
+  <InspectorTable columns={["Cell", "Entry", "Kind", "Target"]} empty={items.length === 0} empty_text="Desktop folder is empty.">
     {#each items as item (`${item.x},${item.y}`)}
       <tr>
         <td>{item.x},{item.y}</td>
-        <td class="font-sans">{apps.get(item.app_id)?.name ?? item.app_id}</td>
+        <td class="font-sans">{item.name}</td>
+        <td>{item.kind}</td>
+        <td class="font-sans">{item.kind === "shortcut" ? (apps.get(item.app_id)?.name ?? `${item.app_id} (missing)`) : "—"}</td>
       </tr>
     {/each}
   </InspectorTable>

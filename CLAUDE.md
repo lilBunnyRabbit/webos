@@ -26,14 +26,15 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
-| `settings` | SettingsService | Theme tokens, taskbar position, file defaults (persisted) | none |
+| `settings` | SettingsService | Theme tokens, taskbar position, file defaults, persisted in `/etc/settings.json` | files |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
 | `version` | VersionService | `version.json` polling (ADR-004) | none |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
-| `desktop` | DesktopService | Icon grid | apps |
+| `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022) | files, apps |
+| `session` | SessionService | Saves open windows to `/var/lib/session/session.json`, restore dialog at boot (ADR-023) | windows, apps, files, dialogs, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 

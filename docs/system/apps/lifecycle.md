@@ -22,14 +22,16 @@ The `AppsService` constructor calls `register()` for each manifest in glob order
 
 ## 3. Launch
 
-Entry points: start menu (`launch(id)`), desktop icon (`launch(app_id, item.props)`), `apps.open(path)` (`launch(id, { path })`).
+Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(path)`, which launches `app_id` with the `.desktop` file's props), desktop folder (`launch("file-explorer", { path })`), `apps.open(path)` (`launch(id, { path })`, or the shortcut's target and props for a `.desktop` file).
 
 `AppsService.launch(id, props?)`:
 
 1. Unknown id → `throw new Error("App {id} not found")`.
-2. Starts the component import: `component()` returns a promise, stored as-is.
-3. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)).
+2. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)).
+3. Builds the instance (private `instantiate`) and starts the component import: `component()` returns a promise, stored as-is.
 4. `windows.open(app_instance)` with `AppInstance = { id, manifest (without component), component: Promise, props? }`.
+
+**Session restore** is the other way in. At boot, if the user picks Restore, [SessionService](../services/session.md) calls `apps.create_instance(app_id, props)` for each saved window (`null` for an unknown app or invalid props, silently) and `windows.restore(snapshots, create)`, which inserts the windows with their saved bounds, flags and snap zone instead of the cascade. Skipped windows get one summary toast. Apps with `restore: false` in the manifest are never saved.
 
 ## 4. Window
 

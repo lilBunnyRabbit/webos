@@ -1,11 +1,12 @@
 # Desktop
 
-Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built)
+Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts), [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built)
 
 | File | Role |
 |------|------|
 | `desktop.svelte` | The CSS grid, the dot background, measurement |
-| `desktop-item.svelte` | One icon: launch, delete, drag visuals |
+| `desktop-item.svelte` | One icon: open, delete, drag visuals |
+| `desktop-item-face.svelte` | Icon + label, shared by the item and its drag ghost |
 | `desktop-item.handle.svelte.ts` | `ItemHandler`: mouse-driven drag to another cell |
 
 ## Responsibilities
@@ -19,7 +20,15 @@ It sits in `os.svelte` under the [window manager](window-manager.md), inside a `
 
 ## Desktop item
 
-- Shows the manifest icon and name from `apps.get(item.app_id)`, or "Unknown (app_id)" when the app isn't registered.
+Each icon is an entry of `/home/Desktop` ([services/desktop.md](../services/desktop.md#model)). `DesktopItemFace` draws it:
+
+| Kind | Icon (32px) | Label |
+|------|-------------|-------|
+| `shortcut` | `ShortcutIcon` (`components/files/shortcut-icon.svelte`): the target app's icon with an arrow badge in the bottom-right corner, or a generic `AppWindow` glyph when the app isn't registered | `item.label` (file name without `.desktop`), plus " (missing app)" in `text-error` when the app isn't registered |
+| `file` | `FileIcon` by MIME, then extension | File name |
+| `directory` | `FileIcon` folder | Folder name |
+
+- The label is one line (`line-clamp-1`), with the full entry name as its `title`.
 - It's a `<button>`, so focus is its only selection state: an `accent` outline and tint on `:focus`. There's no multi-select.
 
 ## Drag (`ItemHandler`)
@@ -38,14 +47,15 @@ While moving, the original icon fades to 50%. A target-cell highlight appears wh
 
 | Input | Result |
 |-------|--------|
-| Double-click icon | `apps.launch(app_id, item.props)`. Unknown apps do nothing. |
+| Double-click icon | `desktop.open(item, { anchor: pointer })`: shortcut and file → `apps.open` (a shortcut launches its target, or toasts "Broken shortcut" when the app is missing; the Open-with dropdown anchors at the pointer), folder → File Explorer there. |
+| `Enter` (keyup, icon focused) | Same as double-click, anchored at the icon's bottom-left corner. |
 | Click icon | Focuses it, nothing else. |
-| `Delete` (keyup, icon focused) | `desktop.remove_item()`. It unpins with no confirm. |
-| Drag icon (> 8px) | Moves it to the cell under the cursor. Dropping on an occupied cell is refused. |
-| `Enter` / `Space` | Nothing. There's no `onclick`, so **there's no keyboard way to launch**. |
+| `Delete` (keyup, icon focused) | `desktop.remove_item()`: deletes a shortcut file with no confirm. Files and folders: nothing happens. Errors go to `console.error`. |
+| Drag icon (> 8px) | Moves it to the cell under the cursor and saves the layout. Dropping on an occupied cell is refused. |
+| `Space` | Nothing. There's no `onclick`. |
 | Right-click | Browser default (no context menu, ADR-011). |
 
-Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop").
+Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" → `desktop.pin(id)`). Anything else that writes into `/home/Desktop` through FilesService (File Explorer, an app) shows up on the desktop right away.
 
 ## Platform APIs
 
@@ -56,4 +66,4 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop").
 - Mouse events only, so there's no touch drag (ADR-016) and no pointer capture. Dropping outside the window still ends the drag via the document `mouseup`.
 - On the first move past the threshold, the target is the item's *current* cell rather than the cell under the pointer (`desktop-item.handle.svelte.ts:105-114`). It catches up on the next `mousemove`.
 - `ItemHandler` captures `{x, y}` at construction. That's fine only because components are keyed by cell. Reusing a component across cells would break the move.
-- No keyboard launch, no context menu, no multi-select, no persistence (see [services/desktop.md](../services/desktop.md)).
+- No context menu, no multi-select, no way to delete a real file or folder from the desktop (see [services/desktop.md](../services/desktop.md#known-gaps)).

@@ -21,8 +21,8 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 
 | Field | Type | Required | Effect today |
 |-------|------|----------|--------------|
-| `id` | `AppId` (`string`) | yes | Registry key. Used by `launch(id)`, desktop items, `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
-| `name` | `string` | yes | Start menu, desktop icon label, window title, Open-with list, notification titles |
+| `id` | `AppId` (`string`) | yes | Registry key. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
+| `name` | `string` | yes | Start menu, the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
 | `version` | `string` | yes | Stored only. Nothing reads it |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. Use a `phosphor-svelte` icon |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
@@ -35,6 +35,7 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 | `defaults` | `WindowOptions` | no | Initial window state, below |
 | `associations` | `string[]` | no | File types this app opens ([file-associations.md](file-associations.md)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
+| `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
 
@@ -54,7 +55,7 @@ The initial size is always 600×400 (capped to the container) in a cascade, what
 
 ### `props`
 
-A zod schema that must describe an object (`AppProps = Record<string, unknown>`). Validated at every `launch()`; the full rules are in [services/apps.md](../services/apps.md#props-validation-adr-008). The component type is `Component<Partial<TProps>>`, so a component with a required prop fails to compile: an app launched from the start menu or desktop gets no props.
+A zod schema that must describe an object (`AppProps = Record<string, unknown>`). Validated at every `launch()` and `create_instance()` (session restore); the full rules are in [services/apps.md](../services/apps.md#props-validation-adr-008). The component type is `Component<Partial<TProps>>`, so a component with a required prop fails to compile: an app launched from the start menu or desktop gets no props.
 
 File-opening apps use `FILE_PROPS` (`z.object({ path: z.string() })`) or extend it.
 
