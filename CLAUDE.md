@@ -8,8 +8,9 @@ A desktop environment in the browser, built with Svelte 5. It's a solo learning 
 2. [docs/CONVENTIONS.md](docs/CONVENTIONS.md): where code goes, naming, Svelte and styling patterns.
 3. [docs/ROADMAP.md](docs/ROADMAP.md): what's done and what's next.
 4. [docs/adrs/README.md](docs/adrs/README.md): the ADR index, showing which are implemented and which are only accepted.
+5. [docs/system/README.md](docs/system/README.md): the system reference, describing how every part of the OS works today.
 
-Read the ADR for the area you touch before you touch it.
+Read the ADR and the system reference page for the area you touch before you touch it.
 
 ## Quick start
 
@@ -113,6 +114,12 @@ Sub-agents that implement get this section in their prompt. Otherwise scope them
 If architectural work is blocked waiting on the owner, finish everything that doesn't depend on the answer. Then stop and report.
 
 ## Documentation duties
+
+### System reference
+
+`docs/system/` documents all OS infrastructure in depth, as it is now: kernel, services, shell UI, app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are excluded.
+
+**Every change to OS code updates the matching reference page in the same commit.** This covers new or changed service APIs, state, persistence keys, shell interactions, manifest fields and system app features. A new service, shell component or system app gets its page and an index entry. A commit that changes behaviour and leaves the reference stale is incomplete. Code that diverges from an ADR goes under "Divergence from ADR" on the page, and the ADR gets a revision note. Page shape and the full index are in `docs/system/README.md`.
 
 ### Brainstorm logs
 

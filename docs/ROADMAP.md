@@ -199,7 +199,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **ADR:** [ADR-015](adrs/015-customization-theming.md)
 - **Status:** In progress
 - [x] Colour tokens as CSS custom properties, brand palettes as presets (see ADR-015 revision)
-- [ ] Theme persistence (blocked on ADR-002 lifecycle)
+- [x] Theme persistence (settings blob, ADR-002)
 - [ ] Theme system (border radius, shadows, animation speed, font)
 - [ ] CSS custom properties for all theme values
 - [ ] Theme export/import as JSON
@@ -274,6 +274,33 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Text Viewer app (`text/*` + common text extensions)
 - [x] Media Preview port (image, video, audio)
 - [x] PDF Viewer app (native browser viewer in an iframe)
+
+---
+
+## Known bugs (system reference pass, 2026-10-11)
+
+Found while writing `docs/system/`. Details and file:line on each page's "Known gaps".
+
+- [ ] Version: production always reports an update, because `version.json` is stamped after the bundle ([version.md](system/services/version.md))
+- [ ] Version: VitePWA service worker runs, though ADR-004 rejected one
+- [ ] Kernel: a failed `init()` leaves the splash up forever, and services that did init are never destroyed ([kernel.md](system/kernel.md))
+- [ ] Windows: clicking the titlebar of a maximized or snapped window restores it (no move threshold) ([window.md](system/shell/window.md))
+- [ ] Windows: viewport and container coordinates are mixed, so windows shift when the taskbar is top or left
+- [ ] Windows: initial size ignores `constraints`, `max` is never read, and cascade spacing differs from ADR-014
+- [ ] Windows: a minimized window can stay focused, which puts dialogs at 0,0
+- [ ] Windows: clicking an input in a background window doesn't raise it
+- [ ] Taskbar: a minimized, unfocused window needs two clicks to restore
+- [ ] Desktop: items are dropped when the grid shrinks; the drag ghost has no width (`px` missing)
+- [ ] Notifications: progress toasts hide after 5 s while the work is still running
+- [ ] App storage: `remove()` doesn't affect a live `persisted()` cell, so the next change writes the value back
+- [ ] Associations: dotfiles like `.env` never match
+- [ ] Files: `directory(path)` without a handle ignores the path; uploads return original names after auto-rename
+- [ ] Settings app: Reset doesn't clear `file_defaults`; the colour picker writes hex, not OKLCH
+- [ ] Code hygiene:
+  - `AppsService implements AppsService` (implements itself)
+  - `children: any` in `window-content`
+  - `$inspect` and `console.log` leftovers
+  - `state_referenced_locally` warning in `WindowsService.to_string`
 
 ---
 
