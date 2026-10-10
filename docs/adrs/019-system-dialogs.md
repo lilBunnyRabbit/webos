@@ -1,0 +1,52 @@
+# ADR-019: System Dialogs Service
+**Date:** 2026-10-11
+**Status:** Accepted
+
+## Context
+
+The "Open with" chooser (ADR-018) is the first UI that belongs to no window: it can be triggered from File Explorer, the shell or a deep link. ADR-003's window overlays (`confirm`, `prompt`, `pick_file`) are window-scoped and still deferred. The owner chose a generic layer over a one-off component.
+
+Brainstorm: [2026-10-11 File Associations](../brainstorm/2026-10-11_file-associations.md)
+
+## Decision
+
+A `dialogs` kernel service holds a reactive stack. One `dialogs-host.svelte` at the web-os root renders it above all windows.
+
+```ts
+interface DialogsService extends IService {
+  readonly stack: DialogEntry[];
+  show<T>(
+    component: Component<DialogProps<T>>,
+    props: object,
+    options?: { anchor?: Position },
+  ): Promise<T | null>;
+}
+
+interface DialogProps<T> {
+  resolve(value: T | null): void;
+}
+```
+
+- `show()` pushes an entry and returns a promise. The dialog component calls `resolve(value)`; the entry is removed and the promise settles.
+- `null` means cancelled. Esc and click outside resolve `null` (light dismiss).
+- `anchor` positions the dialog at a point; without one the host centers it over the focused window, else over the desktop.
+- On shutdown (ADR-002 `destroy`) open dialogs resolve `null`.
+- Mobile (ADR-016) presentation is open. Because callers only use `show()`, a mobile implementation can change it without touching them.
+
+## Alternatives Considered
+
+- **Single-purpose component on AppsService**: no new infrastructure, but every later system dialog repeats it.
+- **Module-level store, no service**: lighter, but not swappable per platform and against "shared state lives in services".
+
+## Consequences
+
+### Positive
+- Any service can ask the user something with one awaited call.
+- One place handles stacking, focus, dismissal and platform differences.
+
+### Negative
+- An eighth service with a single consumer at first.
+- Window-scoped overlays (ADR-003) are a separate question: they may reuse the host or not.
+
+## Related
+- ADR-002 (lifecycle), ADR-003 (window overlays), ADR-016 (mobile), ADR-018 (file associations)

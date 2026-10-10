@@ -26,7 +26,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: upload button
 - [x] Path-string identity system (segments[] + derived path string)
 - [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
-- [ ] File explorer: file open callback (for media preview etc.)
+- [ ] File explorer: open files in apps (see File Associations, ADR-018)
 - [ ] File explorer: context menus (delete, rename, copy, move)
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
@@ -258,9 +258,18 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] File Download Utility
 
 ### File Associations
-- [ ] `associations` field on app manifest (e.g., `[".png", ".jpg"]`)
-- [ ] `open` command in AppsService (resolves file → associated app)
-- [ ] Standard `file` prop for file-handling apps
+- **ADR:** [ADR-018](adrs/018-file-associations.md), [ADR-019](adrs/019-system-dialogs.md)
+- **Brainstorm:** [2026-10-11 File Associations](brainstorm/2026-10-11_file-associations.md)
+- **Status:** Accepted, not started
+- [ ] `associations` manifest field (extensions + MIME patterns)
+- [ ] `FILE_PROPS` (`{ path }`) + `FilesService.get_file(path)`
+- [ ] `AppsService.open(path, { anchor })` with specificity tiers
+- [ ] DialogsService + dialogs host
+- [ ] "Open with" dropdown with "Always use" checkbox
+- [ ] `file_defaults` in persisted settings
+- [ ] File Explorer: double-click / Enter on files
+- [ ] Text Viewer app
+- [ ] Media Preview port (image, video, audio)
 
 ---
 
