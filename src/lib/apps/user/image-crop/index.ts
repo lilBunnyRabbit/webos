@@ -11,6 +11,7 @@ export default define_app({
   description: "Trims transparent borders from an image.",
   keywords: ["trim", "transparent", "alpha", "image"],
   categories: ["user"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

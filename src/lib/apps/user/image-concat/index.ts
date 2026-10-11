@@ -11,6 +11,7 @@ export default define_app({
   description: "Joins several images into one, side by side or stacked.",
   keywords: ["join", "merge", "combine", "stitch", "image"],
   categories: ["user"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

@@ -1,7 +1,9 @@
 import kernel, {
   apps_for,
+  tools_for,
   file_extension,
   SHORTCUT_EXTENSION,
+  type AppManifest,
   type AppsService,
   type ClipboardService,
   type ConflictChoice,
@@ -79,12 +81,15 @@ export function show_properties(handler: DirectoryHandler, window: WindowHandle,
     .show(PropertiesDialog, { path: join_path(handler.segments, item.name), kind: item.kind }, { window: window.id });
 }
 
-/** "Open with" entries for a file: every associated app, best match first. Ids are `open_with:<app id>`. */
+/** "Open with" entries for a file: every associated app, best match first, then tool apps. Ids are `open_with:<app id>`. */
 export async function open_with_items(item: FileSystemItem): Promise<MenuItem[]> {
   if (item.kind !== "file" || file_extension(item.name) === SHORTCUT_EXTENSION) return [];
   const file = await item.handle.getFile();
   const apps = [...kernel.service<AppsService>("apps").list()].map(([, manifest]) => manifest);
-  return apps_for(apps, file).map((app) => ({ id: `open_with:${app.id}`, label: app.name, icon: app.icon }));
+  const entry = (app: AppManifest): MenuItem => ({ id: `open_with:${app.id}`, label: app.name, icon: app.icon });
+  const associated = apps_for(apps, file).map(entry);
+  const tools = tools_for(apps, file).map(entry);
+  return associated.length && tools.length ? [...associated, { separator: true }, ...tools] : [...associated, ...tools];
 }
 
 export function open_with(handler: DirectoryHandler, item: FileSystemItem, app_id: string): void {

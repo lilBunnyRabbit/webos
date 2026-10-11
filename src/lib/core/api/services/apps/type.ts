@@ -46,6 +46,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */
   associations?: string[];
+  /** File types this app can work on without being their viewer: listed under "Open with", never the default. Same syntax as `associations`. */
+  tools?: string[];
   /** `false` keeps the app out of saved sessions (ADR-023). Defaults to `true`. */
   restore?: boolean;
   /** Without a schema the app never receives props. */

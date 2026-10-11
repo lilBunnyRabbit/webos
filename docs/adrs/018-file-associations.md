@@ -7,6 +7,8 @@
 > - The chooser focuses the first app; ArrowUp/ArrowDown move, Enter picks. A file without an extension hides "Always use".
 > - AppsService now depends on `settings` and `dialogs` as well.
 
+> **Revision 2026-10-11: tools.** Manifest field `tools` (association syntax): matching apps are listed under "Open with" after the associated ones, but never become the default and never tie. Added so the static-utils image tools are reachable from File Explorer without stealing images from Media Preview ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+
 > **Revision 2026-10-11: dotfiles**
 > - A dotfile is its own extension: `.env` → `".env"`. Before this, dotfiles had no extension, so Text Viewer's `.env` entry could never match a file named `.env`. Dotfiles now also get the "Always use" checkbox.
 

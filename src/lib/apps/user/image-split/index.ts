@@ -11,6 +11,7 @@ export default define_app({
   categories: ["user"],
   description: "Split an image into square tiles, for grid layouts like Instagram",
   keywords: ["image", "split", "tiles", "grid", "instagram"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

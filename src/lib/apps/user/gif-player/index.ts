@@ -9,6 +9,7 @@ export default define_app({
   icon: FilmStripIcon,
   version: "1.0.0",
   categories: ["user"],
+  tools: ["image/gif", ".gif", "video/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

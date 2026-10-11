@@ -11,6 +11,7 @@ export default define_app({
   categories: ["user"],
   description: "Slice a sprite sheet into frames, fix the grid, preview the animation and export frames or a clean sheet",
   keywords: ["sprite", "sheet", "frames", "animation", "extract", "slice"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

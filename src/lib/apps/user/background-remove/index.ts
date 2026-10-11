@@ -11,6 +11,7 @@ export default define_app({
   description: "Makes chosen colours in an image transparent.",
   keywords: ["transparent", "colour key", "chroma", "image"],
   categories: ["user"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

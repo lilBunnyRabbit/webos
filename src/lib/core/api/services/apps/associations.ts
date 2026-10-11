@@ -44,3 +44,11 @@ export function apps_for(apps: Iterable<AppManifest>, file: { name: string; type
     .sort((a, b) => b.tier - a.tier || a.app.name.localeCompare(b.app.name))
     .map(({ app }) => app);
 }
+
+/** Apps that list `file` under `tools` and aren't already associated with it, by name: the end of the "Open with" list. */
+export function tools_for(apps: Iterable<AppManifest>, file: { name: string; type: string }): AppManifest[] {
+  const matches = (entries: string[] | undefined) => (entries ?? []).some((entry) => association_tier(entry, file) > 0);
+  return [...apps]
+    .filter((app) => matches(app.tools) && !matches(app.associations))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

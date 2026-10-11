@@ -59,6 +59,19 @@ HTML and CSV files used to open in Text Viewer through `text/*`. Now the dedicat
 
 An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else today, since `text/*` doesn't match it. Ties come from two apps on the same tier, for example two apps both listing `.md`.
 
+## Tools
+
+`tools` on the manifest uses the same syntax as `associations`, for apps that work on a file without being its viewer, such as the image tools (Image Crop, Background Remove, …: `tools: ["image/*"]`) or GIF Player (`image/gif`, `.gif`, `video/*`).
+
+- A tool match never counts toward `open()`: it can't win the default, can't cause a tie, and never shows the chooser.
+- File Explorer's "Open with" lists tool apps after the associated apps, behind a separator, by name (`tools_for`). An app that's both associated and a tool for the file appears once, with the associated apps.
+- The submenu still needs two or more entries, so a file with one viewer and one tool now gets "Open with".
+
+| App | Tools |
+|-----|-------|
+| `image-crop`, `background-remove`, `image-concat`, `image-split`, `sprite-extract`, `qr-reader` | `image/*` |
+| `gif-player` | `image/gif`, `.gif`, `video/*` |
+
 ## Remembered defaults
 
 `settings.file_defaults: Record<string, AppId>`: extension (`".svg"`) → app id. Persisted in `/etc/settings.json` ([settings.md](../services/settings.md)); on load, entries whose key doesn't start with `.` or whose value isn't a string are dropped.

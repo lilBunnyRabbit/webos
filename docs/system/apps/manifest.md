@@ -34,6 +34,7 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 | `repository` | `string` | no | Stored only |
 | `defaults` | `WindowOptions` | no | Initial window state, below |
 | `associations` | `string[]` | no | File types this app opens ([file-associations.md](file-associations.md)) |
+| `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 

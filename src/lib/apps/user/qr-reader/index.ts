@@ -9,6 +9,7 @@ export default define_app({
   icon: QrCodeIcon,
   version: "1.0.0",
   categories: ["user"],
+  tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

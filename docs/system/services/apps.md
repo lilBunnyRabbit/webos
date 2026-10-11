@@ -10,7 +10,7 @@ The app registry. Holds every discovered manifest, launches an app into a new wi
 |------|----------|
 | `type.ts` | `AppsService` interface, `AppManifest`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppCategory`, `AppProps` |
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
-| `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()` |
+| `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
 | `service.svelte.ts` | The class |
 
@@ -149,3 +149,4 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 - Stale `file_defaults` entries (pointing at removed apps) stay in settings until the user forgets them in Settings → Default apps, which flags them as "no longer installed".
 
 - `apps_for(apps, file)` (`associations.ts`, exported): every app with an association tier above 0, best tier first then by name. It feeds File Explorer's "Open with" submenu (ADR-025), which shows when two or more apps qualify.
+- `tools_for(apps, file)` (`associations.ts`, exported): apps whose `tools` match the file at any tier and whose `associations` don't, sorted by name. `open_with_items` appends them after a separator. `open()` never looks at `tools`.
