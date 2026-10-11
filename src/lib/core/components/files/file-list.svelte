@@ -10,10 +10,13 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
-  import { create_folder, delete_item, upload } from "./file-actions";
+  import { create_folder, delete_item, open_with, open_with_items, rename_item, show_properties, upload } from "./file-actions";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
+    AppWindow as AppWindowIcon,
+    Info as InfoIcon,
+    PencilSimple as PencilSimpleIcon,
     FolderOpen as FolderOpenIcon,
     FolderPlus as FolderPlusIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -67,15 +70,24 @@
   }
 
   async function item_menu(item: FileSystemItem, anchor: Position) {
+    const with_apps = await open_with_items(item);
     const items: MenuItem[] = [
       { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
+      ...(with_apps.length > 1 ? [{ label: "Open with", icon: AppWindowIcon, items: with_apps }] : []),
+      { separator: true },
+      { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
       { separator: true },
       { id: "delete", label: "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
+      { separator: true },
+      { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" },
     ];
 
     const choice = await dialogs.menu(items, { anchor });
     if (choice === "open") open(item, anchor);
+    else if (choice === "rename") rename_item(handler, window, item);
     else if (choice === "delete") delete_item(handler, window, item);
+    else if (choice === "properties") show_properties(handler, window, item);
+    else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
   }
 
   async function background_menu(anchor: Position) {
@@ -133,7 +145,9 @@
             item_menu(item, { x: event.clientX, y: event.clientY });
           }}
           onkeydown={(event) => {
-            if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
+            if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
+            else if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
+            else if (event.key === "F2") rename_item(handler, window, item);
             else if (is_delete_key(event)) delete_item(handler, window, item);
             else if (is_menu_key(event)) item_menu(item, row_anchor(event.currentTarget));
             else return;

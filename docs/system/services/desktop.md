@@ -58,6 +58,7 @@ Three layers of state turn the folder into a grid:
 | `has_item_in_position` | `(position) => boolean` | Against the visible grid |
 | `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |
 | `remove_item` | `(position) => Promise<void>` | Deletes the entry shown at `position` from `/home/Desktop` (folders recursively). The caller confirms first (`desktop-actions.ts`, ADR-025). The deletion bumps the folder's revision, which reloads the desktop. |
+| `rename_item` | `(position, new_name) => Promise<void>` | Saves the cell under the new name first, then `files.rename_entry`, so the icon keeps its cell. Throws if the name is taken |
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |

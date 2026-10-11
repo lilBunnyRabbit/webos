@@ -108,6 +108,19 @@ export class FilesService implements IFilesService {
     return opfs.get_directory_at(await this.get_root(), split_path(path));
   }
 
+  async rename_entry(handle: FileSystemDirectoryHandle | null, name: string, new_name: string): Promise<void> {
+    const parent = await this.resolve(handle);
+    await opfs.rename_entry(parent, name, new_name);
+    await this.changed(parent);
+  }
+
+  async copy_directory(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemDirectoryHandle> {
+    const target_dir = await this.resolve(target);
+    const result = await opfs.copy_directory(source, target_dir, new_name);
+    await this.changed(target_dir);
+    return result;
+  }
+
   async delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void> {
     const parent = await this.resolve(handle);
     await opfs.delete_entry(parent, name, options);
@@ -214,6 +227,12 @@ export class DirectoryHandler {
     await this.service.changed(this.handle);
     await this.reload();
     return result;
+  }
+
+  async rename_entry(name: string, new_name: string): Promise<void> {
+    await opfs.rename_entry(this.handle, name, new_name);
+    await this.service.changed(this.handle);
+    await this.reload();
   }
 
   async delete_entry(name: string, options?: { recursive?: boolean }): Promise<void> {

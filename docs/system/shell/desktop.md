@@ -76,7 +76,7 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" �
 
 | Where | Menu |
 |-------|------|
-| An icon (right-click, ContextMenu key, Shift+F10) | Open; Remove shortcut (shortcuts) or Delete (files, folders) |
+| An icon (right-click, ContextMenu key, Shift+F10) | Open; Rename (F2); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter) |
 | Empty desktop | New folder (system prompt, validated against desktop names); Change theme (opens Settings) |
 
-Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)` and `names()`.
+Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)`, `names()`, and `rename_item(position, name)`, which moves the saved cell to the new name before renaming so the icon doesn't jump.

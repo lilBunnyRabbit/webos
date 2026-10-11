@@ -4,7 +4,7 @@
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
   import DesktopItemFace from "./desktop-item-face.svelte";
-  import { item_menu, remove_item } from "./desktop-actions";
+  import { item_menu, remove_item, rename_item, show_properties } from "./desktop-actions";
 
   let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
@@ -38,7 +38,9 @@
   onkeydown={(event) => {
     if (document.activeElement !== event.currentTarget) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    if (event.key === "Enter") open(event);
+    if (event.key === "Enter" && event.altKey) show_properties(item);
+    else if (event.key === "Enter") open(event);
+    else if (event.key === "F2") rename_item(item, { x, y });
     else if (event.key === "Delete") remove_item(item, { x, y });
     else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
       item_menu(item, { x, y }, { x: rect.left + rect.width / 2, y: rect.bottom });

@@ -30,6 +30,9 @@ export interface DesktopService extends IService {
   /** Deletes the entry at `position` from `/home/Desktop` (folders recursively). The caller confirms first (ADR-025). */
   remove_item(position: Position): Promise<void>;
 
+  /** Renames the entry at `position`, keeping its cell. Throws if the name is taken. */
+  rename_item(position: Position, new_name: string): Promise<void>;
+
   /** Creates a folder in `/home/Desktop`. */
   create_folder(name: string): Promise<void>;
 

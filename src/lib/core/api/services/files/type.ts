@@ -55,6 +55,10 @@ export interface FilesService extends IService {
   /** The directory at an absolute path, or `null` if it doesn't exist or is a file. */
   get_directory(path: string): Promise<FileSystemDirectoryHandle | null>;
   delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void>;
+  /** Renames in place; throws `InvalidModificationError` if the new name is taken (never auto-renames). */
+  rename_entry(handle: FileSystemDirectoryHandle | null, name: string, new_name: string): Promise<void>;
+  /** Recursive folder copy into `target`, auto-renamed on clash. */
+  copy_directory(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemDirectoryHandle>;
   exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean>;
   /** Copies into `target`. A taken name becomes `name (1).ext`; read the result's `name`. */
   copy_file(source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle>;

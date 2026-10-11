@@ -2,12 +2,16 @@ import kernel, { type AppsService, type DesktopGridItem, type DesktopService, ty
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
+  Info as InfoIcon,
+  PencilSimple as PencilSimpleIcon,
   FolderPlus as FolderPlusIcon,
   Palette as PaletteIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
 import PromptDialog from "../dialogs/prompt-dialog.svelte";
+import PropertiesDialog from "../files/properties-dialog.svelte";
+import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
 
@@ -58,18 +62,48 @@ export async function create_folder(): Promise<void> {
   }
 }
 
+export async function rename_item(item: DesktopGridItem, position: Position): Promise<void> {
+  const name = await dialogs().show(PromptDialog, {
+    message: `Rename “${item.name}”`,
+    initial: item.name,
+    confirm_label: "Rename",
+    select_stem: item.kind !== "directory",
+    validate: (value: string) => name_problem(value, desktop().names(), item.name),
+  });
+  if (!name || name === item.name) return;
+
+  try {
+    await desktop().rename_item(position, name);
+  } catch (error) {
+    report_file_error(`Could not rename "${item.name}"`, error);
+  }
+}
+
+export function show_properties(item: DesktopGridItem): void {
+  void dialogs().show(PropertiesDialog, {
+    path: `${PATHS.desktop}/${item.name}`,
+    kind: item.kind === "directory" ? ("directory" as const) : ("file" as const),
+  });
+}
+
 export async function item_menu(item: DesktopGridItem, position: Position, anchor: Position): Promise<void> {
   const shortcut = item.kind === "shortcut";
   const choice = await dialogs().menu(
     [
       { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
       { separator: true },
+      { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
+      { separator: true },
       { id: "delete", label: shortcut ? "Remove shortcut" : "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
+      { separator: true },
+      { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" },
     ],
     { anchor }
   );
   if (choice === "open") desktop().open(item, { anchor });
+  else if (choice === "rename") rename_item(item, position);
   else if (choice === "delete") remove_item(item, position);
+  else if (choice === "properties") show_properties(item);
 }
 
 export async function background_menu(anchor: Position): Promise<void> {

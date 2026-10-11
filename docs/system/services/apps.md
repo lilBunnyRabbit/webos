@@ -147,3 +147,5 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.
 - Stale `file_defaults` entries (pointing at removed apps) stay in settings until the user forgets them in Settings → Default apps, which flags them as "no longer installed".
+
+- `apps_for(apps, file)` (`associations.ts`, exported): every app with an association tier above 0, best tier first then by name. It feeds File Explorer's "Open with" submenu (ADR-025), which shows when two or more apps qualify.

@@ -204,6 +204,39 @@ export async function copy_file(
   return target_handle;
 }
 
+/** Recursively copies a folder into `target_dir` (auto-renamed on clash), returning the new folder. */
+export async function copy_directory(
+  source: FileSystemDirectoryHandle,
+  target_dir: FileSystemDirectoryHandle,
+  new_name?: string
+): Promise<FileSystemDirectoryHandle> {
+  const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
+    create: true,
+  });
+
+  for (const item of await list_directory(source, { include_metadata: false })) {
+    if (item.kind === "file") await copy_file(item.handle, target);
+    else await copy_directory(item.handle, target);
+  }
+
+  return target;
+}
+
+/** Renames an entry in place. Fails if `new_name` is taken: a rename never silently becomes "name (1)". */
+export async function rename_entry(parent: FileSystemDirectoryHandle, name: string, new_name: string): Promise<void> {
+  if (name === new_name) return;
+  if (await exists(parent, new_name)) {
+    throw new DOMException(`"${new_name}" already exists`, "InvalidModificationError");
+  }
+
+  const kind = (await exists(parent, name, "directory")) ? "directory" : "file";
+  if (kind === "file") {
+    await (await parent.getFileHandle(name)).move(parent, new_name);
+  } else {
+    await move_directory(parent, await parent.getDirectoryHandle(name), parent, new_name);
+  }
+}
+
 export async function move_file(
   source_parent: FileSystemDirectoryHandle,
   source: FileSystemFileHandle,

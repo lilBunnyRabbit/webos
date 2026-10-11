@@ -250,6 +250,18 @@ export class DesktopService implements IDesktopService {
     await this.files_service.delete_entry(await this.folder(), item.name, { recursive: item.kind === "directory" });
   }
 
+  public async rename_item(position: Position, new_name: string): Promise<void> {
+    const item = this.get_item(position);
+    if (!item || item.name === new_name) return;
+
+    // Carry the cell over to the new name before the rename's reload reads the layout, so the icon doesn't jump.
+    const { [item.name]: _old, ...rest } = this.positions;
+    const positions = { ...rest, [new_name]: position };
+    this.positions = positions;
+    await this.save_positions(positions);
+    await this.files_service.rename_entry(await this.folder(), item.name, new_name);
+  }
+
   public async create_folder(name: string): Promise<void> {
     await this.files_service.create_directory(await this.folder(), name);
   }

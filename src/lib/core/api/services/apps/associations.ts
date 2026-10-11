@@ -35,3 +35,12 @@ export function best_apps_for(apps: Iterable<AppManifest>, file: { name: string;
 
   return best;
 }
+
+/** Every app that can open `file`, most specific match first: the "Open with" list. */
+export function apps_for(apps: Iterable<AppManifest>, file: { name: string; type: string }): AppManifest[] {
+  return [...apps]
+    .map((app) => ({ app, tier: Math.max(0, ...(app.associations ?? []).map((entry) => association_tier(entry, file))) }))
+    .filter(({ tier }) => tier > 0)
+    .sort((a, b) => b.tier - a.tier || a.app.name.localeCompare(b.app.name))
+    .map(({ app }) => app);
+}
