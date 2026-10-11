@@ -296,9 +296,12 @@ Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, n
 | Double-click | Folder row | Navigate into it |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
+| Right-click | A row | Item menu: Open, Delete (more in ADR-025 steps 3–4) |
+| Right-click | Empty space in the list | Folder menu: New folder, Upload files, Reload |
+| ContextMenu key, Shift+F10 | Focused row | Item menu, anchored under the row |
 | Delete, or Backspace with `metaKey` (Cmd on macOS; Ctrl doesn't count) | Focused row | Danger confirm sheet (`window.confirm`, Cancel focused), then delete (folders recursively) |
 | Tab | Rows | Rows are `<button>`s, so Tab moves between them. There's no arrow-key movement or selection model |
-| Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder opens a prompt sheet (`window.prompt`, initial "New folder", validated by `name-rules.ts`: not empty, no `/`, not `.`/`..`, not an existing name) |
+| Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder (toolbar or folder menu; shared `file-actions.ts`) opens a prompt sheet (`window.prompt`, initial "New folder", validated by `name-rules.ts`: not empty, no `/`, not `.`/`..`, not an existing name) |
 | Click | Breadcrumb segment | Jump to that folder |
 | Click | Places entry | Jump to that folder |
 | Click × | Filter field | Clears it |

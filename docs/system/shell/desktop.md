@@ -69,3 +69,14 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" �
 - On the first move past the threshold, the target is the item's *current* cell rather than the cell under the pointer (`desktop-item.handle.svelte.ts:105-114`). It catches up on the next `mousemove`.
 - `ItemHandler` captures `{x, y}` at construction. That's fine only because components are keyed by cell. Reusing a component across cells would break the move.
 - No context menu, no multi-select, no way to delete a real file or folder from the desktop (see [services/desktop.md](../services/desktop.md#known-gaps)).
+
+## Context menus (ADR-025)
+
+`desktop-actions.ts` holds the desktop's menus and questions. The desktop is the shell, so they're system dialogs:
+
+| Where | Menu |
+|-------|------|
+| An icon (right-click, ContextMenu key, Shift+F10) | Open; Remove shortcut (shortcuts) or Delete (files, folders) |
+| Empty desktop | New folder (system prompt, validated against desktop names); Change theme (opens Settings) |
+
+Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)` and `names()`.

@@ -2,7 +2,8 @@ import { v4 as uuid } from "uuid";
 import type { Component } from "svelte";
 import type { Kernel, WindowId, WindowsService } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
-import type { DialogEntry, DialogOptions, DialogProps, DialogsService as IDialogsService } from "./type";
+import type { DialogEntry, DialogOptions, DialogProps, DialogsService as IDialogsService, MenuItem } from "./type";
+import ContextMenu from "$lib/core/components/dialogs/context-menu.svelte";
 
 export class DialogsService implements IDialogsService {
   name = "DialogsService";
@@ -40,6 +41,10 @@ export class DialogsService implements IDialogsService {
     for (const entry of [...this.stack].reverse()) {
       entry.resolve(null);
     }
+  }
+
+  public menu(items: MenuItem[], options: { anchor: Position }): Promise<string | null> {
+    return this.show(ContextMenu, { items }, { anchor: options.anchor });
   }
 
   public for_window(window: WindowId): DialogEntry[] {

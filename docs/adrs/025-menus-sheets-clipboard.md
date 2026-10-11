@@ -1,6 +1,6 @@
 # ADR-025: Context Menus, Window Sheets and Clipboard
 **Date:** 2026-10-11
-**Status:** Accepted (step 1 implemented 2026-10-11)
+**Status:** Accepted (steps 1–2 implemented 2026-10-11)
 
 ## Context
 

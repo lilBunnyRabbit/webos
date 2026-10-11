@@ -4,6 +4,7 @@
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
   import DesktopItemFace from "./desktop-item-face.svelte";
+  import { item_menu, remove_item } from "./desktop-actions";
 
   let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
@@ -29,12 +30,20 @@
   style:grid-column={x + 1}
   style:grid-row={y + 1}
   ondblclick={open}
-  onkeyup={(e) => {
-    if (document.activeElement !== e.currentTarget) return;
-    if (e.key === "Enter") open(e);
-    if (e.key === "Delete") {
-      desktop.remove_item({ x, y }).catch((error) => console.error(`[Desktop] Failed to remove ${item.name}`, error));
-    }
+  oncontextmenu={(event) => {
+    event.preventDefault();
+    event.currentTarget.focus();
+    item_menu(item, { x, y }, { x: event.clientX, y: event.clientY });
+  }}
+  onkeydown={(event) => {
+    if (document.activeElement !== event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (event.key === "Enter") open(event);
+    else if (event.key === "Delete") remove_item(item, { x, y });
+    else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
+      item_menu(item, { x, y }, { x: rect.left + rect.width / 2, y: rect.bottom });
+    } else return;
+    event.preventDefault();
   }}
   {@attach item_handler.drag_attachment.bind(item_handler)}
 >

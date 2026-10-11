@@ -1,4 +1,5 @@
 import type { Component } from "svelte";
+import type { IconComponentProps } from "phosphor-svelte";
 import type { IService } from "../../type";
 import type { Position } from "$lib/core/utils/type";
 import type { WindowId } from "../windows/type";
@@ -13,6 +14,12 @@ export interface DialogsService extends IService {
 
   /** Sheets bound to `window`, bottom first: what that window renders over its content. */
   for_window(window: WindowId): DialogEntry[];
+
+  /**
+   * A context menu at `anchor` (system level, ADR-025). Resolves with the chosen item's `id`, or `null` when dismissed.
+   * Items are data, so every menu in the OS looks and behaves the same.
+   */
+  menu(items: MenuItem[], options: { anchor: Position }): Promise<string | null>;
 
   /**
    * Shows `component` and resolves with the value it passes to `resolve`, or `null` when dismissed.
@@ -57,4 +64,26 @@ export interface DialogEntry {
   /** The window this sheet belongs to, or `null` for a system dialog. */
   window: WindowId | null;
   resolve(value: unknown): void;
+}
+
+export type MenuItem = MenuAction | MenuSubmenu | MenuSeparator;
+
+export interface MenuAction {
+  id: string;
+  label: string;
+  icon?: Component<IconComponentProps>;
+  /** A hint only, like "F2" or "Ctrl+C"; the menu doesn't bind it. */
+  shortcut?: string;
+  danger?: boolean;
+  disabled?: boolean;
+}
+
+export interface MenuSubmenu {
+  label: string;
+  icon?: Component<IconComponentProps>;
+  items: MenuItem[];
+}
+
+export interface MenuSeparator {
+  separator: true;
 }

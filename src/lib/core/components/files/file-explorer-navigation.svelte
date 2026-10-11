@@ -13,7 +13,7 @@
   import FileUploadButton from "./file-upload-button.svelte";
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { name_problem } from "./name-rules";
+  import { create_folder } from "./file-actions";
 
   interface Props {
     handler: DirectoryHandler;
@@ -32,21 +32,9 @@
   const { window } = get_app_context();
 
   async function handle_create_folder() {
-    const name = await window.prompt("New folder", {
-      initial: "New folder",
-      confirm_label: "Create",
-      validate: (value) => name_problem(value, handler.items),
-    });
-    if (!name) return;
-
     creating_folder = true;
-    try {
-      await handler.create_directory(name);
-    } catch (error) {
-      report_file_error(`Could not create folder "${name}"`, error);
-    } finally {
-      creating_folder = false;
-    }
+    await create_folder(handler, window);
+    creating_folder = false;
   }
 </script>
 

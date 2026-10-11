@@ -1,6 +1,6 @@
 <script lang="ts">
-  import kernel, { type AppsService } from "$lib/core/api";
-  import type { FileSystemDirectoryItem, FileSystemFileItem, FileSystemItem } from "$lib/core/api/services/files";
+  import kernel, { type AppsService, type DialogsService, type MenuItem } from "$lib/core/api";
+  import type { FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
   import { SYSTEM_DIRECTORIES } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
@@ -10,7 +10,16 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
-  import { FolderOpen as FolderOpenIcon, MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
+  import { create_folder, delete_item, upload } from "./file-actions";
+  import {
+    ArrowClockwise as ArrowClockwiseIcon,
+    ArrowSquareOut as ArrowSquareOutIcon,
+    FolderOpen as FolderOpenIcon,
+    FolderPlus as FolderPlusIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    Trash as TrashIcon,
+    UploadSimple as UploadSimpleIcon,
+  } from "phosphor-svelte";
 
   interface Props {
     handler: DirectoryHandler;
@@ -21,6 +30,8 @@
   let { handler, search = $bindable(), onnavigate }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { window } = get_app_context();
 
   const filtered_items = $derived.by(() => {
     const query = search.trim().toLowerCase();
@@ -32,42 +43,67 @@
     return e.key === "Delete" || (e.key === "Backspace" && e.metaKey);
   }
 
-  const { window } = get_app_context();
-
-  async function delete_item(item: FileSystemItem) {
-    const recursive = item.kind === "directory";
-    const confirmed = await window.confirm(`Delete “${item.name}”?`, {
-      detail: recursive ? "The folder and everything in it will be deleted. This can't be undone." : "This can't be undone.",
-      confirm_label: "Delete",
-      danger: true,
-    });
-    if (!confirmed) return;
-
-    handler
-      .delete_entry(item.name, { recursive })
-      .catch((error) => report_file_error(`Could not delete "${item.name}"`, error));
+  function is_menu_key(e: KeyboardEvent): boolean {
+    return e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey);
   }
 
-  function open_file(item: FileSystemFileItem, anchor: Position) {
+  function row_anchor(element: HTMLElement): Position {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left + 24, y: rect.bottom };
+  }
+
+  function open(item: FileSystemItem, anchor: Position) {
+    if (item.kind === "directory") {
+      handler
+        .open_directory(item.name, item.handle)
+        .then(onnavigate)
+        .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
+      return;
+    }
+
     apps
       .open(join_path(handler.segments, item.name), { anchor })
       .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
   }
 
-  function row_anchor(element: HTMLElement): Position {
-    const rect = element.getBoundingClientRect();
-    return { x: rect.left, y: rect.bottom };
+  async function item_menu(item: FileSystemItem, anchor: Position) {
+    const items: MenuItem[] = [
+      { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
+      { separator: true },
+      { id: "delete", label: "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
+    ];
+
+    const choice = await dialogs.menu(items, { anchor });
+    if (choice === "open") open(item, anchor);
+    else if (choice === "delete") delete_item(handler, window, item);
   }
 
-  function open_directory(item: FileSystemDirectoryItem) {
-    handler
-      .open_directory(item.name, item.handle)
-      .then(onnavigate)
-      .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
+  async function background_menu(anchor: Position) {
+    const choice = await dialogs.menu(
+      [
+        { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
+        { id: "upload", label: "Upload files", icon: UploadSimpleIcon },
+        { separator: true },
+        { id: "reload", label: "Reload", icon: ArrowClockwiseIcon },
+      ],
+      { anchor }
+    );
+    if (choice === "new_folder") create_folder(handler, window);
+    else if (choice === "upload") upload(handler);
+    else if (choice === "reload") handler.reload();
   }
 </script>
 
-<div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
+<!-- Right-click on empty space (or the list's padding) is the folder's own menu. -->
+<div
+  role="presentation"
+  class="min-h-0 min-w-0 flex-1 overflow-y-auto"
+  oncontextmenu={(event) => {
+    if ((event.target as Element).closest("[role=row]")) return;
+    event.preventDefault();
+    background_menu({ x: event.clientX, y: event.clientY });
+  }}
+>
   {#if handler.loading && handler.items.length === 0}
     <div class="flex flex-col gap-1 p-2">
       {#each { length: 6 }, idx (idx)}
@@ -75,7 +111,7 @@
       {/each}
     </div>
   {:else if handler.items.length === 0}
-    <EmptyState icon={FolderOpenIcon} title="This folder is empty" description="Upload files or create a folder from the toolbar." />
+    <EmptyState icon={FolderOpenIcon} title="This folder is empty" description="Upload files or create a folder, from the toolbar or a right-click." />
   {:else if filtered_items.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />
   {:else}
@@ -87,40 +123,29 @@
       </div>
 
       {#each filtered_items as item (item.name)}
-        {@const row = "col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-colors duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset"}
-        {#if item.kind === "file"}
-          <button
-            role="row"
-            class={row}
-            ondblclick={(e) => open_file(item, { x: e.clientX, y: e.clientY })}
-            onkeydown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                open_file(item, row_anchor(e.currentTarget));
-              } else if (is_delete_key(e)) {
-                delete_item(item);
-              }
-            }}
-          >
+        <button
+          role="row"
+          class="col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-colors duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset"
+          ondblclick={(event) => open(item, { x: event.clientX, y: event.clientY })}
+          oncontextmenu={(event) => {
+            event.preventDefault();
+            event.currentTarget.focus();
+            item_menu(item, { x: event.clientX, y: event.clientY });
+          }}
+          onkeydown={(event) => {
+            if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
+            else if (is_delete_key(event)) delete_item(handler, window, item);
+            else if (is_menu_key(event)) item_menu(item, row_anchor(event.currentTarget));
+            else return;
+            event.preventDefault();
+          }}
+        >
+          {#if item.kind === "file"}
             <FileRow {item} />
-          </button>
-        {:else if item.kind === "directory"}
-          <button
-            role="row"
-            class={row}
-            ondblclick={() => open_directory(item)}
-            onkeydown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                open_directory(item);
-              } else if (is_delete_key(e)) {
-                delete_item(item);
-              }
-            }}
-          >
+          {:else}
             <DirectoryRow handle={item.handle} system={SYSTEM_DIRECTORIES.includes(join_path(handler.segments, item.name))} />
-          </button>
-        {/if}
+          {/if}
+        </button>
       {/each}
     </div>
   {/if}

@@ -29,7 +29,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [ ] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
   - [x] Window-scoped dialogs + confirm/prompt sheets
-  - [ ] `dialogs.menu` + ContextMenu (File Explorer, desktop)
+  - [x] `dialogs.menu` + ContextMenu (File Explorer, desktop)
   - [ ] Rename, delete, properties, Open with
   - [ ] ClipboardService: copy/cut/paste with conflict sheet
   - [ ] File picker sheet (`pick_file` / `pick_directory`)

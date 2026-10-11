@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type DesktopService } from "$lib/core/api";
   import DesktopItem from "./desktop-item.svelte";
+  import { background_menu } from "./desktop-actions";
 
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
 </script>
@@ -13,6 +14,12 @@
 
     resize_observer.observe(element);
     return () => resize_observer.disconnect();
+  }}
+  role="presentation"
+  oncontextmenu={(event) => {
+    if ((event.target as Element).closest("button")) return;
+    event.preventDefault();
+    background_menu({ x: event.clientX, y: event.clientY });
   }}
   class="desktop-surface grid size-full place-items-center overflow-hidden"
   style:grid-template-columns={`repeat(${desktop.container.grid.columns}, minmax(64px, 1fr))`}

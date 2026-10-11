@@ -13,6 +13,7 @@ System dialogs that belong to no window. Any service or component calls `show()`
 | `stack` | `DialogEntry[]` | Reactive `$state`, bottom first, system and window-bound together. `readonly` on the interface, mutable on the class |
 | `system` | `DialogEntry[]` | `$derived`: entries with `window === null`. What the top-layer host renders |
 | `for_window(id)` | `(window: WindowId) => DialogEntry[]` | Sheets bound to that window, bottom first. What `window-sheets.svelte` renders (ADR-025) |
+| `menu(items, { anchor })` | `(items: MenuItem[], options: { anchor: Position }) => Promise<string \| null>` | A context menu at `anchor`: `show(ContextMenu, { items }, { anchor })`. Resolves the chosen item's `id`, `null` when dismissed |
 | `show(component, props, options?)` | `<T, P extends object>(component: Component<P & DialogProps<T>>, props: P, options?: DialogOptions): Promise<T \| null>` | Resolves with what the component passes to `resolve`, or `null` when dismissed |
 
 Types (`type.ts`):
@@ -65,6 +66,20 @@ Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-
 |-----------|-------|----------|
 | `ConfirmDialog` | `message`, `detail?`, `confirm_label?` (default "OK"), `danger?` (red button, Cancel gets focus) | `true` / `false` |
 | `PromptDialog` | `message`, `detail?`, `initial?`, `placeholder?`, `confirm_label?`, `validate?(value) → error \| null`, `select_stem?` (select up to the last dot) | trimmed string, or `null` on Cancel/Esc |
+
+### Context menus (ADR-025)
+
+`MenuItem` = `MenuAction { id, label, icon?, shortcut?, danger?, disabled? }` | `MenuSubmenu { label, icon?, items }` | `MenuSeparator { separator: true }`. `shortcut` is a hint only; the menu doesn't bind keys.
+
+`components/dialogs/context-menu.svelte` wraps `context-menu-list.svelte` (recursive, one panel per level):
+
+- System level always: anchored dialog on the host, at the cursor, flipping at screen edges, on the shared scrim. Esc or an outside click dismisses.
+- Panel: `rounded-xl bg-background-lighter p-1.5 shadow-popover`, 32px items with a duotone icon slot (kept empty when absent, so labels align), shortcut hints in mono on the right, separators as hairlines. `danger` items are `text-error` with an `error/12` highlight; disabled items are skipped by the keyboard.
+- Submenus open on hover, click, Enter, Space or →, as a `position: fixed` panel anchored to the item (`anchor-name` per item, `position-area: right span-bottom`, flips inline). ← closes a submenu and returns focus to its item.
+- Keyboard: ↑/↓ wrap through enabled items, Home/End, typeahead on the first letter. Keys are handled by the deepest open level only.
+- First focus: the first enabled item carries `autofocus`, because `showModal()` would otherwise focus the panel itself.
+
+Callers: File Explorer rows and background (`components/files/file-list.svelte`), desktop icons and background (`components/desktop/desktop-actions.ts`). Both also open the item menu from the keyboard with the ContextMenu key or Shift+F10.
 
 ### Fallback point
 
@@ -123,5 +138,6 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 ## Known gaps
 
 - Mobile presentation is undecided (ADR-019, ADR-016). Today it's the same anchored dialog.
-- `pick_file` / `pick_directory` sheets and `dialogs.menu` are not built yet (ADR-025 steps 2 and 5).
+- `pick_file` / `pick_directory` sheets are not built yet (ADR-025 step 5).
+- Menus use the full scrim like every dialog; a lighter treatment for menus may read better.
 - Two `show()` calls in a row stack two modals; there's no queueing or dedup (two quick `open()` calls on ambiguous files show two choosers).

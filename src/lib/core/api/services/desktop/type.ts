@@ -27,8 +27,14 @@ export interface DesktopService extends IService {
   /** Saves the item's new cell to `/var/lib/desktop/layout.json`. */
   move_item(from: Position, to: Position): Position;
 
-  /** Deletes a shortcut file. Real files and folders are left alone until window overlays can confirm (ADR-022). */
+  /** Deletes the entry at `position` from `/home/Desktop` (folders recursively). The caller confirms first (ADR-025). */
   remove_item(position: Position): Promise<void>;
+
+  /** Creates a folder in `/home/Desktop`. */
+  create_folder(name: string): Promise<void>;
+
+  /** Entry names currently on the desktop, for name validation. */
+  names(): string[];
 
   /** Writes `{App name}.desktop` into `/home/Desktop`. Returns the file name, or `null` for an unknown app. */
   pin(app_id: AppId, props?: AppProps): Promise<string | null>;

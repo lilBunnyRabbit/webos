@@ -246,8 +246,16 @@ export class DesktopService implements IDesktopService {
 
   public async remove_item(position: Position): Promise<void> {
     const item = this.get_item(position);
-    if (item?.kind !== "shortcut") return;
-    await this.files_service.delete_entry(await this.folder(), item.name);
+    if (!item) return;
+    await this.files_service.delete_entry(await this.folder(), item.name, { recursive: item.kind === "directory" });
+  }
+
+  public async create_folder(name: string): Promise<void> {
+    await this.files_service.create_directory(await this.folder(), name);
+  }
+
+  public names(): string[] {
+    return this.entries.map((entry) => entry.name);
   }
 
   public async pin(app_id: AppId, props?: AppProps): Promise<string | null> {

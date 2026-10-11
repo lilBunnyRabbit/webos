@@ -64,6 +64,10 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 - Both enter with `animate-pop-in`. Menus dismiss with Esc or an outside click (`closedby="any"`). Questions are shown with `dismissible: false` (`closedby="none"`): only their buttons close them, so a stray click can't throw away a session.
 - Floating layers sit on `background-lighter`, one step above window chrome, so they read as on top even over a window.
 
+## Context menus
+
+Built with `dialogs.menu(items, { anchor })`, never by hand. Order items by frequency: the default action first (Open), then variations (Open with), then edit actions (Rename, Copy, Cut, Paste), then destructive actions last after a separator. Destructive items are `danger`. Show the keyboard shortcut as a hint when one exists. Every right-clickable thing also opens its menu from the keyboard (ContextMenu key, Shift+F10).
+
 ## Window sheets
 
 Questions that belong to one window's task (confirm, prompt, the file picker) are **sheets**: centred in that window on the shared scrim, the app behind them inert, the rest of the OS usable. Use `window.confirm` / `window.prompt` from the app context; never the browser's `confirm()` / `prompt()`.
