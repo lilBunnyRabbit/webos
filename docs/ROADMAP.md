@@ -27,7 +27,12 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] Path-string identity system (segments[] + derived path string)
 - [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
-- [ ] File explorer: context menus (delete, rename, copy, move)
+- [ ] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
+  - [ ] Window-scoped dialogs + confirm/prompt sheets
+  - [ ] `dialogs.menu` + ContextMenu (File Explorer, desktop)
+  - [ ] Rename, delete, properties, Open with
+  - [ ] ClipboardService: copy/cut/paste with conflict sheet
+  - [ ] File picker sheet (`pick_file` / `pick_directory`)
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
 - [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
