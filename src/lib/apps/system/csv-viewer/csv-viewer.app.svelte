@@ -67,11 +67,11 @@
         {:else}
           <div class="min-h-0 overflow-auto">
             <div class="w-max min-w-full font-mono text-ui">
-              <div class="sticky top-0 z-10 grid h-7 items-center border-b border-foreground/8 bg-background-light text-2xs font-medium" style:grid-template-columns={template}>
+              <div class="sticky top-0 z-10 grid h-7 items-center border-b border-foreground/8 bg-background-light font-medium" style:grid-template-columns={template}>
                 <span class="sticky left-0 z-10 h-full bg-background-light"></span>
                 {#each columns as column (column)}
                   {@const label = header ? (header[column] ?? "") : column_label(column)}
-                  <span class="truncate px-2" title={label}>{label}</span>
+                  <span class="truncate px-2 text-2xs" title={label}>{label}</span>
                 {/each}
               </div>
               {#each body as row, index (index)}
