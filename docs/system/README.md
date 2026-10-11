@@ -19,7 +19,7 @@ The reference is part of the code. A change isn't finished until the page that d
 
 | Page | Covers |
 |------|--------|
-| [overview.md](overview.md) | Layers, boot sequence, shell mount tree, source map |
+| [overview.md](overview.md) | Layers, boot sequence, shell mount tree, source map, build & deploy, upgrading from v0 |
 | [kernel.md](kernel.md) | Service registry, dependency order, lifecycle |
 | [persistence.md](persistence.md) | Everything stored: OPFS (user files, `/etc`, `/var/lib`), localStorage keys, versions, what survives reload (including session restore) |
 | [theming.md](theming.md) | How theming works: tokens and the surface ladder, `color-scheme`, `cn`/`tv`, themes, fonts |

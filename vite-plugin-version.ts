@@ -35,6 +35,7 @@ function get_version_info(root: string): VersionInfo {
 
 export function version_plugin(): Plugin {
   let out_dir = "dist";
+  let version_url = "/version.json";
   // One stamp per build or dev session: the bundle and version.json must match, or every check reports an update.
   let info: VersionInfo;
 
@@ -43,12 +44,13 @@ export function version_plugin(): Plugin {
 
     configResolved(config) {
       out_dir = resolve(config.root, config.build.outDir);
+      version_url = `${config.base}version.json`;
     },
 
     // Dev: serve /version.json via middleware
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url === "/version.json") {
+        if (req.url === version_url) {
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
           res.end(JSON.stringify(info, null, 2));

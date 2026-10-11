@@ -217,7 +217,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ## P3 — Apps
 
-### Port from React
+### Port from React (`v0-react` branch)
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [x] Media Preview app (image, video, audio; PDF lives in PDF Viewer)
 - [ ] Tic-Tac-Toe game (+ AI, stats, undo)
@@ -367,7 +367,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### CI/CD
 - [ ] GitHub Actions build pipeline
 - [ ] Automated testing on PR
-- [ ] Automated deployment to GitHub Pages
+- [x] Automated deployment to GitHub Pages (`deploy.yml`: check, build, deploy on push to `master`)
 - [ ] Version tagging
 
 ---

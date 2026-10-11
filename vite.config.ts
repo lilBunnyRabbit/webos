@@ -7,6 +7,8 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Served from lilbunnyrabbit.github.io/webos/ (GitHub Pages project site).
+  base: "/webos/",
   plugins: [
     tailwindcss(),
     svelte(),

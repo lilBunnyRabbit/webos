@@ -32,7 +32,7 @@ Each layer only reaches down. Shell components and apps get services with `kerne
 
 1. **`index.html`** paints a fixed full-screen `#splash` (Brand Dark `#17252c`, `/logo.svg`) and an empty `#app`. Body background is hardcoded to the same colour, so nothing flashes before the theme loads. In a production build, vite-plugin-pwa also injects `registerSW.js`.
 2. **`src/main.ts`** imports `app.css` and `App.svelte`, then imports `kernel` from `src/lib/core/api/index.ts`. Evaluating that barrel creates the `Kernel` singleton, or reuses `window.kernel` (see [Debug handle](#debug-handle)). It also eagerly evaluates every app manifest (see [Circular-import rule](#the-barrel-and-the-circular-import-rule)).
-3. **`await kernel.init()`** registers the default services (`init.ts`), resolves dependency order, then constructs each service and awaits its `init()`, one at a time. The actual order is `files → settings → windows → version → notifications → dialogs → apps → desktop → session → clipboard` (see [kernel.md](kernel.md#init-order)). FilesService's `init()` builds the OPFS hierarchy (`/home` with `Desktop`/`Documents`/`Downloads`, `/etc`, `/var/lib`, `/tmp`), migrates a pre-hierarchy flat root into `/home` once, and empties `/tmp` ([files](services/files.md#hierarchy)). SettingsService's `init()` reads `/etc/settings.json` (importing and removing the legacy localStorage `webos.settings` once) and starts the effect that writes theme tokens to `<html>`. DesktopService's `init()` lists `/home/Desktop`, reads `/var/lib/desktop/layout.json`, seeds two shortcuts on first boot, and starts watching the folder's revision ([desktop](services/desktop.md#lifecycle)). SessionService's `init()` reads `/var/lib/session/session.json`; if it holds windows, it requests the restore dialog without awaiting it, so the dialog appears right after mount and windows are restored only if the user picks Restore ([session](services/session.md)). That's async OPFS work on the boot path, and no OPFS means no boot. The splash is still showing.
+3. **`await kernel.init()`** registers the default services (`init.ts`), resolves dependency order, then constructs each service and awaits its `init()`, one at a time. The actual order is `files → settings → windows → version → notifications → dialogs → apps → desktop → session → clipboard` (see [kernel.md](kernel.md#init-order)). FilesService's `init()` builds the OPFS hierarchy (`/home` with `Desktop`/`Documents`/`Downloads`, `/etc`, `/var/lib`, `/tmp`), migrates a pre-hierarchy flat root into `/home` once, and empties `/tmp` ([files](services/files.md#hierarchy)). SettingsService's `init()` reads `/etc/settings.json` (importing and removing the legacy localStorage `webos.settings`, or the v0 React `settings` key, once) and starts the effect that writes theme tokens to `<html>`. DesktopService's `init()` lists `/home/Desktop`, reads `/var/lib/desktop/layout.json`, seeds shortcuts on first boot (v0 React pins if present, else two defaults), and starts watching the folder's revision ([desktop](services/desktop.md#lifecycle)). SessionService's `init()` reads `/var/lib/session/session.json`; if it holds windows, it requests the restore dialog without awaiting it, so the dialog appears right after mount and windows are restored only if the user picks Restore ([session](services/session.md)). That's async OPFS work on the boot path, and no OPFS means no boot. The splash is still showing.
 4. **`mount(App, { target: #app, intro: true })`**. `App.svelte` renders `web-os.svelte`, and that renders `os.svelte`. Every service exists by now, so `kernel.service()` can never throw during render.
 5. **`#splash` is removed** right after `mount()` returns.
 6. **Shutdown hooks**: `pagehide` without `event.persisted` calls `kernel.shutdown()`. A bfcache-persisted pagehide keeps the services alive. HMR dispose unmounts the app and shuts the kernel down.
@@ -113,3 +113,21 @@ kernel.service("windows").to_string()
 ```
 
 Boot logs nothing on success. The Kernel system app lists `kernel.services` in the UI.
+
+## Build & deploy
+
+- `vite.config.ts` sets `base: "/webos/"`: the site is the GitHub Pages project site `lilbunnyrabbit.github.io/webos/`. Dev serves under the same path (`localhost:5173/webos/`). Vite rewrites `index.html` asset URLs, the PWA manifest gets `scope` and `start_url` `/webos/`, and the SW registers at `/webos/sw.js`. Runtime URLs go through `import.meta.env.BASE_URL` (only `version.json` today).
+- `.github/workflows/deploy.yml` runs on every push to `master` (and manually): Bun install → `bun run check` → `bun run build` → upload `dist/` → `actions/deploy-pages`. A type error blocks the deploy.
+- Branches: `master` is this Svelte version. The React version (v0) is frozen on `v0-react`.
+
+### Upgrading from v0 (React)
+
+The origin is shared, so a v0 user's storage is still there on first load. Nothing is lost:
+
+| v0 storage | Becomes | Where |
+|------------|---------|-------|
+| OPFS root (all files and folders) | `/home/...`; a v0 `Documents` folder is `/home/Documents` | `ensure_hierarchy` ([files](services/files.md#hierarchy)) |
+| localStorage `settings` (zustand) | `/etc/settings.json`: taskbar position; theme only if changed from v0's defaults, else Brand Dark | `take_v0_settings` ([settings](services/settings.md)) |
+| localStorage `desktop` (zustand) | `.desktop` shortcuts at the same grid cells; pins of apps that weren't ported are dropped | `take_v0_pins` ([desktop](services/desktop.md#behaviour--invariants)) |
+
+Both localStorage keys are removed once read.

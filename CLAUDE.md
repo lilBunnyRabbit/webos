@@ -168,4 +168,4 @@ Use conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Body
 ## Reference only
 
 - Legacy React-era docs and AI-written specs were deleted on 2026-10-10. They're in git at `6be283e:docs/to-be-deleted/` and are outdated: capabilities, IPC, 11 services, camelCase APIs. Don't revive them. The owner's quotes that still matter are in PRINCIPLES. Their ideas are in the legacy gap analysis brainstorm and the ROADMAP.
-- Branch `master`: the original React implementation. It's a source for porting (Media Preview, Tic-Tac-Toe, Profiler), not a design template.
+- Branch `v0-react`: the original React implementation (was `master` until 2026-10-11). It's a source for porting (Tic-Tac-Toe, Profiler), not a design template. `master` is this Svelte version and deploys to GitHub Pages.

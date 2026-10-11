@@ -103,12 +103,12 @@ Which services implement which hooks today:
 
 | Service | `init` | `destroy` |
 |---------|--------|-----------|
-| settings | read `/etc/settings.json` (import + remove legacy `webos.settings`), start token + save effects | dispose effects |
+| settings | read `/etc/settings.json` (import + remove legacy `webos.settings` / v0 `settings`), start token + save effects | dispose effects |
 | version | start 30-min poll, `visibilitychange` listener | clear both |
 | notifications | none | clear toast timers |
 | dialogs | none | yes (see [dialogs](services/dialogs.md)) |
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |
-| desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot, start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
+| desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
 | session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
 | windows, apps | none | none |
 

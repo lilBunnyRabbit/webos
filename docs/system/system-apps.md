@@ -165,7 +165,7 @@ Text uses the document frame:
 
 ## Media Preview
 
-`media-preview` · `FileImage` icon · source `system/media-preview/` · ported from `master` (ADR-009, ADR-018)
+`media-preview` · `FileImage` icon · source `system/media-preview/` · ported from v0 (`v0-react`) (ADR-009, ADR-018)
 
 **Purpose.** Show images, play video and audio.
 

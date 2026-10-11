@@ -60,6 +60,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 
 1. `files.get_file("/etc/settings.json")`.
 2. `take_legacy_settings()`: read and **remove** the old localStorage key `webos.settings`. This runs on every boot, file or not, so a stale legacy copy can never come back later.
+   `take_v0_settings()` does the same for the v0 React key `settings` (zustand `{ state: { theme, taskbar } }`): it keeps the taskbar position, and the theme only if it differs from v0's saved defaults (otherwise Brand Dark). `webos.settings` wins if both exist.
 3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar` and `file_defaults`. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
 4. Start an `$effect.root` with two effects:
    - **Token writer:** for each `[key, value]` of `theme`, call `document.documentElement.style.setProperty("--" + key.replaceAll("_", "-"), value)`, so `background_dark` is written as `--background-dark`. Then set `documentElement.style.colorScheme` to `light` when the applied background's lightness is above 0.6, otherwise `dark`. The lightness comes from a probe element (`background_lightness()`), so hex and relative colour syntax work too ([theming](../theming.md#color-scheme)).
@@ -78,7 +79,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 | Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": … }, "file_defaults": { ".ext": "app-id" } }`, pretty-printed (2 spaces) |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | On every change, after the effect flush. Also once right after `init()`, which creates or normalizes the file. |
-| Legacy | localStorage `webos.settings` (same format). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
+| Legacy | localStorage `webos.settings` (same format), then v0 `settings` (zustand). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
 
 **Write queue.** The saver goes through `LatestWriter` (`files/latest-writer.ts`, shared with [session](session.md); see [files](files.md#latestwriter)): writes never overlap, and a burst of changes (typing in a token field) collapses to at most one write in flight plus the newest pending one. `/etc` is recreated if missing. Each write bumps the `/etc` revision.
 

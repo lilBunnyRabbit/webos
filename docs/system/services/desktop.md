@@ -110,7 +110,7 @@ Positions are keyed by entry name, so renaming an entry in File Explorer loses i
 
 ## Behaviour & invariants
 
-**Seeding.** An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` writes one shortcut per `DEFAULT_SHORTCUTS` (`settings`, `file-explorer`), named after the manifest (`Settings.desktop`, `File Explorer.desktop`), at `{ x: i, y: 0 }`, then saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.
+**Seeding.** An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` first takes the v0 React pins (`take_v0_pins()` in `layout.ts`: localStorage `desktop`, read and removed) and writes one shortcut per pin at its v0 grid cell. Without v0 pins it writes one shortcut per `DEFAULT_SHORTCUTS` (`settings`, `file-explorer`) at `{ x: i, y: 0 }`. Shortcuts are named after the manifest (`Settings.desktop`, `File Explorer.desktop`); then it saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.
 
 **Arrange** (`DesktopHelper.arrange(entries, positions)`): in entry order, each entry with a saved position takes that cell if it's still free. Entries with no position, or whose cell an earlier entry already took, go to `unplaced`. `layout` may contain cells outside the current grid.
 

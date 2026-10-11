@@ -9,6 +9,7 @@ import {
   parse_settings,
   serialize_settings,
   take_legacy_settings,
+  take_v0_settings,
 } from "./persistence";
 
 export class SettingsService implements ISettingsService {
@@ -35,9 +36,10 @@ export class SettingsService implements ISettingsService {
 
   async init() {
     const file = await this.files_service.get_file(SETTINGS_PATH);
-    // The legacy copy is consumed either way, so it can't resurrect old values later.
+    // The legacy copies are consumed either way, so they can't resurrect old values later.
     const legacy = take_legacy_settings();
-    const saved = file ? parse_settings(await file.text()) : legacy;
+    const v0 = take_v0_settings();
+    const saved = file ? parse_settings(await file.text()) : (legacy ?? v0);
     if (saved) {
       this.theme = saved.theme;
       this.taskbar = saved.taskbar;

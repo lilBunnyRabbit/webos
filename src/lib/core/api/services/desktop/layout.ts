@@ -29,3 +29,32 @@ export function parse_layout(text: string): Positions {
 export function serialize_layout(positions: Positions): string {
   return JSON.stringify({ version: LAYOUT_VERSION, positions }, null, 2);
 }
+
+/** The React version (branch `v0-react`) kept pinned apps and their grid cells in a zustand store under this key. */
+const V0_STORAGE_KEY = "desktop";
+
+const v0_schema = z.object({
+  state: z.object({
+    items: z.record(z.string(), z.object({ grid: z.object({ x: z.int().min(0), y: z.int().min(0) }) })),
+  }),
+});
+
+export interface V0Pin {
+  app_id: string;
+  position: Position;
+}
+
+/** Reads and removes the v0 desktop pins, so the first seed keeps what the user had pinned. */
+export function take_v0_pins(): V0Pin[] | null {
+  try {
+    const raw = localStorage.getItem(V0_STORAGE_KEY);
+    if (raw === null) return null;
+    localStorage.removeItem(V0_STORAGE_KEY);
+
+    const result = v0_schema.safeParse(JSON.parse(raw));
+    if (!result.success) return null;
+    return Object.entries(result.data.state.items).map(([app_id, item]) => ({ app_id, position: item.grid }));
+  } catch {
+    return null;
+  }
+}

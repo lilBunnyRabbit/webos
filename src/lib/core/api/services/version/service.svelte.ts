@@ -43,7 +43,7 @@ export class VersionService implements IVersionService {
     this.last_check = Date.now();
 
     try {
-      const response = await fetch("/version.json", { cache: "no-store" });
+      const response = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store" });
       if (!response.ok) return;
 
       const remote: VersionInfo = await response.json();

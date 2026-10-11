@@ -27,4 +27,4 @@ A small kernel holds a registry of services: windows, apps, desktop, files, sett
 | [docs/adrs/](docs/adrs/README.md) | Architecture decision records |
 | [docs/brainstorm/](docs/brainstorm/) | Design discussions behind the ADRs |
 
-The original React version lives on the `master` branch.
+The original React version lives on the `v0-react` branch.

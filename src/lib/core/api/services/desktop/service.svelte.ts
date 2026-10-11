@@ -7,7 +7,7 @@ import { PATHS } from "../files/hierarchy";
 import { available_name } from "../files/opfs";
 import { join_path, split_path } from "../files/path";
 import { DesktopHelper } from "./helper";
-import { LAYOUT_DIRECTORY, LAYOUT_FILE, LAYOUT_PATH, parse_layout, serialize_layout, type Positions } from "./layout";
+import { LAYOUT_DIRECTORY, LAYOUT_FILE, LAYOUT_PATH, parse_layout, serialize_layout, take_v0_pins, type Positions } from "./layout";
 
 /** Shortcuts written into an empty desktop on first boot. */
 const DEFAULT_SHORTCUTS: AppId[] = ["settings", "file-explorer"];
@@ -129,10 +129,12 @@ export class DesktopService implements IDesktopService {
   }
 
   private async seed(folder: FileSystemDirectoryHandle): Promise<void> {
+    const pins = take_v0_pins() ?? DEFAULT_SHORTCUTS.map((app_id, x) => ({ app_id, position: { x, y: 0 } }));
     const positions: Positions = {};
-    for (const [x, app_id] of DEFAULT_SHORTCUTS.entries()) {
+    for (const { app_id, position } of pins) {
+      // Pins of v0 apps that weren't ported are dropped by write_shortcut.
       const name = await this.write_shortcut(folder, app_id);
-      if (name) positions[name] = { x, y: 0 };
+      if (name) positions[name] = position;
     }
     await this.save_positions(positions);
   }
