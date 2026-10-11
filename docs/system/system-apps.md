@@ -184,10 +184,10 @@ States before the frame: no path ("Nothing to preview"), error ("Couldn't read t
 
 | Kind | Rendering | Controls |
 |------|-----------|----------|
-| image | `<img>` centered in a `minmax(0,1fr)` grid cell with `p-6`. In fit mode it's `size-full object-contain`, so it fills the cell and small images scale up; the definite cell size is what makes fit work | Zoom out / level / zoom in (0.25 to 5, step 0.25; zooming leaves fit mode; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, download |
-| video | `<video controls>`, `max-h-full max-w-full` | download |
-| audio | a large music-note tile, the file name, `<audio controls>` | download |
-| unsupported | "Can't preview this file" empty state with the type | download |
+| image | `<img>` centered in a `minmax(0,1fr)` grid cell with `p-6`. In fit mode it's `size-full object-contain`, so it fills the cell and small images scale up; the definite cell size is what makes fit work | Zoom out / level / zoom in (0.25 to 5, step 0.25; zooming leaves fit mode; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Save to disk… |
+| video | `<video controls>`, `max-h-full max-w-full` | Save to disk… |
+| audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
+| unsupported | "Can't preview this file" empty state with the type | Save to disk… |
 
 Transforms (`scale`, `rotate`) animate over 200ms.
 
@@ -199,7 +199,7 @@ Transforms (`scale`, `rotate`) animate over 200ms.
 | Toolbar buttons | As above. Each is a labelled `IconButton`; zoom buttons disable at the limits |
 | Native media controls | Play, seek, volume |
 
-Download builds its own `<a download>` from the current object URL. It can't use `files.download_file`, because it has no handle.
+The toolbar's "Save to disk…" (`HardDrives` icon) calls `save_to_disk(path)` from `components/files/file-actions.ts`, the same action as File Explorer and the desktop: `files.export_to_disk` plus a "Saved to disk" toast or an error toast.
 
 **Known gaps.**
 

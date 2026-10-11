@@ -168,8 +168,13 @@ export class FilesService implements IFilesService {
     return result;
   }
 
-  async download_file(handle: FileSystemFileHandle, file_name?: string): Promise<void> {
-    return opfs.download_file(handle, file_name);
+  async export_to_disk(path: string): Promise<string | null> {
+    const segments = split_path(path);
+    const name = segments.pop();
+    const parent = name ? await this.get_directory(join_path(segments)) : null;
+    if (!name || !parent) throw new DOMException(`"${path}" doesn't exist`, "NotFoundError");
+    const handle = (await opfs.exists(parent, name, "file")) ? await parent.getFileHandle(name) : await parent.getDirectoryHandle(name);
+    return opfs.export_to_disk(handle);
   }
 
   async get_storage_estimate(): Promise<{ usage: number; quota: number }> {

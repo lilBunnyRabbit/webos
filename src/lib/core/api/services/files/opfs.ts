@@ -332,20 +332,34 @@ export async function upload_files(
   });
 }
 
-export async function download_file(
-  handle: FileSystemFileHandle,
-  file_name?: string
-): Promise<void> {
-  const file = await handle.getFile();
-  const url = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = file_name ?? file.name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  // Revoking synchronously can cancel the download in Firefox and Safari.
-  setTimeout(() => URL.revokeObjectURL(url), 40_000);
+type WellKnownDirectory = "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos";
+
+// File System Access pickers; TypeScript's DOM lib doesn't declare them yet.
+interface DiskPickers {
+  showSaveFilePicker(options?: { suggestedName?: string; startIn?: WellKnownDirectory }): Promise<FileSystemFileHandle>;
+  showDirectoryPicker(options?: { mode?: "read" | "readwrite"; startIn?: WellKnownDirectory }): Promise<FileSystemDirectoryHandle>;
+}
+
+const disk = () => window as unknown as Window & DiskPickers;
+const is_abort = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+
+/**
+ * Copies a file or folder out of OPFS onto the real disk. A file goes through the native Save dialog; a folder is copied
+ * whole into a folder the user picks (auto-renamed there on clash). Resolves the name written, or `null` if cancelled.
+ */
+export async function export_to_disk(handle: FileSystemFileHandle | FileSystemDirectoryHandle): Promise<string | null> {
+  try {
+    if (handle.kind === "file") {
+      const target = await disk().showSaveFilePicker({ suggestedName: handle.name, startIn: "downloads" });
+      await write_file(target, await handle.getFile());
+      return target.name;
+    }
+    const parent = await disk().showDirectoryPicker({ mode: "readwrite", startIn: "downloads" });
+    return (await copy_directory(handle, parent)).name;
+  } catch (error) {
+    if (is_abort(error)) return null;
+    throw error;
+  }
 }
 
 export async function get_storage_estimate(): Promise<{ usage: number; quota: number }> {

@@ -4,7 +4,7 @@
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     CornersOut as CornersOutIcon,
-    DownloadSimple as DownloadSimpleIcon,
+    HardDrives as HardDrivesIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
     MagnifyingGlassPlus as MagnifyingGlassPlusIcon,
     MusicNote as MusicNoteIcon,
@@ -14,6 +14,7 @@
   } from "phosphor-svelte";
   import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { save_to_disk } from "$lib/core/components/files/file-actions";
   import { untrack } from "svelte";
   import manifest from "./index";
 
@@ -97,13 +98,6 @@
     zoom_by(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
   }
 
-  function download() {
-    if (!url || !file) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = file.name;
-    link.click();
-  }
 </script>
 
 {#if !path}
@@ -139,8 +133,8 @@
         <Separator vertical />
       {/if}
 
-      <IconButton label="Download" size="sm" onclick={download}>
-        <DownloadSimpleIcon weight="bold" />
+      <IconButton label="Save to disk…" size="sm" onclick={() => path && save_to_disk(path)}>
+        <HardDrivesIcon weight="bold" />
       </IconButton>
     </Toolbar>
 

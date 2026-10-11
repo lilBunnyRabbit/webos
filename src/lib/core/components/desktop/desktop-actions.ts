@@ -16,6 +16,7 @@ import {
   Info as InfoIcon,
   PencilSimple as PencilSimpleIcon,
   FolderPlus as FolderPlusIcon,
+  HardDrives as HardDrivesIcon,
   Palette as PaletteIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
@@ -25,6 +26,7 @@ import PropertiesDialog from "../files/properties-dialog.svelte";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
+import { save_to_disk } from "../files/file-actions";
 
 // The desktop is the shell, not an app window, so its questions are system dialogs (ADR-025).
 const desktop = () => kernel.service<DesktopService>("desktop");
@@ -127,6 +129,7 @@ export async function item_menu(item: DesktopGridItem, position: Position, ancho
       { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
+      ...(shortcut ? [] : [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }]),
       { separator: true },
       { id: "delete", label: shortcut ? "Remove shortcut" : "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
       { separator: true },
@@ -140,6 +143,7 @@ export async function item_menu(item: DesktopGridItem, position: Position, ancho
   else if (choice === "cut") cut_item(item);
   else if (choice === "delete") remove_item(item, position);
   else if (choice === "properties") show_properties(item);
+  else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
 }
 
 export async function background_menu(anchor: Position): Promise<void> {

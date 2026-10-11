@@ -8,7 +8,9 @@ import kernel, {
   type ClipboardService,
   type ConflictChoice,
   type DialogsService,
+  type FilesService,
   type MenuItem,
+  type NotificationsService,
 } from "$lib/core/api";
 import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { FileSystemItem } from "$lib/core/api/services/files";
@@ -117,5 +119,17 @@ export async function paste(handler: DirectoryHandler, window: WindowHandle): Pr
     await handler.reload();
   } catch (error) {
     report_file_error("Paste failed", error);
+  }
+}
+
+/** Copies a file or folder out of WebOS onto the real disk; the browser's own dialogs pick where. */
+export async function save_to_disk(path: string): Promise<void> {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  try {
+    const written = await kernel.service<FilesService>("files").export_to_disk(path);
+    if (written === null) return;
+    kernel.service<NotificationsService>("notifications").notify("file-explorer", { title: "Saved to disk", message: written });
+  } catch (error) {
+    report_file_error(`Could not save "${name}" to disk`, error);
   }
 }

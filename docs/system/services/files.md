@@ -4,7 +4,7 @@ Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.m
 
 ## Purpose
 
-The filesystem. Everything lives in the browser's Origin Private File System (OPFS). There's no backend and no access to the user's real disk, apart from the upload picker and downloads.
+The filesystem. Everything lives in the browser's Origin Private File System (OPFS). There's no backend and no access to the user's real disk, apart from the upload picker and "Save to disk…" (`export_to_disk`). OPFS itself lives inside the browser profile as numbered blobs, so it can never be shown in Finder or Explorer.
 
 It's built in three layers, the reference split from [CONVENTIONS](../../CONVENTIONS.md#three-layers-of-logic):
 
@@ -116,7 +116,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `copy_file` | `(source, target, new_name?) => Promise<FileSystemFileHandle>` | Auto-renames. Read the result's `name` |
 | `move_file` | `(source_parent, source, target, new_name?) => Promise<FileSystemFileHandle>` | Native `FileSystemFileHandle.move()`. Auto-renames. Returns `source`, which now points at the new location. Same name into the same directory is a no-op |
 | `upload_files` | `(target, options?) => Promise<File[]>` | Opens the native file picker. See [Upload flow](#upload-flow) |
-| `download_file` | `(handle, file_name?) => Promise<void>` | Object URL + `<a download>`. Revokes the URL after 40 s, since revoking at once cancels the download in Firefox and Safari |
+| `export_to_disk` | `(path) => Promise<string \| null>` | Copies the entry at `path` onto the real disk with the File System Access pickers. A file goes through `showSaveFilePicker` (suggested name, starts in Downloads) and `write_file`. A folder goes through `showDirectoryPicker({ mode: "readwrite" })` and `copy_directory`, which works on disk handles too and auto-renames on clash. Resolves the written name; `null` when the picker is cancelled (`AbortError`). Throws `NotFoundError` for a missing path. Bumps no revision: nothing in OPFS changes |
 | `get_storage_estimate` | `() => Promise<{ usage; quota }>` | `navigator.storage.estimate()`, missing values become `0`. Covers the whole origin, not only OPFS |
 | `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0 |
 | `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), clears every revision and bumps `/`. No confirmation |
@@ -301,7 +301,7 @@ Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, n
 | Double-click | Folder row | Navigate into it |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Delete, Properties |
+| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Delete, Properties |
 | Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload |
 | Ctrl/Cmd+C, Ctrl/Cmd+X | Focused row | Copy or cut to the clipboard (ClipboardService); cut rows are dimmed |
 | Ctrl/Cmd+V | Anywhere in the list | Paste into this folder; name clashes ask in a `ConflictDialog` sheet |

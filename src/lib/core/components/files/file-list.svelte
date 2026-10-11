@@ -18,6 +18,7 @@
     open_with,
     open_with_items,
     paste,
+    save_to_disk,
     rename_item,
     show_properties,
     upload,
@@ -34,6 +35,7 @@
     Info as InfoIcon,
     PencilSimple as PencilSimpleIcon,
     FolderOpen as FolderOpenIcon,
+    HardDrives as HardDrivesIcon,
     FolderPlus as FolderPlusIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     Trash as TrashIcon,
@@ -108,6 +110,7 @@
       { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
+      { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
       { separator: true },
       { id: "delete", label: "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
       { separator: true },
@@ -121,6 +124,7 @@
     else if (choice === "cut") cut_item(handler, item);
     else if (choice === "delete") delete_item(handler, window, item);
     else if (choice === "properties") show_properties(handler, window, item);
+    else if (choice === "save_to_disk") save_to_disk(join_path(handler.segments, item.name));
     else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
   }
 

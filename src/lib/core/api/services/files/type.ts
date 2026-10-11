@@ -67,7 +67,8 @@ export interface FilesService extends IService {
   /** Moves into `target`. A taken name becomes `name (1).ext`. Moving onto itself is a no-op. */
   move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle>;
   upload_files(target: FileSystemDirectoryHandle | null, options?: UploadOptions): Promise<File[]>;
-  download_file(handle: FileSystemFileHandle, file_name?: string): Promise<void>;
+  /** Copies the file or folder at `path` onto the real disk (native Save dialog / folder picker). The written name, or `null` if cancelled. */
+  export_to_disk(path: string): Promise<string | null>;
   get_storage_estimate(): Promise<{ usage: number; quota: number }>;
   get_directory_size(handle: FileSystemDirectoryHandle | null): Promise<number>;
   clear(): Promise<void>;
