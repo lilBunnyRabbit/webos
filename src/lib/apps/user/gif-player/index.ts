@@ -1,0 +1,20 @@
+import { define_app } from "$lib/core/api";
+// Not via the barrel: manifests load while the barrel is still initializing, so its constants are not yet defined.
+import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
+import { FilmStrip as FilmStripIcon } from "phosphor-svelte";
+
+export default define_app({
+  id: "gif-player",
+  name: "GIF Player",
+  icon: FilmStripIcon,
+  version: "1.0.0",
+  categories: ["user"],
+  props: FILE_PROPS,
+  defaults: {
+    constraints: {
+      width: { min: 420 },
+      height: { min: 380 },
+    },
+  },
+  component: () => import("./gif-player.app.svelte"),
+});

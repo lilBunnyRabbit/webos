@@ -220,13 +220,13 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### Port from React (`v0-react` branch)
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [x] Media Preview app (image, video, audio; PDF lives in PDF Viewer)
-- [ ] Tic-Tac-Toe game (+ AI, stats, undo)
-- [ ] Profiler app (per-window performance overlay, FPS, render counts)
+- [x] Tic-Tac-Toe game (+ AI, stats, undo)
+- [ ] Profiler → Activity Monitor system app (per-window DOM activity, FPS, long frames, network, storage, workers; only while open) — [brainstorm](brainstorm/2026-10-11_app-ports.md)
 
 ### New System Apps
 - [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
-- [ ] CSV Viewer (`.csv`/`.tsv` as a table)
-- [ ] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
+- [x] CSV Viewer (`.csv`/`.tsv` as a table)
+- [x] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
 - [ ] Calculator
 - [ ] Text Editor (tests file ops + persistence)
 - [x] Style Guide (component showcase)
@@ -255,17 +255,20 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim
 - [ ] RNG Tools — dice, coin, shuffler, password generator
-- [ ] QR Code Scanner — camera + image file scanning
+- [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
 - [ ] Compression Tools — DEFLATE, LZ77, Huffman + WASM
 - [ ] P2P File Transfer — WebRTC, room codes, QR share
 
 ### static-utils Ports
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Image Combiner
-- [ ] PDF Generator
-- [ ] Video Trimmer/Cropper
-- [ ] Video Merger
-- [ ] File Download Utility
+- **Brainstorm:** [2026-10-11 App ports](brainstorm/2026-10-11_app-ports.md). Outputs saved into OPFS (`pick_save`, folders for multi-file), native APIs instead of jsqr/gifuct-js/jszip
+- [x] Image Crop
+- [x] Background Remove
+- [x] Image Concat
+- [x] Image Split
+- [x] Sprite Extractor
+- [x] GIF Player (`ImageDecoder`)
+- [x] QR Reader (`BarcodeDetector`; covers the "QR Code Scanner" utility)
 
 ### File Associations
 - **ADR:** [ADR-018](adrs/018-file-associations.md), [ADR-019](adrs/019-system-dialogs.md)
