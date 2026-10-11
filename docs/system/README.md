@@ -37,6 +37,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/apps.md](services/apps.md) | `apps` |
 | [services/desktop.md](services/desktop.md) | `desktop` |
 | [services/session.md](services/session.md) | `session` |
+| [services/clipboard.md](services/clipboard.md) | `clipboard` |
 
 ### Shell
 

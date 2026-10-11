@@ -109,6 +109,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `get_file` | `(path) => Promise<File \| null>` | Path lookup (ADR-018). `null` for missing, a directory at that path, or an invalid name. Other errors throw |
 | `get_directory` | `(path) => Promise<FileSystemDirectoryHandle \| null>` | Path lookup via `opfs.get_directory_at`. `null` for missing, a file at that path, or an invalid name. Other errors throw |
 | `rename_entry` | `(handle, name, new_name) => Promise<void>` | In place (`opfs.rename_entry`: native `move()` for files, recreate-and-move for folders). Throws `InvalidModificationError` if `new_name` exists: a rename never auto-renames. Bumps the parent's revision. `DirectoryHandler.rename_entry(name, new_name)` also reloads |
+| `move_directory` | `(source_parent, source, target, new_name?) => Promise<FileSystemDirectoryHandle>` | Recursive move (`opfs.move_directory`), auto-renamed on clash. Bumps both folders' revisions |
 | `copy_directory` | `(source, target, new_name?) => Promise<FileSystemDirectoryHandle>` | Recursive copy, auto-renamed on clash. Bumps the target's revision |
 | `delete_entry` | `(handle, name, { recursive? }) => Promise<void>` | `recursive` defaults to `false`; a non-empty directory throws without it |
 | `exists` | `(handle, name, kind?) => Promise<boolean>` | Without `kind`, tries file then directory. Any error is `false` |
@@ -300,8 +301,10 @@ Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, n
 | Double-click | Folder row | Navigate into it |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Rename, Delete, Properties (copy/cut/paste in ADR-025 step 4) |
-| Right-click | Empty space in the list | Folder menu: New folder, Upload files, Reload |
+| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Delete, Properties |
+| Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload |
+| Ctrl/Cmd+C, Ctrl/Cmd+X | Focused row | Copy or cut to the clipboard (ClipboardService); cut rows are dimmed |
+| Ctrl/Cmd+V | Anywhere in the list | Paste into this folder; name clashes ask in a `ConflictDialog` sheet |
 | F2 | Focused row | Rename: prompt sheet with the stem pre-selected, validated (no clash, no `/`) |
 | Alt+Enter | Focused row | Properties sheet |
 | ContextMenu key, Shift+F10 | Focused row | Item menu, anchored under the row |

@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type DesktopService } from "$lib/core/api";
   import DesktopItem from "./desktop-item.svelte";
-  import { background_menu } from "./desktop-actions";
+  import { background_menu, paste } from "./desktop-actions";
 
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
 </script>
@@ -16,6 +16,12 @@
     return () => resize_observer.disconnect();
   }}
   role="presentation"
+  onkeydown={(event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
+      event.preventDefault();
+      paste();
+    }
+  }}
   oncontextmenu={(event) => {
     if ((event.target as Element).closest("button")) return;
     event.preventDefault();

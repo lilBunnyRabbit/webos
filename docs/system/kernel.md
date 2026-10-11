@@ -62,6 +62,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `apps` | `AppsService` | `windows`, `notifications`, `files`, `settings`, `dialogs` |
 | `desktop` | `DesktopService` | `files`, `apps` |
 | `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
+| `clipboard` | `ClipboardService` | `files` |
 
 ### Dependency graph
 
@@ -79,7 +80,7 @@ version   (standalone)
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → version → notifications → dialogs → apps → desktop → session
+files → settings → windows → version → notifications → dialogs → apps → desktop → session → clipboard
 ```
 
 Shutdown runs the reverse: `session → desktop → apps → dialogs → notifications → version → windows → settings → files`.

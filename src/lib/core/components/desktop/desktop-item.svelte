@@ -4,10 +4,12 @@
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
   import DesktopItemFace from "./desktop-item-face.svelte";
-  import { item_menu, remove_item, rename_item, show_properties } from "./desktop-actions";
+  import { copy_item, cut_item, desktop_path, item_menu, remove_item, rename_item, show_properties } from "./desktop-actions";
+  import type { ClipboardService } from "$lib/core/api";
 
   let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
   function open(event: MouseEvent | KeyboardEvent) {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -25,7 +27,7 @@
   class={cn(
     "group flex size-full flex-col items-center gap-1.5 rounded-xl px-1 pt-2 transition-colors duration-150 select-none",
     "hover:bg-foreground/6 focus:bg-foreground/8",
-    item_handler.move_state?.type === "move" && "opacity-40"
+    (item_handler.move_state?.type === "move" || clipboard.is_cut(desktop_path(item))) && "opacity-40"
   )}
   style:grid-column={x + 1}
   style:grid-row={y + 1}
@@ -41,6 +43,8 @@
     if (event.key === "Enter" && event.altKey) show_properties(item);
     else if (event.key === "Enter") open(event);
     else if (event.key === "F2") rename_item(item, { x, y });
+    else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") copy_item(item);
+    else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "x") cut_item(item);
     else if (event.key === "Delete") remove_item(item, { x, y });
     else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
       item_menu(item, { x, y }, { x: rect.left + rect.width / 2, y: rect.bottom });

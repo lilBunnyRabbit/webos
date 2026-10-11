@@ -57,6 +57,8 @@ export interface FilesService extends IService {
   delete_entry(handle: FileSystemDirectoryHandle | null, name: string, options?: { recursive?: boolean }): Promise<void>;
   /** Renames in place; throws `InvalidModificationError` if the new name is taken (never auto-renames). */
   rename_entry(handle: FileSystemDirectoryHandle | null, name: string, new_name: string): Promise<void>;
+  /** Recursive folder move (OPFS directories have no native move), auto-renamed on clash. */
+  move_directory(source_parent: FileSystemDirectoryHandle | null, source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemDirectoryHandle>;
   /** Recursive folder copy into `target`, auto-renamed on clash. */
   copy_directory(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemDirectoryHandle>;
   exists(handle: FileSystemDirectoryHandle | null, name: string, kind?: "file" | "directory"): Promise<boolean>;

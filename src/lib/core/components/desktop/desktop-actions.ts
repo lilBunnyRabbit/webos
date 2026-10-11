@@ -1,7 +1,18 @@
-import kernel, { type AppsService, type DesktopGridItem, type DesktopService, type DialogsService } from "$lib/core/api";
+import kernel, {
+  type AppsService,
+  type ClipboardService,
+  type ConflictChoice,
+  type DesktopGridItem,
+  type DesktopService,
+  type DialogsService,
+} from "$lib/core/api";
+import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
+  ClipboardText as ClipboardTextIcon,
+  Copy as CopyIcon,
+  Scissors as ScissorsIcon,
   Info as InfoIcon,
   PencilSimple as PencilSimpleIcon,
   FolderPlus as FolderPlusIcon,
@@ -19,6 +30,27 @@ import { name_problem } from "../files/name-rules";
 const desktop = () => kernel.service<DesktopService>("desktop");
 const dialogs = () => kernel.service<DialogsService>("dialogs");
 const apps = () => kernel.service<AppsService>("apps");
+const clipboard = () => kernel.service<ClipboardService>("clipboard");
+
+export const desktop_path = (item: DesktopGridItem): string => `${PATHS.desktop}/${item.name}`;
+
+export function copy_item(item: DesktopGridItem): void {
+  clipboard().copy_files([desktop_path(item)]);
+}
+
+export function cut_item(item: DesktopGridItem): void {
+  clipboard().cut_files([desktop_path(item)]);
+}
+
+export async function paste(): Promise<void> {
+  const ask = async (name: string): Promise<ConflictChoice> =>
+    (await dialogs().show(ConflictDialog, { name, folder: PATHS.desktop }, { dismissible: false })) ?? "skip";
+  try {
+    await clipboard().paste_files(PATHS.desktop, ask);
+  } catch (error) {
+    report_file_error("Paste failed", error);
+  }
+}
 
 export async function remove_item(item: DesktopGridItem, position: Position): Promise<void> {
   const shortcut = item.kind === "shortcut";
@@ -81,7 +113,7 @@ export async function rename_item(item: DesktopGridItem, position: Position): Pr
 
 export function show_properties(item: DesktopGridItem): void {
   void dialogs().show(PropertiesDialog, {
-    path: `${PATHS.desktop}/${item.name}`,
+    path: desktop_path(item),
     kind: item.kind === "directory" ? ("directory" as const) : ("file" as const),
   });
 }
@@ -92,6 +124,8 @@ export async function item_menu(item: DesktopGridItem, position: Position, ancho
     [
       { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
       { separator: true },
+      { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
+      { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
       { separator: true },
       { id: "delete", label: shortcut ? "Remove shortcut" : "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
@@ -102,6 +136,8 @@ export async function item_menu(item: DesktopGridItem, position: Position, ancho
   );
   if (choice === "open") desktop().open(item, { anchor });
   else if (choice === "rename") rename_item(item, position);
+  else if (choice === "copy") copy_item(item);
+  else if (choice === "cut") cut_item(item);
   else if (choice === "delete") remove_item(item, position);
   else if (choice === "properties") show_properties(item);
 }
@@ -110,11 +146,13 @@ export async function background_menu(anchor: Position): Promise<void> {
   const choice = await dialogs().menu(
     [
       { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
+      { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard().content },
       { separator: true },
       { id: "appearance", label: "Change theme", icon: PaletteIcon },
     ],
     { anchor }
   );
   if (choice === "new_folder") create_folder();
+  else if (choice === "paste") paste();
   else if (choice === "appearance") apps().launch("settings");
 }

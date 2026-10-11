@@ -10,7 +10,8 @@
   // Native <dialog> would go to the top layer and escape the window, so a sheet is a plain element: focus moves into it
   // on open, the app behind it is made inert by the window, and Esc is handled here.
   const focus_first: Attachment<HTMLElement> = (element) => {
-    const target = element.querySelector<HTMLElement>("[autofocus], input, button") ?? element;
+    // Two lookups: a selector list would return whichever matches first in document order, not [autofocus] first.
+    const target = element.querySelector<HTMLElement>("[autofocus]") ?? element.querySelector<HTMLElement>("input, button") ?? element;
     target.focus();
   };
 </script>

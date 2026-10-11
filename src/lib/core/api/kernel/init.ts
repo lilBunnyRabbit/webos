@@ -4,6 +4,7 @@ import { WindowsService } from "../services/windows/service.svelte";
 import { AppsService } from "../services/apps/service.svelte";
 import { DesktopService } from "../services/desktop/service.svelte";
 import { SessionService } from "../services/session/service.svelte";
+import { ClipboardService } from "../services/clipboard/service.svelte";
 import { FilesService } from "../services/files/service.svelte";
 import { VersionService } from "../services/version/service.svelte";
 import { NotificationsService } from "../services/notifications/service.svelte";
@@ -53,5 +54,10 @@ export function register_default_services(kernel: Kernel) {
   kernel.register("session", {
     instance: SessionService,
     dependencies: ["windows", "apps", "files", "dialogs", "notifications"],
+  });
+
+  kernel.register("clipboard", {
+    instance: ClipboardService,
+    dependencies: ["files"],
   });
 }

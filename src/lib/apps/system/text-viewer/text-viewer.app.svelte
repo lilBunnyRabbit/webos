@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type FilesService } from "$lib/core/api";
+  import kernel, { type ClipboardService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
@@ -29,7 +29,7 @@
 
   async function copy(text: string) {
     try {
-      await navigator.clipboard.writeText(text);
+      await kernel.service<ClipboardService>("clipboard").copy_text(text);
     } catch (error) {
       report_file_error("Couldn't copy to the clipboard", error);
       return;

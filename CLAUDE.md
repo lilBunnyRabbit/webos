@@ -36,6 +36,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
 | `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022) | files, apps |
 | `session` | SessionService | Saves open windows to `/var/lib/session/session.json`, restore dialog at boot (ADR-023) | windows, apps, files, dialogs, notifications |
+| `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 

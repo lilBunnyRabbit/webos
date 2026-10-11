@@ -1,4 +1,14 @@
-import kernel, { apps_for, file_extension, SHORTCUT_EXTENSION, type AppsService, type DialogsService, type MenuItem } from "$lib/core/api";
+import kernel, {
+  apps_for,
+  file_extension,
+  SHORTCUT_EXTENSION,
+  type AppsService,
+  type ClipboardService,
+  type ConflictChoice,
+  type DialogsService,
+  type MenuItem,
+} from "$lib/core/api";
+import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { FileSystemItem } from "$lib/core/api/services/files";
 import { join_path } from "$lib/core/api/services/files/path";
 import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
@@ -79,4 +89,28 @@ export async function open_with_items(item: FileSystemItem): Promise<MenuItem[]>
 
 export function open_with(handler: DirectoryHandler, item: FileSystemItem, app_id: string): void {
   kernel.service<AppsService>("apps").launch(app_id, { path: join_path(handler.segments, item.name) });
+}
+
+const clipboard = () => kernel.service<ClipboardService>("clipboard");
+
+export function copy_item(handler: DirectoryHandler, item: FileSystemItem): void {
+  clipboard().copy_files([join_path(handler.segments, item.name)]);
+}
+
+export function cut_item(handler: DirectoryHandler, item: FileSystemItem): void {
+  clipboard().cut_files([join_path(handler.segments, item.name)]);
+}
+
+/** Pastes into the folder shown by `handler`; name clashes ask in a sheet over this window. */
+export async function paste(handler: DirectoryHandler, window: WindowHandle): Promise<void> {
+  const dialogs = kernel.service<DialogsService>("dialogs");
+  const ask = async (name: string): Promise<ConflictChoice> =>
+    (await dialogs.show(ConflictDialog, { name, folder: handler.path }, { window: window.id, dismissible: false })) ?? "skip";
+
+  try {
+    await clipboard().paste_files(handler.path, ask);
+    await handler.reload();
+  } catch (error) {
+    report_file_error("Paste failed", error);
+  }
 }

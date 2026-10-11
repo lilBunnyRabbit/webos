@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DialogsService, type MenuItem } from "$lib/core/api";
+  import kernel, { type AppsService, type ClipboardService, type DialogsService, type MenuItem } from "$lib/core/api";
   import type { FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
   import { SYSTEM_DIRECTORIES } from "$lib/core/api/services/files/hierarchy";
@@ -10,10 +10,25 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
-  import { create_folder, delete_item, open_with, open_with_items, rename_item, show_properties, upload } from "./file-actions";
+  import {
+    copy_item,
+    create_folder,
+    cut_item,
+    delete_item,
+    open_with,
+    open_with_items,
+    paste,
+    rename_item,
+    show_properties,
+    upload,
+  } from "./file-actions";
+  import { cn } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
+    ClipboardText as ClipboardTextIcon,
+    Copy as CopyIcon,
+    Scissors as ScissorsIcon,
     AppWindow as AppWindowIcon,
     Info as InfoIcon,
     PencilSimple as PencilSimpleIcon,
@@ -34,6 +49,10 @@
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
+
+  // Cmd on macOS, Ctrl elsewhere: either counts.
+  const mod = (event: KeyboardEvent) => event.ctrlKey || event.metaKey;
   const { window } = get_app_context();
 
   const filtered_items = $derived.by(() => {
@@ -75,6 +94,8 @@
       { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
       ...(with_apps.length > 1 ? [{ label: "Open with", icon: AppWindowIcon, items: with_apps }] : []),
       { separator: true },
+      { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
+      { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
       { separator: true },
       { id: "delete", label: "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
@@ -85,6 +106,8 @@
     const choice = await dialogs.menu(items, { anchor });
     if (choice === "open") open(item, anchor);
     else if (choice === "rename") rename_item(handler, window, item);
+    else if (choice === "copy") copy_item(handler, item);
+    else if (choice === "cut") cut_item(handler, item);
     else if (choice === "delete") delete_item(handler, window, item);
     else if (choice === "properties") show_properties(handler, window, item);
     else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
@@ -96,12 +119,15 @@
         { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
         { id: "upload", label: "Upload files", icon: UploadSimpleIcon },
         { separator: true },
+        { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard.content },
+        { separator: true },
         { id: "reload", label: "Reload", icon: ArrowClockwiseIcon },
       ],
       { anchor }
     );
     if (choice === "new_folder") create_folder(handler, window);
     else if (choice === "upload") upload(handler);
+    else if (choice === "paste") paste(handler, window);
     else if (choice === "reload") handler.reload();
   }
 </script>
@@ -110,6 +136,12 @@
 <div
   role="presentation"
   class="min-h-0 min-w-0 flex-1 overflow-y-auto"
+  onkeydown={(event) => {
+    if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content) {
+      event.preventDefault();
+      paste(handler, window);
+    }
+  }}
   oncontextmenu={(event) => {
     if ((event.target as Element).closest("[role=row]")) return;
     event.preventDefault();
@@ -137,7 +169,10 @@
       {#each filtered_items as item (item.name)}
         <button
           role="row"
-          class="col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-colors duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset"
+          class={cn(
+            "col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+            clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50"
+          )}
           ondblclick={(event) => open(item, { x: event.clientX, y: event.clientY })}
           oncontextmenu={(event) => {
             event.preventDefault();
@@ -148,6 +183,8 @@
             if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
             else if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
             else if (event.key === "F2") rename_item(handler, window, item);
+            else if (mod(event) && event.key.toLowerCase() === "c") copy_item(handler, item);
+            else if (mod(event) && event.key.toLowerCase() === "x") cut_item(handler, item);
             else if (is_delete_key(event)) delete_item(handler, window, item);
             else if (is_menu_key(event)) item_menu(item, row_anchor(event.currentTarget));
             else return;

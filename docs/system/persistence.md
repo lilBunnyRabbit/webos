@@ -67,6 +67,7 @@ interface StorageHandle {
 | Desktop icons | Yes | They're the entries of `/home/Desktop` |
 | Desktop icon positions | Yes, once moved | `/var/lib/desktop/layout.json`. Icons never moved take the first free cells again |
 | Notification history | **No** | NotificationsService `all` is in-memory |
+| Clipboard contents | **No** | ClipboardService is in memory, like a real OS clipboard |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
 | File Explorer location, filter, window zoom | **No** | In-component state |
 | App UI state | Only what the app persists | Settings and Style Guide section, Kernel open cards, Text Viewer wrap (`app.{id}.*`) |

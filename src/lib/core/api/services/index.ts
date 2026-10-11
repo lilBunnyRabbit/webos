@@ -7,3 +7,4 @@ export * from "./version";
 export * from "./notifications";
 export * from "./dialogs";
 export * from "./session";
+export * from "./clipboard";

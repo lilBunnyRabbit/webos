@@ -147,6 +147,20 @@ export class FilesService implements IFilesService {
     return result;
   }
 
+  async move_directory(
+    source_parent: FileSystemDirectoryHandle | null,
+    source: FileSystemDirectoryHandle,
+    target: FileSystemDirectoryHandle | null,
+    new_name?: string
+  ): Promise<FileSystemDirectoryHandle> {
+    const from = await this.resolve(source_parent);
+    const to = await this.resolve(target);
+    const result = await opfs.move_directory(from, source, to, new_name);
+    await this.changed(from);
+    await this.changed(to);
+    return result;
+  }
+
   async upload_files(target: FileSystemDirectoryHandle | null, options?: UploadOptions): Promise<File[]> {
     const target_dir = await this.resolve(target);
     const result = await opfs.upload_files(target_dir, options);

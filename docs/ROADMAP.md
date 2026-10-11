@@ -31,7 +31,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
   - [x] Window-scoped dialogs + confirm/prompt sheets
   - [x] `dialogs.menu` + ContextMenu (File Explorer, desktop)
   - [x] Rename, delete, properties, Open with
-  - [ ] ClipboardService: copy/cut/paste with conflict sheet
+  - [x] ClipboardService: copy/cut/paste with conflict sheet
   - [ ] File picker sheet (`pick_file` / `pick_directory`)
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
