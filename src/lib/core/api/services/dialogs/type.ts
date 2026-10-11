@@ -27,6 +27,11 @@ export interface DialogProps<T> {
 export interface DialogOptions {
   /** Viewport point the dialog opens at, e.g. the click position. */
   anchor?: Position;
+  /**
+   * `false` for questions that must be answered: no Esc, no outside click, only the dialog's own buttons close it.
+   * Defaults to `true` (menus and pickers dismiss lightly).
+   */
+  dismissible?: boolean;
 }
 
 export interface DialogEntry {
@@ -36,5 +41,6 @@ export interface DialogEntry {
   point: Position;
   /** `true`: dropdown below/right of `point`. `false`: centered on it. */
   anchored: boolean;
+  dismissible: boolean;
   resolve(value: unknown): void;
 }

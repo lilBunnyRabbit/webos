@@ -1,5 +1,5 @@
 import { TaskbarPosition, type FileDefaults, type Taskbar, type Theme, type ThemeToken } from "./type";
-import { BRAND_DARK } from "./themes";
+import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
 import { PATHS } from "../files/hierarchy";
 
 /** OS config lives in system storage (ADR-021). */
@@ -41,7 +41,9 @@ export function parse_settings(raw: string): PersistedSettings | null {
 
 function merge_theme(saved: unknown): Theme {
   const source = (saved ?? {}) as Partial<Record<ThemeToken, unknown>>;
-  const theme = { ...BRAND_DARK };
+  // Tokens a save predates come from the matching brand palette, or are derived from its own background.
+  const brand = [BRAND_DARK, BRAND_LIGHT].find((palette) => palette.background === source.background);
+  const theme = { ...BRAND_DARK, ...(brand ?? derive_surfaces()) };
   for (const token of Object.keys(theme) as ThemeToken[]) {
     const value = source[token];
     if (typeof value === "string") theme[token] = value;

@@ -53,7 +53,7 @@ Three layers of state turn the folder into a grid:
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `container` | `readonly { bounds, cell, grid: { columns, rows }, config: { cell_size, padding }, element }` | `$state.raw`. `bounds` is the element's viewport rect minus `padding` on every side. `cell` is the actual cell size (`bounds / columns`), so it's ≥ `cell_size`. `grid` is the column and row count. |
-| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 64`, `padding 4`. A new size re-derives `grid`. A falsy element resets to the viewport size with a 0×0 grid. |
+| `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 88`, `padding 12` (`DEFAULT_CONFIG`; the shell passes no options). A new size re-derives `grid`. A falsy element resets to the viewport size with a 0×0 grid. |
 | `list` | `() => DesktopGrid` | The derived visible `grid`. |
 | `has_item_in_position` | `(position) => boolean` | Against the visible grid |
 | `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |

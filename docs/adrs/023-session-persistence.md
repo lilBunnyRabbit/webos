@@ -5,7 +5,7 @@
 > **Revision 2026-10-11: implementation notes**
 > - The file is `/var/lib/session/session.json`, not `/var/session.json`. It follows the convention set in the same session: OS component state goes in `/var/lib/{component}/` (ADR-021, ADR-022).
 > - `RestoreResult.skipped` is the list of skipped snapshots, not a count, so the console can show what was dropped.
-> - Dismissing the dialog (Esc, outside click; the dialogs host uses `closedby="any"`) counts as **Start fresh**. Saving then starts and overwrites the old session.
+> - ~~Dismissing the dialog counts as Start fresh.~~ Superseded the same day: the dialog is shown with `dismissible: false` (ADR-019 revision), so only Restore or Start fresh close it.
 > - Settings and session share `files/latest-writer.ts` (`LatestWriter`): writes never overlap, the newest text wins, and missing parent folders are created.
 > - `windows.restore` clamps bounds into the container (`WindowsHelper.clamp_bounds`), but skips clamping while the container is unmeasured (0×0). It then calls `focus_next()`, so a minimized top window never holds focus.
 > - SessionService has an inspector (status, saved count, last save, file path) and a `status` of `none | pending | restored | declined`.

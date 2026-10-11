@@ -1,6 +1,6 @@
 <script lang="ts">
   import FileIconHandler from "./file-icon.svelte";
-  import { CaretRight as CaretRightIcon } from "phosphor-svelte";
+  import { Badge } from "../ui";
 
   interface Props {
     handle: FileSystemDirectoryHandle;
@@ -11,10 +11,12 @@
   let { handle: entry, system = false }: Props = $props();
 </script>
 
-<FileIconHandler name={entry.name} kind="directory" weight="bold" />
-<div class="text-left truncate">
-  {entry.name}
-  {#if system}<span class="ml-2 rounded-sm bg-foreground/10 px-1 text-[0.6875rem] text-foreground/60">system</span>{/if}
-</div>
-<div class="font-mono text-sm text-foreground/50">-</div>
-<CaretRightIcon class="justify-self-end" weight="bold" />
+<span class="grid place-items-center text-primary">
+  <FileIconHandler name={entry.name} kind="directory" weight="fill" class="size-4" />
+</span>
+<span role="gridcell" class="flex min-w-0 items-center gap-2 text-ui">
+  <span class="truncate">{entry.name}</span>
+  {#if system}<Badge>system</Badge>{/if}
+</span>
+<span role="gridcell" class="w-16 text-right font-mono text-2xs text-foreground/80">—</span>
+<span role="gridcell" class="hidden w-24 @md:block"></span>

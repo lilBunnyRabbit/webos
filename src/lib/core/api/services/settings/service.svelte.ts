@@ -47,8 +47,10 @@ export class SettingsService implements ISettingsService {
     this.dispose_effects = $effect.root(() => {
       $effect(() => {
         for (const [key, value] of Object.entries(this.theme)) {
-          document.documentElement.style.setProperty(`--${key}`, value);
+          document.documentElement.style.setProperty(`--${key.replaceAll("_", "-")}`, value);
         }
+        // Native controls (scrollbars, pickers, date inputs) and light-dark() follow the palette, not the OS preference.
+        document.documentElement.style.colorScheme = background_lightness() > 0.6 ? "light" : "dark";
       });
 
       $effect(() => {
@@ -67,4 +69,14 @@ export class SettingsService implements ISettingsService {
   destroy() {
     this.dispose_effects?.();
   }
+}
+
+/** Lightness of the applied background, whatever syntax the theme wrote it in (hex, oklch(from …), color-mix). */
+function background_lightness(): number {
+  const probe = document.createElement("span");
+  probe.style.color = "oklch(from var(--background) l c h)";
+  document.body.append(probe);
+  const lightness = Number(/oklch\(\s*([\d.]+)/.exec(getComputedStyle(probe).color)?.[1] ?? 0);
+  probe.remove();
+  return lightness;
 }

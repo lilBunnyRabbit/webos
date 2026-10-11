@@ -5,7 +5,6 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
 </script>
 
-<!-- TODO: remove padding -->
 <div
   {@attach (element) => {
     const resize_observer = new ResizeObserver(() => {
@@ -15,18 +14,14 @@
     resize_observer.observe(element);
     return () => resize_observer.disconnect();
   }}
-  class="grid w-full h-full overflow-hidden bg-background-dark place-items-center"
+  class="desktop-surface grid size-full place-items-center overflow-hidden"
   style:grid-template-columns={`repeat(${desktop.container.grid.columns}, minmax(64px, 1fr))`}
   style:grid-template-rows={`repeat(${desktop.container.grid.rows}, minmax(64px, 1fr))`}
   style:grid-auto-flow="dense"
   style:padding={`${desktop.container.config.padding}px`}
-  style:background-image={desktop.container.cell.width > 0 && desktop.container.cell.height > 0
-    ? `radial-gradient(circle at left top, var(--foreground) 1px, transparent 1px)`
-    : undefined}
-  style:background-size={desktop.container.cell.width > 0 && desktop.container.cell.height > 0
-    ? `${desktop.container.cell.width}px ${desktop.container.cell.height}px`
-    : undefined}
-  style:background-position={`${desktop.container.config.padding}px ${desktop.container.config.padding}px`}
+  style:--cell-width="{desktop.container.cell.width || 88}px"
+  style:--cell-height="{desktop.container.cell.height || 88}px"
+  style:--grid-offset="{desktop.container.config.padding}px"
 >
   {#if desktop.container.grid.columns > 0 && desktop.container.grid.rows > 0}
     {#each desktop.list() as row, row_index (row_index)}
@@ -38,3 +33,20 @@
     {/each}
   {/if}
 </div>
+
+<style>
+  /* The dot grid marks the icon cells; a soft glow from the top keeps the darkest shade from reading as a void.
+     Both are shades of the same surface (gradients between shades are allowed by the brand). */
+  .desktop-surface {
+    background-color: var(--background-darkest);
+    background-image:
+      radial-gradient(circle at center, color-mix(in oklch, var(--foreground) 14%, transparent) 1px, transparent 1.5px),
+      radial-gradient(ellipse 90% 70% at 50% -10%, var(--background-dark), transparent 70%);
+    background-size:
+      var(--cell-width) var(--cell-height),
+      100% 100%;
+    background-position:
+      calc(var(--grid-offset) - var(--cell-width) / 2) calc(var(--grid-offset) - var(--cell-height) / 2),
+      0 0;
+  }
+</style>

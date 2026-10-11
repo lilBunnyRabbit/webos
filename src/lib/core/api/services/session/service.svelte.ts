@@ -68,8 +68,7 @@ export class SessionService implements ISessionService {
 
   private async offer_restore(saved: WindowSnapshot[]): Promise<void> {
     const apps = saved.map((snapshot) => this.apps_service.get(snapshot.app_id) ?? null);
-    // Dismissing the dialog (Esc, outside click) counts as "Start fresh".
-    const restore = await this.dialogs_service.show(RestoreSessionDialog, { apps });
+    const restore = await this.dialogs_service.show(RestoreSessionDialog, { apps }, { dismissible: false });
     if (this.destroyed) return;
 
     if (restore) {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
-  import { cn, format_bytes } from "$lib/core/utils";
+  import { cn, format_bytes, format_datetime } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     CornersOut as CornersOutIcon,
@@ -9,7 +9,9 @@
     MagnifyingGlassPlus as MagnifyingGlassPlusIcon,
     MusicNote as MusicNoteIcon,
     Warning as WarningIcon,
+    FileImage as FileImageIcon,
   } from "phosphor-svelte";
+  import { EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
@@ -88,80 +90,84 @@
   }
 </script>
 
-{#snippet message(text: string, tone: "muted" | "error" = "muted")}
-  <div class={cn("flex h-full flex-col items-center justify-center gap-3 p-8 text-center", tone === "error" ? "text-error" : "text-foreground/60")}>
-    {#if tone === "error"}<WarningIcon class="size-12" />{/if}
-    <p>{text}</p>
-  </div>
-{/snippet}
-
 {#if !path}
-  {@render message("Open an image, video or audio file from File Explorer to preview it here.")}
+  <EmptyState icon={FileImageIcon} title="Nothing to preview" description="Open an image, video or audio file from File Explorer." />
 {:else if error}
-  {@render message(`Could not read the file: ${error}`, "error")}
+  <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
 {:else if file === undefined}
-  {@render message("Loading…")}
+  <div class="grid h-full place-items-center"><Spinner label="Loading file" /></div>
 {:else if file === null}
-  {@render message(`File not found: ${path}`, "error")}
+  <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path} />
 {:else}
   <div class="grid h-full grid-rows-[auto_1fr_auto]">
-    <div class="flex items-center gap-1 border-b border-b-foreground/20 px-2 py-1">
-      <span class="flex-1 truncate px-2 text-sm">{file.name}</span>
+    <Toolbar>
+      <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
 
       {#if kind === "image"}
-        <button class="rounded p-1.5 hover:bg-foreground/10 disabled:opacity-40" title="Zoom out" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>
-          <MagnifyingGlassMinusIcon class="size-4" />
-        </button>
-        <span class="min-w-12 text-center font-mono text-xs text-foreground/60">{fit ? "Fit" : `${Math.round(zoom * 100)}%`}</span>
-        <button class="rounded p-1.5 hover:bg-foreground/10 disabled:opacity-40" title="Zoom in" disabled={zoom >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}>
-          <MagnifyingGlassPlusIcon class="size-4" />
-        </button>
-        <button class="rounded p-1.5 hover:bg-foreground/10" title="Rotate" onclick={() => (rotation = (rotation + 90) % 360)}>
-          <ArrowClockwiseIcon class="size-4" />
-        </button>
-        <button class="rounded p-1.5 hover:bg-foreground/10" title="Fit to window" onclick={reset_view}>
-          <CornersOutIcon class="size-4" />
-        </button>
-        <div class="mx-1 h-5 w-px bg-foreground/20"></div>
+        <IconButton label="Zoom out" size="sm" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>
+          <MagnifyingGlassMinusIcon weight="bold" />
+        </IconButton>
+        <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{fit ? "Fit" : `${Math.round(zoom * 100)}%`}</span>
+        <IconButton label="Zoom in" size="sm" disabled={zoom >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}>
+          <MagnifyingGlassPlusIcon weight="bold" />
+        </IconButton>
+        <IconButton label="Rotate" size="sm" onclick={() => (rotation = (rotation + 90) % 360)}>
+          <ArrowClockwiseIcon weight="bold" />
+        </IconButton>
+        <IconButton label="Fit to window" size="sm" onclick={reset_view}>
+          <CornersOutIcon weight="bold" />
+        </IconButton>
+        <Separator vertical />
       {/if}
 
-      <button class="rounded p-1.5 hover:bg-foreground/10" title="Download" onclick={download}>
-        <DownloadSimpleIcon class="size-4" />
-      </button>
-    </div>
+      <IconButton label="Download" size="sm" onclick={download}>
+        <DownloadSimpleIcon weight="bold" />
+      </IconButton>
+    </Toolbar>
 
-    <div class="min-h-0 overflow-auto">
+    <div class="stage min-h-0 overflow-auto">
       {#if !url}
-        {@render message("Loading…")}
+        <div class="grid h-full place-items-center"><Spinner /></div>
       {:else if kind === "image"}
-        <div class="grid h-full w-full place-items-center p-4" onwheel={on_wheel}>
+        <!-- minmax(0,1fr) gives the cell a definite size, so max-h-full on the image can actually fit it. -->
+        <div class="grid h-full w-full grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center p-6" onwheel={on_wheel}>
           <img
             src={url}
             alt={file.name}
             draggable="false"
-            class={cn("transition-transform", fit && "max-h-full max-w-full object-contain")}
+            class={cn("rounded-sm transition-transform duration-200 ease-out", fit && "size-full object-contain")}
             style:transform="scale({fit ? 1 : zoom}) rotate({rotation}deg)"
           />
         </div>
       {:else if kind === "video"}
-        <div class="grid h-full place-items-center p-4">
+        <div class="grid h-full place-items-center p-6">
           <!-- svelte-ignore a11y_media_has_caption -->
-          <video src={url} controls class="max-h-full max-w-full"></video>
+          <video src={url} controls class="max-h-full max-w-full rounded-lg shadow-window"></video>
         </div>
       {:else if kind === "audio"}
-        <div class="flex h-full flex-col items-center justify-center gap-4 p-8">
-          <MusicNoteIcon class="size-20 text-foreground/40" />
+        <div class="flex h-full flex-col items-center justify-center gap-5 p-8">
+          <div class="grid size-28 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+            <MusicNoteIcon class="size-12 text-primary" weight="duotone" />
+          </div>
+          <p class="max-w-full truncate text-sm font-medium">{file.name}</p>
           <audio src={url} controls class="w-full max-w-md"></audio>
         </div>
       {:else}
-        {@render message(`Cannot preview ${file.type || "this file type"}.`)}
+        <EmptyState icon={WarningIcon} title="Can't preview this file" description={file.type || "Unknown type"} />
       {/if}
     </div>
 
-    <div class="flex gap-4 border-t border-t-foreground/20 px-3 py-1.5 font-mono text-xs text-foreground/60">
+    <StatusBar>
       <span>{file.type || "unknown type"}</span>
       <span>{format_bytes(file.size)}</span>
-      <span>{new Date(file.lastModified).toLocaleString()}</span>
-    </div>
+      <span class="ml-auto">{format_datetime(file.lastModified)}</span>
+    </StatusBar>
   </div>
 {/if}
+
+<style>
+  /* Media sits on the darker shade so images with transparency and dark video edges still read as a frame. */
+  .stage {
+    background: var(--background-darker);
+  }
+</style>

@@ -41,10 +41,10 @@ Read-only state. There are no methods beyond IService.
 
 `offer_restore(saved)`:
 
-1. `dialogs.show(RestoreSessionDialog, { apps })`, one `AppManifest | null` per snapshot. No anchor, so it's centred.
+1. `dialogs.show(RestoreSessionDialog, { apps }, { dismissible: false })`, one `AppManifest | null` per snapshot. No anchor, so it's centred. Not dismissible: Esc and outside clicks do nothing.
 2. If `destroy()` ran meanwhile, stop.
 3. `true` (Restore) → `windows.restore(saved, (app_id, props) => apps.create_instance(app_id, props))`, `status = restored`. If anything was skipped: `console.warn` with the skipped snapshots and one warning toast from app id `"session"`: "N window(s) couldn't be restored" / "The app is gone or its saved data is no longer valid."
-4. `false` or `null` (Start fresh, Esc, outside click) → `status = declined`. Nothing opens.
+4. `false` (Start fresh) → `status = declined`. Nothing opens. `null` is treated the same, but only happens if DialogsService is destroyed while the dialog is open.
 5. `start_saving()`.
 
 `destroy()` sets `destroyed` and disposes the saving effect. A write already queued still finishes.
@@ -85,13 +85,13 @@ The first run writes immediately, so after Start fresh with no windows open the 
 
 **Restore** goes through [`windows.restore`](windows.md#restore) and [`apps.create_instance`](apps.md#create_instanceid-props). A snapshot is skipped when the app id is unknown, or its props fail the app's schema, or it has props and the app has no schema. Props are never dropped to open an empty window (unlike `launch`). Bounds are clamped into the container, and the topmost visible window gets focus.
 
-**The dialog** (`RestoreSessionDialog`, props `{ apps: (AppManifest | null)[] }`, resolves `boolean`): "Restore last session?", "N windows were open when WebOS last closed.", a list of known apps (icon + name, max 10rem tall, scrolls), "N from apps that no longer exist" for the `null`s, then **Start fresh** and **Restore** (autofocused, so Enter restores). Dismissal resolves `null` and counts as Start fresh.
+**The dialog** (`RestoreSessionDialog`, props `{ apps: (AppManifest | null)[] }`, resolves `boolean`): "Pick up where you left off?", "N windows were open when WebOS last closed.", a recessed list of known apps (icon + name, max 11rem tall, scrolls), "+N from apps that no longer exist" for the `null`s, then **Start fresh** (quiet) and **Restore windows** (primary, autofocused, so Enter restores). The OS behind is dimmed. The card is `bg-background-lighter`. There's no light dismiss: one of the two buttons has to be picked.
 
 **What isn't in the session:** notifications, dialogs, desktop state (that's [desktop](desktop.md)), app UI state (apps use `storage`), window ids and `created_at` (both new on restore; the taskbar sorts by `created_at`, so after a restore it shows windows in restore order, oldest z-order first).
 
 ## Divergence from ADR
 
-ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and is silent on dismissal and the inspector. The 2026-10-11 revision note records the code: `/var/lib/session/session.json`, `skipped` as the snapshot list, dismiss = Start fresh, the shared `LatestWriter`, `clamp_bounds` skipping an unmeasured container, `focus_next()` after restore, the inspector and `status`.
+ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and is silent on dismissal and the inspector. The 2026-10-11 revision note records the code: `/var/lib/session/session.json`, `skipped` as the snapshot list, dismiss = Start fresh (since changed: the dialog is now non-dismissible, which the note doesn't cover yet), the shared `LatestWriter`, `clamp_bounds` skipping an unmeasured container, `focus_next()` after restore, the inspector and `status`.
 
 ## Known gaps
 

@@ -48,7 +48,7 @@ App.svelte
 └─ web-os.svelte
    └─ os.svelte                       grid; layout follows settings.taskbar.position
       ├─ desktop/desktop.svelte
-      │  └─ desktop-item.svelte  (per grid cell)
+      │  └─ desktop-item.svelte  (per grid cell) → desktop-item-face.svelte
       ├─ window-manager/window-manager.svelte
       │  └─ window/window.svelte  (per open window)
       │     ├─ window-titlebar.svelte
@@ -56,12 +56,13 @@ App.svelte
       ├─ notifications/toast-area.svelte
       ├─ taskbar/taskbar.svelte
       │  ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
-      │  └─ taskbar-item.svelte  (per window)
+      │  ├─ taskbar-item.svelte  (per window)
+      │  └─ taskbar-clock.svelte
       └─ dialogs/dialogs-host.svelte  (sibling of the grid; native <dialog>)
          └─ (component from DialogsService.stack: open-with-dialog.svelte, restore-session-dialog.svelte)
 ```
 
-The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `os.svelte` pick the cells from the taskbar position. Details are in [shell/](shell/) (written separately).
+The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `os.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
 
 ## Source map
 
@@ -70,7 +71,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `index.html` | Splash, favicon/PWA links, `#app` mount point |
 | `src/main.ts` | Boot: `kernel.init()`, mount, splash removal, boot error on the splash, pagehide/HMR shutdown |
 | `src/App.svelte` | Renders `web-os.svelte` |
-| `src/app.css` | Tailwind, fonts, `@theme inline` token mapping ([theming.md](theming.md)) |
+| `src/app.css` | Tailwind, fonts, `@theme inline` tokens (colours, type, radius, shadows, easing, `pop-in`), base layer ([theming.md](theming.md)) |
 | `src/assets/fonts/` | Self-hosted Inter and Hack with licences |
 | `src/lib/core/web-os.svelte` | Renders `os.svelte` (thin wrapper) |
 | `src/lib/core/api/index.ts` | The barrel and the kernel singleton |
@@ -79,12 +80,14 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `src/lib/core/api/services/{name}/` | One folder per service: `type.ts` (public interface), `service.svelte.ts` (class), pure helpers |
 | `src/lib/core/contexts/app/` | `get_app_context()`, window handle, storage handle (ADR-003) |
 | `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, desktop, window, window-manager, taskbar, files, dialogs, notifications, brand, inspector (building blocks for service inspectors) |
-| `src/lib/core/utils/` | `cn`, `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types |
+| `src/lib/core/components/ui/` | The UI kit (ADR-024): Button, IconButton, Input, Select, Switch, Checkbox, Segmented, Section, SettingRow, SideNav, Toolbar, StatusBar, Badge, EmptyState, Spinner, Kbd, Separator, plus `variants.ts` (`button`, `field`, `badge` recipes) and `types.ts` (`IconComponent`). Imported from `$lib/core/components/ui`. Documented in [docs/design/components.md](../design/components.md) |
+| `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types |
 | `src/lib/apps/index.ts` | Eager glob of `./system/*/index.ts` and `./user/*/index.ts` → `apps: AppManifest[]` |
-| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-viewer, media-preview, pdf-viewer ([system-apps.md](system-apps.md)) |
+| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-viewer, media-preview, pdf-viewer, style-guide ([system-apps.md](system-apps.md)) |
 | `src/lib/apps/user/` | Non-OS apps (out of scope for these docs) |
 | `vite-plugin-version.ts` | `__VERSION_INFO__` define and `version.json` ([services/version.md](services/version.md)) |
 | `public/` | Static assets: logo, PWA icons, `files/` sample media (static only, not seeded into OPFS) |
+| `docs/design/` | How the OS should look: foundations, components, patterns, shell. The Style Guide app renders it live |
 
 ## The barrel and the circular-import rule
 

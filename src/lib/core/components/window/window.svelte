@@ -12,6 +12,7 @@
 
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
   const is_minimized = $derived(instance.flags.has(WindowFlag.MINIMIZED));
+  const is_focused = $derived(windows.is_focused(id));
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
 
   // The window manager keys windows by id, so it never changes for this instance.
@@ -63,7 +64,7 @@
 {#if !is_maximized && !is_minimized && geometry_handler.snap_zone}
   {@const { left, top, width, height } = WindowGeometryHandler.get_snap_position(geometry_handler.snap_zone)}
   <div
-    class="absolute pointer-events-none bg-primary/30 border-2 border-primary rounded-lg transition-all duration-150"
+    class="absolute pointer-events-none rounded-xl bg-primary/10 ring-1 ring-primary/60 backdrop-blur-[2px] transition-all duration-200 ease-out animate-pop-in"
     style:left
     style:top
     style:width
@@ -78,12 +79,11 @@
   onfocusin={() => windows.focus(id)}
   data-window-id={id}
   class={cn(
-    "absolute overflow-hidden pointer-events-auto",
-    "bg-foreground shadow-window rounded-sm border-2 border-foreground grid grid-cols-1 grid-rows-[2.5rem_1fr] transition-colors",
-    is_maximized && !geometry_handler.move.active && "rounded-none border-none",
-    snap_position && !is_maximized && !geometry_handler.move.active && "bg-primary border-primary",
-    is_minimized && "hidden",
-    // flags.has(WindowManagerFlag.PROFILER_ENABLED) && "bg-accent border-accent"
+    "absolute overflow-hidden pointer-events-auto grid grid-cols-1 grid-rows-[2.5rem_1fr]",
+    "rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
+    is_focused ? "shadow-window-focused ring-foreground/16" : "shadow-window ring-foreground/8",
+    is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
+    is_minimized && "hidden"
   )}
   style:left
   style:top
@@ -95,23 +95,24 @@
   style:backface-visibility="hidden"
   tabindex={-1}
 >
-  <!-- Window titlebar -->
+  <!-- Window titlebar. Double-click to maximize is a pointer shortcut; the maximize button is the accessible path. -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     {@attach geometry_handler.drag_attachment()}
+    ondblclick={(event) => {
+      if (!(event.target as Element).closest("[data-window-button]")) windows.toggle_maximize(id);
+    }}
     class={cn(
-      "text-background px-4 py-2 flex items-center justify-between select-none cursor-grab touch-none",
+      "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
       geometry_handler.move.active && "cursor-grabbing"
     )}
   >
-    <WindowTitlebar bind:zoom window_id={id} />
+    <WindowTitlebar bind:zoom window_id={id} focused={is_focused} />
   </div>
 
   <!-- Window content -->
   <div
-    class={cn(
-      "overflow-hidden bg-background rounded-t-sm [content-visibility:auto]",
-      is_maximized && !geometry_handler.move.active && "rounded-none"
-    )}
+    class="overflow-hidden bg-background [content-visibility:auto]"
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
     <WindowContent window_id={id} {zoom}>

@@ -9,6 +9,7 @@ A desktop environment in the browser, built with Svelte 5. It's a solo learning 
 3. [docs/ROADMAP.md](docs/ROADMAP.md): what's done and what's next.
 4. [docs/adrs/README.md](docs/adrs/README.md): the ADR index, showing which are implemented and which are only accepted.
 5. [docs/system/README.md](docs/system/README.md): the system reference, describing how every part of the OS works today.
+6. [docs/design/README.md](docs/design/README.md): how WebOS should look: foundations, UI kit, patterns, shell.
 
 Read the ADR and the system reference page for the area you touch before you touch it.
 
@@ -56,6 +57,7 @@ Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using 
 - Pure logic in `.ts`, reactive state in `.svelte.ts`, rendering in `.svelte`.
 - Follow the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/) (see CONVENTIONS, Styling & brand). Use theme tokens only. Tailwind's default palette is disabled, and no colour may be added.
 - Container queries in app UI, not viewport breakpoints.
+- UI follows [docs/design](docs/design/README.md) and is built from the UI kit (`$lib/core/components/ui`). A component or pattern two apps need goes into the kit, the design docs and the Style Guide app.
 - No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
 - No backend. GitHub Pages is the host.
 - Use the latest web platform features (anchor positioning, popover, `@container`, View Transitions, and so on). The target is the owner's current browser: no polyfills, fallbacks or support checks for older ones. If it works on the owner's machine, it ships. Before building UI or browser behaviour by hand (dismissal, focus, positioning, stacking, animation), check whether a newer platform API does it natively, and bring it up.

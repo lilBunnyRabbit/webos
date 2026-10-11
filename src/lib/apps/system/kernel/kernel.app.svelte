@@ -5,6 +5,7 @@
   import { cn } from "$lib/core/utils";
   import type { Component } from "svelte";
   import { z } from "zod";
+  import { Badge, Button } from "$lib/core/components/ui";
   import {
     ArrowsInSimple as ArrowsInSimpleIcon,
     ArrowsOutSimple as ArrowsOutSimpleIcon,
@@ -26,40 +27,36 @@
   }
 </script>
 
-<div class="flex min-h-full flex-col gap-4 p-4">
+<div class="mx-auto flex min-h-full max-w-4xl flex-col gap-5 p-6">
   <header class="flex items-center gap-3">
     <LogoMark class="h-8 w-auto text-primary" />
     <div class="flex-1">
-      <h1 class="text-xl font-semibold leading-tight">Kernel</h1>
-      <p class="text-xs text-foreground/50">{services.length} services, in init order</p>
+      <h1 class="text-lg leading-tight font-semibold">Kernel</h1>
+      <p class="text-ui text-foreground/65">{services.length} services, in init order</p>
     </div>
-    <button
-      class="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm hover:bg-foreground/10"
-      onclick={toggle_all}
-      aria-pressed={all_expanded}
-    >
+    <Button size="sm" variant="quiet" onclick={toggle_all} aria-pressed={all_expanded}>
       {#if all_expanded}
-        <ArrowsInSimpleIcon class="size-4" /> Collapse all
+        <ArrowsInSimpleIcon weight="bold" /> Collapse all
       {:else}
-        <ArrowsOutSimpleIcon class="size-4" /> Expand all
+        <ArrowsOutSimpleIcon weight="bold" /> Expand all
       {/if}
-    </button>
+    </Button>
   </header>
 
   <ul class="flex flex-col gap-2">
     {#each services as [key, service] (key)}
       {@const open = expanded.value.includes(key)}
-      <li class="rounded-sm border border-foreground/15 bg-foreground/[0.03]">
+      <li class="rounded-xl bg-background-light ring-1 ring-foreground/8">
         <button
-          class="flex w-full items-center gap-2 rounded-t-sm px-3 py-2 text-left hover:bg-foreground/5"
+          class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-foreground/4"
           aria-expanded={open}
           aria-controls="inspector-{key}"
           onclick={() => toggle(key)}
         >
-          <CaretRightIcon class={cn("size-4 shrink-0 text-foreground/60 transition-transform", open && "rotate-90")} />
-          <span class="font-semibold">{service.name}</span>
-          <span class="font-mono text-xs text-foreground/50">{key}</span>
-          <span class="ml-auto truncate text-xs text-foreground/50">{service.description}</span>
+          <CaretRightIcon class={cn("size-4 shrink-0 text-foreground/65 transition-transform", open && "rotate-90")} />
+          <span class="text-ui font-semibold">{service.name}</span>
+          <Badge>{key}</Badge>
+          <span class="ml-auto hidden truncate text-2xs text-foreground/80 @lg:block">{service.description}</span>
         </button>
 
         <div id="inspector-{key}" class="flex flex-col gap-3 px-3 pb-3 pl-9">
@@ -72,7 +69,7 @@
               <p class="text-sm text-error">Inspector failed to load: {error instanceof Error ? error.message : String(error)}</p>
             {/await}
           {:else}
-            <pre class="overflow-x-auto font-mono text-sm text-foreground/70">{service.to_string()}</pre>
+            <pre class="overflow-x-auto font-mono text-sm text-foreground/80">{service.to_string()}</pre>
           {/if}
         </div>
       </li>

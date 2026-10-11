@@ -23,7 +23,23 @@ export const TaskbarPosition = {
 export type TaskbarPosition = (typeof TaskbarPosition)[keyof typeof TaskbarPosition];
 
 export type ThemeBaseToken = "background" | "foreground" | "primary" | "secondary" | "accent";
-export type ThemeToken = ThemeBaseToken | "tertiary" | "cottontail" | "success" | "warning" | "error" | "info";
+/** The brand's surface ladder around `background` (lightest at the top). Written as `--background-dark` etc. */
+export type ThemeSurfaceToken =
+  | "background_lightest"
+  | "background_lighter"
+  | "background_light"
+  | "background_dark"
+  | "background_darker"
+  | "background_darkest";
+export type ThemeToken =
+  | ThemeBaseToken
+  | ThemeSurfaceToken
+  | "tertiary"
+  | "cottontail"
+  | "success"
+  | "warning"
+  | "error"
+  | "info";
 
 export type ThemeBase = Record<ThemeBaseToken, string>;
 export type Theme = Record<ThemeToken, string>;

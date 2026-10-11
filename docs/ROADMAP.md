@@ -63,15 +63,15 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ## P1 — Essential UX
 
 ### Design System
-- **Status:** In progress. Follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/)
+- **Status:** Done (2026-10-11, ADR-024, [docs/design](design/README.md)). Follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/)
 - [x] Brand palettes (Brand Dark default, Brand Light) + extended tokens (tertiary, cottontail, states)
 - [x] Brand fonts (Inter, Hack), self-hosted
 - [x] Logo components (mark, lockup, badge) + placements, favicon/PWA icons, boot splash
 - [x] Tailwind default palette disabled (only theme tokens compile)
-- [ ] Window chrome design
-- [ ] Typography and spacing
-- [ ] Button/input component styles
-- [ ] Consistent theming approach
+- [x] Window chrome design (ADR-024)
+- [x] Typography and spacing (docs/design/foundations.md)
+- [x] UI kit: buttons, inputs, select, switch, segmented, sections, toolbar, status bar (ADR-024)
+- [x] Surface ladder tokens per theme, elevation, motion (ADR-024)
 
 ### Window Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md)
@@ -80,7 +80,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Window open/close/minimize/maximize animations (CSS-based)
 - [ ] Cascading window positioning (offset new windows)
 - [ ] Reopen last closed window (Ctrl+Shift+T)
-- [ ] Taskbar clock / date-time display
+- [x] Taskbar clock / date-time display
 
 ### Window API Expansion
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
@@ -224,7 +224,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
 - [ ] Calculator
 - [ ] Text Editor (tests file ops + persistence)
-- [ ] Style Guide (component showcase)
+- [x] Style Guide (component showcase)
 
 ### Games
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { untrack, type Snippet } from "svelte";
   import kernel, { WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
+  import { EmptyState, Spinner } from "$lib/core/components/ui";
+  import { Warning as WarningIcon } from "phosphor-svelte";
   import { create_storage_handle, create_window_handle, set_app_context } from "$lib/core/contexts/app";
 
   let { zoom, window_id, children }: { zoom: number; window_id: WindowId; children?: Snippet } = $props();
@@ -22,11 +24,11 @@
 
 <div class="h-full w-full overflow-auto @container" style:zoom>
   {#await instance.app.component}
-    <div class="flex items-center justify-center h-full">Loading...</div>
+    <div class="grid h-full place-items-center"><Spinner label="Loading app" /></div>
   {:then Component}
     <Component {...instance.app.props} />
   {:catch error}
-    {`Error loading component: ${error}`}
+    <EmptyState icon={WarningIcon} tone="error" title="This app failed to load" description={error instanceof Error ? error.message : String(error)} />
   {/await}
 
   {#if instance.flags.has(WindowFlag.DEBUG)}

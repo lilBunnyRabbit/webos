@@ -2,6 +2,7 @@
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import type { FilesService } from "$lib/core/api/services/files";
   import { format_bytes } from "$lib/core/utils";
+  import { StatusBar } from "../ui";
 
   interface Props {
     handler: DirectoryHandler;
@@ -39,21 +40,18 @@
   });
 </script>
 
-<div class="border-t border-t-foreground/20 bg-background-dark px-3 py-1.5 text-xs text-foreground/60">
-  <div class="flex items-center justify-between">
-    <span>
-      {handler.items.length} items
-      {#if counts.folders > 0 || counts.files > 0}
-        <span>
-          ({#if counts.folders > 0}{counts.folders} folder{counts.folders !== 1 ? "s" : ""}{#if counts.files > 0}, {/if}{/if}{#if counts.files > 0}{counts.files} file{counts.files !== 1 ? "s" : ""}{/if})
-        </span>
-      {/if}
-    </span>
-    {#if storage}
-      <span>
-        Storage: {format_bytes(storage.usage)} / {format_bytes(storage.quota)}
-        ({storage.quota > 0 ? ((storage.usage / storage.quota) * 100).toFixed(1) : "0.0"}%)
+<StatusBar>
+  <span>
+    {handler.items.length} {handler.items.length === 1 ? "item" : "items"}
+    {#if counts.folders > 0 && counts.files > 0}<span class="hidden @sm:inline">· {counts.folders} folders, {counts.files} files</span>{/if}
+  </span>
+  {#if storage}
+    {@const used = storage.quota > 0 ? storage.usage / storage.quota : 0}
+    <span class="ml-auto hidden items-center gap-2 @md:flex" title="{(used * 100).toFixed(1)}% of this device's storage quota">
+      <span class="h-1 w-16 overflow-hidden rounded-full bg-foreground/12">
+        <span class="block h-full rounded-full bg-primary" style:width="{Math.max(used * 100, 2)}%"></span>
       </span>
-    {/if}
-  </div>
-</div>
+      {format_bytes(storage.usage)} of {format_bytes(storage.quota)}
+    </span>
+  {/if}
+</StatusBar>

@@ -1,29 +1,34 @@
 <script lang="ts">
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
+  import { cn } from "$lib/core/utils";
   import {
-    X as XIcon,
-    MagnifyingGlass as MagnifyingGlassIcon,
-    ArrowLeft as ArrowLeftIcon,
     ArrowClockwise as ArrowClockwiseIcon,
+    ArrowLeft as ArrowLeftIcon,
+    CaretRight as CaretRightIcon,
     FolderPlus as FolderPlusIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    X as XIcon,
   } from "phosphor-svelte";
+  import { IconButton, Input, Separator, Toolbar } from "../ui";
   import FileUploadButton from "./file-upload-button.svelte";
   import { report_file_error } from "./file-explorer.errors";
 
   interface Props {
     handler: DirectoryHandler;
-    path_stack: DirectoryHandler[];
-    onnavigateback: () => void;
-    onnavigatetoindex: (index: number) => void;
+    can_go_back: boolean;
+    onback: () => void;
+    onnavigatepath: (segments: string[]) => void;
     search: string;
   }
 
-  let { handler, path_stack, onnavigateback, onnavigatetoindex, search = $bindable() }: Props = $props();
+  let { handler, can_go_back, onback, onnavigatepath, search = $bindable() }: Props = $props();
 
   let creating_folder = $state(false);
 
+  const crumbs = $derived([{ label: "/", segments: [] as string[] }, ...handler.segments.map((name, index) => ({ label: name, segments: handler.segments.slice(0, index + 1) }))]);
+
   async function handle_create_folder() {
-    const name = prompt("Enter folder name:");
+    const name = prompt("Folder name");
     if (!name) return;
 
     creating_folder = true;
@@ -37,69 +42,48 @@
   }
 </script>
 
-<div
-  class="grid grid-cols-[min-content_3fr_1fr_min-content] grid-rows-1 items-center bg-background-dark border-b border-b-foreground/20 py-2 gap-x-2 px-2"
->
-  <div class="flex items-center gap-1">
-    <button
-      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-      title="Go back"
-      disabled={path_stack.length === 0}
-      onclick={onnavigateback}
-    >
-      <ArrowLeftIcon class="size-4" weight="bold" />
-    </button>
+<Toolbar>
+  <IconButton label="Back" size="sm" disabled={!can_go_back} onclick={onback}>
+    <ArrowLeftIcon weight="bold" />
+  </IconButton>
+  <IconButton label="Reload" size="sm" onclick={() => handler.reload()}>
+    <ArrowClockwiseIcon weight="bold" />
+  </IconButton>
 
-    <button
-      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-      title="Reload"
-      onclick={() => handler.reload()}
-    >
-      <ArrowClockwiseIcon class="size-4" weight="bold" />
-    </button>
-  </div>
-
-  <nav class="flex items-center gap-1 px-2 text-sm bg-background h-6 rounded-sm">
-    {#each path_stack as dir, idx (dir.path)}
-      {#if idx > 0 && !path_stack[idx - 1].is_root}<span class="mx-0.5 pointer-events-none">/</span>{/if}
-      <button class="hover:underline hover:bg-foreground/10" onclick={() => onnavigatetoindex(idx)}>
-        {dir.name}
+  <nav aria-label="Path" class="flex min-w-0 flex-1 items-center overflow-x-auto px-1">
+    {#each crumbs as crumb, index (crumb.segments.join("/"))}
+      {@const last = index === crumbs.length - 1}
+      {#if index > 1}<CaretRightIcon class="size-3 shrink-0 text-foreground/65" weight="bold" />{/if}
+      <button
+        aria-current={last ? "location" : undefined}
+        disabled={last}
+        class={cn(
+          "h-7 shrink-0 rounded-md px-1.5 text-ui transition-colors duration-150",
+          last ? "font-medium text-foreground" : "text-foreground/80 hover:bg-foreground/8 hover:text-foreground",
+          index === 0 && "font-mono"
+        )}
+        onclick={() => onnavigatepath(crumb.segments)}
+      >
+        {crumb.label}
       </button>
     {/each}
-
-    {#if path_stack.length > 0 && !path_stack[path_stack.length - 1].is_root}<span class="mx-0.5 pointer-events-none">/</span>{/if}
-    <button class="hover:underline text-accent cursor-default" disabled>
-      {handler.name}
-    </button>
   </nav>
 
-  <div class="relative flex items-center pr-2 gap-y-1 text-sm bg-background h-6 rounded-sm">
-    <input
-      type="text"
-      class="w-full bg-transparent text-sm placeholder:text-foreground/20 px-2 focus:outline-none h-full caret-primary"
-      placeholder="Search..."
-      bind:value={search}
-    />
+  <Input bind:value={search} size="sm" placeholder="Filter" aria-label="Filter this folder" class="w-28 shrink-0 @lg:w-40">
+    {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
+    {#snippet trailing()}
+      {#if search}
+        <button class="grid size-5 place-items-center rounded-sm text-foreground/65 hover:text-foreground" aria-label="Clear filter" onclick={() => (search = "")}>
+          <XIcon class="size-3" weight="bold" />
+        </button>
+      {/if}
+    {/snippet}
+  </Input>
 
-    {#if search}
-      <button onclick={() => (search = "")} class="cursor-pointer">
-        <XIcon class="size-4" weight="bold" />
-      </button>
-    {:else}
-      <MagnifyingGlassIcon class="size-4" weight="bold" />
-    {/if}
-  </div>
+  <Separator vertical />
 
-  <div class="flex items-center gap-1">
-    <button
-      class="rounded p-1 hover:bg-background h-6 w-6 disabled:opacity-50 disabled:pointer-events-none active:bg-primary active:text-background"
-      title="New folder"
-      disabled={creating_folder}
-      onclick={handle_create_folder}
-    >
-      <FolderPlusIcon class="size-4" weight="bold" />
-    </button>
-
-    <FileUploadButton {handler} />
-  </div>
-</div>
+  <IconButton label="New folder" size="sm" disabled={creating_folder} onclick={handle_create_folder}>
+    <FolderPlusIcon weight="bold" />
+  </IconButton>
+  <FileUploadButton {handler} />
+</Toolbar>

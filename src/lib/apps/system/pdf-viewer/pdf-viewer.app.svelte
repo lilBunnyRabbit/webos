@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
-  import { cn } from "$lib/core/utils";
-  import { Warning as WarningIcon } from "phosphor-svelte";
+  import { EmptyState, Spinner } from "$lib/core/components/ui";
+  import { FilePdf as FilePdfIcon, Warning as WarningIcon } from "phosphor-svelte";
 
   const { path }: { path?: string } = $props();
 
@@ -40,21 +40,14 @@
   });
 </script>
 
-{#snippet message(text: string, tone: "muted" | "error" = "muted")}
-  <div class={cn("flex h-full flex-col items-center justify-center gap-3 p-8 text-center", tone === "error" ? "text-error" : "text-foreground/60")}>
-    {#if tone === "error"}<WarningIcon class="size-12" />{/if}
-    <p>{text}</p>
-  </div>
-{/snippet}
-
 {#if !path}
-  {@render message("Open a PDF from File Explorer to view it here.")}
+  <EmptyState icon={FilePdfIcon} title="No PDF open" description="Open a PDF from File Explorer to read it here." />
 {:else if error}
-  {@render message(`Could not read the file: ${error}`, "error")}
+  <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
 {:else if file === null}
-  {@render message(`File not found: ${path}`, "error")}
+  <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path} />
 {:else if !file || !url}
-  {@render message("Loading…")}
+  <div class="grid h-full place-items-center"><Spinner label="Loading PDF" /></div>
 {:else}
-  <iframe src={url} title={file.name} class="block size-full border-0"></iframe>
+  <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
 {/if}

@@ -6,7 +6,6 @@ export default define_app({
   name: "Kernel",
   icon: BrainIcon,
   version: "1.0.0",
-  author: "John Doe",
   categories: ["system"],
   component: () => import("./kernel.app.svelte"),
 });

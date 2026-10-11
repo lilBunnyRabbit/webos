@@ -62,14 +62,14 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 - Checked before tiers. If the file has an extension and its default names a registered app, that app opens, even if it no longer lists the extension.
 - A default naming a missing app is ignored (and left in settings).
 - Written only by the dropdown's "Always use" checkbox.
-- No UI to view or clear them yet. To reset: the Settings app's Reset Settings, or delete `/etc/settings.json` and reload (both reset theme and taskbar too). There's no app that edits the file.
+- Viewed and cleared in Settings → Default apps: one row per extension with its app (or "no longer installed"), Forget per entry, Forget all. Settings → About → Reset clears them too, along with theme and taskbar.
 
 ## The Open-with dropdown
 
 `OpenWithDialog`, shown through [DialogsService](../services/dialogs.md) with `{ file_name, extension, apps: candidates }`:
 
-- Header "Open {file_name} with", then one row per candidate: icon + name.
-- The first row is focused. ArrowUp/ArrowDown cycle; Enter or click picks and opens immediately.
+- An overline header "Open {file_name} with", then one 36px row per candidate: icon tile + name. A `rounded-xl bg-background-lighter` menu, no backdrop.
+- The first row is focused. ArrowUp/ArrowDown cycle (from the checkbox: Down → first, Up → last); Enter or click picks and opens immediately.
 - "Always use for {extension}" checkbox, hidden when there's no extension. Checked + pick → saved as the default.
 - Esc or click outside → cancelled. Nothing opens, no toast, `open()` resolves `null`.
 - Placement: anchored dropdown below-right of `options.anchor`, flipping at viewport edges. Without an anchor, centred over the focused window, else the desktop.
@@ -108,4 +108,3 @@ Handle `path` being `undefined` (launched from the start menu) and `get_file` re
 ## Known gaps
 
 - No "Open with…" for a single match or when a default exists: the user can't pick another app once a default is set, short of editing settings.
-- No per-extension reset for `file_defaults`. Only the Settings app's global Reset Settings clears them, together with theme and taskbar.

@@ -24,8 +24,8 @@
       <div class="flex items-center gap-2 rounded-sm border border-foreground/15 p-1.5">
         <span class="size-6 shrink-0 rounded-sm border border-foreground/20" style:background={value}></span>
         <div class="min-w-0">
-          <div class="text-xs">{token}</div>
-          <div class="truncate font-mono text-[0.6875rem] text-foreground/50" title={value}>{value}</div>
+          <div class="text-ui">{token}</div>
+          <div class="truncate font-mono text-2xs text-foreground/80" title={value}>{value}</div>
         </div>
       </div>
     {/each}

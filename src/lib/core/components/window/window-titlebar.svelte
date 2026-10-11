@@ -1,99 +1,65 @@
 <script lang="ts">
   import {
-    Copy as CopyIcon,
-    MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
-    MagnifyingGlassPlus as MagnifyingGlassPlusIcon,
+    CornersIn as CornersInIcon,
+    CornersOut as CornersOutIcon,
     Minus as MinusIcon,
-    Square as SquareIcon,
+    Plus as PlusIcon,
     X as XIcon,
   } from "phosphor-svelte";
   import kernel, { type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
+  import { cn } from "$lib/core/utils";
+  import { IconButton } from "../ui";
 
-  let { zoom = $bindable(), window_id }: { zoom: number; window_id: WindowId } = $props();
+  let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const instance = $derived(windows.get(window_id)!);
-
-  // For maximize state
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
+
+  const ZOOM_STEP = 0.1;
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 2;
+
+  const percent = $derived(Math.round(zoom * 100));
 </script>
 
-<!-- 
-ondblclick={() => windows.toggle_maximize(window_id)}
--->
-<div class="flex items-center space-x-2">
-  <div class="flex items-center justify-center w-4 h-4"><instance.app.manifest.icon class="w-4 h-4" /></div>
-  <span class="text-sm font-medium">{instance.app.manifest.name}</span>
+<div class={cn("flex min-w-0 items-center gap-2 transition-opacity duration-150", !focused && "opacity-80")}>
+  <instance.app.manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
+  <span class="truncate text-ui font-medium">{instance.app.manifest.name}</span>
 </div>
 
-<div class="flex items-center space-x-1">
-  <!-- Zoom controls -->
-  <div class="flex items-center space-x-1 mr-2 pl-2 border-l border-background">
+<div class="flex shrink-0 items-center gap-0.5">
+  <!-- Zoom is per window and secondary: hidden until the titlebar is hovered or focused, unless it's not at 100%. -->
+  <div
+    class={cn(
+      "mr-1 flex items-center rounded-md transition-opacity duration-150",
+      zoom === 1 && "opacity-0 group-hover/titlebar:opacity-100 focus-within:opacity-100"
+    )}
+  >
+    <IconButton data-window-button label="Zoom out" size="sm" class="w-6" disabled={zoom <= ZOOM_MIN} onclick={() => (zoom = Math.max(ZOOM_MIN, Math.round((zoom - ZOOM_STEP) * 10) / 10))}>
+      <MinusIcon weight="bold" />
+    </IconButton>
     <button
       data-window-button
-      class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-      title="Zoom Out (Ctrl+-)"
-      onclick={() => {
-        zoom = Math.max(zoom - 0.25, 0.25);
-      }}
+      aria-label="Reset zoom, now {percent}%"
+      title="Reset zoom"
+      class="h-7 min-w-10 rounded-md px-1 font-mono text-2xs text-foreground/80 tabular-nums transition-colors hover:bg-foreground/8 hover:text-foreground"
+      onclick={() => (zoom = 1)}
     >
-      <MagnifyingGlassMinusIcon class="w-3 h-3" />
+      {percent}%
     </button>
-    <button
-      data-window-button
-      class="text-xs text-background min-w-8 text-center"
-      title="Reset Zoom (Ctrl+0)"
-      onclick={() => {
-        zoom = 1;
-      }}
-    >
-      {Math.round(zoom * 100)}%
-    </button>
-    <button
-      data-window-button
-      class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-      title="Zoom In (Ctrl++)"
-      onclick={() => {
-        zoom = Math.min(zoom + 0.25, 3);
-      }}
-    >
-      <MagnifyingGlassPlusIcon class="w-3 h-3" />
-    </button>
+    <IconButton data-window-button label="Zoom in" size="sm" class="w-6" disabled={zoom >= ZOOM_MAX} onclick={() => (zoom = Math.min(ZOOM_MAX, Math.round((zoom + ZOOM_STEP) * 10) / 10))}>
+      <PlusIcon weight="bold" />
+    </IconButton>
   </div>
 
-  <!-- Window Controls -->
-  <button
-    data-window-button
-    class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-    title="Minimize"
-    onclick={() => {
-      windows.toggle_minimize(window_id);
-    }}
-  >
-    <MinusIcon class="w-3 h-3" />
-  </button>
-  <button
-    data-window-button
-    class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-    title={is_maximized ? "Restore" : "Maximize"}
-    onclick={() => {
-      windows.toggle_maximize(window_id);
-    }}
-  >
-    {#if is_maximized}
-      <CopyIcon class="w-3 h-3" />
-    {:else}
-      <SquareIcon class="w-3 h-3" />
-    {/if}
-  </button>
-  <button
-    data-window-button
-    class="w-6 h-6 flex items-center justify-center hover:bg-background hover:text-secondary rounded transition-colors touch-auto"
-    title="Close"
-    onclick={() => {
-      windows.close(window_id);
-    }}
-  >
-    <XIcon class="w-3 h-3" />
-  </button>
+  <IconButton data-window-button label="Minimize" size="sm" onclick={() => windows.toggle_minimize(window_id)}>
+    <MinusIcon weight="bold" />
+  </IconButton>
+  <IconButton data-window-button label={is_maximized ? "Restore" : "Maximize"} size="sm" onclick={() => windows.toggle_maximize(window_id)}>
+    {#if is_maximized}<CornersInIcon weight="bold" />{:else}<CornersOutIcon weight="bold" />{/if}
+  </IconButton>
+  <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => windows.close(window_id)}>
+    <XIcon weight="bold" />
+  </IconButton>
 </div>

@@ -13,7 +13,7 @@
 
 <div
   class={cn(
-    "grid h-dvh w-full overflow-hidden bg-background-dark",
+    "grid h-dvh w-full overflow-hidden bg-background-darkest",
     ov(
       {
         top: "grid-cols-1 grid-rows-[auto_1fr]",
@@ -27,7 +27,7 @@
 >
   <div
     class={cn(
-      "relative z-0 overflow-hidden p-4",
+      "relative z-0 overflow-hidden",
       ov(
         {
           top: "[grid-area:2/1]",

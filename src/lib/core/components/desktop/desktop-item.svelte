@@ -22,10 +22,9 @@
 
 <button
   class={cn(
-    "group w-full h-full flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden hover:bg-foreground/10 rounded hover:overflow-visible cursor-grab",
-    item_handler.move_state?.type === "move" && "opacity-50",
-    (!item_handler.move_state || item_handler.move_state.type === "start") &&
-      "focus:outline-2 focus:outline-accent focus:bg-accent/10 focus:text-accent"
+    "group flex size-full flex-col items-center gap-1.5 rounded-xl px-1 pt-2 transition-colors duration-150 select-none",
+    "hover:bg-foreground/6 focus:bg-foreground/8",
+    item_handler.move_state?.type === "move" && "opacity-40"
   )}
   style:grid-column={x + 1}
   style:grid-row={y + 1}
@@ -46,8 +45,8 @@
   {#if x !== item_handler.move_state.new_position.x || y !== item_handler.move_state.new_position.y}
     <div
       class={cn(
-        "w-full h-full bg-foreground/30 transition-all rounded-xl border-2 border-foreground/30",
-        item_handler.is_blocked && "bg-error/30 border-error/30"
+        "size-full rounded-xl bg-foreground/6 ring-1 ring-foreground/20 ring-inset transition-all duration-150",
+        item_handler.is_blocked && "bg-error/10 ring-error/50"
       )}
       style:grid-column={item_handler.move_state.new_position.x + 1}
       style:grid-row={item_handler.move_state.new_position.y + 1}
@@ -56,7 +55,7 @@
 
   <div
     bind:this={item_handler.preview_element}
-    class="fixed flex flex-col items-center pt-2 px-1 gap-y-1 overflow-hidden cursor-grabbing -left-16 -top-16"
+    class="pointer-events-none fixed -top-24 -left-24 z-50 flex flex-col items-center gap-1.5 px-1 pt-2 cursor-grabbing"
     style:width="{desktop.container.cell.width}px"
     style:height="{desktop.container.cell.height}px"
   >

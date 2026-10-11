@@ -21,14 +21,14 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 
 | Field | Type | Required | Effect today |
 |-------|------|----------|--------------|
-| `id` | `AppId` (`string`) | yes | Registry key. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
-| `name` | `string` | yes | Start menu, the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
+| `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
+| `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
 | `version` | `string` | yes | Stored only. Nothing reads it |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. Use a `phosphor-svelte` icon |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `categories` | `AppCategory[]` | no, default `["user"]` | Stored only. Nothing filters or groups by it yet |
 | `description` | `string` | no | Stored only |
-| `keywords` | `string[]` | no | Stored only (meant for search) |
+| `keywords` | `string[]` | no | Start menu search matches them (substring, case-insensitive), alongside `name` and `id` |
 | `author` | `string` | no | Stored only |
 | `license` | `string` | no | Stored only |
 | `repository` | `string` | no | Stored only |

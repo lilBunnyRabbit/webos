@@ -22,8 +22,8 @@ export class DesktopService implements IDesktopService {
   }
 
   private static DEFAULT_CONFIG = {
-    cell_size: 64,
-    padding: 4,
+    cell_size: 88,
+    padding: 12,
   };
 
   private files_service!: FilesService;

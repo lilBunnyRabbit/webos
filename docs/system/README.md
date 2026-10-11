@@ -1,6 +1,6 @@
 # System reference
 
-How WebOS works **today**, in depth. ADRs say why a decision was made, brainstorm logs record how it was reached, and the roadmap tracks what's left. This reference describes what the code does right now.
+How WebOS works **today**, in depth. ADRs say why a decision was made, brainstorm logs record how it was reached, and the roadmap tracks what's left. This reference describes what the code does right now. How things should *look* (tokens to use, the UI kit, app patterns, shell visuals) is in [docs/design](../design/README.md); keep the two in sync.
 
 It covers all OS infrastructure: kernel, services, shell UI, the app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are left out.
 
@@ -22,7 +22,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [overview.md](overview.md) | Layers, boot sequence, shell mount tree, source map |
 | [kernel.md](kernel.md) | Service registry, dependency order, lifecycle |
 | [persistence.md](persistence.md) | Everything stored: OPFS (user files, `/etc`, `/var/lib`), localStorage keys, versions, what survives reload (including session restore) |
-| [theming.md](theming.md) | Tokens, themes, brand constraints, fonts |
+| [theming.md](theming.md) | How theming works: tokens and the surface ladder, `color-scheme`, `cn`/`tv`, themes, fonts |
 
 ### Services
 
@@ -45,7 +45,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [shell/window.md](shell/window.md) | Window frame, titlebar, drag/resize, app content |
 | [shell/window-manager.md](shell/window-manager.md) | Renders all windows |
 | [shell/desktop.md](shell/desktop.md) | Desktop surface and icons |
-| [shell/taskbar.md](shell/taskbar.md) | Taskbar, items, start menu |
+| [shell/taskbar.md](shell/taskbar.md) | Taskbar dock, items, clock, start menu |
 
 ### Apps
 
@@ -56,7 +56,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [apps/app-context.md](apps/app-context.md) | `get_app_context()`: window and storage handles |
 | [apps/file-associations.md](apps/file-associations.md) | How `open(path)` picks an app |
 | [apps/writing-an-app.md](apps/writing-an-app.md) | Building a new app, step by step |
-| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Viewer, Media Preview, PDF Viewer |
+| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Viewer, Media Preview, PDF Viewer, Style Guide |
 
 ## Page shape
 

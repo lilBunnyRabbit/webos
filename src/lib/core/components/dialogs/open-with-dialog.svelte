@@ -9,6 +9,7 @@
 
 <script lang="ts">
   import type { AppManifest, DialogProps } from "$lib/core/api";
+  import { Checkbox } from "../ui";
 
   interface Props extends DialogProps<OpenWithChoice> {
     file_name: string;
@@ -26,7 +27,8 @@
     event.preventDefault();
     const items = [...event.currentTarget.querySelectorAll<HTMLElement>("[data-option]")];
     const index = items.indexOf(document.activeElement as HTMLElement);
-    const next = event.key === "ArrowDown" ? index + 1 : index - 1;
+    // From outside the list (the checkbox), Down goes to the first app and Up to the last.
+    const next = index === -1 ? (event.key === "ArrowDown" ? 0 : items.length - 1) : event.key === "ArrowDown" ? index + 1 : index - 1;
     items.at(next % items.length)?.focus();
   }
 </script>
@@ -35,9 +37,9 @@
   role="menu"
   tabindex="-1"
   onkeydown={move_focus}
-  class="grid min-w-56 max-w-80 rounded-md border border-foreground/20 bg-background py-1 text-sm shadow-window"
+  class="grid min-w-60 max-w-80 animate-pop-in gap-0.5 rounded-xl bg-background-lighter p-1.5 text-ui shadow-popover"
 >
-  <p class="px-3 py-1.5 text-foreground/60 truncate">Open {file_name} with</p>
+  <p class="truncate px-2 pt-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Open {file_name} with</p>
 
   {#each apps as app, index (app.id)}
     <!-- svelte-ignore a11y_autofocus -->
@@ -45,18 +47,18 @@
       data-option
       autofocus={index === 0}
       role="menuitem"
-      class="flex items-center gap-3 px-3 py-2 text-left hover:bg-foreground/10 focus:bg-foreground/10 outline-none"
+      class="flex h-9 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
       onclick={() => resolve({ app_id: app.id, always })}
     >
-      <app.icon class="size-5 shrink-0" />
+      <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-foreground/10"><app.icon class="size-4" weight="duotone" /></span>
       <span class="truncate">{app.name}</span>
     </button>
   {/each}
 
   {#if extension}
-    <label class="mt-1 flex items-center gap-2 border-t border-t-foreground/20 px-3 pt-2 pb-1.5 text-foreground/80">
-      <input type="checkbox" bind:checked={always} class="accent-primary" />
-      Always use for {extension}
+    <label class="mt-1 flex cursor-pointer items-center gap-2 border-t border-foreground/8 px-2 pt-2.5 pb-1 text-foreground/80">
+      <Checkbox bind:checked={always} />
+      Always use for <span class="font-mono">{extension}</span>
     </label>
   {/if}
 </div>

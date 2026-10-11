@@ -40,6 +40,7 @@ export class DialogsService implements IDialogsService {
         props,
         point: options.anchor ?? this.fallback_point(),
         anchored: options.anchor !== undefined,
+        dismissible: options.dismissible ?? true,
         resolve: (value) => {
           const index = this.stack.findIndex((item) => item.id === id);
           if (index === -1) return;

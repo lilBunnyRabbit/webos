@@ -1,11 +1,11 @@
 # Window
 
-Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted)
+Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted), [ADR-024](../../adrs/024-design-system.md) (chrome) · Design: [docs/design/shell.md](../../design/shell.md#windows)
 
 | File | Role |
 |------|------|
-| `window.svelte` | The window frame: positioning, chrome classes, snap preview, resize handles |
-| `window-titlebar.svelte` | Icon, name, zoom controls, min/max/close buttons |
+| `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
+| `window-titlebar.svelte` | Icon, name, zoom pill, min/max/close buttons |
 | `window-content.svelte` | Sets the app context, awaits the lazy component, renders it |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 
@@ -31,10 +31,17 @@ One `<Window id>` per entry in `windows.list()`, rendered by the [window manager
 
 Visual states (all theme tokens):
 
-- normal: `bg-foreground border-foreground`, titlebar text `text-background`
-- maximized: no border or radius
-- snapped: `bg-primary border-primary`
-- minimized: `hidden` (`display: none`, the app stays mounted)
+| State | Frame |
+|-------|-------|
+| unfocused | `rounded-xl bg-background`, `ring-1 ring-foreground/8`, `shadow-window` |
+| focused (`windows.is_focused(id)`) | `ring-foreground/16`, `shadow-window-focused`. The box-shadow transitions over 200ms |
+| maximized (and not mid-gesture) | `rounded-none shadow-none ring-0` |
+| snapped | Same as normal; only the geometry differs |
+| minimized | `hidden` (`display: none`, the app stays mounted) |
+
+The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
+
+**Snap preview.** While dragging over a snap zone, a sibling div before the frame shows the target: `rounded-xl bg-primary/10 ring-1 ring-primary/60 backdrop-blur-[2px]`, entering with `animate-pop-in` and moving between zones with a 200ms transition.
 
 ## Drag and resize (`WindowGeometryHandler`)
 
@@ -72,19 +79,20 @@ Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) 
 | Control | Action |
 |---------|--------|
 | App icon + `manifest.name` | Static. There's no `set_title`/`set_icon` yet (ROADMAP). |
-| Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.25 to 3 in 0.25 steps. The % button resets to 1. The state is local to the component, so it's lost on reload. |
+| App icon (duotone) + `manifest.name` | Static, `text-ui font-medium`. The pair fades to 80% opacity when the window isn't focused. There's no `set_title`/`set_icon` yet (ROADMAP). |
+| Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.5 to 2 in 0.1 steps (rounded to one decimal). − and + are `IconButton`s (Phosphor `Minus` / `Plus`) that disable at the limits. The % button resets to 1; its accessible name is "Reset zoom, now N%". A quiet pill that's invisible until the titlebar is hovered or something in it has focus, and always visible when zoom isn't 100%. The state is local to `window.svelte`, so it's lost on reload and not saved in the session. |
 | Minimize | `windows.toggle_minimize(id)` |
-| Maximize / Restore | `windows.toggle_maximize(id)`. The icon swaps between `Square` and `Copy`. |
-| Close | `windows.close(id)`. Immediate, no veto. |
+| Maximize / Restore | `windows.toggle_maximize(id)`. The icon swaps between `CornersOut` and `CornersIn`; label and title follow. |
+| Close | `windows.close(id)`. Immediate, no veto. Hover turns it `bg-error text-background`. |
 
-Every button has `data-window-button` so the drag attachment skips it.
+Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w-6`), so each has its `label` as accessible name and tooltip. Every button carries `data-window-button` so the drag attachment and the double-click handler skip it.
 
 ## Content and app context
 
 `window-content.svelte`:
 
 - Calls `set_app_context({ window_id, app_id, window: create_window_handle(id), storage: create_storage_handle(app_id) })` once at init. `app_id` is read under `untrack`. This is the only place an app context is created ([apps/app-context.md](../apps/app-context.md)).
-- `{#await instance.app.component}` shows "Loading..." while the chunk loads, then `<Component {...instance.app.props} />`. On failure it prints a plain error string. The promise was started by `AppsService.launch()`, not here.
+- `{#await instance.app.component}` shows a centered `Spinner` ("Loading app") while the chunk loads, then `<Component {...instance.app.props} />`. On failure it shows an error `EmptyState` ("This app failed to load" plus the message). The promise was started by `AppsService.launch()`, not here.
 - The wrapper is `h-full w-full overflow-auto @container`. That container is what apps' `@sm:`/`@md:` queries resolve against ([CONVENTIONS](../../CONVENTIONS.md)).
 - With `WindowFlag.DEBUG` it also renders the debug snippet passed from `window.svelte`: `bounds` and `move` as JSON.
 
@@ -95,22 +103,22 @@ Every button has `data-window-button` so the drag attachment skips it.
 | Pointer drag | Titlebar (not its buttons) | Move. A drop at a container edge or corner snaps. |
 | Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners) | Resize. Handles are hidden when maximized or minimized. |
 | Pointer down | Titlebar or resize handle | Focus (raise) |
-| Click (no movement) | Titlebar of a maximized/snapped window | **Restores it.** See gaps. |
+| Click (no movement) | Titlebar of a maximized/snapped window | Nothing. The window stays put; only a drag past 4px restores it. |
 | Pointer down (capture phase) | Anywhere in the frame, content included | Focus (raise) |
 | `focusin` | Anything inside the frame gets DOM focus (Tab, programmatic) | Focus (raise) |
 | Click | Titlebar buttons | See the titlebar table |
-| Keyboard | — | Nothing. No shortcuts, Escape, or keyboard move/resize. The zoom button titles promise `Ctrl+-` / `Ctrl+0` / `Ctrl++`, which aren't implemented. |
-| Double-click | Titlebar | Nothing. The maximize toggle is commented out in `window-titlebar.svelte`. |
+| Keyboard | — | Nothing. No shortcuts, Escape, or keyboard move/resize. |
+| Double-click | Titlebar (not its buttons) | `windows.toggle_maximize(id)`: maximize, or restore a maximized window. On a snapped window it maximizes; the next double-click restores to the snapped spot. The maximize button is the accessible path. |
 
 ## Platform APIs
 
 - Pointer Events with `setPointerCapture` and `touch-action: none` on the titlebar and handles, so touch drag works.
 - `requestAnimationFrame` throttling.
-- CSS: `zoom`, `contain`, `content-visibility`, `contain-intrinsic-size`, `@container`, `translate3d`.
+- CSS: `zoom`, `contain`, `content-visibility`, `contain-intrinsic-size`, `@container`, `translate3d`, `backdrop-filter` (snap preview).
 - Not used: View Transitions (ADR-014 animations), popover/top layer, anchor positioning.
 
 ## Known gaps
 
 - The handler mutates the instance directly (bounds, snap_zone, flags) instead of going through the service API.
-- No `role`/`aria-*` on the frame. No titlebar `aria-label`s, only `title`.
+- No `role`/`aria-*` on the frame itself.
 - ADR-014 open/close/minimize/maximize animations aren't built. The only animation is the 250ms snap transition.

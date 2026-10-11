@@ -1,7 +1,14 @@
-import type { Theme, ThemeBase } from "./type";
+import type { Theme, ThemeBase, ThemeSurfaceToken } from "./type";
 
+// Brand ladder: ±0.034 lightness per step around the seed, chroma scaled with lightness (brand palette values).
 export const BRAND_DARK: Theme = {
+  background_lightest: "oklch(0.357 0.0326 230.47)",
+  background_lighter: "oklch(0.323 0.0295 230.47)",
+  background_light: "oklch(0.289 0.0264 230.47)",
   background: "oklch(0.255 0.0233 230.47)",
+  background_dark: "oklch(0.221 0.0202 230.47)",
+  background_darker: "oklch(0.187 0.0171 230.47)",
+  background_darkest: "oklch(0.153 0.014 230.47)",
   foreground: "oklch(0.745 0.0078 50.47)",
   primary: "oklch(0.745 0.0699 122.47)",
   secondary: "oklch(0.745 0.0466 302.47)",
@@ -16,7 +23,13 @@ export const BRAND_DARK: Theme = {
 
 // Brand rule: light is product UI only, never for the app icon, favicon or splash.
 export const BRAND_LIGHT: Theme = {
+  background_lightest: "oklch(1 0 0)",
+  background_lighter: "oklch(0.983 0.0086 86.47)",
+  background_light: "oklch(0.966 0.0172 86.47)",
   background: "oklch(0.949 0.0259 86.47)",
+  background_dark: "oklch(0.89 0.0562 86.47)",
+  background_darker: "oklch(0.832 0.077 86.47)",
+  background_darkest: "oklch(0.774 0.0725 86.47)",
   foreground: "oklch(0.3982 0.0233 266.47)",
   primary: "oklch(0.4743 0.0778 50.47)",
   secondary: "oklch(0.4743 0.0519 190)",
@@ -29,10 +42,37 @@ export const BRAND_LIGHT: Theme = {
   info: "oklch(0.4829 0.1244 246.07)",
 };
 
+const SURFACE_STEPS: Record<ThemeSurfaceToken, number> = {
+  background_lightest: 3,
+  background_lighter: 2,
+  background_light: 1,
+  background_dark: -1,
+  background_darker: -2,
+  background_darkest: -3,
+};
+
+/**
+ * The surface ladder for themes that only define `background` (five-colour presets, older saves). Brand palettes list
+ * their exact shades instead. Steps follow the brand: 0.034 lightness each; "dark" is always lower lightness.
+ * A step past black or white reflects back (abs) instead of clamping, so a pure-black or pure-white preset still gets
+ * distinct shades rather than seven copies of the same colour.
+ */
+export function derive_surfaces(): Record<ThemeSurfaceToken, string> {
+  return Object.fromEntries(
+    Object.entries(SURFACE_STEPS).map(([token, step]) => [
+      token,
+      step < 0
+        ? `oklch(from var(--background) abs(calc(l - ${-step * 0.034})) c h)`
+        : `oklch(from var(--background) calc(1 - abs(calc(1 - l - ${step * 0.034}))) c h)`,
+    ])
+  ) as Record<ThemeSurfaceToken, string>;
+}
+
 // Mirrors the brand derivation (states at brand lightness, fixed hues) so presets never hand-pick extra colours.
 export function derive_theme(base: ThemeBase): Theme {
   return {
     ...base,
+    ...derive_surfaces(),
     tertiary: "color-mix(in oklch, var(--primary), var(--secondary))",
     cottontail: "oklch(from var(--primary) calc(l + 0.2) calc(c * 1.34) h)",
     success: "oklch(from var(--primary) l 0.14 140)",

@@ -6,7 +6,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 
 | Store | Key / path | Owner | Format | Version | Load: sanitize / migrate | When written |
 |-------|-----------|-------|--------|---------|--------------------------|--------------|
-| OPFS | `/etc/settings.json` | SettingsService (`settings/persistence.ts`) | JSON `{ version, theme, taskbar, file_defaults }`, pretty-printed | `1` | Wrong version → discarded (no migration). Theme merged over Brand Dark, known token keys with string values only. Bad taskbar position → `bottom`. `file_defaults` keeps only `".ext" → string` entries. Parse error → defaults. | `$effect` after every change, plus once right after init, through a write queue (no overlapping writes, newest wins). [Details](services/settings.md#persistence) |
+| OPFS | `/etc/settings.json` | SettingsService (`settings/persistence.ts`) | JSON `{ version, theme, taskbar, file_defaults }`, pretty-printed | `1` | Wrong version → discarded (no migration). Theme merged over Brand Dark, known token keys with string values only. Surface tokens a save predates come from the matching brand palette, else `derive_surfaces()`. Bad taskbar position → `bottom`. `file_defaults` keeps only `".ext" → string` entries. Parse error → defaults. | `$effect` after every change, plus once right after init, through a write queue (no overlapping writes, newest wins). [Details](services/settings.md#persistence) |
 | localStorage | `webos.settings` (legacy) | SettingsService (`take_legacy_settings`) | Same JSON as above | `1` | Imported only when `/etc/settings.json` doesn't exist | Never written. Removed on every boot |
 | OPFS | `/home/Desktop/*` | DesktopService (reads), the user, `pin()` and seeding (write) | Any file or folder. `.desktop` files are shortcut JSON `{ app_id, props? }` | none | Shortcut zod-validated on read; invalid → shown as a plain file, "Broken shortcut" on open | Seeding on first boot, "Pin to Desktop", and anything the user saves there. [Details](services/desktop.md#persistence) |
 | OPFS | `/var/lib/session/session.json` | SessionService (`session/persistence.ts`) | JSON `{ version, windows: [{ app_id, props?, bounds, flags, snap_zone }] }`, oldest-first in z-order, pretty-printed | `1` | zod; anything invalid → no session (no dialog), overwritten on first save. Unknown app or invalid props → that window skipped at restore, one toast | `$effect` on every window change, through `LatestWriter`, but only after the boot restore decision. [Details](services/session.md#persistence) |
@@ -19,7 +19,17 @@ Every place the OS stores data in the browser, as of the current code. There's n
 
 Not used anywhere in OS code: `sessionStorage`, IndexedDB, cookies, the URL (no hash/query state; ADR-010 is only accepted).
 
-Only one user app uses app storage today: `user/example` (`app.example.count`). No system app persists anything through it.
+App storage keys in use today:
+
+| Key | App | Value |
+|-----|-----|-------|
+| `app.settings.section` | Settings | Open section: `appearance`, `taskbar`, `files` or `about` (zod enum) |
+| `app.kernel.expanded` | Kernel | Registry keys of the open inspector cards (`string[]`) |
+| `app.text-viewer.wrap` | Text Viewer | Line wrap on or off (`boolean`, default `true`) |
+| `app.style-guide.section` | Style Guide | Open section: `colour`, `type`, `surfaces`, `actions`, `inputs` or `feedback` (zod enum) |
+| `app.example.count` | `user/example` | Counter (`number`) |
+
+All are `storage.persisted()` cells, so every window of the app shares one live value.
 
 ## App storage handle
 
@@ -58,7 +68,8 @@ interface StorageHandle {
 | Desktop icon positions | Yes, once moved | `/var/lib/desktop/layout.json`. Icons never moved take the first free cells again |
 | Notification history | **No** | NotificationsService `all` is in-memory |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
-| File Explorer location, app UI state | **No** | Unless the app uses `storage` |
+| File Explorer location, filter, window zoom | **No** | In-component state |
+| App UI state | Only what the app persists | Settings and Style Guide section, Kernel open cards, Text Viewer wrap (`app.{id}.*`) |
 | bfcache restore (`pagehide` with `persisted`) | Everything | Services aren't shut down, so the page comes back as it was |
 
 ## Conventions
@@ -69,7 +80,7 @@ The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.
 
 | What | How |
 |------|-----|
-| Settings | Delete `/etc/settings.json` in File Explorer + reload, or the Settings app's Reset (theme, taskbar and `file_defaults`, no reload). Deleting without a reload does nothing: the next change rewrites it. |
+| Settings | Delete `/etc/settings.json` in File Explorer + reload, or Settings → About → Reset (theme, taskbar and `file_defaults`, no reload). Settings → Default apps clears `file_defaults` alone (one entry or all). Deleting the file without a reload does nothing: the next change rewrites it. |
 | Session | Start fresh in the boot dialog, which saves an empty session. Deleting `/var/lib/session/session.json` in File Explorer doesn't stick: the next window change rewrites it. |
 | Desktop | Delete shortcuts from the desktop, or anything in `/home/Desktop` from File Explorer. Delete `/var/lib/desktop/layout.json` to forget positions; with an empty `/home/Desktop` too, the next boot seeds the two default shortcuts again. |
 | App data | `localStorage` keys `app.{id}.*` (no UI) |

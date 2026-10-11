@@ -44,6 +44,8 @@ export default define_app({
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Note as NoteIcon, TextAa as TextAaIcon, X as XIcon } from "phosphor-svelte";
   import { z } from "zod";
 
   const { path }: { path?: string } = $props();
@@ -55,18 +57,20 @@ export default define_app({
   const content = $derived(path ? files.get_file(path).then((file) => file?.text() ?? null) : null);
 </script>
 
-<div class="grid grid-rows-[auto_1fr] h-full">
-  <header class="flex gap-2 px-3 py-2 border-b border-b-foreground/20 text-sm">
-    <span class="font-mono truncate text-foreground/65">{path ?? "No file"}</span>
-    <button class="hover:opacity-85" onclick={() => font_size.value++}>A+</button>
-    <button class="hover:opacity-85" onclick={() => win.close()}>Close</button>
-  </header>
+<div class="grid h-full grid-rows-[auto_1fr]">
+  <Toolbar>
+    <span class="min-w-0 flex-1 truncate px-1 font-mono text-2xs text-foreground/80">{path ?? "No file"}</span>
+    <IconButton label="Larger text" size="sm" onclick={() => font_size.value++}><TextAaIcon weight="bold" /></IconButton>
+    <IconButton label="Close" size="sm" onclick={() => win.close()}><XIcon weight="bold" /></IconButton>
+  </Toolbar>
 
   {#if !content}
-    <p class="p-4 text-foreground/65">Open a .note file from File Explorer.</p>
+    <EmptyState icon={NoteIcon} title="No note open" description="Open a .note file from File Explorer." />
   {:else}
-    {#await content then text}
-      <pre class="p-4 @md:px-8" style:font-size="{font_size.value}px">{text ?? "File not found."}</pre>
+    {#await content}
+      <div class="grid place-items-center"><Spinner label="Reading note" /></div>
+    {:then text}
+      <pre class="overflow-auto p-4 @md:px-8" style:font-size="{font_size.value}px">{text ?? "File not found."}</pre>
     {/await}
   {/if}
 </div>
@@ -79,7 +83,8 @@ What this shows:
 - **Context** via `get_app_context()` during init. `window` renamed to keep the global reachable.
 - **Per-app settings** with `storage.persisted()`, stored as `app.notes.font_size`. Shared live by every Notes window. Must be called during init.
 - **Responsive** with container queries (`@md:`); the window body is the `@container`. No viewport breakpoints.
-- **Theme tokens only** (`text-foreground/65`, `border-foreground/20`); the default Tailwind palette doesn't compile.
+- **UI kit, not hand-rolled controls.** `Toolbar`, `IconButton` (always with a `label`), `EmptyState` and `Spinner` from `$lib/core/components/ui`, laid out as the document frame from [docs/design/patterns.md](../../design/patterns.md). The Style Guide app shows every component live.
+- **Theme tokens only** (`text-foreground/65`, `bg-background-light`); the default Tailwind palette doesn't compile.
 
 ## 4. Try it
 
@@ -90,11 +95,11 @@ What this shows:
 | Situation | What happens |
 |-----------|--------------|
 | Launched with props that fail the schema | Window opens with no props, warning toast, zod issues in the console |
-| Component import fails | The window shows `Error loading component: …` |
+| Component import fails | The window shows an error empty state, "This app failed to load", with the message |
 | Same app opened twice | Two windows. Shared `persisted()` values, separate component state |
 | User closes the window | Immediate unmount; clean up in `$effect` returns or `onDestroy`. There's no close veto |
 | Report an error to the user | `kernel.service<NotificationsService>("notifications").notify(app_id, { type: "error", title })` ([notifications](../services/notifications.md)) |
 | Ask the user something outside the window | `dialogs.show(Component, props, { anchor })` ([dialogs](../services/dialogs.md)) |
 | Need the file's bytes | `files.get_file(path)` returns a `File` or `null` ([files](../services/files.md)) |
 
-References in the repo: `user/example` (context, persisted state, props), `system/text-viewer` (smallest file app), `system/media-preview` (file app with a toolbar).
+References in the repo: `user/example` (context, persisted state, props), `system/text-viewer` (smallest file app, persisted toggle), `system/media-preview` (file app with a toolbar and status bar), `system/settings` (side-nav app with sections), `system/style-guide` (every kit component).

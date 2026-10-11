@@ -2,6 +2,9 @@
 **Date:** 2026-10-11
 **Status:** Implemented (2026-10-11, see revision)
 
+> **Revision 2026-10-11: required answers**
+> - `DialogOptions.dismissible` (default `true`). With `false`, the host renders `closedby="none"` and cancels Esc, so only the dialog's own buttons close it. This is for questions whose dismissal would silently pick an answer. The session restore dialog is the first: dismissing it used to mean "Start fresh" and threw the saved session away. Menus stay light-dismiss.
+
 > **Revision 2026-10-11: implementation**
 > - **Native `<dialog closedby="any">` opened with `showModal()`** (owner decision, over a hand-written `popover="manual"` host). The platform handles Esc, outside-click dismissal, focus trap and return, the top layer and the stack. Dialogs are modal: an outside click closes the top dialog only and does not reach what was clicked, like OS context menus.
 > - **Placement by CSS anchor positioning** (owner decision). The host puts a 0×0 anchor at the point; anchored dialogs use `position-area: bottom span-right` with `flip-block`/`flip-inline` fallbacks, unanchored ones `position-area: center`. No JS measuring.

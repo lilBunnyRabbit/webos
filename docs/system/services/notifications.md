@@ -68,7 +68,7 @@ None. History is in memory and gone on reload.
 ## Behaviour & invariants
 
 - `notify` prepends to `all` and `toast_ids`, then starts the hide timer (private `schedule_hide`, which clears any existing timer for the id first). Duration: the caller's `duration` if set (`null` → no timer); otherwise none for `type: "progress"`, 5 s for every other type. Returns a uuid.
-- `update()` that switches a `"progress"` notification to another type, when the caller never set `duration` and the toast is still showing, starts the default 5 s timer. So `notify({ type: "progress" })` → `update({ type: "success" })` stays up while working and hides 5 s after it finishes.
+- `update()` that switches a `"progress"` notification to another type, when the caller never set `duration` and the toast is still showing, starts the default 5 s timer. So `notify({ type: "progress" })` → `update({ type: "info" })` stays up while working and hides 5 s after it finishes.
 - A caller-set `duration` on a progress toast is a fixed lifetime from `notify`. `update()` never restarts it.
 - The toast's close button calls `hide_toast`, not `dismiss`.
 
@@ -76,9 +76,10 @@ None. History is in memory and gone on reload.
 
 `toast-area.svelte`, mounted in `os.svelte` in the same grid cell as the desktop, so it follows the taskbar position. A `pointer-events-none` flex column, aligned bottom-right (`items-end justify-end`, `p-4`), newest on top. Each toast:
 
-- `w-80`, `bg-background`, 2px border in the level colour, `shadow-window`. Text stays `text-foreground`.
-- Grid: icon | title + message | close button. Then an optional progress bar (`bg-current` on `bg-foreground/20`) and an optional row of action buttons.
-- Enters/leaves with `fly` (x 24px, 150 ms).
+- `w-80`, `rounded-xl bg-background-lighter p-3 shadow-popover`. `role="alert"` for errors, `role="status"` otherwise.
+- Grid: icon tile | title + message | dismiss `IconButton` ("Dismiss"). The icon tile is the type's colour at 12% with the full colour as ink (`info`, `warning`, `error`; `progress` uses `primary` and spins). The title is `text-ui font-semibold`, the message `text-ui` at 80%. A custom `icon` replaces the type icon.
+- An optional 4px progress bar (`primary` on `foreground/12`; a pulsing third for indeterminate `progress < 0`), then an optional row of `Button`s: the first `primary`, the rest `secondary`, all `sm`.
+- Enters/leaves with `fly` (x 24px, 180 ms).
 
 Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 

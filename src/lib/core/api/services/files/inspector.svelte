@@ -24,7 +24,7 @@
 
 {#if root}
   {#await root}
-    <p class="text-sm text-foreground/50">Reading root…</p>
+    <p class="text-ui text-foreground/65">Reading root…</p>
   {:then items}
     <InspectorTable columns={["Name", "Kind", "Size"]} empty={items.length === 0} empty_text="Root is empty.">
       {#each items as item (item.name)}
@@ -36,6 +36,6 @@
       {/each}
     </InspectorTable>
   {:catch error}
-    <p class="text-sm text-error">Could not read root: {error instanceof Error ? error.message : String(error)}</p>
+    <p class="text-ui text-error">Could not read root: {error instanceof Error ? error.message : String(error)}</p>
   {/await}
 {/if}

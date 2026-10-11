@@ -23,9 +23,18 @@
 
   <dialog
     {@attach open_modal}
-    closedby="any"
+    closedby={entry.dismissible ? "any" : "none"}
     onclose={() => entry.resolve(null)}
-    class="m-0 p-0 inset-auto max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none backdrop:bg-transparent"
+    oncancel={(event) => {
+      // closedby="none" still lets Esc fire cancel in some builds; a required answer ignores it.
+      if (!entry.dismissible) event.preventDefault();
+    }}
+    class={[
+      "m-0 p-0 inset-auto max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none",
+      // Every dialog, anchored menu or centered question, sits on the shared scrim; questions also blur what's behind.
+      "backdrop:bg-(--overlay)",
+      !entry.anchored && "backdrop:backdrop-blur-[2px]",
+    ]}
     style:position-anchor="--dialog-{entry.id}"
     style:position-area={entry.anchored ? "bottom span-right" : "center"}
     style:position-try-fallbacks={entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}

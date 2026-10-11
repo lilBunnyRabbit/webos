@@ -8,6 +8,8 @@
   import FileRow from "./file-row.svelte";
   import DirectoryRow from "./directory-row.svelte";
   import { report_file_error } from "./file-explorer.errors";
+  import { EmptyState } from "../ui";
+  import { FolderOpen as FolderOpenIcon, MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
 
   interface Props {
     handler: DirectoryHandler;
@@ -58,52 +60,61 @@
   }
 </script>
 
-<div class="grid grid-cols-[auto_1fr_auto_auto] gap-x-4 overflow-y-auto max-h-full h-fit">
-  <div class="grid grid-cols-subgrid col-span-4 px-4 py-2 sticky top-0 bg-background border-b border-b-foreground">
-    <div class="col-span-2 font-medium text-sm">Name</div>
-    <div class="font-medium text-sm">Size</div>
-    <div class="font-medium text-sm">Date</div>
-  </div>
-
-  {#if handler.loading}
-    {#each { length: 5 }, idx (idx)}
-      <div class="bg-foreground/10 animate-pulse h-10 col-span-4"></div>
-    {/each}
+<div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
+  {#if handler.loading && handler.items.length === 0}
+    <div class="flex flex-col gap-1 p-2">
+      {#each { length: 6 }, idx (idx)}
+        <div class="h-8 animate-pulse rounded-md bg-foreground/5" style:opacity={1 - idx * 0.14}></div>
+      {/each}
+    </div>
+  {:else if handler.items.length === 0}
+    <EmptyState icon={FolderOpenIcon} title="This folder is empty" description="Upload files or create a folder from the toolbar." />
   {:else if filtered_items.length === 0}
-    <div class="col-span-4 px-4 py-2 h-full text-accent">No files found</div>
+    <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />
   {:else}
-    {#each filtered_items as item (item.name)}
-      {#if item.kind === "file"}
-        <button
-          class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
-          ondblclick={(e) => open_file(item, { x: e.clientX, y: e.clientY })}
-          onkeydown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              open_file(item, row_anchor(e.currentTarget));
-            } else if (is_delete_key(e)) {
-              delete_item(item);
-            }
-          }}
-        >
-          <FileRow {item} />
-        </button>
-      {:else if item.kind === "directory"}
-        <button
-          class="grid grid-cols-subgrid col-span-4 items-center focus:bg-foreground/5 hover:bg-foreground/5 px-4 py-2"
-          ondblclick={() => open_directory(item)}
-          onkeydown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              open_directory(item);
-            } else if (is_delete_key(e)) {
-              delete_item(item);
-            }
-          }}
-        >
-          <DirectoryRow handle={item.handle} system={is_system_path(join_path(handler.segments, item.name))} />
-        </button>
-      {/if}
-    {/each}
+    <div role="grid" aria-label="Folder contents" class="grid grid-cols-[1.25rem_1fr_auto_auto] gap-x-3 px-2 pb-2">
+      <div role="row" class="sticky top-0 z-10 col-span-4 grid grid-cols-subgrid border-b border-foreground/8 bg-background px-2 pt-2 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
+        <div role="columnheader" class="col-span-2">Name</div>
+        <div role="columnheader" class="w-16 text-right">Size</div>
+        <div role="columnheader" class="hidden w-24 @md:block">Modified</div>
+      </div>
+
+      {#each filtered_items as item (item.name)}
+        {@const row = "col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-colors duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset"}
+        {#if item.kind === "file"}
+          <button
+            role="row"
+            class={row}
+            ondblclick={(e) => open_file(item, { x: e.clientX, y: e.clientY })}
+            onkeydown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                open_file(item, row_anchor(e.currentTarget));
+              } else if (is_delete_key(e)) {
+                delete_item(item);
+              }
+            }}
+          >
+            <FileRow {item} />
+          </button>
+        {:else if item.kind === "directory"}
+          <button
+            role="row"
+            class={row}
+            ondblclick={() => open_directory(item)}
+            onkeydown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                open_directory(item);
+              } else if (is_delete_key(e)) {
+                delete_item(item);
+              }
+            }}
+          >
+            <DirectoryRow handle={item.handle} system={is_system_path(join_path(handler.segments, item.name))} />
+          </button>
+        {/if}
+      {/each}
+    </div>
   {/if}
 </div>

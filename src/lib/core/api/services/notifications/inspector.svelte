@@ -18,7 +18,7 @@
 {#if detailed}
   <InspectorTable columns={["Time", "Type", "App", "Title"]} empty={recent.length === 0} empty_text="No notifications.">
     {#each recent as notification (notification.id)}
-      <tr class={notification.read ? "text-foreground/50" : undefined}>
+      <tr class={notification.read ? "text-foreground/65" : undefined}>
         <td>{notification.created_at.toLocaleTimeString()}</td>
         <td>{notification.type}</td>
         <td>{notification.app_id}</td>

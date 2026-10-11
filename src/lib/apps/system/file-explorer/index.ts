@@ -8,7 +8,6 @@ export default define_app({
   name: "File Explorer",
   icon: FolderIcon,
   version: "1.0.0",
-  author: "John Doe",
   categories: ["system"],
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,

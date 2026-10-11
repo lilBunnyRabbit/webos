@@ -142,16 +142,18 @@ export type SnapZone = (typeof SnapZone)[keyof typeof SnapZone];
 
 ## Styling & brand
 
+How things should look (tokens, type, spacing, components, patterns) is in [docs/design](design/README.md). UI is built from the kit in `$lib/core/components/ui`; don't hand-roll buttons, inputs or toolbars.
+
 The app follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/). Its LLM index at `https://lilbunnyrabbit.github.io/brand/llms.txt` is the full spec.
 
 ### Themes and tokens
 
 - Themes live in `services/settings/themes.ts`. **Brand Dark** is the default and **Brand Light** comes second. Other presets are user themes.
-- `SettingsService.theme` holds the tokens and writes each one as `--{token}` on `<html>`. Tailwind maps them in `src/app.css` with `@theme inline`.
+- `SettingsService.theme` holds the tokens and writes each one as a kebab-case variable (`background_dark` → `--background-dark`) on `<html>`. Tailwind maps them in `src/app.css` with `@theme inline`.
 
 | Token | Use |
 |-------|-----|
-| `background` | The page/surface. `background-dark` is derived (mixed 80% with black) |
+| `background` … `background-darkest`/`-lightest` | The surface ladder (see below and [docs/design/foundations.md](design/foundations.md#surface-ladder)) |
 | `foreground` | All text |
 | `primary` | Wherever something should read as the brand: the logo, selection, the main action |
 | `secondary`, `tertiary` | Supporting brand colours |
@@ -161,13 +163,13 @@ The app follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/bran
 | `mark-ears` | Fixed logo colour. The same in every theme |
 
 - All values are OKLCH. Tailwind's default palette is **disabled** (`--color-*: initial`), so `red-500`, `white` and similar don't compile. If a colour seems to be missing, it's a token at reduced opacity, not a new colour.
-- No background ladder. The brand has seven background shades, but the owner chose not to model them. Use `background`, `background-dark`, and opacity on `foreground` for subtle fills.
+- The brand's seven-shade surface ladder is in every theme (`background-darkest` … `background-lightest`, ADR-024). Desktop on darkest, windows on `background`, chrome and cards on `background-light`, inputs on `background-darker`. At most three shades per view. Neutral fills are `foreground` at an opacity.
 - A preset that defines only the five base colours gets the rest from `derive_theme()`. It follows the brand formula: states sit at the primary colour's lightness with fixed hues, and tertiary and cottontail derive from primary. Never hand-pick extra colours for a preset.
 - Interaction opacity, from the brand modifiers: hover `opacity-85`, active `opacity-70`, disabled `opacity-38`. Muted text is `text-foreground/65`, for captions and metadata only.
 
 ### Brand rules that bite in UI
 
-- Nothing sits on white. Popovers and dialogs default to a white UA background, so always give them `bg-background`.
+- Nothing sits on white. Popovers and dialogs default to a white UA background, so always give them a surface (`bg-background-light` for menus, toasts and dialogs).
 - No white text on a brand fill. Use `text-background` on `bg-primary` and friends.
 - Two brand colours never touch. Separate them with a gap or a border.
 - No gradients between brand colours.

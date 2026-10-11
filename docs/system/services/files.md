@@ -211,7 +211,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
 
-**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["home"])` resolves `/home` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory(segments.slice(0, depth))` for each ancestor, `directory(split_path(path))` and `open_directory(name, handle)`, which always pass a matching pair.
+**Gotcha: `directory(segments, handle)` trusts the pair.** Without a handle, `files.directory(["home"])` resolves `/home` from the root (it never creates it). With a handle, it doesn't check that `segments` describes that handle's path, so a mismatched pair gets a wrong label. File Explorer does `directory(split_path(path))` for its start folder, `directory(segments)` for breadcrumb and Places jumps, and `open_directory(name, handle)` to enter a folder, which always pass a matching pair.
 
 ### LatestWriter
 
@@ -252,29 +252,41 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 ## File explorer components
 
-`src/lib/core/components/files/`, shared OS UI. The [File Explorer app](../system-apps.md#file-explorer) is a thin wrapper that passes its `path` prop to `file-explorer.svelte`.
+`src/lib/core/components/files/`, shared OS UI built from the [UI kit](../../design/components.md). The [File Explorer app](../system-apps.md#file-explorer) is a thin wrapper that passes its `path` prop to `file-explorer.svelte`.
 
 | File | Responsibility |
 |------|----------------|
-| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `path_stack: DirectoryHandler[]`, `search`. Prop `path` (default `PATHS.home`), read once. Starts there with a handler for every ancestor already on `path_stack`. Layout: navigation / list / status bar. Shows "Failed to load filesystem" if any lookup fails, for example when the folder or `/home` was deleted this session |
-| `file-explorer-navigation.svelte` | Toolbar: back, reload, breadcrumbs, search input (`bind:search`), new folder, upload |
-| `file-list.svelte` | Header row plus a row per item. Filtering, open, delete. Passes `system={is_system_path(path)}` to folder rows. Shows 5 skeleton rows while `handler.loading`, "No files found" when empty |
-| `file-row.svelte` | File cells: icon, name, `format_bytes(size)`, `last_modified` as a local date (`-` when missing). A `.desktop` row reads and parses the file and shows `ShortcutIcon` with the target app's icon (generic glyph while loading, on error, or for a broken shortcut) |
+| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `history: DirectoryHandler[]` (for Back only), `search`. Prop `path` (default `PATHS.home`), read once: `files.directory(split_path(path))`. Layout: `grid-rows-[auto_1fr_auto]` with the toolbar, then Places + list side by side, then the status bar. A centered `Spinner` ("Opening folder") while the start folder resolves; an error `EmptyState` ("Couldn't open this folder" + message) if it fails, for example when the folder or `/home` was deleted this session |
+| `file-explorer-navigation.svelte` | `Toolbar`: Back and Reload `IconButton`s, the breadcrumb, a filter `Input` (`bind:search`, always visible: `w-28`, `w-40` from `@lg`), a vertical `Separator`, New folder, Upload |
+| `file-explorer-places.svelte` | Sidebar, only at `@3xl` and up (`w-44`, `bg-background-light`, hairline right). "Places": Home, Desktop, Documents, Downloads (`PATHS`). "System": every `SYSTEM_DIRECTORIES` entry (`/etc`, `/var`, `/tmp`) by path. The entry equal to the current path is active (`foreground/10` fill, `primary` filled icon, `aria-current="page"`); clicking it does nothing |
+| `file-list.svelte` | The scrolling list: a `role="grid"` with a sticky overline header row (Name, Size, Modified) and a row per item. Filtering, open, delete. Passes `system={is_system_path(path)}` to folder rows. Skeleton, empty and no-match states (below) |
+| `file-row.svelte` | File cells: icon (duotone, `foreground/80`), name (`text-ui`), size (`format_bytes`, `—` when missing), modified date (`format_date`, medium date; `format_datetime` as `title`, 24-hour; `—` when missing). Size and date are mono `text-2xs` `foreground/80` `tabular-nums`. A `.desktop` row reads and parses the file and shows `ShortcutIcon` with the target app's icon (generic glyph while loading, on error, or for a broken shortcut) |
 | `shortcut-icon.svelte` | `ShortcutIcon { app_id: AppId \| null, class? }`: the app's manifest icon, or Phosphor `AppWindow` when unknown, with an `ArrowUpRight` badge in the bottom-right corner. Also used by the desktop (ADR-022) |
-| `directory-row.svelte` | Folder cells: icon, name, `-`, caret. No date. With `system`, a small "system" badge after the name (`/etc`, `/var`, `/tmp` and anything under them) |
-| `file-explorer-status-bar.svelte` | "N items (x folders, y files)" for the unfiltered directory, plus origin storage usage/quota/% |
-| `file-upload-button.svelte` | Calls `handler.upload_files()`, disabled while it runs |
+| `directory-row.svelte` | Folder cells: `primary` filled folder icon, name, `—` for size, empty date. With `system`, a neutral `Badge` "system" after the name (`/etc`, `/var`, `/tmp` and anything under them) |
+| `file-explorer-status-bar.svelte` | `StatusBar` (single line, `nowrap`, each child truncates): "N items" for the unfiltered directory, plus "· x folders, y files" when both kinds are present (from `@sm`). On the right, from `@md`, a storage meter: a 64px `primary` bar (at least 2% wide) and "{usage} of {quota}", percentage in the `title` |
+| `file-upload-button.svelte` | Upload `IconButton`, calls `handler.upload_files()`, disabled while it runs |
 | `file-explorer.errors.ts` | `report_file_error(title, error)`: `console.error`, then an `error` notification from source `"file-explorer"` ([notifications](notifications.md)) |
 | `file-icon.svelte` | Phosphor icon by MIME type first, then extension. Generic fallback |
 
 ### Navigation model
 
-- `navigate_to(child)` pushes the current handler onto `path_stack`. The child is a fresh handler and lists itself.
-- Back pops the stack. Clicking breadcrumb `i` truncates the stack to `i`. Both call `show()`, which **reloads** the target, because stacked handlers aren't watched.
-- A new window opens at its `path` prop (`/home` by default) with a handler for every ancestor on the stack, so Back and the breadcrumb reach `/` and the system folders. Opening `/home/Desktop` gives `/ home / Desktop`. Each ancestor handler lists itself on creation even though it isn't shown, and the lookups run one after another before the first paint.
-- Breadcrumbs show stack entries by `name`, root as `/`. A `/` separator goes between entries, except right after the root, whose name already is `/`: `/ home / Documents`. The current directory is a disabled entry in `text-accent`.
-- There's no forward history. Back is disabled when the stack is empty, which is only at `/` after going back (or jumping there by breadcrumb).
-- `search` survives navigation. It filters the current directory only, as a case-insensitive substring of the name.
+- **The breadcrumb shows the real path, not the history.** Crumbs are `/` (mono) plus one per segment of `handler.segments`. A small `CaretRight` (`foreground/65`) separates segments, but not right after `/`: `/ home › Documents`. The current folder is `font-medium`, `disabled`, and `aria-current="location"`. The whole trail is a `<nav aria-label="Path">` that scrolls horizontally when it overflows.
+- Clicking a crumb or an inactive Places entry calls `navigate_path(segments)`: `files.directory(segments)` resolves a fresh handler from the root, which then goes through `navigate_to`. A failure is reported as `Could not open /{segments}`.
+- `navigate_to(next)` (also used when entering a folder from the list) pushes the current handler onto `history`, shows `next` and **clears `search`**.
+- **Back** pops `history`, clears `search` and **reloads** the popped handler, because handlers in history aren't watched. Back is disabled when `history` is empty, which is the case in every new window. There's no forward history.
+- A new window opens straight at its `path` prop with an empty history. Ancestors aren't resolved up front; the breadcrumb and Places reach them on demand.
+- `search` filters the current directory only, as a case-insensitive substring of the name (trimmed).
+
+### List states
+
+| State | Shows |
+|-------|-------|
+| `handler.loading` with no items yet | Six skeleton rows (`h-8 bg-foreground/5 animate-pulse`), fading out downward |
+| Loaded, folder empty | `EmptyState` "This folder is empty" ("Upload files or create a folder from the toolbar.") |
+| Filter matches nothing | `EmptyState` "No matches" (`Nothing here is called "{search}".`) |
+| Items | Rows. A reload keeps the current rows on screen until the new listing lands (`DirectoryHandler` only swaps `items` when done), so mutations don't flash skeletons |
+
+Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, name, size, modified). Hover `bg-foreground/6`; focus `bg-primary/12`, keyboard focus adds an inset 2px `cottontail` ring. The Modified column hides below `@md`.
 
 ### Interactions
 
@@ -286,9 +298,10 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 | Enter | Focused folder row | Navigate into it |
 | Delete, or Backspace with `metaKey` (Cmd on macOS; Ctrl doesn't count) | Focused row | `confirm()`, then delete (folders recursively, "and all its contents") |
 | Tab | Rows | Rows are `<button>`s, so Tab moves between them. There's no arrow-key movement or selection model |
-| Click | Back / Reload / New folder / Upload | As labelled. New folder uses `prompt()` |
-| Click | Breadcrumb | Jump to that ancestor |
-| Click × | Search | Clears it |
+| Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder uses `prompt()` |
+| Click | Breadcrumb segment | Jump to that folder |
+| Click | Places entry | Jump to that folder |
+| Click × | Filter field | Clears it |
 
 A single click only focuses the row. There are no context menus, rename, drag-and-drop or multi-select.
 
@@ -308,7 +321,9 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 | Upload | `Upload failed` |
 | Delete | `Could not delete "{name}"` |
 | Open file / enter folder | `Could not open "{name}"` |
-| Back / breadcrumb reload | `Could not open {path}` |
+| Breadcrumb / Places jump | `Could not open /{path}` |
+| Back reload | `Could not open {path}` |
+| Start folder | Inline error `EmptyState`, no toast |
 | Initial listing in `DirectoryHandler` constructor | console only |
 | Storage estimate | console only |
 
@@ -327,11 +342,12 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (multi-window sync is its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
 - A revision bumps only the directly affected directory. A consumer of `/home` doesn't see a change inside `/home/Documents`.
 - After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped. An effect that calls `revision()` directly does re-run: `SvelteMap.clear()` invalidates every key's signal and the map's version (DesktopService reloads, then re-seeds).
-- The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Failed to load filesystem") until the next boot recreates it.
+- The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Couldn't open this folder") until the next boot recreates it. Places entries for a deleted folder report `Could not open …`.
 - `move_directory` isn't atomic and has no guard against moving a folder into its own subtree. An interrupted migration resumes on the next boot, but a folder that was half-moved ends up split between `/home/X` and `/home/X (1)`.
 - A root **file** named `home`, `etc`, `var` or `tmp` makes `ensure_hierarchy` throw (`TypeMismatchError` on create), which now fails the whole boot.
 - No rename UI, no directory move or copy through the service or UI, no context menu, no drag-and-drop, no file properties.
+- The list's icon cell has no `role="gridcell"`, and buttons used as `role="row"` lose button semantics. The grid has no arrow-key model behind the role.
 - `get_file` returns a `File`, not a handle. A path-based app can read but can't write back without walking the tree itself.
-- Every mutation reloads through the `loading` branch, which swaps the whole list for skeletons. Focus is lost after a keyboard delete, and the list flickers.
+- Focus is lost after a keyboard delete: the deleted row unmounts and nothing moves focus to a neighbour.
 - The `DirectoryHandler` constructor's listing failure is invisible to the user.
 - No tests, despite `opfs.ts` being shaped for them.

@@ -2,6 +2,8 @@
   import { untrack } from "svelte";
   import { get_app_context } from "$lib/core/contexts/app";
   import { z } from "zod";
+  import { Badge, Button, Section } from "$lib/core/components/ui";
+  import { Plus as PlusIcon } from "phosphor-svelte";
 
   const { count: initial_count }: { count?: number } = $props();
 
@@ -9,13 +11,34 @@
   const count = storage.persisted("count", untrack(() => initial_count) ?? 0, z.number());
 </script>
 
-<div>
-  <h1>Example App</h1>
-  <p>This is a simple example application.</p>
-  <p>Count: {count.value}</p>
-  <p>Focused: {window.is_focused}</p>
-  <p>Size: {window.bounds.width} × {window.bounds.height}</p>
-  <button onclick={() => count.value++}>Increment</button>
-  <button onclick={() => window.maximize()}>Maximize</button>
-  <button onclick={() => window.restore()}>Restore</button>
+<div class="mx-auto flex max-w-xl flex-col gap-6 p-6">
+  <header>
+    <h1 class="text-lg font-semibold">Example app</h1>
+    <p class="text-ui text-foreground/65">A tour of the app context: persisted storage and the window handle.</p>
+  </header>
+
+  <Section title="Persisted counter" description="Stored under app.example.count and shared live by every Example window.">
+    <div class="flex items-center justify-between gap-4 px-4 py-4">
+      <span class="font-mono text-3xl font-semibold tabular-nums">{count.value}</span>
+      <div class="flex gap-1.5">
+        <Button onclick={() => (count.value = 0)}>Reset</Button>
+        <Button variant="primary" onclick={() => count.value++}><PlusIcon weight="bold" /> Increment</Button>
+      </div>
+    </div>
+  </Section>
+
+  <Section title="Window">
+    <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+      <span class="text-ui text-foreground/80">Focused</span>
+      <Badge tone={window.is_focused ? "success" : "neutral"}>{window.is_focused ? "yes" : "no"}</Badge>
+    </div>
+    <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+      <span class="text-ui text-foreground/80">Size</span>
+      <span class="font-mono text-2xs tabular-nums">{window.bounds.width} × {window.bounds.height}</span>
+    </div>
+    <div class="flex justify-end gap-1.5 px-4 py-3">
+      <Button size="sm" onclick={() => window.restore()}>Restore</Button>
+      <Button size="sm" onclick={() => window.maximize()}>Maximize</Button>
+    </div>
+  </Section>
 </div>
