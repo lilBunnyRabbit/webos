@@ -31,4 +31,4 @@ Cause: ADR-003 deliberately shares `storage.persisted()` cells across every wind
 
 ## Next session topics
 
-- Clean up the orphaned `app.{id}.*` localStorage keys? They're harmless.
+- ~~Clean up the orphaned `app.{id}.*` keys~~ Done: SessionService removes them at boot.

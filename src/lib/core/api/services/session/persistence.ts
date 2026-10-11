@@ -35,3 +35,20 @@ export function parse_session(text: string): WindowSnapshot[] {
 export function serialize_session(windows: WindowSnapshot[]): string {
   return JSON.stringify({ version: SESSION_VERSION, windows }, null, 2);
 }
+
+/** View state that lived in shared `persisted()` cells before `storage.window()`; now per window in the session. */
+const LEGACY_VIEW_KEYS = [
+  "app.settings.section",
+  "app.activity-monitor.section",
+  "app.style-guide.section",
+  "app.kernel.expanded",
+  "app.text-viewer.wrap",
+];
+
+export function remove_legacy_view_keys(): void {
+  try {
+    for (const key of LEGACY_VIEW_KEYS) localStorage.removeItem(key);
+  } catch (error) {
+    console.error("[SessionService] Failed to remove legacy view keys:", error);
+  }
+}

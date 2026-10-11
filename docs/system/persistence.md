@@ -71,7 +71,7 @@ interface StorageHandle {
 | Clipboard contents | **No** | ClipboardService is in memory, like a real OS clipboard |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
 | File Explorer location, filter, window zoom | **No** | In-component state |
-| App UI state | Per window, through session restore | `storage.window()`: Settings, Activity Monitor and Style Guide section, Kernel open cards, Text Viewer wrap, saved as `state` in `/var/lib/session/session.json`. Old `app.settings.section`, `app.kernel.expanded`, `app.text-viewer.wrap`, `app.style-guide.section`, `app.activity-monitor.section` keys stay behind unused |
+| App UI state | Per window, through session restore | `storage.window()`: Settings, Activity Monitor and Style Guide section, Kernel open cards, Text Viewer wrap, saved as `state` in `/var/lib/session/session.json`. SessionService's `init()` removes the old shared keys (`app.settings.section`, `app.activity-monitor.section`, `app.style-guide.section`, `app.kernel.expanded`, `app.text-viewer.wrap`; `LEGACY_VIEW_KEYS` in `session/persistence.ts`) on every boot |
 | bfcache restore (`pagehide` with `persisted`) | Everything | Services aren't shut down, so the page comes back as it was |
 
 ## Conventions

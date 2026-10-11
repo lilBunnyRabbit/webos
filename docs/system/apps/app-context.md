@@ -109,7 +109,7 @@ section.value = "about"; // this window only
 - Gone when the window closes. Not tied to component lifetime, so it can be called anywhere a context is available.
 - A launch prop can be the `initial` (Settings' `section`): it counts for a new window, but a restored window's saved state wins over its saved props.
 
-Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Viewer (`wrap`). Before 2026-10-11 these were `persisted()` cells, so every window of the app switched together; their old `app.{id}.*` keys stay behind unused.
+Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Viewer (`wrap`). Before 2026-10-11 these were `persisted()` cells, so every window of the app switched together; SessionService's `init()` removes their old `app.{id}.*` keys ([persistence](../persistence.md)).
 
 ## Divergence from ADR
 

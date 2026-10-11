@@ -9,7 +9,7 @@ import type {
 } from "$lib/core/api";
 import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
-import { SESSION_FLAGS, SESSION_PATH, parse_session, serialize_session } from "./persistence";
+import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
 
 export class SessionService implements ISessionService {
@@ -44,6 +44,7 @@ export class SessionService implements ISessionService {
   }
 
   async init(): Promise<void> {
+    remove_legacy_view_keys();
     const file = await this.files_service.get_file(SESSION_PATH);
     const saved = file ? parse_session(await file.text()) : [];
     this.saved_count = saved.length;

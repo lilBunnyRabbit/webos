@@ -35,6 +35,7 @@ Read-only state. There are no methods beyond IService.
 
 `init()`, async:
 
+0. `remove_legacy_view_keys()`: deletes the five localStorage keys that held view state before `storage.window()` (`LEGACY_VIEW_KEYS`). Cheap no-op once they're gone.
 1. `files.get_file(SESSION_PATH)` → `parse_session()`, or `[]` when missing. `saved_count` = its length.
 2. Nothing saved → `start_saving()`, `status` stays `none`, done.
 3. Otherwise `status = pending` and `offer_restore(saved)` starts **without being awaited**: the kernel awaits `init()` before mounting, and the dialogs host only renders after mount. A rejection is logged (`[SessionService] Restore failed:`) and saving starts anyway.
