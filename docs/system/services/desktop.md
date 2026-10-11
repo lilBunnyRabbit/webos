@@ -57,7 +57,9 @@ Three layers of state turn the folder into a grid:
 | `list` | `() => DesktopGrid` | The derived visible `grid`. |
 | `has_item_in_position` | `(position) => boolean` | Against the visible grid |
 | `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |
-| `remove_item` | `(position) => Promise<void>` | Deletes the file of a **shortcut** shown at `position` (`files.delete_entry` in `/home/Desktop`). Files and folders: silent no-op (ADR-022 waits for window overlays to confirm). The deletion bumps the folder's revision, which reloads the desktop. |
+| `remove_item` | `(position) => Promise<void>` | Deletes the entry shown at `position` from `/home/Desktop` (folders recursively). The caller confirms first (`desktop-actions.ts`, ADR-025). The deletion bumps the folder's revision, which reloads the desktop. |
+| `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
+| `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
 | `open` | `(item, options?: OpenOptions) => void` | `shortcut` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
