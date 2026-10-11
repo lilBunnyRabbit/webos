@@ -2,6 +2,10 @@
 **Date:** 2026-10-11
 **Status:** Implemented (2026-10-11)
 
+> **Revision 2026-10-11: window state**
+> - `WindowSnapshot` gains an optional `state` (`AppInstance.state`, written by `storage.window()`). The version stays `1`, so older files still load, and their windows start at each key's `initial`.
+> - `windows.restore`'s `create` takes the whole snapshot. `apps.create_instance(id, props, state)` seeds the instance's state. See the [window state brainstorm](../brainstorm/2026-10-11_window-state.md).
+
 > **Revision 2026-10-11: implementation notes**
 > - The file is `/var/lib/session/session.json`, not `/var/session.json`. It follows the convention set in the same session: OS component state goes in `/var/lib/{component}/` (ADR-021, ADR-022).
 > - `RestoreResult.skipped` is the list of skipped snapshots, not a count, so the console can show what was dropped.

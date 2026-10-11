@@ -27,7 +27,7 @@
     const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in Text Viewer" });
     if (chosen) path = chosen;
   }
-  const wrap = storage.persisted("wrap", true, z.boolean());
+  const wrap = storage.window("wrap", true, z.boolean());
 
   const files = $derived(kernel.service<FilesService>("files"));
   const file = $derived(path ? files.get_file(path) : null);

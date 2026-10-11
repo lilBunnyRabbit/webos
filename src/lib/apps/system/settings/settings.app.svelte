@@ -12,9 +12,8 @@
   let { section: requested }: { section?: Section } = $props();
 
   const { storage } = get_app_context();
-  const section = storage.persisted<Section>("section", "appearance", z.enum(SECTION_IDS));
   // svelte-ignore state_referenced_locally
-  if (requested) section.value = requested;
+  const section = storage.window<Section>("section", requested ?? "appearance", z.enum(SECTION_IDS));
 
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 </script>

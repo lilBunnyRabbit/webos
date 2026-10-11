@@ -27,7 +27,7 @@
   type Section = (typeof SECTIONS)[number]["value"];
 
   const { storage, window: win } = get_app_context();
-  const section = storage.persisted<Section>("section", "windows", z.enum(SECTIONS.map((item) => item.value)));
+  const section = storage.window<Section>("section", "windows", z.enum(SECTIONS.map((item) => item.value)));
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 
   const windows = $derived(kernel.service<WindowsService>("windows"));

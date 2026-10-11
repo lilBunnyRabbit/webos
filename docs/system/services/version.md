@@ -137,7 +137,6 @@ If the browser already installed the new worker before the click, `installing` a
 ## Known gaps
 
 - With two tabs open, the first to boot writes the seen marker; the other shows no toast.
-- A Settings window launched from the toast keeps `section: "whats-new"` in its props, so a restored session reopens it there.
 
 - `update_available` is never cleared, even if a later check finds nothing newer.
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.

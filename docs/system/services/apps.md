@@ -25,7 +25,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | |
 | `register(manifest)` | `(manifest: AppManifest): void` | `registry.set`. Same id overwrites silently. No `unregister` |
 | `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Always opens a new window |
-| `create_instance(id, props?)` | `(id: AppId, props?: unknown): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
+| `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
@@ -87,7 +87,7 @@ No single-instance mode, no "focus the existing window". Every call is a new win
 
 ### `create_instance(id, props?)`
 
-Silent and strict, for callers that would rather skip than open an empty window (ADR-023):
+Silent and strict, for callers that would rather skip than open an empty window (ADR-023). `state` seeds the instance's window state (`AppInstance.state`, a `$state` record; `{}` otherwise), read by `storage.window()` ([app context](../apps/app-context.md#window)):
 
 | Input | Result |
 |-------|--------|
@@ -134,7 +134,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 | Start menu (`taskbar/start-menu-popover.svelte`) | `launch(id)` |
 | `DesktopService.open()` for a shortcut or file (desktop double-click / Enter) | `open(path, { anchor })`; rejections go to `console.error` |
 | `DesktopService.open()` for a folder | `launch("file-explorer", { path })` |
-| SessionService restore | `create_instance(app_id, props)` per saved window ([session](session.md)) |
+| SessionService restore | `create_instance(app_id, props, state)` per saved window ([session](session.md)) |
 | File Explorer file row, double-click / Enter (`files/file-list.svelte`) | `open(path, { anchor })`, so a `.desktop` file there launches its target; rejections go to `report_file_error` |
 
 ## Divergence from ADR

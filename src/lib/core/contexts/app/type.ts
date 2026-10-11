@@ -43,6 +43,11 @@ export interface StorageHandle {
   remove(key: string): void;
   /** Must be called during component init: it uses `$effect` to save. */
   persisted<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
+  /**
+   * State of this window only, such as the open tab. Starts at `initial` in a new window; a restored window gets its
+   * saved value back when it still passes `schema`. Saved with the session, gone when the window closes.
+   */
+  window<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
 }
 
 export type { ConfirmOptions, PickOptions, PromptOptions, SaveOptions };

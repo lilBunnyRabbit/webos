@@ -12,7 +12,7 @@ import type {
   WindowSnapshot,
 } from "./type";
 import { WindowFlag } from "./type";
-import type { AppId, AppInstance, AppProps } from "../apps/type";
+import type { AppInstance } from "../apps/type";
 
 export class WindowsService implements IWindowsService {
   name = "WindowsService";
@@ -177,12 +177,12 @@ export class WindowsService implements IWindowsService {
 
   public restore(
     windows: WindowSnapshot[],
-    create: (app_id: AppId, props: AppProps | undefined) => AppInstance | null
+    create: (snapshot: WindowSnapshot) => AppInstance | null
   ): RestoreResult {
     const result: RestoreResult = { restored: [], skipped: [] };
 
     for (const snapshot of windows) {
-      const app = create(snapshot.app_id, snapshot.props);
+      const app = create(snapshot);
       if (!app) {
         result.skipped.push(snapshot);
         continue;

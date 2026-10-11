@@ -56,19 +56,20 @@ export class AppsService implements IAppsService {
     return this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
   }
 
-  public create_instance(id: AppId, props?: unknown): AppInstance | null {
+  public create_instance(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance | null {
     const manifest = this.registry.get(id);
     if (!manifest) return null;
-    if (props === undefined) return this.instantiate(manifest, undefined);
+    if (props === undefined) return this.instantiate(manifest, undefined, state);
     if (!manifest.props) return null;
 
     const result = manifest.props.safeParse(props);
-    return result.success ? this.instantiate(manifest, result.data) : null;
+    return result.success ? this.instantiate(manifest, result.data, state) : null;
   }
 
-  private instantiate(manifest: AppManifest, props: AppProps | undefined): AppInstance {
+  private instantiate(manifest: AppManifest, props: AppProps | undefined, initial_state: Record<string, unknown> = {}): AppInstance {
     const { component, ...partial_manifest } = manifest;
-    return { id: manifest.id, manifest: partial_manifest, component: component(), props };
+    const state = $state(initial_state);
+    return { id: manifest.id, manifest: partial_manifest, component: component(), props, state };
   }
 
   public async open(path: string, options: OpenOptions = {}): Promise<WindowId | null> {

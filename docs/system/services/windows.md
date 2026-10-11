@@ -25,7 +25,7 @@ interface WindowInstance {
   snap_zone: SnapZone | null;
   constraints: WindowConstraints; // { width?: { min?, max? }, height?: { min?, max? } }
   bounds: Bounds;                // { x, y, width, height } in px, the "restored" geometry
-  app: AppInstance;              // { id, manifest (minus component), component: Promise, props }
+  app: AppInstance;              // { id, manifest (minus component), component: Promise, props, state }
 }
 ```
 
@@ -46,7 +46,7 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |
 | `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Doesn't touch existing windows (TODO at `service.svelte.ts:70`). Called by the window manager. |
 | `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.legacy_calculate_bounds`. |
-| `restore` | `(windows: WindowSnapshot[], create: (app_id, props) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
+| `restore` | `(windows: WindowSnapshot[], create: (snapshot) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
 | `close` | `(id) => boolean` | Deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
 | `close_all` | `() => void` | Empties the index and resets `max_order`. Nothing calls it. |
 | `exists` | `(id) => boolean` | |
@@ -111,7 +111,7 @@ interface RestoreResult { restored: WindowId[]; skipped: WindowSnapshot[] }
 
 For each snapshot, in order:
 
-1. `create(app_id, props)`. `null` → push the snapshot to `skipped`, continue.
+1. `create(snapshot)`. `null` → push the snapshot to `skipped`, continue.
 2. Insert a record directly (not through `open()`): new uuid, `created_at = now`, `order = ++max_order`, `flags = new Flags(snapshot.flags)`, `snap_zone` from the snapshot, `constraints` from `manifest.defaults` (manifest `flags`/`snap_zone` defaults are ignored), `bounds = WindowsHelper.clamp_bounds(snapshot.bounds, container.bounds)`.
 3. Push the id to `restored`.
 

@@ -30,7 +30,7 @@
       window_id: id,
       app_id,
       window: create_window_handle(id),
-      storage: create_storage_handle(app_id),
+      storage: create_storage_handle(app_id, instance.app.state),
     });
   });
 

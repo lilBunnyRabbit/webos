@@ -26,10 +26,8 @@ App storage keys in use today:
 
 | Key | App | Value |
 |-----|-----|-------|
-| `app.settings.section` | Settings | Open section: `appearance`, `taskbar`, `files` or `about` (zod enum) |
-| `app.kernel.expanded` | Kernel | Registry keys of the open inspector cards (`string[]`) |
-| `app.text-viewer.wrap` | Text Viewer | Line wrap on or off (`boolean`, default `true`) |
-| `app.style-guide.section` | Style Guide | Open section: `colour`, `type`, `surfaces`, `actions`, `inputs` or `feedback` (zod enum) |
+| `app.tic-tac-toe.stats` | `user/tic-tac-toe` | Win/loss/draw counts |
+| `app.qr-reader.entries` | `user/qr-reader` | Scanned codes |
 | `app.example.count` | `user/example` | Counter (`number`) |
 
 All are `storage.persisted()` cells, so every window of the app shares one live value.
@@ -73,7 +71,7 @@ interface StorageHandle {
 | Clipboard contents | **No** | ClipboardService is in memory, like a real OS clipboard |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
 | File Explorer location, filter, window zoom | **No** | In-component state |
-| App UI state | Only what the app persists | Settings and Style Guide section, Kernel open cards, Text Viewer wrap (`app.{id}.*`) |
+| App UI state | Per window, through session restore | `storage.window()`: Settings, Activity Monitor and Style Guide section, Kernel open cards, Text Viewer wrap, saved as `state` in `/var/lib/session/session.json`. Old `app.settings.section`, `app.kernel.expanded`, `app.text-viewer.wrap`, `app.style-guide.section`, `app.activity-monitor.section` keys stay behind unused |
 | bfcache restore (`pagehide` with `persisted`) | Everything | Services aren't shut down, so the page comes back as it was |
 
 ## Conventions

@@ -44,7 +44,7 @@
   type SectionId = (typeof SECTIONS)[number]["value"];
 
   const { storage } = get_app_context();
-  const section = storage.persisted<SectionId>("section", "colour", z.enum(SECTIONS.map((item) => item.value)));
+  const section = storage.window<SectionId>("section", "colour", z.enum(SECTIONS.map((item) => item.value)));
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 
   const LADDER = ["background-darkest", "background-darker", "background-dark", "background", "background-light", "background-lighter", "background-lightest"];

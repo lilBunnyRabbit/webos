@@ -49,7 +49,7 @@ class PersistedCell<T> {
   }
 }
 
-export function create_storage_handle(app_id: AppId): StorageHandle {
+export function create_storage_handle(app_id: AppId, window_state: Record<string, unknown>): StorageHandle {
   const prefix = `app.${app_id}.`;
 
   function get<T>(key: string, schema?: ZodType<T>): T | null {
@@ -108,5 +108,20 @@ export function create_storage_handle(app_id: AppId): StorageHandle {
     return cell;
   }
 
-  return { get, set, remove, persisted };
+  function window_cell<T>(key: string, initial: T, schema?: ZodType<T>): { value: T } {
+    const parsed = key in window_state && schema ? schema.safeParse(window_state[key]) : null;
+    if (!(key in window_state) || parsed?.success === false) window_state[key] = initial;
+    else if (parsed?.success) window_state[key] = parsed.data;
+
+    return {
+      get value() {
+        return window_state[key] as T;
+      },
+      set value(value: T) {
+        window_state[key] = value;
+      },
+    };
+  }
+
+  return { get, set, remove, persisted, window: window_cell };
 }

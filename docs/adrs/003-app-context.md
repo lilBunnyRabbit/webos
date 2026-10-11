@@ -10,6 +10,7 @@
 > - **Storage is guarded:** `get(key, schema?)` and `persisted(key, initial, schema?)` take an optional zod schema. Missing, corrupt or invalid data returns `null` / falls back to `initial`. Write failures log.
 > - Lives in `src/lib/core/contexts/app/`; import from `$lib/core/contexts/app`.
 > - **Windows of one app share `persisted()` cells** (owner decision). The storage module keeps one reactive cell per key, retained by each caller and disposed when the last one unmounts, so two windows stay in sync live. The first caller's `initial` and schema win. `set()` on a key with a live cell updates the cell. Other browser tabs are not synced; that belongs to the multi-window brainstorm.
+> - **Revision 2026-10-11: `storage.window()`** (owner decision). Sharing is right for app data and wrong for view state: two Settings windows switched tabs together. View state now uses `storage.window(key, initial, schema?)`, stored per window in `AppInstance.state` and saved with the session (ADR-023 revision). A new window starts at `initial`. Settings, Activity Monitor, Style Guide, Kernel and Text Viewer moved over. [Brainstorm](../brainstorm/2026-10-11_window-state.md).
 
 ## Context
 

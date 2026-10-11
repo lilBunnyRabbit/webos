@@ -14,6 +14,7 @@ const snapshot_schema = z.object({
   bounds: z.object({ x: z.number(), y: z.number(), width: z.number().positive(), height: z.number().positive() }),
   flags: z.array(z.enum(SESSION_FLAGS)),
   snap_zone: z.enum(Object.values(SnapZone)).nullable(),
+  state: z.record(z.string(), z.unknown()).optional(),
 });
 
 const session_schema = z.object({

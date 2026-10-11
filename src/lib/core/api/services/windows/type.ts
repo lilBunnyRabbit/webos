@@ -93,7 +93,7 @@ export interface WindowsService extends IService {
    * on top. `create` builds each app instance; returning `null` skips that window. Bounds are clamped into the
    * container, and the topmost visible window gets focus.
    */
-  restore(windows: WindowSnapshot[], create: (app_id: AppId, props: AppProps | undefined) => AppInstance | null): RestoreResult;
+  restore(windows: WindowSnapshot[], create: (snapshot: WindowSnapshot) => AppInstance | null): RestoreResult;
 
   /**
    * Snaps a window to a specific zone (edge or corner).
@@ -128,6 +128,8 @@ export interface WindowSnapshot {
   /** Only `minimized` and `maximized` are kept. */
   flags: WindowFlag[];
   snap_zone: SnapZone | null;
+  /** The app instance's window state (`storage.window()`). Absent in sessions saved before it existed. */
+  state?: Record<string, unknown>;
 }
 
 export interface RestoreResult {

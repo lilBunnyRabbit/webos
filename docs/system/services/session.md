@@ -43,7 +43,7 @@ Read-only state. There are no methods beyond IService.
 
 1. `dialogs.show(RestoreSessionDialog, { apps }, { dismissible: false })`, one `AppManifest | null` per snapshot. No anchor, so it's centred. Not dismissible: Esc and outside clicks do nothing.
 2. If `destroy()` ran meanwhile, stop.
-3. `true` (Restore) → `windows.restore(saved, (app_id, props) => apps.create_instance(app_id, props))`, `status = restored`. If anything was skipped: `console.warn` with the skipped snapshots and one warning toast from app id `"session"`: "N window(s) couldn't be restored" / "The app is gone or its saved data is no longer valid."
+3. `true` (Restore) → `windows.restore(saved, ({ app_id, props, state }) => apps.create_instance(app_id, props, state))`, `status = restored`. If anything was skipped: `console.warn` with the skipped snapshots and one warning toast from app id `"session"`: "N window(s) couldn't be restored" / "The app is gone or its saved data is no longer valid."
 4. `false` (Start fresh) → `status = declined`. Nothing opens. `null` is treated the same, but only happens if DialogsService is destroyed while the dialog is open.
 5. `start_saving()`.
 
@@ -66,8 +66,11 @@ interface WindowSnapshot {
   bounds: Bounds;              // numbers; width and height positive
   flags: WindowFlag[];         // only SESSION_FLAGS: "minimized", "maximized"
   snap_zone: SnapZone | null;
+  state?: Record<string, unknown>; // z: record, optional; AppInstance.state, only when non-empty
 }
 ```
+
+`state` is additive: files saved before it existed still parse (version stays `1`) and their windows start every `storage.window()` key at `initial`.
 
 ## Behaviour & invariants
 
@@ -77,7 +80,7 @@ interface WindowSnapshot {
 
 - `windows.sorted_list` by `order` ascending, so oldest-first in z-order and the last entry ends up on top after restore.
 - Drops windows whose manifest has `restore: false`. No app sets it today.
-- Per window: `app_id`, `$state.snapshot(props)`, a copy of `bounds` (the restored geometry, even for maximized or snapped windows), flags filtered to `SESSION_FLAGS` (`debug` is dropped), `snap_zone`.
+- Per window: `app_id`, `$state.snapshot(props)`, a copy of `bounds` (the restored geometry, even for maximized or snapped windows), flags filtered to `SESSION_FLAGS` (`debug` is dropped), `snap_zone`, and `$state.snapshot(app.state)` when it has keys. A `storage.window()` change therefore rewrites the file.
 - It tracks everything it reads, so any bounds, flag, snap or z-order change rewrites the file. Bounds only change on pointer release, so dragging doesn't write per frame. Focusing a window does write (its `order` changes).
 - Also updates `saved_count` and `last_saved`.
 

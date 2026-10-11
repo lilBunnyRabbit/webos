@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.8.1",
+    date: "2026-10-11",
+    title: "One window, one tab",
+    changes: [
+      { kind: FIXED, text: "Two windows of the same app no longer switch tabs together. Each keeps its own tab, and restored windows reopen on it." },
+    ],
+  },
+  {
     version: "0.8.0",
     date: "2026-10-11",
     title: "Welcome",

@@ -13,7 +13,7 @@
   } from "phosphor-svelte";
 
   const { storage } = get_app_context();
-  const expanded = storage.persisted("expanded", [] as string[], z.array(z.string()));
+  const expanded = storage.window("expanded", [] as string[], z.array(z.string()));
 
   const services = $derived([...kernel.services.entries()]);
   const all_expanded = $derived(services.length > 0 && services.every(([key]) => expanded.value.includes(key)));

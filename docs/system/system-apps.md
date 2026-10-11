@@ -7,17 +7,17 @@ All of them have `categories: ["system"]`. Nothing reads `categories` except the
 | id | Name | Associations | Props | Window `defaults` | Services | App storage ([app context](apps/app-context.md)) |
 |----|------|--------------|-------|-------------------|----------|-------------|
 | `file-explorer` | File Explorer | none | `FILE_PROPS` (a folder path) | none | files, apps, notifications (through the shared components) | none |
-| `settings` | Settings | none | `{ section }` (one of the section ids) | min 640×480 | settings, version, apps | `section` |
-| `kernel` | Kernel | none | none | none | the kernel itself | `expanded` |
-| `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files | `wrap` |
+| `settings` | Settings | none | `{ section }` (one of the section ids) | min 640×480 | settings, version, apps | window: `section` |
+| `kernel` | Kernel | none | none | none | the kernel itself | window: `expanded` |
+| `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files | window: `wrap` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
-| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | `section` |
-| `style-guide` | Style Guide | none | none | min 720×520 | none | `section` |
+| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | window: `section` |
+| `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
 
-"None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). App storage keys are `storage.persisted()` cells, stored as localStorage `app.{id}.{key}` ([persistence](persistence.md#app-storage-handle)).
+"None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
 
 On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DEFAULT_SHORTCUTS` in `services/desktop/service.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
 
@@ -72,7 +72,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 | `sections/about.svelte` | Build info, updates, introduction replay, reset, source link |
 | `color.ts` | `to_hex()` and `to_oklch()` for the colour picker, through a probe element and relative colour syntax |
 
-**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new and About. The open section is `storage.persisted("section", "appearance", z.enum(SECTION_IDS))` → `app.settings.section`, shared live by every Settings window. A `section` prop overwrites it once at mount; the "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
+**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
 
 | Section | What it does |
 |---------|--------------|
@@ -114,7 +114,7 @@ Every write goes straight to service state. Persistence is the settings service'
 | Click a card header | Toggles that card between basic and detailed. `aria-expanded`/`aria-controls` are set. |
 | Expand all / Collapse all | Opens every card, or closes all of them when all are open. |
 
-**Persistence.** The set of open cards is `storage.persisted("expanded", string[])` → localStorage `app.kernel.expanded` (ADR-003). It's shared live by every Kernel window in the tab. Another browser tab writes the same key, and the last one to write wins.
+**Persistence.** The set of open cards is `storage.window("expanded", string[])`: per Kernel window, restored with the session.
 
 **Inspectors** (basic → detailed):
 
@@ -156,7 +156,7 @@ Text uses the document frame:
 - **Body:** one `grid-cols-[auto_minmax(0,1fr)]` grid with a sticky line-number gutter (`tabular-nums`, not selectable) and the lines in mono `text-ui`. Gutter and text share the grid, so a wrapped line keeps its number on its first visual row. Wrap on: `whitespace-pre-wrap wrap-anywhere`; the `minmax(0,1fr)` column lets long unbroken lines wrap instead of overflowing. Off: `whitespace-pre`, scrolling horizontally.
 - **Status bar:** file name, line count, character count, size, MIME type (`text/plain` when empty).
 
-**Persistence.** Line wrap is `storage.persisted("wrap", true, z.boolean())` → `app.text-viewer.wrap`, shared by every Text Viewer window.
+**Persistence.** Line wrap is `storage.window("wrap", true, z.boolean())`: per window, on by default, restored with the session.
 
 **Interactions.** Scroll, select, the two toolbar buttons. No keyboard shortcuts.
 

@@ -72,7 +72,7 @@ export class SessionService implements ISessionService {
     if (this.destroyed) return;
 
     if (restore) {
-      const result = this.windows_service.restore(saved, (app_id, props) => this.apps_service.create_instance(app_id, props));
+      const result = this.windows_service.restore(saved, ({ app_id, props, state }) => this.apps_service.create_instance(app_id, props, state));
       this.status = SessionStatus.RESTORED;
 
       if (result.skipped.length > 0) {
@@ -115,6 +115,7 @@ export class SessionService implements ISessionService {
         bounds: { ...instance.bounds },
         flags: [...instance.flags].filter((flag) => SESSION_FLAGS.includes(flag)),
         snap_zone: instance.snap_zone,
+        ...(Object.keys(instance.app.state).length > 0 && { state: $state.snapshot(instance.app.state) }),
       }));
   }
 }

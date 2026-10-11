@@ -15,7 +15,7 @@ const { window_id, app_id, window, storage } = get_app_context();
 | `window_id` | `WindowId` | This window |
 | `app_id` | `AppId` | The manifest id |
 | `window` | `WindowHandle` | Window state and controls |
-| `storage` | `StorageHandle` | `localStorage` under `app.{app_id}.` |
+| `storage` | `StorageHandle` | `localStorage` under `app.{app_id}.`, plus this window's state (`window()`) |
 
 - Svelte `getContext` under a private symbol. Call it during component init, in any component inside the app's window (children included).
 - Outside a window, or outside init, it throws "get_app_context must be called during init of a component inside a window".
@@ -56,14 +56,15 @@ Not there (ADR-003, deferred): `on()` events (owner decided against them; use ge
 
 ## `StorageHandle`
 
-Built by `create_storage_handle(app_id)`. Keys are stored as `app.{app_id}.{key}`, JSON-encoded. Small data only; files go through [FilesService](../services/files.md). Storage conventions overall: [persistence.md](../persistence.md).
+Built by `create_storage_handle(app_id, instance.app.state)` in `window.svelte`. Keys are stored as `app.{app_id}.{key}`, JSON-encoded. Small data only; files go through [FilesService](../services/files.md). Storage conventions overall: [persistence.md](../persistence.md).
 
 | Member | Signature | Behaviour |
 |--------|-----------|-----------|
 | `get` | `<T>(key, schema?: ZodType<T>): T \| null` | Reads and parses. Missing, unparseable JSON, a throwing `localStorage`, or a failed `schema.safeParse` → `null`. Without a schema the parsed value is cast, unchecked |
 | `set` | `<T>(key, value: T): void` | If a `persisted()` cell is live for the key, sets the cell (which then saves). Otherwise writes directly. Write errors are `console.error`ed. No schema check |
 | `remove` | `(key): void` | `localStorage.removeItem` (errors logged, not thrown), then resets a live cell to its `initial` without saving; see below |
-| `persisted` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | A reactive cell that saves on change. Must be called during component init |
+| `persisted` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | A reactive cell that saves on change, shared by every window of the app. Must be called during component init. For app data |
+| `window` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | State of this window only, saved with the session. For view state (open tab, expanded rows, toggles) |
 
 ### `persisted()`
 
@@ -94,6 +95,21 @@ Edge cases:
 - A launch prop used as `initial` (the Example app's `count`) only counts when nothing is stored and no cell is live. After that the stored value wins over the prop.
 - Other browser tabs aren't synced; there's no `storage` event listener.
 - Two different components in the same window calling `persisted()` on the same key also share the cell.
+
+### `window()`
+
+```ts
+const section = storage.window<Section>("section", "appearance", z.enum(SECTION_IDS));
+section.value = "about"; // this window only
+```
+
+- The value lives in `AppInstance.state` (`$state`, created by `apps.instantiate`), keyed by `key`. Two windows of one app never share it.
+- A new window starts at `initial`. A restored window gets its saved value back if it passes `schema`, else `initial`. Without a schema the saved value is used unchecked.
+- Nothing is written to localStorage. SessionService snapshots `app.state` with the window and passes it back through `windows.restore` → `apps.create_instance(id, props, state)` ([session](../services/session.md)).
+- Gone when the window closes. Not tied to component lifetime, so it can be called anywhere a context is available.
+- A launch prop can be the `initial` (Settings' `section`): it counts for a new window, but a restored window's saved state wins over its saved props.
+
+Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Viewer (`wrap`). Before 2026-10-11 these were `persisted()` cells, so every window of the app switched together; their old `app.{id}.*` keys stay behind unused.
 
 ## Divergence from ADR
 

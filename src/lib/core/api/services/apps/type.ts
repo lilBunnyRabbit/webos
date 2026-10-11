@@ -12,7 +12,7 @@ export interface AppsService extends IService {
    * The instance `launch()` would open, without opening a window or reporting problems: `null` when the app is unknown
    * or the props fail its schema. Used by session restore (ADR-023).
    */
-  create_instance(id: AppId, props?: unknown): AppInstance | null;
+  create_instance(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance | null;
   /**
    * Opens a file in the app associated with it (ADR-018). Resolves to the new window,
    * or `null` when the file is missing or no app matches (both notify).
@@ -68,5 +68,6 @@ export interface AppInstance<TProps extends AppProps = AppProps> {
   manifest: Omit<AppManifest, "component">;
   component: Promise<Component<Partial<TProps>>>;
   props?: TProps;
-  // window_ids: WindowId[];
+  /** Per-window state from `storage.window()`, keyed by name. Saved with the session and handed back on restore. */
+  state: Record<string, unknown>;
 }
