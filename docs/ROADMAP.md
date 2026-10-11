@@ -187,7 +187,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Task lifecycle (create, cancel, retry, remove)
 - [ ] Progress tracking (determinate/indeterminate)
 - [ ] Retry configuration (fixed/exponential backoff)
-- [ ] Task Manager system app (filter, progress bars, actions)
+- [ ] Tasks tab in Activity Monitor (filter, progress bars, actions); no separate Task Manager app (ADR-013 revision)
 - [ ] Taskbar badge for active task count
 - [ ] Notification integration on task complete/fail
 - [ ] Keyboard shortcut: Ctrl+Shift+Esc
@@ -221,7 +221,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [x] Media Preview app (image, video, audio; PDF lives in PDF Viewer)
 - [x] Tic-Tac-Toe game (+ AI, stats, undo)
-- [ ] Profiler → Activity Monitor system app (per-window DOM activity, FPS, long frames, network, storage, workers; only while open) — [brainstorm](brainstorm/2026-10-11_app-ports.md)
+- [x] Profiler → Activity Monitor system app (per-window DOM activity, FPS, long frames, network, storage, workers; only while open) — [brainstorm](brainstorm/2026-10-11_app-ports.md)
 
 ### New System Apps
 - [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
@@ -337,6 +337,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Install prompt customization
 
 ### Workers Service
+- Deferred until an app needs a worker; then it also feeds a Workers tab in Activity Monitor ([brainstorm](brainstorm/2026-10-11_app-ports.md))
 - [ ] Web Worker pool for CPU-heavy operations
 - [ ] WASM module loading in workers (compression, image processing)
 

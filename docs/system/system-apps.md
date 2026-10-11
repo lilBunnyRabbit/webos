@@ -14,6 +14,7 @@ All of them have `categories: ["system"]`. Nothing reads `categories` except the
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
+| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | `section` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). App storage keys are `storage.persisted()` cells, stored as localStorage `app.{id}.{key}` ([persistence](persistence.md#app-storage-handle)).
@@ -281,6 +282,59 @@ Download builds its own `<a download>` from the current object URL. It can't use
 - Fixed column width: long values are truncated (tooltip only), short columns waste space.
 - Parses on the main thread and builds every row's DOM; `content-visibility` only skips layout and paint.
 - No delimiter detection (semicolon CSVs show as one column), UTF-8 only, read-only, no sorting or filtering.
+
+---
+
+## Activity Monitor
+
+`activity-monitor` · `Pulse` icon · source `system/activity-monitor/`
+
+**Purpose.** A task manager for the web OS: activity per window, page-wide performance, network requests and storage use. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+
+**Services.** `windows` (`list`, `get` for manifests, `close`), `files` (`get_directory`, `get_directory_size`), `apps` (names for app storage).
+
+**Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `WindowMonitor`, `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
+
+- `observe()`: the event-driven observers (long animation frames, CPU pressure, resource timing, the connection `change` listener). They run for the window's lifetime.
+- `sample()`: the 1 s ticks, the rAF frame counter and the per-window MutationObservers. They run only while the window isn't minimized.
+
+Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start calls so a window opening doesn't restart the samplers.
+
+**Sections** (`SideNav`, Settings-style frame):
+
+- **Windows:**
+  - One row per window from `windows.list()`: manifest icon and name, a 4-character id, and badges for "this window" and "minimized".
+  - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
+  - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
+  - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
+  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. Peak, media and sparkline columns hide in narrow windows (container queries).
+  - **End:** calls `windows.close(id)`, the same as ×.
+- **Performance:**
+  - Frame rate (rAF), event-loop lag (drift of a chained 1 s `setTimeout`) and JS heap (`performance.memory`, copied field by field because its fields are prototype getters), each with a sparkline.
+  - CPU pressure (`PressureObserver`, `"cpu"`, 1 s) as a badge. "Not allowed here" if `observe()` is rejected.
+  - The newest 50 long animation frames (`buffered: false`): age, duration, blocking duration, and the longest script's invoker and source.
+- **Network:**
+  - Online state (`svelte/reactivity/window`), plus `navigator.connection` effective type, downlink, rtt and save-data.
+  - Resource timing since the window opened, newest first, capped at 500: path, initiator, transfer size, duration, with totals.
+  - "Include earlier" merges `performance.getEntriesByType("resource")`; "Clear" empties the list.
+- **Storage:**
+  - `storage.estimate()` as a meter, plus `usageDetails` and `storage.persisted()`.
+  - OPFS size of `/home /etc /var /tmp`, only when Measure is clicked, because it reads every file.
+  - localStorage bytes per `app.{id}.` prefix (UTF-16), plus "Other keys".
+  - Service worker controller and registration states.
+  - Refresh is manual; this tab has no timers.
+
+An API the browser doesn't have shows "Not available in this browser". There are no polyfills.
+
+**Persistence.** App storage `section`. Samples are never stored.
+
+**Known gaps.**
+
+- No Workers tab: no browser API lists workers, and no app spawns one yet. A Workers Service comes with its first consumer. TasksService jobs (ADR-013) become a tab once that service lands.
+- Windows have no titles, so rows show the app name and a short id.
+- Its own row counts the mutations from re-rendering its own table.
+- Monitors keep running while another section is shown; only minimizing pauses sampling. A hidden browser tab gets no rAF, so FPS reads 0.
+- Cross-origin resources without `Timing-Allow-Origin` report 0 bytes.
 
 ---
 

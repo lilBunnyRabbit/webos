@@ -3,6 +3,8 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+> **Revision 2026-10-11:** No separate Task Manager app. The Activity Monitor system app (Windows, Performance, Network, Storage) gets a Tasks tab when TasksService lands ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+
 ## Context
 
 WebOS needs background task orchestration for long-running operations: file uploads, video processing, compression, batch operations. The `@lilbunnyrabbit/task-manager` npm package (your own package) provides task lifecycle, progress tracking, retry logic, and composable workflows. Integrating it into WebOS both solves a real need and serves as a showcase for the package.
