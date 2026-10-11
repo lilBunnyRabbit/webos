@@ -142,6 +142,7 @@ A reactive snapshot of one directory. Defined in `service.svelte.ts`, not export
 | `create_directory(name)` | | `opfs.create_directory`, then `service.changed(handle)`, then `reload()` |
 | `create_file(name, options?)` | | `opfs.create_file`, then `service.changed(handle)`, then `reload()` |
 | `delete_entry(name, options?)` | | `opfs.delete_entry`, then `service.changed(handle)`, then `reload()` |
+| `rename_entry(name, new_name)` | | `opfs.rename_entry`, then `service.changed(handle)`, then `reload()` |
 | `upload_files(options?)` | | Bumps and reloads only if something was uploaded |
 | `open_directory(name, handle)` | `Promise<DirectoryHandler>` | `service.directory([...segments, name], handle)`. A new handler each time |
 
@@ -199,7 +200,8 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 | Mutation | Bumps |
 |----------|-------|
-| `create_directory`, `create_file`, `delete_entry` | the parent |
+| `create_directory`, `create_file`, `delete_entry`, `rename_entry` | the parent |
+| `copy_directory` | the target |
 | `write_file` | the file's parent (resolved from the file handle) |
 | `copy_file` | the target directory |
 | `move_file` | source parent, then target directory |
