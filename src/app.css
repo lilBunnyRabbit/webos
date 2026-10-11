@@ -115,7 +115,8 @@
   }
 
   ::selection {
-    background: color-mix(in oklch, var(--primary) 35%, transparent);
+    background: var(--primary);
+    color: var(--background);
   }
 
   h1,

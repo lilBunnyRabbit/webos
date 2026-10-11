@@ -83,7 +83,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 - `body`: `bg-background-darkest text-foreground font-sans text-sm overflow-hidden`. `#app` fills `100dvw × 100dvh`.
 - `:focus-visible`: 2px `var(--cottontail)` outline, 2px offset.
 - `--overlay` on `html`: the shared scrim behind the start menu and every dialog, `background-darkest` at 60%.
-- `::selection`: `primary` at 35%.
+- `::selection`: solid `primary` with `background` text, the primary button pair. A translucent `primary` left the light text unreadable on light fields.
 - `h1`–`h3`: heading tracking, `text-wrap: balance`.
 - Every element: thin scrollbars, thumb `foreground` at 22% on a transparent track.
 - `prefers-reduced-motion: reduce`: every animation and transition collapses to 1ms.
