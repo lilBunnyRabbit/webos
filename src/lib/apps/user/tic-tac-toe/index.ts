@@ -1,0 +1,17 @@
+import { define_app } from "$lib/core/api";
+import { GridNine as GridNineIcon } from "phosphor-svelte";
+
+export default define_app({
+  id: "tic-tac-toe",
+  name: "Tic-Tac-Toe",
+  icon: GridNineIcon,
+  version: "1.0.0",
+  categories: ["user"],
+  defaults: {
+    constraints: {
+      width: { min: 340 },
+      height: { min: 420 },
+    },
+  },
+  component: () => import("./tic-tac-toe.app.svelte"),
+});
