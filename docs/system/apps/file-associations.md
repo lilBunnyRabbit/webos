@@ -52,6 +52,10 @@ Listing an extension is how an app beats a broader type. A `.ts` file can get th
 | `text-viewer` | `text/*`, `.md`, `.json`, `.ts`, `.js`, `.svelte`, `.yaml`, `.yml`, `.toml`, `.ini`, `.log`, `.env` |
 | `media-preview` | `image/*`, `video/*`, `audio/*` |
 | `pdf-viewer` | `application/pdf`, `.pdf` |
+| `html-preview` | `text/html`, `.html`, `.htm` |
+| `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
+
+HTML and CSV files used to open in Text Viewer through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Viewer can't be picked for them from File Explorer. Its own Open… still accepts them.
 
 An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else today, since `text/*` doesn't match it. Ties come from two apps on the same tier, for example two apps both listing `.md`.
 

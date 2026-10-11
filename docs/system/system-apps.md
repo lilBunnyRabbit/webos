@@ -12,6 +12,8 @@ All of them have `categories: ["system"]`. Nothing reads `categories` except the
 | `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files | `wrap` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
+| `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
+| `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | `section` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). App storage keys are `storage.persisted()` cells, stored as localStorage `app.{id}.{key}` ([persistence](persistence.md#app-storage-handle)).
@@ -224,6 +226,64 @@ Download builds its own `<a download>` from the current object URL. It can't use
 
 ---
 
+## HTML Preview
+
+`html-preview` · `FileHtml` icon · source `system/html-preview/`
+
+**Purpose.** Render an HTML file the way a browser would, or read its source.
+
+**Associations.** `text/html` (tier 2) plus `.html` and `.htm` (tier 3), so it beats Text Viewer's `text/*` (tier 1) with no prompt.
+
+**Behaviour.** `path` is local state seeded from the prop (`untrack`), and "Open…" swaps it. A `$derived.by` turns `path` into a `files.get_file(path)` + `file.text()` promise and also reads a `revision` counter. Reload bumps the counter, which re-reads the file and remounts the iframe. The states are: no path ("No file open" with "Open a file…"), loading (`Spinner`), not found and read error (error empty states), then the document frame:
+
+- **Toolbar:** Open…, Reload, the full path in mono (truncated, `title` = path), and a `Segmented` Preview / Source switch.
+- **Preview:** a borderless full-size `<iframe srcdoc={text} sandbox="allow-scripts">`. There is no `allow-same-origin`, so the page runs in an opaque origin. Its scripts run, but they can't reach the OS, localStorage or OPFS. The document paints its own background.
+- **Source:** the text in a read-only `<pre>`, mono `text-ui`, `whitespace-pre-wrap wrap-anywhere`.
+- **Status bar:** file name, line count, size, MIME type (`text/html` when empty).
+
+**Persistence.** None. The view resets to Preview in every new window.
+
+**Known gaps.**
+
+- Relative URLs (`style.css`, `img.png`, sibling pages) don't resolve. `srcdoc` has no base URL, and nothing maps OPFS paths to URLs.
+- External resources and network requests from the page aren't blocked.
+- No auto-reload when the file changes. Source view has no line numbers or highlighting.
+
+---
+
+## CSV Viewer
+
+`csv-viewer` · `FileCsv` icon · source `system/csv-viewer/`
+
+**Purpose.** Read CSV and TSV files as a table.
+
+**Associations.** `text/csv`, `text/tab-separated-values` (tier 2) plus `.csv`, `.tsv` (tier 3), so it beats Text Viewer's `text/*`.
+
+**Behaviour.** The same `path` pattern as HTML Preview. The `get_file` promise resolves into `{ file, delimiter, rows, column_count }`. The delimiter comes from the extension: `.tsv` is tab, anything else is comma.
+
+`parse_csv` (`csv.ts`) is a hand-written RFC 4180 parser: quoted fields, `""` escapes, CRLF or LF, line breaks inside quotes. It is lenient:
+
+- a stray quote inside an unquoted field is kept
+- text after a closing quote is appended
+- a trailing newline adds no empty row
+- a leading BOM is dropped
+
+`column_count` is the longest row; short rows render empty cells. After the no-path, loading, not-found and read-error states, an empty file shows "This file is empty". Otherwise the app renders:
+
+- **Toolbar:** Open…, the full path in mono, and a "First row is header" `Switch` (on by default).
+- **Table:** each row is its own grid on one shared fixed template: `{digits+3}ch` for row numbers, then `12rem` per column. Rows line up without a `<table>`, so each body row can use `content-visibility: auto` with `contain-intrinsic-block-size: auto 1.75rem`, and the browser skips rendering off-screen rows with no JS virtualization. Table rows can't do this, because containment doesn't apply to them. The header row is sticky on `background-light`: the first row, or A, B, … AA when the header is off. The row-number column is sticky on the left. Cells are mono `text-ui`, truncated, with the full value as `title`.
+- **Status bar:** file name, `{rows} rows × {columns} columns` (excluding the header), delimiter (Comma / Tab), size.
+
+**Persistence.** None. The header toggle is per window.
+
+**Known gaps.**
+
+- Fixed column width: long values are truncated (tooltip only), short columns waste space.
+- Parses on the main thread and builds every row's DOM; `content-visibility` only skips layout and paint.
+- No delimiter detection (semicolon CSVs show as one column), UTF-8 only, read-only, no sorting or filtering.
+
+---
+
 ## Style Guide
 
 `style-guide` · `Swatches` icon · source `system/style-guide/` (ADR-024)
@@ -250,4 +310,4 @@ The controls are bound to local `$state` and do nothing else. Nothing but the op
 
 ## "Open…" in the viewers (ADR-025)
 
-Text Viewer, Media Preview and PDF Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.
+Text Viewer, Media Preview, PDF Viewer, HTML Preview and CSV Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.
