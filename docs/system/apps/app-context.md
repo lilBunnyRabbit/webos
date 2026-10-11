@@ -50,6 +50,7 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 | `prompt(message, options?)` | `Promise<string \| null>` | `PromptDialog` sheet. Esc or Cancel → `null`. Options: `detail`, `initial`, `placeholder`, `confirm_label`, `validate`, `select_stem` |
 | `pick_file(options?)` | `Promise<string \| null>` | `FilePickerDialog` sheet: File Explorer in picker mode. Options: `accept` (association syntax: `.md`, `image/*`), `start_path` (default `/home`), `title`. Resolves the chosen path |
 | `pick_directory(options?)` | `Promise<string \| null>` | The same for folders: "Select folder" takes the selected subfolder or the open folder |
+| `pick_save(options?)` | `Promise<string \| null>` | The picker in save mode: a folder plus a typed name. Options: `name` (suggested), `accept` (dims files that don't match), `start_path`, `title` (default "Save as"). Asks before replacing ("Replace" button). Resolves the full path; the app writes the file ([files.md](../services/files.md#picker-mode-adr-025)) |
 
 Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, status bar.
 

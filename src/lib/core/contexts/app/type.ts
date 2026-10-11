@@ -1,6 +1,6 @@
 import type { ConfirmOptions } from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import type { PromptOptions } from "$lib/core/components/dialogs/prompt-dialog.svelte";
-import type { PickOptions } from "$lib/core/components/files/file-picker-dialog.svelte";
+import type { PickOptions, SaveOptions } from "$lib/core/components/files/file-picker-dialog.svelte";
 import type { AppId, WindowId } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { ZodType } from "zod";
@@ -33,6 +33,8 @@ export interface WindowHandle {
   pick_file(options?: PickOptions & { title?: string }): Promise<string | null>;
   /** The same picker for folders. */
   pick_directory(options?: Omit<PickOptions, "accept"> & { title?: string }): Promise<string | null>;
+  /** The picker in save mode: a folder plus a file name. Resolves the full path, or `null`. Writing is the caller's job. */
+  pick_save(options?: SaveOptions & { title?: string }): Promise<string | null>;
 }
 
 export interface StorageHandle {
@@ -43,4 +45,4 @@ export interface StorageHandle {
   persisted<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
 }
 
-export type { ConfirmOptions, PickOptions, PromptOptions };
+export type { ConfirmOptions, PickOptions, PromptOptions, SaveOptions };

@@ -9,6 +9,8 @@
 > - FilesService gained `rename_entry` (never auto-renames), `copy_directory` and `move_directory`. `apps_for()` lists every associated app for "Open with", which shows only when two or more apps qualify.
 > - The desktop's questions are system dialogs: confirm, prompt, conflict and properties.
 
+> **Revision 2026-10-11: save picker.** `window.pick_save({ name?, accept?, start_path?, title? })` is the picker with `kind: "save"`: a name field, and a red Replace when the name exists. It returns a path; the app writes. Added for the static-utils ports, whose outputs go into OPFS instead of downloads ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+
 ## Context
 
 File Explorer uses the browser's `prompt()` and `confirm()`. There's no right-click, so rename, copy, move, Open with and properties have no entry point. The desktop can't delete real files without a confirm (ADR-022). ADR-003 planned window-scoped `confirm` / `prompt` / `pick_file`; the owner wants a clear split between system dialogs and window-bound ones, so that a picker can open inside the app that asked for it. Brainstorm: [2026-10-11 Context menus](../brainstorm/2026-10-11_context-menus.md).

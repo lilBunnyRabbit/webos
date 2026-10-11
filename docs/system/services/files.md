@@ -366,9 +366,10 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 ### Picker mode (ADR-025)
 
-`<FileExplorer picker={{ kind, accept, onchoose, oncancel }} />` turns the explorer into a picker (`picker.ts`, used by `file-picker-dialog.svelte` for `window.pick_file` / `pick_directory`):
+`<FileExplorer picker={{ kind, accept, name?, onchoose, oncancel }} />` turns the explorer into a picker (`picker.ts`, used by `file-picker-dialog.svelte` for `window.pick_file` / `pick_directory` / `pick_save`). `kind` is `"file"`, `"directory"` or `"save"`:
 
 - Click selects (`aria-selected`), double-click or Enter on a file chooses it, folders still navigate on double-click.
 - Files that don't match `accept` (association syntax, checked with `association_tier`) are dimmed and `aria-disabled`; a directory picker disables all files.
 - No context menus, rename, delete or clipboard keys.
 - A footer replaces the status bar: the chosen path, Cancel, and Open / Select folder (a directory picker can take the open folder itself).
+- Save mode: the footer is a form with a name field (autofocused, seeded from `name`), Cancel and Save. Clicking or double-clicking a file copies its name into the field, without choosing it. Typing overrides that name until the next click: the field is a writable `$derived` of the selection. If a file in the open folder has the name, the button becomes a red **Replace** with a "Replaces the existing file" hint. If a folder has it, saving is disabled ("A folder has this name"). An empty name, `.`, `..` or a name with `/` disables it too. Resolves the full path. The picker writes nothing; the caller writes with `files.get_directory(folder)` + `create_file(dir, name, { content, overwrite: true })`.

@@ -3,9 +3,12 @@ import type { FileSystemItem } from "$lib/core/api/services/files";
 
 /** File Explorer in picker mode (ADR-025): a window sheet that returns a path instead of opening things. */
 export interface PickerMode {
-  kind: "file" | "directory";
+  /** `save` picks a folder plus a file name, which may be new or an existing file to replace. */
+  kind: "file" | "directory" | "save";
   /** Extensions (".md") or MIME patterns ("image/*"), the same syntax as app associations. Empty = anything. */
   accept?: string[];
+  /** Save mode: the suggested file name. */
+  name?: string;
   onchoose: (path: string) => void;
   oncancel: () => void;
 }

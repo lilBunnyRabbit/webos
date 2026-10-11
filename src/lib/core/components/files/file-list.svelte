@@ -80,7 +80,9 @@
 
   function open(item: FileSystemItem, anchor: Position) {
     if (picker && item.kind === "file") {
-      if (accepts(picker, item)) picker.onchoose(join_path(handler.segments, item.name));
+      // Saving over a file goes through the footer, which asks before replacing.
+      if (picker.kind === "save") selected = item.name;
+      else if (accepts(picker, item)) picker.onchoose(join_path(handler.segments, item.name));
       return;
     }
 

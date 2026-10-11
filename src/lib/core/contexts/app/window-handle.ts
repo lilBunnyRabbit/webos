@@ -60,5 +60,8 @@ export function create_window_handle(id: WindowId): WindowHandle {
     pick_directory(options = {}) {
       return dialogs().show(FilePickerDialog, { kind: "directory" as const, ...options }, { window: id });
     },
+    pick_save(options = {}) {
+      return dialogs().show(FilePickerDialog, { kind: "save" as const, ...options }, { window: id });
+    },
   };
 }
