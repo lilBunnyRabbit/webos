@@ -247,3 +247,7 @@ The controls are bound to local `$state` and do nothing else. Nothing but the op
 
 - Hand-maintained: a new kit component or token only appears once someone adds it here. `Separator` isn't shown at all; `SideNav` only appears as the app's own navigation.
 - The token lists are hard-coded arrays, not read from `ThemeToken`.
+
+## "Open…" in the viewers (ADR-025)
+
+Text Viewer, Media Preview and PDF Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.

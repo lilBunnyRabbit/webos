@@ -56,7 +56,7 @@ Constraints from the code:
 ## Action items
 
 - [x] ADR-025, roadmap
-- [ ] Implement in 5 steps (ADR-025 § Implementation order)
+- [x] Implemented in 5 steps (2026-10-11)
 
 ## Next session topics
 

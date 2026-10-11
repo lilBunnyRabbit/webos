@@ -1,6 +1,6 @@
 # App context
 
-ADR: [003](../../adrs/003-app-context.md) · Source: `src/lib/core/contexts/app/` · Set in: `src/lib/core/components/window/window-content.svelte`
+ADR: [003](../../adrs/003-app-context.md) · Source: `src/lib/core/contexts/app/` · Set in: `src/lib/core/components/window/window.svelte`
 
 What an app knows about where it runs: its window and its storage. Import from `$lib/core/contexts/app`.
 
@@ -19,7 +19,7 @@ const { window_id, app_id, window, storage } = get_app_context();
 
 - Svelte `getContext` under a private symbol. Call it during component init, in any component inside the app's window (children included).
 - Outside a window, or outside init, it throws "get_app_context must be called during init of a component inside a window".
-- One context per window, created once by `window-content.svelte` before the app component mounts.
+- One context per window, created once by `window.svelte` before the app component mounts. It's set on the window, not the app content, so the window's sheets (a file picker reusing File Explorer) get the same context.
 - Destructuring is fine: the handles read the service on every access. Destructuring `window` shadows the global `window` in that component; rename it (`window: win`) if you need the global.
 - No `kernel` in the context (ADR-003 revision). Apps import the singleton: `import kernel from "$lib/core/api"`.
 
@@ -48,8 +48,10 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 |--------|------|-----------|
 | `confirm(message, options?)` | `Promise<boolean>` | `ConfirmDialog` sheet, `dismissible: false`. `false` on Cancel or if the window closes. Options: `detail`, `confirm_label`, `danger` |
 | `prompt(message, options?)` | `Promise<string \| null>` | `PromptDialog` sheet. Esc or Cancel → `null`. Options: `detail`, `initial`, `placeholder`, `confirm_label`, `validate`, `select_stem` |
+| `pick_file(options?)` | `Promise<string \| null>` | `FilePickerDialog` sheet: File Explorer in picker mode. Options: `accept` (association syntax: `.md`, `image/*`), `start_path` (default `/home`), `title`. Resolves the chosen path |
+| `pick_directory(options?)` | `Promise<string \| null>` | The same for folders: "Select folder" takes the selected subfolder or the open folder |
 
-Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, `pick_file` / `pick_directory` (ADR-025 step 5), status bar.
+Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, status bar.
 
 ## `StorageHandle`
 

@@ -23,6 +23,7 @@
     upload,
   } from "./file-actions";
   import { cn } from "$lib/core/utils";
+  import { accepts, type PickerMode } from "./picker";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
@@ -43,9 +44,12 @@
     handler: DirectoryHandler;
     onnavigate: (handler: DirectoryHandler) => void;
     search: string;
+    /** Picker mode: clicks select, double-click or Enter chooses, no menus or edits (ADR-025). */
+    picker?: PickerMode;
+    selected?: string | null;
   }
 
-  let { handler, search = $bindable(), onnavigate }: Props = $props();
+  let { handler, search = $bindable(), selected = $bindable(null), picker, onnavigate }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -75,6 +79,11 @@
   }
 
   function open(item: FileSystemItem, anchor: Position) {
+    if (picker && item.kind === "file") {
+      if (accepts(picker, item)) picker.onchoose(join_path(handler.segments, item.name));
+      return;
+    }
+
     if (item.kind === "directory") {
       handler
         .open_directory(item.name, item.handle)
@@ -137,12 +146,14 @@
   role="presentation"
   class="min-h-0 min-w-0 flex-1 overflow-y-auto"
   onkeydown={(event) => {
+    if (picker) return;
     if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content) {
       event.preventDefault();
       paste(handler, window);
     }
   }}
   oncontextmenu={(event) => {
+    if (picker) return event.preventDefault();
     if ((event.target as Element).closest("[role=row]")) return;
     event.preventDefault();
     background_menu({ x: event.clientX, y: event.clientY });
@@ -167,19 +178,33 @@
       </div>
 
       {#each filtered_items as item (item.name)}
+        {@const choosable = !picker || accepts(picker, item)}
         <button
+          aria-disabled={!choosable && item.kind === "file"}
+          aria-selected={picker ? selected === item.name : undefined}
+          onclick={() => {
+            if (picker) selected = choosable ? item.name : null;
+          }}
           role="row"
           class={cn(
             "col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-            clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50"
+            clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50",
+            !choosable && item.kind === "file" && "opacity-38",
+            picker && selected === item.name && "bg-primary/15 hover:bg-primary/15"
           )}
           ondblclick={(event) => open(item, { x: event.clientX, y: event.clientY })}
           oncontextmenu={(event) => {
             event.preventDefault();
+            if (picker) return;
             event.currentTarget.focus();
             item_menu(item, { x: event.clientX, y: event.clientY });
           }}
           onkeydown={(event) => {
+            if (picker) {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              return open(item, row_anchor(event.currentTarget));
+            }
             if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
             else if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
             else if (event.key === "F2") rename_item(handler, window, item);

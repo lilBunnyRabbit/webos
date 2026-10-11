@@ -1,9 +1,21 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
-  import { EmptyState, Spinner } from "$lib/core/components/ui";
-  import { FilePdf as FilePdfIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { untrack } from "svelte";
+  import manifest from "./index";
 
-  const { path }: { path?: string } = $props();
+  const { path: initial_path }: { path?: string } = $props();
+
+  // Starts at the launched file; "Open…" swaps it in place.
+  let path = $state(untrack(() => initial_path));
+  const { window } = get_app_context();
+
+  async function pick() {
+    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in PDF Viewer" });
+    if (chosen) path = chosen;
+  }
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -14,6 +26,8 @@
 
   $effect(() => {
     if (!path) return;
+    file = undefined;
+    error = null;
     let cancelled = false;
     files
       .get_file(path)
@@ -41,7 +55,9 @@
 </script>
 
 {#if !path}
-  <EmptyState icon={FilePdfIcon} title="No PDF open" description="Open a PDF from File Explorer to read it here." />
+  <EmptyState icon={FilePdfIcon} title="No PDF open" description="Pick a PDF, or open one from File Explorer.">
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>{/snippet}
+  </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
 {:else if file === null}
@@ -49,5 +65,11 @@
 {:else if !file || !url}
   <div class="grid h-full place-items-center"><Spinner label="Loading PDF" /></div>
 {:else}
-  <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
+  <div class="grid h-full grid-rows-[auto_1fr]">
+    <Toolbar>
+      <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+      <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
+    </Toolbar>
+    <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
+  </div>
 {/if}

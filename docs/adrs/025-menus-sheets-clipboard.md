@@ -1,6 +1,13 @@
 # ADR-025: Context Menus, Window Sheets and Clipboard
 **Date:** 2026-10-11
-**Status:** Accepted (steps 1–4 implemented 2026-10-11)
+**Status:** Implemented (2026-10-11)
+
+> **Revision 2026-10-11: implementation notes**
+> - The app context moved from `window-content.svelte` to `window.svelte`, so sheets rendered beside the app (the File Explorer picker) share it.
+> - Sheets are plain elements, not `<dialog>`, because a native modal goes to the top layer and escapes the window. The app behind is `inert`. The window's content area is a size container, so sheets size against it.
+> - Copying into the same folder always keeps both (no conflict prompt), because "Replace" would delete the source. Cut and paste back into the same folder does nothing.
+> - FilesService gained `rename_entry` (never auto-renames), `copy_directory` and `move_directory`. `apps_for()` lists every associated app for "Open with", which shows only when two or more apps qualify.
+> - The desktop's questions are system dialogs: confirm, prompt, conflict and properties.
 
 ## Context
 

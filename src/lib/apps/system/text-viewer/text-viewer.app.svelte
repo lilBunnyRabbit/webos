@@ -1,21 +1,32 @@
 <script lang="ts">
   import kernel, { type ClipboardService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
   import {
     Check as CheckIcon,
     Copy as CopyIcon,
     FileText as FileTextIcon,
+    FolderOpen as FolderOpenIcon,
     TextAlignLeft as TextAlignLeftIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
+  import { untrack } from "svelte";
+  import manifest from "./index";
   import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
 
-  const { path }: { path?: string } = $props();
+  const { path: initial_path }: { path?: string } = $props();
 
-  const { storage } = get_app_context();
+  // Starts at the launched file; "Open…" swaps it in place.
+  let path = $state(untrack(() => initial_path));
+
+  const { storage, window } = get_app_context();
+
+  async function pick() {
+    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in Text Viewer" });
+    if (chosen) path = chosen;
+  }
   const wrap = storage.persisted("wrap", true, z.boolean());
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -41,7 +52,9 @@
 </script>
 
 {#if !file}
-  <EmptyState icon={FileTextIcon} title="No file open" description="Open a text file from File Explorer to read it here." />
+  <EmptyState icon={FileTextIcon} title="No file open" description="Pick a text file, or open one from File Explorer.">
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+  </EmptyState>
 {:else}
   {#await file.then(async (result) => (result ? { file: result, text: await result.text() } : null))}
     <div class="grid h-full place-items-center"><Spinner label="Reading file" /></div>
@@ -52,7 +65,7 @@
       {@const lines = loaded.text.split("\n")}
       <div class="grid h-full grid-rows-[auto_1fr_auto]">
         <Toolbar>
-          <FileTextIcon class="ml-1 size-4 shrink-0 text-foreground/65" weight="duotone" />
+          <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
           <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
           <IconButton label={wrap.value ? "Don't wrap lines" : "Wrap lines"} size="sm" aria-pressed={wrap.value} class={cn(wrap.value && "bg-foreground/10 text-foreground")} onclick={() => (wrap.value = !wrap.value)}>
             <TextAlignLeftIcon weight="bold" />

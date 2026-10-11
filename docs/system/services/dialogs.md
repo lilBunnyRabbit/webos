@@ -79,7 +79,7 @@ Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-
 - Keyboard: ↑/↓ wrap through enabled items, Home/End, typeahead on the first letter. Keys are handled by the deepest open level only.
 - First focus: the first enabled item carries `autofocus`, because `showModal()` would otherwise focus the panel itself.
 
-Other sheets: `components/dialogs/conflict-dialog.svelte` (`{ name, folder }` → `"replace" | "keep_both" | "skip"`, Keep both focused) and `components/files/properties-dialog.svelte` (`{ path, kind }`: kind, size, folder contents, modified, location; resolves `true` on Close). File Explorer shows it as a window sheet, the desktop as a system dialog.
+Other sheets: `components/files/file-picker-dialog.svelte` (`{ kind, accept?, start_path?, title? }` → path; File Explorer with a `picker` prop), `components/dialogs/conflict-dialog.svelte` (`{ name, folder }` → `"replace" | "keep_both" | "skip"`, Keep both focused) and `components/files/properties-dialog.svelte` (`{ path, kind }`: kind, size, folder contents, modified, location; resolves `true` on Close). File Explorer shows it as a window sheet, the desktop as a system dialog.
 
 Callers: File Explorer rows and background (`components/files/file-list.svelte`), desktop icons and background (`components/desktop/desktop-actions.ts`). Both also open the item menu from the keyboard with the ContextMenu key or Shift+F10.
 
@@ -140,6 +140,5 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 ## Known gaps
 
 - Mobile presentation is undecided (ADR-019, ADR-016). Today it's the same anchored dialog.
-- `pick_file` / `pick_directory` sheets are not built yet (ADR-025 step 5).
 - Menus use the full scrim like every dialog; a lighter treatment for menus may read better.
 - Two `show()` calls in a row stack two modals; there's no queueing or dedup (two quick `open()` calls on ambiguous files show two choosers).

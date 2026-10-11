@@ -10,14 +10,27 @@
     MusicNote as MusicNoteIcon,
     Warning as WarningIcon,
     FileImage as FileImageIcon,
+    FolderOpen as FolderOpenIcon,
   } from "phosphor-svelte";
-  import { EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { untrack } from "svelte";
+  import manifest from "./index";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
   const ZOOM_STEP = 0.25;
 
-  const { path }: { path?: string } = $props();
+  const { path: initial_path }: { path?: string } = $props();
+
+  // Starts at the launched file; "Open…" swaps it in place.
+  let path = $state(untrack(() => initial_path));
+  const { window } = get_app_context();
+
+  async function pick() {
+    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in Media Preview" });
+    if (chosen) path = chosen;
+  }
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -40,6 +53,9 @@
 
   $effect(() => {
     if (!path) return;
+    file = undefined;
+    error = null;
+    reset_view();
     let cancelled = false;
     files
       .get_file(path)
@@ -91,7 +107,9 @@
 </script>
 
 {#if !path}
-  <EmptyState icon={FileImageIcon} title="Nothing to preview" description="Open an image, video or audio file from File Explorer." />
+  <EmptyState icon={FileImageIcon} title="Nothing to preview" description="Pick an image, video or audio file, or open one from File Explorer.">
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+  </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
 {:else if file === undefined}
@@ -101,6 +119,7 @@
 {:else}
   <div class="grid h-full grid-rows-[auto_1fr_auto]">
     <Toolbar>
+      <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
 
       {#if kind === "image"}

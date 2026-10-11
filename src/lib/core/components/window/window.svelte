@@ -5,6 +5,7 @@
   import WindowContent from "./window-content.svelte";
   import WindowTitlebar from "./window-titlebar.svelte";
   import WindowSheets from "./window-sheets.svelte";
+  import { create_storage_handle, create_window_handle, set_app_context } from "$lib/core/contexts/app";
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
 
   let { id }: { id: WindowId } = $props();
@@ -20,6 +21,18 @@
 
   // The window manager keys windows by id, so it never changes for this instance.
   const geometry_handler = new WindowGeometryHandler(untrack(() => id));
+
+  // Set here rather than in the app's content so the window's sheets (a file picker reusing File Explorer) get it too.
+  // Set once: a window's id and app never change, and context can only be set during init.
+  untrack(() => {
+    const app_id = instance.app.id;
+    set_app_context({
+      window_id: id,
+      app_id,
+      window: create_window_handle(id),
+      storage: create_storage_handle(app_id),
+    });
+  });
 
   // Internal state
   let zoom = $state(1);
@@ -115,7 +128,7 @@
 
   <!-- Window content -->
   <div
-    class="relative overflow-hidden bg-background [content-visibility:auto]"
+    class="relative overflow-hidden bg-background [container-type:size] [content-visibility:auto]"
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
     <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->

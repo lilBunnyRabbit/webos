@@ -58,7 +58,7 @@ What are the implications of this decision?
 | [022](./022-desktop-folder.md) | Desktop Folder and Shortcuts | 2026-10-11 | Implemented |
 | [023](./023-session-persistence.md) | Session Persistence | 2026-10-11 | Implemented |
 | [024](./024-design-system.md) | Design System | 2026-10-11 | Implemented |
-| [025](./025-menus-sheets-clipboard.md) | Context Menus, Window Sheets and Clipboard | 2026-10-11 | Accepted |
+| [025](./025-menus-sheets-clipboard.md) | Context Menus, Window Sheets and Clipboard | 2026-10-11 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

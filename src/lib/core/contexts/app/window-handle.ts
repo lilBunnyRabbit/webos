@@ -1,6 +1,7 @@
 import kernel, { WindowFlag, type DialogsService, type WindowId, type WindowsService } from "$lib/core/api";
 import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import PromptDialog from "$lib/core/components/dialogs/prompt-dialog.svelte";
+import FilePickerDialog from "$lib/core/components/files/file-picker-dialog.svelte";
 import type { Bounds } from "$lib/core/utils/type";
 import type { WindowHandle } from "./type";
 
@@ -52,6 +53,12 @@ export function create_window_handle(id: WindowId): WindowHandle {
     },
     prompt(message, options = {}) {
       return dialogs().show(PromptDialog, { message, ...options }, { window: id });
+    },
+    pick_file(options = {}) {
+      return dialogs().show(FilePickerDialog, { kind: "file" as const, ...options }, { window: id });
+    },
+    pick_directory(options = {}) {
+      return dialogs().show(FilePickerDialog, { kind: "directory" as const, ...options }, { window: id });
     },
   };
 }

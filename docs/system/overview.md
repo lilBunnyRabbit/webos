@@ -52,7 +52,8 @@ App.svelte
       ├─ window-manager/window-manager.svelte
       │  └─ window/window.svelte  (per open window)
       │     ├─ window-titlebar.svelte
-      │     └─ window-content.svelte  → set_app_context(), lazy app component
+      │     ├─ window-content.svelte  → lazy app component
+      │     └─ window-sheets.svelte   → this window's dialog sheets (ADR-025)
       ├─ notifications/toast-area.svelte
       ├─ taskbar/taskbar.svelte
       │  ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte

@@ -11,8 +11,12 @@
   import FileList from "./file-list.svelte";
   import FileExplorerStatusBar from "./file-explorer-status-bar.svelte";
   import { report_file_error } from "./file-explorer.errors";
+  import type { PickerMode } from "./picker";
+  import FilePickerFooter from "./file-picker-footer.svelte";
 
-  let { path = PATHS.home }: { path?: string } = $props();
+  let { path = PATHS.home, picker }: { path?: string; picker?: PickerMode } = $props();
+
+  let selected = $state<string | null>(null);
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -28,6 +32,7 @@
     if (handler) history = [...history, handler];
     handler = next;
     search = "";
+    selected = null;
   }
 
   function navigate_path(segments: string[]) {
@@ -57,10 +62,14 @@
 
       <div class="flex min-h-0">
         <FileExplorerPlaces current={handler.path} onnavigatepath={navigate_path} />
-        <FileList {handler} bind:search onnavigate={navigate_to} />
+        <FileList {handler} bind:search bind:selected {picker} onnavigate={navigate_to} />
       </div>
 
-      <FileExplorerStatusBar {handler} {files} />
+      {#if picker}
+        <FilePickerFooter {handler} {picker} {selected} />
+      {:else}
+        <FileExplorerStatusBar {handler} {files} />
+      {/if}
     </div>
   {/if}
 {:catch error}

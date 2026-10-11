@@ -6,7 +6,8 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
 | `window-titlebar.svelte` | Icon, name, zoom pill, min/max/close buttons |
-| `window-content.svelte` | Sets the app context, awaits the lazy component, renders it |
+| `window-content.svelte` | Awaits the lazy component, renders it |
+| `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 
 One `<Window id>` per entry in `windows.list()`, rendered by the [window manager](window-manager.md).
@@ -91,7 +92,8 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 
 `window-content.svelte`:
 
-- Calls `set_app_context({ window_id, app_id, window: create_window_handle(id), storage: create_storage_handle(app_id) })` once at init. `app_id` is read under `untrack`. This is the only place an app context is created ([apps/app-context.md](../apps/app-context.md)).
+- The app context is set one level up, in `window.svelte` (`set_app_context({ window_id, app_id, window, storage })` once at init, `app_id` under `untrack`), so sheets rendered beside the app share it ([apps/app-context.md](../apps/app-context.md)).
+- The content area is a size container (`container-type: size`) so sheets can size against the window (`cqw`/`cqh`), and the app is wrapped in `inert` while sheets are open.
 - `{#await instance.app.component}` shows a centered `Spinner` ("Loading app") while the chunk loads, then `<Component {...instance.app.props} />`. On failure it shows an error `EmptyState` ("This app failed to load" plus the message). The promise was started by `AppsService.launch()`, not here.
 - The wrapper is `h-full w-full overflow-auto @container`. That container is what apps' `@sm:`/`@md:` queries resolve against ([CONVENTIONS](../../CONVENTIONS.md)).
 - With `WindowFlag.DEBUG` it also renders the debug snippet passed from `window.svelte`: `bounds` and `move` as JSON.

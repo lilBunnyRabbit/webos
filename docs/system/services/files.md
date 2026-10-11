@@ -363,3 +363,12 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - Focus is lost after a keyboard delete: the deleted row unmounts and nothing moves focus to a neighbour.
 - The `DirectoryHandler` constructor's listing failure is invisible to the user.
 - No tests, despite `opfs.ts` being shaped for them.
+
+### Picker mode (ADR-025)
+
+`<FileExplorer picker={{ kind, accept, onchoose, oncancel }} />` turns the explorer into a picker (`picker.ts`, used by `file-picker-dialog.svelte` for `window.pick_file` / `pick_directory`):
+
+- Click selects (`aria-selected`), double-click or Enter on a file chooses it, folders still navigate on double-click.
+- Files that don't match `accept` (association syntax, checked with `association_tier`) are dimmed and `aria-disabled`; a directory picker disables all files.
+- No context menus, rename, delete or clipboard keys.
+- A footer replaces the status bar: the chosen path, Cancel, and Open / Select folder (a directory picker can take the open folder itself).
