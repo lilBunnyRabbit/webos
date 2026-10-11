@@ -1,4 +1,5 @@
 import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
+import { untrack } from "svelte";
 import { SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
 import { ensure_hierarchy } from "./hierarchy";
@@ -202,16 +203,44 @@ export class DirectoryHandler {
   readonly service: FilesService;
 
   items = $state<FileSystemItem[]>([]);
-  loading = $state(false);
+  loading = $state(true);
+  /** Turns false once the folder is deleted or moved away; the handler then disposes itself. */
+  exists = $state(true);
 
   private reload_id = 0;
+  private listing: { revision: number; promise: Promise<void> } | null = null;
+  private dispose_watch: (() => void) | null;
 
+  /** Watches its own revision (re-lists) and every ancestor's (checks it still exists) until `dispose()`. */
   constructor(service: FilesService, handle: FileSystemDirectoryHandle, segments: string[]) {
     this.service = service;
     this.handle = handle;
     this.segments = segments;
     this.path = "/" + segments.join("/");
-    this.reload().catch((error) => console.error(`[FilesService] Failed to list ${this.path}`, error));
+
+    this.dispose_watch = $effect.root(() => {
+      $effect(() => {
+        this.service.revision(this.path);
+        untrack(() => this.reload()).catch((error) => console.error(`[FilesService] Failed to list ${this.path}`, error));
+      });
+
+      if (this.is_root) return;
+      let first = true;
+      $effect(() => {
+        // Deleting or moving a folder bumps only its parent, and a gone grandparent only the one above that.
+        for (let depth = 0; depth < this.segments.length; depth++) this.service.revision(join_path(this.segments.slice(0, depth)));
+        if (first) {
+          first = false;
+          return;
+        }
+        untrack(() => this.check_exists()).catch((error) => console.error(`[FilesService] Failed to check ${this.path}`, error));
+      });
+    });
+  }
+
+  dispose(): void {
+    this.dispose_watch?.();
+    this.dispose_watch = null;
   }
 
   get name(): string {
@@ -222,7 +251,29 @@ export class DirectoryHandler {
     return this.segments.length === 0;
   }
 
-  async reload(): Promise<void> {
+  /**
+   * Lists the folder. A mutation and the revision watcher both call this after the same bump; the second call joins
+   * the listing already running for that revision instead of starting another.
+   */
+  reload(): Promise<void> {
+    const revision = this.service.revision(this.path);
+    if (this.listing?.revision === revision) return this.listing.promise;
+
+    const promise = this.list().finally(() => {
+      if (this.listing?.promise === promise) this.listing = null;
+    });
+    this.listing = { revision, promise };
+    return promise;
+  }
+
+  private async check_exists(): Promise<void> {
+    const current = await this.service.get_directory(this.path);
+    if (current && (await current.isSameEntry(this.handle))) return;
+    this.exists = false;
+    this.dispose();
+  }
+
+  private async list(): Promise<void> {
     const id = ++this.reload_id;
     this.loading = true;
     try {

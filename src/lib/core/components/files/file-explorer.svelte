@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-  import kernel, { type FilesService } from "$lib/core/api";
+  import { onDestroy, untrack } from "svelte";
+  import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
-  import { split_path } from "$lib/core/api/services/files/path";
+  import { join_path, split_path } from "$lib/core/api/services/files/path";
   import { EmptyState, Spinner } from "../ui";
   import { WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import FileExplorerNavigation from "./file-explorer-navigation.svelte";
@@ -19,20 +19,29 @@
   let selected = $state<string | null>(null);
 
   const files = $derived(kernel.service<FilesService>("files"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let handler: DirectoryHandler | null = $state(null);
-  /** Folders visited before this one, for Back. The breadcrumb shows the real path instead. */
+  /** Folders visited before this one, for Back. They keep watching, so going back shows them fresh. */
   let history: DirectoryHandler[] = $state([]);
   let search = $state("");
+  let destroyed = false;
+
+  const can_go_back = $derived(history.some((previous) => previous.exists));
 
   // The start folder is read once; navigating afterwards is the explorer's own state.
-  const init_promise = untrack(() => files.directory(split_path(path))).then((start) => (handler = start));
+  const init_promise = untrack(() => files.directory(split_path(path))).then(show);
 
-  function navigate_to(next: DirectoryHandler) {
-    if (handler) history = [...history, handler];
+  function show(next: DirectoryHandler) {
+    if (destroyed) return next.dispose();
     handler = next;
     search = "";
     selected = null;
+  }
+
+  function navigate_to(next: DirectoryHandler) {
+    if (handler) history = [...history, handler];
+    show(next);
   }
 
   function navigate_path(segments: string[]) {
@@ -42,15 +51,40 @@
       .catch((error) => report_file_error(`Could not open /${segments.join("/")}`, error));
   }
 
-  // Folders in history aren't watched; their contents may have changed since we left them.
   function navigate_back() {
-    const previous = history.at(-1);
+    const alive = history.filter((previous) => previous.exists);
+    const previous = alive.pop();
     if (!previous) return;
-    history = history.slice(0, -1);
-    handler = previous;
-    search = "";
-    previous.reload().catch((error) => report_file_error(`Could not open ${previous.path}`, error));
+    handler?.dispose();
+    history = alive;
+    show(previous);
   }
+
+  // Deleted or moved in another window: fall back to the nearest folder that still exists.
+  $effect(() => {
+    const current = handler;
+    if (current && !current.exists) untrack(() => leave(current));
+  });
+
+  async function leave(gone: DirectoryHandler) {
+    let segments = gone.segments.slice(0, -1);
+    while (segments.length > 0 && !(await files.get_directory(join_path(segments)))) segments = segments.slice(0, -1);
+
+    const next = await files.directory(segments);
+    if (handler !== gone) return next.dispose();
+    show(next);
+    notifications.notify("file-explorer", {
+      type: "info",
+      title: `"${gone.name}" was moved or deleted`,
+      message: `Showing ${next.path} instead.`,
+    });
+  }
+
+  onDestroy(() => {
+    destroyed = true;
+    handler?.dispose();
+    for (const previous of history) previous.dispose();
+  });
 </script>
 
 {#await init_promise}
@@ -58,7 +92,7 @@
 {:then}
   {#if handler}
     <div class="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden">
-      <FileExplorerNavigation {handler} can_go_back={history.length > 0} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
+      <FileExplorerNavigation {handler} {can_go_back} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
 
       <div class="flex min-h-0">
         <FileExplorerPlaces current={handler.path} onnavigatepath={navigate_path} />

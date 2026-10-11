@@ -43,11 +43,10 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 
 **Known gaps.**
 
-- Doesn't read `files.revision()` yet, so changes from elsewhere (pinning to the desktop, another window) need a manual reload.
+- Folders update live when another window or a service changes them (each `DirectoryHandler` watches its revision). A folder deleted or moved elsewhere sends the window to the nearest existing parent with a toast. Changes in other browser tabs still need a manual reload.
 - System folders are only marked, not protected: they can be deleted like any folder.
 - No associations, so `apps.open()` on a folder path doesn't reach it. Only `launch("file-explorer", { path })` does.
-- No rename, move, copy, context menu, drag-and-drop or multi-select yet (ADR-025 steps 2–4). New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
-- No sync between two windows (see the files doc).
+- No drag-and-drop or multi-select yet. New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
 
 ---
 

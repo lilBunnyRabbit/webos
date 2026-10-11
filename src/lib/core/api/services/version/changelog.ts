@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.8.2",
+    date: "2026-10-12",
+    title: "In step",
+    changes: [
+      { kind: FIXED, text: "File Explorer windows update on their own when another window changes the folder they show, including pins to the desktop." },
+      { kind: FIXED, text: "If the folder you're looking at is deleted or moved elsewhere, File Explorer takes you to the nearest folder that still exists." },
+    ],
+  },
+  {
     version: "0.8.1",
     date: "2026-10-11",
     title: "One window, one tab",

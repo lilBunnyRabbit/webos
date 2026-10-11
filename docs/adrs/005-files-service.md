@@ -1,6 +1,10 @@
 # ADR-005: Files Service API Design
 **Date:** 2026-01-27
-**Status:** Accepted (implemented 2026-01-27, revised 2026-02-07, 2026-10-10)
+**Status:** Accepted (implemented 2026-01-27, revised 2026-02-07, 2026-10-10, 2026-10-12)
+
+> **Revision 2026-10-12: handlers stay fresh** (owner, [brainstorm](../brainstorm/2026-10-12_explorer-sync.md))
+> - `DirectoryHandler` watches its own revision (ADR-021) and re-lists, and watches its ancestors' revisions to notice when it's deleted or moved (`exists` turns `false`). It gains `dispose()`; whoever creates a handler disposes it.
+> - `reload()` joins a listing already in flight for the same revision, so a mutation and the watcher list once.
 
 > **Revision 2026-10-10: review pass**
 > - **Nothing user-facing overwrites or merges** (owner decision). `create_file`, `create_directory`, `copy_file`, `move_file` and `upload_files` pick a free name via `available_name()`: `name (1).ext`, `name (2).ext`, and so on. Any future drag-and-drop or paste must do the same. Exact-name writes exist only through `create_file({ overwrite: true })` and `get_*_handle({ create: true })`. `create_file` used to throw on a clash; it now renames. `move_file` now returns the moved handle.

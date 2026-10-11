@@ -25,7 +25,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer: create folder button
 - [x] File explorer: upload button
 - [x] Path-string identity system (segments[] + derived path string)
-- [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
+- [x] Multi-window sync: each `DirectoryHandler` watches its folder's and ancestors' `files.revision()` (ADR-021); a gone folder sends the explorer to the nearest parent ([brainstorm](brainstorm/2026-10-12_explorer-sync.md))
+- [ ] Cross-tab file sync: FileSystemObserver vs BroadcastChannel relay (brainstorm first)
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [x] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
   - [x] Window-scoped dialogs + confirm/prompt sheets
@@ -37,10 +38,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] File explorer errors surfaced as notifications
 - [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
 - [ ] Drag-and-drop file operations (must auto-rename via `available_name()`)
-- [ ] File rename functionality
-- [ ] Copy/paste operations (must auto-rename via `available_name()`)
-- [ ] File properties dialog
-- [ ] Back/forward navigation buttons
+- [-] Back/forward navigation buttons (Back done, no Forward)
 
 ### Service Lifecycle Hooks
 - **ADR:** [ADR-002](adrs/002-service-lifecycle.md)

@@ -11,7 +11,7 @@ It's built in three layers, the reference split from [CONVENTIONS](../../CONVENT
 ```
 opfs.ts            pure async functions over FileSystem*Handle, no Svelte
    ↑
-DirectoryHandler   reactive snapshot of one directory ($state items, loading)
+DirectoryHandler   live view of one directory ($state items, loading, exists), watches revisions
    ↑
 FilesService       caches the root handle, builds the hierarchy at init, tracks per-directory revisions,
                    makes DirectoryHandlers, exposes direct ops (null → root)
@@ -100,7 +100,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `init` | `() => Promise<void>` | Kernel hook. `ensure_hierarchy(await get_root())`. See [Lifecycle](#lifecycle) |
 | `get_root` | `() => Promise<FileSystemDirectoryHandle>` | Cached. See [Lifecycle](#lifecycle) |
 | `revision` | `(path) => number` | Reactive change counter for one directory, `0` until something changes. Path is normalised (`split_path` → `join_path`). See [Revisions](#revisions) |
-| `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | New handler that starts listing straight away. Without `handle`, walks `segments` from the root (`NotFoundError` / `TypeMismatchError` if a segment is missing or a file). With `handle`, wraps it and `segments` is only a label, see [gotchas](#behaviour--invariants) |
+| `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | New handler that starts watching and listing straight away. The caller must `dispose()` it. Without `handle`, walks `segments` from the root (`NotFoundError` / `TypeMismatchError` if a segment is missing or a file). With `handle`, wraps it and `segments` is only a label, see [gotchas](#behaviour--invariants) |
 | `list` | `(handle?, options?) => Promise<FileSystemItem[]>` | One-shot listing, sorted |
 | `create_directory` | `(handle, name) => Promise<FileSystemDirectoryHandle>` | Auto-renames on a clash |
 | `create_file` | `(handle, name, options?) => Promise<FileSystemFileHandle>` | Auto-renames unless `overwrite`. Writes `content` if given (`""` with `overwrite` truncates) |
@@ -127,7 +127,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 
 ## DirectoryHandler
 
-A reactive snapshot of one directory. Defined in `service.svelte.ts`, not exported through the barrel. Consumers import the type from `$lib/core/api/services/files/service.svelte`.
+A live view of one directory: it owns its own freshness (owner, 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_explorer-sync.md)). Defined in `service.svelte.ts`, not exported through the barrel. Consumers import the type from `$lib/core/api/services/files/service.svelte`.
 
 | Member | Type | Notes |
 |--------|------|-------|
@@ -136,10 +136,12 @@ A reactive snapshot of one directory. Defined in `service.svelte.ts`, not export
 | `handle` | `readonly FileSystemDirectoryHandle` | What every operation actually uses |
 | `service` | `readonly FilesService` | The concrete class |
 | `items` | `$state<FileSystemItem[]>` | Last listing, with metadata, `default_sort` |
-| `loading` | `$state<boolean>` | True while a reload is in flight |
+| `loading` | `$state<boolean>` | True while a reload is in flight. Starts `true`: the first listing runs from the watcher |
+| `exists` | `$state<boolean>` | Turns `false` once the folder is deleted or moved away. The handler then disposes itself. Never turns back |
 | `name` | getter | Last segment, or `"/"` at root |
 | `is_root` | getter | `segments.length === 0` |
-| `reload()` | `Promise<void>` | Re-lists. Overlapping reloads: only the newest one writes `items` and clears `loading` |
+| `reload()` | `Promise<void>` | Re-lists. A call while a listing for the **same revision** is in flight joins it instead of starting another, so a mutation and the watcher list once. Otherwise overlapping listings: only the newest writes `items` and clears `loading` |
+| `dispose()` | `void` | Stops both watchers. Idempotent. Whoever got the handler from `directory()` / `open_directory()` calls it |
 | `create_directory(name)` | | `opfs.create_directory`, then `service.changed(handle)`, then `reload()` |
 | `create_file(name, options?)` | | `opfs.create_file`, then `service.changed(handle)`, then `reload()` |
 | `delete_entry(name, options?)` | | `opfs.delete_entry`, then `service.changed(handle)`, then `reload()` |
@@ -147,9 +149,14 @@ A reactive snapshot of one directory. Defined in `service.svelte.ts`, not export
 | `upload_files(options?)` | | Bumps and reloads only if something was uploaded |
 | `open_directory(name, handle)` | `Promise<DirectoryHandler>` | `service.directory([...segments, name], handle)`. A new handler each time |
 
-The constructor fires `reload()` itself. That's a side effect in a constructor, but it's intended (ADR-005 "auto-loading"). If that first listing fails, it's only `console.error`ed. `items` stays `[]` and nothing notifies.
+The constructor starts an `$effect.root` with two effects (ADR-005 "auto-loading", extended):
 
-There's no handler cache, and handlers don't watch anything. Two handlers on the same directory are independent snapshots. Mutations through either one, or through the direct service ops, bump the directory's [revision](#revisions), but no handler reads it, so the other snapshot stays stale until it reloads. ADR-005 records why the path-keyed cache was removed.
+- **Own revision.** Reads `service.revision(path)` and calls `reload()`. The first run is the initial listing; every later bump re-lists. Failures are only `console.error`ed.
+- **Ancestor revisions** (not at root). Reads the revision of every ancestor, `/` down to the parent: deleting or moving a folder bumps only its parent, and a gone grandparent only the folder above that. The first run only subscribes. Later runs call `get_directory(path)` and `isSameEntry(handle)`; when the path is gone or now holds a different folder, `exists` turns `false` and the handler disposes itself. A sibling change in any ancestor costs one path walk.
+
+A folder rename is recreate-and-move, so a renamed folder counts as gone too.
+
+There's no handler cache. Two handlers on the same directory are independent, but both watch the same [revision](#revisions), so a mutation through either one, or through the direct service ops, re-lists both. ADR-005 records why the path-keyed cache was removed.
 
 ## State
 
@@ -207,11 +214,11 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 | `copy_file` | the target directory |
 | `move_file` | source parent, then target directory |
 | `upload_files` | the target, only if something was stored |
-| `DirectoryHandler` create, delete, upload | its directory, before its own `reload()` |
+| `DirectoryHandler` create, delete, rename, upload | its directory, before its own `reload()` (which the watcher's call then joins) |
 | `clear()` | all revisions are dropped, then `/` is bumped |
 
 - The bump happens after the OPFS call resolves. A failed mutation bumps nothing.
-- Readers today: DesktopService watches `/home/Desktop` ([desktop](desktop.md#lifecycle)). File Explorer doesn't read revisions.
+- Readers today: DesktopService watches `/home/Desktop` ([desktop](desktop.md#lifecycle)). Every live `DirectoryHandler` watches its own folder and its ancestors.
 - Raw `opfs.*` calls, including `ensure_hierarchy` at boot, bump nothing.
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
@@ -261,7 +268,7 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 | File | Responsibility |
 |------|----------------|
-| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `history: DirectoryHandler[]` (for Back only), `search`. Prop `path` (default `PATHS.home`), read once: `files.directory(split_path(path))`. Layout: `grid-rows-[auto_1fr_auto]` with the toolbar, then Places + list side by side, then the status bar. A centered `Spinner` ("Opening folder") while the start folder resolves; an error `EmptyState` ("Couldn't open this folder" + message) if it fails, for example when the folder or `/home` was deleted this session |
+| `file-explorer.svelte` | Root. Owns navigation state: `handler`, `history: DirectoryHandler[]` (for Back only), `search`. Freshness is the handler's job; the explorer only reacts to `handler.exists` going `false` (see Navigation). It disposes the current handler and every history entry on destroy, and a handler that resolves after destroy is disposed on arrival. Prop `path` (default `PATHS.home`), read once: `files.directory(split_path(path))`. Layout: `grid-rows-[auto_1fr_auto]` with the toolbar, then Places + list side by side, then the status bar. A centered `Spinner` ("Opening folder") while the start folder resolves; an error `EmptyState` ("Couldn't open this folder" + message) if it fails, for example when the folder or `/home` was deleted this session |
 | `file-explorer-navigation.svelte` | `Toolbar`: Back and Reload `IconButton`s, the breadcrumb, a filter `Input` (`bind:search`, always visible: `w-28`, `w-40` from `@lg`), a vertical `Separator`, New folder, Upload |
 | `file-explorer-places.svelte` | Sidebar, only at `@3xl` and up (`w-44`, `bg-background-light`, hairline right). "Places": Home, Desktop, Documents, Downloads (`PATHS`). "System": every `SYSTEM_DIRECTORIES` entry (`/etc`, `/var`, `/tmp`) by path. The entry equal to the current path is active (`foreground/10` fill, `primary` filled icon, `aria-current="page"`); clicking it does nothing |
 | `file-list.svelte` | The scrolling list: a `role="grid"` with a sticky overline header row (Name, Size, Modified) and a row per item. Filtering, open, delete. Passes `system={is_system_path(path)}` to folder rows. Skeleton, empty and no-match states (below) |
@@ -278,7 +285,8 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 - **The breadcrumb shows the real path, not the history.** Crumbs are `/` (mono) plus one per segment of `handler.segments`. A small `CaretRight` (`foreground/65`) separates segments, but not right after `/`: `/ home › Documents`. The current folder is `font-medium`, `disabled`, and `aria-current="location"`. The whole trail is a `<nav aria-label="Path">` that scrolls horizontally when it overflows.
 - Clicking a crumb or an inactive Places entry calls `navigate_path(segments)`: `files.directory(segments)` resolves a fresh handler from the root, which then goes through `navigate_to`. A failure is reported as `Could not open /{segments}`.
 - `navigate_to(next)` (also used when entering a folder from the list) pushes the current handler onto `history`, shows `next` and **clears `search`**.
-- **Back** pops `history`, clears `search` and **reloads** the popped handler, because handlers in history aren't watched. Back is disabled when `history` is empty, which is the case in every new window. There's no forward history.
+- **Back** drops gone folders from `history`, disposes the current handler and shows the last remaining one, clearing `search`. History handlers keep watching, so no reload is needed. Back is disabled when no history entry still exists, which is the case in every new window. There's no forward history.
+- **Gone folder.** When the current handler's `exists` turns `false` (deleted or moved in another window, or `clear()`), the explorer walks up `segments` to the nearest folder that still exists, shows it, and posts an `info` toast from `"file-explorer"`: `"{name}" was moved or deleted` / `Showing {path} instead.` If the user navigated meanwhile, the found handler is disposed and nothing changes.
 - A new window opens straight at its `path` prop with an empty history. Ancestors aren't resolved up front; the breadcrumb and Places reach them on demand.
 - `search` filters the current directory only, as a case-insensitive substring of the name (trimmed).
 
@@ -334,9 +342,8 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 | Delete | `Could not delete "{name}"` |
 | Open file / enter folder | `Could not open "{name}"` |
 | Breadcrumb / Places jump | `Could not open /{path}` |
-| Back reload | `Could not open {path}` |
 | Start folder | Inline error `EmptyState`, no toast |
-| Initial listing in `DirectoryHandler` constructor | console only |
+| `DirectoryHandler` listings and existence checks | console only |
 | Storage estimate | console only |
 
 ## Divergence from ADR
@@ -350,8 +357,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 ## Known gaps
 
-- No cross-instance sync in File Explorer. Revisions exist and DesktopService reads them, but File Explorer and `DirectoryHandler` don't yet, so another window or a direct service op still needs a manual reload.
-- Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (multi-window sync is its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
+- Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (cross-tab sync would need its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
 - A revision bumps only the directly affected directory. A consumer of `/home` doesn't see a change inside `/home/Documents`.
 - After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped. An effect that calls `revision()` directly does re-run: `SvelteMap.clear()` invalidates every key's signal and the map's version (DesktopService reloads, then re-seeds).
 - The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Couldn't open this folder") until the next boot recreates it. Places entries for a deleted folder report `Could not open …`.
@@ -361,7 +367,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - The list's icon cell has no `role="gridcell"`, and buttons used as `role="row"` lose button semantics. The grid has no arrow-key model behind the role.
 - `get_file` returns a `File`, not a handle. A path-based app can read but can't write back without walking the tree itself.
 - Focus is lost after a keyboard delete: the deleted row unmounts and nothing moves focus to a neighbour.
-- The `DirectoryHandler` constructor's listing failure is invisible to the user.
+- A `DirectoryHandler` listing failure is invisible to the user.
 - No tests, despite `opfs.ts` being shaped for them.
 
 ### Picker mode (ADR-025)
