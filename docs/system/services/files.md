@@ -296,9 +296,9 @@ Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, n
 | Double-click | Folder row | Navigate into it |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Delete, or Backspace with `metaKey` (Cmd on macOS; Ctrl doesn't count) | Focused row | `confirm()`, then delete (folders recursively, "and all its contents") |
+| Delete, or Backspace with `metaKey` (Cmd on macOS; Ctrl doesn't count) | Focused row | Danger confirm sheet (`window.confirm`, Cancel focused), then delete (folders recursively) |
 | Tab | Rows | Rows are `<button>`s, so Tab moves between them. There's no arrow-key movement or selection model |
-| Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder uses `prompt()` |
+| Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder opens a prompt sheet (`window.prompt`, initial "New folder", validated by `name-rules.ts`: not empty, no `/`, not `.`/`..`, not an existing name) |
 | Click | Breadcrumb segment | Jump to that folder |
 | Click | Places entry | Jump to that folder |
 | Click × | Filter field | Clears it |
@@ -331,7 +331,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 - ADR-005 §5 lists `move_file(...): Promise<void>`. The code returns the moved handle. The 2026-10-10 revision note records this, so it's only the body that's stale.
 - ADR-005 §6 types `FileSystemItem` as a base interface with `kind: "file" | "directory"`. The code uses a discriminated union, which is better and matches CONVENTIONS.
-- ADR-005 §9 specifies `confirm()`/`prompt()`. That's still true, but ADR-019 dialogs exist now and the explorer doesn't use them.
+- ADR-005 §9 specifies `confirm()`/`prompt()`. Superseded by ADR-025: the explorer uses window sheets.
 - ADR-021 §2 triggers the migration when `/home` doesn't exist and creates every `PATHS` folder before it. The code creates the four top-level folders first, keys the migration on the `/etc/hierarchy.json` marker (so an interrupted migration resumes), and creates `Desktop`/`Documents`/`Downloads` after it (so a user's own `Documents` merges in by name).
 - ADR-021 §4 says a revision is `0` "until something under `path` changes". The code bumps only the directory a mutation touched, not its ancestors, so it's "in `path`", not "under".
 - [CONVENTIONS](../../CONVENTIONS.md#services) says `index.ts` exports types only and that only `init.ts` imports service classes. `type.ts` imports `DirectoryHandler` from the implementation file, so `FilesService.directory()` returns the concrete class, and `DirectoryHandler.service` is the concrete `FilesService`, not the interface. The UI components import the type from `service.svelte` directly. Swapping the files service (ADR-016) would have to keep this exact class.

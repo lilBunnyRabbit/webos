@@ -64,6 +64,13 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 - Both enter with `animate-pop-in`. Menus dismiss with Esc or an outside click (`closedby="any"`). Questions are shown with `dismissible: false` (`closedby="none"`): only their buttons close them, so a stray click can't throw away a session.
 - Floating layers sit on `background-lighter`, one step above window chrome, so they read as on top even over a window.
 
+## Window sheets
+
+Questions that belong to one window's task (confirm, prompt, the file picker) are **sheets**: centred in that window on the shared scrim, the app behind them inert, the rest of the OS usable. Use `window.confirm` / `window.prompt` from the app context; never the browser's `confirm()` / `prompt()`.
+
+- Confirm: a tinted icon tile, the question as the title (with the item's name in curly quotes), one line on consequences, then Cancel + the verb ("Delete"). `danger` makes the verb red and focuses Cancel.
+- Prompt: the title, a large field with the current value selected (`select_stem` for file names), inline validation under the field, then Cancel + the verb ("Create", "Rename").
+
 ## Dates and times
 
 `format_date()` and `format_datetime()` from `$lib/core/utils`: "Oct 11, 2026" and "Oct 11, 2026, 14:03". Times are 24-hour everywhere (the clock too). Don't call `toLocaleString()` directly.

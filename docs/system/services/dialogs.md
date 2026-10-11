@@ -10,7 +10,9 @@ System dialogs that belong to no window. Any service or component calls `show()`
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `stack` | `DialogEntry[]` | Reactive `$state`, bottom first. `readonly` on the interface, mutable on the class |
+| `stack` | `DialogEntry[]` | Reactive `$state`, bottom first, system and window-bound together. `readonly` on the interface, mutable on the class |
+| `system` | `DialogEntry[]` | `$derived`: entries with `window === null`. What the top-layer host renders |
+| `for_window(id)` | `(window: WindowId) => DialogEntry[]` | Sheets bound to that window, bottom first. What `window-sheets.svelte` renders (ADR-025) |
 | `show(component, props, options?)` | `<T, P extends object>(component: Component<P & DialogProps<T>>, props: P, options?: DialogOptions): Promise<T \| null>` | Resolves with what the component passes to `resolve`, or `null` when dismissed |
 
 Types (`type.ts`):
@@ -18,20 +20,20 @@ Types (`type.ts`):
 | Type | Shape |
 |------|-------|
 | `DialogProps<T>` | `{ resolve(value: T \| null): void }`. The host injects it; your component declares it in its `Props` |
-| `DialogOptions` | `{ anchor?: Position; dismissible?: boolean }`. `anchor`: viewport point, e.g. the click. `dismissible` (default `true`): `false` for a question that must be answered, so Esc and outside clicks do nothing and only the dialog's own buttons close it |
-| `DialogEntry` | `{ id, component, props, point: Position, anchored: boolean, dismissible: boolean, resolve(value: unknown): void }` |
+| `DialogOptions` | `{ anchor?: Position; dismissible?: boolean; window?: WindowId }`. `anchor`: viewport point, e.g. the click. `dismissible` (default `true`): `false` for a question that must be answered, so Esc and outside clicks do nothing and only the dialog's own buttons close it. `window`: bind the dialog to a window as a sheet |
+| `DialogEntry` | `{ id, component, props, point: Position, anchored: boolean, dismissible: boolean, window: WindowId \| null, resolve(value: unknown): void }` |
 | `DialogId` | `string` (uuid) |
 
 `show()` is typed on the component's props: `P` is everything the component takes except `resolve`, and `T` is what it resolves with.
 
 ## State
 
-`stack` only. An entry is pushed by `show()` and removed by its own `resolve`. Nothing else mutates it.
+`stack`, plus `system` derived from it. An entry is pushed by `show()` and removed by its own `resolve`. Nothing else mutates it.
 
 ## Lifecycle
 
-- No `init()`.
-- `destroy()` resolves every open entry with `null`, top first. Each resolve splices its entry, so the host unmounts the dialogs.
+- `init()` starts an `$effect.root` that watches `windows.list()`: a window-bound entry whose window no longer exists resolves with `null`, like a cancel.
+- `destroy()` disposes that watcher and resolves every open entry with `null`, top first. Each resolve splices its entry, so the host unmounts the dialogs.
 
 ## Persistence
 
@@ -47,6 +49,22 @@ None.
 4. Pushes the entry. The promise never rejects.
 
 Because `resolve` is idempotent, a dialog that resolves a value and is then closed natively (which fires `close` → `resolve(null)`) settles once, with the value.
+
+### Window sheets (ADR-025)
+
+`show(..., { window: id })` pushes an entry with `window: id` and focuses that window, so a question in a background window is never answered blind. The window renders it (`components/window/window-sheets.svelte`), not the host:
+
+- A plain element, not `<dialog>`: a native modal would go to the top layer and escape the window. The sheet layer is `absolute inset-0` inside the window's content area, on the shared `--overlay` scrim with a 2px blur, centred.
+- While the window has sheets, its app content is wrapped in `inert`: no clicks, focus or screen-reader access. The titlebar stays live, so the window can still be moved, minimized or closed. Closing resolves the sheets with `null`.
+- On mount, focus goes to the sheet's first `[autofocus]`, else its first input or button. Only the top sheet is interactive (lower ones are `inert`).
+- Esc resolves `null` if the entry is dismissible.
+
+Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-context.md#windowhandle)):
+
+| Component | Props | Resolves |
+|-----------|-------|----------|
+| `ConfirmDialog` | `message`, `detail?`, `confirm_label?` (default "OK"), `danger?` (red button, Cancel gets focus) | `true` / `false` |
+| `PromptDialog` | `message`, `detail?`, `initial?`, `placeholder?`, `confirm_label?`, `validate?(value) → error \| null`, `select_stem?` (select up to the last dot) | trimmed string, or `null` on Cancel/Esc |
 
 ### Fallback point
 
@@ -105,5 +123,5 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 ## Known gaps
 
 - Mobile presentation is undecided (ADR-019, ADR-016). Today it's the same anchored dialog.
-- Window-scoped overlays from ADR-003 (`confirm`, `prompt`, `pick_file`) don't exist; File Explorer still uses `window.confirm()` for deletes.
+- `pick_file` / `pick_directory` sheets and `dialogs.menu` are not built yet (ADR-025 steps 2 and 5).
 - Two `show()` calls in a row stack two modals; there's no queueing or dedup (two quick `open()` calls on ambiguous files show two choosers).

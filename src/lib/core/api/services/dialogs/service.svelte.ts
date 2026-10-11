@@ -1,6 +1,6 @@
 import { v4 as uuid } from "uuid";
 import type { Component } from "svelte";
-import type { Kernel, WindowsService } from "$lib/core/api";
+import type { Kernel, WindowId, WindowsService } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
 import type { DialogEntry, DialogOptions, DialogProps, DialogsService as IDialogsService } from "./type";
 
@@ -14,17 +14,36 @@ export class DialogsService implements IDialogsService {
   }
 
   public stack = $state<DialogEntry[]>([]);
+  public system = $derived(this.stack.filter((entry) => entry.window === null));
 
   private windows_service!: WindowsService;
+  private dispose_watch?: () => void;
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
   }
 
+  init() {
+    // A closed window takes its sheets with it: they resolve null like a cancel.
+    this.dispose_watch = $effect.root(() => {
+      $effect(() => {
+        const open = new Set(this.windows_service.list());
+        for (const entry of this.stack.filter((item) => item.window !== null && !open.has(item.window))) {
+          entry.resolve(null);
+        }
+      });
+    });
+  }
+
   destroy() {
+    this.dispose_watch?.();
     for (const entry of [...this.stack].reverse()) {
       entry.resolve(null);
     }
+  }
+
+  public for_window(window: WindowId): DialogEntry[] {
+    return this.stack.filter((entry) => entry.window === window);
   }
 
   public show<T, P extends object>(
@@ -41,6 +60,7 @@ export class DialogsService implements IDialogsService {
         point: options.anchor ?? this.fallback_point(),
         anchored: options.anchor !== undefined,
         dismissible: options.dismissible ?? true,
+        window: options.window ?? null,
         resolve: (value) => {
           const index = this.stack.findIndex((item) => item.id === id);
           if (index === -1) return;
@@ -49,6 +69,8 @@ export class DialogsService implements IDialogsService {
         },
       };
       this.stack.push(entry);
+      // A question in a background window brings that window forward, so it's never answered blind.
+      if (entry.window) this.windows_service.focus(entry.window);
     });
   }
 

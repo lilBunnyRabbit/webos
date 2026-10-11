@@ -1,9 +1,10 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { type WindowsService, type WindowId, WindowFlag } from "$lib/core/api";
+  import kernel, { type DialogsService, type WindowsService, type WindowId, WindowFlag } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import WindowContent from "./window-content.svelte";
   import WindowTitlebar from "./window-titlebar.svelte";
+  import WindowSheets from "./window-sheets.svelte";
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
 
   let { id }: { id: WindowId } = $props();
@@ -13,6 +14,8 @@
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
   const is_minimized = $derived(instance.flags.has(WindowFlag.MINIMIZED));
   const is_focused = $derived(windows.is_focused(id));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const has_sheets = $derived(dialogs.for_window(id).length > 0);
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
 
   // The window manager keys windows by id, so it never changes for this instance.
@@ -112,15 +115,19 @@
 
   <!-- Window content -->
   <div
-    class="overflow-hidden bg-background [content-visibility:auto]"
+    class="relative overflow-hidden bg-background [content-visibility:auto]"
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
-    <WindowContent window_id={id} {zoom}>
-      <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
-        <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-        <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
-      </div>
-    </WindowContent>
+    <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
+    <div class="contents" inert={has_sheets}>
+      <WindowContent window_id={id} {zoom}>
+        <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
+          <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
+          <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
+        </div>
+      </WindowContent>
+    </div>
+    <WindowSheets window_id={id} />
   </div>
 
   <!-- Resize handles -->

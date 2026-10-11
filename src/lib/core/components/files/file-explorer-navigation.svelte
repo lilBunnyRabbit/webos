@@ -12,6 +12,8 @@
   import { IconButton, Input, Separator, Toolbar } from "../ui";
   import FileUploadButton from "./file-upload-button.svelte";
   import { report_file_error } from "./file-explorer.errors";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { name_problem } from "./name-rules";
 
   interface Props {
     handler: DirectoryHandler;
@@ -27,8 +29,14 @@
 
   const crumbs = $derived([{ label: "/", segments: [] as string[] }, ...handler.segments.map((name, index) => ({ label: name, segments: handler.segments.slice(0, index + 1) }))]);
 
+  const { window } = get_app_context();
+
   async function handle_create_folder() {
-    const name = prompt("Folder name");
+    const name = await window.prompt("New folder", {
+      initial: "New folder",
+      confirm_label: "Create",
+      validate: (value) => name_problem(value, handler.items),
+    });
     if (!name) return;
 
     creating_folder = true;

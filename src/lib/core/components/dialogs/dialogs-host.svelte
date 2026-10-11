@@ -13,7 +13,7 @@
   };
 </script>
 
-{#each dialogs.stack as entry (entry.id)}
+{#each dialogs.system as entry (entry.id)}
   <div
     class="fixed size-0 pointer-events-none"
     style:left="{entry.point.x}px"

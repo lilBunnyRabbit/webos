@@ -2,12 +2,13 @@
   import kernel, { type AppsService } from "$lib/core/api";
   import type { FileSystemDirectoryItem, FileSystemFileItem, FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
-  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
+  import { SYSTEM_DIRECTORIES } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
   import DirectoryRow from "./directory-row.svelte";
   import { report_file_error } from "./file-explorer.errors";
+  import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
   import { FolderOpen as FolderOpenIcon, MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
 
@@ -31,10 +32,16 @@
     return e.key === "Delete" || (e.key === "Backspace" && e.metaKey);
   }
 
-  function delete_item(item: FileSystemItem) {
+  const { window } = get_app_context();
+
+  async function delete_item(item: FileSystemItem) {
     const recursive = item.kind === "directory";
-    const message = recursive ? `Delete "${item.name}" and all its contents?` : `Delete "${item.name}"?`;
-    if (!confirm(message)) return;
+    const confirmed = await window.confirm(`Delete “${item.name}”?`, {
+      detail: recursive ? "The folder and everything in it will be deleted. This can't be undone." : "This can't be undone.",
+      confirm_label: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     handler
       .delete_entry(item.name, { recursive })
@@ -111,7 +118,7 @@
               }
             }}
           >
-            <DirectoryRow handle={item.handle} system={is_system_path(join_path(handler.segments, item.name))} />
+            <DirectoryRow handle={item.handle} system={SYSTEM_DIRECTORIES.includes(join_path(handler.segments, item.name))} />
           </button>
         {/if}
       {/each}

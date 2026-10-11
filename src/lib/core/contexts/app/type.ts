@@ -1,3 +1,5 @@
+import type { ConfirmOptions } from "$lib/core/components/dialogs/confirm-dialog.svelte";
+import type { PromptOptions } from "$lib/core/components/dialogs/prompt-dialog.svelte";
 import type { AppId, WindowId } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { ZodType } from "zod";
@@ -21,6 +23,11 @@ export interface WindowHandle {
   minimize(): void;
   maximize(): void;
   restore(): void;
+
+  /** A confirm sheet over this window (ADR-025). Resolves `false` on Cancel or if the window closes. */
+  confirm(message: string, options?: ConfirmOptions): Promise<boolean>;
+  /** A text prompt sheet over this window. Resolves `null` on Cancel, Esc or if the window closes. */
+  prompt(message: string, options?: PromptOptions): Promise<string | null>;
 }
 
 export interface StorageHandle {
@@ -30,3 +37,5 @@ export interface StorageHandle {
   /** Must be called during component init: it uses `$effect` to save. */
   persisted<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
 }
+
+export type { ConfirmOptions, PromptOptions };

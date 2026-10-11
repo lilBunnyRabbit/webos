@@ -28,7 +28,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [ ] Multi-window / cross-instance sync: two explorers on the same folder don't update each other. The SvelteMap cache was built then removed (stale path keys, see ADR-005). **Needs its own brainstorm first** (likely event-based invalidation, touches kernel events)
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [ ] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
-  - [ ] Window-scoped dialogs + confirm/prompt sheets
+  - [x] Window-scoped dialogs + confirm/prompt sheets
   - [ ] `dialogs.menu` + ContextMenu (File Explorer, desktop)
   - [ ] Rename, delete, properties, Open with
   - [ ] ClipboardService: copy/cut/paste with conflict sheet

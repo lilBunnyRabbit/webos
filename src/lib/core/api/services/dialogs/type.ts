@@ -1,11 +1,18 @@
 import type { Component } from "svelte";
 import type { IService } from "../../type";
 import type { Position } from "$lib/core/utils/type";
+import type { WindowId } from "../windows/type";
 
-/** System dialogs above all windows (ADR-019). */
+/** System dialogs above all windows (ADR-019), and window sheets bound to one window (ADR-025). */
 export interface DialogsService extends IService {
-  /** Open dialogs, bottom first. */
+  /** Every open dialog, system and window-bound, bottom first. */
   readonly stack: DialogEntry[];
+
+  /** System dialogs only: what the top-layer host renders. */
+  readonly system: DialogEntry[];
+
+  /** Sheets bound to `window`, bottom first: what that window renders over its content. */
+  for_window(window: WindowId): DialogEntry[];
 
   /**
    * Shows `component` and resolves with the value it passes to `resolve`, or `null` when dismissed.
@@ -32,6 +39,11 @@ export interface DialogOptions {
    * Defaults to `true` (menus and pickers dismiss lightly).
    */
   dismissible?: boolean;
+  /**
+   * Bind the dialog to a window: it renders as a sheet over that window's content, blocks only that window, moves
+   * with it and resolves `null` if the window closes. Without it, the dialog is system-level (ADR-025).
+   */
+  window?: WindowId;
 }
 
 export interface DialogEntry {
@@ -42,5 +54,7 @@ export interface DialogEntry {
   /** `true`: dropdown below/right of `point`. `false`: centered on it. */
   anchored: boolean;
   dismissible: boolean;
+  /** The window this sheet belongs to, or `null` for a system dialog. */
+  window: WindowId | null;
   resolve(value: unknown): void;
 }

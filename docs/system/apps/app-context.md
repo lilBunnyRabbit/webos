@@ -42,7 +42,14 @@ Built by `create_window_handle(id)`. Every member calls `kernel.service<WindowsS
 
 All controls are idempotent; the service's `toggle_*` calls are wrapped so the handle never toggles the wrong way.
 
-Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, overlays (`confirm`, `prompt`, `pick_file`, `pick_directory`), status bar.
+Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](../services/dialogs.md#window-sheets-adr-025)):
+
+| Member | Type | Behaviour |
+|--------|------|-----------|
+| `confirm(message, options?)` | `Promise<boolean>` | `ConfirmDialog` sheet, `dismissible: false`. `false` on Cancel or if the window closes. Options: `detail`, `confirm_label`, `danger` |
+| `prompt(message, options?)` | `Promise<string \| null>` | `PromptDialog` sheet. Esc or Cancel → `null`. Options: `detail`, `initial`, `placeholder`, `confirm_label`, `validate`, `select_stem` |
+
+Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, `pick_file` / `pick_directory` (ADR-025 step 5), status bar.
 
 ## `StorageHandle`
 
