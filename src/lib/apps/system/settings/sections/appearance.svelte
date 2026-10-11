@@ -3,7 +3,7 @@
   import { Section } from "$lib/core/components/ui";
   import { CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { to_hex, to_oklch } from "../color";
-  import ThemeCard from "./theme-card.svelte";
+  import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
 

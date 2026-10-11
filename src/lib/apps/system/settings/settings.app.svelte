@@ -1,28 +1,20 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { SideNav } from "$lib/core/components/ui";
-  import {
-    FileText as FileTextIcon,
-    Info as InfoIcon,
-    Palette as PaletteIcon,
-    SquareSplitVertical as SquareSplitVerticalIcon,
-  } from "phosphor-svelte";
   import { z } from "zod";
   import About from "./sections/about.svelte";
   import Appearance from "./sections/appearance.svelte";
   import Files from "./sections/files.svelte";
   import Taskbar from "./sections/taskbar.svelte";
+  import WhatsNew from "./sections/whats-new.svelte";
+  import { SECTIONS, SECTION_IDS, type Section } from "./sections";
 
-  const SECTIONS = [
-    { value: "appearance", label: "Appearance", icon: PaletteIcon },
-    { value: "taskbar", label: "Taskbar", icon: SquareSplitVerticalIcon },
-    { value: "files", label: "Default apps", icon: FileTextIcon },
-    { value: "about", label: "About", icon: InfoIcon },
-  ] as const;
-  type Section = (typeof SECTIONS)[number]["value"];
+  let { section: requested }: { section?: Section } = $props();
 
   const { storage } = get_app_context();
-  const section = storage.persisted<Section>("section", "appearance", z.enum(SECTIONS.map((item) => item.value)));
+  const section = storage.persisted<Section>("section", "appearance", z.enum(SECTION_IDS));
+  // svelte-ignore state_referenced_locally
+  if (requested) section.value = requested;
 
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 </script>
@@ -39,6 +31,8 @@
         <Taskbar />
       {:else if section.value === "files"}
         <Files />
+      {:else if section.value === "whats-new"}
+        <WhatsNew />
       {:else}
         <About />
       {/if}

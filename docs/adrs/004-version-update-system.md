@@ -2,6 +2,11 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-11: release notes ([ADR-026](026-release-notes-intro.md))**
+> - The changelog is a bundled, typed `changelog.ts`, not a `CHANGELOG.md` fetched at runtime. A runtime markdown file would need a renderer dependency, and there are no kinds for badges.
+> - The "update available" toast is built: it's sticky, shown once per detected build, and offers "Update and reload".
+> - Releases are `package.json` semver bumps. History is backfilled as 0.1.0 to 0.7.0.
+
 > **Revision 2026-10-11: the service worker stays**
 > - A standalone, installable PWA is a main goal of the project, so the VitePWA service worker that ADR-004 rejected under "Alternatives" stays. It was already registered in production (`registerType: "autoUpdate"`: Workbox precache, navigation fallback to `index.html`, `skipWaiting` + `clientsClaim`).
 > - Roles: the service worker owns caching and offline use. VersionService only detects a new build through `version.json`, which isn't precached, so it always hits the network.

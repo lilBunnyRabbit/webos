@@ -388,7 +388,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
   - E2E
 
   Also the runner (Vitest is the P4 assumption), how to test OPFS outside a browser, and what CI runs. The P4 Testing items wait on this.
-- [ ] **Release notifications.** After an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
+- [x] **Release notifications.** Done as [ADR-026](adrs/026-release-notes-intro.md): typed changelog, "Updated" and "update available" toasts, Settings › What's new, full-screen first-boot introduction. Originally: after an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
   - What shows before vs after reloading into the new version?
   - How do we track which version a user has seen?
   - Is the changelog format structured or markdown?

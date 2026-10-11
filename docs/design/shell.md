@@ -31,6 +31,14 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - Apps are a 4-column grid of icon tiles. A pin button appears on hover or focus.
 - Footer: the logo mark, the name, and the build version in mono.
 
+## Introduction
+
+- First boot only, or replayed from Settings › About. A full-viewport takeover, not a window: `background-darkest` with a soft `background-dark` glow at the top. Logo lockup top left, Skip top right.
+- One page at a time in a `max-w-3xl` column: an overline step, a `text-2xl` title (the Hello page uses `text-3xl` under the logo mark), a lead at 65%, then content. Display sizes are only used here.
+- Content is cards (`background-light`, `ring-foreground/8`, tinted icon tile + title + one or two lines). Warnings get a `warning` tile.
+- Footer: page dots (the current one is a `primary` pill), Back (quiet) and Next (primary, `lg`). Pages enter with `animate-pop-in`.
+- Preferences chosen here (theme, taskbar) apply live and use the same controls as Settings (`ThemeCard`, `Segmented`).
+
 ## Toasts
 
 - Bottom-right stack, `w-80`, `rounded-xl bg-background-lighter shadow-popover`, sliding in from the right.

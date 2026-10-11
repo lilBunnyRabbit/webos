@@ -8,6 +8,7 @@
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
     CheckCircle as CheckCircleIcon,
+    Play as PlayIcon,
     Sparkle as SparkleIcon,
   } from "phosphor-svelte";
 
@@ -68,6 +69,14 @@
           {version.is_checking ? "Checking" : "Check now"}
         </Button>
       {/if}
+    </SettingRow>
+  </Section>
+
+  <Section title="Introduction">
+    <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: files, getting around, theme and taskbar.">
+      <Button onclick={() => version.show_intro()}>
+        <PlayIcon /> Show again
+      </Button>
     </SettingRow>
   </Section>
 

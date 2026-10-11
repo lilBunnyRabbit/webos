@@ -133,6 +133,10 @@ Resolves `OpenWithChoice = { app_id: AppId; always: boolean }` (exported from th
 
 A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick up where you left off?", the window count, the known apps (icon + name) in a recessed `background-darker` list, "+N from apps that no longer exist", then **Start fresh** (quiet, `false`) and **Restore windows** (primary, `true`, autofocused). Esc and outside clicks do nothing: the user has to pick one. It only resolves `null` if DialogsService is destroyed first.
 
+### Third consumer: `IntroDialog`
+
+`src/lib/core/components/intro/intro-dialog.svelte`, shown by [VersionService](version.md#release-notes-and-introduction) on first boot and from Settings › About, with `dismissible: false`. It resolves `true` from Skip or the last page. Its root is `fixed inset-0`, so it covers the viewport wherever the host centres it (on replay the fallback point is the focused window's centre); its opaque `background-darkest` hides the scrim.
+
 ## Divergence from ADR
 
 - ADR-019 sketches `show<T>(component: Component<DialogProps<T>>, props: object, …)`. The code types `props` against the component (`P`), so wrong props don't compile.

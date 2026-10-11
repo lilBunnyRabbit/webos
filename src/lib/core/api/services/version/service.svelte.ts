@@ -1,4 +1,11 @@
-import type { VersionInfo, VersionService as IVersionService } from "./type";
+import type { AppsService, DialogsService, FilesService, Kernel, NotificationsService } from "$lib/core/api";
+import IntroDialog from "$lib/core/components/intro/intro-dialog.svelte";
+import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
+import { LatestWriter } from "../files/latest-writer";
+import { CHANGELOG } from "./changelog";
+import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
+import { compare_versions } from "./semver";
+import { ChangeKind, type Release, type VersionInfo, type VersionService as IVersionService } from "./type";
 
 declare const __VERSION_INFO__: VersionInfo;
 
@@ -7,15 +14,27 @@ const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
 
 export class VersionService implements IVersionService {
   name = "VersionService";
-  description = "Build info and update detection";
+  description = "Build info, update detection, release notes and the introduction";
   inspector = () => import("./inspector.svelte");
 
   public info = $state<VersionInfo>(__VERSION_INFO__);
   public update_available = $state<VersionInfo | null>(null);
   public is_checking = $state(false);
 
+  public readonly changelog = CHANGELOG;
+  public unseen = $state<Release[]>([]);
+
   private last_check = 0;
+  private notified_build = 0;
   private poll_interval?: ReturnType<typeof setInterval>;
+  private destroyed = false;
+
+  private files_service!: FilesService;
+  private notifications_service!: NotificationsService;
+  private dialogs_service!: DialogsService;
+  private apps_service!: AppsService;
+
+  private writer = new LatestWriter(() => this.files_service, VERSION_STATE_PATH, "version state");
 
   private on_visibility_change = () => {
     if (document.visibilityState === "visible" && Date.now() - this.last_check > VISIBILITY_THROTTLE) {
@@ -23,12 +42,39 @@ export class VersionService implements IVersionService {
     }
   };
 
-  init() {
+  constructor(private kernel: Kernel) {
+    this.files_service = $derived(this.kernel.service<FilesService>("files"));
+    this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
+    this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
+    this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
+  }
+
+  async init() {
     this.poll_interval = setInterval(() => this.check(), POLL_INTERVAL);
     document.addEventListener("visibilitychange", this.on_visibility_change);
+
+    const file = await this.files_service.get_file(VERSION_STATE_PATH);
+    const seen = file ? parse_seen(await file.text()) : null;
+
+    if (seen === null) {
+      // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
+      this.show_intro().then(() => {
+        if (!this.destroyed) this.writer.write(serialize_seen(this.info.version));
+      });
+      return;
+    }
+
+    if (compare_versions(seen, this.info.version) >= 0) return;
+
+    this.unseen = this.changelog.filter(
+      (release) => compare_versions(release.version, seen) > 0 && compare_versions(release.version, this.info.version) <= 0
+    );
+    this.writer.write(serialize_seen(this.info.version));
+    if (this.unseen.length > 0) this.notify_updated();
   }
 
   destroy() {
+    this.destroyed = true;
     clearInterval(this.poll_interval);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
   }
@@ -49,6 +95,7 @@ export class VersionService implements IVersionService {
       const remote: VersionInfo = await response.json();
       if (remote.buildTimestamp > this.info.buildTimestamp) {
         this.update_available = remote;
+        this.notify_update_available(remote);
       }
     } catch (error) {
       console.error("Failed to check for updates:", error);
@@ -71,6 +118,40 @@ export class VersionService implements IVersionService {
     } catch (error) {
       console.error("Failed to apply update:", error);
     }
+  }
+
+  async show_intro(): Promise<void> {
+    await this.dialogs_service.show(IntroDialog, {}, { dismissible: false });
+  }
+
+  private notify_updated(): void {
+    const changes = this.unseen.flatMap((release) => release.changes);
+    const counts = Object.values(ChangeKind)
+      .map((kind) => [kind, changes.filter((change) => change.kind === kind).length] as const)
+      .filter(([, count]) => count > 0);
+
+    this.notifications_service.notify("version", {
+      title: `Updated to v${this.info.version}`,
+      message: counts.map(([kind, count]) => `${count} ${kind}`).join(" · "),
+      icon: SparkleIcon,
+      // Sticky: at boot it can sit behind the introduction or the Restore dialog.
+      duration: null,
+      actions: [{ label: "What's new", on_click: () => this.apps_service.launch("settings", { section: "whats-new" }) }],
+    });
+  }
+
+  /** Once per detected build; a later check that finds the same build stays quiet. */
+  private notify_update_available(remote: VersionInfo): void {
+    if (import.meta.env.DEV || remote.buildTimestamp === this.notified_build) return;
+    this.notified_build = remote.buildTimestamp;
+
+    this.notifications_service.notify("version", {
+      title: "A new version is ready",
+      message: `v${remote.version}. WebOS reloads and offers your open windows back.`,
+      icon: ArrowCircleUpIcon,
+      duration: null,
+      actions: [{ label: "Update and reload", on_click: () => this.apply_update() }],
+    });
   }
 }
 

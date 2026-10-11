@@ -65,6 +65,7 @@ Inter for everything you read, Hack (`font-mono`) for values: sizes, ids, paths,
 
 | Role | Classes | Size |
 |------|---------|------|
+| Display (introduction only) | `text-3xl` / `text-2xl font-semibold` | 30 / 24px |
 | App or page title | `text-lg font-semibold` | 18px |
 | Card or dialog title | `text-base font-semibold` / `text-sm font-semibold` | 16 / 14px |
 | Section heading | `text-sm font-semibold` | 14px |

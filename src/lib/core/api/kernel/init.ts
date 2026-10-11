@@ -26,11 +26,6 @@ export function register_default_services(kernel: Kernel) {
     dependencies: [],
   });
 
-  kernel.register("version", {
-    instance: VersionService,
-    dependencies: [],
-  });
-
   kernel.register("notifications", {
     instance: NotificationsService,
     dependencies: [],
@@ -59,5 +54,11 @@ export function register_default_services(kernel: Kernel) {
   kernel.register("clipboard", {
     instance: ClipboardService,
     dependencies: ["files"],
+  });
+
+  // Registered last so it initialises after session: its introduction stacks above the Restore dialog (ADR-026).
+  kernel.register("version", {
+    instance: VersionService,
+    dependencies: ["files", "notifications", "dialogs", "apps"],
   });
 }

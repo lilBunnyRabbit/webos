@@ -56,7 +56,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `settings` | `SettingsService` | `files` |
 | `windows` | `WindowsService` | none |
 | `files` | `FilesService` | none |
-| `version` | `VersionService` | none |
+| `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps` |
 | `notifications` | `NotificationsService` | none |
 | `dialogs` | `DialogsService` | `windows` |
 | `apps` | `AppsService` | `windows`, `notifications`, `files`, `settings`, `dialogs` |
@@ -72,7 +72,7 @@ windows ────────────────────────
 windows, notifications, files, settings, dialogs ───► apps
 files, apps ────────────────────────────────────────► desktop
 windows, apps, files, dialogs, notifications ───────► session
-version   (standalone)
+files, notifications, dialogs, apps ────────────────► version
 ```
 
 ### Init order
@@ -80,10 +80,12 @@ version   (standalone)
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → version → notifications → dialogs → apps → desktop → session → clipboard
+files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → version
 ```
 
-Shutdown runs the reverse: `session → desktop → apps → dialogs → notifications → version → windows → settings → files`.
+Shutdown runs the reverse: `version → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+
+`version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
 Errors thrown during resolution, before anything is constructed:
 
@@ -104,7 +106,7 @@ Which services implement which hooks today:
 | Service | `init` | `destroy` |
 |---------|--------|-----------|
 | settings | read `/etc/settings.json` (import + remove legacy `webos.settings` / v0 `settings`), start token + save effects | dispose effects |
-| version | start 30-min poll, `visibilitychange` listener | clear both |
+| version | start 30-min poll, `visibilitychange` listener; read `/var/lib/version/state.json`, then request the introduction (first boot) or toast "Updated to vX" ([version](services/version.md#release-notes-and-introduction)) | clear both |
 | notifications | none | clear toast timers |
 | dialogs | none | yes (see [dialogs](services/dialogs.md)) |
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |

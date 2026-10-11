@@ -7,7 +7,7 @@ All of them have `categories: ["system"]`. Nothing reads `categories` except the
 | id | Name | Associations | Props | Window `defaults` | Services | App storage ([app context](apps/app-context.md)) |
 |----|------|--------------|-------|-------------------|----------|-------------|
 | `file-explorer` | File Explorer | none | `FILE_PROPS` (a folder path) | none | files, apps, notifications (through the shared components) | none |
-| `settings` | Settings | none | none | min 640×480 | settings, version, apps | `section` |
+| `settings` | Settings | none | `{ section }` (one of the section ids) | min 640×480 | settings, version, apps | `section` |
 | `kernel` | Kernel | none | none | none | the kernel itself | `expanded` |
 | `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files | `wrap` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
@@ -55,7 +55,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 
 `settings` · `Gear` icon · source `system/settings/`
 
-**Purpose.** Edit the theme, taskbar position and remembered default apps, see build info, check for updates, and reset.
+**Purpose.** Edit the theme, taskbar position and remembered default apps, read every release's notes, see build info, check for updates, replay the introduction, and reset.
 
 **Services.** `settings` ([settings](services/settings.md)), `version` ([version](services/version.md)) and `apps` (Default apps names and icons). All through `$derived(kernel.service(...))`.
 
@@ -65,13 +65,14 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 |------|----------|
 | `settings.app.svelte` | `SideNav` + the open page, `max-w-2xl` centered, `h1` with the section name |
 | `sections/appearance.svelte` | Theme cards and the colour customiser |
-| `sections/theme-card.svelte` | One preset as a miniature OS (desktop, window with titlebar, text lines, primary/secondary chips, taskbar) in the preset's own colours |
 | `sections/taskbar.svelte` | Position `Segmented` + live preview |
 | `sections/files.svelte` | Default apps |
-| `sections/about.svelte` | Build info, updates, reset, source link |
+| `sections/whats-new.svelte` | The changelog (ADR-026) |
+| `sections.ts` | `SECTIONS` (id, label, icon) and `SECTION_IDS`, shared by the manifest's props schema and the app |
+| `sections/about.svelte` | Build info, updates, introduction replay, reset, source link |
 | `color.ts` | `to_hex()` and `to_oklch()` for the colour picker, through a probe element and relative colour syntax |
 
-**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps and About. The open section is `storage.persisted("section", "appearance", z.enum([...]))` → `app.settings.section`, shared live by every Settings window.
+**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new and About. The open section is `storage.persisted("section", "appearance", z.enum(SECTION_IDS))` → `app.settings.section`, shared live by every Settings window. A `section` prop overwrites it once at mount; the "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
 
 | Section | What it does |
 |---------|--------------|
@@ -79,7 +80,8 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 | Appearance → Customise colours | A `<details>` disclosure, closed by default. Tokens grouped Surfaces (the seven ladder shades), Text and brand (foreground, primary, secondary, tertiary, accent, cottontail) and States. Each token: a swatch that opens `<input type="color">`, the label, and a mono text field. Both write on `change` (the text field on blur or Enter). The rows only render while the disclosure is open (`bind:open`), so the hex conversions cost nothing when it's closed. The picker shows `to_hex(value)` (sRGB, clipped) and stores `to_oklch(hex)`, the computed `oklch(from <hex> l c h)`. Picking or typing a derived token replaces its live expression with a fixed value |
 | Taskbar | A `Segmented` (Bottom, Top, Left, Right, with icons) bound to `settings.taskbar.position`, and a miniature screen preview that moves its dock to the chosen edge |
 | Default apps | Lists `settings.file_defaults` sorted by extension: the extension in mono, the app's icon and name (or "{id} (no longer installed)" in `error`), and a Forget `IconButton` that removes that entry. "Forget all" in the section header sets `{}`. Empty: "No default apps yet". Entries are added by "Always use" in the Open-with menu ([file associations](apps/file-associations.md)) |
-| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK` and `file_defaults` to `{}`, with no confirmation. A "Source on GitHub" link |
+| What's new | `version.changelog`, newest first: one `background-light` card per release with title, mono version `Badge`, a primary "New to you" `Badge` for releases in `version.unseen`, and the date (`format_date` of the local day). Each change is a row: kind `Badge` (New `primary`, Improved `info`, Fixed `success`) and the text |
+| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Introduction: "Show again" calls `version.show_intro()` (doesn't touch the seen marker). Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK` and `file_defaults` to `{}`, with no confirmation. A "Source on GitHub" link |
 
 Every write goes straight to service state. Persistence is the settings service's job (`/etc/settings.json`).
 

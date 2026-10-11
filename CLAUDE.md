@@ -30,7 +30,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `settings` | SettingsService | Theme tokens, taskbar position, file defaults, persisted in `/etc/settings.json` | files |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
-| `version` | VersionService | `version.json` polling (ADR-004) | none |
+| `version` | VersionService | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
@@ -164,6 +164,17 @@ At the end of every session that completes work, update `docs/ROADMAP.md`: `[x]`
 ## Commits
 
 Use conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Body is short bullets. Renames toward the naming rules go in their own `refactor:` commit.
+
+## Releases
+
+Users are told about releases through `src/lib/core/api/services/version/changelog.ts` (ADR-026). A push without a version bump announces nothing.
+
+- Every `feat:` or `fix:` commit a user can notice also edits `changelog.ts` and, when needed, `package.json`, in the same commit. Refactors, docs and tooling don't.
+- Check `git diff origin/master -- package.json`:
+  - **Unchanged since the last push:** bump `package.json` and open a new entry at the top of `CHANGELOG`. Use minor for anything new, patch for fixes only.
+  - **Already bumped:** add your line to the top entry. If a `new` change joins a patch release, raise it to the next minor.
+- The top entry's `version` always equals `package.json`. `date` is the day of the push.
+- Write for users, not developers: one sentence per change, no ADR numbers, no service names. `kind` is `new`, `improved` or `fixed`.
 
 ## Reference only
 
