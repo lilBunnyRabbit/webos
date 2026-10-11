@@ -27,7 +27,7 @@
     parent_folder,
     save_image,
     type SourceImage,
-  } from "./image-io";
+  } from "$lib/core/utils/image";
 
   const MIN_ZOOM = 10;
   const MAX_ZOOM = 100;

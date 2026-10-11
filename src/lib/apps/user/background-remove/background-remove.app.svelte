@@ -28,7 +28,7 @@
     parent_folder,
     save_image,
     type SourceImage,
-  } from "./image-io";
+  } from "$lib/core/utils/image";
 
   // JPEG has no alpha channel, so the removed pixels would come back black.
   const FORMATS = FORMAT_OPTIONS.filter((option) => option.value !== ImageFormat.JPEG);

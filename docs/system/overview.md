@@ -82,7 +82,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `src/lib/core/contexts/app/` | `get_app_context()`, window handle, storage handle (ADR-003) |
 | `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, desktop, window, window-manager, taskbar, files, dialogs, notifications, brand, inspector (building blocks for service inspectors) |
 | `src/lib/core/components/ui/` | The UI kit (ADR-024): Button, IconButton, Input, Select, Switch, Checkbox, Segmented, Section, SettingRow, SideNav, Toolbar, StatusBar, Badge, EmptyState, Spinner, Kbd, Separator, plus `variants.ts` (`button`, `field`, `badge` recipes) and `types.ts` (`IconComponent`). Imported from `$lib/core/components/ui`. Documented in [docs/design/components.md](../design/components.md) |
-| `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types |
+| `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types; `image.ts`: image load, drop/paste, canvas and save helpers shared by the image user apps (imported directly, not through the barrel) |
 | `src/lib/apps/index.ts` | Eager glob of `./system/*/index.ts` and `./user/*/index.ts` → `apps: AppManifest[]` |
 | `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-viewer, media-preview, pdf-viewer, html-preview, csv-viewer, style-guide ([system-apps.md](system-apps.md)) |
 | `src/lib/apps/user/` | Non-OS apps (out of scope for these docs) |

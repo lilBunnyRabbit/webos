@@ -28,8 +28,12 @@ export interface SourceImage {
 
 type Drawable = CanvasImageSource & { width: number; height: number };
 
+export function is_image_file(file: File): boolean {
+  return file.type.startsWith("image/");
+}
+
 export async function load_image(file: File, path: string | null = null): Promise<SourceImage> {
-  if (!file.type.startsWith("image/")) throw new Error(`${file.name} is not an image`);
+  if (!is_image_file(file)) throw new Error(`${file.name} is not an image`);
   // Decoded through <img> rather than createImageBitmap(blob), which rejects SVG.
   const url = URL.createObjectURL(file);
   try {
@@ -50,8 +54,8 @@ export async function load_image_at(path: string): Promise<SourceImage> {
 }
 
 /** Image files from a drop or paste; everything else is ignored. */
-export function image_files(transfer: DataTransfer | null): File[] {
-  return Array.from(transfer?.files ?? []).filter((file) => file.type.startsWith("image/"));
+export function image_files(transfer: DataTransfer | null | undefined): File[] {
+  return Array.from(transfer?.files ?? []).filter(is_image_file);
 }
 
 /** Only drags from the host OS carry `Files`; drags inside the page are left alone. */
@@ -77,8 +81,15 @@ export function paint(source: Drawable) {
   };
 }
 
+export function canvas_to_blob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the PNG"))), ImageFormat.PNG);
+  });
+}
+
 export function parent_folder(path: string): string {
-  return path.slice(0, path.lastIndexOf("/")) || "/";
+  const index = path.lastIndexOf("/");
+  return index <= 0 ? "/" : path.slice(0, index);
 }
 
 export function file_stem(name: string): string {
@@ -96,6 +107,10 @@ function format_for_name(name: string, fallback: ImageFormat): ImageFormat {
   return (dot > 0 && EXTENSIONS[name.slice(dot).toLowerCase()]) || fallback;
 }
 
+export function error_message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export interface SaveImageOptions {
   app_id: AppId;
   window: WindowHandle;
@@ -106,7 +121,14 @@ export interface SaveImageOptions {
 }
 
 /** Asks where to save with the save picker, then writes the encoded canvas there through FilesService. */
-export async function save_image({ app_id, window, canvas, name, format, start_path }: SaveImageOptions): Promise<void> {
+export async function save_image({
+  app_id,
+  window,
+  canvas,
+  name,
+  format,
+  start_path,
+}: SaveImageOptions): Promise<void> {
   const path = await window.pick_save({ name, accept: ["image/*"], start_path: start_path ?? "/home" });
   if (!path) return;
 
@@ -126,11 +148,7 @@ export async function save_image({ app_id, window, canvas, name, format, start_p
     notifications.notify(app_id, {
       type: NotificationType.ERROR,
       title: "Couldn't save the image",
-      message: error instanceof Error ? error.message : String(error),
+      message: error_message(error),
     });
   }
-}
-
-export function error_message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

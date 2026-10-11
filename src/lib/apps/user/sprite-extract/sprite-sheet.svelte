@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { untrack } from "svelte";
-  import type { LoadedImage } from "./image-input";
+  import type { SourceImage } from "$lib/core/utils/image";
   import type { SpriteExtractState } from "./sprite-extract.svelte";
   import {
     clamp_scale,
@@ -39,7 +39,7 @@
   let status = $state("");
   let panning = $state(false);
   let drag: Drag | null = null;
-  let fitted_for: LoadedImage | null = null;
+  let fitted_for: SourceImage | null = null;
 
   const lines = $derived(grid_lines(sprite.grid));
   const sequence = $derived(new Set(sprite.sequence));
@@ -86,7 +86,7 @@
       return;
     }
     draw_sheet(ctx, w, h, dpr, {
-      image: source.image,
+      image: source.bitmap,
       width: sprite.width,
       height: sprite.height,
       grid: sprite.grid,

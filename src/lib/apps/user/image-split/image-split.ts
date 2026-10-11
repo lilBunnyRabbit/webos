@@ -1,4 +1,4 @@
-import { canvas_to_blob } from "./image-input";
+import { canvas_to_blob } from "$lib/core/utils/image";
 
 export const SplitDirection = { COLUMNS: "x", ROWS: "y" } as const;
 export type SplitDirection = (typeof SplitDirection)[keyof typeof SplitDirection];
@@ -46,7 +46,7 @@ export function compute_layout(width: number, height: number, settings: SplitSet
 }
 
 /** Tiles with the preview gap between them. A partial last row or column leaves empty space, like the export. */
-export function draw_preview(canvas: HTMLCanvasElement, image: HTMLImageElement, layout: SplitLayout): void {
+export function draw_preview(canvas: HTMLCanvasElement, image: ImageBitmap, layout: SplitLayout): void {
   const { columns, rows, size, gap } = layout;
   canvas.width = Math.max(1, Math.round(columns * size + (columns - 1) * gap));
   canvas.height = Math.max(1, Math.round(rows * size + (rows - 1) * gap));
@@ -67,7 +67,7 @@ export interface Tile {
 }
 
 /** Renders tiles one at a time on a single canvas, so memory stays at one tile however many there are. */
-export async function* render_tiles(image: HTMLImageElement, layout: SplitLayout): AsyncGenerator<Tile> {
+export async function* render_tiles(image: ImageBitmap, layout: SplitLayout): AsyncGenerator<Tile> {
   const canvas = document.createElement("canvas");
   canvas.width = layout.tile;
   canvas.height = layout.tile;

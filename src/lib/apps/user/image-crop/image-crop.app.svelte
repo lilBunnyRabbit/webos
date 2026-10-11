@@ -27,7 +27,7 @@
     read_pixels,
     save_image,
     type SourceImage,
-  } from "./image-io";
+  } from "$lib/core/utils/image";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window: win } = get_app_context();

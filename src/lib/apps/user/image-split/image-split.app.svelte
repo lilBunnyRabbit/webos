@@ -13,7 +13,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { clamp_count, compute_layout, draw_preview, MAX_COUNT, render_tiles, SplitDirection } from "./image-split";
-  import { file_stem, first_image_file, has_files, load_image, parent_path, type LoadedImage } from "./image-input";
+  import { file_stem, has_files, image_files, load_image, parent_folder, type SourceImage } from "$lib/core/utils/image";
 
   const { path }: { path?: string } = $props();
 
@@ -21,7 +21,7 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  let source = $state.raw<LoadedImage | null>(null);
+  let source = $state.raw<SourceImage | null>(null);
   let loading = $state(false);
   let load_error = $state<{ title: string; description: string } | null>(null);
   let load_id = 0;
@@ -32,7 +32,7 @@
   let dragging = $state(false);
 
   const layout = $derived(
-    source ? compute_layout(source.image.naturalWidth, source.image.naturalHeight, { direction, count }) : null
+    source ? compute_layout(source.bitmap.width, source.bitmap.height, { direction, count }) : null
   );
 
   function report(title: string, error: unknown, type: NotificationType = NotificationType.ERROR) {
@@ -70,7 +70,8 @@
   }
 
   async function pick() {
-    const chosen = await win.pick_file({ accept: ["image/*"], title: "Open in Image Split", start_path: parent_path(source?.path ?? null) });
+    const start_path = source?.path ? parent_folder(source.path) : undefined;
+    const chosen = await win.pick_file({ accept: ["image/*"], title: "Open in Image Split", start_path });
     if (chosen) open_path(chosen);
   }
 
@@ -78,11 +79,11 @@
 
   async function save() {
     if (!source || !layout || progress) return;
-    const { image, name, path: source_path } = source;
+    const { bitmap, name, path: source_path } = source;
     const plan = layout;
     const stem = file_stem(name);
 
-    const folder = await win.pick_directory({ title: "Save tiles to…", start_path: parent_path(source_path) });
+    const folder = await win.pick_directory({ title: "Save tiles to…", start_path: source_path ? parent_folder(source_path) : undefined });
     if (!folder) return;
 
     const total = plan.columns * plan.rows;
@@ -91,7 +92,7 @@
       const parent = await files.get_directory(folder);
       if (!parent) throw new Error(`${folder} no longer exists`);
       const target = await files.create_directory(parent, `${stem}-split`);
-      for await (const tile of render_tiles(image, plan)) {
+      for await (const tile of render_tiles(bitmap, plan)) {
         await files.create_file(target, `${stem}_${tile.number}.png`, { content: tile.blob });
         progress = { done: tile.number, total };
       }
@@ -122,13 +123,13 @@
     if (!has_files(event)) return;
     event.preventDefault();
     dragging = false;
-    const file = first_image_file(event.dataTransfer?.files);
+    const file = image_files(event.dataTransfer)[0];
     if (file) open_file(file, null);
     else report("Not an image", "Drop a PNG, JPEG, WebP or other image file", NotificationType.WARNING);
   }
 
   function on_paste(event: ClipboardEvent) {
-    const file = first_image_file(event.clipboardData?.items);
+    const file = image_files(event.clipboardData)[0];
     if (!file) return;
     event.preventDefault();
     open_file(file, null);
@@ -200,7 +201,7 @@
           <canvas
             class="max-h-full max-w-full rounded-sm"
             aria-label="{layout.columns} by {layout.rows} tiles"
-            {@attach (canvas) => draw_preview(canvas, source!.image, layout)}
+            {@attach (canvas) => draw_preview(canvas, source!.bitmap, layout)}
           ></canvas>
         {/if}
       </div>
@@ -213,7 +214,7 @@
           <span>{layout.columns} × {layout.rows} tiles</span>
           <span>{layout.tile} px</span>
         {/if}
-        <span class="ml-auto hidden @sm:block">{source.image.naturalWidth} × {source.image.naturalHeight}</span>
+        <span class="ml-auto hidden @sm:block">{source.bitmap.width} × {source.bitmap.height}</span>
       </StatusBar>
     </div>
   {/if}

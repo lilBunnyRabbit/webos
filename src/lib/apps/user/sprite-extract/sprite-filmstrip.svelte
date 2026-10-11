@@ -18,7 +18,7 @@
 </script>
 
 {#if sprite.source}
-  {@const image = sprite.source.image}
+  {@const image = sprite.source.bitmap}
   {#if sprite.sequence.length}
     <ul class="flex flex-wrap content-start gap-1" aria-label="Sequence">
       {#each sprite.sequence as index, position (`${position}-${index}`)}

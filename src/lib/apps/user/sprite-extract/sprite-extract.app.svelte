@@ -36,7 +36,7 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { file_stem, first_image_file, has_files, load_image, parent_path } from "./image-input";
+  import { file_stem, has_files, image_files, load_image, parent_folder } from "$lib/core/utils/image";
   import { ANCHORS, frame_file_name, frames_metadata, render_frames, render_sheet, type ExportOptions } from "./sprite-export";
   import { SpriteExtractState } from "./sprite-extract.svelte";
   import { count_overrides, DEFAULT_SETTINGS, format_sequence, GridMode, parse_sequence, SETTINGS_SCHEMA } from "./sprite-model";
@@ -80,7 +80,7 @@
   const has_line_overrides = $derived(Object.keys(sprite.overrides.columns).length + Object.keys(sprite.overrides.rows).length > 0);
   const sequence_text = $derived(sequence_draft ?? format_sequence(sprite.sequence));
   const sequence_valid = $derived(sequence_draft === null || parse_sequence(sequence_draft, grid.frames.length) !== null);
-  const start_path = $derived(parent_path(source?.path ?? null));
+  const start_path = $derived(source?.path ? parent_folder(source.path) : undefined);
 
   function report(title: string, error: unknown, type: NotificationType = NotificationType.ERROR) {
     if (type === NotificationType.ERROR) console.error(`[SpriteExtract] ${title}`, error);
@@ -149,7 +149,7 @@
 
   async function save_frames() {
     if (!source || !sprite.sequence.length || exporting) return;
-    const { image, name } = source;
+    const { bitmap, name } = source;
     const frames = grid.frames;
     const sequence = sprite.sequence;
     const options = export_options();
@@ -164,7 +164,7 @@
       const parent = await files.get_directory(folder);
       if (!parent) throw new Error(`${folder} no longer exists`);
       const target = await files.create_directory(parent, `${stem}-frames`);
-      for await (const frame of render_frames(image, frames, sequence, options)) {
+      for await (const frame of render_frames(bitmap, frames, sequence, options)) {
         await files.create_file(target, frame_file_name(stem, frame.order, total), { content: frame.blob });
         exporting = { done: frame.order + 1, total };
       }
@@ -180,7 +180,7 @@
 
   async function save_sheet() {
     if (!source || !sprite.sequence.length || exporting) return;
-    const { image, name } = source;
+    const { bitmap, name } = source;
     const frames = grid.frames;
     const sequence = sprite.sequence;
     const options = export_options();
@@ -190,11 +190,11 @@
 
     exporting = { done: 0, total: 1 };
     try {
-      const folder = parent_path(chosen) ?? "/";
+      const folder = parent_folder(chosen);
       const file_name = chosen.slice(chosen.lastIndexOf("/") + 1);
       const directory = await files.get_directory(folder);
       if (!directory) throw new Error(`${folder} no longer exists`);
-      const { png, json } = await render_sheet(image, frames, sequence, options);
+      const { png, json } = await render_sheet(bitmap, frames, sequence, options);
       await files.create_file(directory, file_name, { content: png, overwrite: true });
       // The picker only asked about replacing the PNG, so the metadata never overwrites; it takes a free name.
       const meta = await files.create_file(directory, `${file_stem(file_name)}.json`, { content: json });
@@ -283,13 +283,13 @@
     if (!has_files(event)) return;
     event.preventDefault();
     dragging = false;
-    const file = first_image_file(event.dataTransfer?.files);
+    const file = image_files(event.dataTransfer)[0];
     if (file) open_file(file, null);
     else report("Not an image", "Drop a PNG, JPEG, WebP or other image file", NotificationType.WARNING);
   }
 
   function on_paste(event: ClipboardEvent) {
-    const file = first_image_file(event.clipboardData?.items);
+    const file = image_files(event.clipboardData)[0];
     if (!file) return;
     event.preventDefault();
     open_file(file, null);

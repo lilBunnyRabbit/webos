@@ -1,4 +1,4 @@
-import type { LoadedImage } from "./image-input";
+import type { SourceImage } from "$lib/core/utils/image";
 import { Anchor } from "./sprite-export";
 import {
   clamp_rect,
@@ -21,7 +21,7 @@ import {
 
 /** One window's sheet: the image, the grid on it, manual fixes and the frame order. */
 export class SpriteExtractState {
-  source = $state.raw<LoadedImage | null>(null);
+  source = $state.raw<SourceImage | null>(null);
   settings = $state.raw<SpriteSettings>(DEFAULT_SETTINGS);
   overrides = $state.raw<SpriteOverrides>(EMPTY_OVERRIDES);
   sequence = $state.raw<number[]>([]);
@@ -30,8 +30,8 @@ export class SpriteExtractState {
   fps = $state(12);
   uniform = $state(true);
 
-  readonly width = $derived(this.source?.image.naturalWidth ?? 0);
-  readonly height = $derived(this.source?.image.naturalHeight ?? 0);
+  readonly width = $derived(this.source?.bitmap.width ?? 0);
+  readonly height = $derived(this.source?.bitmap.height ?? 0);
   readonly grid = $derived(compute_grid(this.width, this.height, this.settings, this.overrides));
 
   /** Offscreen copy of the image for pixel reads. */
@@ -41,7 +41,7 @@ export class SpriteExtractState {
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx?.drawImage(this.source.image, 0, 0);
+    ctx?.drawImage(this.source.bitmap, 0, 0);
     return ctx;
   });
 
@@ -49,7 +49,7 @@ export class SpriteExtractState {
     this.settings = settings;
   }
 
-  set_source(source: LoadedImage | null) {
+  set_source(source: SourceImage | null) {
     this.source = source;
     this.overrides = EMPTY_OVERRIDES;
     this.selected = null;
@@ -57,7 +57,7 @@ export class SpriteExtractState {
       this.sequence = [];
       return;
     }
-    const base = compute_base_grid(source.image.naturalWidth, source.image.naturalHeight, this.settings);
+    const base = compute_base_grid(source.bitmap.width, source.bitmap.height, this.settings);
     this.sequence = default_sequence(base.columns.length, base.rows.length);
   }
 
@@ -141,7 +141,7 @@ export class SpriteExtractState {
   /** `false` when the sheet has no clear gaps to detect. */
   auto_detect(): boolean {
     if (!this.source) return false;
-    const detected = detect_grid(this.source.image);
+    const detected = detect_grid(this.source.bitmap);
     if (!detected) return false;
     const next = detection_to_state(this.width, this.height, detected, this.settings);
     this.settings = next.settings;

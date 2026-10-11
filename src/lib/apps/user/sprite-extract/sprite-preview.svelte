@@ -39,7 +39,7 @@
     const src = round_rect(frame);
     const offset = anchor_offset(src, cell, sprite.anchor);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(source.image, src.x, src.y, src.w, src.h, offset.x, offset.y, src.w, src.h);
+    ctx.drawImage(source.bitmap, src.x, src.y, src.w, src.h, offset.x, offset.y, src.w, src.h);
   }
 
   export function toggle() {
