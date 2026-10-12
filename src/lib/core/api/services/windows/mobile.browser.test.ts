@@ -73,4 +73,24 @@ describe("MobileWindowsService", () => {
     expect(windows.get(result.restored[0])!.flags.size).toBe(0);
     expect(windows.get(result.restored[0])!.snap_zone).toBeNull();
   });
+
+  test("back handlers run newest first until one handles it, and go with the window", () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    const calls: string[] = [];
+
+    windows.add_back_handler(a, () => (calls.push("app"), true));
+    const dispose_sheet = windows.add_back_handler(a, () => (calls.push("sheet"), false));
+
+    expect(windows.back(a)).toBe(true);
+    expect(calls).toEqual(["sheet", "app"]);
+
+    dispose_sheet();
+    calls.length = 0;
+    windows.back(a);
+    expect(calls).toEqual(["app"]);
+
+    windows.close(a);
+    expect(windows.back(a)).toBe(false);
+  });
 });

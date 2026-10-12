@@ -38,6 +38,7 @@ Built by `create_window_handle(id)`. Every member calls `kernel.service<WindowsS
 | `close()` | `void` | `windows.close(id)`. Immediate, no confirmation |
 | `minimize()` | `void` | Minimizes if not already minimized |
 | `maximize()` | `void` | Un-minimizes first if minimized, then maximizes if not maximized |
+| `on_back(handler)` | `() => void` (disposer) | Claims the mobile nav bar's Back (ADR-003 revision 2026-10-12). `handler` returns `true` when it handled back. Handlers stack per window, newest first: `windows.add_back_handler(id, handler)`. Use `$effect(() => window.on_back(...))`. Desktop never calls it |
 | `restore()` | `void` | If minimized: un-minimize only (a minimized-and-maximized window comes back maximized). Else if maximized: un-maximize. Else nothing |
 
 All controls are idempotent; the service's `toggle_*` calls are wrapped so the handle never toggles the wrong way.

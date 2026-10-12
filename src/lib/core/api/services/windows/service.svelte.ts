@@ -44,6 +44,27 @@ export class WindowsService implements DesktopWindowsService {
     this.max_order = 0;
   }
 
+  /** Plain, not reactive: only read when Back is pressed. */
+  private back_handlers = new Map<WindowId, Array<() => boolean>>();
+
+  public add_back_handler(id: WindowId, handler: () => boolean): () => void {
+    const handlers = this.back_handlers.get(id) ?? [];
+    handlers.push(handler);
+    this.back_handlers.set(id, handlers);
+    return () => {
+      const current = this.back_handlers.get(id);
+      if (!current) return;
+      const index = current.lastIndexOf(handler);
+      if (index !== -1) current.splice(index, 1);
+      if (current.length === 0) this.back_handlers.delete(id);
+    };
+  }
+
+  public back(id: WindowId): boolean {
+    const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
+    return handlers.some((handler) => handler());
+  }
+
   public set_container(element?: HTMLElement | null): Bounds {
     if (!element) {
       this.container = {
@@ -89,6 +110,7 @@ export class WindowsService implements DesktopWindowsService {
 
     // Remove window from index
     delete this.index[id];
+    this.back_handlers.delete(id);
 
     // Reset max order if no windows are left
     if (Object.keys(this.index).length === 0) {

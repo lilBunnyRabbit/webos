@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.11.0",
+    date: "2026-10-12",
+    title: "Fingertips",
+    changes: [
+      { kind: FIXED, text: "On phones and tablets, File Explorer opens folders and files with a tap, and holding a file or empty space opens its menu." },
+      { kind: NEW, text: "The Back button steps back through an app's own history first, like returning to the previous folder in File Explorer." },
+      { kind: IMPROVED, text: "Menus on phones slide up from the bottom, and buttons are bigger on touch screens." },
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-10-12",
     title: "Pocket",

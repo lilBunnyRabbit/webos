@@ -8,6 +8,7 @@ The shell phones and tablets get. `os.svelte` renders it instead of `desktop-she
 
 ```
 mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touch-action: manipulation
+├─ DialogsHost anchored="sheet"   menus as bottom sheets
 ├─ main (stage)           container-type: size; the desktop glow; logo mark watermark in the centre
 │  ├─ mobile-home.svelte  pages + page dots + dock
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
@@ -35,7 +36,7 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 
 | Button | Does |
 |--------|------|
-| Back | Closes the drawer or switcher; otherwise sends the on-screen app home (it keeps running). Nothing on home. The OS back gesture keeps its browser meaning |
+| Back | In order: closes the drawer or switcher; asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); dismisses the app's top sheet when it's dismissible (a required one stays); sends the app home (it keeps running). Nothing on home. The OS back gesture keeps its browser meaning |
 | Home | Closes any layer and goes home |
 | Running apps | Toggles the switcher. A `primary` badge shows the count of running apps |
 
@@ -81,5 +82,5 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - No app-level back (File Explorer up a folder) and no OS back gesture wiring: separate brainstorm.
 - No way to reorder the dock except undocking and docking again.
 - No virtual keyboard handling beyond what `h-dvh` gives.
-- Context menus and system dialogs use their desktop sizes.
+- Centred system dialogs use their desktop sizes (capped to the screen); context menus and Open with are bottom sheets.
 - Dragging across pages relies on the 550ms side hold; there's no page indicator while dragging.

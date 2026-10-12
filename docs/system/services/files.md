@@ -299,14 +299,16 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 | Filter matches nothing | `EmptyState` "No matches" (`Nothing here is called "{search}".`) |
 | Items | Rows. A reload keeps the current rows on screen until the new listing lands (`DirectoryHandler` only swaps `items` when done), so mutations don't flash skeletons |
 
-Rows are 32px `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, name, size, modified). Hover `bg-foreground/6`; focus `bg-primary/12`, keyboard focus adds an inset 2px `cottontail` ring. The Modified column hides below `@md`.
+Rows are 32px (44px on a coarse pointer) `rounded-md` `<button role="row">`s in a 4-column subgrid (icon, name, size, modified). Hover `bg-foreground/6`; focus `bg-primary/12`, keyboard focus adds an inset 2px `cottontail` ring. The Modified column hides below `@md`.
 
 ### Interactions
 
 | Input | Target | Effect |
 |-------|--------|--------|
-| Double-click | File row | `apps.open(join_path(segments, name), { anchor: cursor })` |
-| Double-click | Folder row | Navigate into it |
+| Double-click (desktop), tap (mobile) | File row | `apps.open(join_path(segments, name), { anchor: cursor })` |
+| Double-click (desktop), tap (mobile) | Folder row | Navigate into it |
+| Long press (mobile) | A row / empty space | The item menu / the folder menu below, as a bottom sheet. Right-click menus are off on mobile; `long_press` handles a mouse right-click too |
+| Back button (mobile nav bar) | | `window.on_back`: the previous folder in this explorer's history; unclaimed when there's none, so the shell takes over |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
 | Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Delete, Properties |
@@ -374,7 +376,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 `<FileExplorer picker={{ kind, accept, name?, onchoose, oncancel }} />` turns the explorer into a picker (`picker.ts`, used by `file-picker-dialog.svelte` for `window.pick_file` / `pick_directory` / `pick_save`). `kind` is `"file"`, `"directory"` or `"save"`:
 
-- Click selects (`aria-selected`), double-click or Enter on a file chooses it, folders still navigate on double-click.
+- Click selects (`aria-selected`), double-click or Enter on a file chooses it, folders still navigate on double-click. On mobile a tap on a folder navigates into it and a tap on a file selects it.
 - Files that don't match `accept` (association syntax, checked with `association_tier`) are dimmed and `aria-disabled`; a directory picker disables all files.
 - No context menus, rename, delete or clipboard keys.
 - A footer replaces the status bar: the chosen path, Cancel, and Open / Select folder (a directory picker can take the open folder itself).

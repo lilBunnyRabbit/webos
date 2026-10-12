@@ -21,13 +21,13 @@
 
 {#if picker.kind === "save"}
   <form
-    class="flex shrink-0 items-center gap-3 border-t border-foreground/8 bg-background-light px-3 py-2.5"
+    class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5"
     onsubmit={(event) => {
       event.preventDefault();
       if (save_path) picker.onchoose(save_path);
     }}
   >
-    <Input bind:value={name} aria-label="File name" placeholder="File name" class="min-w-0 flex-1" autofocus />
+    <Input bind:value={name} aria-label="File name" placeholder="File name" class="min-w-48 flex-1" autofocus />
     {#if existing?.kind === "directory"}
       <span class="shrink-0 text-2xs text-error">A folder has this name</span>
     {:else if existing}

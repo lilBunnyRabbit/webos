@@ -46,7 +46,7 @@
     <ArrowClockwiseIcon weight="bold" />
   </IconButton>
 
-  <nav aria-label="Path" class="flex min-w-0 flex-1 items-center overflow-x-auto px-1">
+  <nav aria-label="Path" class="flex min-w-32 flex-1 items-center overflow-x-auto px-1">
     {#each crumbs as crumb, index (crumb.segments.join("/"))}
       {@const last = index === crumbs.length - 1}
       {#if index > 1}<CaretRightIcon class="size-3 shrink-0 text-foreground/65" weight="bold" />{/if}
@@ -54,7 +54,7 @@
         aria-current={last ? "location" : undefined}
         disabled={last}
         class={cn(
-          "h-7 shrink-0 rounded-md px-1.5 text-ui transition-colors duration-150",
+          "h-7 pointer-coarse:h-9 shrink-0 rounded-md px-1.5 text-ui transition-colors duration-150",
           last ? "font-medium text-foreground" : "text-foreground/80 hover:bg-foreground/8 hover:text-foreground",
           index === 0 && "font-mono"
         )}
@@ -65,7 +65,7 @@
     {/each}
   </nav>
 
-  <Input bind:value={search} size="sm" placeholder="Filter" aria-label="Filter this folder" class="w-28 shrink-0 @lg:w-40">
+  <Input bind:value={search} size="sm" placeholder="Filter" aria-label="Filter this folder" class="min-w-28 flex-1 @md:w-28 @md:flex-none @lg:w-40">
     {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
     {#snippet trailing()}
       {#if search}
@@ -76,7 +76,7 @@
     {/snippet}
   </Input>
 
-  <Separator vertical />
+  <Separator vertical class="hidden @md:block" />
 
   <IconButton label="New folder" size="sm" disabled={creating_folder} onclick={handle_create_folder}>
     <FolderPlusIcon weight="bold" />

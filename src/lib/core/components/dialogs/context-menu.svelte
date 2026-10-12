@@ -2,7 +2,7 @@
   import type { DialogProps, MenuItem } from "$lib/core/api";
   import ContextMenuList from "./context-menu-list.svelte";
 
-  let { items, resolve }: DialogProps<string> & { items: MenuItem[] } = $props();
+  let { items, sheet = false, resolve }: DialogProps<string> & { items: MenuItem[]; sheet?: boolean } = $props();
 </script>
 
-<ContextMenuList {items} onselect={(id) => resolve(id)} />
+<ContextMenuList {items} {sheet} onselect={(id) => resolve(id)} />

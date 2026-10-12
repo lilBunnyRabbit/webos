@@ -26,7 +26,7 @@
   {#each options as option (option.value)}
     <label
       class={cn(
-        "flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-3 text-ui font-medium text-foreground/80 transition-colors duration-150",
+        "flex h-7 pointer-coarse:h-9 cursor-pointer items-center gap-1.5 rounded-md px-3 text-ui font-medium text-foreground/80 transition-colors duration-150",
         "hover:text-foreground has-checked:bg-background-light has-checked:text-foreground has-checked:shadow-raised",
         "has-focus-visible:outline-2 has-focus-visible:outline-cottontail"
       )}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from "svelte";
   import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
+  import { get_app_context } from "$lib/core/contexts/app";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { join_path, split_path } from "$lib/core/api/services/files/path";
@@ -59,6 +60,16 @@
     history = alive;
     show(previous);
   }
+
+  // The mobile Back button walks this explorer's history first (ADR-003 on_back).
+  const { window } = get_app_context();
+  $effect(() =>
+    window.on_back(() => {
+      if (!can_go_back) return false;
+      navigate_back();
+      return true;
+    })
+  );
 
   // Deleted or moved in another window: fall back to the nearest folder that still exists.
   $effect(() => {

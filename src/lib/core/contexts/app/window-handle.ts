@@ -41,6 +41,9 @@ export function create_window_handle(id: WindowId): WindowHandle {
       if (has(WindowFlag.MINIMIZED)) windows().toggle_minimize(id);
       if (!has(WindowFlag.MAXIMIZED)) windows().toggle_maximize(id);
     },
+    on_back(handler) {
+      return windows().add_back_handler(id, handler);
+    },
     restore() {
       if (has(WindowFlag.MINIMIZED)) windows().toggle_minimize(id);
       else if (has(WindowFlag.MAXIMIZED)) windows().toggle_maximize(id);

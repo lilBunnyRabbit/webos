@@ -2,6 +2,9 @@
   import kernel, { type DialogsService } from "$lib/core/api";
   import type { Attachment } from "svelte/attachments";
 
+  /** `sheet`: anchored dialogs (menus, Open with) rise from the bottom of the screen instead (the mobile shell). */
+  let { anchored = "dropdown" }: { anchored?: "dropdown" | "sheet" } = $props();
+
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   // Native modal dialog: closedby="any" gives Esc, outside-click dismissal, focus trap/return and stacking (ADR-019).
@@ -14,6 +17,7 @@
 </script>
 
 {#each dialogs.system as entry (entry.id)}
+  {@const sheet = entry.anchored && anchored === "sheet"}
   <div
     class="fixed size-0 pointer-events-none"
     style:left="{entry.point.x}px"
@@ -30,15 +34,16 @@
       if (!entry.dismissible) event.preventDefault();
     }}
     class={[
-      "m-0 p-0 inset-auto max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none",
+      "m-0 p-0 max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none",
+      sheet ? "inset-x-0 top-auto bottom-0 w-full animate-sheet-in" : "inset-auto",
       // Every dialog, anchored menu or centered question, sits on the shared scrim; questions also blur what's behind.
       "backdrop:bg-(--overlay)",
       !entry.anchored && "backdrop:backdrop-blur-[2px]",
     ]}
-    style:position-anchor="--dialog-{entry.id}"
-    style:position-area={entry.anchored ? "bottom span-right" : "center"}
-    style:position-try-fallbacks={entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
+    style:position-anchor={sheet ? undefined : `--dialog-${entry.id}`}
+    style:position-area={sheet ? undefined : entry.anchored ? "bottom span-right" : "center"}
+    style:position-try-fallbacks={!sheet && entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
   >
-    <entry.component {...entry.props} resolve={entry.resolve} />
+    <entry.component {...entry.props} {...sheet && { sheet: true }} resolve={entry.resolve} />
   </dialog>
 {/each}

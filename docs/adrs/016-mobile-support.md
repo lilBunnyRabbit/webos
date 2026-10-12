@@ -17,6 +17,11 @@
 > - **Desktop service split:** base `DesktopService` addresses items by name; `GridDesktopService` (desktop) and `MobileDesktopService` extend it. Both own a `DesktopFolder` for the folder logic.
 > - No WebOS status bar: the device has one. Safe-area insets pad the shell. Sessions use the same file; mobile ignores geometry.
 
+> **Revision 2026-10-12: apps pass** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-apps-pass.md))
+> - Apps read `kernel.platform` where behaviour differs (tap to open instead of double-click). Layout still adapts through container queries.
+> - Back is an app concept on mobile: `WindowHandle.on_back(handler)` (ADR-003 revision). The shell's Back asks the on-screen app first.
+> - Each shell renders its own `DialogsHost`; the mobile one shows context menus as bottom sheets.
+
 ## Context
 
 The current UI is a desktop OS metaphor — windows, taskbar, desktop grid. Mobile devices need a fundamentally different UX: fullscreen apps, an app switcher, and a paged home screen with a dock. The kernel's service registry was designed to support swapping service implementations per platform.

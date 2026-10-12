@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { type AppsService, type ClipboardService, type DialogsService, type MenuItem } from "$lib/core/api";
+  import kernel, { Platform, type AppsService, type ClipboardService, type DialogsService, type MenuItem } from "$lib/core/api";
+  import { long_press } from "$lib/core/utils/long-press";
   import type { FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
   import { SYSTEM_DIRECTORIES } from "$lib/core/api/services/files/hierarchy";
@@ -46,7 +47,10 @@
     handler: DirectoryHandler;
     onnavigate: (handler: DirectoryHandler) => void;
     search: string;
-    /** Picker mode: clicks select, double-click or Enter chooses, no menus or edits (ADR-025). */
+    /**
+     * Picker mode: clicks select, double-click or Enter chooses, no menus or edits (ADR-025). On mobile a tap on a folder
+     * opens it and a tap on a file selects it.
+     */
     picker?: PickerMode;
     selected?: string | null;
   }
@@ -56,6 +60,9 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
+
+  /** Touch has no double-click or right-click: a tap opens, a long press is the menu (ADR-016 apps pass). */
+  const mobile = kernel.platform === Platform.MOBILE;
 
   // Cmd on macOS, Ctrl elsewhere: either counts.
   const mod = (event: KeyboardEvent) => event.ctrlKey || event.metaKey;
@@ -147,9 +154,10 @@
   }
 </script>
 
-<!-- Right-click on empty space (or the list's padding) is the folder's own menu. -->
+<!-- Right-click (mobile: long press) on empty space, or the list's padding, is the folder's own menu. -->
 <div
   role="presentation"
+  {@attach mobile && !picker && long_press({ on_menu: background_menu, ignore: "[role=row]" })}
   class="min-h-0 min-w-0 flex-1 overflow-y-auto"
   onkeydown={(event) => {
     if (picker) return;
@@ -159,7 +167,7 @@
     }
   }}
   oncontextmenu={(event) => {
-    if (picker) return event.preventDefault();
+    if (picker || mobile) return event.preventDefault();
     if ((event.target as Element).closest("[role=row]")) return;
     event.preventDefault();
     background_menu({ x: event.clientX, y: event.clientY });
@@ -188,12 +196,17 @@
         <button
           aria-disabled={!choosable && item.kind === "file"}
           aria-selected={picker ? selected === item.name : undefined}
-          onclick={() => {
-            if (picker) selected = choosable ? item.name : null;
+          onclick={(event) => {
+            const anchor = { x: event.clientX, y: event.clientY };
+            if (picker) {
+              if (mobile && item.kind === "directory") open(item, anchor);
+              else selected = choosable ? item.name : null;
+            } else if (mobile) open(item, anchor);
           }}
+          {@attach mobile && !picker && long_press({ on_menu: (point) => item_menu(item, point) })}
           role="row"
           class={cn(
-            "col-span-4 grid h-8 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+            "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
             clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50",
             !choosable && item.kind === "file" && "opacity-38",
             picker && selected === item.name && "bg-primary/15 hover:bg-primary/15"
@@ -201,7 +214,7 @@
           ondblclick={(event) => open(item, { x: event.clientX, y: event.clientY })}
           oncontextmenu={(event) => {
             event.preventDefault();
-            if (picker) return;
+            if (picker || mobile) return;
             event.currentTarget.focus();
             item_menu(item, { x: event.clientX, y: event.clientY });
           }}

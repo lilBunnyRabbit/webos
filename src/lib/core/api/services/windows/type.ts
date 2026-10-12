@@ -89,6 +89,15 @@ export interface WindowsService extends IService {
   restore(windows: WindowSnapshot[], create: (snapshot: WindowSnapshot) => AppInstance | null): RestoreResult;
 
   /**
+   * Registers a back handler for the window (ADR-003 `window.on_back`). Handlers stack: the newest runs first, so a
+   * picker sheet's File Explorer goes up a folder before the app behind it is asked. Returns the disposer.
+   */
+  add_back_handler(id: WindowId, handler: () => boolean): () => void;
+
+  /** Runs the window's back handlers, newest first, until one returns `true`. `false` when none handled it. */
+  back(id: WindowId): boolean;
+
+  /**
    * Toggles the maximized state of a window.
    * @param id - The window ID to toggle
    * @returns `true` if the window is now maximized, `false` if it's now unmaximized or didn't exist

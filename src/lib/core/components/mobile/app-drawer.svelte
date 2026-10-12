@@ -3,7 +3,7 @@
   import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon } from "phosphor-svelte";
   import { fly } from "svelte/transition";
   import { EmptyState, Input } from "../ui";
-  import { long_press } from "./long-press";
+  import { long_press } from "$lib/core/utils/long-press";
 
   let { onclose }: { onclose: () => void } = $props();
 

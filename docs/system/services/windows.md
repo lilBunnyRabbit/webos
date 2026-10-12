@@ -64,6 +64,8 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `is_focused` | `(id) => boolean` | `order === max_order`. |
 | `get_focused` | `() => WindowId \| null` | Linear scan with `is_focused`. Used by [DialogsService](dialogs.md) to anchor dialogs. |
 | `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. Nothing calls it; the drag handler writes `instance.snap_zone` directly. |
+| `add_back_handler` | `(id, handler: () => boolean) => () => void` | Registers a back handler (the window handle's `on_back`). A plain per-window array, newest last; the disposer removes that handler. `close()` drops the window's handlers. Both implementations |
+| `back` | `(id) => boolean` | Runs the handlers newest first until one returns `true`. The mobile shell's Back calls it; desktop has no caller |
 | `toggle_maximize` | `(id) => boolean` | Adding the flag also focuses. Removing it doesn't. Returns the new state (`false` for a missing id too). |
 | `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Minimizing the focused window hands focus to the next one (see below). Returns the new state. |
 | `name`, `description`, `to_string()` | IService | `to_string()` lists `id: app name`. |

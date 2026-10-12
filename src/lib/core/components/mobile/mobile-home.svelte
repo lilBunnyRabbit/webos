@@ -6,7 +6,7 @@
   import { background_menu } from "../desktop/desktop-actions";
   import HomeIcon from "./home-icon.svelte";
   import { home_item_menu } from "./home-actions";
-  import { long_press } from "./long-press";
+  import { long_press } from "$lib/core/utils/long-press";
 
   let { ondrawer }: { ondrawer: () => void } = $props();
 

@@ -31,6 +31,27 @@ export class MobileWindowsService implements IMobileWindowsService {
   private max_order = $state<number>(0);
   private index = $state<Record<WindowId, WindowInstance>>({});
 
+  /** Plain, not reactive: only read when Back is pressed. */
+  private back_handlers = new Map<WindowId, Array<() => boolean>>();
+
+  public add_back_handler(id: WindowId, handler: () => boolean): () => void {
+    const handlers = this.back_handlers.get(id) ?? [];
+    handlers.push(handler);
+    this.back_handlers.set(id, handlers);
+    return () => {
+      const current = this.back_handlers.get(id);
+      if (!current) return;
+      const index = current.lastIndexOf(handler);
+      if (index !== -1) current.splice(index, 1);
+      if (current.length === 0) this.back_handlers.delete(id);
+    };
+  }
+
+  public back(id: WindowId): boolean {
+    const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
+    return handlers.some((handler) => handler());
+  }
+
   public set_container(element?: HTMLElement | null): void {
     this.container = { element: element ?? null };
   }
@@ -82,6 +103,7 @@ export class MobileWindowsService implements IMobileWindowsService {
 
     const was_focused = this.is_focused(id);
     delete this.index[id];
+    this.back_handlers.delete(id);
 
     if (Object.keys(this.index).length === 0) this.max_order = 0;
     // Closing the app on screen goes home, not into another app the user didn't ask for.

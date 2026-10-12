@@ -39,7 +39,7 @@
     <button
       aria-current={active ? "page" : undefined}
       class={cn(
-        "flex h-8 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-ui font-medium transition-colors duration-150",
+        "flex h-8 pointer-coarse:h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-ui font-medium transition-colors duration-150",
         active ? "bg-foreground/10 text-foreground" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
       )}
       onclick={() => (value = item.value)}

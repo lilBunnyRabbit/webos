@@ -16,9 +16,11 @@
     /** Empty when the file has no extension; "Always use" is then hidden. */
     extension: string;
     apps: AppManifest[];
+    /** Set by the mobile dialogs host: a full-width bottom sheet. */
+    sheet?: boolean;
   }
 
-  let { file_name, extension, apps, resolve }: Props = $props();
+  let { file_name, extension, apps, sheet = false, resolve }: Props = $props();
 
   let always = $state(false);
 
@@ -37,7 +39,10 @@
   role="menu"
   tabindex="-1"
   onkeydown={move_focus}
-  class="grid min-w-60 max-w-80 animate-pop-in gap-0.5 rounded-xl bg-background-lighter p-1.5 text-ui shadow-popover"
+  class={[
+    "grid gap-0.5 bg-background-lighter text-ui",
+    sheet ? "w-full rounded-t-2xl p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-60 max-w-80 animate-pop-in rounded-xl p-1.5 shadow-popover",
+  ]}
 >
   <p class="truncate px-2 pt-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Open {file_name} with</p>
 
@@ -47,7 +52,7 @@
       data-option
       autofocus={index === 0}
       role="menuitem"
-      class="flex h-9 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
+      class="flex h-9 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
       onclick={() => resolve({ app_id: app.id, always })}
     >
       <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-foreground/10"><app.icon class="size-4" weight="duotone" /></span>

@@ -18,9 +18,10 @@ export const button = merge_tv({
       quiet: "text-foreground/80 hover:bg-foreground/8 hover:text-foreground active:bg-foreground/12",
       danger: "bg-error text-background hover:opacity-85 active:opacity-70",
     },
+    // Touch screens get finger-sized targets; the look stays the same (docs/design/components.md).
     size: {
-      sm: "h-7 rounded-md px-2.5 text-ui [&_svg]:size-3.5",
-      md: "h-8 rounded-md px-3 text-ui [&_svg]:size-4",
+      sm: "h-7 rounded-md px-2.5 text-ui pointer-coarse:h-9 [&_svg]:size-3.5",
+      md: "h-8 rounded-md px-3 text-ui pointer-coarse:h-10 [&_svg]:size-4",
       lg: "h-10 rounded-lg px-4 text-sm [&_svg]:size-4.5",
     },
     icon: {
@@ -28,8 +29,8 @@ export const button = merge_tv({
     },
   },
   compoundVariants: [
-    { icon: true, size: "sm", class: "w-7" },
-    { icon: true, size: "md", class: "w-8" },
+    { icon: true, size: "sm", class: "w-7 pointer-coarse:w-9" },
+    { icon: true, size: "md", class: "w-8 pointer-coarse:w-10" },
     { icon: true, size: "lg", class: "w-10" },
   ],
   defaultVariants: { variant: "secondary", size: "md", icon: false },
@@ -49,8 +50,8 @@ export const field = merge_tv({
   ],
   variants: {
     size: {
-      sm: "h-7 px-2",
-      md: "h-8 px-2.5",
+      sm: "h-7 px-2 pointer-coarse:h-9",
+      md: "h-8 px-2.5 pointer-coarse:h-10",
       lg: "h-10 rounded-lg px-3 text-sm",
     },
   },

@@ -9,12 +9,15 @@
     items,
     onselect,
     onback,
+    sheet = false,
     class: class_name,
   }: {
     items: MenuItem[];
     onselect: (id: string) => void;
     /** Present on submenus: close this level and return focus to the parent item. */
     onback?: () => void;
+    /** A bottom sheet on phones: full width, submenus open inline below their item, no shortcut hints. */
+    sheet?: boolean;
     class?: string;
   } = $props();
 
@@ -67,7 +70,11 @@
   bind:this={panel}
   role="menu"
   tabindex="-1"
-  class={cn("flex min-w-52 max-w-72 flex-col gap-px rounded-xl bg-background-lighter p-1.5 text-ui shadow-popover outline-none", class_name)}
+  class={cn(
+    "flex flex-col gap-px bg-background-lighter text-ui outline-none",
+    sheet ? "w-full rounded-t-2xl p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-52 max-w-72 rounded-xl p-1.5 shadow-popover",
+    class_name
+  )}
   {onkeydown}
   {@attach focus_first}
 >
@@ -84,12 +91,12 @@
         aria-expanded={open}
         data-label={item.label}
         class={cn(
-          "flex h-8 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10",
+          "flex h-8 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10",
           open && "bg-foreground/8"
         )}
         style:anchor-name="--submenu-{uid}-{index}"
-        onpointerenter={() => (open_index = index)}
-        onclick={() => (open_index = index)}
+        onpointerenter={() => !sheet && (open_index = index)}
+        onclick={() => (open_index = sheet && open ? null : index)}
         onkeydown={(event) => {
           if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -100,9 +107,11 @@
       >
         {#if item.icon}<item.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />{:else}<span class="size-4 shrink-0"></span>{/if}
         <span class="flex-1 truncate">{item.label}</span>
-        <CaretRightIcon class="size-3 text-foreground/65" weight="bold" />
+        <CaretRightIcon class={cn("size-3 text-foreground/65 transition-transform", sheet && open && "rotate-90")} weight="bold" />
       </button>
-      {#if open}
+      {#if open && sheet}
+        <Self items={item.items} {onselect} sheet class="rounded-none p-0 pb-0 pl-6" />
+      {:else if open}
         <div class="submenu" style:position-anchor="--submenu-{uid}-{index}">
           <Self
             items={item.items}
@@ -122,7 +131,7 @@
         disabled={item.disabled}
         data-label={item.label}
         class={cn(
-          "flex h-8 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none disabled:opacity-38",
+          "flex h-8 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none disabled:opacity-38",
           item.danger ? "text-error hover:bg-error/12 focus:bg-error/12" : "hover:bg-foreground/8 focus:bg-foreground/10"
         )}
         onpointerenter={() => (open_index = null)}
@@ -134,7 +143,7 @@
           <span class="size-4 shrink-0"></span>
         {/if}
         <span class="flex-1 truncate">{item.label}</span>
-        {#if item.shortcut}<span class="font-mono text-2xs text-foreground/65">{item.shortcut}</span>{/if}
+        {#if item.shortcut && !sheet}<span class="font-mono text-2xs text-foreground/65">{item.shortcut}</span>{/if}
       </button>
     {/if}
   {/each}

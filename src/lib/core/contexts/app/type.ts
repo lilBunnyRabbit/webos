@@ -24,6 +24,11 @@ export interface WindowHandle {
   minimize(): void;
   maximize(): void;
   restore(): void;
+  /**
+   * Claims the mobile Back button for this window's own navigation (ADR-003 revision). `handler` returns `true` when it
+   * handled back. Returns the disposer, so `$effect(() => window.on_back(...))` just works. Desktop never calls it.
+   */
+  on_back(handler: () => boolean): () => void;
 
   /** A confirm sheet over this window (ADR-025). Resolves `false` on Cancel or if the window closes. */
   confirm(message: string, options?: ConfirmOptions): Promise<boolean>;

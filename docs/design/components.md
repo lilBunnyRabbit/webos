@@ -4,7 +4,7 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 
 | Component | What | Notes |
 |-----------|------|-------|
-| `Button` | Text button | `variant`: `primary` (one per view), `secondary` (default), `quiet` (toolbars, low emphasis), `danger` (destructive only). `size`: `sm` 28px, `md` 32px, `lg` 40px. Icons go first, `weight="bold"` |
+| `Button` | Text button | `variant`: `primary` (one per view), `secondary` (default), `quiet` (toolbars, low emphasis), `danger` (destructive only). `size`: `sm` 28px, `md` 32px, `lg` 40px; on a coarse pointer (`pointer-coarse:`) `sm` is 36px and `md` 40px, so touch targets fit a finger without a mobile flag. Fields and `Segmented` grow the same way. Icons go first, `weight="bold"` |
 | `IconButton` | Icon-only button | `label` is required: accessible name and tooltip. Defaults to `quiet` |
 | `Input` | Text field | The field surface (`light-dark()`, see foundations) with a `foreground/30` ring, `leading` / `trailing` snippets for an icon or a clear button. Sizes match `Button` |
 | `Select` | Native `<select>` | `appearance: base-select`, so the popup is styled and keyboard, positioning and form behaviour stay native |
@@ -14,7 +14,7 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Section` | A titled group on a page | Title, description, `actions` snippet; content sits in a `rounded-xl` card with dividers, or `flush` for none |
 | `SettingRow` | Label, description and a control | Stacks below `@md`. Its `children` snippet receives `{ id, describedby }`; put them on the control so it gets its name and description: `{#snippet children({ id, describedby })}<Switch {id} aria-describedby={describedby} />{/snippet}` |
 | `SideNav` | An app's section navigation | Sidebar at `@2xl`, tab row below. Active item is `foreground/10` with a filled primary icon |
-| `Toolbar` | An app's top bar | 44px, `bg-background-light`, hairline below. `role="toolbar"` |
+| `Toolbar` | An app's top bar | At least 44px, `bg-background-light`, hairline below. `role="toolbar"`. Wraps onto more rows when a phone is too narrow: give the part that should stretch `flex-1` and a `min-w-*` |
 | `StatusBar` | Footer metadata | 28px, mono `text-2xs`, muted. No important actions |
 | `Badge` | A short label or status | `tone`: neutral, primary, success, warning, error, info (tinted fill + ink) |
 | `EmptyState` | Nothing to show, an error, or a first run | Icon tile, title, one line of help, optional actions. `tone="error"` for failures |

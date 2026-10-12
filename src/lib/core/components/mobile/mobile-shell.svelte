@@ -1,7 +1,8 @@
 <script lang="ts">
-  import kernel, { type MobileWindowsService, type WindowId } from "$lib/core/api";
+  import kernel, { type DialogsService, type MobileWindowsService, type WindowId } from "$lib/core/api";
   import LogoMark from "../brand/logo-mark.svelte";
   import ToastArea from "../notifications/toast-area.svelte";
+  import DialogsHost from "../dialogs/dialogs-host.svelte";
   import AppDrawer from "./app-drawer.svelte";
   import MobileHome from "./mobile-home.svelte";
   import MobileWindows from "./mobile-windows.svelte";
@@ -9,6 +10,7 @@
   import { view_transition } from "./view-transition";
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const focused = $derived(windows.get_focused());
   const running = $derived(windows.list().length);
 
@@ -20,9 +22,17 @@
     if (focused) layer = null;
   });
 
+  /** Shell layer, then the app's own navigation, then its top sheet, then home (ADR-016 apps pass). */
   function back() {
-    if (layer) view_transition(() => (layer = null));
-    else if (focused) view_transition(() => windows.go_home());
+    if (layer) return view_transition(() => (layer = null));
+    if (!focused) return;
+    if (windows.back(focused)) return;
+
+    const sheet = dialogs.for_window(focused).at(-1);
+    if (sheet?.dismissible) return sheet.resolve(null);
+    if (sheet) return;
+
+    view_transition(() => windows.go_home());
   }
 
   function home() {
@@ -69,6 +79,8 @@
 
   <NavBar {running} switcher={layer === "switcher"} onback={back} onhome={home} onrecents={recents} />
 </div>
+
+<DialogsHost anchored="sheet" />
 
 <style>
   /* Same surface as the desktop: a soft glow from the top, between shades of one surface. */
