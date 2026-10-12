@@ -49,7 +49,7 @@ What are the implications of this decision?
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted |
 | [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Accepted |
 | [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Accepted |
-| [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Accepted |
+| [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented (core shell; apps pass and back pending) |
 | [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Accepted |
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
 | [019](./019-system-dialogs.md) | System Dialogs Service | 2026-10-11 | Implemented |

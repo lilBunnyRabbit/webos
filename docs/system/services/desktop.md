@@ -22,7 +22,7 @@ Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brai
 
 - **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
 - **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_item(from, to)`. The desktop shell (`desktop.svelte`, `desktop-item.svelte`, the drag handle) and this inspector use it.
-- **`MobileDesktopService`**: the mobile home. Not built yet.
+- **`MobileDesktopService`**: the mobile home: ordered pages and a dock. See [Mobile home](#mobile-home).
 
 Both implementations own a `DesktopFolder` (composition, not a base class). It holds `entries`, the revision watch, reload, seeding trigger, and the file operations. The owner passes `read_layout`, `seed` and `loaded` callbacks, so each layout file stays with its service.
 
@@ -145,6 +145,26 @@ Hidden items keep whatever position they had. If `to` is somehow occupied, both 
 **Refresh.** Any mutation of `/home/Desktop` made through FilesService in this tab (File Explorer, `pin()`, `remove_item()`, an app saving there) bumps its revision and reloads the desktop. Writing `layout.json` bumps `/var/lib/desktop`, which nothing watches, so a move doesn't reload. Overlapping reloads resolve to the newest (`reload_id`).
 
 **Coordinates.** `container.bounds` is viewport space. The shell's drag handler subtracts `bounds.x/y` from `clientX/Y` and divides by `cell` to get a grid cell, so the two stay consistent as long as the element doesn't move without resizing. Moves without a resize aren't observed (ResizeObserver only reports size).
+
+## Mobile home
+
+`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
+
+| Member | Signature | Notes |
+|--------|-----------|-------|
+| `pages` | `(capacity) => DesktopItem[][]` | Home items (not docked) in the saved order, then entries the order doesn't know in folder order, chunked by `capacity`. Always at least one page; `capacity <= 0` gives one page with everything |
+| `dock` | `() => DesktopItem[]` | Docked items in dock order, at most `DOCK_SIZE` (4) |
+| `dock_full` | `readonly boolean` | `$derived` |
+| `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end), taking it out of the dock if it was there |
+| `set_docked` | `(name, docked) => void` | Appends to the dock (ignored when full) or moves back to the end of home |
+| `rename_item` | `(name, new_name)` | Swaps the name in the order and dock and saves before renaming, so the icon keeps its place |
+| base members | | Forward to `DesktopFolder` |
+
+**Layout file** `/var/lib/desktop/home-layout.json`: `{ "version": 1, "order": ["Settings.desktop", …], "dock": ["File Explorer.desktop"] }`. zod-validated (dock max 4); anything invalid is an empty layout (folder order, empty dock), not an error. Every change rebuilds both lists from what's shown, so stale names drop out, assigns the state at once and writes in the background (`[MobileDesktopService] Failed to save the home layout`).
+
+**Arrange** (`arrange_home(entries, layout)`, pure, unit-tested): dock names that exist, capped at 4; then home = saved order minus docked, stale and duplicate names; then every other entry in folder order. No gaps and no cells: rotating or a bigger screen just reflows.
+
+**Seeding** runs for an empty folder with no `home-layout.json`. If the desktop's `layout.json` exists, the desktop was set up and emptied on purpose, so only an empty home layout is written. Otherwise it writes the `DEFAULT_SHORTCUTS` and saves them as the home order. A folder the desktop already filled isn't seeded: those items show in folder order with an empty dock.
 
 ## Divergence from ADR
 

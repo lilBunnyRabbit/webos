@@ -46,24 +46,26 @@ If `kernel.init()` throws (a service `init()` rejects, a dependency is missing, 
 ```
 App.svelte
 └─ web-os.svelte
-   └─ os.svelte                       grid; layout follows settings.taskbar.position
-      ├─ desktop/desktop.svelte
-      │  └─ desktop-item.svelte  (per grid cell) → desktop-item-face.svelte
-      ├─ window-manager/window-manager.svelte
-      │  └─ window/window.svelte  (per open window)
-      │     ├─ window-titlebar.svelte
-      │     ├─ window-content.svelte  → lazy app component
-      │     └─ window-sheets.svelte   → this window's dialog sheets (ADR-025)
-      ├─ notifications/toast-area.svelte
-      ├─ taskbar/taskbar.svelte
-      │  ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
-      │  ├─ taskbar-item.svelte  (per window)
-      │  └─ taskbar-clock.svelte
-      └─ dialogs/dialogs-host.svelte  (sibling of the grid; native <dialog>)
+   └─ os.svelte                       platform branch (ADR-016)
+      ├─ mobile/mobile-shell.svelte   phones and tablets, see shell/mobile.md
+      ├─ desktop-shell.svelte         grid; layout follows settings.taskbar.position
+      │  ├─ desktop/desktop.svelte
+      │  │  └─ desktop-item.svelte  (per grid cell) → desktop-item-face.svelte
+      │  ├─ window-manager/window-manager.svelte
+      │  │  └─ window/window.svelte  (per open window)
+      │  │     ├─ window-titlebar.svelte
+      │  │     ├─ window-content.svelte  → lazy app component
+      │  │     └─ window-sheets.svelte   → this window's dialog sheets (ADR-025)
+      │  ├─ notifications/toast-area.svelte
+      │  └─ taskbar/taskbar.svelte
+      │     ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
+      │     ├─ taskbar-item.svelte  (per window)
+      │     └─ taskbar-clock.svelte
+      └─ dialogs/dialogs-host.svelte  (sibling of either shell; native <dialog>)
          └─ (component from DialogsService.stack: open-with-dialog.svelte, restore-session-dialog.svelte)
 ```
 
-The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `os.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
+The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `desktop-shell.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
 
 ## Source map
 

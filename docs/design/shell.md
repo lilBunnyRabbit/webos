@@ -44,3 +44,17 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - Bottom-right stack, `w-80`, `rounded-xl bg-background-lighter shadow-popover`, sliding in from the right.
 - A tinted icon tile per type (`info`, `warning`, `error`, `progress` → primary). Title `text-ui font-semibold`, message at 70%.
 - Actions are small buttons: the first is primary, the rest secondary. Progress shows a 4px primary bar.
+
+## Mobile
+
+Phones and tablets share one shell ([system reference](../system/shell/mobile.md)). Same tokens, same surfaces; bigger touch targets.
+
+- **No edge gestures.** Every screen edge belongs to the device. Navigation is a three-button bar (back, home, running apps), 40px buttons on `bg-background-light/90` with `backdrop-blur-xl` and a hairline on top, padded by the bottom safe area. The running-apps button carries a `primary` count badge and fills when the switcher is open.
+- **No status bar of our own.** The device has one. Apps and home pad the top safe area.
+- **Home:** the desktop surface (`background-darkest` with the `background-dark` glow from the top) and the logo mark centred as a watermark in `primary/10`. Icons are 56px `rounded-2xl` tiles on `background-light` with `shadow-raised` and a hairline, a 28px duotone glyph and a two-line `text-xs` label. They flow with no gaps; pages snap sideways, with dots below (the current one a `primary` pill, like the introduction).
+- **Dock:** the taskbar's floating dock, centred, fitting its content: an All apps button (`SquaresFour`, duotone), a hairline separator, up to four tiles without labels.
+- **Long press** is the right-click: 450ms, a short vibration, then the menu. Moving after the hold drags: a ghost tile at `scale-110` with `shadow-popover`, a 2px `primary` bar marking where it lands, the dock tinting `primary/10` with a `primary/60` hairline when it accepts.
+- **App drawer:** a `rounded-t-3xl` sheet on `background-lighter` over the scrim, with a small grab bar, the large search field and the home tiles in an auto-fill grid.
+- **Switcher:** the scrim with a strong blur behind a row of live app cards at 66%, `rounded-2xl`, `shadow-window-focused`, a `foreground/12` hairline, each under a header with the app's icon, name and close button. Flick a card up to close it. "Close all" is a secondary button below.
+- **Motion:** shell changes (opening an app, the switcher, going home) run as View Transitions; cards morph to fullscreen. Apps pop in (`animate-pop-in`) when they come on screen. All of it respects reduced motion.
+- **Toasts** come from the top, centred.

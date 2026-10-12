@@ -89,6 +89,11 @@ The desktop service addresses items by grid position (`remove_item(position)`), 
 
 - **Long-press menu plus drag reorder** (chosen). A long press with no movement opens the context menu; a long press followed by movement drags to reorder, across pages by holding near the side (inset from the edge). Movement before the timer is a page swipe.
 
+### Design review in the browser
+
+- The owner: no logo in the dock. It moved to the home background, centred, as a `primary/10` watermark. The dock's first slot is an All apps button instead.
+- Restored sessions land on home with the apps in the switcher (like a phone after a restart), not on the last app.
+
 ## Key takeaways
 
 - No WebOS gesture starts at a screen edge. Navigation is buttons.
@@ -97,11 +102,11 @@ The desktop service addresses items by grid position (`remove_item(position)`), 
 
 ## Action items
 
-- [ ] ADR-016 revision with these decisions
-- [ ] `refactor:` DesktopService base by name, `DesktopFolder`, `GridDesktopService`
-- [ ] `MobileWindowsService`, `MobileDesktopService`, registration by platform
-- [ ] Mobile shell: home pages, dock, drawer, switcher, nav bar, toasts, dialogs at phone size
-- [ ] System docs, design docs (shell), roadmap, changelog
+- [x] ADR-016 revision with these decisions
+- [x] `refactor:` DesktopService base by name, `DesktopFolder`, `GridDesktopService`
+- [x] `MobileWindowsService`, `MobileDesktopService`, registration by platform
+- [x] Mobile shell: home pages, dock, drawer, switcher, nav bar, toasts
+- [x] System docs, design docs (shell), roadmap, changelog
 - [ ] Second pass: apps at phone width
 
 ## Next session topics

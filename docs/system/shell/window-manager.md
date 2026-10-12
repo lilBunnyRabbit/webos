@@ -11,7 +11,7 @@ That's all it does. It owns no state.
 
 ## Placement
 
-[os.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy. Its classes are `relative z-0 pointer-events-none`. Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
+[desktop-shell.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy. Its classes are `relative z-0 pointer-events-none`. Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
 
 ## Container measurement
 
@@ -24,7 +24,7 @@ The observer disconnects on teardown. Nothing calls `set_container(null)`.
 
 ## Props
 
-`SvelteHTMLElements["div"]`, spread onto the root. `os.svelte` passes `class` for the grid area.
+`SvelteHTMLElements["div"]`, spread onto the root. `desktop-shell.svelte` passes `class` for the grid area.
 
 ## User interactions
 

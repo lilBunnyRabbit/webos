@@ -46,7 +46,7 @@ Two interfaces in `type.ts` (ADR-016, owner 2026-10-12, [brainstorm](../../brain
 - **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
 - **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container` and `snap`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
 
-The class `WindowsService` implements `DesktopWindowsService`. There's no mobile implementation yet. Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); a mobile implementation may treat them as no-ops.
+The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.ts` registers `MobileWindowsService` (`mobile.svelte.ts`) under the same key instead; see [Mobile](#mobile). Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); mobile treats them as no-ops.
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
@@ -125,6 +125,19 @@ For each snapshot, in order:
 Then `focus_next()`: the topmost non-minimized window gets the highest order, so a minimized last window never holds focus. With every restored window minimized, nothing is focused. Restored windows go on top of anything already open.
 
 `WindowsHelper.clamp_bounds(bounds, container)`: width and height capped at the container's, then `x`/`y` clamped to `[0, container − size]`, so the whole window is inside. A container with zero width or height (unmeasured) returns a copy unchanged.
+
+## Mobile
+
+`MobileWindowsService` (`mobile.svelte.ts`, interface `MobileWindowsService extends WindowsService` in `type.ts`, inspector `mobile-inspector.svelte`) backs the [mobile shell](../shell/mobile.md). ADR-016 revision 2026-10-12.
+
+- **Same focus model:** the window holding `max_order` is focused and on screen. **Home** is the state where no window holds it (the one desktop reaches when everything is minimized). `go_home()` bumps `max_order` when something is focused.
+- **Every window stays mounted.** Background windows are simply not focused. `recent()` lists ids by `order`, newest first: the switcher's order.
+- `open(app)`: new record on top, `snap_zone: null`, `constraints: {}`, `bounds` = the container's size at `0,0`. Manifest `flags` are kept except `minimized` / `maximized`.
+- `restore()`: inserts in order like desktop, drops `minimized` / `maximized`, ignores saved geometry, then **goes home**: restored apps wait in the switcher, like a phone after a restart.
+- `close(id)`: closing the on-screen app goes home rather than surfacing another one.
+- `toggle_maximize()` → always `false`, does nothing. `toggle_minimize(id)`: on-screen → home (`true`); background → focus it (`false`). The window handle's `is_minimized` / `is_maximized` therefore always read `false`.
+- `container` is `{ element }` only; `set_container(element)` stores the stage element (`mobile-windows.svelte`), which dialogs anchor to.
+- No `snap`, no geometry, no clamping. `bounds` are written only so a session saved on mobile restores sensibly on desktop.
 
 ## Divergence from ADR
 

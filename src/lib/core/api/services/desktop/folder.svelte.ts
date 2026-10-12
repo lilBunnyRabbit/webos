@@ -91,7 +91,9 @@ export class DesktopFolder {
       }
 
       const shortcut =
-        file_extension(item.name) === SHORTCUT_EXTENSION ? parse_shortcut(await (await item.handle.getFile()).text()) : null;
+        file_extension(item.name) === SHORTCUT_EXTENSION
+          ? parse_shortcut(await (await item.handle.getFile()).text())
+          : null;
       entries.push(
         shortcut
           ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), ...shortcut }
@@ -148,7 +150,12 @@ export class DesktopFolder {
 }
 
 /** Writes a file into a `/var/lib` subfolder, creating the subfolder on first use. */
-export async function write_var_lib(files: FilesService, directory: string, file: string, content: string): Promise<void> {
+export async function write_var_lib(
+  files: FilesService,
+  directory: string,
+  file: string,
+  content: string
+): Promise<void> {
   let handle = await files.get_directory(`${PATHS.var_lib}/${directory}`);
   if (!handle) {
     const var_lib = await files.get_directory(PATHS.var_lib);

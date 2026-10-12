@@ -3,7 +3,15 @@ import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
 import { DesktopHelper } from "./helper";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
-import { LAYOUT_DIRECTORY_NAME, LAYOUT_FILE, LAYOUT_PATH, parse_layout, serialize_layout, take_v0_pins, type Positions } from "./layout";
+import {
+  LAYOUT_DIRECTORY_NAME,
+  LAYOUT_FILE,
+  LAYOUT_PATH,
+  parse_layout,
+  serialize_layout,
+  take_v0_pins,
+  type Positions,
+} from "./layout";
 
 export class DesktopService implements GridDesktopService {
   name = "DesktopService";

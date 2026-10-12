@@ -16,7 +16,7 @@ Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/de
 - Render each non-empty cell of `desktop.list()` as a `DesktopItem` at `grid-column: x+1; grid-row: y+1`. Rows are keyed by row index and items by column index, so a component is tied to its cell, not to its item.
 - Render nothing until the grid has at least 1×1.
 
-It sits in `os.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too. There's no wallpaper yet (ADR-011).
+It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too. There's no wallpaper yet (ADR-011).
 
 ## Desktop item
 

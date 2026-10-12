@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppManifest, type AppsService, type DesktopService, type VersionService } from "$lib/core/api";
+  import kernel, { search_apps, type AppManifest, type AppsService, type DesktopService, type VersionService } from "$lib/core/api";
   import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon } from "phosphor-svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
   import { EmptyState, IconButton, Input, Kbd } from "../ui";
@@ -16,14 +16,7 @@
     search?.focus();
   });
 
-  const all = $derived([...apps.list()].map(([, manifest]) => manifest).sort((a, b) => a.name.localeCompare(b.name)));
-  const matches = $derived(
-    query.trim() === ""
-      ? all
-      : all.filter((manifest) =>
-          [manifest.name, manifest.id, ...(manifest.keywords ?? [])].some((text) => text.toLowerCase().includes(query.trim().toLowerCase()))
-        )
-  );
+  const matches = $derived(search_apps([...apps.list()].map(([, manifest]) => manifest), query));
 
   function close() {
     document.getElementById("start-menu-popover")?.hidePopover();

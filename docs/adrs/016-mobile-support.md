@@ -1,7 +1,7 @@
 # ADR-016: Mobile Support
 
 **Date:** 2026-02-01
-**Status:** Accepted (groundwork implemented 2026-10-12, shell in progress)
+**Status:** Implemented 2026-10-12 (core shell; apps pass and back pending)
 
 > **Revision 2026-10-12: groundwork** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-groundwork.md))
 > - Built early, before the mobile shell: `kernel.platform` and the interface split. Everything else waits for the last roadmap block.

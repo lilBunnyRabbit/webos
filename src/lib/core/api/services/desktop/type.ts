@@ -64,8 +64,8 @@ export interface MobileDesktopService extends DesktopService {
   /** Dock entries, in dock order. */
   dock(): DesktopItem[];
 
-  /** Moves an entry to `index` in the home order (index among non-dock entries). Saves the layout. */
-  move_item(name: string, index: number): void;
+  /** Moves an entry in the home order to just before `before` (`null`: the end), out of the dock if it was there. */
+  move_item(name: string, before: string | null): void;
 
   /** Adds the entry to the dock (at the end) or takes it out (back into the home order). */
   set_docked(name: string, docked: boolean): void;

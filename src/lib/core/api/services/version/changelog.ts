@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-10-12",
+    title: "Pocket",
+    changes: [
+      { kind: NEW, text: "Phones and tablets get their own WebOS: apps open fullscreen, and back, home and running apps buttons sit at the bottom." },
+      { kind: NEW, text: "The home screen shows your desktop items as swipeable pages, with a dock for up to four favourites." },
+      { kind: NEW, text: "Hold an icon on the home screen for its menu, or hold and drag to move it or put it in the dock." },
+      { kind: NEW, text: "All your apps are one tap away in a searchable list, and running apps show as live cards you can switch to or flick away." },
+    ],
+  },
+  {
     version: "0.9.0",
     date: "2026-10-12",
     title: "Contained",

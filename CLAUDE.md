@@ -31,13 +31,13 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
 | `settings` | SettingsService | Theme tokens, taskbar position, file defaults, persisted in `/etc/settings.json` | files |
-| `windows` | WindowsService | Window lifecycle, geometry, z-order, snap | none |
+| `windows` | WindowsService | Window lifecycle, geometry, z-order, snap. `MobileWindowsService` on mobile (ADR-016) | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
 | `version` | VersionService | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
-| `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022) | files, apps |
+| `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022). `MobileDesktopService` (pages + dock) on mobile (ADR-016) | files, apps |
 | `session` | SessionService | Saves open windows to `/var/lib/session/session.json`, restore dialog at boot (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 

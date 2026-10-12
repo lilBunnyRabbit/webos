@@ -126,6 +126,21 @@ export interface DesktopWindowsService extends WindowsService {
   snap(id: WindowId, zone: SnapZone | null): boolean;
 }
 
+/**
+ * The mobile shell's windows (ADR-016): one fullscreen app at a time. The focused window is on screen; with nothing
+ * focused the home screen shows. Background windows stay mounted. Maximize is a no-op and minimize sends the app home.
+ */
+export interface MobileWindowsService extends WindowsService {
+  /** Registers the element apps render in. Mobile windows always fill it. */
+  set_container(element?: HTMLElement | null): void;
+
+  /** Shows the home screen: no window is focused, every app keeps running. */
+  go_home(): void;
+
+  /** Running windows, most recently used first: the switcher's order. */
+  recent(): WindowId[];
+}
+
 export type WindowId = string;
 
 /** A window as the session stores it: what to launch and where it was. */

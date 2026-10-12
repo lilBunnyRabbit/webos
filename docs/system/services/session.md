@@ -99,6 +99,8 @@ ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and
 
 ## Known gaps
 
+- On mobile, `windows.restore` ignores the saved geometry and lands on the home screen with the restored apps in the switcher ([windows.md](windows.md#mobile)). Both platforms share the file, so a session saved on mobile restores on desktop with fullscreen-sized windows.
+
 - Multiple tabs: last writer wins, and every tab writes on every window change (ADR-023 §5).
 - Every focus change rewrites the file, because `order` is part of the snapshot.
 - `last_saved` is set when a write is queued, not when it lands, so a failed write still updates it.
