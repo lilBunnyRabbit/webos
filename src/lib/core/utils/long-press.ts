@@ -6,6 +6,23 @@ const HOLD_MS = 450;
 /** Movement before the hold fires is a scroll or swipe, handed to the browser. */
 const SLOP_PX = 8;
 
+// Temporary (2026-10-12): `?debug-touch` prints the events a long press sees, to diagnose drags failing on a real phone.
+const DEBUG = new URLSearchParams(location.search).has("debug-touch");
+let debug_lines: string[] = [];
+function debug(line: string) {
+  if (!DEBUG) return;
+  let panel = document.getElementById("debug-touch");
+  if (!panel) {
+    panel = document.createElement("pre");
+    panel.id = "debug-touch";
+    panel.style.cssText =
+      "position:fixed;left:4px;right:4px;top:4px;z-index:100000;max-height:45vh;overflow:auto;margin:0;padding:6px;font:11px/1.3 monospace;background:rgb(0 0 0/.85);color:#fff;pointer-events:none;white-space:pre-wrap";
+    document.body.append(panel);
+  }
+  debug_lines = [...debug_lines.slice(-40), `${(performance.now() / 1000).toFixed(2)} ${line}`];
+  panel.textContent = `${navigator.userAgent}\n${debug_lines.join("\n")}`;
+}
+
 export interface LongPressOptions {
   /** Hold without moving, then release. Also a mouse right-click. */
   on_menu: (point: Position) => void;
@@ -46,11 +63,13 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     const ignored = (event: Event) => !!options.ignore && !!(event.target as Element).closest?.(options.ignore);
 
     function on_pointer_down(event: PointerEvent) {
+      debug(`down ${event.pointerType} id=${event.pointerId} primary=${event.isPrimary} ta=${getComputedStyle(element).touchAction}`);
       if (event.pointerType === "mouse" || !event.isPrimary || ignored(event)) return;
       reset();
       start = point(event);
       pointer_id = event.pointerId;
       timer = setTimeout(() => {
+        debug("hold");
         held = true;
         swallow_click = true;
         navigator.vibrate?.(8);
@@ -58,7 +77,8 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
         if (pointer_id !== null && element.isConnected) {
           try {
             element.setPointerCapture(pointer_id);
-          } catch {
+          } catch (error) {
+            debug(`capture failed ${error}`);
             // The pointer ended without an event reaching us: nothing to hold on to.
             reset();
           }
@@ -67,6 +87,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_pointer_move(event: PointerEvent) {
+      if (start) debug(`move id=${event.pointerId} held=${held} dragging=${dragging}`);
       if (event.pointerId !== pointer_id || !start) return;
       const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y) > SLOP_PX;
 
@@ -83,6 +104,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_pointer_up(event: PointerEvent) {
+      if (start) debug(`up id=${event.pointerId} held=${held} dragging=${dragging}`);
       if (event.pointerId !== pointer_id) return;
       if (dragging) options.on_drag_end?.(point(event));
       else if (held) options.on_menu(point(event));
@@ -90,6 +112,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_pointer_cancel(event: PointerEvent) {
+      if (start) debug(`CANCEL id=${event.pointerId} held=${held}`);
       if (event.pointerId !== pointer_id) return;
       if (dragging) options.on_drag_cancel?.();
       reset();
@@ -97,6 +120,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
 
     // Must be non-passive: it's the only way to stop the browser scrolling under a held finger.
     function on_touch_move(event: TouchEvent) {
+      if (start) debug(`touchmove cancelable=${event.cancelable} held=${held}`);
       if (held && event.cancelable) event.preventDefault();
     }
 
@@ -108,6 +132,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_context_menu(event: MouseEvent) {
+      debug(`contextmenu ${(event as Partial<PointerEvent>).pointerType ?? "?"} held=${held}`);
       // Android fires contextmenu for a touch long press too; the timer already handles that one.
       event.preventDefault();
       if (ignored(event)) return;
