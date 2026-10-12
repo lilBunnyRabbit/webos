@@ -155,3 +155,24 @@ describe("move_paths / copy_paths", () => {
     expect(await files.copy_paths(["/home/a/z.txt"], "/home/b", async () => "skip")).toEqual([]);
   });
 });
+
+describe("import_entries", () => {
+  test("stores files and copies folders, keeping both on a clash", async () => {
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "in");
+    await files.write_file(await files.create_file(await files.get_directory("/home/in"), "a.txt"), "old");
+
+    // A directory handle from anywhere works; an OPFS one stands in for a folder dropped from the disk.
+    const source = await files.create_directory(home, "outside");
+    await files.write_file(await files.create_file(source, "inner.txt"), "inner");
+
+    const imported = await files.import_entries("/home/in", [new File(["new"], "a.txt"), source]);
+    expect(imported).toEqual(["/home/in/a (1).txt", "/home/in/outside"]);
+    expect(await (await files.get_file("/home/in/a (1).txt"))!.text()).toBe("new");
+    expect(await (await files.get_file("/home/in/outside/inner.txt"))!.text()).toBe("inner");
+  });
+
+  test("a missing target throws", async () => {
+    await expect(files.import_entries("/home/nope", [new File(["x"], "x.txt")])).rejects.toThrow("doesn't exist");
+  });
+});

@@ -176,6 +176,28 @@ export class FilesService implements IFilesService {
     return result;
   }
 
+  async import_entries(target: string, entries: (File | FileSystemHandle)[]): Promise<string[]> {
+    const target_path = join_path(split_path(target));
+    const target_dir = await this.get_directory(target_path);
+    if (!target_dir) throw new Error(`${target} doesn't exist`);
+
+    const imported: string[] = [];
+    try {
+      for (const entry of entries) {
+        const handle =
+          entry instanceof File
+            ? await opfs.store_file(target_dir, entry)
+            : entry.kind === "file"
+              ? await opfs.store_file(target_dir, await (entry as FileSystemFileHandle).getFile())
+              : await opfs.copy_directory(entry as FileSystemDirectoryHandle, target_dir);
+        imported.push(join_path([...split_path(target_path), handle.name]));
+      }
+    } finally {
+      if (imported.length > 0) await this.changed(target_dir);
+    }
+    return imported;
+  }
+
   async move_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]> {
     return this.transfer("move", paths, target, on_conflict);
   }

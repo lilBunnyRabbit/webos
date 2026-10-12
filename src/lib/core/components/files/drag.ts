@@ -28,6 +28,36 @@ export function read_drag_paths(event: DragEvent): string[] {
   }
 }
 
+/** A drop of real files or folders from the OS (or another app). */
+export function has_os_files(event: DragEvent): boolean {
+  return event.dataTransfer?.types.includes("Files") ?? false;
+}
+
+type HandleItem = DataTransferItem & { getAsFileSystemHandle?: () => Promise<FileSystemHandle | null> };
+
+/**
+ * The dropped files and folders. Call it inside the `drop` handler before any `await`: the items are only readable
+ * while the event is being dispatched. Folders need `getAsFileSystemHandle` (Chromium); elsewhere they're skipped.
+ */
+export function read_os_entries(event: DragEvent): Promise<(File | FileSystemHandle)[]> {
+  const pending = [...(event.dataTransfer?.items ?? [])]
+    .filter((item) => item.kind === "file")
+    .map((item: HandleItem) => item.getAsFileSystemHandle?.() ?? Promise.resolve(item.getAsFile()));
+  return Promise.all(pending).then((entries) => entries.filter((entry): entry is File | FileSystemHandle => entry !== null));
+}
+
+/** Imports dropped OS files into `target`, keeping both on a clash. Resolves with the new paths, `[]` on failure. */
+export async function import_dropped(entries: Promise<(File | FileSystemHandle)[]>, target: string): Promise<string[]> {
+  try {
+    const list = await entries;
+    if (list.length === 0) return [];
+    return await kernel.service<FilesService>("files").import_entries(target, list);
+  } catch (error) {
+    report_file_error("Couldn't import the dropped items", error);
+    return [];
+  }
+}
+
 /** Moves dropped entries into `target`, keeping both on a clash. Resolves with the new paths, `[]` on failure. */
 export async function drop_paths(paths: string[], target: string): Promise<string[]> {
   if (paths.length === 0) return [];

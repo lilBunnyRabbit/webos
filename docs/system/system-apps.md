@@ -49,7 +49,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 - Folders update live when another window or a service changes them (each `DirectoryHandler` watches its revision). A folder deleted or moved elsewhere sends the window to the nearest existing parent with a toast. Changes in other browser tabs still need a manual reload.
 - System folders are only marked, not protected: they can be deleted like any folder.
 - No associations, so `apps.open()` on a folder path doesn't reach it. Only `launch("file-explorer", { path })` does.
-- No multi-select on phones and tablets, no arrow-key selection, and no dropping real files in from the OS. New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
+- No multi-select on phones and tablets and no arrow-key selection. Real files and folders dropped from the OS are imported (folders need Chromium). New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
 
 ---
 

@@ -289,6 +289,13 @@ export async function available_name(dir: FileSystemDirectoryHandle, name: strin
   }
 }
 
+/** Writes a `File` from outside OPFS into `target_dir` under a free name. The one path for uploads and drops. */
+export async function store_file(target_dir: FileSystemDirectoryHandle, file: File): Promise<FileSystemFileHandle> {
+  const handle = await target_dir.getFileHandle(await available_name(target_dir, file.name), { create: true });
+  await write_file(handle, file);
+  return handle;
+}
+
 export async function upload_files(
   target_dir: FileSystemDirectoryHandle,
   options: UploadOptions = {}
@@ -313,10 +320,7 @@ export async function upload_files(
       try {
         const uploaded: File[] = [];
         for (const file of Array.from(files)) {
-          const name = await available_name(target_dir, file.name);
-          const file_handle = await target_dir.getFileHandle(name, { create: true });
-          await write_file(file_handle, file);
-          uploaded.push(await file_handle.getFile());
+          uploaded.push(await (await store_file(target_dir, file)).getFile());
         }
         resolve(uploaded);
       } catch (err) {

@@ -33,6 +33,12 @@ Roadmap block 6 (ADR-011) plus two inbox items. Owner: "click drag and the recta
 ### 6. Where the move logic lives
 - **`FilesService.move_paths(paths, target)`** (owner's pick over extracting a function or a clipboard method). Path-based, on the files service. `copy_paths` sits beside it, and `clipboard.paste_files` delegates to both with its conflict question, so the self-paste and same-folder rules exist once.
 
+### 7. Dropping real files from the OS (same day, follow-up)
+- **Files and folders, recursive** (chosen). `DataTransferItem.getAsFileSystemHandle()` (Chromium) gives real handles; folders copy through the existing `copy_directory`, which takes any directory handle. Elsewhere a folder is skipped. The handles must be requested synchronously inside `drop`.
+- **`files.import_entries(target, entries)`** (chosen over extending `upload_files`): path-based like `move_paths`, takes `File | FileSystemHandle`, keeps both on a clash. The picker upload and the drop share `opfs.store_file`.
+- **Errors only** for feedback; items just appear. A desktop drop lands at the drop cell.
+- Imports work on every platform (an iPad can drop from Files); WebOS-path drags stay desktop-pointer only.
+
 ## Key takeaways
 
 - One selection behaviour, two surfaces, no new state layer.
@@ -50,6 +56,5 @@ Roadmap block 6 (ADR-011) plus two inbox items. Owner: "click drag and the recta
 
 ## Next session topics
 
-- Dropping real files from the OS (upload by drop).
 - Touch selection mode on mobile.
 - Arrow-key selection.

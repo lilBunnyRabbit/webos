@@ -5,6 +5,7 @@
 > **Revision 2026-10-12: path-based moves** (owner, [brainstorm](../brainstorm/2026-10-12_multi-select.md))
 > - `move_paths(paths, target, on_conflict?)` and `copy_paths(...)` move or copy entries by absolute path into the folder at `target`. Without `on_conflict` a clash keeps both (`available_name()`), which is what drag and drop uses. Moving a folder into itself throws; moving into the folder it's already in is a no-op.
 > - `clipboard.paste_files` delegates to them with its conflict question, so the rules exist once.
+> - `import_entries(target, entries)` brings in files and folders from outside WebOS (dropped from the OS): a `File` or file handle is stored under a free name, a directory handle is copied recursively. The picker upload and the drop share `opfs.store_file`.
 
 > **Revision 2026-10-12: handlers stay fresh** (owner, [brainstorm](../brainstorm/2026-10-12_explorer-sync.md))
 > - `DirectoryHandler` watches its own revision (ADR-021) and re-lists, and watches its ancestors' revisions to notice when it's deleted or moved (`exists` turns `false`). It gains `dispose()`; whoever creates a handler disposes it.

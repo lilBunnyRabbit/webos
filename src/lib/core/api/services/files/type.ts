@@ -77,6 +77,11 @@ export interface FilesService extends IService {
    * where they are. Moving a folder into itself throws. Resolves with the new paths.
    */
   move_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
+  /**
+   * Imports things from outside WebOS (files and folders dropped from the OS) into the folder at `target`. A
+   * `FileSystemDirectoryHandle` is copied recursively. Clashes keep both. Resolves with the new paths.
+   */
+  import_entries(target: string, entries: (File | FileSystemHandle)[]): Promise<string[]>;
   /** Copies like `move_paths`. Copying into the entry's own folder always keeps both. */
   copy_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
   /** Copies the file or folder at `path` onto the real disk (native Save dialog / folder picker). The written name, or `null` if cancelled. */

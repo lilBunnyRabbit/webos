@@ -67,6 +67,7 @@ The desktop and File Explorer select the same way (`$lib/core/utils/selection.ts
 - Right-click on a selected item acts on the whole selection; on an unselected one, it selects that one first. Menus say the count ("Delete 3 items"); actions that need one item (Rename, Properties, Save to disk, Open with) disappear for many. Deleting many asks once.
 - Dragging moves. Dragged items fade to 40%; a folder under the drag is the target (`primary/18`, `primary/70` 2px ring). Name clashes on a drop keep both, without asking.
 - Pointer only: phones and tablets keep tap and long press.
+- Files dragged in from the computer are copied in, not moved, onto the same targets with the same highlight. No confirmation, no progress; failures toast.
 
 ## Dialogs and menus
 

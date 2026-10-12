@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.17.0",
+    date: "2026-10-12",
+    title: "Drop in",
+    changes: [
+      { kind: NEW, text: "Drag files and whole folders from your computer onto the desktop, a File Explorer window or a folder to copy them into WebOS." },
+    ],
+  },
+  {
     version: "0.16.0",
     date: "2026-10-12",
     title: "Lasso",

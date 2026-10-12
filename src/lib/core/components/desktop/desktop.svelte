@@ -3,7 +3,7 @@
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { click_select, intersects, rect_from_points, type Rect } from "$lib/core/utils/selection";
   import type { Position } from "$lib/core/utils/type";
-  import { drop_paths, has_drag_paths, read_drag_paths, set_drag_paths } from "../files/drag";
+  import { drop_paths, has_drag_paths, has_os_files, import_dropped, read_drag_paths, read_os_entries, set_drag_paths } from "../files/drag";
   import DesktopItem from "./desktop-item.svelte";
   import {
     background_menu,
@@ -120,9 +120,10 @@
   }
 
   function on_drag_over(event: DragEvent) {
-    if (!drag && !has_drag_paths(event)) return;
+    const os = !drag && !has_drag_paths(event) && has_os_files(event);
+    if (!drag && !has_drag_paths(event) && !os) return;
     event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    if (event.dataTransfer) event.dataTransfer.dropEffect = os ? "copy" : "move";
     hover = { cell: cell_at(event.clientX, event.clientY), folder: folder_under(event) };
   }
 
@@ -133,6 +134,13 @@
     const cell = cell_at(event.clientX, event.clientY);
     hover = null;
     drag = null;
+
+    // Real files from the OS: imported, not moved (ADR-005 revision).
+    if (!local && !has_drag_paths(event) && has_os_files(event)) {
+      const imported = await import_dropped(read_os_entries(event), folder ? `${PATHS.desktop}/${folder}` : PATHS.desktop);
+      if (!folder) desktop.move_items(imported.map((path) => ({ name: path.slice(path.lastIndexOf("/") + 1), to: cell })));
+      return;
+    }
 
     if (folder) {
       const paths = local ? local.names.map((name) => `${PATHS.desktop}/${name}`) : read_drag_paths(event);

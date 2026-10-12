@@ -59,7 +59,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
 - [x] Multi-select: Ctrl/Shift+Click, marquee, Ctrl+A; bulk copy/cut/delete/open. Same selection helper as the desktop (ADR-011 revision)
 - [x] Drag-and-drop file operations: drag onto a folder, the list, the desktop or another Explorer window to move; clashes keep both (`files.move_paths`)
-- [ ] Drop real files from the OS (upload by drop)
+- [x] Drop real files and folders from the OS onto the list, a folder row or the desktop (`files.import_entries`, 2026-10-12)
 - [ ] Touch selection mode on mobile; arrow-key selection
 - [-] Back/forward navigation buttons (Back done, no Forward)
 

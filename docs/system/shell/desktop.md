@@ -49,6 +49,7 @@ Native HTML drag and drop (`components/files/drag.ts`), shared with File Explore
 | `dragover` the surface | Accepted for a drag from here or one carrying WebOS paths. Over a folder icon that isn't being dragged, that folder highlights. Otherwise, for a drag from here, an outline (`foreground/6`, `foreground/20` inset ring) marks each icon's target: its offset from the grabbed icon, applied to the cell under the pointer |
 | `drop` on a folder icon | `drop_paths(paths, /home/Desktop/{folder})`: moved into the folder, keeping both on a clash |
 | `drop` elsewhere, drag from here | `desktop.move_items(...)`: the group keeps its shape, and taken or off-grid targets take the nearest free cell |
+| `drop` of real files from the OS | `import_dropped(...)` into the folder under the pointer, or into `/home/Desktop` and then `move_items` to the drop cell. Drop effect `copy` |
 | `drop` elsewhere, drag from Explorer | `drop_paths(paths, /home/Desktop)`, then `move_items` places the moved entries at the drop cell (and the nearest free ones) |
 | `dragend` / leaving the surface | Clears the drag and the hover state |
 
@@ -78,7 +79,7 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" â
 ## Known gaps
 
 - No touch drag on the desktop: native drag and drop is pointer-only, and the desktop shell isn't used on phones and tablets anyway (ADR-016).
-- No arrow-key selection and no dropping real files in from the OS.
+- No arrow-key selection.
 - The drop outlines show where icons would go before nearest-free resolution, so a target on a taken cell shows the outline there even though the icon will land elsewhere.
 
 ## Context menus (ADR-025)

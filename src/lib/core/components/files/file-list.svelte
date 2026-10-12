@@ -12,7 +12,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
   import { click_select, intersects, rect_from_points } from "$lib/core/utils/selection";
-  import { drop_paths, has_drag_paths, read_drag_paths, set_drag_paths } from "./drag";
+  import { drop_paths, has_drag_paths, has_os_files, import_dropped, read_drag_paths, read_os_entries, set_drag_paths } from "./drag";
   import { untrack } from "svelte";
   import {
     copy_items,
@@ -154,20 +154,31 @@
     return name;
   }
 
+  /** WebOS paths move (desktop pointer only); real files from the OS import, on every platform. */
+  function drop_kind(event: DragEvent): "paths" | "os" | null {
+    if (picker) return null;
+    if (has_drag_paths(event)) return mobile ? null : "paths";
+    return has_os_files(event) ? "os" : null;
+  }
+
   function on_drag_over(event: DragEvent) {
-    if (picker || mobile || !has_drag_paths(event)) return;
+    const kind = drop_kind(event);
+    if (!kind) return;
     event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    if (event.dataTransfer) event.dataTransfer.dropEffect = kind === "os" ? "copy" : "move";
     drop_folder = folder_under(event);
   }
 
   async function on_drop(event: DragEvent) {
-    if (picker || mobile || !has_drag_paths(event)) return;
+    const kind = drop_kind(event);
+    if (!kind) return;
     event.preventDefault();
     const folder = folder_under(event);
+    const target = folder ? join_path(handler.segments, folder) : handler.path;
     drop_folder = null;
     dragging = new Set();
-    await drop_paths(read_drag_paths(event), folder ? join_path(handler.segments, folder) : handler.path);
+    if (kind === "os") await import_dropped(read_os_entries(event), target);
+    else await drop_paths(read_drag_paths(event), target);
   }
 
   function is_delete_key(e: KeyboardEvent): boolean {
