@@ -20,8 +20,9 @@
   import EventLog from "./event-log.svelte";
   import Handshake from "./handshake.svelte";
   import LinkStatus from "./link-status.svelte";
+  import NowBanner from "./now-banner.svelte";
   import RouteMap from "./route-map.svelte";
-  import { Phase, ReceiveSession, SendSession } from "./session.svelte";
+  import { NO_PATH, Phase, ReceiveSession, SendSession } from "./session.svelte";
   import Throughput from "./throughput.svelte";
 
   type Role = "send" | "receive";
@@ -50,6 +51,36 @@
   $effect(() => () => {
     sender.close();
     receiver.close();
+  });
+
+  const active = $derived([sender, receiver].some((side) => side.phase === Phase.CONNECTING || side.phase === Phase.TRANSFERRING));
+  let wake_lock = $state(false);
+
+  // A phone whose screen turns off freezes this page, and the transfer with it. The browser drops the lock whenever the
+  // page is hidden, so it's taken again each time it comes back.
+  $effect(() => {
+    if (!active) return;
+    let sentinel: WakeLockSentinel | null = null;
+    let live = true;
+    const acquire = () => {
+      if (document.visibilityState !== "visible") return;
+      navigator.wakeLock.request("screen").then(
+        (lock) => {
+          if (!live) return void lock.release();
+          sentinel = lock;
+          wake_lock = true;
+          lock.addEventListener("release", () => (wake_lock = false), { once: true });
+        },
+        (reason) => console.warn("[P2PTransfer] wake lock refused", reason)
+      );
+    };
+    acquire();
+    document.addEventListener("visibilitychange", acquire);
+    return () => {
+      live = false;
+      document.removeEventListener("visibilitychange", acquire);
+      void sentinel?.release();
+    };
   });
 
   async function add_from_files() {
@@ -95,10 +126,11 @@
     {/if}
   </Toolbar>
 
-  <LinkStatus phase={session.phase} route={session.link?.route ?? null} rtt={session.link?.rtt ?? null} rate={session.rate} />
+  <LinkStatus phase={session.phase} stalled={session.stalled} route={session.link?.route ?? null} rtt={session.link?.rtt ?? null} rate={session.rate} />
 
   <div class="min-h-0 overflow-auto">
     <div class="mx-auto flex max-w-xl flex-col gap-5 p-4 @md:p-6">
+      <NowBanner {role} {session} {wake_lock} />
       <Handshake steps={STEPS[role]} {step} />
 
       {#if session.phase === Phase.SETUP && role === "send"}
@@ -185,10 +217,11 @@
         </section>
 
         {#if session.phase === Phase.INTERRUPTED}
-          <div class="flex flex-col gap-2 rounded-xl bg-error/12 p-3">
-            <p class="font-mono text-2xs text-error">ERR {session.error}</p>
-            <p class="text-ui">What arrived is kept. Reconnect with a new code and it carries on from there.</p>
-            <div class="flex justify-end gap-2">
+          <div class="flex flex-col gap-2">
+            {#if session.error !== NO_PATH}
+              <p class="text-center text-ui text-foreground/65">What arrived is kept. Reconnect with new codes and it carries on from there.</p>
+            {/if}
+            <div class="flex justify-center gap-2">
               <Button size="sm" onclick={reset}>Start over</Button>
               <Button variant="primary" size="sm" onclick={() => (role === "send" ? sender.offer() : receiver.rescan())}>
                 <ArrowCounterClockwiseIcon weight="bold" /> Reconnect

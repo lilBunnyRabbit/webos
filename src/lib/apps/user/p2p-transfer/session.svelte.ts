@@ -28,10 +28,16 @@ export interface LogLine {
   tone: LogTone;
 }
 
+export const NO_PATH =
+  "No direct path between the devices. Mobile data often blocks one; put both on the same Wi-Fi, or connect one to the other's hotspot";
+
 const LOG_LIMIT = 200;
 const SAMPLE_MS = 500;
 /** 20 s of throughput at one sample per tick, for the graph. */
 const SAMPLE_COUNT = 40;
+const STALL_MS = 10_000;
+/** Below this the smoothed rate is decay noise, not data: show nothing rather than `3e-20 B/s`. */
+const MIN_RATE = 1;
 
 function message_of(reason: unknown): string {
   if (reason instanceof DOMException && reason.name === "InvalidStateError") return "The connection was lost";
@@ -72,6 +78,8 @@ abstract class Session {
   /** Bytes per second, smoothed over the last sample. */
   rate = $state(0);
   samples = $state.raw<number[]>([]);
+  /** The link is up but progress hasn't moved for `STALL_MS`: usually the other device's screen went off. */
+  stalled = $state(false);
 
   protected peer: RTCPeerConnection | null = null;
   #log_start = 0;
@@ -88,7 +96,7 @@ abstract class Session {
 
   /** Seconds left at the current rate, `null` while there's no rate to go by. */
   get eta(): number | null {
-    return this.rate > 0 ? (this.total - this.done_bytes) / this.rate : null;
+    return this.rate >= MIN_RATE ? (this.total - this.done_bytes) / this.rate : null;
   }
 
   protected write(text: string, tone: LogTone = LogTone.INFO) {
@@ -107,22 +115,36 @@ abstract class Session {
       const state = pc.connectionState;
       if (state === "connected") this.write("DTLS handshake complete, link up", LogTone.OK);
       else if (state === "disconnected") this.write("Link quiet, waiting for it to recover");
-      else if (state === "failed" && this.phase === Phase.CONNECTING) this.write("No reply yet, still listening for the other device");
+      else if (state === "failed" && this.phase === Phase.CONNECTING) this.failed_while_connecting(pc);
     });
     return pc;
   }
 
+  /** Before the channel opens, ICE `failed` can still recover: the other device may not have this side's code yet. */
+  protected failed_while_connecting(_pc: RTCPeerConnection) {
+    this.write("No reply yet, still listening for the other device");
+  }
+
   protected start_sampling(pc: RTCPeerConnection) {
     let last = this.done_bytes;
+    let moved_at = performance.now();
     this.rate = 0;
     this.samples = [];
+    this.stalled = false;
     clearInterval(this.#sampler);
     this.#sampler = window.setInterval(async () => {
       const bytes = this.done_bytes;
+      const now = performance.now();
       const instant = ((bytes - last) * 1000) / SAMPLE_MS;
+      if (bytes !== last) moved_at = now;
       last = bytes;
-      this.rate = this.rate === 0 ? instant : this.rate * 0.6 + instant * 0.4;
+      const smoothed = this.rate === 0 ? instant : this.rate * 0.6 + instant * 0.4;
+      this.rate = smoothed < MIN_RATE ? 0 : smoothed;
       this.samples = [...this.samples, instant].slice(-SAMPLE_COUNT);
+      const stalled = this.phase === Phase.TRANSFERRING && this.done_bytes < this.total && now - moved_at > STALL_MS;
+      if (stalled && !this.stalled) this.write("Stalled: no data confirmed for 10 s. Keep both screens on with P2P Transfer in front", LogTone.ERROR);
+      if (!stalled && this.stalled) this.write("Data moving again", LogTone.OK);
+      this.stalled = stalled;
       const link = await read_link(pc).catch(() => null);
       if (link?.route && pc === this.peer) {
         if (link.route !== this.link?.route) {
@@ -159,6 +181,7 @@ abstract class Session {
   close() {
     clearInterval(this.#sampler);
     this.rate = 0;
+    this.stalled = false;
     this.peer?.close();
     this.peer = null;
     this.code = null;
@@ -180,6 +203,8 @@ export class SendSession extends Session {
   files = $state.raw<File[]>([]);
   /** The receiver's answer is in; what's left is ICE and DTLS on their own. */
   answered = $state(false);
+  /** Every byte is handed to the channel; progress now waits on the receiver's confirmations. */
+  queued = $state(false);
 
   add(files: File[]) {
     this.files = [...this.files, ...files];
@@ -195,6 +220,7 @@ export class SendSession extends Session {
   async offer(): Promise<void> {
     const pc = this.connect();
     this.answered = false;
+    this.queued = false;
     this.phase = Phase.CONNECTING;
     this.write(`Gathering ICE candidates for ${this.files.length} file${this.files.length === 1 ? "" : "s"}`);
     try {
@@ -215,14 +241,28 @@ export class SendSession extends Session {
         },
         on_progress: (index, bytes) => {
           if (pc !== this.peer) return;
-          if (bytes === this.entries[index].size && this.progress[index] !== bytes) this.write(`Sent ${this.entries[index].name}`);
+          if (bytes === this.entries[index].size && this.progress[index] !== bytes) this.write(`Receiver confirmed ${this.entries[index].name}`, LogTone.OK);
           this.progress[index] = bytes;
+        },
+        on_queued: () => {
+          if (pc !== this.peer) return;
+          this.queued = true;
+          if (this.done_bytes < this.total) this.write("All data handed to the network, waiting for the receiver to confirm");
         },
       });
       this.finish(pc, "Receiver confirmed every file");
     } catch (reason) {
       this.fail(pc, reason);
     }
+  }
+
+  /**
+   * With the answer in, both sides have every candidate and have checked them all, so `failed` is final. The usual cause
+   * is a mobile carrier's symmetric NAT; without a relay (ADR-032: none, by choice) there's no path across it.
+   */
+  protected override failed_while_connecting(pc: RTCPeerConnection) {
+    if (!this.answered) return super.failed_while_connecting(pc);
+    this.fail(pc, new Error(NO_PATH));
   }
 
   /** Throws when `code` isn't the receiver's answer, so the scanner can say so and keep scanning. */

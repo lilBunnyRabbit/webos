@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.25.1",
+    date: "2026-10-13",
+    title: "Honest progress",
+    changes: [
+      { kind: FIXED, text: "P2P Transfer only counts a file as sent once the other device confirms it arrived, instead of showing 100% straight away." },
+      { kind: FIXED, text: "P2P Transfer keeps the screen on during a transfer, and says so when the other device stops responding." },
+      { kind: FIXED, text: "When two devices can't reach each other, P2P Transfer now stops and suggests the same Wi-Fi or a hotspot instead of waiting forever." },
+      { kind: IMPROVED, text: "P2P Transfer says in plain words what's happening and what to do next." },
+    ],
+  },
+  {
     version: "0.25.0",
     date: "2026-10-13",
     title: "Puzzle box",
