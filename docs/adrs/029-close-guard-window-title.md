@@ -1,6 +1,6 @@
 # ADR-029: Close Guard and Window Titles
 **Date:** 2026-10-12
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 

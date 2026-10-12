@@ -62,7 +62,7 @@ What are the implications of this decision?
 | [026](./026-release-notes-intro.md) | Release Notes and First-Run Introduction | 2026-10-11 | Implemented |
 | [027](./027-testing.md) | Testing | 2026-10-12 | Implemented |
 | [028](./028-ui-service.md) | UI Service | 2026-10-12 | Implemented |
-| [029](./029-close-guard-window-title.md) | Close Guard and Window Titles | 2026-10-12 | Accepted |
+| [029](./029-close-guard-window-title.md) | Close Guard and Window Titles | 2026-10-12 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

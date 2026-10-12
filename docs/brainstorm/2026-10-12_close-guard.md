@@ -31,4 +31,4 @@ Against the picks, recorded: the OS sheet can't carry app-specific wording; five
 - [x] WindowsService: `title` / `dirty` on window state, `set_title`, `set_dirty`, guarded `close` / `close_all`, `force_close`; mobile service too (`CloseGuard`)
 - [x] OS sheet, titlebar title + dot, taskbar tooltip, switcher card, Activity Monitor name and End → `force_close`, `beforeunload`
 - [x] WindowHandle `set_title` / `set_dirty`
-- [ ] Paint adopts both (after the kit pass merges)
+- [x] Paint adopts both (the toolbar keeps the file name on mobile, which has no titlebar)

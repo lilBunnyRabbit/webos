@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, {
     NotificationType,
+    Platform,
     ShortcutCategory,
     type NotificationsService,
     type SettingsService,
@@ -285,32 +286,37 @@
     if (chosen) await open_path(chosen);
   }
 
-  async function write(path: string) {
-    if (!history) return;
+  async function write(path: string): Promise<boolean> {
+    if (!history) return false;
     const state = current(history);
     try {
       await write_image(path, doc_canvas!);
       file_path = path;
       saved = state;
       notifications.notify(app_id, { title: "Image saved", message: path });
+      return true;
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the image", message: error_message(reason) });
+      return false;
     }
   }
 
-  async function save_as() {
+  async function save_as(): Promise<boolean> {
     const path = await win.pick_save({
       name: file_path ? base_name(file_path) : "Untitled.png",
       accept: ["image/*"],
       start_path: file_path ? parent_folder(file_path) : "/home",
     });
-    if (path) await write(path);
+    return path ? write(path) : false;
   }
 
-  async function save() {
-    if (file_path) await write(file_path);
-    else await save_as();
+  function save(): Promise<boolean> {
+    return file_path ? write(file_path) : save_as();
   }
+
+  // The OS owns the unsaved-changes flow (ADR-029): titlebar title and dot, the close sheet, the tab-close warning.
+  $effect(() => win.set_title(file_name));
+  $effect(() => win.set_dirty(dirty, { save }));
 
   function canvas_point(event: PointerEvent): Point {
     const box = overlay_canvas!.getBoundingClientRect();
@@ -523,9 +529,12 @@
     <IconButton label="Undo" size="sm" disabled={!undoable} onclick={do_undo}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
     <IconButton label="Redo" size="sm" disabled={!redoable} onclick={do_redo}><ArrowClockwiseIcon weight="bold" /></IconButton>
 
+    <!-- The desktop titlebar shows the file name (window.set_title); the mobile shell has no titlebar. -->
     <span class="flex min-w-16 flex-1 items-center gap-1.5 px-1">
-      <span class="truncate text-ui font-medium" title={file_path ?? "Not saved yet"}>{file_name}</span>
-      {#if dirty}<span class="size-2 shrink-0 rounded-full bg-primary" title="Unsaved changes"></span>{/if}
+      {#if kernel.platform === Platform.MOBILE}
+        <span class="truncate text-ui font-medium" title={file_path ?? "Not saved yet"}>{file_name}</span>
+        {#if dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
+      {/if}
     </span>
 
     <div class="hidden items-center gap-1.5 @md:flex">{@render zoom_controls()}</div>
