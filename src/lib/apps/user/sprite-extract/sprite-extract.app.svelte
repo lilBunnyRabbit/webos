@@ -340,8 +340,7 @@
         <IconButton
           label={show_labels ? "Hide frame numbers (L)" : "Show frame numbers (L)"}
           size="sm"
-          aria-pressed={show_labels}
-          class={cn(show_labels && "bg-foreground/10 text-foreground")}
+          pressed={show_labels}
           onclick={() => (show_labels = !show_labels)}
         >
           <TagIcon weight="bold" />

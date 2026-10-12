@@ -5,9 +5,9 @@
 
   type Props = HTMLButtonAttributes & Omit<ButtonVariants, "icon"> & { children: Snippet };
 
-  let { variant, size, class: class_name, type = "button", children, ...rest }: Props = $props();
+  let { variant, size, pressed, class: class_name, type = "button", children, ...rest }: Props = $props();
 </script>
 
-<button {type} class={button({ variant, size, class: class_name as string })} {...rest}>
+<button {type} aria-pressed={pressed} class={button({ variant, size, pressed, class: class_name as string })} {...rest}>
   {@render children()}
 </button>

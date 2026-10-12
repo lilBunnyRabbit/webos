@@ -155,7 +155,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 Text uses the document frame:
 
-- **Toolbar:** a file icon, the full path in mono (truncated, full path as `title`), a wrap toggle (`aria-pressed`, filled when on) and Copy all (switches to a green check for 1.2 s; the timer is cleared on unmount). A clipboard failure is reported through `report_file_error` ("Couldn't copy to the clipboard").
+- **Toolbar:** a file icon, the full path in mono (truncated, full path as `title`), a wrap toggle (`IconButton` with `pressed`) and Copy all, the kit `CopyButton` (a green check for 1.2 s, disabled for an empty file, an error toast from Text Viewer if the clipboard refuses).
 - **Body:** one `grid-cols-[auto_minmax(0,1fr)]` grid with a sticky line-number gutter (`tabular-nums`, not selectable) and the lines in mono `text-ui`. Gutter and text share the grid, so a wrapped line keeps its number on its first visual row. Wrap on: `whitespace-pre-wrap wrap-anywhere`; the `minmax(0,1fr)` column lets long unbroken lines wrap instead of overflowing. Off: `whitespace-pre`, scrolling horizontally.
 - **Status bar:** file name, line count, character count, size, MIME type (`text/plain` when empty).
 
@@ -250,7 +250,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Behaviour.** `path` is local state seeded from the prop (`untrack`), and "Open…" swaps it. A `$derived.by` turns `path` into a `files.get_file(path)` + `file.text()` promise and also reads a `revision` counter. Reload bumps the counter, which re-reads the file and remounts the iframe. The states are: no path ("No file open" with "Open a file…"), loading (`Spinner`), not found and read error (error empty states), then the document frame:
 
-- **Toolbar:** Open…, Reload, the full path in mono (truncated, `title` = path), and a `Segmented` Preview / Source switch.
+- **Toolbar:** Open…, Reload, the full path in mono (truncated, `title` = path), and a `sm` `Segmented` Preview / Source switch.
 - **Preview:** a borderless full-size `<iframe srcdoc={text} sandbox="allow-scripts">`. There is no `allow-same-origin`, so the page runs in an opaque origin. Its scripts run, but they can't reach the OS, localStorage or OPFS. The document paints its own background.
 - **Source:** the text in a read-only `<pre>`, mono `text-ui`, `whitespace-pre-wrap wrap-anywhere`.
 - **Status bar:** file name, line count, size, MIME type (`text/html` when empty).
@@ -364,9 +364,9 @@ An API the browser doesn't have shows "Not available in this browser". There are
 | Colour | The surface ladder as a strip, text and brand swatches, state swatches, the opacity modifiers. Swatches read `var(--{token})` and print the CSS variable |
 | Type | The type scale, from `text-lg` titles to mono `text-2xs` values |
 | Surfaces | Radius tokens, the four shadows, and a sample app frame (Toolbar, content, StatusBar) |
-| Actions | `Button` variants and sizes, `IconButton`s |
-| Inputs | `Input` (plain and with a leading icon), `Select`, `Segmented`, `Switch`, `Checkbox` inside `SettingRow`s |
-| Feedback | `Badge` tones, `Kbd`, `Spinner`, `EmptyState` with an action |
+| Actions | `Button` variants and sizes, `IconButton`s, toggles (`pressed` on `Button` and `IconButton`), `CopyButton` (with text and empty) |
+| Inputs | `Input` (plain and with a leading icon), `Select`, `Segmented` (`md` and `sm`), `Slider` (`md` and `sm`), `Switch`, `Checkbox` inside `SettingRow`s; `Textarea` (prose and `mono`) |
+| Feedback | `Badge` tones, `Kbd`, `Spinner`, `BoardOverlay` over a sample board, `EmptyState` with an action |
 
 The controls are bound to local `$state` and do nothing else. Nothing but the open section is persisted.
 
@@ -394,7 +394,7 @@ The controls are bound to local `$state` and do nothing else. Nothing but the op
 
 **Display.** Mono, right-aligned, wrapping. While typing: the expression large, and the live result below it (`preview`: trailing operators dropped and open brackets closed, then evaluated; hidden for a lone number or an unfinished expression). After `=`: the solved expression small with `=`, the result large. Errors show in `error`. `=` completes the expression the same way, so `2 × (3 + 4` gives 14.
 
-**Layout.** Toolbar (Copy result, History toggle), then the display over a 4×6 keypad of kit `Button`s (`secondary` digits, `secondary` + `text-primary` operators, `quiet` functions, `primary` equals spanning two rows, `0` spanning two columns). From `@2xl` the history is a side panel; below that the toggle shows it over the keypad, and picking an entry closes it. The keypad fills the window, so a phone gets large touch targets.
+**Layout.** Toolbar (Copy result, History toggle as a `pressed` `IconButton`), then the display over a 4×6 keypad of kit `Button`s (`secondary` digits, `secondary` + `text-primary` operators, `quiet` functions, `primary` equals spanning two rows, `0` spanning two columns). From `@2xl` the history is a side panel; below that the toggle shows it over the keypad, and picking an entry closes it. The keypad fills the window, so a phone gets large touch targets.
 
 **Interactions.**
 

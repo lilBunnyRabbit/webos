@@ -74,6 +74,7 @@ Inter for everything you read, Hack (`font-mono`) for values: sizes, ids, paths,
 | Captions, metadata, column headers | `text-2xs` | 11px |
 | Overlines (group labels) | `text-2xs font-medium uppercase tracking-wide text-foreground/65` | 11px |
 
+- Display sizes are reserved in chrome (titles, toolbars, dialogs) for the introduction. In app content they're fine where the content is the point, such as a drawn result in RNG Tools.
 - Headings get `-0.011em` tracking and balanced wrapping from the base layer.
 - Numbers that change or line up use `tabular-nums`.
 - Sentence case everywhere ("Default apps", not "Default Apps").

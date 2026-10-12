@@ -1,8 +1,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Badge, IconButton, Input, Section, SettingRow, Switch } from "$lib/core/components/ui";
+  import { Badge, CopyButton, IconButton, Input, Section, SettingRow, Switch } from "$lib/core/components/ui";
   import { ArrowsClockwise as ArrowsClockwiseIcon } from "phosphor-svelte";
-  import CopyButton from "../copy-button.svelte";
   import { as_number } from "../form";
   import {
     CHARACTERS,

@@ -27,13 +27,17 @@ export const button = merge_tv({
     icon: {
       true: "px-0",
     },
+    // A toggle that is on: the primary tint, the same selection colour lists use (docs/design/foundations.md).
+    pressed: {
+      true: "bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary active:bg-primary/25",
+    },
   },
   compoundVariants: [
     { icon: true, size: "sm", class: "w-7 pointer-coarse:w-9" },
     { icon: true, size: "md", class: "w-8 pointer-coarse:w-10" },
     { icon: true, size: "lg", class: "w-10" },
   ],
-  defaultVariants: { variant: "secondary", size: "md", icon: false },
+  defaultVariants: { variant: "secondary", size: "md", icon: false, pressed: false },
 });
 export type ButtonVariants = VariantProps<typeof button>;
 

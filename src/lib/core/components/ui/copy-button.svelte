@@ -1,10 +1,18 @@
 <script lang="ts">
   import kernel, { NotificationType, type ClipboardService, type NotificationsService } from "$lib/core/api";
-  import { IconButton } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Check as CheckIcon, Copy as CopyIcon } from "phosphor-svelte";
+  import IconButton from "./icon-button.svelte";
+  import type { ButtonVariants } from "./variants";
 
-  let { text, label = "Copy", disabled = false }: { text: string; label?: string; disabled?: boolean } = $props();
+  // Needs an app window around it: a failed copy is reported as that app.
+  let {
+    text,
+    label = "Copy",
+    disabled = false,
+    size = "sm",
+    class: class_name,
+  }: { text: string; label?: string; disabled?: boolean; size?: ButtonVariants["size"]; class?: string } = $props();
 
   const { app_id } = get_app_context();
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
@@ -29,6 +37,6 @@
   }
 </script>
 
-<IconButton label={copied ? "Copied" : label} size="sm" disabled={disabled || text === ""} onclick={copy}>
+<IconButton label={copied ? "Copied" : label} {size} class={class_name} disabled={disabled || text === ""} onclick={copy}>
   {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
 </IconButton>

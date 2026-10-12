@@ -55,6 +55,7 @@
           <IconButton label="Reload" size="sm" onclick={() => revision++}><ArrowClockwiseIcon weight="bold" /></IconButton>
           <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
           <Segmented
+            size="sm"
             label="View"
             bind:value={view}
             options={[

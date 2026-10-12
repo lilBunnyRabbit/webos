@@ -1,9 +1,8 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, Input, Section, Segmented, field } from "$lib/core/components/ui";
+  import { Button, CopyButton, Input, Section, Segmented, Textarea } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { Shuffle as ShuffleIcon } from "phosphor-svelte";
-  import CopyButton from "../copy-button.svelte";
   import { as_number } from "../form";
   import {
     DEFAULT_LIST_SETTINGS,
@@ -49,16 +48,13 @@
 
 <Section title="Entries" description="One per line. Blank lines are skipped; repeated lines count twice.">
   <div class="flex flex-col gap-3 p-4">
-    <textarea
+    <Textarea
+      mono
       aria-label="Entries"
-      rows="8"
-      spellcheck="false"
-      autocapitalize="off"
-      autocomplete="off"
+      rows={8}
       placeholder={"Ana\nBo\nCai"}
-      class={field({ class: "h-auto min-h-24 resize-y py-2 font-mono leading-relaxed pointer-coarse:h-auto" })}
-      bind:value={() => settings.value.text, (text) => update({ text })}
-    ></textarea>
+      bind:value={() => settings.value.text, (text) => update({ text: text ?? "" })}
+    />
     <p class="font-mono text-2xs text-foreground/65 tabular-nums">{items.length} {items.length === 1 ? "entry" : "entries"}</p>
   </div>
 </Section>

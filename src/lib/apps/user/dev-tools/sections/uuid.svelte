@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { Button, Input, Section, Segmented } from "$lib/core/components/ui";
+  import { Button, CopyButton, Input, Section, Segmented } from "$lib/core/components/ui";
   import { ArrowsClockwise as ArrowsClockwiseIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import type { DevToolsState } from "../tools";
   import { MAX_UUIDS, UuidVersion, generate_uuids } from "../uuid";
-  import CopyButton from "./copy-button.svelte";
 
   let { value = $bindable() }: { value: DevToolsState["uuid"] } = $props();
 

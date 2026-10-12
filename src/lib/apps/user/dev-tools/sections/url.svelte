@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { Input, Section, Segmented } from "$lib/core/components/ui";
+  import { CopyButton, Input, Section, Segmented, Textarea } from "$lib/core/components/ui";
   import { DIRECTION_OPTIONS, Direction, type DevToolsState } from "../tools";
   import { UrlScope, decode_url, encode_url, parse_url } from "../url";
-  import CopyButton from "./copy-button.svelte";
-  import TextArea from "./text-area.svelte";
 
   let { value = $bindable() }: { value: DevToolsState["url"] } = $props();
 
@@ -28,13 +26,13 @@
       ? "For one query value or path segment: escapes / ? & = # too."
       : "For a whole URL: keeps its structure, escapes only what can't appear in one."}
   </p>
-  <TextArea bind:value={value.input} rows={4} aria-label="Input" placeholder="Text" />
+  <Textarea mono bind:value={value.input} rows={4} aria-label="Input" placeholder="Text" />
   <div class="flex items-center justify-between gap-2 px-0.5">
     <h3 class="text-ui font-medium">Result</h3>
     <CopyButton text={result.ok ? result.value : ""} />
   </div>
   {#if result.ok}
-    <TextArea value={result.value} rows={4} readonly aria-label="Result" />
+    <Textarea mono value={result.value} rows={4} readonly aria-label="Result" />
   {:else}
     <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{result.error}</p>
   {/if}

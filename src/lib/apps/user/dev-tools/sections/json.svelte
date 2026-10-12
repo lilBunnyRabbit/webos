@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { Button, Section, Select } from "$lib/core/components/ui";
+  import { Button, CopyButton, Section, Select, Textarea } from "$lib/core/components/ui";
   import { CheckCircle as CheckCircleIcon } from "phosphor-svelte";
   import { JsonIndent, format_json, minify_json, type JsonResult } from "../json";
   import type { DevToolsState } from "../tools";
-  import CopyButton from "./copy-button.svelte";
-  import TextArea from "./text-area.svelte";
 
   let { value = $bindable() }: { value: DevToolsState["json"] } = $props();
 
@@ -53,7 +51,7 @@
 {/if}
 
 <Section title="JSON" flush>
-  <TextArea
+  <Textarea mono
     bind:value={value.input}
     bind:element={input}
     rows={16}

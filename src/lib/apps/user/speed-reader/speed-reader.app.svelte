@@ -1,8 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Input, Separator, Spinner, Switch, Toolbar, field } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
+  import { Button, EmptyState, IconButton, Input, Separator, Slider, Spinner, Switch, Textarea, Toolbar } from "$lib/core/components/ui";
   import {
     BookOpenText as BookOpenTextIcon,
     CaretLeft as CaretLeftIcon,
@@ -267,18 +266,18 @@
         <Button variant="primary" size="sm" disabled={!draft.trim()} onclick={read_draft}><PlayIcon weight="fill" /> Read</Button>
       </Toolbar>
       <div class="grid min-h-0 p-3">
-        <textarea
+        <Textarea
           bind:value={draft}
           aria-label="Text to read"
           placeholder="Paste or type the text you want to read, or open a .txt or .md file."
-          class={field({ class: "h-full resize-none py-2 leading-6 pointer-coarse:h-full" })}
+          class="h-full min-h-0 resize-none leading-6 pointer-coarse:h-full"
           onkeydown={(event) => {
             if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
               event.preventDefault();
               read_draft();
             }
           }}
-        ></textarea>
+        />
       </div>
     </div>
   {:else if !tokens.length}
@@ -319,8 +318,7 @@
         <IconButton
           label="Reader settings"
           size="sm"
-          aria-pressed={show_settings}
-          class={cn(show_settings && "bg-foreground/10 text-foreground")}
+          pressed={show_settings}
           onclick={toggle_settings}
         >
           <SlidersHorizontalIcon weight="bold" />
@@ -401,14 +399,14 @@
           <IconButton label="Next word (→)" onclick={() => step_to(index + 1)}><CaretRightIcon weight="bold" /></IconButton>
           <IconButton label="Jump to end (End)" onclick={() => step_to(tokens.length - 1)}><SkipForwardIcon weight="bold" /></IconButton>
         </div>
-        <input
-          type="range"
+        <Slider
           aria-label="Position"
           min={0}
           max={Math.max(0, tokens.length - 1)}
           step={1}
           value={index}
-          class="w-full accent-primary"
+          size="sm"
+          class="w-full"
           oninput={(event) => seek(event.currentTarget.valueAsNumber)}
         />
         <div class="flex items-center justify-between gap-3 font-mono text-2xs text-foreground/80 tabular-nums">

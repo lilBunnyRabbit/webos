@@ -1,13 +1,11 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
-  import { Button, IconButton, Section, Spinner } from "$lib/core/components/ui";
+  import { Button, CopyButton, IconButton, Section, Spinner, Textarea } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_bytes } from "$lib/core/utils";
   import { FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
   import { digest_all, type HashResult } from "../hash";
   import type { DevToolsState } from "../tools";
-  import CopyButton from "./copy-button.svelte";
-  import TextArea from "./text-area.svelte";
 
   let { value = $bindable() }: { value: DevToolsState["hash"] } = $props();
 
@@ -61,7 +59,7 @@
 <p class="text-ui text-foreground/65">SHA family through the browser's Web Crypto. MD5 isn't offered: browsers don't provide it.</p>
 
 <Section title="Text" description="Hashed as UTF-8." flush>
-  <TextArea bind:value={value.input} rows={4} aria-label="Text to hash" placeholder="Text to hash" />
+  <Textarea mono bind:value={value.input} rows={4} aria-label="Text to hash" placeholder="Text to hash" />
   {@render results(text_hashes)}
 </Section>
 
