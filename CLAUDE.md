@@ -19,7 +19,10 @@ Read the ADR and the system reference page for the area you touch before you tou
 bun install
 bun dev
 bun run check   # must stay at 0 errors
+bun run test    # unit (Node) + browser (Chromium) tests, ADR-027
 ```
+
+Tests sit next to their source: `*.test.ts` runs in Node, `*.browser.test.ts` in real Chromium (OPFS). Anything touching OPFS or the DOM goes in a browser test; no fakes. First run: `bunx playwright install chromium`.
 
 ## Architecture in one screen
 

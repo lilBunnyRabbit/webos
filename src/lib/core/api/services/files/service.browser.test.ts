@@ -1,0 +1,116 @@
+import { flushSync } from "svelte";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import * as opfs from "./opfs";
+import { FilesService, type DirectoryHandler } from "./service.svelte";
+
+let files: FilesService;
+const handlers: DirectoryHandler[] = [];
+
+async function open(path: string[]): Promise<DirectoryHandler> {
+  const handler = await files.directory(path);
+  handlers.push(handler);
+  flushSync();
+  await vi.waitFor(() => expect(handler.loading).toBe(false));
+  return handler;
+}
+
+function count_listings(name: string): () => number {
+  const entries = FileSystemDirectoryHandle.prototype.entries;
+  let count = 0;
+  vi.spyOn(FileSystemDirectoryHandle.prototype, "entries").mockImplementation(function (this: FileSystemDirectoryHandle) {
+    if (this.name === name) count++;
+    return entries.call(this);
+  });
+  return () => count;
+}
+
+beforeEach(async () => {
+  await opfs.clear_opfs();
+  files = new FilesService();
+  await files.init();
+});
+
+afterEach(() => {
+  for (const handler of handlers.splice(0)) handler.dispose();
+  vi.restoreAllMocks();
+});
+
+describe("revisions", () => {
+  test("a mutation bumps only the directory it touched", async () => {
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "a");
+    expect(files.revision("/home")).toBe(1);
+    expect(files.revision("/")).toBe(0);
+    expect(files.revision("//home/")).toBe(1);
+  });
+
+  test("move_file bumps both folders, write_file bumps the parent", async () => {
+    const home = (await files.get_directory("/home"))!;
+    const tmp = (await files.get_directory("/tmp"))!;
+    const file = await files.create_file(home, "a.txt");
+    await files.move_file(home, file, tmp);
+    expect(files.revision("/home")).toBe(2);
+    expect(files.revision("/tmp")).toBe(1);
+
+    await files.write_file(file, "x");
+    expect(files.revision("/tmp")).toBe(2);
+  });
+});
+
+describe("DirectoryHandler", () => {
+  test("lists itself and follows changes made elsewhere", async () => {
+    const handler = await open(["home"]);
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "from-elsewhere");
+    flushSync();
+    await vi.waitFor(() => expect(handler.items.map((item) => item.name)).toContain("from-elsewhere"));
+  });
+
+  test("its own mutation lists once, not once per trigger", async () => {
+    const handler = await open(["tmp"]);
+    const listings = count_listings("tmp");
+    await handler.create_directory("a");
+    flushSync();
+    await vi.waitFor(() => expect(handler.loading).toBe(false));
+    expect(listings()).toBe(1);
+    expect(handler.items.map((item) => item.name)).toEqual(["a"]);
+  });
+
+  test("a reload while one runs for the same revision joins it", async () => {
+    const handler = await open(["tmp"]);
+    expect(handler.reload()).toBe(handler.reload());
+  });
+
+  test("notices when a grandparent is deleted, and stops watching", async () => {
+    const tmp = (await files.get_directory("/tmp"))!;
+    const outer = await files.create_directory(tmp, "outer");
+    await files.create_directory(outer, "inner");
+    const handler = await open(["tmp", "outer", "inner"]);
+
+    await files.delete_entry(tmp, "outer", { recursive: true });
+    flushSync();
+    await vi.waitFor(() => expect(handler.exists).toBe(false));
+  });
+
+  test("a sibling change in an ancestor keeps it alive", async () => {
+    const tmp = (await files.get_directory("/tmp"))!;
+    await files.create_directory(tmp, "here");
+    const handler = await open(["tmp", "here"]);
+
+    await files.create_directory(tmp, "sibling");
+    flushSync();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(handler.exists).toBe(true);
+  });
+
+  test("a folder replaced at the same path counts as gone", async () => {
+    const tmp = (await files.get_directory("/tmp"))!;
+    await files.create_directory(tmp, "x");
+    const handler = await open(["tmp", "x"]);
+
+    await files.delete_entry(tmp, "x", { recursive: true });
+    await files.create_directory(tmp, "x");
+    flushSync();
+    await vi.waitFor(() => expect(handler.exists).toBe(false));
+  });
+});

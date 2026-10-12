@@ -60,6 +60,7 @@ What are the implications of this decision?
 | [024](./024-design-system.md) | Design System | 2026-10-11 | Implemented |
 | [025](./025-menus-sheets-clipboard.md) | Context Menus, Window Sheets and Clipboard | 2026-10-11 | Implemented |
 | [026](./026-release-notes-intro.md) | Release Notes and First-Run Introduction | 2026-10-11 | Implemented |
+| [027](./027-testing.md) | Testing | 2026-10-12 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

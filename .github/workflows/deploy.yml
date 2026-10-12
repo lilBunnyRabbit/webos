@@ -42,6 +42,10 @@ jobs:
       - name: Check
         run: bun run check
 
+      # ADR-027: unit tests gate the deploy. Browser tests need Playwright and run locally for now.
+      - name: Unit tests
+        run: bun run test:unit
+
       - name: Build
         run: bun run build
       

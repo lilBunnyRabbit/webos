@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
 import { version_plugin } from "./vite-plugin-version";
@@ -59,5 +60,19 @@ export default defineConfig({
     alias: {
       $lib: path.resolve("./src/lib"),
     },
+  },
+  // ADR-027. Browser tests run on the Vitest server's own origin, so their OPFS never sees real WebOS data.
+  test: {
+    projects: [
+      { extends: true, test: { name: "unit", include: ["src/**/*.test.ts"], exclude: ["src/**/*.browser.test.ts"], environment: "node" } },
+      {
+        extends: true,
+        test: {
+          name: "browser",
+          include: ["src/**/*.browser.test.ts"],
+          browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: "chromium" }] },
+        },
+      },
+    ],
   },
 });

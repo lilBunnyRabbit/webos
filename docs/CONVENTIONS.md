@@ -239,8 +239,23 @@ Ask before adding one. The bar: browser-native API first, then own package (`@li
 | `bun dev` | Dev server |
 | `bun run check` | `svelte-check` + `tsc`. Must stay at 0 errors |
 | `bun run build` | Production build (also writes `version.json`) |
+| `bun run test` | Vitest, both projects: `unit` (Node) and `browser` (Chromium through Playwright). First run needs `bunx playwright install chromium` |
+| `bun run test:unit` | Node project only. CI runs this before `build` |
 
-Prettier: 120 cols, double quotes, semicolons, ES5 trailing commas. No test runner yet (roadmap P4). When it lands: Vitest, pure `.ts` first.
+Prettier: 120 cols, double quotes, semicolons, ES5 trailing commas. 
+### Tests
+
+[ADR-027](adrs/027-testing.md). Vitest, two projects in `vite.config.ts`:
+
+- `name.test.ts` next to `name.ts` runs in Node: pure logic, parsers, helpers.
+- `name.browser.test.ts` runs in headless Chromium. Use it for anything touching OPFS, the DOM or platform APIs. No fakes: the real implementation is the point.
+
+Rules:
+
+- Browser tests start each case from an empty OPFS (`opfs.clear_opfs()` in `beforeEach`). The Vitest server's origin is not the dev server's, so the owner's data is never touched.
+- Reactive code: call `flushSync()` after a change so effects run, then `vi.waitFor` for the async part. Dispose what you create (`DirectoryHandler.dispose()`) in `afterEach`.
+- Test behaviour through the public API, not private fields. A test should fail when the behaviour breaks: break the code once on purpose and check.
+- No component tests (ADR-027).
 
 ---
 

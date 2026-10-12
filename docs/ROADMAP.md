@@ -10,10 +10,10 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-1. [ ] **Foundations**
-   - Testing strategy brainstorm, then Vitest (new dependency, owner OK at setup) covering pure `.ts` and the subtle services (session, files revisions, DirectoryHandler)
-   - Error boundaries: a crashing app shows an error in its window, not a dead OS
-   - Mobile groundwork only (ADR-016): platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
+1. [-] **Foundations**
+   - [-] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler covered. Service tests through a real kernel still open
+   - [ ] Error boundaries: a crashing app shows an error in its window, not a dead OS
+   - [ ] Mobile groundwork only (ADR-016): platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
 3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
 4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
@@ -334,10 +334,11 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ## P4 — Infrastructure & Polish
 
 ### Testing
-- [ ] Testing setup (Vitest + @testing-library/svelte)
-- [ ] Unit tests for core utilities and services
+- **ADR:** [ADR-027](adrs/027-testing.md)
+- [x] Testing setup (Vitest: `unit` in Node, `browser` in Chromium; no component tests)
+- [-] Unit tests for core utilities and services (helpers, parsers, opfs, FilesService, DirectoryHandler; services through a kernel open)
 - [ ] Integration tests for app launching and file operations
-- [ ] E2E tests (Playwright)
+- [ ] Playwright browser tests in CI (deferred by owner)
 
 ### Error Handling
 - [ ] Error handling strategy
@@ -399,13 +400,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 Owner-requested topics. Each needs a design session (brainstorm log, then an ADR) before any code. Agents: don't implement these, grill the owner.
 
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
-- [ ] **Testing strategy.** Decide what to test and where:
-  - Pure `.ts` first (`opfs.ts`, parsers, helpers)
-  - Reactive `.svelte.ts` handlers
-  - Components
-  - E2E
-
-  Also the runner (Vitest is the P4 assumption), how to test OPFS outside a browser, and what CI runs. The P4 Testing items wait on this.
+- [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
 - [x] **Release notifications.** Done as [ADR-026](adrs/026-release-notes-intro.md): typed changelog, "Updated" and "update available" toasts, Settings › What's new, full-screen first-boot introduction. Originally: after an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
   - What shows before vs after reloading into the new version?
   - How do we track which version a user has seen?
