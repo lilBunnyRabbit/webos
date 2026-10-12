@@ -19,6 +19,36 @@
     onclose();
   }
 
+  /** Pulled down past this many px, the sheet closes. */
+  const CLOSE_DISTANCE = 96;
+  let pull = $state<{ pointer: number; start: number; dy: number; active: boolean } | null>(null);
+
+  function on_pull_down(event: PointerEvent) {
+    if (!event.isPrimary) return;
+    pull = { pointer: event.pointerId, start: event.clientY, dy: 0, active: false };
+  }
+
+  function on_pull_move(event: PointerEvent) {
+    if (!pull || event.pointerId !== pull.pointer) return;
+    const dy = event.clientY - pull.start;
+    if (!pull.active && dy > 8) {
+      pull.active = true;
+      try {
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      } catch {
+        // A pointer that already ended can't be captured; the pull still follows its moves.
+      }
+    }
+    if (pull.active) pull.dy = Math.max(0, dy);
+  }
+
+  function on_pull_up(event: PointerEvent) {
+    if (!pull || event.pointerId !== pull.pointer) return;
+    const close = pull.active && pull.dy > CLOSE_DISTANCE;
+    pull = null;
+    if (close) onclose();
+  }
+
   async function menu(manifest: AppManifest, anchor: { x: number; y: number }) {
     const choice = await dialogs.menu([{ id: "pin", label: "Add to home screen", icon: PushPinIcon }], { anchor });
     if (choice === "pin") desktop.pin(manifest.id).catch((error) => console.error(`[AppDrawer] Failed to pin ${manifest.id}`, error));
@@ -32,22 +62,35 @@
     aria-label="All apps"
     class="mt-[calc(env(safe-area-inset-top)+2rem)] flex min-h-0 flex-1 flex-col rounded-t-3xl bg-background-lighter shadow-popover select-none [-webkit-touch-callout:none]"
     transition:fly={{ y: 48, duration: 200 }}
+    style:translate={pull?.active ? `0 ${pull.dy}px` : undefined}
+    style:transition={pull?.active ? "none" : "translate 200ms var(--ease-out)"}
   >
-    <div class="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/20" aria-hidden="true"></div>
+    <!-- The top of the sheet pulls it down; touch-none so the browser doesn't scroll or refresh instead. Back and the
+         scrim are the accessible ways to close. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="touch-none"
+      onpointerdown={on_pull_down}
+      onpointermove={on_pull_move}
+      onpointerup={on_pull_up}
+      onpointercancel={() => (pull = null)}
+    >
+      <div class="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/20" aria-hidden="true"></div>
 
-    <div class="p-4 pb-3">
-      <Input
-        bind:value={query}
-        size="lg"
-        placeholder="Search apps"
-        aria-label="Search apps"
-        enterkeyhint="go"
-        onkeydown={(event) => {
-          if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
-        }}
-      >
-        {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
-      </Input>
+      <div class="p-4 pb-3">
+        <Input
+          bind:value={query}
+          size="lg"
+          placeholder="Search apps"
+          aria-label="Search apps"
+          enterkeyhint="go"
+          onkeydown={(event) => {
+            if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
+          }}
+        >
+          {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
+        </Input>
+      </div>
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
