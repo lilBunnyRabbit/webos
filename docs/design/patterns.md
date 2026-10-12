@@ -38,7 +38,7 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 
 ## Game app
 
-Tic-Tac-Toe, Minesweeper, 2048, Snake and Maze share one frame:
+Tic-Tac-Toe, Minesweeper, 2048, Snake, Maze and the puzzle apps share one frame:
 
 ```
 ┌ Toolbar ─────────────────────────────────────┐  mode or difficulty (sm Segmented; a Select in narrow windows), stats toggle, New game (primary)
@@ -54,6 +54,16 @@ Tic-Tac-Toe, Minesweeper, 2048, Snake and Maze share one frame:
 - **Stats panel (optional, Tic-Tac-Toe and Minesweeper):** a side panel from `@3xl` (wins, best times, streaks). Below that, a `pressed` "Statistics" `IconButton` in the toolbar shows it over the board.
 - **Pause and end:** a `BoardOverlay` inside the board: the title ("Paused", "Game over"), one mono line (score, best), the primary action (Resume, Play again, New game) last. Starting cues that must not hide the board (Snake's "swipe to start") sit at its edge instead.
 - **Touch:** swipes on the board; a direction pad only on `pointer-coarse`. Touch targets stay the kit's 36px; a dense board (Minesweeper Expert) may go down to 32px cells.
+
+### Puzzle apps
+
+Nonogram, Word Search, Sudoku, Futoshiki, Kakuro and Nurikabe use the same frame, with a few rules on top:
+
+- **Generated, never authored.** A puzzle is its size or difficulty plus a seed (`$lib/core/utils/random`). The generator keeps only puzzles its own solver proves have exactly one answer, so the player never has to guess. Saves store the seed and the player's marks, not the puzzle.
+- **Toolbar:** size or difficulty, the input tool (Fill/Cross, Notes, Sea/Dot), Undo, Redo, Hint, a statistics toggle, New puzzle last. In narrow windows the tools move to a bar under the board, where a thumb reaches them.
+- **Feedback follows the genre:** satisfied clues dim, broken rules turn `error`, and nothing reveals whether a legal move is right except Hint.
+- **Hint** fixes the first wrong entry if there is one, otherwise gives the next cell logic can prove. Hints are counted, and best times only count solves without them.
+- **Phones:** the board fills the width. When cells would fall below a finger's width, the board gets a zoom toggle and scrolls with its clue strips pinned rather than shrinking further.
 
 ## Breadcrumbs
 

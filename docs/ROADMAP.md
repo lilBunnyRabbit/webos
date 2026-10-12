@@ -262,10 +262,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Games
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Game Hub (library browser, play time tracking, categories, saves)
-- [ ] Nonogram (b&w + color, editor, hints, puzzle packs)
+- [-] Nonogram: black and white, generated puzzles, hints, zoom on phones (2026-10-13). Colour, editor and packs not done
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
-- [ ] Other puzzles: Kakuro, Word Search, Nurikabe, Futoshiki
+- [-] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku done; Kakuro, Nurikabe in progress
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
