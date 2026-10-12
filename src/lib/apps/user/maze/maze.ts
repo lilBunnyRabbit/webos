@@ -1,3 +1,5 @@
+import { create_rng, pick, shuffle, type Rng } from "$lib/core/utils/random";
+
 export const Direction = { N: "n", E: "e", S: "s", W: "w" } as const;
 export type Direction = (typeof Direction)[keyof typeof Direction];
 
@@ -13,23 +15,6 @@ export interface Maze {
   readonly width: number;
   readonly height: number;
   readonly open: Uint8Array;
-}
-
-export type Rng = () => number;
-
-export function create_rng(seed: number): Rng {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export function random_seed(): number {
-  return crypto.getRandomValues(new Uint32Array(1))[0];
 }
 
 export function create_maze(width: number, height: number): Maze {
@@ -96,18 +81,6 @@ export const CARVERS: readonly Carver[] = Object.values(Carver);
 export interface CarveStep {
   head: number | null;
   marks?: readonly number[];
-}
-
-function pick<T>(items: readonly T[], rng: Rng): T {
-  return items[Math.floor(rng() * items.length)];
-}
-
-function shuffle<T>(items: T[], rng: Rng): T[] {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
 }
 
 function* backtracker(maze: Maze, rng: Rng): Generator<CarveStep, void, undefined> {

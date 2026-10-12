@@ -5,7 +5,6 @@ import {
   carve_steps,
   cell_count,
   create_maze,
-  create_rng,
   Direction,
   exits,
   generate,
@@ -14,6 +13,7 @@ import {
   step,
   type Maze,
 } from "./maze";
+import { create_rng } from "$lib/core/utils/random";
 
 function reachable(maze: Maze, from = 0): number {
   const seen = new Uint8Array(cell_count(maze));
@@ -80,17 +80,6 @@ describe.each(CARVERS)("%s", (carver) => {
       expect(head).toBeLessThan(36);
     }
     expect(steps).toBeGreaterThan(0);
-  });
-});
-
-describe("create_rng", () => {
-  test("stays in [0, 1)", () => {
-    const rng = create_rng(123);
-    for (let i = 0; i < 1000; i++) {
-      const value = rng();
-      expect(value).toBeGreaterThanOrEqual(0);
-      expect(value).toBeLessThan(1);
-    }
   });
 });
 

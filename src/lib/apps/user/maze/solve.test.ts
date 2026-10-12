@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { carve, cell_count, CARVERS, create_maze, create_rng, exits, generate, neighbours, type Maze } from "./maze";
+import { carve, cell_count, CARVERS, create_maze, exits, generate, neighbours, type Maze } from "./maze";
+import { create_rng } from "$lib/core/utils/random";
 import { solve, SOLVERS } from "./solve";
 
 function distances(maze: Maze, from: number): Int32Array {

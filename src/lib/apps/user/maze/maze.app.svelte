@@ -16,14 +16,13 @@
     CARVERS,
     carve_steps,
     create_maze,
-    create_rng,
     Direction,
-    random_seed,
     run,
     step,
     type Carver,
     type CarveStep,
   } from "./maze";
+  import { create_rng, random_seed } from "$lib/core/utils/random";
   import { draw_maze, read_palette, type Palette, type Scene } from "./maze-render";
   import {
     best_ms_schema,
