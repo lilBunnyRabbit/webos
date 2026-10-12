@@ -65,6 +65,7 @@ What are the implications of this decision?
 | [029](./029-close-guard-window-title.md) | Close Guard and Window Titles | 2026-10-12 | Implemented |
 | [030](./030-text-editor.md) | Text Editor | 2026-10-13 | Implemented |
 | [031](./031-open-from-device.md) | Open from Device | 2026-10-13 | Implemented |
+| [032](./032-p2p-transfer.md) | P2P Transfer | 2026-10-13 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

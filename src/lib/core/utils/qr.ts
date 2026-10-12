@@ -1,3 +1,5 @@
+import { encode } from "uqr";
+
 /** `BarcodeDetector` isn't in TypeScript's DOM lib yet; this is the slice the apps use. */
 interface DetectedBarcode {
   rawValue: string;
@@ -61,4 +63,23 @@ export async function create_qr_detector(): Promise<BarcodeDetector> {
 export async function detect_qr(detector: BarcodeDetector, source: QrSource): Promise<string | null> {
   const [code] = await detector.detect(source);
   return code?.rawValue ?? null;
+}
+
+export interface QrPath {
+  /** Modules per side, quiet zone included. */
+  size: number;
+  /** One SVG path of every dark module, in module units: `<svg viewBox="0 0 {size} {size}"><path d={d} />`. */
+  d: string;
+}
+
+/** Encodes `text` as a QR code drawn as a single SVG path, with the 4-module quiet zone the spec asks for. */
+export function qr_path(text: string): QrPath {
+  const { data, size } = encode(text, { ecc: "L", border: 4 });
+  let d = "";
+  data.forEach((row, y) =>
+    row.forEach((dark, x) => {
+      if (dark) d += `M${x} ${y}h1v1h-1z`;
+    })
+  );
+  return { size, d };
 }

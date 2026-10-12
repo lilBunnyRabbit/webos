@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.23.0",
+    date: "2026-10-13",
+    title: "Hand it over",
+    changes: [
+      { kind: NEW, text: "P2P Transfer sends files straight to another device: scan each other's QR code and the files go directly, never through a server." },
+      { kind: NEW, text: "If the connection drops, reconnect and the transfer carries on where it stopped." },
+    ],
+  },
+  {
     version: "0.22.0",
     date: "2026-10-13",
     title: "Straight from your device",
