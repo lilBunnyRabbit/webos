@@ -45,13 +45,13 @@
 <Section title={value.direction === Direction.ENCODE ? "Base64" : "Text"} flush>
   {#snippet actions()}
     <Button size="sm" variant="quiet" disabled={!result.ok || value.input === ""} onclick={swap}>
-      <ArrowsDownUpIcon /> Use as input
+      <ArrowsDownUpIcon weight="bold" />Use as input
     </Button>
     <CopyButton text={result.ok ? result.value : ""} />
   {/snippet}
   {#if result.ok}
     <TextArea value={result.value} rows={6} readonly aria-label="Output" />
   {:else}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 text-ui text-error">{result.error}</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{result.error}</p>
   {/if}
 </Section>

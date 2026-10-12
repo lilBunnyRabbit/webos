@@ -92,11 +92,24 @@
 
   // Drawing colours are user content, not chrome: black and white plus the current theme's tokens as a starting palette.
   const SWATCH_TOKENS = ["foreground", "background", "primary", "secondary", "tertiary", "accent", "success", "warning", "error", "info"] as const;
-  const swatches = $derived([
-    "#000000",
-    "#ffffff",
-    ...SWATCH_TOKENS.map((token) => css_to_hex(settings.theme[token])),
-  ]);
+  let swatch_group = $state<HTMLElement>();
+  let theme_colors = $state.raw<string[]>([]);
+  const swatches = $derived([...new Set(["#000000", "#ffffff", ...theme_colors])]);
+
+  // Derived tokens are var() expressions a canvas can't parse; resolved a frame later, once the new theme is written.
+  $effect(() => {
+    Object.values(settings.theme);
+    const probe = swatch_group;
+    if (!probe) return;
+    const frame = requestAnimationFrame(() => {
+      theme_colors = SWATCH_TOKENS.map((token) => {
+        probe.style.color = `var(--${token})`;
+        return css_to_hex(getComputedStyle(probe).color);
+      });
+      probe.style.color = "";
+    });
+    return () => cancelAnimationFrame(frame);
+  });
 
   interface EyeDropperInstance {
     open(): Promise<{ sRGBHex: string }>;
@@ -539,7 +552,7 @@
         {/each}
       </div>
 
-      <div class="flex items-center gap-1.5">
+      <div class="flex flex-wrap items-center gap-1.5">
         <label class="color-well" title="Primary colour (left click)">
           <span class="sr-only">Primary colour</span>
           <input type="color" bind:value={primary.value} onchange={() => remember(primary.value)} />
@@ -554,22 +567,35 @@
         {/if}
       </div>
 
-      <div class="flex flex-wrap gap-1 @md:grid @md:grid-cols-6" role="group" aria-label="Swatches">
-        {#each [...swatches, ...recent.value] as color, index (index)}
-          <button
-            type="button"
-            class="swatch"
-            style:background-color={color}
-            title="{color} · click for primary, right-click for secondary"
-            aria-label="Use {color}"
-            onclick={() => (primary.value = color)}
-            oncontextmenu={(event) => {
-              event.preventDefault();
-              secondary.value = color;
-            }}
-          ></button>
-        {/each}
+      {#snippet swatch_row(label: string, colors: string[])}
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{label}</span>
+          <div class="swatches flex flex-wrap gap-1.5 @md:grid @md:grid-cols-[repeat(auto-fill,var(--swatch))]" role="group" aria-label={label}>
+            {#each colors as color (color)}
+              <button
+                type="button"
+                class="swatch"
+                style:background-color={color}
+                title="{color} · click for primary, right-click for secondary"
+                aria-label="Use {color}"
+                aria-pressed={color === primary.value.toLowerCase()}
+                onclick={() => (primary.value = color)}
+                oncontextmenu={(event) => {
+                  event.preventDefault();
+                  secondary.value = color;
+                }}
+              ></button>
+            {/each}
+          </div>
+        </div>
+      {/snippet}
+
+      <div bind:this={swatch_group} class="contents">
+        {@render swatch_row("Colours", swatches)}
       </div>
+      {#if recent.value.length > 0}
+        {@render swatch_row("Recent", recent.value)}
+      {/if}
 
       {#if uses_size(tool.value)}
         <label class="flex items-center gap-2 text-ui text-foreground/80">
@@ -698,15 +724,40 @@
     cursor: pointer;
   }
 
+  .swatches {
+    --swatch: 1.25rem;
+  }
+
   .swatch {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--swatch);
+    height: var(--swatch);
     border-radius: var(--radius-sm);
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 25%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 30%, transparent);
     cursor: pointer;
+    transition: scale 150ms var(--ease-out);
+  }
+
+  .swatch:hover {
+    scale: 1.1;
+  }
+
+  .swatch[aria-pressed="true"] {
+    outline: 2px solid var(--foreground);
+    outline-offset: 1px;
   }
 
   .swatch:focus-visible {
     outline: 2px solid var(--cottontail);
+  }
+
+  @media (pointer: coarse) {
+    .swatches {
+      --swatch: 2.25rem;
+    }
+
+    .color-well {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
   }
 </style>

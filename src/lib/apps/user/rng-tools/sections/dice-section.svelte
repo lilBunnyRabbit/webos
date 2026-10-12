@@ -62,7 +62,7 @@
 
   <Section title="History" description="Rolls in this window, newest first.">
     {#snippet actions()}
-      <Button size="sm" variant="quiet" onclick={() => (history.value = [])}><TrashIcon />Clear</Button>
+      <Button size="sm" variant="quiet" onclick={() => (history.value = [])}><TrashIcon weight="bold" />Clear</Button>
     {/snippet}
     <ol class="max-h-72 overflow-y-auto">
       {#each history.value as entry (entry.id)}

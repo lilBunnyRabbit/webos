@@ -23,7 +23,7 @@
   <SideNav label="Tools" items={[...TOOLS]} bind:value={tools.tool} />
 
   <main class="min-h-0 flex-1 overflow-y-auto">
-    <div class="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-5 @md:px-6 @md:py-6">
+    <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-6">
       <h1 class="text-lg font-semibold">{current.label}</h1>
       {#if tools.tool === "base64"}
         <Base64 bind:value={tools.base64} />

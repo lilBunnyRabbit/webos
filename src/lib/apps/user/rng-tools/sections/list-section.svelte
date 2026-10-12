@@ -53,8 +53,10 @@
       aria-label="Entries"
       rows="8"
       spellcheck="false"
+      autocapitalize="off"
+      autocomplete="off"
       placeholder={"Ana\nBo\nCai"}
-      class={field({ class: "h-auto min-h-32 resize-y py-2 font-mono pointer-coarse:h-auto" })}
+      class={field({ class: "h-auto min-h-24 resize-y py-2 font-mono leading-relaxed pointer-coarse:h-auto" })}
       bind:value={() => settings.value.text, (text) => update({ text })}
     ></textarea>
     <p class="font-mono text-2xs text-foreground/65 tabular-nums">{items.length} {items.length === 1 ? "entry" : "entries"}</p>

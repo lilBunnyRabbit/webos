@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type ClipboardService, type NotificationsService } from "$lib/core/api";
-  import { get_app_context } from "$lib/core/contexts/app";
   import { IconButton } from "$lib/core/components/ui";
+  import { get_app_context } from "$lib/core/contexts/app";
   import { Check as CheckIcon, Copy as CopyIcon } from "phosphor-svelte";
 
   let { text, label = "Copy", disabled = false }: { text: string; label?: string; disabled?: boolean } = $props();
@@ -29,6 +29,6 @@
   }
 </script>
 
-<IconButton label={copied ? "Copied" : label} size="sm" {disabled} onclick={copy}>
-  {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon />{/if}
+<IconButton label={copied ? "Copied" : label} size="sm" disabled={disabled || text === ""} onclick={copy}>
+  {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
 </IconButton>

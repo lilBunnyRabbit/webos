@@ -254,7 +254,7 @@
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
         <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{title}</span>
         <Segmented label="Visualization" options={MODE_OPTIONS} bind:value={mode.value} />
-        <Separator vertical />
+        <Separator vertical class="hidden @md:block" />
         <IconButton label={mic ? "Stop microphone" : "Use microphone"} size="sm" variant={mic ? "secondary" : "quiet"} onclick={toggle_mic}>
           {#if mic}<MicrophoneSlashIcon weight="bold" />{:else}<MicrophoneIcon weight="bold" />{/if}
         </IconButton>

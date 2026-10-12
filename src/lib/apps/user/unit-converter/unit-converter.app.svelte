@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Badge, Button, EmptyState, IconButton, Input, Select, SideNav } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Section, Select, SideNav } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -158,34 +158,35 @@
   <SideNav label="Quantities" items={NAV_ITEMS} bind:value={() => quantity, set_quantity} />
 
   <main class="min-h-0 flex-1 overflow-y-auto">
-    <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 @md:px-6">
+    <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-6">
       <h1 class="text-lg font-semibold">{table.label}</h1>
 
-      <section class="flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
-        <div class="grid gap-3 @lg:grid-cols-[1fr_auto_1fr]">
-          {@render field("from", "From")}
-          <div class="flex justify-center @lg:self-start">
-            <IconButton size="lg" label="Swap units" onclick={swap}>
-              <ArrowsDownUpIcon weight="bold" class="@lg:hidden" />
-              <ArrowsLeftRightIcon weight="bold" class="hidden @lg:block" />
-            </IconButton>
+      <Section>
+        <div class="flex flex-col gap-3 p-4">
+          <div class="grid gap-3 @lg:grid-cols-[1fr_auto_1fr]">
+            {@render field("from", "From")}
+            <div class="flex justify-center @lg:self-start">
+              <IconButton size="lg" label="Swap units" onclick={swap}>
+                <ArrowsDownUpIcon weight="bold" class="@lg:hidden" />
+                <ArrowsLeftRightIcon weight="bold" class="hidden @lg:block" />
+              </IconButton>
+            </div>
+            {@render field("to", "To")}
           </div>
-          {@render field("to", "To")}
+
+          {#if invalid}
+            <p id="{uid}-error" class="text-ui text-error" aria-live="polite">Type a number, such as 12.5 or 3e8.</p>
+          {:else}
+            <p class="font-mono text-2xs text-foreground/65 tabular-nums">
+              1 {pair.from.symbol} = {format_number(convert(1, pair.from, pair.to))}
+              {pair.to.symbol}
+            </p>
+          {/if}
         </div>
+      </Section>
 
-        {#if invalid}
-          <p id="{uid}-error" class="text-ui text-error" aria-live="polite">Type a number, such as 12.5 or 3e8.</p>
-        {:else}
-          <p class="font-mono text-2xs text-foreground/65 tabular-nums">
-            1 {pair.from.symbol} = {format_number(convert(1, pair.from, pair.to))}
-            {pair.to.symbol}
-          </p>
-        {/if}
-      </section>
-
-      <section class="flex flex-col gap-2.5">
-        <header class="flex flex-wrap items-center justify-between gap-2 px-0.5">
-          <h2 class="text-sm font-semibold">All units</h2>
+      <Section title="All units">
+        {#snippet actions()}
           <Input
             size="sm"
             class="w-40 @md:w-56"
@@ -202,11 +203,11 @@
               {/if}
             {/snippet}
           </Input>
-        </header>
+        {/snippet}
 
         {#if visible_units.length === 0}
           <EmptyState
-            class="h-auto rounded-xl bg-background-light p-6"
+            class="h-auto p-6"
             icon={MagnifyingGlassIcon}
             title="Nothing in {table.label.toLowerCase()} is called “{query.trim()}”"
             description={elsewhere.length ? "Found in another quantity:" : "Try a unit name or symbol, such as km or GiB."}
@@ -226,7 +227,7 @@
             {/snippet}
           </EmptyState>
         {:else}
-          <div class="flex flex-col gap-3 rounded-xl bg-background-light p-1.5 ring-1 ring-foreground/8">
+          <div class="flex flex-col gap-3 p-1.5">
             {#each groups as group (group.label)}
               <div class="flex flex-col">
                 {#if group.label}
@@ -265,7 +266,7 @@
             {/each}
           </div>
         {/if}
-      </section>
+      </Section>
     </div>
   </main>
 </div>

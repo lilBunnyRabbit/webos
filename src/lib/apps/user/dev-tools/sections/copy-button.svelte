@@ -4,7 +4,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Check as CheckIcon, Copy as CopyIcon } from "phosphor-svelte";
 
-  let { text, label = "Copy" }: { text: string; label?: string } = $props();
+  let { text, label = "Copy", disabled = false }: { text: string; label?: string; disabled?: boolean } = $props();
 
   const { app_id } = get_app_context();
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
@@ -12,6 +12,7 @@
 
   let copied = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
+
   $effect(() => () => clearTimeout(timer));
 
   async function copy() {
@@ -28,6 +29,6 @@
   }
 </script>
 
-<IconButton {label} size="sm" disabled={text === ""} onclick={copy}>
-  {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon />{/if}
+<IconButton label={copied ? "Copied" : label} size="sm" disabled={disabled || text === ""} onclick={copy}>
+  {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
 </IconButton>

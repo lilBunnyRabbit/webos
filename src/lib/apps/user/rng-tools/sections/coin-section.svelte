@@ -37,8 +37,8 @@
   }
 </script>
 
-<Section flush>
-  <div class="flex flex-col items-center gap-4 rounded-xl bg-background-light p-6 ring-1 ring-foreground/8">
+<Section>
+  <div class="flex flex-col items-center gap-4 p-6">
     <output aria-live="polite" class="flex flex-col items-center gap-2">
       <span
         class={cn(
@@ -64,7 +64,7 @@
 
 <Section title="Tally" description="Every flip, kept until you reset it.">
   {#snippet actions()}
-    <Button size="sm" variant="quiet" disabled={total === 0} onclick={() => (tally.value = { heads: 0, tails: 0 })}><ResetIcon />Reset</Button>
+    <Button size="sm" variant="quiet" disabled={total === 0} onclick={() => (tally.value = { heads: 0, tails: 0 })}><ResetIcon weight="bold" />Reset</Button>
   {/snippet}
   <dl class="grid grid-cols-3 divide-x divide-foreground/8 text-center">
     {#each counts as { label, count, share } (label)}

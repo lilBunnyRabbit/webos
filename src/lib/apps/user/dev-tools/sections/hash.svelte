@@ -54,7 +54,7 @@
       {/each}
     </dl>
   {:catch reason}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 text-ui text-error">{reason}</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{reason}</p>
   {/await}
 {/snippet}
 
@@ -67,15 +67,15 @@
 
 <Section title="File" flush>
   {#snippet actions()}
-    <Button size="sm" onclick={pick}><FolderOpenIcon /> Choose file</Button>
+    <Button size="sm" onclick={pick}><FolderOpenIcon weight="bold" />Choose file</Button>
   {/snippet}
   {#if file_error}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 text-ui text-error">Couldn't read the file: {file_error}</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">Couldn't read the file: {file_error}</p>
   {:else if picked}
     <div class="flex min-w-0 items-center gap-2 text-ui">
       <span class="min-w-0 flex-1 truncate font-mono text-2xs" title={picked.path}>{picked.path}</span>
       <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{format_bytes(picked.size)}</span>
-      <IconButton label="Clear file" size="sm" onclick={() => (picked = null)}><XIcon /></IconButton>
+      <IconButton label="Clear file" size="sm" onclick={() => (picked = null)}><XIcon weight="bold" /></IconButton>
     </div>
     {@render results(picked.hashes)}
   {:else}
