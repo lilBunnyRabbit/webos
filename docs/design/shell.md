@@ -33,6 +33,11 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - With nothing typed, apps are grouped into sections (Productivity, Media, Utilities, Developer, Games, then System), each an overline over a 4-column grid of icon tiles. A pin button appears on hover or focus.
 - Footer: the logo mark, the name, and the build version in mono.
 
+## Updating
+
+- "Update and reload" covers both shells with a full-viewport takeover like the introduction: `background-darkest` with the `background-dark` glow, the logo mark in `primary`, "Updating WebOS" (`text-base font-semibold`) over `v{old} → v{new}` in mono `text-2xs`.
+- Three steps in `text-ui`: done ones get a `primary` check, the current one a spinner, upcoming ones a dot at 65%. It stays until the page navigates away.
+
 ## Introduction
 
 - First boot only, or replayed from Settings › About. A full-viewport takeover, not a window: `background-darkest` with a soft `background-dark` glow at the top. Logo lockup top left, Skip top right.

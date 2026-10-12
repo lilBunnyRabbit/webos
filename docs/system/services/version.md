@@ -14,7 +14,8 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `update_available` | `update_available: VersionInfo \| null` | The remote info, set when `remote.buildTimestamp > info.buildTimestamp`. Never reset to `null`. |
 | `is_checking` | `is_checking: boolean` | True while a `check()` is in flight. |
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running. Fetches `${import.meta.env.BASE_URL}version.json` (`/webos/version.json` in production) with `cache: "no-store"`. A non-OK response is ignored silently. Network or parse errors go to `console.error`. Never throws. |
-| `apply_update` | `apply_update(): Promise<void>` | If a service worker is registered: `registration.update()`, then waits for the installing or waiting worker to reach `activated`. Then `location.reload()`. Errors (including a worker that goes `redundant`) go to `console.error`, and in that case there's no reload. See [Service worker](#service-worker). |
+| `apply_update` | `apply_update(): Promise<void>` | Walks `update_stage` through `installing` → (`clearing`) → `reloading` while the update overlay shows it. `registration.update()`; a new worker that activates within 8 s means a reload into its precache. No new worker, a timeout or an error falls through to clearing: unregister this app's registration and delete only Cache Storage keys containing its scope (`scope_caches`, `update.ts`). Every path ends in `location.replace(?__upd=<now>)`; `init()` strips the parameter again. A second call while one runs is ignored. See [Service worker](#service-worker). |
+| `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
 | `changelog` | `readonly Release[]` | `CHANGELOG` from `changelog.ts`, newest first |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
 | `show_intro` | `show_intro(): Promise<void>` | `dialogs.show(IntroDialog, {}, { dismissible: false })`. Resolves when it closes. Doesn't write the seen marker |
@@ -109,7 +110,7 @@ Paging: Back/Next, dot buttons, and ←/→ on `window` (ignored inside inputs a
 
 ## Persistence
 
-`/var/lib/version/state.json`: `{ "version": 1, "seen": "0.8.0" }` (`persistence.ts`, zod, written through `LatestWriter`). The Workbox precache in Cache Storage belongs to the service worker ([persistence.md](../persistence.md)); `apply_update()` swaps it, never deletes it.
+`/var/lib/version/state.json`: `{ "version": 1, "seen": "0.8.0" }` (`persistence.ts`, zod, written through `LatestWriter`). The Workbox precache in Cache Storage belongs to the service worker ([persistence.md](../persistence.md)); `apply_update()` swaps it, and deletes this app's caches only on the fallback path (other `lilbunnyrabbit.github.io` apps share the origin, so it never touches theirs).
 
 ## Behaviour & invariants
 
@@ -126,6 +127,7 @@ Who does what:
 - **The SW** precaches the app shell (`js`, `css`, `html`, plus `includeAssets` and the manifest icons) and serves it, so the app boots offline. With `autoUpdate` the new worker skips waiting and claims open clients as soon as it installs. The browser also checks for a new `sw.js` on its own (on navigation, at most daily otherwise).
 - **VersionService** decides *when the user is told*. `version.json` isn't precached and is fetched with `no-store`, so `check()` always sees the deployed build. Offline, the fetch fails and logs.
 - **`apply_update()`** bridges them. A plain reload would boot the old build from the precache. So it calls `registration.update()` to fetch the new `sw.js`, waits for that worker to activate (it skips waiting and claims this page), and only then reloads. The reload is served from the new precache, and offline keeps working afterwards.
+- **Fallback (2026-10-12).** GitHub Pages' CDN can keep serving the old `sw.js` for minutes after `version.json` changed. Then `update()` finds nothing, and the old flow reloaded into the same build, so "Update and reload" looked like it did nothing. Now that case unregisters this app's worker, deletes its scoped caches and reloads with a cache-busting query, so the next boot comes from the network and registers the new worker. Modelled on series-tracker's `applyUpdate`, minus its origin-wide wipe.
 
 If the browser already installed the new worker before the click, `installing` and `waiting` are both `null` and it reloads straight away, which is correct: the active worker already serves the new build.
 

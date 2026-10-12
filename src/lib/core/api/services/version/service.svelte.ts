@@ -5,12 +5,17 @@ import { LatestWriter } from "../files/latest-writer";
 import { CHANGELOG } from "./changelog";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
-import { ChangeKind, type Release, type VersionInfo, type VersionService as IVersionService } from "./type";
+import { scope_caches, strip_update_param, with_update_param } from "./update";
+import { ChangeKind, UpdateStage, type Release, type VersionInfo, type VersionService as IVersionService } from "./type";
 
 declare const __VERSION_INFO__: VersionInfo;
 
 const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
+/** A new worker that hasn't activated by then is treated as stuck, and the hard path runs. */
+const ACTIVATE_TIMEOUT = 8000;
+/** Long enough for a stage to paint before the next one, or the page, replaces it. */
+const STAGE_BEAT = 250;
 
 export class VersionService implements IVersionService {
   name = "VersionService";
@@ -20,6 +25,7 @@ export class VersionService implements IVersionService {
   public info = $state<VersionInfo>(__VERSION_INFO__);
   public update_available = $state<VersionInfo | null>(null);
   public is_checking = $state(false);
+  public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
 
   public readonly changelog = CHANGELOG;
   public unseen = $state<Release[]>([]);
@@ -50,6 +56,9 @@ export class VersionService implements IVersionService {
   }
 
   async init() {
+    const clean = strip_update_param(location.href);
+    if (clean) history.replaceState(history.state, "", clean);
+
     this.poll_interval = setInterval(() => this.check(), POLL_INTERVAL);
     document.addEventListener("visibilitychange", this.on_visibility_change);
 
@@ -105,19 +114,44 @@ export class VersionService implements IVersionService {
   }
 
   async apply_update(): Promise<void> {
+    if (this.update_stage !== UpdateStage.IDLE) return;
+    this.update_stage = UpdateStage.INSTALLING;
+    await beat();
+
+    // The service worker serves the app shell from its precache, so a plain reload would boot the old build. The happy
+    // path fetches the new worker; it skips waiting and claims this page, and the reload loads its precache.
+    const registration = await navigator.serviceWorker?.getRegistration().catch(() => undefined);
     try {
-      // The service worker serves the app shell from its precache, so a plain reload would boot the old build.
-      // Fetch the new worker first; it skips waiting and claims this page, then the reload loads the new precache.
-      const registration = await navigator.serviceWorker?.getRegistration();
       if (registration) {
         await registration.update();
         const worker = registration.installing ?? registration.waiting;
-        if (worker) await activated(worker);
+        if (worker) {
+          await activated(worker, ACTIVATE_TIMEOUT);
+          return this.reload();
+        }
       }
-      window.location.reload();
     } catch (error) {
-      console.error("Failed to apply update:", error);
+      console.warn("[VersionService] Service worker update failed, clearing instead", error);
     }
+
+    // No new worker: GitHub Pages' CDN can serve the old sw.js for minutes after version.json changed. Drop this app's
+    // worker and caches (never another app's: every lilbunnyrabbit.github.io site shares the origin) and load from the network.
+    this.update_stage = UpdateStage.CLEARING;
+    try {
+      await registration?.unregister();
+      const keys = await caches.keys();
+      await Promise.all(scope_caches(keys, registration?.scope ?? new URL(import.meta.env.BASE_URL, location.origin).href).map((key) => caches.delete(key)));
+    } catch (error) {
+      console.warn("[VersionService] Couldn't clear the old build", error);
+    }
+    await beat();
+    this.reload();
+  }
+
+  private reload(): void {
+    this.update_stage = UpdateStage.RELOADING;
+    // A plain reload can replay the old navigation from the HTTP cache; a new query forces a fresh document.
+    setTimeout(() => location.replace(with_update_param(location.href, Date.now())), STAGE_BEAT);
   }
 
   async show_intro(): Promise<void> {
@@ -155,12 +189,23 @@ export class VersionService implements IVersionService {
   }
 }
 
-function activated(worker: ServiceWorker): Promise<void> {
+function beat(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, STAGE_BEAT));
+}
+
+function activated(worker: ServiceWorker, timeout: number): Promise<void> {
   return new Promise((resolve, reject) => {
     if (worker.state === "activated") return resolve();
+    const timer = setTimeout(() => reject(new Error("New service worker didn't activate")), timeout);
     worker.addEventListener("statechange", () => {
-      if (worker.state === "activated") resolve();
-      if (worker.state === "redundant") reject(new Error("New service worker failed to install"));
+      if (worker.state === "activated") {
+        clearTimeout(timer);
+        resolve();
+      }
+      if (worker.state === "redundant") {
+        clearTimeout(timer);
+        reject(new Error("New service worker failed to install"));
+      }
     });
   });
 }

@@ -15,6 +15,15 @@ export const ChangeKind = {
 } as const;
 export type ChangeKind = (typeof ChangeKind)[keyof typeof ChangeKind];
 
+/** Where "Update and reload" is. `IDLE` until the user asks; the update overlay shows every other stage. */
+export const UpdateStage = {
+  IDLE: "idle",
+  INSTALLING: "installing",
+  CLEARING: "clearing",
+  RELOADING: "reloading",
+} as const;
+export type UpdateStage = (typeof UpdateStage)[keyof typeof UpdateStage];
+
 export interface Change {
   kind: ChangeKind;
   /** User-facing wording, one sentence. */
@@ -41,6 +50,9 @@ export interface VersionService extends IService {
   /** Whether a check is currently in progress. */
   is_checking: boolean;
 
+  /** Progress of `apply_update()`, for the update overlay. */
+  readonly update_stage: UpdateStage;
+
   /** Every release, newest first. */
   readonly changelog: Release[];
 
@@ -50,7 +62,10 @@ export interface VersionService extends IService {
   /** Fetch remote version.json and compare buildTimestamp. */
   check(): Promise<void>;
 
-  /** Install the new service worker, then reload into the new build. */
+  /**
+   * Install the new service worker and reload into the new build. When no new worker turns up (the CDN still serves the
+   * old `sw.js`), unregister this app's worker, delete its caches and reload with a cache-busting query.
+   */
   apply_update(): Promise<void>;
 
   /** Show the full-screen introduction. Resolves when it closes. */
