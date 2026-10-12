@@ -315,13 +315,13 @@
     <IconButton size="sm" label="Hint (H)" class="pointer-coarse:hidden" disabled={game.solved} onclick={give_hint}>
       <LightbulbIcon weight="bold" />
     </IconButton>
-    <IconButton size="sm" label="Statistics" class="@3xl:hidden" pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
+    <IconButton size="sm" label="Statistics" class="@5xl:hidden" pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
       <ChartBarIcon weight={show_stats ? "fill" : "bold"} />
     </IconButton>
     <Button size="sm" variant="primary" class="hidden @sm:inline-flex" onclick={() => start_over()}>New puzzle</Button>
   </Toolbar>
 
-  <div class="relative grid min-h-0 @3xl:grid-cols-[1fr_18rem]">
+  <div class="relative grid min-h-0 @5xl:grid-cols-[1fr_18rem]">
     <div class="flex min-h-0 flex-col touch-manipulation">
       <div class="flex min-h-0 flex-1 overflow-auto p-3 pb-2 [container-type:size]">
         <!-- svelte-ignore a11y_interactive_supports_focus -->
@@ -466,7 +466,7 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
+        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
         show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
       )}
     >
