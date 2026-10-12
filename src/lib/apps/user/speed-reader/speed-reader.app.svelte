@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Input, Separator, Spinner, StatusBar, Toolbar, field } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Input, Separator, Spinner, Switch, Toolbar, field } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     BookOpenText as BookOpenTextIcon,
@@ -19,18 +19,30 @@
     Warning as WarningIcon,
   } from "phosphor-svelte";
   import { onDestroy, tick, untrack } from "svelte";
+  import { prefersReducedMotion } from "svelte/motion";
+  import { fade } from "svelte/transition";
   import manifest from "./index";
   import {
     DEFAULT_SETTINGS,
     MAX_GHOST_WORDS,
     clamp_int,
     find_position,
+    pause_settings,
     positions_schema,
     remember_position,
     settings_schema,
   } from "./storage";
-  import { MAX_PAUSE_MS, MAX_WPM, MIN_WPM, build_timeline, elapsed_for_index, format_duration, index_for_elapsed } from "./timeline";
-  import { split_at_orp, tokenize, type ReaderToken } from "./tokens";
+  import {
+    MAX_PAUSE_MS,
+    MAX_WPM,
+    MIN_WPM,
+    build_timeline,
+    elapsed_at,
+    elapsed_for_index,
+    format_duration,
+    position_at,
+  } from "./timeline";
+  import { tokenize, type ReaderToken } from "./tokens";
 
   interface Source {
     path: string | null;
@@ -39,7 +51,11 @@
     tokens: ReaderToken[];
   }
 
-  const WPM_STEP = 25;
+  const WPM_STEP = 50;
+  const ENTRANCE_RATIO = 0.3;
+  const GHOST_OPACITY = [40, 25, 15, 10, 6];
+  // A longer gap is a stalled tab or a debugger pause, not reading time; catching it up would skip whole sentences.
+  const MAX_FRAME_MS = 250;
 
   const { path: initial_path }: { path?: string } = $props();
   const { window: win, storage } = get_app_context();
@@ -55,38 +71,37 @@
   let show_settings = $state(false);
 
   let index = $state(0);
+  let progress = 0;
   let playing = $state(false);
-  let seek_count = $state(0);
 
   const tokens = $derived(source?.tokens ?? []);
-  const timeline = $derived(build_timeline(tokens, settings.value.wpm, settings.value.pause_ms));
+  const timeline = $derived(build_timeline(tokens, settings.value.wpm, pause_settings(settings.value)));
   const current = $derived(tokens[index]);
-  const parts = $derived(current ? split_at_orp(current) : ["", "", ""]);
-  const before = $derived(tokens.slice(Math.max(0, index - settings.value.ghost_words), index).map((token) => token.text));
-  const after = $derived(tokens.slice(index + 1, index + 1 + settings.value.ghost_words).map((token) => token.text));
-  const elapsed = $derived(elapsed_for_index(timeline, index));
+  const before = $derived(tokens.slice(Math.max(0, index - settings.value.ghost_words), index));
+  const after = $derived(tokens.slice(index + 1, index + 1 + settings.value.ghost_words));
+  const entrance_ms = $derived(prefersReducedMotion.current ? 0 : (timeline.segments[0]?.base_ms ?? 0) * ENTRANCE_RATIO);
 
+  // The rAF callback reads `timeline` and `index` untracked, so a rebuilt timeline (speed or pause change) continues
+  // from the same fraction of the current word instead of restarting the loop.
   $effect(() => {
     if (!playing) return;
-    void seek_count;
-    const schedule = timeline;
-    // Anchored to the wall clock, so late timers never add up to drift.
-    const origin = performance.now() - elapsed_for_index(schedule, untrack(() => index));
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let last: number | null = null;
 
-    const step = () => {
-      const now = performance.now() - origin;
-      if (now >= schedule.total_ms) {
-        index = schedule.starts.length - 1;
+    let frame = requestAnimationFrame(function step(now) {
+      const delta = last === null ? 0 : Math.min(now - last, MAX_FRAME_MS);
+      last = now;
+      const elapsed = elapsed_at(timeline, { index, progress }) + delta;
+      if (elapsed >= timeline.total_ms) {
+        index = timeline.segments.length - 1;
+        progress = 0;
         pause();
         return;
       }
-      index = index_for_elapsed(schedule, now);
-      timer = setTimeout(step, (schedule.starts[index + 1] ?? schedule.total_ms) - now);
-    };
-    untrack(step);
+      ({ index, progress } = position_at(timeline, elapsed));
+      frame = requestAnimationFrame(step);
+    });
 
-    return () => clearTimeout(timer);
+    return () => cancelAnimationFrame(frame);
   });
 
   $effect(() => {
@@ -103,7 +118,7 @@
 
   function play() {
     if (!tokens.length) return;
-    if (index >= tokens.length - 1) index = 0;
+    if (index >= tokens.length - 1) seek(0);
     playing = true;
   }
 
@@ -121,8 +136,18 @@
   function seek(target: number) {
     if (!tokens.length) return;
     index = clamp_int(target, 0, tokens.length - 1);
-    seek_count++;
+    progress = 0;
     if (!playing) save_position();
+  }
+
+  function step_to(target: number) {
+    pause();
+    seek(target);
+  }
+
+  // Colour, not opacity, so the truncation ellipsis fades with the farthest word instead of showing at full strength.
+  function ghost_color(distance: number): string {
+    return `color-mix(in oklch, var(--foreground) ${GHOST_OPACITY[distance - 1] ?? 0}%, transparent)`;
   }
 
   function set_wpm(value: number) {
@@ -136,11 +161,17 @@
     };
   }
 
+  function toggle_settings() {
+    show_settings = !show_settings;
+    if (show_settings) pause();
+  }
+
   async function show(next: Source) {
     playing = false;
     source = next;
     const stored = next.path ? find_position(storage.get("positions", positions_schema) ?? [], next.path) : null;
     index = clamp_int(stored ?? 0, 0, Math.max(0, next.tokens.length - 1));
+    progress = 0;
     await tick();
     root?.focus({ preventScroll: true });
   }
@@ -194,13 +225,14 @@
     const target = event.target;
     if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
     if (target instanceof HTMLInputElement && (target.type !== "range" || event.key !== " ")) return;
+    if (target instanceof HTMLButtonElement && (event.key === " " || event.key === "Enter")) return;
 
     const actions: Record<string, () => void> = {
       " ": toggle,
-      ArrowLeft: () => seek(index - (event.shiftKey ? 10 : 1)),
-      ArrowRight: () => seek(index + (event.shiftKey ? 10 : 1)),
-      Home: () => seek(0),
-      End: () => seek(tokens.length - 1),
+      ArrowLeft: () => step_to(index - (event.shiftKey ? 10 : 1)),
+      ArrowRight: () => step_to(index + (event.shiftKey ? 10 : 1)),
+      Home: () => step_to(0),
+      End: () => step_to(tokens.length - 1),
       ArrowUp: () => set_wpm(settings.value.wpm + WPM_STEP),
       ArrowDown: () => set_wpm(settings.value.wpm - WPM_STEP),
     };
@@ -257,11 +289,11 @@
       {/snippet}
     </EmptyState>
   {:else}
-    <div class="grid h-full grid-rows-[auto_auto_1fr_auto_auto]">
+    <div class="grid h-full grid-rows-[auto_auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
         <IconButton label={source.path ? "Paste text" : "Edit text"} size="sm" onclick={edit_text}><ClipboardTextIcon weight="bold" /></IconButton>
-        <span class="min-w-16 flex-1 truncate px-1 text-ui font-medium" title={source.path ?? undefined}>{source.name}</span>
+        <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={source.path ?? undefined}>{source.name}</span>
 
         <div class="flex items-center gap-1">
           <IconButton label="Slower (↓)" size="sm" disabled={settings.value.wpm <= MIN_WPM} onclick={() => set_wpm(settings.value.wpm - WPM_STEP)}>
@@ -281,7 +313,7 @@
           <IconButton label="Faster (↑)" size="sm" disabled={settings.value.wpm >= MAX_WPM} onclick={() => set_wpm(settings.value.wpm + WPM_STEP)}>
             <PlusIcon weight="bold" />
           </IconButton>
-          <span class="font-mono text-2xs text-foreground/65">wpm</span>
+          <span class="hidden font-mono text-2xs text-foreground/80 @sm:inline">wpm</span>
         </div>
         <Separator vertical />
         <IconButton
@@ -289,7 +321,7 @@
           size="sm"
           aria-pressed={show_settings}
           class={cn(show_settings && "bg-foreground/10 text-foreground")}
-          onclick={() => (show_settings = !show_settings)}
+          onclick={toggle_settings}
         >
           <SlidersHorizontalIcon weight="bold" />
         </IconButton>
@@ -298,7 +330,7 @@
       {#if show_settings}
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-foreground/8 bg-background-light px-3 py-2 text-ui text-foreground/80">
           <label class="flex items-center gap-2" title="Words shown faded on each side of the current one">
-            Context words
+            Ghost words
             <Input
               type="number"
               size="sm"
@@ -309,16 +341,24 @@
               class="w-14 font-mono tabular-nums"
             />
           </label>
-          <label class="flex items-center gap-2" title="Extra time after a sentence. Commas and dashes get part of it, paragraphs more">
+          <label class="flex items-center gap-2" title="Hold the word before punctuation a little longer">
+            <Switch bind:checked={settings.value.pauses} />
+            Pauses
+          </label>
+          <label class="flex items-center gap-2" title="Extra time on the last word of a sentence. Commas, dashes and ellipses have their own">
             Sentence pause
             <Input
               type="number"
               size="sm"
               min={0}
               max={MAX_PAUSE_MS}
-              step={50}
-              value={settings.value.pause_ms}
-              onchange={number_setting((value) => (settings.value.pause_ms = clamp_int(value, 0, MAX_PAUSE_MS)), () => settings.value.pause_ms)}
+              step={100}
+              disabled={!settings.value.pauses}
+              value={settings.value.sentence_pause_ms}
+              onchange={number_setting(
+                (value) => (settings.value.sentence_pause_ms = clamp_int(value, 0, MAX_PAUSE_MS)),
+                () => settings.value.sentence_pause_ms
+              )}
               class="w-18 font-mono tabular-nums"
             />
             <span class="font-mono text-2xs">ms</span>
@@ -330,26 +370,37 @@
 
       <button
         type="button"
-        class="stage grid min-h-0 cursor-pointer place-items-center overflow-hidden px-3 outline-none"
+        class="stage grid min-h-0 cursor-pointer bg-background text-foreground touch-manipulation place-items-center overflow-hidden px-4 outline-none select-none"
         aria-label={playing ? "Pause" : "Play"}
         onclick={toggle}
       >
-        <div class="reader grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto_auto] font-mono">
-          <span class="col-start-2 row-start-1 h-3 w-0.5 justify-self-center bg-foreground/25"></span>
-          <span class="col-span-3 col-start-1 row-start-2 h-px self-start bg-foreground/12" aria-hidden="true"></span>
-          <div class="col-start-1 row-start-2 self-baseline flex items-baseline justify-end overflow-hidden py-5 whitespace-pre">
-            {#if before.length}<span class="ghost text-foreground/35">{before.join(" ")} </span>{/if}<span>{parts[0]}</span>
+        <div class="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-4 font-mono">
+          <div class="ghost truncate text-right" dir="rtl" style:color={ghost_color(settings.value.ghost_words)}>
+            <span dir="ltr">
+              {#each before as token, offset}<span style:color={ghost_color(before.length - offset)}>{offset ? " " : ""}{token.text}</span>{/each}
+            </span>
           </div>
-          <span class="col-start-2 row-start-2 self-baseline py-5 whitespace-pre text-primary">{parts[1]}</span>
-          <div class="col-start-3 row-start-2 self-baseline flex items-baseline overflow-hidden py-5 whitespace-pre">
-            <span>{parts[2]}</span>{#if after.length}<span class="ghost text-foreground/35"> {after.join(" ")}</span>{/if}
+          <div class="grid">
+            {#key index}
+              <span class="word col-start-1 row-start-1 text-center whitespace-pre" style:--chars={Array.from(current?.text ?? "").length} in:fade={{ duration: entrance_ms }}>{current?.text}</span>
+            {/key}
           </div>
-          <span class="col-span-3 col-start-1 row-start-2 h-px self-end bg-foreground/12" aria-hidden="true"></span>
-          <span class="col-start-2 row-start-3 h-3 w-0.5 justify-self-center bg-foreground/25"></span>
+          <div class="ghost truncate text-left" style:color={ghost_color(settings.value.ghost_words)}>
+            {#each after as token, offset}<span style:color={ghost_color(offset + 1)}>{offset ? " " : ""}{token.text}</span>{/each}
+          </div>
         </div>
       </button>
 
-      <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 py-2">
+      <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 pt-2 pb-2.5">
+        <div class="flex items-center justify-center gap-2">
+          <IconButton label="Jump to start (Home)" onclick={() => step_to(0)}><SkipBackIcon weight="bold" /></IconButton>
+          <IconButton label="Previous word (←)" onclick={() => step_to(index - 1)}><CaretLeftIcon weight="bold" /></IconButton>
+          <IconButton label={playing ? "Pause (Space)" : "Play (Space)"} variant="primary" size="lg" class="rounded-full" onclick={toggle}>
+            {#if playing}<PauseIcon weight="fill" />{:else}<PlayIcon weight="fill" />{/if}
+          </IconButton>
+          <IconButton label="Next word (→)" onclick={() => step_to(index + 1)}><CaretRightIcon weight="bold" /></IconButton>
+          <IconButton label="Jump to end (End)" onclick={() => step_to(tokens.length - 1)}><SkipForwardIcon weight="bold" /></IconButton>
+        </div>
         <input
           type="range"
           aria-label="Position"
@@ -360,42 +411,27 @@
           class="w-full accent-primary"
           oninput={(event) => seek(event.currentTarget.valueAsNumber)}
         />
-        <div class="flex items-center justify-between font-mono text-2xs text-foreground/80 tabular-nums">
-          <span>{format_duration(elapsed)}</span>
-          <span>−{format_duration(timeline.total_ms - elapsed)}</span>
-        </div>
-        <div class="flex items-center justify-center gap-1.5">
-          <IconButton label="Jump to start (Home)" onclick={() => seek(0)}><SkipBackIcon weight="bold" /></IconButton>
-          <IconButton label="Previous word (←)" onclick={() => seek(index - 1)}><CaretLeftIcon weight="bold" /></IconButton>
-          <IconButton label={playing ? "Pause (Space)" : "Play (Space)"} variant={playing ? "secondary" : "primary"} onclick={toggle}>
-            {#if playing}<PauseIcon weight="fill" />{:else}<PlayIcon weight="fill" />{/if}
-          </IconButton>
-          <IconButton label="Next word (→)" onclick={() => seek(index + 1)}><CaretRightIcon weight="bold" /></IconButton>
-          <IconButton label="Jump to end (End)" onclick={() => seek(tokens.length - 1)}><SkipForwardIcon weight="bold" /></IconButton>
+        <div class="flex items-center justify-between gap-3 font-mono text-2xs text-foreground/80 tabular-nums">
+          <span>{format_duration(elapsed_for_index(timeline, index))} / {format_duration(timeline.total_ms)}</span>
+          <span>{index + 1} / {tokens.length}</span>
         </div>
       </div>
-
-      <StatusBar>
-        <span>Word {index + 1} / {tokens.length}</span>
-        <span class="ml-auto">{settings.value.wpm} wpm</span>
-        <span class="hidden @sm:inline">{format_duration(timeline.total_ms)} total</span>
-      </StatusBar>
     </div>
   {/if}
 </div>
 
 <style>
   .stage {
-    background: var(--background-darker);
     container-type: inline-size;
   }
 
-  .reader {
-    font-size: clamp(1.5rem, 8cqi, 3.75rem);
+  .word {
+    /* Hack's advance is 0.6em, so a word of n characters is about 0.6n em wide: shrink long ones to fit the stage. */
+    font-size: min(clamp(1.75rem, 9cqi, 3rem), calc((100cqi - 2rem) / (var(--chars) * 0.62)));
     line-height: 1.2;
   }
 
   .ghost {
-    font-size: 0.4em;
+    font-size: clamp(0.875rem, 3.5cqi, 1.125rem);
   }
 </style>

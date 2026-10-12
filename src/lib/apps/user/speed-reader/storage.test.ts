@@ -2,11 +2,13 @@ import { describe, expect, test } from "vitest";
 import {
   clamp_int,
   find_position,
+  pause_settings,
   positions_schema,
   remember_position,
   settings_schema,
   DEFAULT_SETTINGS,
 } from "./storage";
+import { DEFAULT_PAUSES, NO_PAUSES } from "./timeline";
 
 describe("remember_position", () => {
   test("puts the latest file first and replaces its old entry", () => {
@@ -38,11 +40,28 @@ describe("remember_position", () => {
   });
 });
 
+describe("pause_settings", () => {
+  test("off means no pauses at all", () => {
+    expect(pause_settings({ ...DEFAULT_SETTINGS, pauses: false })).toEqual(NO_PAUSES);
+  });
+
+  test("on uses the sentence pause setting and the fixed rest", () => {
+    expect(pause_settings({ ...DEFAULT_SETTINGS, sentence_pause_ms: 1200 })).toEqual({
+      ...DEFAULT_PAUSES,
+      sentence_ms: 1200,
+    });
+  });
+});
+
 describe("schemas", () => {
   test("accept the defaults and reject out-of-range values", () => {
     expect(settings_schema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
     expect(settings_schema.safeParse({ ...DEFAULT_SETTINGS, wpm: 5 }).success).toBe(false);
     expect(positions_schema.safeParse([{ path: "/a", index: -1 }]).success).toBe(false);
+  });
+
+  test("settings saved by the earlier version fall back to defaults", () => {
+    expect(settings_schema.safeParse({ wpm: 300, ghost_words: 3, pause_ms: 400 }).success).toBe(false);
   });
 });
 
