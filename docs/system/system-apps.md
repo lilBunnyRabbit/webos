@@ -16,6 +16,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
 | `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | window: `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
+| `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
 
@@ -373,6 +374,50 @@ The controls are bound to local `$state` and do nothing else. Nothing but the op
 
 - Hand-maintained: a new kit component or token only appears once someone adds it here. `Separator` isn't shown at all; `SideNav` only appears as the app's own navigation.
 - The token lists are hard-coded arrays, not read from `ThemeToken`.
+
+---
+
+## Calculator
+
+`calculator` · `Calculator` icon · source `system/calculator/`
+
+**Purpose.** A basic calculator: `+ − × ÷`, percent, sign change, decimals and brackets, with a history of results. Category Utilities; `description` and `keywords` (`math`, `calc`, `arithmetic`) feed launcher search.
+
+**Evaluation** (`calculator.ts`, no `eval`/`Function`). `tokenize` turns the expression into numbers, operators, `%` and brackets; it accepts ASCII (`* / -`) and the display symbols (`× ÷ −`). A recursive-descent `Parser` applies the usual precedence: brackets, then unary `+`/`−`, then postfix `%`, then `× ÷`, then `+ −`, all left-associative. Two calculator rules:
+
+- `%` divides by 100, except that a bare `n%` on the right of `+` or `−` is a share of the left side: `200 + 10%` is 220, `200 × 10%` is 20.
+- A bracket right after a value multiplies: `2(3)` is 6.
+
+`evaluate` returns `{ ok, value }` or `{ ok: false, error }` with `syntax`, `divide_by_zero` (any `÷ 0`, even `0 ÷ 0`) or `out_of_range` (a non-finite result). `format_number` rounds to 12 significant digits, so `0.1 + 0.2` shows `0.3`, and switches to exponent form (`1e+21`) at 10^15 and above or below 10^-9. The tokenizer reads that exponent form, so a large result can carry on into the next expression.
+
+**Input.** `press(state, key)` is a pure reducer over `{ expression, evaluated }`. It keeps the expression finishable: a second binary operator replaces the first (a `−` after `×` or `÷` stays as a unary minus), one decimal point per number (`.` alone becomes `0.`), `)` only when a bracket is open, `%` only after a number or bracket, a leading `0` is replaced by the next digit, and a digit or `(` after `)` or `%` inserts `×`. `±` flips the sign of the last number, or of the bracket group it closes. After `=`, a digit or `.` starts a new expression and an operator carries the result on.
+
+**Display.** Mono, right-aligned, wrapping. While typing: the expression large, and the live result below it (`preview`: trailing operators dropped and open brackets closed, then evaluated; hidden for a lone number or an unfinished expression). After `=`: the solved expression small with `=`, the result large. Errors show in `error`. `=` completes the expression the same way, so `2 × (3 + 4` gives 14.
+
+**Layout.** Toolbar (Copy result, History toggle), then the display over a 4×6 keypad of kit `Button`s (`secondary` digits, `secondary` + `text-primary` operators, `quiet` functions, `primary` equals spanning two rows, `0` spanning two columns). From `@2xl` the history is a side panel; below that the toggle shows it over the keypad, and picking an entry closes it. The keypad fills the window, so a phone gets large touch targets.
+
+**Interactions.**
+
+| Action | Effect |
+|--------|--------|
+| Keys `0–9 . , + - * x / % ( )` | The matching pad |
+| Enter or `=` | Evaluate. Adds `{ expression, result }` to the history |
+| Backspace | Delete the last character (clears after `=`) |
+| Escape or Delete | Clear |
+| Ctrl/Cmd+C with no text selected | Copy the result |
+| Copy result button | `clipboard.copy_text(result)`; a check for 1.2 s, or an error toast if the browser refuses |
+| Click a history entry | Loads its expression for editing |
+| Clear (history) | Window sheet confirm, then empties the history |
+
+Keys are read by one `<svelte:window>` `keydown` listener, only while the window is focused and focus is on the window frame or inside the app (not a sheet). Pads cancel `mousedown` so they never take focus: Enter after clicking a pad means `=`, not that pad again. Enter on a focused button (Tab navigation) still activates the button.
+
+**Persistence.** `storage.persisted("history")`: newest first, capped at 50, a repeat of the newest entry isn't added again, shared live by every Calculator window. The current expression, the solved expression and the history toggle are `storage.window()` state, restored with the session.
+
+**Known gaps.**
+
+- No memory keys, powers, roots or scientific functions; no locale number formatting (always `.` decimals, no grouping).
+- Keyboard shortcuts don't go through ShortcutsService, so they aren't in the Mod+/ cheat sheet.
+- The expression can't be edited in the middle; Backspace works from the end only.
 
 ## "Open…" in the viewers (ADR-025)
 
