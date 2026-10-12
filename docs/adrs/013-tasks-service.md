@@ -1,7 +1,9 @@
 # ADR-013: Tasks Service & Task Manager App
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Accepted (parked)
+
+> **Revision 2026-10-12: parked** (owner, [brainstorm](../brainstorm/2026-10-12_tasks-parked.md)). Nothing in the system needs it yet. It gets built with its first real consumer (the terminal, or zip in File Explorer). Before building: check `TaskHandle` against the package's actual API, and add an `AbortSignal` to `execute` so Cancel can stop the work.
 
 > **Revision 2026-10-11:** No separate Task Manager app. The Activity Monitor system app (Windows, Performance, Network, Storage) gets a Tasks tab when TasksService lands ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
