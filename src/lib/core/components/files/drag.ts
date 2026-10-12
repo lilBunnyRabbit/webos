@@ -40,9 +40,15 @@ type HandleItem = DataTransferItem & { getAsFileSystemHandle?: () => Promise<Fil
  * while the event is being dispatched. Folders need `getAsFileSystemHandle` (Chromium); elsewhere they're skipped.
  */
 export function read_os_entries(event: DragEvent): Promise<(File | FileSystemHandle)[]> {
+  // Both reads happen now, while the event is live. The handle is null for files that aren't on a disk (an image
+  // dragged out of another app), so the plain File is the fallback.
   const pending = [...(event.dataTransfer?.items ?? [])]
     .filter((item) => item.kind === "file")
-    .map((item: HandleItem) => item.getAsFileSystemHandle?.() ?? Promise.resolve(item.getAsFile()));
+    .map((item: HandleItem) => {
+      const file = item.getAsFile();
+      const handle = item.getAsFileSystemHandle?.();
+      return handle ? handle.then((value) => value ?? file, () => file) : Promise.resolve(file);
+    });
   return Promise.all(pending).then((entries) => entries.filter((entry): entry is File | FileSystemHandle => entry !== null));
 }
 

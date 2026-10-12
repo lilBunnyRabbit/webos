@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Drop in",
     changes: [
       { kind: NEW, text: "Drag files and whole folders from your computer onto the desktop, a File Explorer window or a folder to copy them into WebOS." },
+      { kind: FIXED, text: "Items dropped or moved onto the desktop show up right away instead of only after a reload." },
     ],
   },
   {

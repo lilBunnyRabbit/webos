@@ -16,7 +16,10 @@ interface DesktopFolderOptions {
   read_layout: () => Promise<string | null>;
   /** Called once for an empty folder that has never had a layout: write the default shortcuts and a layout. */
   seed: (folder: DesktopFolder) => Promise<void>;
-  /** Hands the layout text to the owner in the same tick the entries change, so both update together. */
+  /**
+   * Hands the layout text to the owner with the first entries, in the same tick. Only once: after that the owner's
+   * in-memory layout is the truth, and it may be rewriting the file while the folder is re-read.
+   */
   loaded: (layout: string | null) => void;
 }
 
@@ -29,6 +32,7 @@ export class DesktopFolder {
 
   private dispose_watch?: () => void;
   private reload_id = 0;
+  private layout_loaded = false;
 
   constructor(private options: DesktopFolderOptions) {}
 
@@ -67,18 +71,34 @@ export class DesktopFolder {
     return this.entries.map((entry) => entry.name);
   }
 
-  private async reload(): Promise<void> {
+  /**
+   * Re-reads the folder. A shortcut can be moved or rewritten between listing and reading it (that also bumps the
+   * revision), so a read that fails that way is stale and retried rather than reported.
+   */
+  private async reload(attempt = 0): Promise<void> {
+    try {
+      await this.read();
+    } catch (error) {
+      const stale = error instanceof DOMException && (error.name === "NotFoundError" || error.name === "NotReadableError");
+      if (!stale || attempt >= 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+      return this.reload(attempt + 1);
+    }
+  }
+
+  private async read(): Promise<void> {
     const id = ++this.reload_id;
     const files = this.options.files();
     const folder = await this.handle();
     const items = await files.list(folder);
 
-    const layout = await this.options.read_layout();
+    // The layout file is read until it's been handed over once; later reloads would race the owner's own writes to it.
+    const layout = this.layout_loaded ? null : await this.options.read_layout();
     const visible = items.filter((item) => !item.name.startsWith("."));
 
     // An empty folder with no layout file has never been set up: seed it once, then read what was written. The layout
     // file the seed writes stops this from running again.
-    if (layout === null && visible.length === 0) {
+    if (!this.layout_loaded && layout === null && visible.length === 0) {
       await this.options.seed(this);
       return this.reload();
     }
@@ -104,7 +124,10 @@ export class DesktopFolder {
     // A newer reload started while this one was reading; its result wins.
     if (id !== this.reload_id) return;
     this.entries = entries;
-    this.options.loaded(layout);
+    if (!this.layout_loaded) {
+      this.layout_loaded = true;
+      this.options.loaded(layout);
+    }
   }
 
   /** Writes `{App name}.desktop`, auto-renamed on a clash. Returns the file name, or `null` for an unknown app. */

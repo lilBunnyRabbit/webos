@@ -96,14 +96,16 @@ Three layers of state turn the folder into a grid:
 
 `destroy()` disposes the effect root.
 
-`reload()`:
+`reload()` runs `read()` and retries it up to 3 times (50, 100, 150 ms apart) when it fails with `NotFoundError` or `NotReadableError`: a shortcut moved or rewritten between listing and reading. That change bumps the revision too, so the failed read was stale anyway. Anything else, or a fourth failure, goes to `console.error`.
+
+`read()`:
 
 1. Take `id = ++reload_id`.
 2. `files.get_directory("/home/Desktop")`. Missing → throws `/home/Desktop is missing` (FilesService recreates it at boot, so this means it was deleted this session).
-3. List it, and read the owner's layout through `read_layout()` (here `/var/lib/desktop/layout.json`; `null` when missing).
-4. **Seed** (the owner's `seed()`) when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
+3. List it. **Only until the layout has been handed over once**, read it through `read_layout()` (here `/var/lib/desktop/layout.json`; `null` when missing). After that the owner's in-memory layout is the truth: re-reading the file raced the owner's own writes (a drop onto the desktop imports, which reloads, while `move_items` rewrites the file: `NotReadableError` / `NotFoundError`, and a stale file could overwrite a fresh move in memory).
+4. **Seed** (the owner's `seed()`), on the first load only, when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
 5. Build `entries`. Each `.desktop` file is read and parsed here, so listing costs one read per shortcut (and opening one reads it again in `apps.open`).
-6. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries` and call `loaded(layout)`, where this service runs `parse_layout()` (or `{}`) into `positions` in the same tick.
+6. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries`, and the first time only call `loaded(layout)`, where this service runs `parse_layout()` (or `{}`) into `positions` in the same tick. Tested in `folder.browser.test.ts`.
 
 A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.md](../kernel.md#failed-init)).
 
@@ -178,7 +180,7 @@ ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context me
 - Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.
 - `pin()` doesn't dedupe. The start menu ignores its `null` and its errors beyond `console.error`.
-- A move saved while a reload is reading `layout.json` can be overwritten in memory by the older file contents.
+- Layout changes made in another tab aren't picked up until a page reload (the file is read once).
 - Deleting a file or folder from the desktop silently does nothing.
 - Changes from other tabs, or OPFS writes that bypass FilesService, show up only after a reload.
 - Until `/home/Desktop` has been bumped once this session, `revision()` returns `0` for a missing `SvelteMap` key, which tracks the map's version. Any revision bump anywhere (a settings save to `/etc`, a File Explorer upload) then re-runs the watcher and reloads the desktop. Harmless but wasteful.
