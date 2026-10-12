@@ -7,9 +7,9 @@ import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
 import { SettingsService } from "../settings/service.svelte";
-import { WindowFlag, type WindowSnapshot } from "../windows/type";
+import { WindowFlag, type WindowFrames, type WindowSnapshot } from "../windows/type";
 import { WindowsService } from "../windows/service.svelte";
-import { SESSION_PATH, parse_session, serialize_session } from "./persistence";
+import { SESSION_PATH, parse_session, serialize_session, type SessionFile } from "./persistence";
 import { SessionService } from "./service.svelte";
 import { SessionStatus } from "./type";
 
@@ -25,13 +25,13 @@ const example_window: WindowSnapshot = { ...settings_window, app_id: "example", 
 
 let shutdown: () => void;
 
-async function boot(saved: WindowSnapshot[] | null, answer = true): Promise<Kernel> {
+async function boot(saved: WindowSnapshot[] | null, answer = true, frames: WindowFrames = {}): Promise<Kernel> {
   if (saved) {
     const files = new FilesService();
     await files.init();
     let handle = await files.get_root();
     for (const segment of ["var", "lib", "session"]) handle = await handle.getDirectoryHandle(segment, { create: true });
-    await opfs.write_file(await handle.getFileHandle("session.json", { create: true }), serialize_session(saved));
+    await opfs.write_file(await handle.getFileHandle("session.json", { create: true }), serialize_session({ windows: saved, frames }));
   }
 
   const booted = await boot_test_kernel({
@@ -50,10 +50,12 @@ async function boot(saved: WindowSnapshot[] | null, answer = true): Promise<Kern
 const session = (kernel: Kernel) => kernel.service<SessionService>("session");
 const windows = (kernel: Kernel) => kernel.service<WindowsService>("windows");
 
-async function saved_on_disk(kernel: Kernel): Promise<WindowSnapshot[]> {
+async function saved_file(kernel: Kernel): Promise<SessionFile> {
   const file = await kernel.service<FilesService>("files").get_file(SESSION_PATH);
-  return file ? parse_session(await file.text()) : [];
+  return file ? parse_session(await file.text()) : { windows: [], frames: {} };
 }
+
+const saved_on_disk = async (kernel: Kernel) => (await saved_file(kernel)).windows;
 
 beforeEach(() => opfs.clear_opfs());
 afterEach(() => shutdown?.());
@@ -93,5 +95,47 @@ describe("SessionService", () => {
     expect(windows(kernel).list()).toHaveLength(1);
     const [warning] = kernel.service<NotificationsService>("notifications").all;
     expect(warning.type).toBe("warning");
+  });
+
+  test("frames load whatever the answer, and closing a window records and saves its frame", async () => {
+    // Small enough to fit the test page, so it isn't clamped.
+    const frame = { x: 10, y: 20, width: 300, height: 200 };
+    const kernel = await boot([settings_window], false, { example: frame });
+    await vi.waitFor(() => expect(session(kernel).status).toBe(SessionStatus.DECLINED));
+    expect(windows(kernel).frames).toEqual({ example: frame });
+
+    const id = kernel.service<AppsService>("apps").launch("example")!;
+    expect(windows(kernel).get(id)?.bounds).toEqual(frame);
+
+    windows(kernel).get(id)!.bounds = { ...frame, x: 30 };
+    windows(kernel).close(id);
+    flushSync();
+    await vi.waitFor(async () => expect((await saved_file(kernel)).frames).toEqual({ example: { ...frame, x: 30 } }));
+  });
+
+  test("closed windows stack newest first and reopen with their state, un-minimized", async () => {
+    const kernel = await boot([example_window, settings_window]);
+    await vi.waitFor(() => expect(session(kernel).status).toBe(SessionStatus.RESTORED));
+    flushSync();
+
+    const [example_id, settings_id] = windows(kernel)
+      .sorted_list(([, a], [, b]) => a.order - b.order)
+      .map(([id]) => id);
+    windows(kernel).close(example_id);
+    flushSync();
+    windows(kernel).close(settings_id);
+    flushSync();
+    expect(session(kernel).closed.map((w) => w.app_id)).toEqual(["settings", "example"]);
+
+    session(kernel).reopen_closed();
+    flushSync();
+    const example = session(kernel).reopen_closed();
+    flushSync();
+    expect(session(kernel).closed).toEqual([]);
+    expect(windows(kernel).get(example!)?.flags.has(WindowFlag.MINIMIZED)).toBe(false);
+    expect(windows(kernel).is_focused(example!)).toBe(true);
+    const settings = windows(kernel).list().find((id) => windows(kernel).get(id)?.app.id === "settings")!;
+    expect(windows(kernel).get(settings)?.app.state).toEqual({ section: "whats-new" });
+    expect(session(kernel).reopen_closed()).toBeNull();
   });
 });

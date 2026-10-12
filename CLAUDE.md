@@ -38,10 +38,10 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
 | `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022). `MobileDesktopService` (pages + dock) on mobile (ADR-016) | files, apps |
-| `session` | SessionService | Saves open windows to `/var/lib/session/session.json`, restore dialog at boot (ADR-023) | windows, apps, files, dialogs, notifications |
+| `session` | SessionService | Saves open windows and window frames to `/var/lib/session/session.json`, restore dialog at boot, reopen closed windows (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 | `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center (ADR-028) | none |
-| `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui |
+| `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui, session |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 

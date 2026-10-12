@@ -14,7 +14,7 @@
   import MobileHome from "./mobile-home.svelte";
   import MobileWindows from "./mobile-windows.svelte";
   import NavBar from "./nav-bar.svelte";
-  import { view_transition } from "./view-transition";
+  import { view_transition } from "$lib/core/utils/view-transition";
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));

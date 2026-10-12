@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type WindowsService, WindowFlag, type WindowInstance } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
+  import { view_transition } from "$lib/core/utils/view-transition";
 
   let { instance, vertical }: { instance: WindowInstance; vertical: boolean } = $props();
 
@@ -19,9 +20,12 @@
     is_focused && !is_minimized && "bg-foreground/10",
     is_minimized && "text-foreground/65"
   )}
+  style:view-transition-name={is_minimized ? `window-${instance.id}` : undefined}
   onclick={() => {
+    // Minimizing flies the window into this button and restoring flies it back out: while minimized it carries the
+    // window's view-transition name (ADR-014 revision).
     if (is_minimized || is_focused) {
-      windows.toggle_minimize(instance.id);
+      view_transition(() => windows.toggle_minimize(instance.id));
     } else {
       windows.focus(instance.id);
     }

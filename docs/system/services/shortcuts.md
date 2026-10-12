@@ -1,6 +1,6 @@
 # ShortcutsService
 
-Key `shortcuts` · Depends on: `windows`, `apps`, `dialogs`, `ui` · ADR: [ADR-012](../../adrs/012-shortcuts-service.md), [ADR-017](../../adrs/017-keyboard-shortcuts-strategy.md) (both revised 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_shortcuts.md)) · Source: `src/lib/core/api/services/shortcuts/` · Inspector: `inspector.svelte` (ADR-020)
+Key `shortcuts` · Depends on: `windows`, `apps`, `dialogs`, `ui`, `session` · ADR: [ADR-012](../../adrs/012-shortcuts-service.md), [ADR-017](../../adrs/017-keyboard-shortcuts-strategy.md) (both revised 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_shortcuts.md)) · Source: `src/lib/core/api/services/shortcuts/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -68,6 +68,7 @@ On every `keydown`, in order:
 | `window.minimize` | Alt+Shift+↓ | `toggle_minimize(focused)` | Minimize | Go home |
 | `window.previous` | Alt+\` | The most recent other window (from home: the newest), un-minimizing it | ✓ | ✓ |
 | `window.cycle` | Alt+Shift+\` | The least recently used window, so repeated presses walk all of them | ✓ | ✓ |
+| `window.reopen` | Alt+Shift+T | `session.reopen_closed()`; only while `session.closed` isn't empty (Ctrl+Shift+T is the browser's) | ✓ | ✓ |
 | `desktop.show` | Alt+Shift+D | Minimize every visible window / `go_home()` | Show desktop | Go home |
 | `window.maximize` | Alt+Shift+↑ | `toggle_maximize(focused)` | ✓ | — |
 | `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | Leave maximize, snap to the half; the same key again unsnaps | ✓ | — |
@@ -76,7 +77,7 @@ On every `keydown`, in order:
 | `system.notifications` | Alt+Shift+N | `ui.toggle("notifications")`: the tray panel / the switcher with its list | ✓ | ✓ |
 | `system.shortcuts` | Mod+/ | The cheat sheet (`ShortcutsDialog`, system dialog) | ✓ | ✓ |
 
-Close, minimize, maximize and snap have `when: focused !== null`, so with nothing focused the key falls through.
+Close, minimize, maximize and snap have `when: focused !== null`, so with nothing focused the key falls through. Minimize, maximize, snap, show desktop and un-minimizing through previous/cycle run inside `view_transition()` (`$lib/core/utils/view-transition`), so they morph like the buttons do ([window](../shell/window.md#motion)).
 
 ## Cheat sheet
 

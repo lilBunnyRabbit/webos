@@ -1,4 +1,4 @@
-import type { AppsService, DialogsService, Kernel, UiService, WindowsService } from "$lib/core/api";
+import type { AppsService, DialogsService, Kernel, SessionService, UiService, WindowsService } from "$lib/core/api";
 import { default_shortcuts } from "./defaults";
 import { event_keys, has_command_modifier, is_mac, normalize } from "./keys";
 import type { KeyShortcut, ShortcutsService as IShortcutsService } from "./type";
@@ -32,6 +32,7 @@ export class ShortcutsService implements IShortcutsService {
       apps: () => this.kernel.service<AppsService>("apps"),
       dialogs: () => this.dialogs_service,
       ui: () => this.kernel.service<UiService>("ui"),
+      session: () => this.kernel.service<SessionService>("session"),
     };
     this.dispose_defaults = default_shortcuts(services).map((shortcut) => this.register(shortcut));
     window.addEventListener("keydown", this.on_keydown);

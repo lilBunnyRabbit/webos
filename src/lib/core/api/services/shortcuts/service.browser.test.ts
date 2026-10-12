@@ -31,6 +31,7 @@ async function boot(): Promise<Kernel> {
     apps: stub_service("apps", { launch: vi.fn() }),
     dialogs: dialogs_stub,
     ui: UiService,
+    session: stub_service("session", { closed: [], reopen_closed: vi.fn(() => null) }),
     shortcuts: ShortcutsService,
   });
   shutdown = booted.shutdown;

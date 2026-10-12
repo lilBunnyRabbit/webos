@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.14.0",
+    date: "2026-10-12",
+    title: "Settle in",
+    changes: [
+      { kind: IMPROVED, text: "Apps reopen where you last closed them, at the size you left them. A first window opens centred and sized to your screen, and windows never open off screen." },
+      { kind: IMPROVED, text: "A second window of the same app steps down and to the right of the first instead of landing on top of it." },
+      { kind: NEW, text: "Windows fade in and out, minimize into their taskbar button and grow smoothly when maximized or snapped." },
+      { kind: NEW, text: "Alt+Shift+T reopens the window you just closed, with everything it had open." },
+      { kind: FIXED, text: "A newly opened window gets the keyboard right away, and apps no longer flash a loading spinner when they open." },
+    ],
+  },
+  {
     version: "0.13.0",
     date: "2026-10-12",
     title: "Inbox",

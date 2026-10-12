@@ -1,6 +1,6 @@
 # WindowsService
 
-Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (accepted, mostly unbuilt), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
+Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (placement, frames), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -10,9 +10,9 @@ The service doesn't know about app lifecycles. A window is just a record holding
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `WindowsService` interface (JSDoc reference for the repo), `WindowInstance`, `WindowFlag`, `SnapZone`, `WindowConstraints`, `WindowOptions`, `WindowSnapshot`, `RestoreResult` |
+| `type.ts` | `WindowsService` interface (JSDoc reference for the repo), `WindowInstance`, `WindowFlag`, `SnapZone`, `WindowConstraints`, `WindowOptions`, `WindowSnapshot`, `WindowFrames`, `RestoreResult` |
 | `service.svelte.ts` | Implementation |
-| `helper.ts` | `WindowsHelper`: initial-bounds math, `clamp_bounds` |
+| `helper.ts` | `WindowsHelper.place` (where a new window opens), `clamp_bounds`, `CASCADE_OFFSET`. Tested in `helper.test.ts` |
 
 ## Window model
 
@@ -52,10 +52,12 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 |--------|-----------|-------|
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |
 | `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Doesn't touch existing windows (TODO at `service.svelte.ts:70`). Called by the window manager. |
-| `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.legacy_calculate_bounds`. |
+| `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.place` (see [Placement](#placement)). |
 | `restore` | `(windows: WindowSnapshot[], create: (snapshot) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
-| `close` | `(id) => boolean` | Deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
-| `close_all` | `() => void` | Empties the index and resets `max_order`. Nothing calls it. |
+| `close` | `(id) => boolean` | Records the window's frame (`frames[app.id] = bounds`), then deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
+| `close_all` | `() => void` | Records every window's frame (topmost last, so it wins per app), empties the index and resets `max_order`. The mobile switcher's Close all calls it. |
+| `frames` | `readonly WindowFrames` | `$state.raw` `Record<AppId, Bounds>`: each app's last closed window frame. Base interface, so both implementations hold them |
+| `load_frames` | `(frames) => void` | Replaces `frames`. [SessionService](session.md) calls it at init |
 | `exists` | `(id) => boolean` | |
 | `get` | `(id) => WindowInstance \| null` | Returns the live, reactive proxy. Callers mutate it directly (the shell does, see below). |
 | `list` | `() => WindowId[]` | Insertion order. The window manager renders in this order. |
@@ -94,12 +96,21 @@ None of its own. [SessionService](session.md) snapshots the windows into `/var/l
 - Closing or minimizing the focused window calls the private `focus_next()`. It raises the topmost window that isn't minimized. When every remaining window is minimized, it bumps `max_order` without giving it to any window, so **nothing is focused** and `get_focused()` returns `null`.
 - A minimized window is therefore never the focused one. DialogsService gets either a visible window or `null`, and falls back to the container center.
 
-**Initial bounds** (`WindowsHelper.legacy_calculate_bounds`):
+### Placement
 
-- Size is 600×400, clamped to the manifest's `constraints` (`min`/`max`), then capped at the container size.
-- Position cascades from `(100,100)` by 40px per already-open window (count mod 15). If that would push the window past `container − size − (20, 80)`, it resets to `(100,100)`. The `80` assumes a bottom taskbar.
+`WindowsHelper.place({ constraints, container, sibling, frame })`, ADR-014 revision ([brainstorm](../../brainstorm/2026-10-12_window-polish.md)). `open()` passes the app's **frontmost** open window (highest `order`) as `sibling` and `frames[app.id]` as `frame`.
+
+| Case | Size | Position |
+|------|------|----------|
+| The app has a window open | the sibling's | sibling + 28px (`CASCADE_OFFSET`) each way; when that would overflow the container, `(0, 0)` |
+| A remembered frame | the frame's | the frame's |
+| Neither | 62% × 70% of the container | centred horizontally, 40% of the free height above (optically centred) |
+
+Size is then clamped to the manifest's `constraints` and capped at the container; the result goes through `clamp_bounds`, so a window always opens **fully inside** the area (a frame saved on a bigger screen shrinks and moves in). An unmeasured container (0×0) falls back to 600×400 unclamped.
+
+**Frames** are recorded on close only (owner's call): closing the tab with windows open records nothing; session restore covers that. `bounds` is the normal frame even while maximized or snapped, so it's recorded as is.
+
 - **Coordinate spaces.** `bounds` is container-relative: it's rendered as `left/top` inside the window-manager element. `container.bounds.x/y` is the container's viewport offset, and it's only used to convert pointer `clientX/Y` into container space.
-- `WindowsHelper.calculate_bounds` is an unimplemented stub that returns zeros. Nothing calls it.
 
 **Constraints.** `min` and `max` apply to the initial size and to resizing. The resize fallback minimum is 400×300 (`WindowGeometryHandler.MIN_WIDTH/MIN_HEIGHT`).
 
@@ -107,7 +118,7 @@ None of its own. [SessionService](session.md) snapshots the windows into `/var/l
 
 **Snapping.** `snap_zone` is set by the drag handler on drop. Any non-snapped drop clears it, and so does any resize. A snapped window keeps its pre-snap `bounds`. Maximize and snap aren't mutually exclusive in state, but maximize wins when rendering, and any drag or resize clears both.
 
-**Close.** `close()` only deletes the record. The keyed `{#each}` in the window manager unmounts the window, and the app's component and `$effect`s tear down with it. That includes `storage.persisted` cells, which release their refcount. There's no close hook, no "unsaved changes" veto, no closed-window stack, and AppsService doesn't track which windows belong to which app (`AppInstance.window_ids` is commented out).
+**Close.** `close()` records the frame and deletes the record. The keyed `{#each}` in the window manager unmounts the window, and the app's component and `$effect`s tear down with it. That includes `storage.persisted` cells, which release their refcount. There's no close hook and no "unsaved changes" veto. The closed-window stack lives in [SessionService](session.md), which notices the window missing from its next snapshot. AppsService AppsService doesn't track which windows belong to which app (`AppInstance.window_ids` is commented out).
 
 **Who mutates instances directly.** The service doesn't own every write. `WindowGeometryHandler` (`components/window/window.handler.svelte.ts`) writes `instance.bounds`, `instance.snap_zone` and `instance.flags.delete(MAXIMIZED)` itself, without going through `snap()` or `toggle_maximize()`. Swapping in a different WindowsService (ADR-016) would have to keep returning mutable proxies from `get()`.
 
@@ -139,16 +150,16 @@ Then `focus_next()`: the topmost non-minimized window gets the highest order, so
 - `close(id)`: closing the on-screen app goes home rather than surfacing another one.
 - `toggle_maximize()` → always `false`, does nothing. `toggle_minimize(id)`: on-screen → home (`true`); background → focus it (`false`). The window handle's `is_minimized` / `is_maximized` therefore always read `false`.
 - `container` is `{ element }` only; `set_container(element)` stores the stage element (`mobile-windows.svelte`), which dialogs anchor to.
+- `frames` / `load_frames` are held but never recorded or used, so a phone visit saves the desktop's frames back unchanged.
 - No `snap`, no geometry, no clamping. `bounds` are written only so a session saved on mobile restores sensibly on desktop.
 
 ## Divergence from ADR
 
-ADR-014 is *Accepted*, not implemented, so most of it just doesn't exist yet: single-instance, animations, taskbar grouping, the closed-window stack. Its session-persistence section is superseded by ADR-023 (SessionService + `restore()`). One part already exists in a different form: **cascading**. ADR-014 says to offset +30px from the *last opened* window. The code offsets 40px × *the number of open windows*, so closing windows makes positions repeat.
+ADR-014's 2026-10-12 revision records the code: remembered frames instead of plain cascading, 28px from the app's frontmost window, the closed stack in SessionService. Single-instance and taskbar grouping are parked. Its session-persistence section is superseded by ADR-023.
 
 ## Known gaps
 
 - Container shrink doesn't re-clamp windows, so they can end up off-screen after a resize or a taskbar move. Only `restore()` clamps.
-- `snap()`, `close_all()` and `calculate_bounds()` are unused.
+- `snap()` is unused.
 - The container is measured by a ResizeObserver plus an rAF after taskbar moves. Both are paused in hidden tabs, so a tab that starts hidden keeps the `window.innerWidth/innerHeight` default until it's shown.
-- Cascade is 40px per open window from `(100,100)`. ADR-014 specifies +30px from the last opened window (roadmap item).
 - `index` is a plain record (`// TODO: map?`). `list()` order is insertion order, not z-order.

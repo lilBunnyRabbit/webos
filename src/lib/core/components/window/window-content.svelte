@@ -24,7 +24,8 @@
 
 <div class="h-full w-full overflow-auto @container" style:zoom>
   {#await instance.app.component}
-    <div class="grid h-full place-items-center"><Spinner label="Loading app" /></div>
+    <!-- Most apps load faster than a blink; the spinner only fades in once loading is noticeably slow. -->
+    <div class="grid h-full place-items-center animate-[pop-in_160ms_ease-out_300ms_both]"><Spinner label="Loading app" /></div>
   {:then Component}
     <svelte:boundary onerror={report}>
       <Component {...instance.app.props} />

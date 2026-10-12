@@ -2,6 +2,10 @@
 **Date:** 2026-10-11
 **Status:** Implemented (2026-10-11)
 
+> **Revision 2026-10-12: frames and closed windows** ([brainstorm](../brainstorm/2026-10-12_window-polish.md))
+> - `session.json` is version `2`: `{ version, windows, frames }`. `frames` maps an app id to the frame its last closed window had (ADR-014 revision). Session loads them into `windows.load_frames()` at init, whatever the restore answer, and saves `windows.frames` with the windows. A v1 file still parses, with no frames.
+> - SessionService keeps a stack of recently closed windows: it diffs consecutive snapshots, pushes a window that disappeared (newest first, max 10, memory only), and `reopen_closed()` restores the newest, un-minimized. Alt+Shift+T.
+
 > **Revision 2026-10-11: window state**
 > - `WindowSnapshot` gains an optional `state` (`AppInstance.state`, written by `storage.window()`). The version stays `1`, so older files still load, and their windows start at each key's `initial`.
 > - `windows.restore`'s `create` takes the whole snapshot. `apps.create_instance(id, props, state)` seeds the instance's state. See the [window state brainstorm](../brainstorm/2026-10-11_window-state.md).

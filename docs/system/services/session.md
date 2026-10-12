@@ -4,12 +4,12 @@ Key `session` · Depends on: `windows`, `apps`, `files`, `dialogs`, `notificatio
 
 ## Purpose
 
-Saves the open windows to `/var/lib/session/session.json` on every change and, at boot, offers to reopen them. It owns the file and the restore flow. Rebuilding windows is WindowsService's job (`windows.restore`), building app instances is AppsService's (`apps.create_instance`).
+Saves the open windows and the remembered window frames to `/var/lib/session/session.json` on every change and, at boot, offers to reopen the windows. It also keeps the stack of recently closed windows (Alt+Shift+T). It owns the file and the restore flow. Rebuilding windows is WindowsService's job (`windows.restore`), building app instances is AppsService's (`apps.create_instance`).
 
 | File | Contents |
 |------|----------|
 | `type.ts` | `SessionService` interface, `SessionStatus` const enum |
-| `persistence.ts` | `SESSION_PATH`, `SESSION_FLAGS`, `parse_session()`, `serialize_session()`, zod schema |
+| `persistence.ts` | `SESSION_PATH`, `SESSION_FLAGS`, `SessionFile`, `parse_session()`, `serialize_session()`, zod schema (v1 and v2) |
 | `service.svelte.ts` | The class |
 | `inspector.svelte` | Status, saved count, last save; detailed adds the file path |
 
@@ -17,13 +17,15 @@ Saves the open windows to `/var/lib/session/session.json` on every change and, a
 
 ## Public API
 
-Read-only state. There are no methods beyond IService.
+Read-only state plus `reopen_closed()`.
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `status` | `SessionStatus` | `none` (nothing saved to offer), `pending` (dialog open), `restored`, `declined` |
 | `saved_count` | `number` | Windows in the loaded file at boot, then in the last snapshot written |
 | `last_saved` | `Date \| null` | When the last snapshot was handed to the writer in this tab (queued, not confirmed on disk). `null` before the first save |
+| `closed` | `WindowSnapshot[]` | `$state.raw`. Recently closed windows, newest first, max 10, memory only (ADR-023 revision) |
+| `reopen_closed` | `() => WindowId \| null` | Pops the newest, drops `minimized`, `windows.restore([it])`, then `windows.focus(id)` (mobile's restore goes home). `null` when empty or the app can't be created (the entry is dropped either way). Alt+Shift+T |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()`: "`SessionService: {status}, {n} saved windows`" |
 
@@ -36,7 +38,7 @@ Read-only state. There are no methods beyond IService.
 `init()`, async:
 
 0. `remove_legacy_view_keys()`: deletes the five localStorage keys that held view state before `storage.window()` (`LEGACY_VIEW_KEYS`). Cheap no-op once they're gone.
-1. `files.get_file(SESSION_PATH)` → `parse_session()`, or `[]` when missing. `saved_count` = its length.
+1. `files.get_file(SESSION_PATH)` → `parse_session()`, or empty when missing. `saved_count` = the windows' length. `windows.load_frames(frames)` runs now, whatever the restore answer: Start fresh drops windows, not where apps open.
 2. Nothing saved → `start_saving()`, `status` stays `none`, done.
 3. Otherwise `status = pending` and `offer_restore(saved)` starts **without being awaited**: the kernel awaits `init()` before mounting, and the dialogs host only renders after mount. A rejection is logged (`[SessionService] Restore failed:`) and saving starts anyway.
 
@@ -55,9 +57,9 @@ Read-only state. There are no methods beyond IService.
 | | |
 |-|-|
 | Path | `/var/lib/session/session.json` (ADR-021 convention: OS component state in `/var/lib/{component}/`) |
-| Format | `{ "version": 1, "windows": WindowSnapshot[] }`, pretty-printed |
-| Version | `SESSION_VERSION = 1` (private) |
-| Load | zod. Wrong version, bad shape or bad JSON → `[]`, so no dialog, and the first save overwrites the file. One bad window fails the whole file |
+| Format | `{ "version": 2, "windows": WindowSnapshot[], "frames": Record<AppId, Bounds> }`, pretty-printed |
+| Version | `SESSION_VERSION = 2` (private). A v1 file (no `frames`) still loads, with no frames |
+| Load | zod discriminated union on `version`. Unknown version, bad shape or bad JSON → no windows and no frames, so no dialog, and the first save overwrites the file. One bad window fails the whole file |
 | Written | Through `LatestWriter` ([files](files.md#latestwriter)): no overlapping writes, newest wins, `/var/lib/session` created on first write. Errors → `console.error("Failed to save session:")` |
 
 ```ts
@@ -71,7 +73,7 @@ interface WindowSnapshot {
 }
 ```
 
-`state` is additive: files saved before it existed still parse (version stays `1`) and their windows start every `storage.window()` key at `initial`.
+`state` is additive: files saved before it existed still parse and their windows start every `storage.window()` key at `initial`.
 
 ## Behaviour & invariants
 
@@ -83,9 +85,11 @@ interface WindowSnapshot {
 - Drops windows whose manifest has `restore: false`. No app sets it today.
 - Per window: `app_id`, `$state.snapshot(props)`, a copy of `bounds` (the restored geometry, even for maximized or snapped windows), flags filtered to `SESSION_FLAGS` (`debug` is dropped), `snap_zone`, and `$state.snapshot(app.state)` when it has keys. A `storage.window()` change therefore rewrites the file.
 - It tracks everything it reads, so any bounds, flag, snap or z-order change rewrites the file. Bounds only change on pointer release, so dragging doesn't write per frame. Focusing a window does write (its `order` changes).
+- Writes `windows.frames` alongside, so a close (which records a frame) rewrites the file.
 - Also updates `saved_count` and `last_saved`.
+- Then, untracked, compares the snapshot's window ids with the previous run's: every window that disappeared is pushed onto `closed` (topmost first). Windows with `restore: false` aren't in the snapshot, so they can't be reopened. Closes before the restore decision aren't tracked.
 
-The first run writes immediately, so after Start fresh with no windows open the file holds `{"version":1,"windows":[]}` and the next boot offers nothing.
+The first run writes immediately, so after Start fresh with no windows open the file holds `{"version":2,"windows":[],"frames":{…}}` and the next boot offers nothing.
 
 **Restore** goes through [`windows.restore`](windows.md#restore) and [`apps.create_instance`](apps.md#create_instanceid-props). A snapshot is skipped when the app id is unknown, or its props fail the app's schema, or it has props and the app has no schema. Props are never dropped to open an empty window (unlike `launch`). Bounds are clamped into the container, and the topmost visible window gets focus.
 
@@ -95,7 +99,7 @@ The first run writes immediately, so after Start fresh with no windows open the 
 
 ## Divergence from ADR
 
-ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and is silent on dismissal and the inspector. The 2026-10-11 revision note records the code: `/var/lib/session/session.json`, `skipped` as the snapshot list, dismiss = Start fresh (since changed: the dialog is now non-dismissible, which the note doesn't cover yet), the shared `LatestWriter`, `clamp_bounds` skipping an unmeasured container, `focus_next()` after restore, the inspector and `status`.
+The 2026-10-12 revision covers v2 (`frames`) and the closed stack. ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and is silent on dismissal and the inspector. The 2026-10-11 revision note records the code: `/var/lib/session/session.json`, `skipped` as the snapshot list, dismiss = Start fresh (since changed: the dialog is now non-dismissible, which the note doesn't cover yet), the shared `LatestWriter`, `clamp_bounds` skipping an unmeasured container, `focus_next()` after restore, the inspector and `status`.
 
 ## Known gaps
 

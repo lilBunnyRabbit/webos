@@ -4,6 +4,7 @@ import type {
   DialogsService,
   MobileWindowsService,
   KeyShortcut,
+  SessionService,
   UiService,
   WindowId,
   WindowsService,
@@ -12,12 +13,14 @@ import ShortcutsDialog from "$lib/core/components/dialogs/shortcuts-dialog.svelt
 import { WindowFlag } from "../windows/type";
 import { ShortcutCategory } from "./type";
 import { UiOverlay } from "../ui/type";
+import { view_transition } from "$lib/core/utils/view-transition";
 
 interface Services {
   windows: () => WindowsService;
   apps: () => AppsService;
   dialogs: () => DialogsService;
   ui: () => UiService;
+  session: () => SessionService;
 }
 
 // Shape checks, not platform checks: the registered windows service decides what makes sense (ADR-016).
@@ -25,7 +28,7 @@ const is_desktop = (windows: WindowsService): windows is DesktopWindowsService =
 const is_mobile = (windows: WindowsService): windows is MobileWindowsService => "go_home" in windows;
 
 /** The OS shortcuts (ADR-017 revision). Registered by the service's `init()`. */
-export function default_shortcuts({ windows, apps, dialogs, ui }: Services): KeyShortcut[] {
+export function default_shortcuts({ windows, apps, dialogs, ui, session }: Services): KeyShortcut[] {
   const focused = () => windows().get_focused();
   const with_focused = (action: (id: WindowId) => void) => () => {
     const id = focused();
@@ -41,7 +44,7 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
   function bring(id: WindowId | undefined) {
     if (!id) return;
     const service = windows();
-    if (service.get(id)?.flags.has(WindowFlag.MINIMIZED)) service.toggle_minimize(id);
+    if (service.get(id)?.flags.has(WindowFlag.MINIMIZED)) view_transition(() => service.toggle_minimize(id));
     else service.focus(id);
   }
 
@@ -60,7 +63,7 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
       label: is_mobile(windows()) ? "Go home" : "Minimize window",
       category: ShortcutCategory.WINDOW,
       when: () => focused() !== null,
-      run: with_focused((id) => windows().toggle_minimize(id)),
+      run: with_focused((id) => view_transition(() => windows().toggle_minimize(id))),
     },
     {
       id: "window.previous",
@@ -80,17 +83,26 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
       run: () => bring(recent().at(-1)),
     },
     {
+      id: "window.reopen",
+      keys: "alt+shift+t",
+      label: "Reopen closed window",
+      category: ShortcutCategory.WINDOW,
+      when: () => session().closed.length > 0,
+      run: () => void session().reopen_closed(),
+    },
+    {
       id: "desktop.show",
       keys: "alt+shift+d",
       label: is_mobile(windows()) ? "Go home" : "Show desktop",
       category: ShortcutCategory.WINDOW,
-      run: () => {
-        const service = windows();
-        if (is_mobile(service)) return service.go_home();
-        for (const id of service.list()) {
-          if (!service.get(id)?.flags.has(WindowFlag.MINIMIZED)) service.toggle_minimize(id);
-        }
-      },
+      run: () =>
+        view_transition(() => {
+          const service = windows();
+          if (is_mobile(service)) return service.go_home();
+          for (const id of service.list()) {
+            if (!service.get(id)?.flags.has(WindowFlag.MINIMIZED)) service.toggle_minimize(id);
+          }
+        }),
     },
     {
       id: "apps.launcher",
@@ -125,12 +137,14 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
   if (is_desktop(windows())) {
     const desktop = () => windows() as DesktopWindowsService;
     const snap = (zone: "left" | "right") =>
-      with_focused((id) => {
-        const instance = desktop().get(id);
-        // Maximize wins when rendering, so a snap from maximized has to leave it first.
-        if (instance?.flags.has(WindowFlag.MAXIMIZED)) desktop().toggle_maximize(id);
-        desktop().snap(id, instance?.snap_zone === zone ? null : zone);
-      });
+      with_focused((id) =>
+        view_transition(() => {
+          const instance = desktop().get(id);
+          // Maximize wins when rendering, so a snap from maximized has to leave it first.
+          if (instance?.flags.has(WindowFlag.MAXIMIZED)) desktop().toggle_maximize(id);
+          desktop().snap(id, instance?.snap_zone === zone ? null : zone);
+        })
+      );
 
     shortcuts.push(
       {
@@ -139,7 +153,7 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
         label: "Maximize or restore window",
         category: ShortcutCategory.WINDOW,
         when: () => focused() !== null,
-        run: with_focused((id) => desktop().toggle_maximize(id)),
+        run: with_focused((id) => view_transition(() => desktop().toggle_maximize(id))),
       },
       {
         id: "window.snap_left",

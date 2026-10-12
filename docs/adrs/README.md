@@ -47,7 +47,7 @@ What are the implications of this decision?
 | [011](./011-desktop-enhancements.md) | Desktop Enhancements | 2026-02-01 | Accepted |
 | [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted |
-| [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Accepted |
+| [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Implemented (single-instance, grouping parked) |
 | [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Accepted |
 | [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented (core shell; apps pass and back pending) |
 | [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Revised (Alt+Shift scheme) |

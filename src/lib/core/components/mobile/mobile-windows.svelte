@@ -5,7 +5,7 @@
   import { Button, IconButton } from "../ui";
   import NotificationList from "../notifications/notification-list.svelte";
   import MobileWindow from "./mobile-window.svelte";
-  import { view_transition } from "./view-transition";
+  import { view_transition } from "$lib/core/utils/view-transition";
 
   let { switcher, onpick }: { switcher: boolean; onpick: (id: WindowId) => void } = $props();
 

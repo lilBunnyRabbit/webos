@@ -9,6 +9,7 @@
   import kernel, { type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { IconButton } from "../ui";
+  import { view_transition } from "$lib/core/utils/view-transition";
 
   let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
 
@@ -53,10 +54,10 @@
     </IconButton>
   </div>
 
-  <IconButton data-window-button label="Minimize" size="sm" onclick={() => windows.toggle_minimize(window_id)}>
+  <IconButton data-window-button label="Minimize" size="sm" onclick={() => view_transition(() => windows.toggle_minimize(window_id))}>
     <MinusIcon weight="bold" />
   </IconButton>
-  <IconButton data-window-button label={is_maximized ? "Restore" : "Maximize"} size="sm" onclick={() => windows.toggle_maximize(window_id)}>
+  <IconButton data-window-button label={is_maximized ? "Restore" : "Maximize"} size="sm" onclick={() => view_transition(() => windows.toggle_maximize(window_id))}>
     {#if is_maximized}<CornersInIcon weight="bold" />{:else}<CornersOutIcon weight="bold" />{/if}
   </IconButton>
   <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => windows.close(window_id)}>

@@ -8,7 +8,7 @@ import type {
   SnapZone,
   WindowId,
   WindowInstance,
-  WindowOptions,
+  WindowFrames,
   WindowSnapshot,
 } from "./type";
 import { WindowFlag } from "./type";
@@ -38,6 +38,20 @@ export class WindowsService implements DesktopWindowsService {
   private max_order = $state<number>(0);
   // TODO: map?
   private index = $state<Record<WindowId, WindowInstance>>({});
+
+  public frames = $state.raw<WindowFrames>({});
+
+  public load_frames(frames: WindowFrames): void {
+    this.frames = frames;
+  }
+
+  /** `bounds` is the normal frame even while maximized or snapped: those are a flag and a zone on top. */
+  private record_frames(instances: WindowInstance[]): void {
+    if (instances.length === 0) return;
+    const frames = { ...this.frames };
+    for (const instance of instances.sort((a, b) => a.order - b.order)) frames[instance.app.id] = { ...instance.bounds };
+    this.frames = frames;
+  }
 
   private reset_state(): void {
     this.index = {};
@@ -107,6 +121,7 @@ export class WindowsService implements DesktopWindowsService {
     }
 
     const was_focused = this.is_focused(id);
+    this.record_frames([this.index[id]]);
 
     // Remove window from index
     delete this.index[id];
@@ -123,6 +138,7 @@ export class WindowsService implements DesktopWindowsService {
   }
 
   public close_all(): void {
+    this.record_frames(Object.values(this.index));
     this.reset_state();
   }
 
@@ -178,6 +194,9 @@ export class WindowsService implements DesktopWindowsService {
     const id = uuid();
 
     const options = app.manifest.defaults ?? {};
+    const sibling = Object.values(this.index)
+      .filter((instance) => instance.app.id === app.id)
+      .sort((a, b) => b.order - a.order)[0];
 
     this.index[id] = {
       id,
@@ -186,11 +205,12 @@ export class WindowsService implements DesktopWindowsService {
       flags: new Flags(options.flags ?? []),
       snap_zone: options.snap_zone ?? null,
       constraints: options.constraints ?? {},
-      bounds: WindowsHelper.legacy_calculate_bounds(
-        options.constraints ?? {},
-        this.container.bounds,
-        Object.keys(this.index).length
-      ),
+      bounds: WindowsHelper.place({
+        constraints: options.constraints ?? {},
+        container: this.container.bounds,
+        sibling: sibling?.bounds ?? null,
+        frame: this.frames[app.id] ?? null,
+      }),
       app,
     };
 

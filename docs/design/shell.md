@@ -14,6 +14,8 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - Titlebar: 40px, `bg-background-light`, hairline below. App icon (duotone) and name in `text-ui font-medium`; unfocused windows fade the title to 80%.
 - Controls: kit `IconButton`s (28px, quiet); close turns `bg-error text-background` on hover. Zoom is a `− 100% +` group that appears on titlebar hover or focus (always visible when zoom isn't 100%); the percentage is the "Reset zoom" button.
 - Double-click the titlebar to maximize or restore. Drag snaps show a `primary/10` preview with a `primary/60` hairline.
+- **Where windows open:** where that app's last window was closed. A second window of an open app steps 28px down and right from it. An app's very first window is centred, a little above the middle, at about two thirds of the area. A window never opens partly off screen.
+- **Motion:** windows fade and grow from 96% when they open (140ms) and shrink away when they close (100ms). Minimizing flies the window into its taskbar button and restoring flies it back out; maximize and snap morph between frames. A new window takes the keyboard. The loading spinner only appears when an app takes longer than 300ms.
 
 ## Taskbar
 

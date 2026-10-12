@@ -1,16 +1,21 @@
+import { untrack } from "svelte";
 import type {
   AppsService,
   DialogsService,
   FilesService,
   Kernel,
   NotificationsService,
+  WindowId,
   WindowSnapshot,
   WindowsService,
 } from "$lib/core/api";
+import { WindowFlag } from "../windows/type";
 import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
+
+const MAX_CLOSED = 10;
 
 export class SessionService implements ISessionService {
   name = "SessionService";
@@ -24,6 +29,10 @@ export class SessionService implements ISessionService {
   public status = $state<SessionStatus>(SessionStatus.NONE);
   public saved_count = $state(0);
   public last_saved = $state<Date | null>(null);
+  public closed = $state.raw<WindowSnapshot[]>([]);
+
+  /** The previous save's windows by id: one missing from the next save was closed. */
+  private previous = new Map<WindowId, WindowSnapshot>();
 
   private windows_service!: WindowsService;
   private apps_service!: AppsService;
@@ -46,8 +55,10 @@ export class SessionService implements ISessionService {
   async init(): Promise<void> {
     remove_legacy_view_keys();
     const file = await this.files_service.get_file(SESSION_PATH);
-    const saved = file ? parse_session(await file.text()) : [];
+    const { windows: saved, frames } = file ? parse_session(await file.text()) : { windows: [], frames: {} };
     this.saved_count = saved.length;
+    // Frames apply whatever the restore answer: Start fresh drops windows, not where apps like to open.
+    this.windows_service.load_frames(frames);
 
     if (saved.length === 0) {
       this.start_saving();
@@ -98,25 +109,53 @@ export class SessionService implements ISessionService {
 
     this.dispose_saving = $effect.root(() => {
       $effect(() => {
-        const windows = this.snapshot();
+        const entries = this.snapshot();
+        const windows = entries.map(([, snapshot]) => snapshot);
         this.saved_count = windows.length;
-        this.writer.write(serialize_session(windows));
+        this.writer.write(serialize_session({ windows, frames: this.windows_service.frames }));
         this.last_saved = new Date();
+        untrack(() => this.track_closed(entries));
       });
     });
   }
 
-  private snapshot(): WindowSnapshot[] {
+  /** Pushes windows that were in the previous save and aren't now. Oldest-first input, so the topmost ends newest. */
+  private track_closed(entries: [WindowId, WindowSnapshot][]): void {
+    const current = new Map(entries);
+    const gone = [...this.previous].filter(([id]) => !current.has(id)).map(([, snapshot]) => snapshot);
+    this.previous = current;
+    if (gone.length > 0) this.closed = [...gone.reverse(), ...this.closed].slice(0, MAX_CLOSED);
+  }
+
+  public reopen_closed(): WindowId | null {
+    const [snapshot, ...rest] = this.closed;
+    if (!snapshot) return null;
+    this.closed = rest;
+
+    const flags = snapshot.flags.filter((flag) => flag !== WindowFlag.MINIMIZED);
+    const { restored } = this.windows_service.restore([{ ...snapshot, flags }], ({ app_id, props, state }) =>
+      this.apps_service.create_instance(app_id, props, state)
+    );
+    const id = restored[0] ?? null;
+    // Mobile's restore goes home; a reopened window is meant to be on screen.
+    if (id) this.windows_service.focus(id);
+    return id;
+  }
+
+  private snapshot(): [WindowId, WindowSnapshot][] {
     return this.windows_service
       .sorted_list(([, a], [, b]) => a.order - b.order)
       .filter(([, instance]) => instance.app.manifest.restore !== false)
-      .map(([, instance]) => ({
+      .map(([id, instance]) => [
+        id,
+        {
         app_id: instance.app.id,
         props: $state.snapshot(instance.app.props),
         bounds: { ...instance.bounds },
         flags: [...instance.flags].filter((flag) => SESSION_FLAGS.includes(flag)),
         snap_zone: instance.snap_zone,
         ...(Object.keys(instance.app.state).length > 0 && { state: $state.snapshot(instance.app.state) }),
-      }));
+        },
+      ]);
   }
 }

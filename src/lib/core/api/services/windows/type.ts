@@ -14,6 +14,15 @@ export interface WindowsService extends IService {
   };
 
   /**
+   * Each app's last closed window frame (ADR-014 revision). The desktop records them on close and opens new windows
+   * there; mobile only holds them, so a phone visit doesn't erase them. SessionService persists them.
+   */
+  readonly frames: WindowFrames;
+
+  /** Replaces `frames` with what SessionService loaded. */
+  load_frames(frames: WindowFrames): void;
+
+  /**
    * Closes a window by its ID.
    * @param id - The window ID to close
    * @returns `true` if the window was closed, `false` if it didn't exist
@@ -151,6 +160,9 @@ export interface MobileWindowsService extends WindowsService {
 }
 
 export type WindowId = string;
+
+/** App id → the frame its last closed window had. */
+export type WindowFrames = Record<AppId, Bounds>;
 
 /** A window as the session stores it: what to launch and where it was. */
 export interface WindowSnapshot {

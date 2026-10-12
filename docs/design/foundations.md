@@ -121,6 +121,7 @@ Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for d
 - Default: 150ms, `--ease-out` (`cubic-bezier(0.22, 1, 0.36, 1)`), on colour, opacity and small transforms.
 - Entrances: `animate-pop-in` (160ms, fade plus 0.97→1 scale) for menus, dialogs and snap previews.
 - Layout moves (snap): 200–250ms.
+- Windows: open 140ms / close 100ms (fade + 0.96→1 scale); minimize, maximize and snap are View Transition morphs (browser default, ~250ms).
 - `prefers-reduced-motion` collapses all of it to 1ms in the base layer.
 
 ## Icons

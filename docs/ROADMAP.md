@@ -14,8 +14,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
    - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
-2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping; the closed-window stack needs a key other than Ctrl+Shift+T
-3. [-] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
+2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping. Reopen closed window landed in block 3 as Alt+Shift+T
+3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
 5. [ ] **Shell + Terminal + Command palette** (ADR-007)
 6. [ ] **Desktop** (ADR-011: multi-select, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
@@ -98,11 +98,11 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Window Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md)
-- **Status:** Not started
+- **Status:** Done (2026-10-12), single-instance parked
 - [ ] Single-instance app flag in manifest: parked, nothing breaks without it ([brainstorm](brainstorm/2026-10-12_roadmap-order.md))
-- [ ] Window open/close/minimize/maximize animations (CSS-based)
-- [ ] Cascading window positioning (offset new windows)
-- [ ] Reopen last closed window (Ctrl+Shift+T)
+- [x] Window open/close/minimize/maximize animations (Svelte transitions + View Transitions)
+- [x] Window placement: remembered frame per app, cascade from the app's frontmost window, centred first open (replaces plain cascading)
+- [x] Reopen last closed window (Alt+Shift+T; Ctrl+Shift+T is the browser's)
 - [x] Taskbar clock / date-time display
 
 ### Window API Expansion
@@ -119,7 +119,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] File system hierarchy: `/home`, `/etc`, `/var`, `/tmp`, one-time migration, native moves, per-directory revision (ADR-021)
 - [x] Desktop folder `/home/Desktop` with `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022)
 - [x] SessionService: `/var/lib/session/session.json`, reactive save, restore dialog, `windows.restore` (ADR-023)
-- [ ] Closed window stack (reopen last 10)
+- [x] Closed window stack (reopen last 10, SessionService, 2026-10-12)
 
 ### Notifications Service
 - **ADR:** [ADR-006](adrs/006-notifications-service.md)

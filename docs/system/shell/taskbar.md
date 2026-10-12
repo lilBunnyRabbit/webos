@@ -25,6 +25,7 @@ The position comes from [settings](../services/settings.md) (`taskbar.position`:
 - The list is `windows.sorted_list()` by `created_at`, so it's in open order and stable under focus changes.
 - One item per window, no grouping by app (ADR-014).
 - Each item is a 40px `rounded-xl` button with the app icon (`size-5.5`), `aria-label` and `title` set to the app name, and `aria-pressed` when it's the focused, visible window.
+- While its window is minimized the button carries `view-transition-name: window-{id}`, and minimize/restore from it run in `view_transition()`, so the window flies into and out of the button ([window motion](window.md#motion)).
 
 States:
 

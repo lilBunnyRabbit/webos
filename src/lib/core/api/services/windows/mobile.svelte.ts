@@ -6,6 +6,7 @@ import type {
   MobileWindowsService as IMobileWindowsService,
   RestoreResult,
   WindowId,
+  WindowFrames,
   WindowInstance,
   WindowSnapshot,
 } from "./type";
@@ -26,6 +27,13 @@ export class MobileWindowsService implements IMobileWindowsService {
   }
 
   public container = $state.raw<{ element: HTMLElement | null }>({ element: null });
+
+  /** Held, never recorded: mobile windows have no frame of their own, and the desktop's must survive a phone visit. */
+  public frames = $state.raw<WindowFrames>({});
+
+  public load_frames(frames: WindowFrames): void {
+    this.frames = frames;
+  }
 
   /** Same focus model as desktop: the window holding `max_order` is focused. Bumping it without a holder means home. */
   private max_order = $state<number>(0);

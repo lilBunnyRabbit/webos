@@ -1,4 +1,5 @@
 import type { IService } from "../../type";
+import type { WindowId, WindowSnapshot } from "../windows/type";
 
 export const SessionStatus = {
   /** Nothing was saved, so nothing to offer. */
@@ -17,4 +18,10 @@ export interface SessionService extends IService {
   readonly saved_count: number;
   /** When the session was last written in this tab, or `null` before the first save. */
   readonly last_saved: Date | null;
+
+  /** Recently closed windows, newest first, at most 10. Memory only (ADR-023 revision). */
+  readonly closed: WindowSnapshot[];
+
+  /** Reopens the most recently closed window, un-minimized and focused. `null` when there's none or its app is gone. */
+  reopen_closed(): WindowId | null;
 }

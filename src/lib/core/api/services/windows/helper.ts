@@ -1,41 +1,62 @@
 import type { WindowConstraints } from "./type";
 import type { Bounds } from "$lib/core/utils/type";
 
-export class WindowsHelper {
-  public static legacy_calculate_bounds(
-    constraints: WindowConstraints,
-    container: Bounds,
-    window_count: number
-  ): Bounds {
-    const clamp = (value: number, limits: { min?: number; max?: number } = {}, available: number) =>
-      Math.min(available, Math.max(limits.min ?? 0, Math.min(limits.max ?? Infinity, value)));
+/** How far a second window of an app sits from its frontmost one. */
+export const CASCADE_OFFSET = 28;
 
-    const size = {
-      width: clamp(600, constraints.width, container.width),
-      height: clamp(400, constraints.height, container.height),
+/** A first-ever window's share of the window area (ADR-014 revision). */
+const DEFAULT_SHARE = { width: 0.62, height: 0.7 };
+
+/** Before the window area is measured there's nothing to scale against. */
+const FALLBACK_SIZE = { width: 600, height: 400 };
+
+export interface PlacementInput {
+  constraints: WindowConstraints;
+  container: Bounds;
+  /** The frontmost open window of the same app: the new one cascades from it. */
+  sibling: Bounds | null;
+  /** The frame the app's last closed window had. */
+  frame: Bounds | null;
+}
+
+export class WindowsHelper {
+  /**
+   * Where a new window opens (ADR-014 revision): cascaded from the app's frontmost window, else its remembered frame, else
+   * centred at a share of the area. Always ends fully inside the container: a frame from a bigger screen shrinks and
+   * moves back in, and a cascade that would overflow wraps to the top-left.
+   */
+  public static place(input: PlacementInput): Bounds {
+    const { constraints, container, sibling, frame } = input;
+    const measured = container.width > 0 && container.height > 0;
+
+    const fit = (value: number, limits: { min?: number; max?: number } = {}, available: number) => {
+      const constrained = Math.max(limits.min ?? 0, Math.min(limits.max ?? Infinity, value));
+      return Math.round(measured ? Math.min(available, constrained) : constrained);
     };
 
-    const start_x = 100;
-    const start_y = 100;
-    const cascade_offset = 40; // Offset for each new window
+    const base = sibling ?? frame;
+    const width = fit(base ? base.width : measured ? container.width * DEFAULT_SHARE.width : FALLBACK_SIZE.width, constraints.width, container.width);
+    const height = fit(base ? base.height : measured ? container.height * DEFAULT_SHARE.height : FALLBACK_SIZE.height, constraints.height, container.height);
 
-    // Calculate position based on number of existing windows
-    const offset_multiplier = window_count % 15; // Reset after 15 windows
-
-    let x = start_x + offset_multiplier * cascade_offset;
-    let y = start_y + offset_multiplier * cascade_offset;
-
-    // Ensure window doesn't go off screen (using container bounds if present)
-    const max_x = container.width - size.width - 20;
-    const max_y = container.height - size.height - 80; // Account for taskbar
-
-    if (x > max_x || y > max_y) {
-      // Reset to start position if we've gone too far
-      x = start_x;
-      y = start_y;
+    let x: number;
+    let y: number;
+    if (sibling) {
+      x = sibling.x + CASCADE_OFFSET;
+      y = sibling.y + CASCADE_OFFSET;
+      if (measured && (x + width > container.width || y + height > container.height)) {
+        x = 0;
+        y = 0;
+      }
+    } else if (frame) {
+      x = frame.x;
+      y = frame.y;
+    } else {
+      // Optically centred: a little above the middle, like native first windows.
+      x = Math.round((container.width - width) / 2);
+      y = Math.round((container.height - height) * 0.4);
     }
 
-    return { x, y, ...size };
+    return WindowsHelper.clamp_bounds({ x, y, width, height }, container);
   }
 
   /** Pulls saved bounds back inside the container, which may be smaller than when they were saved. */
@@ -50,18 +71,6 @@ export class WindowsHelper {
       height,
       x: Math.min(Math.max(0, bounds.x), container.width - width),
       y: Math.min(Math.max(0, bounds.y), container.height - height),
-    };
-  }
-
-  public static calculate_bounds(constraints: WindowConstraints, container: Bounds): Bounds {
-    // Calculate width and height based on constraints and container size and calculated x/y
-
-    // TODO: implement
-    return {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
     };
   }
 }

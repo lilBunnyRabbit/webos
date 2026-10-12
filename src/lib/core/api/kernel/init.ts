@@ -72,7 +72,7 @@ export function register_default_services(kernel: Kernel) {
 
   kernel.register("shortcuts", {
     instance: ShortcutsService,
-    dependencies: ["windows", "apps", "dialogs", "ui"],
+    dependencies: ["windows", "apps", "dialogs", "ui", "session"],
   });
 
   // Registered last so it initialises after session: its introduction stacks above the Restore dialog (ADR-026).

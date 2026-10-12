@@ -42,6 +42,16 @@ Visual states (all theme tokens):
 
 The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
 
+## Motion
+
+ADR-014 revision ([brainstorm](../../brainstorm/2026-10-12_window-polish.md)). Reduced motion turns all of it off (`view_transition()` skips, the global reduced-motion rule shortens Svelte's CSS animations to 1ms).
+
+- **Open / close:** the frame has `in:pop|global` (140ms) and `out:pop|global` (100ms): opacity 0→1 and the CSS `scale` property 0.96→1, `cubicOut`. `scale`, not `transform`, so it never fights the drag `translate3d`. `|global` because the frame is the component root inside the window manager's `{#each}`. A restored session animates in too.
+- **Minimize, restore, maximize, snap:** View Transitions through `view_transition()` (`$lib/core/utils/view-transition`, shared with the mobile shell). The frame carries `view-transition-name: window-{id}` while it's not minimized; its [taskbar button](taskbar.md#window-items) carries the same name while it is, so minimizing morphs the window into its button and restoring morphs it back out. Maximize and snap morph between the two frames. Wrapped: the titlebar's minimize and maximize buttons, the titlebar double-click, the taskbar button, and the window shortcuts ([shortcuts](../services/shortcuts.md)). Not wrapped: a drag that drops into a snap zone (the preview already shows the target), close (it has its outro).
+- During a view transition the page is a snapshot for ~250ms: live content freezes and clicks land on nothing (accepted cost).
+
+**Keyboard focus.** An effect focuses the frame (`tabindex=-1`, `preventScroll`) whenever the window is focused and visible and DOM focus isn't already inside it, so a new window, a taskbar click or Alt+\` hands it the keyboard. A click on a field keeps that field focused; an app that focuses its own input on mount keeps it.
+
 **Snap preview.** While dragging over a snap zone, a sibling div before the frame shows the target: `rounded-xl bg-primary/10 ring-1 ring-primary/60 backdrop-blur-[2px]`, entering with `animate-pop-in` and moving between zones with a 200ms transition.
 
 ## Drag and resize (`WindowGeometryHandler`)
@@ -94,7 +104,7 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 
 - The app context is set one level up, in `window.svelte` (`set_app_context({ window_id, app_id, window, storage })` once at init, `app_id` under `untrack`), so sheets rendered beside the app share it ([apps/app-context.md](../apps/app-context.md)).
 - The content area is a size container (`container-type: size`) so sheets can size against the window (`cqw`/`cqh`), and the app is wrapped in `inert` while sheets are open.
-- `{#await instance.app.component}` shows a centered `Spinner` ("Loading app") while the chunk loads, then `<Component {...instance.app.props} />`. On failure it shows an error `EmptyState` ("This app failed to load" plus the message). The promise was started by `AppsService.launch()`, not here.
+- `{#await instance.app.component}` shows a centered `Spinner` ("Loading app") while the chunk loads, faded in with `pop-in` after a 300ms delay so a fast load never blinks, then `<Component {...instance.app.props} />`. On failure it shows an error `EmptyState` ("This app failed to load" plus the message). The promise was started by `AppsService.launch()`, not here.
 - `<svelte:boundary>` catches errors thrown while the app renders, in its effects and in its `$derived`: the window shows an error `EmptyState` ("This app crashed" plus the message) with **Restart app** (the boundary's `reset()`, which remounts the app: component state is lost, `persisted()` and `storage.window()` values survive) and **Close window**. The error is logged and posted as an `error` toast from the app's id, so a crash in a minimized window isn't silent. Errors in event handlers and un-awaited promises aren't caught by boundaries (Svelte rule); they still reach the console only.
 - The wrapper is `h-full w-full overflow-auto @container`. That container is what apps' `@sm:`/`@md:` queries resolve against ([CONVENTIONS](../../CONVENTIONS.md)).
 - With `WindowFlag.DEBUG` it also renders the debug snippet passed from `window.svelte`: `bounds` and `move` as JSON.
@@ -110,18 +120,20 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 | Pointer down (capture phase) | Anywhere in the frame, content included | Focus (raise) |
 | `focusin` | Anything inside the frame gets DOM focus (Tab, programmatic) | Focus (raise) |
 | Click | Titlebar buttons | See the titlebar table |
-| Keyboard | — | Nothing. No shortcuts, Escape, or keyboard move/resize. |
-| Double-click | Titlebar (not its buttons) | `windows.toggle_maximize(id)`: maximize, or restore a maximized window. On a snapped window it maximizes; the next double-click restores to the snapped spot. The maximize button is the accessible path. |
+| Keyboard | — | The frame takes DOM focus when the window comes to the front. Window shortcuts are the shortcuts service's; no keyboard move/resize. |
+| Double-click | Titlebar (not its buttons) | `windows.toggle_maximize(id)` in a view transition: maximize, or restore a maximized window. On a snapped window it maximizes; the next double-click restores to the snapped spot. The maximize button is the accessible path. |
 
 ## Platform APIs
 
 - Pointer Events with `setPointerCapture` and `touch-action: none` on the titlebar and handles, so touch drag works.
 - `requestAnimationFrame` throttling.
 - CSS: `zoom`, `contain`, `content-visibility`, `contain-intrinsic-size`, `@container`, `translate3d`, `backdrop-filter` (snap preview).
-- Not used: View Transitions (ADR-014 animations), popover/top layer, anchor positioning.
+- View Transitions (`view-transition-name`, `document.startViewTransition`), Svelte `in:`/`out:` transitions.
+- Not used: popover/top layer, anchor positioning.
 
 ## Known gaps
 
 - The handler mutates the instance directly (bounds, snap_zone, flags) instead of going through the service API.
 - No `role`/`aria-*` on the frame itself.
-- ADR-014 open/close/minimize/maximize animations aren't built. The only animation is the 250ms snap transition.
+- A drag that snaps doesn't morph.
+- Closing during the 100ms outro leaves the frame visible but its record is already gone.

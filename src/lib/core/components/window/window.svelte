@@ -7,6 +7,13 @@
   import WindowSheets from "./window-sheets.svelte";
   import { create_storage_handle, create_window_handle, set_app_context } from "$lib/core/contexts/app";
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
+  import { cubicOut } from "svelte/easing";
+  import { view_transition } from "$lib/core/utils/view-transition";
+
+  /** Open and close (ADR-014 revision): a fade and a small scale. `scale`, not `transform`, so a drag can't fight it. */
+  function pop(_: Element, { duration }: { duration: number }) {
+    return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t}; scale: ${0.96 + 0.04 * t};` };
+  }
 
   let { id }: { id: WindowId } = $props();
   const windows = $derived(kernel.service<WindowsService>("windows"));
@@ -36,6 +43,14 @@
 
   // Internal state
   let zoom = $state(1);
+  let element: HTMLElement | null = $state(null);
+
+  // A window that comes to the front takes the keyboard, unless focus is already inside it (a click on a field).
+  $effect(() => {
+    if (is_focused && !is_minimized && element && !element.contains(document.activeElement)) {
+      element.focus({ preventScroll: true });
+    }
+  });
 
   // TODO: is there a better way
   const left = $derived(
@@ -91,6 +106,9 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
+  bind:this={element}
+  in:pop|global={{ duration: 140 }}
+  out:pop|global={{ duration: 100 }}
   onpointerdowncapture={() => windows.focus(id)}
   onfocusin={() => windows.focus(id)}
   data-window-id={id}
@@ -107,6 +125,7 @@
   style:height
   style:transform
   style:z-index={instance.order}
+  style:view-transition-name={is_minimized ? undefined : `window-${id}`}
   style:contain="size layout paint style"
   style:backface-visibility="hidden"
   tabindex={-1}
@@ -116,7 +135,7 @@
   <div
     {@attach geometry_handler.drag_attachment()}
     ondblclick={(event) => {
-      if (!(event.target as Element).closest("[data-window-button]")) windows.toggle_maximize(id);
+      if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
     }}
     class={cn(
       "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
