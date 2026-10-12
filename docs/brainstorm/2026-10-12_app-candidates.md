@@ -139,6 +139,21 @@ Against the pick, recorded: one kind per app means Settings is "System", not als
 - [x] Tags and search shape (G1)
 - [ ] Which apps go into batch 1: owner
 
+### Batch 1 (owner's pick)
+
+Calculator (system), Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader (reading only, no video export), Music Visualizer, Paint (no close guard yet). One agent per app in its own worktree, under the rules in "Is it isolated work?".
+
+### Shared origin
+
+Every `lilbunnyrabbit.github.io/*` site is one origin. OPFS, localStorage, IndexedDB, Cache Storage and quota are per origin, never per path, so moving data to OPFS doesn't isolate WebOS. Any sibling app can read it, `localStorage.clear()` it or share its eviction.
+
+| Option | Verdict |
+|--------|---------|
+| Custom subdomain (CNAME) | Rejected for now. Real isolation, but needs a domain and a one-time data move from the old origin |
+| Separate GitHub org `<name>.github.io` | Rejected for now. Same move, new name |
+| Namespace inside the origin (`/webos/` OPFS root, key prefix) | Rejected: prevents collisions, not isolation |
+| **Leave it** | **Chosen.** Every site on the origin is the owner's own code. Revisit if something actually collides, or before G8 (iframing sibling sites) |
+
 ## Next session topics
 
 - Close guard (G2), before any editor app
