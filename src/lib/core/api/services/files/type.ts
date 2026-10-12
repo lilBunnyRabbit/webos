@@ -1,6 +1,10 @@
 import type { IService } from "../../type";
 import type { DirectoryHandler } from "./service.svelte";
 
+export type ConflictChoice = "replace" | "keep_both" | "skip";
+/** Asked when a name is taken in the target folder; the caller shows the question. */
+export type ConflictHandler = (name: string) => Promise<ConflictChoice>;
+
 export type FileSystemItem = FileSystemFileItem | FileSystemDirectoryItem;
 
 export interface FileSystemFileItem {
@@ -67,6 +71,14 @@ export interface FilesService extends IService {
   /** Moves into `target`. A taken name becomes `name (1).ext`. Moving onto itself is a no-op. */
   move_file(source_parent: FileSystemDirectoryHandle | null, source: FileSystemFileHandle, target: FileSystemDirectoryHandle | null, new_name?: string): Promise<FileSystemFileHandle>;
   upload_files(target: FileSystemDirectoryHandle | null, options?: UploadOptions): Promise<File[]>;
+  /**
+   * Moves the entries at `paths` into the folder at `target` (ADR-005 revision). `on_conflict` decides a taken name;
+   * without it both are kept (`name (1).ext`), which is what drag and drop wants. Entries already in `target` are left
+   * where they are. Moving a folder into itself throws. Resolves with the new paths.
+   */
+  move_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
+  /** Copies like `move_paths`. Copying into the entry's own folder always keeps both. */
+  copy_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
   /** Copies the file or folder at `path` onto the real disk (native Save dialog / folder picker). The written name, or `null` if cancelled. */
   export_to_disk(path: string): Promise<string | null>;
   get_storage_estimate(): Promise<{ usage: number; quota: number }>;

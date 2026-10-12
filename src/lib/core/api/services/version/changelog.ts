@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.16.0",
+    date: "2026-10-12",
+    title: "Lasso",
+    changes: [
+      { kind: NEW, text: "Drag across the desktop or a File Explorer folder to select several items at once, or use Ctrl+click, Shift+click and Ctrl+A." },
+      { kind: NEW, text: "Cut, copy, delete and open every selected item in one go." },
+      { kind: NEW, text: "Drag files and folders onto a folder, into another File Explorer window or onto the desktop to move them there." },
+      { kind: IMPROVED, text: "Dragging a group of desktop icons keeps their arrangement, and icons that don't fit take the nearest free spot." },
+    ],
+  },
+  {
     version: "0.15.0",
     date: "2026-10-12",
     title: "Round up",

@@ -3,7 +3,13 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
-> **Revision 2026-10-12: selection shared with File Explorer** (owner's inbox). File Explorer wants the same multi-select (Ctrl/Shift+Click, marquee, Ctrl+A) for bulk copy/cut/delete and drag-to-folder. The selection model should be one behaviour for both surfaces; its shape (a shared helper, a kit component, or state per surface) is decided when block 6 starts.
+> **Revision 2026-10-12: multi-select decided** (owner, [brainstorm](../brainstorm/2026-10-12_multi-select.md))
+> - Selection is local state in each surface (desktop, File Explorer list) with one pure helper for the click rules and rectangle hit-testing. Not persisted, not on a service. Desktop pointer only: mobile is unchanged.
+> - Marquee, Ctrl+Click toggle, Shift+Click range, Ctrl+A, Esc. Delete / Cut / Copy / Open act on the whole selection; Rename, Properties and Save to disk need exactly one.
+> - Drags are native HTML drag and drop with a WebOS data type carrying the paths, so desktop ↔ Explorer and window ↔ window drops work. Dropping on a folder (or the desktop, or an Explorer list) moves there through `files.move_paths`, auto-renaming clashes.
+> - A group dragged across the desktop keeps its shape; icons landing on a taken or off-grid cell take the nearest free one. `GridDesktopService.move_items(moves)` writes the layout once.
+
+> **Revision 2026-10-12: selection shared with File Explorer** (owner's inbox). File Explorer wants the same multi-select (Ctrl/Shift+Click, marquee, Ctrl+A) for bulk copy/cut/delete and drag-to-folder. ~~Its shape is decided when block 6 starts.~~ Decided above.
 
 > **Revision 2026-10-11: layout vs visible grid**
 > - DesktopService keeps the user's arrangement (`layout`) as the source of truth and derives the visible `grid` for the current container size (`DesktopHelper.fit`). Items in range keep their cell. Out-of-range items take the first free cell. Items with no free cell are hidden but never deleted, and they return to their own cells when the grid grows.

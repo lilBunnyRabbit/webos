@@ -1,4 +1,11 @@
-import type { FilesService as IFilesService, FileSystemItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
+import type {
+  ConflictHandler,
+  FilesService as IFilesService,
+  FileSystemItem,
+  ListOptions,
+  CreateFileOptions,
+  UploadOptions,
+} from "./type";
 import { untrack } from "svelte";
 import { SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
@@ -166,6 +173,64 @@ export class FilesService implements IFilesService {
     const target_dir = await this.resolve(target);
     const result = await opfs.upload_files(target_dir, options);
     if (result.length > 0) await this.changed(target_dir);
+    return result;
+  }
+
+  async move_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]> {
+    return this.transfer("move", paths, target, on_conflict);
+  }
+
+  async copy_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]> {
+    return this.transfer("copy", paths, target, on_conflict);
+  }
+
+  private async transfer(mode: "move" | "copy", paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]> {
+    const target_path = join_path(split_path(target));
+    const target_dir = await this.get_directory(target_path);
+    if (!target_dir) throw new Error(`${target} doesn't exist`);
+
+    const result: string[] = [];
+    for (const path of paths) {
+      const segments = split_path(path);
+      const name = segments.at(-1);
+      if (!name) continue;
+      const source_path = join_path(segments);
+      const parent_path = join_path(segments.slice(0, -1));
+      const parent = await this.get_directory(parent_path);
+      if (!parent) continue;
+
+      const directory = await this.get_directory(source_path);
+      if (directory && (target_path === source_path || target_path.startsWith(`${source_path}/`))) {
+        throw new Error(`Can't put "${name}" into itself`);
+      }
+
+      const same_folder = parent_path === target_path;
+      // Moving into the folder it's already in is a no-op, not a conflict with itself.
+      if (mode === "move" && same_folder) {
+        result.push(source_path);
+        continue;
+      }
+
+      // Copying into its own folder always keeps both: "Replace" would delete the very thing being copied.
+      if (on_conflict && !same_folder && (await this.exists(target_dir, name))) {
+        const choice = await on_conflict(name);
+        if (choice === "skip") continue;
+        if (choice === "replace") await this.delete_entry(target_dir, name, { recursive: true });
+      }
+
+      let new_name: string;
+      if (directory) {
+        const moved =
+          mode === "copy" ? await this.copy_directory(directory, target_dir, name) : await this.move_directory(parent, directory, target_dir, name);
+        new_name = moved.name;
+      } else {
+        const file = await parent.getFileHandle(name).catch(() => null);
+        if (!file) continue;
+        const moved = mode === "copy" ? await this.copy_file(file, target_dir, name) : await this.move_file(parent, file, target_dir, name);
+        new_name = moved.name;
+      }
+      result.push(join_path([...split_path(target_path), new_name]));
+    }
     return result;
   }
 

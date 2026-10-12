@@ -1,19 +1,18 @@
 # Desktop
 
-Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts), [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built)
+Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts), [ADR-011](../../adrs/011-desktop-enhancements.md) (multi-select built, wallpaper and auto-arrange not)
 
 | File | Role |
 |------|------|
-| `desktop.svelte` | The CSS grid, the surface (dot grid + glow, scoped `<style>`), measurement |
-| `desktop-item.svelte` | One icon: open, delete, drag visuals |
-| `desktop-item-face.svelte` | Icon + label, shared by the item and its drag ghost |
-| `desktop-item.handle.svelte.ts` | `ItemHandler`: mouse-driven drag to another cell |
+| `desktop.svelte` | The CSS grid, the surface (dot grid + glow, scoped `<style>`), measurement, selection, marquee, drag and drop, keyboard |
+| `desktop-item.svelte` | One icon: a draggable button showing selected, dimmed and drop-target states; reports clicks, menus and drag start/end up |
+| `desktop-item-face.svelte` | Icon + label |
 
 ## Responsibilities
 
 - Measure itself into `desktop.set_container()` (ResizeObserver) and render a CSS grid with `repeat(columns, minmax(64px, 1fr))` × `repeat(rows, …)`, with padding from `container.config.padding` (12px). Cells are at least 88px (`cell_size`), so the 64px floor never bites.
 - Paint the surface (`.desktop-surface`): `background-darkest`, a dot at every cell corner (`foreground` at 14%, a 1px `radial-gradient` sized to `container.cell` and offset by the padding, so the dots sit on the cell corners), and a soft `background-dark` ellipse glowing from the top. Both gradients are shades of one surface, which the brand allows. The cell size reaches CSS as `--cell-width` / `--cell-height` (88px until measured), the padding as `--grid-offset`.
-- Render each non-empty cell of `desktop.list()` as a `DesktopItem` at `grid-column: x+1; grid-row: y+1`. Rows are keyed by row index and items by column index, so a component is tied to its cell, not to its item.
+- Flatten `desktop.list()` into `cells` (`{ item, x, y }`, reading order: rows top to bottom, cells left to right) and render each as a `DesktopItem` at `grid-column: x+1; grid-row: y+1`, keyed by entry name.
 - Render nothing until the grid has at least 1×1.
 
 It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too. There's no wallpaper yet (ADR-011).
@@ -31,44 +30,56 @@ The icon sits in a 44px `rounded-xl` tile (`bg-background-light`, `shadow-raised
 | `directory` | `FileIcon` folder (duotone) | Folder name |
 
 - The label is up to two lines (`line-clamp-2`, `text-2xs`, `break-words`), with the full entry name as its `title`.
-- It's a `<button>` filling its cell (`rounded-xl`). Hover tints the cell `foreground/6` and lifts the tile 2px (`group-hover:-translate-y-0.5`). Focus is its only selection state: a `foreground/8` tint, plus the global cottontail `:focus-visible` outline for keyboard focus. There's no multi-select.
+- It's a `<button>` filling its cell (`rounded-xl`, `draggable`, `data-desktop-name`, `aria-pressed` when selected). Hover tints the cell `foreground/6` and lifts the tile 2px (`group-hover:-translate-y-0.5`). Selected: `primary/14` with an inset `primary/40` ring. Drop target (a folder under a drag): `primary/18`, inset `primary/70` 2px ring. Dragged or cut: 40% opacity. Keyboard focus: `foreground/8` plus the global cottontail outline.
 
-## Drag (`ItemHandler`)
+## Selection (ADR-011 revision)
 
-It uses **mouse** events, not pointer events. CONVENTIONS calls this older code.
+[Brainstorm](../../brainstorm/2026-10-12_multi-select.md). Selection is `desktop.svelte`'s own state: a set of names and a range anchor (`$state.raw`), pruned to visible entries, never persisted. Click rules come from `$lib/core/utils/selection.ts` (`click_select`, tested): click selects one, Ctrl/Cmd+click toggles, Shift+click selects the range from the anchor in reading order, Ctrl+Shift adds it.
+
+- **Marquee.** A primary-button drag on empty desktop (not on an icon) focuses the surface (`tabindex=-1`), clears the selection unless Ctrl/Cmd is held, captures the pointer and draws a `primary/12` rectangle with a `primary/60` hairline. Icons whose **cell** intersects it are selected, by cell math from `container.bounds` and `container.cell` (no DOM reads). `lostpointercapture` ends it. A click on empty desktop is a zero-size marquee, so it clears the selection.
+- **Acting on it.** An action on a selected icon applies to the whole selection; on an unselected icon (right-click, a key with it focused) it first selects just that icon. Rename, Properties and Save to disk need exactly one.
+
+## Drag and drop (ADR-011 revision)
+
+Native HTML drag and drop (`components/files/drag.ts`), shared with File Explorer.
 
 | Phase | What happens |
 |-------|--------------|
-| `mousedown` on the item | Records the pointer offset inside the icon. State becomes `start`. `mousemove`/`mouseup` go on `document`. |
-| `mousemove` | Moves the fixed-position preview with the pointer. Below an 8px threshold (`DRAG_THRESHOLD`) nothing else happens. After that, the state becomes `move` and the target cell is `floor((client − container.bounds) / cell)`, clamped to the grid. |
-| `mouseup` | If the state is `move` and the target cell is empty (`!is_blocked`), it calls `desktop.move_item(from, to)`. Then it clears the state. |
+| `dragstart` on an icon | Selects it if it isn't selected. Sets the dragged paths (`/home/Desktop/{name}` for every selected icon) and remembers the group and the grabbed icon's cell. Dragged icons fade to 40%; the browser draws the ghost |
+| `dragover` the surface | Accepted for a drag from here or one carrying WebOS paths. Over a folder icon that isn't being dragged, that folder highlights. Otherwise, for a drag from here, an outline (`foreground/6`, `foreground/20` inset ring) marks each icon's target: its offset from the grabbed icon, applied to the cell under the pointer |
+| `drop` on a folder icon | `drop_paths(paths, /home/Desktop/{folder})`: moved into the folder, keeping both on a clash |
+| `drop` elsewhere, drag from here | `desktop.move_items(...)`: the group keeps its shape, and taken or off-grid targets take the nearest free cell |
+| `drop` elsewhere, drag from Explorer | `drop_paths(paths, /home/Desktop)`, then `move_items` places the moved entries at the drop cell (and the nearest free ones) |
+| `dragend` / leaving the surface | Clears the drag and the hover state |
 
-While moving, the original icon fades to 40%. A target-cell highlight (`foreground/6` fill, `foreground/20` inset ring) appears whenever the target isn't the current cell, `error/10` with an `error/50` ring if the cell is occupied. A ghost copy (`pointer-events-none`, `z-50`), one cell in size (`container.cell` in px), follows the cursor.
+A drop on another window or an Explorer list is that surface's to handle; dragging icons into an Explorer folder moves them off the desktop.
 
 ## User interactions
 
 | Input | Result |
 |-------|--------|
-| Double-click icon | `desktop.open(item, { anchor: pointer })`: shortcut and file → `apps.open` (a shortcut launches its target, or toasts "Broken shortcut" when the app is missing; the Open-with dropdown anchors at the pointer), folder → File Explorer there. |
-| `Enter` (keyup, icon focused) | Same as double-click, anchored at the icon's bottom-left corner. |
-| Click icon | Focuses it, nothing else. |
-| `Delete` (keyup, icon focused) | `desktop.remove_item()`: deletes a shortcut file with no confirm. Files and folders: nothing happens. Errors go to `console.error`. |
-| Drag icon (> 8px) | Moves it to the cell under the cursor and saves the layout. Dropping on an occupied cell is refused. |
-| `Space` | Nothing. There's no `onclick`. |
-| Right-click | Browser default (no context menu, ADR-011). |
+| Click icon | Select it (Ctrl/Cmd toggles, Shift ranges) |
+| Double-click icon | `desktop.open(item, { anchor: pointer })`: shortcut and file → `apps.open` (a shortcut launches its target, or toasts "Broken shortcut" when the app is missing; the Open-with dropdown anchors at the pointer), folder → File Explorer there. Only that icon |
+| Drag on empty desktop | Marquee selection |
+| Drag icon(s) | Move the group to other cells, into a desktop folder, or out to an Explorer window |
+| Ctrl/Cmd+A, Esc | Select all, clear |
+| `Enter` (icon focused) | Open every target icon, anchored under the focused one; Alt+Enter → Properties (one) |
+| `F2`, Ctrl/Cmd+C, Ctrl/Cmd+X, Delete / Cmd+Backspace | Rename (one), copy, cut, delete the targets (one confirm for many) |
+| Ctrl/Cmd+V | Paste into `/home/Desktop` |
+| Right-click icon, ContextMenu, Shift+F10 | The icon menu for the targets |
+| Right-click empty desktop | The background menu |
 
 Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" → `desktop.pin(id)`). Anything else that writes into `/home/Desktop` through FilesService (File Explorer, an app) shows up on the desktop right away.
 
 ## Platform APIs
 
-`ResizeObserver`, CSS grid with `grid-auto-flow: dense`, layered `radial-gradient` backgrounds, document-level mouse listeners.
+`ResizeObserver`, CSS grid with `grid-auto-flow: dense`, layered `radial-gradient` backgrounds, Pointer Events with pointer capture (marquee), native HTML drag and drop (`draggable`, `DataTransfer`).
 
 ## Known gaps
 
-- Mouse events only, so there's no touch drag (ADR-016) and no pointer capture. Dropping outside the window still ends the drag via the document `mouseup`.
-- On the first move past the threshold, the target is the item's *current* cell rather than the cell under the pointer (`desktop-item.handle.svelte.ts:105-114`). It catches up on the next `mousemove`.
-- `ItemHandler` captures `{x, y}` at construction. That's fine only because components are keyed by cell. Reusing a component across cells would break the move.
-- No context menu, no multi-select, no way to delete a real file or folder from the desktop (see [services/desktop.md](../services/desktop.md#known-gaps)).
+- No touch drag on the desktop: native drag and drop is pointer-only, and the desktop shell isn't used on phones and tablets anyway (ADR-016).
+- No arrow-key selection and no dropping real files in from the OS.
+- The drop outlines show where icons would go before nearest-free resolution, so a target on a taken cell shows the outline there even though the icon will land elsewhere.
 
 ## Context menus (ADR-025)
 
@@ -76,9 +87,9 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" �
 
 | Where | Menu |
 |-------|------|
-| An icon (right-click, ContextMenu key, Shift+F10) | Open; Cut (Ctrl+X); Copy (Ctrl+C); Rename (F2); Save to disk… (files, folders); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter) |
+| An icon (right-click, ContextMenu key, Shift+F10) | For one: Open; Cut (Ctrl+X); Copy (Ctrl+C); Rename (F2); Save to disk… (files, folders); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter). For a selection of N: Open N items, Cut, Copy, Delete N items |
 | Empty desktop | New folder (system prompt, validated against desktop names); Paste (Ctrl+V; conflicts ask in a system dialog); Gather windows (Alt+Shift+G: every visible window moved fully on screen, `windows.gather()` in a view transition; disabled with no windows; only when the windows service has `gather`); Change theme (opens Settings) |
 
-Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)`, `names()`, and `rename_item(name, new_name)`, which moves the saved cell to the new name before renaming so the icon doesn't jump.
+Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries, "Delete N items?" once for a selection. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)`, `names()`, and `rename_item(name, new_name)`, which moves the saved cell to the new name before renaming so the icon doesn't jump.
 
 Cut icons are dimmed like a drag (`clipboard.is_cut`).

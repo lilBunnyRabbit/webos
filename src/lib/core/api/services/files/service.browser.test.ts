@@ -114,3 +114,44 @@ describe("DirectoryHandler", () => {
     await vi.waitFor(() => expect(handler.exists).toBe(false));
   });
 });
+
+describe("move_paths / copy_paths", () => {
+  async function file(dir: string, name: string, content = name) {
+    const handle = await files.create_file(await files.get_directory(dir), name);
+    await files.write_file(handle, content);
+  }
+
+  test("moves into the target, keeping both on a clash", async () => {
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "a");
+    await files.create_directory(home, "b");
+    await file("/home/a", "x.txt", "from a");
+    await file("/home/b", "x.txt", "from b");
+
+    const moved = await files.move_paths(["/home/a/x.txt"], "/home/b");
+    expect(moved).toEqual(["/home/b/x (1).txt"]);
+    expect(await (await files.get_file("/home/b/x (1).txt"))!.text()).toBe("from a");
+    expect(await files.get_file("/home/a/x.txt")).toBeNull();
+  });
+
+  test("moving into the folder it's in is a no-op; into itself throws", async () => {
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "a");
+    await file("/home", "y.txt");
+
+    expect(await files.move_paths(["/home/y.txt"], "/home")).toEqual(["/home/y.txt"]);
+    await expect(files.move_paths(["/home/a"], "/home/a")).rejects.toThrow("into itself");
+  });
+
+  test("copies folders, and the conflict handler can skip", async () => {
+    const home = (await files.get_directory("/home"))!;
+    await files.create_directory(home, "a");
+    await files.create_directory(home, "b");
+    await file("/home/a", "z.txt");
+    await file("/home/b", "z.txt");
+
+    expect(await files.copy_paths(["/home/a"], "/home/b")).toEqual(["/home/b/a"]);
+    expect(await files.get_file("/home/b/a/z.txt")).not.toBeNull();
+    expect(await files.copy_paths(["/home/a/z.txt"], "/home/b", async () => "skip")).toEqual([]);
+  });
+});

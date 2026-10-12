@@ -18,7 +18,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
 5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
-6. [ ] **Desktop** (ADR-011: multi-select shared with File Explorer, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
+6. [-] **Desktop** (ADR-011: multi-select shared with File Explorer done 2026-10-12, [brainstorm](brainstorm/2026-10-12_multi-select.md); wallpaper, auto-arrange left) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
 7. [ ] **Deep linking + share** (ADR-010)
 8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
 
@@ -57,8 +57,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
 - [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
-- [ ] Multi-select: Ctrl/Shift+Click, marquee, Ctrl+A; bulk copy/cut/delete/drag. Same selection model as desktop multi-select (ADR-011 revision, decide with block 6)
-- [ ] Drag-and-drop file operations: drop files onto a folder to move them (must auto-rename via `available_name()`; pairs with multi-select)
+- [x] Multi-select: Ctrl/Shift+Click, marquee, Ctrl+A; bulk copy/cut/delete/open. Same selection helper as the desktop (ADR-011 revision)
+- [x] Drag-and-drop file operations: drag onto a folder, the list, the desktop or another Explorer window to move; clashes keep both (`files.move_paths`)
+- [ ] Drop real files from the OS (upload by drop)
+- [ ] Touch selection mode on mobile; arrow-key selection
 - [-] Back/forward navigation buttons (Back done, no Forward)
 
 ### Service Lifecycle Hooks
@@ -145,7 +147,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Desktop Enhancements
 - **ADR:** [ADR-011](adrs/011-desktop-enhancements.md)
 - **Status:** Context menu done (ADR-025)
-- [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click), sharing its selection model with File Explorer
+- [x] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click, Ctrl+A), group drag keeping its shape, drop into folders (2026-10-12)
 - [x] Desktop context menu (right-click on background and icons; ADR-025)
 - [ ] Desktop wallpapers (solid, gradient, image with fit/blur/tint)
 - [ ] Icon auto-arrange

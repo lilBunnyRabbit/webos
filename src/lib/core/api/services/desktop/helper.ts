@@ -1,5 +1,11 @@
 import type { DesktopGrid, DesktopItem } from "./type";
 import type { Positions } from "./layout";
+import type { Position } from "$lib/core/utils/type";
+
+export interface DesktopMove {
+  name: string;
+  to: Position;
+}
 
 export class DesktopHelper {
   /**
@@ -20,6 +26,41 @@ export class DesktopHelper {
     }
 
     return { layout, unplaced };
+  }
+
+  /**
+   * Where a dragged group lands (ADR-011 revision). Each item takes its target cell when it's on the grid and not taken
+   * by an item that stays; otherwise the nearest free cell. Earlier moves claim first. An item with nowhere to go is
+   * left out, so it keeps its cell.
+   */
+  public static resolve_moves(grid: DesktopGrid, dimensions: { columns: number; rows: number }, moves: DesktopMove[]): Map<string, Position> {
+    const moving = new Set(moves.map((move) => move.name));
+    const taken = new Set<string>();
+    grid.forEach((row, y) => row?.forEach((item, x) => item && !moving.has(item.name) && taken.add(`${x},${y}`)));
+
+    const free = (x: number, y: number) => x >= 0 && y >= 0 && x < dimensions.columns && y < dimensions.rows && !taken.has(`${x},${y}`);
+    const resolved = new Map<string, Position>();
+
+    for (const { name, to } of moves) {
+      let best: Position | null = free(to.x, to.y) ? to : null;
+      if (!best) {
+        let distance = Infinity;
+        for (let y = 0; y < dimensions.rows; y++) {
+          for (let x = 0; x < dimensions.columns; x++) {
+            const d = (x - to.x) ** 2 + (y - to.y) ** 2;
+            if (d < distance && free(x, y)) {
+              distance = d;
+              best = { x, y };
+            }
+          }
+        }
+      }
+      if (!best) continue;
+      taken.add(`${best.x},${best.y}`);
+      resolved.set(name, best);
+    }
+
+    return resolved;
   }
 
   /**

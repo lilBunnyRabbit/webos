@@ -11,11 +11,14 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState } from "../ui";
+  import { click_select, intersects, rect_from_points } from "$lib/core/utils/selection";
+  import { drop_paths, has_drag_paths, read_drag_paths, set_drag_paths } from "./drag";
+  import { untrack } from "svelte";
   import {
-    copy_item,
+    copy_items,
     create_folder,
-    cut_item,
-    delete_item,
+    cut_items,
+    delete_items,
     open_with,
     open_with_items,
     paste,
@@ -65,7 +68,7 @@
   const mobile = kernel.platform === Platform.MOBILE;
 
   // Cmd on macOS, Ctrl elsewhere: either counts.
-  const mod = (event: KeyboardEvent) => event.ctrlKey || event.metaKey;
+  const mod = (event: KeyboardEvent | MouseEvent) => event.ctrlKey || event.metaKey;
   const { window } = get_app_context();
 
   const filtered_items = $derived.by(() => {
@@ -73,6 +76,99 @@
     if (!query) return handler.items;
     return handler.items.filter((item) => item.name.toLowerCase().includes(query));
   });
+
+  // Multi-select (ADR-011 revision): this list's own UI state, desktop pointer only. The picker keeps its single
+  // `selected`, and mobile keeps tap to open.
+  const multi = $derived(!picker && !mobile);
+  const order = $derived(filtered_items.map((item) => item.name));
+  let chosen = $state.raw<Set<string>>(new Set());
+  let anchor = $state<string | null>(null);
+  const selection = $derived(new Set(order.filter((name) => chosen.has(name))));
+  const selected_items = $derived(filtered_items.filter((item) => selection.has(item.name)));
+
+  // A new folder starts with nothing selected.
+  $effect(() => {
+    void handler.path;
+    untrack(() => {
+      chosen = new Set();
+      anchor = null;
+    });
+  });
+
+  function select(name: string, event: MouseEvent) {
+    ({ selection: chosen, anchor } = click_select({ selection, anchor }, name, { toggle: mod(event), range: event.shiftKey }, order));
+  }
+
+  function ensure_selected(item: FileSystemItem) {
+    if (selection.has(item.name)) return;
+    chosen = new Set([item.name]);
+    anchor = item.name;
+  }
+
+  /** What an action on `item` applies to: the whole selection when it's in it, else just it. */
+  const targets = (item: FileSystemItem): FileSystemItem[] => (selection.has(item.name) ? selected_items : [item]);
+
+  let list: HTMLElement | null = $state(null);
+
+  // Marquee from empty space. Rows are hit-tested by their rects; the list is short enough to read them per move.
+  let marquee = $state<{ pointer: number; start: Position; current: Position; base: Set<string> } | null>(null);
+  const marquee_rect = $derived(marquee && rect_from_points(marquee.start, marquee.current));
+
+  function on_pointer_down(event: PointerEvent) {
+    if (!multi || event.button !== 0 || (event.target as Element).closest("[role=row], button, input")) return;
+    const base = mod(event) ? selection : new Set<string>();
+    if (!mod(event)) chosen = new Set();
+    marquee = { pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, current: { x: event.clientX, y: event.clientY }, base };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+
+  function on_pointer_move(event: PointerEvent) {
+    if (!marquee || event.pointerId !== marquee.pointer || !list) return;
+    marquee.current = { x: event.clientX, y: event.clientY };
+    const rect = rect_from_points(marquee.start, marquee.current);
+    const hits = [...list.querySelectorAll<HTMLElement>("[data-entry-name]")]
+      .filter((row) => {
+        const { left, top, right, bottom } = row.getBoundingClientRect();
+        return intersects({ left, top, right, bottom }, rect);
+      })
+      .map((row) => row.dataset.entryName!);
+    chosen = new Set([...marquee.base, ...hits]);
+  }
+
+  // Native drag and drop, shared with the desktop and other Explorer windows (ADR-011 revision).
+  let dragging = $state.raw<Set<string>>(new Set());
+  let drop_folder = $state<string | null>(null);
+
+  function on_row_drag_start(event: DragEvent, item: FileSystemItem) {
+    ensure_selected(item);
+    const items = targets(item);
+    set_drag_paths(event, items.map((entry) => join_path(handler.segments, entry.name)));
+    dragging = new Set(items.map((entry) => entry.name));
+  }
+
+  /** The folder row under the pointer, unless it's being dragged itself. */
+  function folder_under(event: DragEvent): string | null {
+    const row = (event.target as Element).closest<HTMLElement>("[data-entry-name]");
+    const name = row?.dataset.entryName;
+    if (!name || row.dataset.entryKind !== "directory" || dragging.has(name)) return null;
+    return name;
+  }
+
+  function on_drag_over(event: DragEvent) {
+    if (picker || mobile || !has_drag_paths(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    drop_folder = folder_under(event);
+  }
+
+  async function on_drop(event: DragEvent) {
+    if (picker || mobile || !has_drag_paths(event)) return;
+    event.preventDefault();
+    const folder = folder_under(event);
+    drop_folder = null;
+    dragging = new Set();
+    await drop_paths(read_drag_paths(event), folder ? join_path(handler.segments, folder) : handler.path);
+  }
 
   function is_delete_key(e: KeyboardEvent): boolean {
     return e.key === "Delete" || (e.key === "Backspace" && e.metaKey);
@@ -108,31 +204,46 @@
       .catch((error) => report_file_error(`Could not open "${item.name}"`, error));
   }
 
-  async function item_menu(item: FileSystemItem, anchor: Position) {
-    const with_apps = await open_with_items(item);
+  /** Menu for `entries` (the selection, or one row): Open with, Rename, Save to disk and Properties need exactly one. */
+  async function item_menu(entries: FileSystemItem[], anchor: Position) {
+    const [item] = entries;
+    if (!item) return;
+    const single = entries.length === 1;
+    const with_apps = single ? await open_with_items(item) : [];
     const items: MenuItem[] = [
-      { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
+      { id: "open", label: single ? "Open" : `Open ${entries.length} items`, icon: ArrowSquareOutIcon, shortcut: "↵" },
       ...(with_apps.length > 1 ? [{ label: "Open with", icon: AppWindowIcon, items: with_apps }] : []),
       { separator: true },
       { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
-      { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
-      { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
+      ...(single
+        ? [
+            { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
+            { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
+          ]
+        : []),
       { separator: true },
-      { id: "delete", label: "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
-      { separator: true },
-      { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" },
+      { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true },
+      ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
     ];
 
     const choice = await dialogs.menu(items, { anchor });
-    if (choice === "open") open(item, anchor);
+    if (choice === "open") open_all(entries, anchor);
     else if (choice === "rename") rename_item(handler, window, item);
-    else if (choice === "copy") copy_item(handler, item);
-    else if (choice === "cut") cut_item(handler, item);
-    else if (choice === "delete") delete_item(handler, window, item);
+    else if (choice === "copy") copy_items(handler, entries);
+    else if (choice === "cut") cut_items(handler, entries);
+    else if (choice === "delete") delete_items(handler, window, entries);
     else if (choice === "properties") show_properties(handler, window, item);
     else if (choice === "save_to_disk") save_to_disk(join_path(handler.segments, item.name));
     else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
+  }
+
+  /** Several entries: files open in their apps, the first folder is navigated to. */
+  function open_all(entries: FileSystemItem[], anchor: Position) {
+    if (entries.length === 1) return open(entries[0], anchor);
+    for (const entry of entries.filter((entry) => entry.kind === "file")) open(entry, anchor);
+    const folder = entries.find((entry) => entry.kind === "directory");
+    if (folder) open(folder, anchor);
   }
 
   async function background_menu(anchor: Position) {
@@ -156,16 +267,31 @@
 
 <!-- Right-click (mobile: long press) on empty space, or the list's padding, is the folder's own menu. -->
 <div
+  bind:this={list}
   role="presentation"
   {@attach mobile && !picker && long_press({ on_menu: background_menu, ignore: "[role=row]" })}
-  class="min-h-0 min-w-0 flex-1 overflow-y-auto"
+  class="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
   onkeydown={(event) => {
     if (picker) return;
     if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content) {
       event.preventDefault();
       paste(handler, window);
+    } else if (multi && mod(event) && event.key.toLowerCase() === "a" && !(event.target as Element).closest("input")) {
+      event.preventDefault();
+      chosen = new Set(order);
+    } else if (multi && event.key === "Escape" && selection.size > 0) {
+      event.preventDefault();
+      chosen = new Set();
     }
   }}
+  onpointerdown={on_pointer_down}
+  onpointermove={on_pointer_move}
+  onlostpointercapture={() => (marquee = null)}
+  ondragover={on_drag_over}
+  ondragleave={(event) => {
+    if (!list?.contains(event.relatedTarget as Node | null)) drop_folder = null;
+  }}
+  ondrop={on_drop}
   oncontextmenu={(event) => {
     if (picker || mobile) return event.preventDefault();
     if ((event.target as Element).closest("[role=row]")) return;
@@ -194,29 +320,43 @@
       {#each filtered_items as item (item.name)}
         {@const choosable = !picker || accepts(picker, item)}
         <button
+          data-entry-name={item.name}
+          data-entry-kind={item.kind}
+          draggable={multi}
           aria-disabled={!choosable && item.kind === "file"}
-          aria-selected={picker ? selected === item.name : undefined}
+          aria-selected={picker ? selected === item.name : multi ? selection.has(item.name) : undefined}
           onclick={(event) => {
             const anchor = { x: event.clientX, y: event.clientY };
             if (picker) {
               if (mobile && item.kind === "directory") open(item, anchor);
               else selected = choosable ? item.name : null;
             } else if (mobile) open(item, anchor);
+            else select(item.name, event);
           }}
-          {@attach mobile && !picker && long_press({ on_menu: (point) => item_menu(item, point) })}
+          {@attach mobile && !picker && long_press({ on_menu: (point) => item_menu([item], point) })}
           role="row"
           class={cn(
-            "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:bg-primary/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+            "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-subgrid items-center rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+            !multi && "focus:bg-primary/12",
             clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50",
+            dragging.has(item.name) && "opacity-40",
             !choosable && item.kind === "file" && "opacity-38",
-            picker && selected === item.name && "bg-primary/15 hover:bg-primary/15"
+            picker && selected === item.name && "bg-primary/15 hover:bg-primary/15",
+            selection.has(item.name) && "bg-primary/14 hover:bg-primary/18",
+            drop_folder === item.name && "bg-primary/18 ring-2 ring-primary/70 ring-inset"
           )}
           ondblclick={(event) => open(item, { x: event.clientX, y: event.clientY })}
           oncontextmenu={(event) => {
             event.preventDefault();
             if (picker || mobile) return;
             event.currentTarget.focus();
-            item_menu(item, { x: event.clientX, y: event.clientY });
+            ensure_selected(item);
+            item_menu(targets(item), { x: event.clientX, y: event.clientY });
+          }}
+          ondragstart={(event) => on_row_drag_start(event, item)}
+          ondragend={() => {
+            dragging = new Set();
+            drop_folder = null;
           }}
           onkeydown={(event) => {
             if (picker) {
@@ -224,13 +364,14 @@
               event.preventDefault();
               return open(item, row_anchor(event.currentTarget));
             }
+            const entries = targets(item);
             if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
-            else if (event.key === "Enter") open(item, row_anchor(event.currentTarget));
+            else if (event.key === "Enter") open_all(entries, row_anchor(event.currentTarget));
             else if (event.key === "F2") rename_item(handler, window, item);
-            else if (mod(event) && event.key.toLowerCase() === "c") copy_item(handler, item);
-            else if (mod(event) && event.key.toLowerCase() === "x") cut_item(handler, item);
-            else if (is_delete_key(event)) delete_item(handler, window, item);
-            else if (is_menu_key(event)) item_menu(item, row_anchor(event.currentTarget));
+            else if (mod(event) && event.key.toLowerCase() === "c") copy_items(handler, entries);
+            else if (mod(event) && event.key.toLowerCase() === "x") cut_items(handler, entries);
+            else if (is_delete_key(event)) delete_items(handler, window, entries);
+            else if (is_menu_key(event)) item_menu(entries, row_anchor(event.currentTarget));
             else return;
             event.preventDefault();
           }}
@@ -243,5 +384,16 @@
         </button>
       {/each}
     </div>
+  {/if}
+
+  {#if marquee_rect && list}
+    {@const origin = list.getBoundingClientRect()}
+    <div
+      class="pointer-events-none absolute rounded-sm bg-primary/12 ring-1 ring-primary/60"
+      style:left="{marquee_rect.left - origin.left}px"
+      style:top="{marquee_rect.top - origin.top + list.scrollTop}px"
+      style:width="{marquee_rect.right - marquee_rect.left}px"
+      style:height="{marquee_rect.bottom - marquee_rect.top}px"
+    ></div>
   {/if}
 </div>

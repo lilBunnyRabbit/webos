@@ -1,6 +1,9 @@
 import type { IService } from "../../type";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, OpenOptions } from "..";
+import type { DesktopMove } from "./helper";
+
+export type { DesktopMove };
 
 /**
  * The `/home/Desktop` folder as items, addressed by entry name (ADR-022). Platform-neutral (ADR-016): the desktop grid
@@ -52,8 +55,11 @@ export interface GridDesktopService extends DesktopService {
 
   has_item_in_position(position: Position): boolean;
 
-  /** Saves the item's new cell to `/var/lib/desktop/layout.json`. */
-  move_item(from: Position, to: Position): Position;
+  /**
+   * Moves items to new cells in one layout write (`/var/lib/desktop/layout.json`). A target that's taken or off the
+   * grid becomes the nearest free cell (`DesktopHelper.resolve_moves`).
+   */
+  move_items(moves: DesktopMove[]): void;
 }
 
 /** The mobile home (ADR-016): an ordered flow of entries, paged by capacity, plus a dock. */

@@ -37,19 +37,25 @@ export async function create_folder(handler: DirectoryHandler, window: WindowHan
   }
 }
 
-export async function delete_item(handler: DirectoryHandler, window: WindowHandle, item: FileSystemItem): Promise<void> {
-  const recursive = item.kind === "directory";
-  const confirmed = await window.confirm(`Delete “${item.name}”?`, {
-    detail: recursive ? "The folder and everything in it will be deleted. This can't be undone." : "This can't be undone.",
+/** One confirmation for the whole selection. */
+export async function delete_items(handler: DirectoryHandler, window: WindowHandle, items: FileSystemItem[]): Promise<void> {
+  const [first] = items;
+  if (!first) return;
+  const single = items.length === 1;
+  const folders = items.some((item) => item.kind === "directory");
+  const confirmed = await window.confirm(single ? `Delete “${first.name}”?` : `Delete ${items.length} items?`, {
+    detail: folders ? "Folders go with everything in them. This can't be undone." : "This can't be undone.",
     confirm_label: "Delete",
     danger: true,
   });
   if (!confirmed) return;
 
-  try {
-    await handler.delete_entry(item.name, { recursive });
-  } catch (error) {
-    report_file_error(`Could not delete "${item.name}"`, error);
+  for (const item of items) {
+    try {
+      await handler.delete_entry(item.name, { recursive: item.kind === "directory" });
+    } catch (error) {
+      report_file_error(`Could not delete "${item.name}"`, error);
+    }
   }
 }
 
@@ -100,12 +106,12 @@ export function open_with(handler: DirectoryHandler, item: FileSystemItem, app_i
 
 const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
-export function copy_item(handler: DirectoryHandler, item: FileSystemItem): void {
-  clipboard().copy_files([join_path(handler.segments, item.name)]);
+export function copy_items(handler: DirectoryHandler, items: FileSystemItem[]): void {
+  clipboard().copy_files(items.map((item) => join_path(handler.segments, item.name)));
 }
 
-export function cut_item(handler: DirectoryHandler, item: FileSystemItem): void {
-  clipboard().cut_files([join_path(handler.segments, item.name)]);
+export function cut_items(handler: DirectoryHandler, items: FileSystemItem[]): void {
+  clipboard().cut_files(items.map((item) => join_path(handler.segments, item.name)));
 }
 
 /** Pastes into the folder shown by `handler`; name clashes ask in a sheet over this window. */

@@ -41,6 +41,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 - **Places sidebar** (from `@3xl`): Home, Desktop, Documents, Downloads, and the System folders `/etc`, `/var`, `/tmp`, with the current one highlighted (clicking it is a no-op).
 - **List:** a grid with sticky overline headers (Name, Size, Modified; Modified from `@md`), 32px rows, folders first in `primary`, files as duotone icons, `.desktop` rows drawn as `ShortcutIcon` with the target app's icon, and a "system" badge on `/etc`, `/var`, `/tmp` and below. Skeleton rows while loading, empty states for an empty folder and for a filter with no matches.
 - **Actions:** open a file in its associated app (double-click or Enter; a tap on mobile, through `apps.open`; a `.desktop` shortcut launches its target), enter a folder, delete (Delete or Cmd+Backspace, `confirm()`; folders recursive).
+- **Multi-select and drag** (desktop pointer): click, Ctrl+click, Shift+click, Ctrl+A, a rectangle from empty space; Cut, Copy, Delete and Open act on the selection. Drag rows onto a folder, into another Explorer window or onto the desktop to move them ([details](services/files.md#multi-select-and-drag-and-drop)).
 - **Status bar:** one truncating line: item count (folder/file breakdown from `@sm`), and a storage meter with usage of quota (from `@md`).
 
 **Known gaps.**
@@ -48,7 +49,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 - Folders update live when another window or a service changes them (each `DirectoryHandler` watches its revision). A folder deleted or moved elsewhere sends the window to the nearest existing parent with a toast. Changes in other browser tabs still need a manual reload.
 - System folders are only marked, not protected: they can be deleted like any folder.
 - No associations, so `apps.open()` on a folder path doesn't reach it. Only `launch("file-explorer", { path })` does.
-- No drag-and-drop or multi-select yet. New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
+- No multi-select on phones and tablets, no arrow-key selection, and no dropping real files in from the OS. New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
 
 ---
 

@@ -21,7 +21,7 @@ Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/short
 Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)):
 
 - **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
-- **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_item(from, to)`. The desktop shell (`desktop.svelte`, `desktop-item.svelte`, the drag handle) and this inspector use it.
+- **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_items(moves)`. The desktop shell (`desktop.svelte`) and this inspector use it.
 - **`MobileDesktopService`**: the mobile home: ordered pages and a dock. See [Mobile home](#mobile-home).
 
 Both implementations own a `DesktopFolder` (composition, not a base class). It holds `entries`, the revision watch, reload, seeding trigger, and the file operations. The owner passes `read_layout`, `seed` and `loaded` callbacks, so each layout file stays with its service.
@@ -68,7 +68,7 @@ Three layers of state turn the folder into a grid:
 | `list` | `() => DesktopGrid` | The derived visible `grid`. |
 | `has_item_in_position` | `(position) => boolean` | Against the visible grid |
 | `items` | `() => DesktopItem[]` | Folder entries in folder order |
-| `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |
+| `move_items` | `(moves: { name, to }[]) => void` | Resolves targets with `DesktopHelper.resolve_moves` (a taken or off-grid target becomes the nearest free cell; earlier moves claim first; an item with nowhere to go is left out), rewrites `positions` (below) and saves the layout once, without awaiting. Nothing resolved: no-op. Names not yet in the grid (just moved into `/home/Desktop`) get a position that applies when they load |
 | `remove_item` | `(name) => Promise<void>` | Deletes the entry from `/home/Desktop` (folders recursively); an unknown name does nothing. The caller confirms first (`desktop-actions.ts`, ADR-025). The deletion bumps the folder's revision, which reloads the desktop. |
 | `rename_item` | `(name, new_name) => Promise<void>` | Saves the cell (if it has one) under the new name first, then `files.rename_entry`, so the icon keeps its cell. Throws if the name is taken |
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
@@ -81,7 +81,7 @@ Three layers of state turn the folder into a grid:
 ## State
 
 - `folder.entries`: `$state<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()`.
-- `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_item()`.
+- `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_items()`.
 - `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
 - `files_service`, `apps_service`: `$derived(kernel.service(...))` set in the constructor.
@@ -115,7 +115,7 @@ A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.
 | Positions | `/var/lib/desktop/layout.json`: `{ "version": 1, "positions": { "Settings.desktop": { "x": 0, "y": 0 } } }`, pretty-printed |
 | Version | `LAYOUT_VERSION = 1` (private to `layout.ts`) |
 | Load | zod: `version` literal `1`, `positions` a record of `{ x, y }` non-negative integers. Wrong version, bad shape or bad JSON → `{}` (every icon takes a free cell), no error logged |
-| Written | Seeding, and every `move_item()`. `/var/lib/desktop` is created on first write (`files.create_directory` under `/var/lib`, which `ensure_hierarchy` guarantees). Write errors: `console.error("[DesktopService] Failed to save the layout")` |
+| Written | Seeding, and every `move_items()`. `/var/lib/desktop` is created on first write (`files.create_directory` under `/var/lib`, which `ensure_hierarchy` guarantees). Write errors: `console.error("[DesktopService] Failed to save the layout")` |
 
 Positions are keyed by entry name, so renaming an entry in File Explorer loses its position.
 
@@ -133,14 +133,15 @@ Positions are keyed by entry name, so renaming an entry in File Explorer loses i
 
 Unplaced items are never written back. Their cell is recomputed on every fit, so a new or removed entry, or a resize, can shift them.
 
-**Move** (`move_item(from, to)`) builds a fresh `positions`:
+**Move** (`move_items(moves)`, ADR-011 revision) builds a fresh `positions`:
 
-1. Start from the current `positions`, minus names no longer in `entries` (stale names are pruned here and only here).
-2. Pin every item **visible** in `grid` to the cell it's shown in. Relocated and unplaced icons become real positions, so they don't jump when this cell changes hands.
-3. Set the moved item to `to`.
-4. Assign `positions` (the grid updates at once), then write the file in the background.
+1. Resolve the targets (`DesktopHelper.resolve_moves(grid, dimensions, moves)`): cells held by items that aren't moving are taken; each move takes its target when it's on the grid and free, else the nearest free cell by distance (scan order breaks ties, so an item may land back in its own vacated cell). Tested in `helper.test.ts`.
+2. Start from the current `positions`, minus names no longer in `entries` (stale names are pruned here and only here).
+3. Pin every item **visible** in `grid` to the cell it's shown in. Relocated and unplaced icons become real positions, so they don't jump when a cell changes hands.
+4. Set each resolved item to its cell.
+5. Assign `positions` (the grid updates at once), then write the file in the background.
 
-Hidden items keep whatever position they had. If `to` is somehow occupied, both names point at one cell and `arrange()` gives it to the first in entry order; the other becomes unplaced.
+Hidden items keep whatever position they had.
 
 **Refresh.** Any mutation of `/home/Desktop` made through FilesService in this tab (File Explorer, `pin()`, `remove_item()`, an app saving there) bumps its revision and reloads the desktop. Writing `layout.json` bumps `/var/lib/desktop`, which nothing watches, so a move doesn't reload. Overlapping reloads resolve to the newest (`reload_id`).
 

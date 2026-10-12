@@ -1,7 +1,9 @@
 import type { IService } from "../../type";
 
+import type { ConflictChoice } from "../files/type";
+
+export type { ConflictChoice };
 export type ClipboardMode = "copy" | "cut";
-export type ConflictChoice = "replace" | "keep_both" | "skip";
 
 export interface FilesClipboard {
   kind: "files";

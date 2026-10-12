@@ -1,7 +1,7 @@
 import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
-import { DesktopHelper } from "./helper";
+import { DesktopHelper, type DesktopMove } from "./helper";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
   LAYOUT_DIRECTORY_NAME,
@@ -159,25 +159,19 @@ export class DesktopService implements GridDesktopService {
     return this.grid[position.y]?.[position.x];
   }
 
-  public move_item(from: Position, to: Position): Position {
-    if (from.x === to.x && from.y === to.y) {
-      return from;
-    }
-
-    const item = this.get_item(from);
-    if (!item) return from;
+  public move_items(moves: DesktopMove[]): void {
+    const resolved = DesktopHelper.resolve_moves(this.grid, this.container.grid, moves);
+    if (resolved.size === 0) return;
 
     // Positions of entries that no longer exist are dropped here.
     const names = new Set(this.folder.names());
     const positions: Positions = Object.fromEntries(Object.entries(this.positions).filter(([name]) => names.has(name)));
     // Pin every visible item to where it's shown, so relocated items don't jump once this cell changes hands.
     this.grid.forEach((row, y) => row?.forEach((entry, x) => entry && (positions[entry.name] = { x, y })));
-    positions[item.name] = to;
+    for (const [name, position] of resolved) positions[name] = position;
     this.positions = positions;
 
     this.save_positions(positions).catch((error) => console.error("[DesktopService] Failed to save the layout", error));
-
-    return to;
   }
 
   public items(): DesktopItem[] {

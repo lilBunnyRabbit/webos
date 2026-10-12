@@ -40,12 +40,16 @@ const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
 export const desktop_path = (item: DesktopItem): string => `${PATHS.desktop}/${item.name}`;
 
-export function copy_item(item: DesktopItem): void {
-  clipboard().copy_files([desktop_path(item)]);
+export function copy_items(items: DesktopItem[]): void {
+  clipboard().copy_files(items.map(desktop_path));
 }
 
-export function cut_item(item: DesktopItem): void {
-  clipboard().cut_files([desktop_path(item)]);
+export function cut_items(items: DesktopItem[]): void {
+  clipboard().cut_files(items.map(desktop_path));
+}
+
+export function open_items(items: DesktopItem[], anchor: Position): void {
+  for (const item of items) desktop().open(item, { anchor });
 }
 
 export async function paste(): Promise<void> {
@@ -59,6 +63,35 @@ export async function paste(): Promise<void> {
 }
 
 export async function remove_item(item: DesktopItem): Promise<void> {
+  return remove_items([item]);
+}
+
+/** One confirmation for the whole selection. */
+export async function remove_items(items: DesktopItem[]): Promise<void> {
+  if (items.length === 0) return;
+  if (items.length > 1) {
+    const confirmed = await dialogs().show(
+      ConfirmDialog,
+      {
+        message: `Delete ${items.length} items?`,
+        detail: "Folders go with everything in them; shortcuts only remove the shortcut. This can't be undone.",
+        confirm_label: "Delete",
+        danger: true,
+      },
+      { dismissible: false }
+    );
+    if (!confirmed) return;
+    for (const item of items) {
+      try {
+        await desktop().remove_item(item.name);
+      } catch (error) {
+        report_file_error(`Could not delete "${item.name}"`, error);
+      }
+    }
+    return;
+  }
+
+  const [item] = items;
   const shortcut = item.kind === "shortcut";
   const confirmed = await dialogs().show(
     ConfirmDialog,
@@ -124,28 +157,37 @@ export function show_properties(item: DesktopItem): void {
   });
 }
 
-export async function item_menu(item: DesktopItem, anchor: Position): Promise<void> {
-  const shortcut = item.kind === "shortcut";
+/** The menu for the selection: everything acts on all of `items`; Rename, Properties and Save to disk need one. */
+export async function item_menu(items: DesktopItem[], anchor: Position): Promise<void> {
+  const [item] = items;
+  if (!item) return;
+  const single = items.length === 1;
+  const shortcut = single && item.kind === "shortcut";
   const choice = await dialogs().menu(
     [
-      { id: "open", label: "Open", icon: ArrowSquareOutIcon, shortcut: "↵" },
+      { id: "open", label: single ? "Open" : `Open ${items.length} items`, icon: ArrowSquareOutIcon, shortcut: "↵" },
       { separator: true },
       { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
-      { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
-      ...(shortcut ? [] : [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }]),
+      ...(single ? [{ id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" }] : []),
+      ...(single && !shortcut ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
       { separator: true },
-      { id: "delete", label: shortcut ? "Remove shortcut" : "Delete", icon: TrashIcon, shortcut: "Del", danger: true },
-      { separator: true },
-      { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" },
+      {
+        id: "delete",
+        label: shortcut ? "Remove shortcut" : single ? "Delete" : `Delete ${items.length} items`,
+        icon: TrashIcon,
+        shortcut: "Del",
+        danger: true,
+      },
+      ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
     ],
     { anchor }
   );
-  if (choice === "open") desktop().open(item, { anchor });
+  if (choice === "open") open_items(items, anchor);
   else if (choice === "rename") rename_item(item);
-  else if (choice === "copy") copy_item(item);
-  else if (choice === "cut") cut_item(item);
-  else if (choice === "delete") remove_item(item);
+  else if (choice === "copy") copy_items(items);
+  else if (choice === "cut") cut_items(items);
+  else if (choice === "delete") remove_items(items);
   else if (choice === "properties") show_properties(item);
   else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
 }
