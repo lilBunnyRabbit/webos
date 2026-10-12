@@ -1,7 +1,13 @@
 # ADR-016: Mobile Support
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Accepted (groundwork implemented 2026-10-12)
+
+> **Revision 2026-10-12: groundwork** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-groundwork.md))
+> - Built early, before the mobile shell: `kernel.platform` and the interface split. Everything else waits for the last roadmap block.
+> - **Detection:** `?platform=mobile|desktop` wins; otherwise `(pointer: coarse) and (hover: none)` means mobile. A plain readonly value, not reactive (it never changes).
+> - **Interfaces:** the sketch below is outdated. The base keeps the name `WindowsService` and holds what shared code calls, including `toggle_maximize` and `container.element`. `DesktopWindowsService extends WindowsService` adds `container.bounds`, `set_container`, `snap`. Shared callers were checked one by one (apps, dialogs, session, window handle, Activity Monitor).
+> - Until a mobile shell exists, `platform` is read by nothing: mobile devices still get the desktop services and shell.
 
 ## Context
 

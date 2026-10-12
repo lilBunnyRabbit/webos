@@ -1,10 +1,10 @@
 <script lang="ts">
-  import kernel, { type SettingsService, type WindowsService } from "$lib/core/api";
+  import kernel, { type DesktopWindowsService, type SettingsService } from "$lib/core/api";
   import type { SvelteHTMLElements } from "svelte/elements";
   import Window from "../window/window.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const windows = $derived(kernel.service<WindowsService>("windows"));
+  const windows = $derived(kernel.service<DesktopWindowsService>("windows"));
 
   const list = $derived(windows.list());
 

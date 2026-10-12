@@ -37,6 +37,7 @@ There's a `// TODO: kernel to interface` in `type.ts`. `ServiceDescriptor` refer
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
+| `platform` | `readonly platform: Platform` (`"desktop" \| "mobile"`) | `detect_platform()` from `kernel/platform.ts`, read once when the singleton is built (ADR-016). `?platform=mobile\|desktop` in the URL wins; otherwise a coarse primary pointer that can't hover (`(pointer: coarse) and (hover: none)`) is mobile. Not reactive, never changes. **Nothing reads it yet**: `init.ts` registers the desktop services and `os.svelte` renders the desktop shell on both platforms until the mobile shell exists. |
 | `services` | `readonly services: Map<string, IService>` | A `SvelteMap`, so lookups inside `$derived` are reactive to set/replace. Holds only fully initialized services. Public: the Kernel app iterates it. |
 | `init` | `init(): Promise<Kernel>` | Idempotent while initialized. Calls `register_default_services(this)`, resolves order, then for each key: `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. Sets `is_initialized`. If a construction or `init()` throws, it tears down what already initialized and rethrows (see [Failed init](#failed-init)). |
 | `register` | `register<T extends IService>(name: string, descriptor: ServiceDescriptor<T>): void` | Records a descriptor only, constructing nothing. Throws if called after init. Warns `Overwriting service "x"` on a duplicate key. |

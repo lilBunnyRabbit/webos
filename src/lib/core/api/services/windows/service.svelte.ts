@@ -3,7 +3,7 @@ import type { Bounds } from "$lib/core/utils/type";
 import { v4 as uuid } from "uuid";
 import { WindowsHelper } from "./helper";
 import type {
-  WindowsService as IWindowsService,
+  DesktopWindowsService,
   RestoreResult,
   SnapZone,
   WindowId,
@@ -14,7 +14,7 @@ import type {
 import { WindowFlag } from "./type";
 import type { AppInstance } from "../apps/type";
 
-export class WindowsService implements IWindowsService {
+export class WindowsService implements DesktopWindowsService {
   name = "WindowsService";
   description = "Window lifecycle, geometry and z-order";
   inspector = () => import("./inspector.svelte");

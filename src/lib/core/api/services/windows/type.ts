@@ -4,21 +4,14 @@ import type { Bounds, PartialRecord } from "$lib/core/utils/type";
 import type { AppId, AppInstance, AppProps } from "../apps/type";
 
 /**
- * Service for managing windows lifecycle, state, and operations.
- * Handles window creation, destruction, focusing, and state manipulation.
+ * Platform-neutral window management (ADR-016): lifecycle, focus, minimize/maximize, session restore. What code outside
+ * the desktop shell may rely on. A mobile implementation is free to treat maximize and bounds as no-ops.
  */
 export interface WindowsService extends IService {
-  /** The container bounds for all windows */
+  /** The element windows render in; dialogs anchor to it when nothing better is given. */
   readonly container: {
-    bounds: Bounds;
     element: HTMLElement | null;
   };
-
-  /**
-   * Sets the container bounds for all windows.
-   * @param element - The element to set the container bounds from
-   */
-  set_container(element?: HTMLElement | null): Bounds;
 
   /**
    * Closes a window by its ID.
@@ -96,14 +89,6 @@ export interface WindowsService extends IService {
   restore(windows: WindowSnapshot[], create: (snapshot: WindowSnapshot) => AppInstance | null): RestoreResult;
 
   /**
-   * Snaps a window to a specific zone (edge or corner).
-   * @param id - The window ID to snap
-   * @param zone - The snap zone to snap to, or `null` to unsnap
-   * @returns `true` if the window was snapped, `false` if it didn't exist
-   */
-  snap(id: WindowId, zone: SnapZone | null): boolean;
-
-  /**
    * Toggles the maximized state of a window.
    * @param id - The window ID to toggle
    * @returns `true` if the window is now maximized, `false` if it's now unmaximized or didn't exist
@@ -116,6 +101,29 @@ export interface WindowsService extends IService {
    * @returns `true` if the window is now minimized, `false` if it's now unminimized or didn't exist
    */
   toggle_minimize(id: WindowId): boolean;
+}
+
+/** The desktop shell's windows: positioned in a measured container, draggable, snappable (ADR-016). */
+export interface DesktopWindowsService extends WindowsService {
+  /** The container bounds for all windows */
+  readonly container: {
+    bounds: Bounds;
+    element: HTMLElement | null;
+  };
+
+  /**
+   * Sets the container bounds for all windows.
+   * @param element - The element to set the container bounds from
+   */
+  set_container(element?: HTMLElement | null): Bounds;
+
+  /**
+   * Snaps a window to a specific zone (edge or corner).
+   * @param id - The window ID to snap
+   * @param zone - The snap zone to snap to, or `null` to unsnap
+   * @returns `true` if the window was snapped, `false` if it didn't exist
+   */
+  snap(id: WindowId, zone: SnapZone | null): boolean;
 }
 
 export type WindowId = string;

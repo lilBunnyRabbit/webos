@@ -41,6 +41,13 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 
 ## Public API
 
+Two interfaces in `type.ts` (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-groundwork.md)):
+
+- **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
+- **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container` and `snap`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
+
+The class `WindowsService` implements `DesktopWindowsService`. There's no mobile implementation yet. Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); a mobile implementation may treat them as no-ops.
+
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |

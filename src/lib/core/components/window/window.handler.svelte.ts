@@ -3,13 +3,13 @@ import kernel, {
   type SnapZone,
   type WindowId,
   type WindowInstance,
-  type WindowsService,
+  type DesktopWindowsService,
 } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { Attachment } from "svelte/attachments";
 
 // TODO: cleanup logic
-const windows = $derived(kernel.service<WindowsService>("windows"));
+const windows = $derived(kernel.service<DesktopWindowsService>("windows"));
 
 const DRAG_THRESHOLD = 4;
 

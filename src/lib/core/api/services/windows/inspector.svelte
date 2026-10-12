@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { InspectorProps, WindowsService } from "$lib/core/api";
+  import type { InspectorProps, DesktopWindowsService } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
 
-  let { service, detailed }: InspectorProps<WindowsService> = $props();
+  let { service, detailed }: InspectorProps<DesktopWindowsService> = $props();
 
   const windows = $derived(service.sorted_list(([, a], [, b]) => b.order - a.order));
   const focused_id = $derived(service.get_focused());

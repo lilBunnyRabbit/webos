@@ -10,10 +10,10 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-1. [-] **Foundations**
+1. [-] **Foundations** (left: service tests through a real kernel)
    - [-] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler covered. Service tests through a real kernel still open
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
-   - [ ] Mobile groundwork only (ADR-016): platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
+   - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
 3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
 4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
@@ -371,9 +371,9 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - **ADR:** [ADR-016](adrs/016-mobile-support.md)
 - **Brainstorm:** [2026-02-01 Mobile Support](brainstorm/2026-02-01_mobile-support.md)
 - **Status:** Not started
-- [ ] Platform detection utility (runtime-once, `kernel.platform`)
+- [x] Platform detection utility (runtime-once, `kernel.platform`, `?platform=` override)
 - [ ] Shell-level split (`os.svelte` → `<DesktopShell>` / `<MobileShell>`)
-- [ ] Shared `IWindowsService` base interface
+- [x] Shared base interface: `WindowsService` (base) / `DesktopWindowsService`
 - [ ] `MobileWindowsService` (fullscreen-only, no drag/resize/snap)
 - [ ] `MobileDesktopService` (paged home screen, dock, app search)
 - [ ] Mobile shell components (fullscreen app container, app switcher, home screen)
