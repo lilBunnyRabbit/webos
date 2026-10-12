@@ -189,6 +189,7 @@ Modelled on the owner's E-Loterija (named configurations, each a list of `{min, 
 | 2048 accent, Calculator toolbar | Left as is |
 | Speed Reader pauses (automatic vs hand-marked stops) | Open; automatic for now |
 | Speed Reader parity with the deployed `/speed-reader` (editor cleanup, stop tokens, video export via mediabunny, export presets) | **Deferred**: the owner will rework the whole app later; current WebOS version stays |
+| Kit pass follow-ups: pressed tint is `primary` everywhere, `Textarea` keeps a `mono` prop, `CopyButton` needs an app window (its toast) | **Kept as built** (owner, 2026-10-13) |
 
 ## Next session topics
 
