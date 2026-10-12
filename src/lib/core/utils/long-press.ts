@@ -19,8 +19,17 @@ function debug(line: string) {
       "position:fixed;left:4px;right:4px;top:4px;z-index:100000;max-height:45vh;overflow:auto;margin:0;padding:6px;font:11px/1.3 monospace;background:rgb(0 0 0/.85);color:#fff;pointer-events:none;white-space:pre-wrap";
     document.body.append(panel);
   }
-  debug_lines = [...debug_lines.slice(-40), `${(performance.now() / 1000).toFixed(2)} ${line}`];
-  panel.textContent = `${navigator.userAgent}\n${debug_lines.join("\n")}`;
+  const stamp = `${(performance.now() / 1000).toFixed(2)} `;
+  const kind = line.split(" ")[0];
+  const last = debug_lines.at(-1);
+  // Collapse runs of the same event so one gesture fits on screen; newest first since the panel can't be scrolled.
+  if (last?.split(" ")[1] === kind && (kind === "move" || kind === "touchmove")) {
+    const count = Number(last.match(/ x(\d+)$/)?.[1] ?? 1) + 1;
+    debug_lines = [...debug_lines.slice(0, -1), `${stamp}${line} x${count}`];
+  } else {
+    debug_lines = [...debug_lines.slice(-30), `${stamp}${line}`];
+  }
+  panel.textContent = `${navigator.userAgent}\n${[...debug_lines].reverse().join("\n")}`;
 }
 
 export interface LongPressOptions {
@@ -63,6 +72,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     const ignored = (event: Event) => !!options.ignore && !!(event.target as Element).closest?.(options.ignore);
 
     function on_pointer_down(event: PointerEvent) {
+      if (event.pointerType !== "mouse") debug_lines = [];
       debug(`down ${event.pointerType} id=${event.pointerId} primary=${event.isPrimary} ta=${getComputedStyle(element).touchAction}`);
       if (event.pointerType === "mouse" || !event.isPrimary || ignored(event)) return;
       reset();
@@ -87,7 +97,10 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_pointer_move(event: PointerEvent) {
-      if (start) debug(`move id=${event.pointerId} held=${held} dragging=${dragging}`);
+      if (start)
+        debug(
+          `move held=${held} dragging=${dragging} dist=${Math.round(Math.hypot(event.clientX - start.x, event.clientY - start.y))}`
+        );
       if (event.pointerId !== pointer_id || !start) return;
       const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y) > SLOP_PX;
 
