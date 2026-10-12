@@ -263,20 +263,25 @@
       >
         <canvas bind:this={canvas} class="block size-full"></canvas>
 
-        {#if game.status !== Status.PLAYING}
-          <div class="absolute inset-0 grid place-items-center bg-background/70 p-4 text-center" aria-live="polite">
+        {#if game.status === Status.READY}
+          <!-- Below the snake, which starts in the middle, so the player sees where it is and which way it faces. -->
+          <div class="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-[8cqmin] text-center" aria-live="polite">
+            <p class="text-ui text-foreground/80">Arrow keys, WASD or a swipe to start</p>
+            <Button size="sm" variant="primary" onclick={play}>Start</Button>
+          </div>
+        {:else if game.status !== Status.PLAYING}
+          <div
+            class="absolute inset-0 grid animate-in place-items-center rounded-[inherit] bg-background/80 p-4 text-center backdrop-blur-[2px] fade-in"
+            aria-live="polite"
+          >
             <div class="flex flex-col items-center gap-3">
-              {#if game.status === Status.READY}
-                <p class="text-sm font-semibold">Ready</p>
-                <p class="text-ui text-foreground/65">Arrow keys, WASD or a swipe to start.</p>
-                <Button size="sm" variant="primary" onclick={play}>Start</Button>
-              {:else if game.status === Status.PAUSED}
-                <p class="text-sm font-semibold">Paused</p>
-                <p class="font-mono text-2xs text-foreground/65 tabular-nums">Score {game.score}</p>
+              {#if game.status === Status.PAUSED}
+                <p class="text-base font-semibold">Paused</p>
+                <p class="font-mono text-2xs text-foreground/80 tabular-nums">Score {game.score}</p>
                 <Button size="sm" variant="primary" onclick={play}>Resume</Button>
               {:else}
-                <p class="text-sm font-semibold">{game.status === Status.WON ? "You filled the board" : "Game over"}</p>
-                <p class="font-mono text-2xs text-foreground/65 tabular-nums">
+                <p class="text-base font-semibold">{game.status === Status.WON ? "You filled the board" : "Game over"}</p>
+                <p class="font-mono text-2xs text-foreground/80 tabular-nums">
                   Score {game.score}{new_best ? " · New best" : ""}
                 </p>
                 <Button size="sm" variant="primary" onclick={new_game}>Play again</Button>
@@ -287,17 +292,17 @@
       </div>
     </div>
 
-    <div class="hidden grid-cols-3 gap-1 pointer-coarse:grid" role="group" aria-label="Direction">
-      <IconButton size="lg" class="col-start-2" label="Up" onclick={() => steer(Direction.UP)}>
+    <div class="hidden grid-cols-3 gap-1.5 pointer-coarse:grid" role="group" aria-label="Direction">
+      <IconButton size="lg" variant="secondary" class="col-start-2" label="Up" onclick={() => steer(Direction.UP)}>
         <ArrowUpIcon weight="bold" />
       </IconButton>
-      <IconButton size="lg" class="col-start-1" label="Left" onclick={() => steer(Direction.LEFT)}>
+      <IconButton size="lg" variant="secondary" class="col-start-1" label="Left" onclick={() => steer(Direction.LEFT)}>
         <ArrowLeftIcon weight="bold" />
       </IconButton>
-      <IconButton size="lg" label="Down" onclick={() => steer(Direction.DOWN)}>
+      <IconButton size="lg" variant="secondary" label="Down" onclick={() => steer(Direction.DOWN)}>
         <ArrowDownIcon weight="bold" />
       </IconButton>
-      <IconButton size="lg" label="Right" onclick={() => steer(Direction.RIGHT)}>
+      <IconButton size="lg" variant="secondary" label="Right" onclick={() => steer(Direction.RIGHT)}>
         <ArrowRightIcon weight="bold" />
       </IconButton>
     </div>

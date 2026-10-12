@@ -62,8 +62,8 @@
   const PAD = [
     { direction: Direction.N, label: "Up", icon: ArrowUpIcon, area: "col-start-2 row-start-1" },
     { direction: Direction.W, label: "Left", icon: ArrowLeftIcon, area: "col-start-1 row-start-2" },
+    { direction: Direction.S, label: "Down", icon: ArrowDownIcon, area: "col-start-2 row-start-2" },
     { direction: Direction.E, label: "Right", icon: ArrowRightIcon, area: "col-start-3 row-start-2" },
-    { direction: Direction.S, label: "Down", icon: ArrowDownIcon, area: "col-start-2 row-start-3" },
   ];
 
   const Phase = { CARVING: "carving", READY: "ready", SOLVING: "solving", SOLVED: "solved" } as const;
@@ -416,34 +416,36 @@
       {status}
     </p>
 
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <div
-      bind:this={board}
-      {@attach observe_size}
-      role="application"
-      tabindex="0"
-      aria-label={mode === Mode.PLAY ? "Maze. Arrow keys or WASD move, Shift runs to the next junction." : "Maze"}
-      class={cn(
-        "relative min-h-0 w-full flex-1 rounded-lg focus-visible:outline-2 focus-visible:outline-cottontail",
-        mode === Mode.PLAY && "touch-none"
-      )}
-      onpointerdown={on_pointerdown}
-      onpointerup={on_pointerup}
-      onpointercancel={() => (swipe = null)}
-    >
-      <canvas
-        bind:this={canvas}
-        class="absolute inset-0 size-full"
-        width={Math.round(view.w * view.dpr)}
-        height={Math.round(view.h * view.dpr)}
-      ></canvas>
+    <div class="grid min-h-0 w-full flex-1 place-items-center [container-type:size]">
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <div
+        bind:this={board}
+        {@attach observe_size}
+        role="application"
+        tabindex="0"
+        aria-label={mode === Mode.PLAY ? "Maze. Arrow keys or WASD move, Shift runs to the next junction." : "Maze"}
+        class={cn(
+          "relative size-[100cqmin] rounded-lg bg-background-light ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail",
+          mode === Mode.PLAY && "touch-none"
+        )}
+        onpointerdown={on_pointerdown}
+        onpointerup={on_pointerup}
+        onpointercancel={() => (swipe = null)}
+      >
+        <canvas
+          bind:this={canvas}
+          class="absolute inset-0 size-full"
+          width={Math.round(view.w * view.dpr)}
+          height={Math.round(view.h * view.dpr)}
+        ></canvas>
+      </div>
     </div>
 
     {#if mode === Mode.PLAY}
-      <div class="hidden grid-cols-3 grid-rows-3 gap-1 pointer-coarse:grid">
+      <div class="hidden grid-cols-3 gap-1.5 pointer-coarse:grid" role="group" aria-label="Direction">
         {#each PAD as key (key.direction)}
           <IconButton
-            size="md"
+            size="lg"
             variant="secondary"
             label={key.label}
             class={key.area}
