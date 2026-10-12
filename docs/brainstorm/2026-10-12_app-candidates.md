@@ -154,6 +154,19 @@ Every `lilbunnyrabbit.github.io/*` site is one origin. OPFS, localStorage, Index
 | Namespace inside the origin (`/webos/` OPFS root, key prefix) | Rejected: prevents collisions, not isolation |
 | **Leave it** | **Chosen.** Every site on the origin is the owner's own code. Revisit if something actually collides, or before G8 (iframing sibling sites) |
 
+### Batch 1 result
+
+All 11 merged on 2026-10-12, each touching only its own folder (Calculator also its system docs page). `bun run check` 0 errors, tests green. None has been run in a browser yet.
+
+Open questions the agents raised, for the owner:
+- In-app keys: Paint registers with ShortcutsService per window (shows in Mod+/); Snake, 2048, Maze, Calculator, Speed Reader handle keys on their root element like Tic-Tac-Toe. Pick one convention.
+- Shared vs per-window app state: `persisted()` syncs every window (RNG Tools, Paint settings); `get`/`set` seeds new windows only (Dev Tools, Unit Converter). 2048's saved game is last-write-wins across windows.
+- Kit gaps worked around locally: Slider (4 apps use bare range inputs), Textarea (Dev Tools, RNG Tools, Speed Reader), colour well, anchored popover (Paint), `Input` invalid state, `Select` option groups, `Segmented` change callback.
+- Core gaps: close guard and `set_title` (Paint), `write_image(path, canvas)` in `utils/image.ts` (Paint copied the format map), a neutral home for `has_files`/`parent_folder`.
+- Music Visualizer uses the browser's fullscreen on its canvas; OS-level fullscreen would be a WindowHandle change.
+- Paint: white default canvas, black/white swatches treated as content not chrome; undo keeps full snapshots (50 / 256 MB).
+- Dev Tools regex runs on the main thread: catastrophic backtracking freezes the tab (worker + timeout fixes it).
+
 ## Next session topics
 
 - Close guard (G2), before any editor app

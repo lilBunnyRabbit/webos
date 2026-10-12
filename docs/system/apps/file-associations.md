@@ -71,6 +71,9 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 |-----|-------|
 | `image-crop`, `background-remove`, `image-concat`, `image-split`, `sprite-extract`, `qr-reader` | `image/*` |
 | `gif-player` | `image/gif`, `.gif`, `video/*` |
+| `paint` | `image/*` |
+| `music-visualizer` | `audio/*` |
+| `speed-reader` | `text/plain`, `.txt`, `.md` |
 
 ## Remembered defaults
 

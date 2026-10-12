@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Path as PathIcon } from "phosphor-svelte";
+import { Signpost as SignpostIcon } from "phosphor-svelte";
 
 export default define_app({
   id: "maze",
   name: "Maze",
-  icon: PathIcon,
+  icon: SignpostIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Watch mazes being built and solved, then race through them yourself.",

@@ -29,3 +29,5 @@ public/version.json
 
 _old/
 .vitest/
+
+.claude/worktrees/

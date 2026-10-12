@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.19.0",
+    date: "2026-10-12",
+    title: "Full house",
+    changes: [
+      { kind: NEW, text: "Calculator, with a history you can click to reuse." },
+      { kind: NEW, text: "Four games: Minesweeper, 2048, Snake and Maze, which builds and solves mazes before you race through one." },
+      { kind: NEW, text: "Paint: draw, fill, add shapes and text, and save or open images in your files." },
+      { kind: NEW, text: "Speed Reader shows a text or file one word at a time at the speed you choose and remembers where you stopped." },
+      { kind: NEW, text: "Music Visualizer plays an audio file as moving bars, a waveform or a ring." },
+      { kind: NEW, text: "Dev Tools for Base64, hashes, URLs, UUIDs, regular expressions and JSON." },
+      { kind: NEW, text: "RNG Tools for random numbers, dice, coin flips, picking from a list and passwords." },
+      { kind: NEW, text: "Unit Converter for length, weight, temperature, data size and more." },
+    ],
+  },
+  {
     version: "0.18.0",
     date: "2026-10-12",
     title: "Sorted",

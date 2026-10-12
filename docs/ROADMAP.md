@@ -247,13 +247,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### App catalogue
 - **Brainstorm:** [2026-10-12 App candidates](brainstorm/2026-10-12_app-candidates.md): every candidate rated build now / after a gate / skip, and the rules for building apps in parallel
 - [x] Categories + launcher sections + ranked search (ADR-001 revision, 2026-10-12)
-- [ ] Batch 1: owner picks from the build-now list
+- [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
+- [ ] Batch 1 follow-ups: in-app keys vs ShortcutsService, kit Slider/Textarea/colour well/anchored popover, `Input` invalid state, `Select` groups, close guard + `set_title` (Paint), `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
 - [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
 - [x] CSV Viewer (`.csv`/`.tsv` as a table)
 - [x] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
-- [ ] Calculator
+- [x] Calculator (2026-10-12)
 - [ ] Text Editor (tests file ops + persistence)
 - [x] Style Guide (component showcase)
 
@@ -261,18 +262,22 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Game Hub (library browser, play time tracking, categories, saves)
 - [ ] Nonogram (b&w + color, editor, hints, puzzle packs)
-- [ ] Other puzzles: Kakuro, Maze, Word Search, Nurikabe, Futoshiki
+- [x] Maze (generate, solve, play; 2026-10-12)
+- [x] Minesweeper, 2048, Snake (2026-10-12)
+- [ ] Other puzzles: Kakuro, Word Search, Nurikabe, Futoshiki
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Quick Notes (quno) — chronological notes, markdown, tags, search
-- [ ] Speed Reader — RSVP, adjustable WPM, library
+- [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
 - [ ] Markdown-to-PDF converter — live preview, templates, TOC
 - [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
 
 ### Media & Entertainment
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Series Tracker — TMDB API, episode tracking, watchlist
+- [x] Paint (2026-10-12)
+- [x] Music Visualizer (2026-10-12)
 - [ ] Image Editor — crop, resize, rotate, filters
 - [ ] Video Tools — trimmer, merger, audio extraction (ffmpeg.wasm)
 - [ ] Gifski — video-to-GIF via WASM
@@ -280,7 +285,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim
-- [ ] RNG Tools — dice, coin, shuffler, password generator
+- [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
+- [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
+- [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
 - [ ] Compression Tools — DEFLATE, LZ77, Huffman + WASM
 - [ ] P2P File Transfer — WebRTC, room codes, QR share

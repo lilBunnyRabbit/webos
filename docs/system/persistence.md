@@ -30,8 +30,19 @@ App storage keys in use today:
 | `app.tic-tac-toe.stats` | `user/tic-tac-toe` | Win/loss/draw counts |
 | `app.qr-reader.entries` | `user/qr-reader` | Scanned codes |
 | `app.example.count` | `user/example` | Counter (`number`) |
+| `app.calculator.history` | `system/calculator` | Past calculations, capped at 50 |
+| `app.minesweeper.{difficulty,custom,stats}` | `user/minesweeper` | Last difficulty, last custom board, played/won/best times |
+| `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
+| `app.snake.{speed,wrap,high_scores}` | `user/snake` | Last mode; high score per speed and wall mode |
+| `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
+| `app.rng-tools.{section,number,dice.notation,list,password,coin.tally}` | `user/rng-tools` | Last section and per-section settings; coin tally |
+| `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped) |
+| `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
+| `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
+| `app.music-visualizer.{mode,volume,smoothing,sensitivity}` | `user/music-visualizer` | Visualizer settings |
+| `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
 
-All are `storage.persisted()` cells, so every window of the app shares one live value.
+Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
 
 ## App storage handle
 
