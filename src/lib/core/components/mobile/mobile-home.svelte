@@ -30,7 +30,7 @@
   let scroller: HTMLElement | null = $state(null);
   let page = $state(0);
 
-  type Target = { zone: "home"; before: string | null } | { zone: "dock" };
+  type Target = { zone: "home"; before: string | null } | { zone: "dock"; before: string | null };
   let drag = $state<{ item: DesktopItem; docked: boolean; point: Position; target: Target | null } | null>(null);
   let turn_timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -45,7 +45,12 @@
     const element = document.elementFromPoint(point.x, point.y);
     if (!element) return null;
 
-    if (element.closest("[data-dock]")) return drag.docked || desktop.dock_full ? null : { zone: "dock" };
+    if (element.closest("[data-dock]")) {
+      // A docked icon moves within the dock; anything else needs a free slot.
+      if (!drag.docked && desktop.dock_full) return null;
+      const name = element.closest<HTMLElement>("[data-dock-name]")?.dataset.dockName ?? null;
+      return name === drag.item.name ? null : { zone: "dock", before: name };
+    }
 
     const icon = element.closest<HTMLElement>("[data-home-name]");
     if (icon) {
@@ -97,7 +102,7 @@
         clearTimeout(turn_timer);
         turn_timer = undefined;
         if (!finished?.target) return;
-        if (finished.target.zone === "dock") desktop.set_docked(finished.item.name, true);
+        if (finished.target.zone === "dock") desktop.set_docked(finished.item.name, true, finished.target.before);
         else desktop.move_item(finished.item.name, finished.target.before);
       },
       on_drag_cancel: () => {
@@ -109,6 +114,7 @@
   }
 
   const drop_before = $derived(drag?.target?.zone === "home" ? drag.target.before : undefined);
+  const dock_before = $derived(drag?.target?.zone === "dock" ? drag.target.before : undefined);
 </script>
 
 <div class="flex h-full flex-col pt-[env(safe-area-inset-top)] select-none [-webkit-touch-callout:none]">
@@ -171,7 +177,7 @@
       aria-label="Dock"
       class={cn(
         "mx-auto flex w-fit max-w-full items-center gap-1 rounded-2xl bg-background-light/90 p-1.5 shadow-popover backdrop-blur-xl transition-[box-shadow,background-color] duration-150",
-        drag?.target?.zone === "dock" && "bg-primary/10 ring-1 ring-primary/60"
+        drag?.target?.zone === "dock" && !drag.docked && "bg-primary/10 ring-1 ring-primary/60"
       )}
     >
       <button
@@ -186,9 +192,14 @@
 
       {#each dock as item (item.name)}
         <button
+          data-dock-name={item.name}
           {@attach drag_handlers(item, true)}
           onclick={(event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
-          class={cn("rounded-2xl transition-opacity duration-150", drag?.item.name === item.name && "opacity-30")}
+          class={cn(
+            "relative rounded-2xl transition-opacity duration-150",
+            drag?.item.name === item.name && "opacity-30",
+            dock_before === item.name && "before:absolute before:top-1 before:-left-1 before:h-12 before:w-0.5 before:rounded-full before:bg-primary"
+          )}
         >
           <HomeIcon {item} label={false} class="shadow-none" />
         </button>

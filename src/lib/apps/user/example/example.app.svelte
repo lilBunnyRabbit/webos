@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import kernel, { Platform } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { z } from "zod";
   import { Badge, Button, Section } from "$lib/core/components/ui";
@@ -8,10 +9,12 @@
   const { count: initial_count }: { count?: number } = $props();
 
   const { window, storage } = get_app_context();
+  // Mobile windows are always fullscreen: no size to show, nothing to maximize or restore (ADR-016).
+  const mobile = kernel.platform === Platform.MOBILE;
   const count = storage.persisted("count", untrack(() => initial_count) ?? 0, z.number());
 </script>
 
-<div class="mx-auto flex max-w-xl flex-col gap-6 p-6">
+<div class="mx-auto flex max-w-xl flex-col gap-6 p-4 @md:p-6">
   <header>
     <h1 class="text-lg font-semibold">Example app</h1>
     <p class="text-ui text-foreground/65">A tour of the app context: persisted storage and the window handle.</p>
@@ -32,13 +35,19 @@
       <span class="text-ui text-foreground/80">Focused</span>
       <Badge tone={window.is_focused ? "success" : "neutral"}>{window.is_focused ? "yes" : "no"}</Badge>
     </div>
-    <div class="flex items-center justify-between gap-4 px-4 py-2.5">
-      <span class="text-ui text-foreground/80">Size</span>
-      <span class="font-mono text-2xs tabular-nums">{window.bounds.width} × {window.bounds.height}</span>
-    </div>
-    <div class="flex justify-end gap-1.5 px-4 py-3">
-      <Button size="sm" onclick={() => window.restore()}>Restore</Button>
-      <Button size="sm" onclick={() => window.maximize()}>Maximize</Button>
-    </div>
+    {#if mobile}
+      <div class="flex justify-end gap-1.5 px-4 py-3">
+        <Button size="sm" onclick={() => window.minimize()}>Go home</Button>
+      </div>
+    {:else}
+      <div class="flex items-center justify-between gap-4 px-4 py-2.5">
+        <span class="text-ui text-foreground/80">Size</span>
+        <span class="font-mono text-2xs tabular-nums">{window.bounds.width} × {window.bounds.height}</span>
+      </div>
+      <div class="flex justify-end gap-1.5 px-4 py-3">
+        <Button size="sm" onclick={() => window.restore()}>Restore</Button>
+        <Button size="sm" onclick={() => window.maximize()}>Maximize</Button>
+      </div>
+    {/if}
   </Section>
 </div>

@@ -179,7 +179,7 @@
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
-        <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{images.length} {images.length === 1 ? "image" : "images"}</span>
+        <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{images.length} {images.length === 1 ? "image" : "images"}</span>
         {#if loading}<Spinner label="Loading images" />{/if}
 
         <IconButton label="Zoom out" size="sm" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>

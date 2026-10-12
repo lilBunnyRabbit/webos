@@ -109,14 +109,15 @@ export class MobileDesktopService implements IMobileDesktopService {
     this.commit(home, dock);
   }
 
-  public set_docked(name: string, docked: boolean): void {
-    if (!this.folder.get(name)) return;
+  public set_docked(name: string, docked: boolean, before: string | null = null): void {
+    if (!this.folder.get(name) || name === before) return;
 
     const home = this.arranged.home.map((entry) => entry.name).filter((entry) => entry !== name);
     const dock = this.arranged.dock.map((entry) => entry.name).filter((entry) => entry !== name);
     if (docked) {
       if (dock.length >= DOCK_SIZE) return;
-      dock.push(name);
+      const index = before === null ? -1 : dock.indexOf(before);
+      dock.splice(index === -1 ? dock.length : index, 0, name);
     } else {
       home.push(name);
     }

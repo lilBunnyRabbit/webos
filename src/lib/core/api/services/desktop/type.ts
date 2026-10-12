@@ -67,8 +67,11 @@ export interface MobileDesktopService extends DesktopService {
   /** Moves an entry in the home order to just before `before` (`null`: the end), out of the dock if it was there. */
   move_item(name: string, before: string | null): void;
 
-  /** Adds the entry to the dock (at the end) or takes it out (back into the home order). */
-  set_docked(name: string, docked: boolean): void;
+  /**
+   * Docks the entry just before `before` (`null` or absent: at the end), which also reorders an entry already in the
+   * dock, or takes it out (back to the end of the home order). Docking is ignored when the dock is full.
+   */
+  set_docked(name: string, docked: boolean, before?: string | null): void;
 
   /** Whether the dock has room for one more entry. */
   readonly dock_full: boolean;

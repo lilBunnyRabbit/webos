@@ -102,7 +102,8 @@
   <div class="grid h-full place-items-center"><Spinner label="Opening folder" /></div>
 {:then}
   {#if handler}
-    <div class="grid h-full grid-rows-[auto_1fr_auto] overflow-hidden">
+    <!-- minmax(0,1fr): the implicit auto column would grow to the toolbar's min-content and push the footer out of a phone-wide sheet. -->
+    <div class="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden">
       <FileExplorerNavigation {handler} {can_go_back} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
 
       <div class="flex min-h-0">

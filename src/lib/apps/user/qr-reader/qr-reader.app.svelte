@@ -16,7 +16,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { QrEntries, create_qr_detector, detect_qr, is_url, thumbnail, type QrEntry } from "./qr";
+  import { QrEntries, create_qr_detector, detect_qr, is_url, thumbnail, type BarcodeDetector, type QrEntry } from "./qr";
 
   const { path }: { path?: string } = $props();
   const { window, storage, app_id } = get_app_context();
@@ -24,7 +24,13 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
-  const detector = create_qr_detector();
+  const detector_ready = create_qr_detector();
+  let detector = $state.raw<BarcodeDetector | null>(null);
+  let detector_error = $state<string | null>(null);
+  detector_ready.then(
+    (result) => (detector = result),
+    (reason) => (detector_error = reason instanceof Error ? reason.message : String(reason))
+  );
   const entries = storage.persisted<QrEntry[]>("entries", [], QrEntries);
 
   let stream = $state.raw<MediaStream | null>(null);
@@ -52,12 +58,12 @@
   }
 
   async function scan_file(file: File) {
-    if (!detector) return;
     if (!file.type.startsWith("image/")) return report("Not an image", file.name, NotificationType.WARNING);
     let bitmap: ImageBitmap | undefined;
     try {
+      const ready = await detector_ready;
       bitmap = await createImageBitmap(file);
-      const content = await detect_qr(detector, bitmap);
+      const content = await detect_qr(ready, bitmap);
       if (!content) return report("No QR code found in the image", file.name, NotificationType.WARNING);
       add_entry(content, thumbnail(bitmap, bitmap.width, bitmap.height));
     } catch (reason) {
@@ -111,13 +117,14 @@
   $effect(() => {
     if (!stream || !video || !detector) return;
     const element = video;
+    const reader = detector;
     element.srcObject = stream;
     element.play().catch((reason) => console.warn("[QrReader] camera preview failed to play", reason));
 
     let active = true;
     let handle = 0;
     const scan = async () => {
-      const content = await detect_qr(detector, element).catch(() => null);
+      const content = await detect_qr(reader, element).catch(() => null);
       if (!active) return;
       if (content) {
         add_entry(content, thumbnail(element, element.videoWidth, element.videoHeight));
@@ -189,8 +196,8 @@
   }
 </script>
 
-{#if !detector}
-  <EmptyState icon={WarningIcon} tone="error" title="QR scanning isn't available" description="This browser has no BarcodeDetector." />
+{#if detector_error}
+  <EmptyState icon={WarningIcon} tone="error" title="QR scanning isn't available" description={detector_error} />
 {:else}
   <div
     role="presentation"

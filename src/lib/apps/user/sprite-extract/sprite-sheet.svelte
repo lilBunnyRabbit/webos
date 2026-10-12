@@ -1,24 +1,48 @@
 <script lang="ts">
-  import kernel, { type SettingsService } from "$lib/core/api";
+  import kernel, { Platform, type SettingsService } from "$lib/core/api";
   import { untrack } from "svelte";
   import type { SourceImage } from "$lib/core/utils/image";
   import type { SpriteExtractState } from "./sprite-extract.svelte";
+  import type { SpriteOverrides, SpriteSettings } from "./sprite-model";
   import {
     clamp_scale,
     describe_hit,
     draw_sheet,
     fit_view,
     grid_lines,
+    HANDLE_SIZE,
+    HIT_TOLERANCE,
     hit_cursor,
     hit_test,
+    pinch_view,
     read_palette,
     to_image,
+    TOUCH_HANDLE_SIZE,
+    TOUCH_HIT_TOLERANCE,
     zoom_view,
     type Drag,
     type Hit,
     type Palette,
+    type Point,
     type View,
   } from "./sprite-sheet";
+
+  /** Same feel as the shell's long press. */
+  const HOLD_MS = 450;
+  /** A finger never lands still; movement under this is jitter, not a drag. */
+  const SLOP_PX = 8;
+
+  interface Pinch {
+    view: View;
+    mid: Point;
+    distance: number;
+  }
+
+  interface Snapshot {
+    settings: SpriteSettings;
+    overrides: SpriteOverrides;
+    sequence: number[];
+  }
 
   interface Props {
     sprite: SpriteExtractState;
@@ -40,6 +64,17 @@
   let panning = $state(false);
   let drag: Drag | null = null;
   let fitted_for: SourceImage | null = null;
+  let coarse = $state(kernel.platform === Platform.MOBILE);
+
+  const pointers = new Map<number, Point>();
+  let pinch: Pinch | null = null;
+  /** The touch already did its job (a pinch or a hold); its remaining fingers are ignored until all lift. */
+  let spent = false;
+  /** Where a touch landed, until it moves past the slop. */
+  let press: Point | null = null;
+  let hold: ReturnType<typeof setTimeout> | undefined;
+  /** Sprite state before an editing drag, so a second finger can take the edit back. */
+  let before_edit: Snapshot | null = null;
 
   const lines = $derived(grid_lines(sprite.grid));
   const sequence = $derived(new Set(sprite.sequence));
@@ -98,8 +133,11 @@
       view,
       hover,
       palette,
+      handle_size: coarse ? TOUCH_HANDLE_SIZE : HANDLE_SIZE,
     });
   });
+
+  $effect(() => () => clearTimeout(hold));
 
   function observe_size(element: HTMLElement) {
     const observer = new ResizeObserver(() => {
@@ -115,13 +153,44 @@
   }
 
   function hit_at(sx: number, sy: number): Hit {
-    return sprite.source ? hit_test(view, sprite.grid, lines, sprite.selected, sx, sy) : { type: "none" };
+    return sprite.source ? hit_test(view, sprite.grid, lines, sprite.selected, sx, sy, coarse ? TOUCH_HIT_TOLERANCE : HIT_TOLERANCE) : { type: "none" };
+  }
+
+  function spread(): { mid: Point; distance: number } {
+    const [a, b] = pointers.values();
+    return { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
+
+  function end_press() {
+    clearTimeout(hold);
+    hold = undefined;
+    press = null;
+  }
+
+  function start_pinch() {
+    end_press();
+    if (before_edit) {
+      sprite.settings = before_edit.settings;
+      sprite.overrides = before_edit.overrides;
+      sprite.sequence = before_edit.sequence;
+      before_edit = null;
+    }
+    drag = null;
+    panning = false;
+    spent = false;
+    hover = { type: "none" };
+    status = "";
+    pinch = { view, ...spread() };
   }
 
   function on_pointerdown(event: PointerEvent) {
     if (!sprite.source) return;
     canvas!.setPointerCapture(event.pointerId);
     const { sx, sy } = local(event);
+    coarse = event.pointerType !== "mouse";
+    pointers.set(event.pointerId, { x: sx, y: sy });
+    if (pointers.size === 2 && event.pointerType !== "mouse") return start_pinch();
+    if (pointers.size > 1 || spent) return;
     const pan = (): Drag => ({ kind: "pan", start_x: sx, start_y: sy, offset_x: view.offset_x, offset_y: view.offset_y });
 
     if (event.button === 1 || pan_mode || (event.button === 0 && event.altKey)) {
@@ -133,6 +202,24 @@
 
     const hit = hit_at(sx, sy);
     const img = to_image(view, sx, sy);
+    const edits = hit.type === "handle" || hit.type === "line" || (hit.type === "frame" && hit.index === sprite.selected);
+    before_edit = edits ? { settings: sprite.settings, overrides: sprite.overrides, sequence: sprite.sequence } : null;
+    if (coarse) {
+      press = { x: sx, y: sy };
+      // Touch can't double-click, so holding a frame still toggles it instead.
+      if (hit.type === "frame") {
+        const index = hit.index;
+        hold = setTimeout(() => {
+          end_press();
+          sprite.toggle_in_sequence(index);
+          navigator.vibrate?.(8);
+          drag = null;
+          panning = false;
+          before_edit = null;
+          spent = true;
+        }, HOLD_MS);
+      }
+    }
     switch (hit.type) {
       case "handle":
         drag = { kind: "frame-resize", index: hit.frame, handle: hit.handle, start: sprite.grid.frames[hit.frame] };
@@ -157,11 +244,26 @@
   function on_pointermove(event: PointerEvent) {
     if (!sprite.source) return;
     const { sx, sy } = local(event);
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: sx, y: sy });
+
+    if (spent) return;
+    if (pinch) {
+      if (pointers.size < 2) return;
+      const { mid, distance } = spread();
+      set_view(pinch_view(pinch.view, pinch.mid, pinch.distance, mid, distance));
+      return;
+    }
 
     if (!drag) {
+      coarse = event.pointerType !== "mouse";
       hover = hit_at(sx, sy);
       status = describe_hit(view, sprite.grid, sx, sy, hover);
       return;
+    }
+
+    if (press) {
+      if (Math.hypot(sx - press.x, sy - press.y) <= SLOP_PX) return;
+      end_press();
     }
 
     const img = to_image(view, sx, sy);
@@ -219,10 +321,24 @@
   }
 
   function on_lostpointercapture(event: PointerEvent) {
+    pointers.delete(event.pointerId);
+    if (pinch && pointers.size < 2) {
+      pinch = null;
+      spent = true;
+    }
+    if (pointers.size) return;
+    spent = false;
+    end_press();
+    before_edit = null;
     drag = null;
     panning = false;
-    const { sx, sy } = local(event);
-    hover = hit_at(sx, sy);
+    if (event.pointerType === "mouse") {
+      const { sx, sy } = local(event);
+      hover = hit_at(sx, sy);
+    } else {
+      hover = { type: "none" };
+      status = "";
+    }
   }
 
   function on_pointerleave() {

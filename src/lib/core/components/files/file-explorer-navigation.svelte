@@ -76,10 +76,12 @@
     {/snippet}
   </Input>
 
-  <Separator vertical class="hidden @md:block" />
-
-  <IconButton label="New folder" size="sm" disabled={creating_folder} onclick={handle_create_folder}>
-    <FolderPlusIcon weight="bold" />
-  </IconButton>
-  <FileUploadButton {handler} />
+  <!-- One group, so a wrapping toolbar keeps the two together. -->
+  <div class="flex shrink-0 items-center gap-1.5">
+    <Separator vertical class="hidden @md:block" />
+    <IconButton label="New folder" size="sm" disabled={creating_folder} onclick={handle_create_folder}>
+      <FolderPlusIcon weight="bold" />
+    </IconButton>
+    <FileUploadButton {handler} />
+  </div>
 </Toolbar>

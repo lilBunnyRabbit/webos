@@ -51,13 +51,13 @@ To keep the platform check out of shared code, each shell renders its own `Dialo
 
 ## Action items
 
-- [ ] ADR-016 and ADR-003 revisions
-- [ ] Kit: `pointer-coarse:` sizes, wrapping `Toolbar`, `long_press` moved to `$lib/core/utils`
-- [ ] `on_back` on the window handle and the windows services; the shell's Back calls it
-- [ ] File Explorer: tap opens, long-press menus, picker enters folders, back
-- [ ] Dialogs host: menus as sheets on mobile
-- [ ] Every app's fixes, Sprite Extract, Media Preview pinch, QR via `jsqr`
-- [ ] System docs, design docs, changelog
+- [x] ADR-016 and ADR-003 revisions
+- [x] Kit: `pointer-coarse:` sizes, wrapping `Toolbar`, `long_press` moved to `$lib/core/utils`
+- [x] `on_back` on the window handle and the windows services; the shell's Back calls it
+- [x] File Explorer: tap opens, long-press menus, picker enters folders, back
+- [x] Dialogs host: menus as sheets on mobile
+- [x] Every app's fixes, Sprite Extract, Media Preview pinch, QR via `jsqr`
+- [x] System docs, design docs, changelog
 
 ## Next session topics
 

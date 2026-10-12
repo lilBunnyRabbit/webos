@@ -88,18 +88,18 @@
   {:else if monitor.frames.length === 0}
     <p class="px-4 py-3 text-ui text-foreground/65">No long frames yet</p>
   {:else}
-    <div class="grid h-8 grid-cols-[3.5rem_4.5rem_4.5rem_minmax(0,1fr)] items-center gap-x-3 px-4 text-2xs tracking-wide text-foreground/65 uppercase">
+    <div class="grid h-8 grid-cols-[3.5rem_4rem_minmax(0,1fr)] items-center gap-x-3 px-4 text-2xs tracking-wide text-foreground/65 uppercase @md:grid-cols-[3.5rem_4.5rem_4.5rem_minmax(0,1fr)]">
       <span class="text-right">When</span>
       <span class="text-right">Duration</span>
-      <span class="text-right">Blocking</span>
+      <span class="hidden text-right @md:block">Blocking</span>
       <span>Top script</span>
     </div>
     {#each monitor.frames as frame (frame)}
       {@const script = top_script(frame)}
-      <div class="grid h-8 grid-cols-[3.5rem_4.5rem_4.5rem_minmax(0,1fr)] items-center gap-x-3 px-4 font-mono text-2xs tabular-nums">
+      <div class="grid h-8 grid-cols-[3.5rem_4rem_minmax(0,1fr)] items-center gap-x-3 px-4 font-mono text-2xs tabular-nums @md:grid-cols-[3.5rem_4.5rem_4.5rem_minmax(0,1fr)]">
         <span class="text-right text-foreground/65">{Math.max(0, Math.round((monitor.now - frame.startTime) / 1000))} s ago</span>
         <span class="text-right">{format_ms(frame.duration)}</span>
-        <span class="text-right">{format_ms(frame.blockingDuration)}</span>
+        <span class="hidden text-right @md:block">{format_ms(frame.blockingDuration)}</span>
         {#if script}
           <span class="truncate text-foreground/80" title={`${script.invoker}\n${script.sourceURL}`}>
             {script.invoker || script.sourceFunctionName || "anonymous"}

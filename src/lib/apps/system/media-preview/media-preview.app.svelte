@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type FilesService } from "$lib/core/api";
+  import kernel, { Platform, type FilesService } from "$lib/core/api";
   import { cn, format_bytes, format_datetime } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
@@ -15,12 +15,14 @@
   import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { save_to_disk } from "$lib/core/components/files/file-actions";
-  import { untrack } from "svelte";
+  import { flushSync, untrack } from "svelte";
   import manifest from "./index";
+  import { clamp, distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
   const ZOOM_STEP = 0.25;
+  const STAGE_PADDING = kernel.platform === Platform.MOBILE ? 8 : 24;
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -43,6 +45,22 @@
   let zoom = $state(1);
   let rotation = $state(0);
   let fit = $state(true);
+
+  let stage: HTMLDivElement | null = $state(null);
+  let box: HTMLDivElement | null = $state(null);
+  let stage_width = $state(0);
+  let stage_height = $state(0);
+  /** The image's intrinsic size, known once it has loaded. */
+  let natural = $state.raw<Size | null>(null);
+
+  const turned = $derived(natural ? rotated_size(natural, rotation) : null);
+  const fitted = $derived(
+    turned ? fit_scale(turned, { width: stage_width - 2 * STAGE_PADDING, height: stage_height - 2 * STAGE_PADDING }) : 1
+  );
+  const scale = $derived(fit ? fitted : zoom);
+  // The limits stretch to include fit, so a huge photo or a tiny icon can still zoom out of, and back into, fit.
+  const min_zoom = $derived(Math.min(MIN_ZOOM, fitted || MIN_ZOOM));
+  const max_zoom = $derived(Math.max(MAX_ZOOM, fitted));
 
   const kind = $derived.by(() => {
     const type = file?.type ?? "";
@@ -74,6 +92,7 @@
   $effect(() => {
     if (!file) return;
     const object_url = URL.createObjectURL(file);
+    natural = null;
     url = object_url;
     return () => {
       URL.revokeObjectURL(object_url);
@@ -81,9 +100,27 @@
     };
   });
 
-  function zoom_by(delta: number) {
+  /** Zooms so the image point under `anchor` (client coordinates) stays under it. */
+  function zoom_at(next: number, anchor: Point) {
+    const before = box?.getBoundingClientRect();
     fit = false;
-    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom + delta));
+    zoom = clamp(next, min_zoom, max_zoom);
+    if (!before || !box || !stage || !before.width || !before.height) return;
+    const fx = (anchor.x - before.left) / before.width;
+    const fy = (anchor.y - before.top) / before.height;
+    flushSync();
+    const after = box.getBoundingClientRect();
+    stage.scrollLeft += after.left + fx * after.width - anchor.x;
+    stage.scrollTop += after.top + fy * after.height - anchor.y;
+  }
+
+  function stage_center(): Point {
+    const rect = stage?.getBoundingClientRect();
+    return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : { x: 0, y: 0 };
+  }
+
+  function zoom_by(delta: number) {
+    zoom_at(scale + delta, stage_center());
   }
 
   function reset_view() {
@@ -92,10 +129,55 @@
     rotation = 0;
   }
 
+  function on_image_load(event: Event) {
+    const image = event.currentTarget as HTMLImageElement;
+    natural = { width: image.naturalWidth, height: image.naturalHeight };
+  }
+
   function on_wheel(event: WheelEvent) {
     if (!event.ctrlKey) return;
     event.preventDefault();
-    zoom_by(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
+    zoom_at(scale + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), { x: event.clientX, y: event.clientY });
+  }
+
+  // Touch and pen only: the mouse keeps the scrollbars and Ctrl + wheel. Not reactive, it's per-gesture bookkeeping.
+  const pointers = new Map<number, Point>();
+  let gesture: { center: Point; spread: number; scale: number } | null = null;
+  let pinched = false;
+
+  function begin_gesture() {
+    const [a, b] = pointers.values();
+    gesture = a ? { center: b ? midpoint(a, b) : a, spread: b ? distance(a, b) : 0, scale } : null;
+  }
+
+  function on_pointerdown(event: PointerEvent) {
+    if (event.pointerType === "mouse" || pointers.size >= 2) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    begin_gesture();
+  }
+
+  function on_pointermove(event: PointerEvent) {
+    if (!gesture || !stage || !pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const [a, b] = pointers.values();
+    const center = b ? midpoint(a, b) : a;
+    if (b && gesture.spread > 0) {
+      pinched = true;
+      zoom_at((gesture.scale * distance(a, b)) / gesture.spread, gesture.center);
+    }
+    stage.scrollLeft -= center.x - gesture.center.x;
+    stage.scrollTop -= center.y - gesture.center.y;
+    gesture.center = center;
+  }
+
+  function on_lostpointercapture(event: PointerEvent) {
+    if (!pointers.delete(event.pointerId)) return;
+    begin_gesture();
+    if (gesture) return;
+    // Pinching below fit snaps back to it, the way photo viewers settle.
+    if (pinched && !fit && zoom <= fitted) fit = true;
+    pinched = false;
   }
 
 </script>
@@ -114,14 +196,15 @@
   <div class="grid h-full grid-rows-[auto_1fr_auto]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
+      <!-- Below @lg the controls don't leave the name room, so it takes the first row of the wrapping toolbar. -->
+      <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{file.name}</span>
 
       {#if kind === "image"}
-        <IconButton label="Zoom out" size="sm" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>
+        <IconButton label="Zoom out" size="sm" disabled={scale <= min_zoom} onclick={() => zoom_by(-ZOOM_STEP)}>
           <MagnifyingGlassMinusIcon weight="bold" />
         </IconButton>
         <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{fit ? "Fit" : `${Math.round(zoom * 100)}%`}</span>
-        <IconButton label="Zoom in" size="sm" disabled={zoom >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}>
+        <IconButton label="Zoom in" size="sm" disabled={scale >= max_zoom} onclick={() => zoom_by(ZOOM_STEP)}>
           <MagnifyingGlassPlusIcon weight="bold" />
         </IconButton>
         <IconButton label="Rotate" size="sm" onclick={() => (rotation = (rotation + 90) % 360)}>
@@ -133,24 +216,45 @@
         <Separator vertical />
       {/if}
 
-      <IconButton label="Save to disk…" size="sm" onclick={() => path && save_to_disk(path)}>
+      <IconButton label="Save to disk…" size="sm" class="ml-auto @lg:ml-0" onclick={() => path && save_to_disk(path)}>
         <HardDrivesIcon weight="bold" />
       </IconButton>
     </Toolbar>
 
-    <div class="stage min-h-0 overflow-auto">
+    <div class="stage min-h-0 overflow-auto" bind:this={stage} bind:clientWidth={stage_width} bind:clientHeight={stage_height}>
       {#if !url}
         <div class="grid h-full place-items-center"><Spinner /></div>
       {:else if kind === "image"}
-        <!-- minmax(0,1fr) gives the cell a definite size, so max-h-full on the image can actually fit it. -->
-        <div class="grid h-full w-full grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center p-6" onwheel={on_wheel}>
-          <img
-            src={url}
-            alt={file.name}
-            draggable="false"
-            class={cn("rounded-sm transition-transform duration-200 ease-out", fit && "size-full object-contain")}
-            style:transform="scale({fit ? 1 : zoom}) rotate({rotation}deg)"
-          />
+        <!--
+          The box takes the zoomed, rotated size in layout, so overflow scrolls from its real top-left edge (a transform
+          wouldn't grow the scroll area). overflow-clip stops the image's mid-rotation corners from adding scrollbars.
+        -->
+        <div
+          role="presentation"
+          class="grid min-h-full w-max min-w-full touch-none place-items-center overflow-clip"
+          style:padding="{STAGE_PADDING}px"
+          onwheel={on_wheel}
+          onpointerdown={on_pointerdown}
+          onpointermove={on_pointermove}
+          onlostpointercapture={on_lostpointercapture}
+        >
+          <div
+            bind:this={box}
+            class="relative"
+            style:width={turned ? `${Math.floor(turned.width * scale)}px` : undefined}
+            style:height={turned ? `${Math.floor(turned.height * scale)}px` : undefined}
+          >
+            <img
+              src={url}
+              alt={file.name}
+              draggable="false"
+              class={cn("max-w-none rounded-sm transition-transform duration-200 ease-out", natural ? "absolute top-1/2 left-1/2" : "invisible")}
+              style:width={natural ? `${natural.width * scale}px` : undefined}
+              style:height={natural ? `${natural.height * scale}px` : undefined}
+              style:transform={natural ? `translate(-50%, -50%) rotate(${rotation}deg)` : undefined}
+              onload={on_image_load}
+            />
+          </div>
         </div>
       {:else if kind === "video"}
         <div class="grid h-full place-items-center p-6">

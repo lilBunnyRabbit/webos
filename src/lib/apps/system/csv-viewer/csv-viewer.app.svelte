@@ -13,6 +13,8 @@
   // Starts at the launched file; "Open…" swaps it in place.
   let path = $state(untrack(() => initial_path));
   let has_header = $state(true);
+  /** The tapped cell, shown in full above the status bar: tooltips need a hover that touch doesn't have. */
+  let inspected = $state<{ row: number; column: number; value: string } | null>(null);
 
   const { window } = get_app_context();
 
@@ -34,6 +36,19 @@
       : null
   );
   const name = $derived(path?.split("/").at(-1) ?? "");
+
+  $effect(() => {
+    void path;
+    void has_header;
+    inspected = null;
+  });
+
+  function inspect(event: MouseEvent) {
+    const cell = (event.target as Element).closest<HTMLElement>("[data-cell]");
+    if (!cell) return;
+    const [row, column] = cell.dataset.cell!.split(",").map(Number);
+    inspected = inspected?.row === row && inspected.column === column ? null : { row, column, value: cell.textContent ?? "" };
+  }
 </script>
 
 {#if !loading}
@@ -52,12 +67,12 @@
       {@const columns = Array.from({ length: loaded.column_count }, (_, index) => index)}
       <!-- Every row is its own grid on one fixed template, so rows line up and each can skip rendering off screen. -->
       {@const template = `${String(body.length).length + 3}ch repeat(${loaded.column_count}, 12rem)`}
-      <div class="grid h-full grid-rows-[auto_1fr_auto]">
+      <div class="grid h-full grid-rows-[auto_1fr_auto_auto]">
         <Toolbar>
           <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-          <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
+          <span class="min-w-24 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
           <label class="flex shrink-0 items-center gap-2 px-1 text-ui">
-            First row is header
+            <span class="@md:hidden">Header row</span><span class="hidden @md:inline">First row is header</span>
             <Switch bind:checked={has_header} />
           </label>
         </Toolbar>
@@ -65,7 +80,8 @@
         {#if loaded.column_count === 0}
           <EmptyState icon={FileCsvIcon} title="This file is empty" description="There are no rows to show." />
         {:else}
-          <div class="min-h-0 overflow-auto">
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+          <div class="min-h-0 overflow-auto" onclick={inspect}>
             <div class="w-max min-w-full font-mono text-ui">
               <div class="sticky top-0 z-10 grid h-7 items-center border-b border-foreground/8 bg-background-light font-medium" style:grid-template-columns={template}>
                 <span class="sticky left-0 z-10 h-full bg-background-light"></span>
@@ -78,12 +94,26 @@
                 <div class="grid h-7 items-center border-b border-foreground/6 [contain-intrinsic-block-size:auto_1.75rem] [content-visibility:auto]" style:grid-template-columns={template}>
                   <span class="sticky left-0 flex h-full items-center justify-end bg-background pr-3 text-2xs text-foreground/65 tabular-nums select-none">{index + 1}</span>
                   {#each columns as column (column)}
-                    <span class="truncate px-2" title={row[column]}>{row[column] ?? ""}</span>
+                    <span
+                      data-cell="{index},{column}"
+                      class={["truncate px-2", inspected?.row === index && inspected.column === column && "bg-primary/12"]}
+                      title={row[column]}>{row[column] ?? ""}</span
+                    >
                   {/each}
                 </div>
               {/each}
             </div>
           </div>
+        {/if}
+
+        {#if inspected}
+          {@const label = header ? (header[inspected.column] ?? column_label(inspected.column)) : column_label(inspected.column)}
+          <div class="flex items-start gap-2 border-t border-foreground/8 bg-background-light px-3 py-2 text-ui">
+            <span class="shrink-0 font-mono text-2xs text-foreground/80 pt-0.5">{inspected.row + 1} · {label}</span>
+            <span class="max-h-24 min-w-0 flex-1 overflow-y-auto font-mono break-words whitespace-pre-wrap select-text">{inspected.value || "(empty)"}</span>
+          </div>
+        {:else}
+          <div></div>
         {/if}
 
         <StatusBar>

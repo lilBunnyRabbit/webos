@@ -2,6 +2,9 @@ import type { LineAxis, LineEdge, PaddingSide, Rect, SpriteGrid, SpriteOverrides
 
 export const HIT_TOLERANCE = 6;
 export const HANDLE_SIZE = 7;
+/** A fingertip covers ~40 px and hides what it's on, so touch and pen grab from much further away. */
+export const TOUCH_HIT_TOLERANCE = 18;
+export const TOUCH_HANDLE_SIZE = 13;
 export const MIN_SCALE = 0.05;
 export const MAX_SCALE = 64;
 
@@ -36,7 +39,7 @@ export interface View {
   offset_y: number;
 }
 
-interface Point {
+export interface Point {
   x: number;
   y: number;
 }
@@ -64,6 +67,13 @@ export function zoom_view(view: View, factor: number, sx: number, sy: number): V
   const scale = clamp_scale(view.scale * factor);
   const k = scale / view.scale;
   return { scale, offset_x: sx - (sx - view.offset_x) * k, offset_y: sy - (sy - view.offset_y) * k };
+}
+
+/** Two-finger view: the image point that was under the starting midpoint follows the midpoint, scaled by the spread. */
+export function pinch_view(start: View, start_mid: Point, start_distance: number, mid: Point, distance: number): View {
+  const scale = clamp_scale(start.scale * (distance / Math.max(1, start_distance)));
+  const anchor = to_image(start, start_mid.x, start_mid.y);
+  return { scale, offset_x: mid.x - anchor.x * scale, offset_y: mid.y - anchor.y * scale };
 }
 
 export function grid_lines(grid: SpriteGrid): LineRef[] {
@@ -114,7 +124,8 @@ export function hit_test(
   lines: LineRef[],
   selected: number | null,
   sx: number,
-  sy: number
+  sy: number,
+  hit_tolerance = HIT_TOLERANCE
 ): Hit {
   const img = to_image(view, sx, sy);
   const selected_frame = selected === null ? undefined : grid.frames[selected];
@@ -123,13 +134,13 @@ export function hit_test(
     const points = handle_points(view, selected_frame);
     for (const handle of HANDLES) {
       const p = points[handle];
-      if (Math.abs(p.x - sx) <= HIT_TOLERANCE + 1 && Math.abs(p.y - sy) <= HIT_TOLERANCE + 1) {
+      if (Math.abs(p.x - sx) <= hit_tolerance + 1 && Math.abs(p.y - sy) <= hit_tolerance + 1) {
         return { type: "handle", frame: selected, handle };
       }
     }
   }
 
-  const tolerance = HIT_TOLERANCE / view.scale;
+  const tolerance = hit_tolerance / view.scale;
   const b = grid.bounds;
   const within_y = img.y >= b.y - tolerance && img.y <= b.y + b.h + tolerance;
   const within_x = img.x >= b.x - tolerance && img.x <= b.x + b.w + tolerance;
@@ -232,6 +243,7 @@ export interface Scene {
   view: View;
   hover: Hit;
   palette: Palette;
+  handle_size: number;
 }
 
 function checkerboard(ctx: CanvasRenderingContext2D, palette: Palette): CanvasPattern | null {
@@ -255,7 +267,7 @@ function with_alpha(ctx: CanvasRenderingContext2D, alpha: number, draw: () => vo
 
 /** The whole sheet view: image, padding and gaps, excluded frames, labels, grid lines and the selection. */
 export function draw_sheet(ctx: CanvasRenderingContext2D, cw: number, ch: number, dpr: number, scene: Scene): void {
-  const { image, width, height, grid, lines, overrides, selected, sequence, show_labels, view, hover, palette } = scene;
+  const { image, width, height, grid, lines, overrides, selected, sequence, show_labels, view, hover, palette, handle_size } = scene;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
 
@@ -385,8 +397,8 @@ export function draw_sheet(ctx: CanvasRenderingContext2D, cw: number, ch: number
     ctx.strokeStyle = palette.label;
     ctx.lineWidth = 1;
     for (const p of Object.values(handle_points(view, frame))) {
-      ctx.fillRect(p.x - HANDLE_SIZE / 2, p.y - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE);
-      ctx.strokeRect(p.x - HANDLE_SIZE / 2 + 0.5, p.y - HANDLE_SIZE / 2 + 0.5, HANDLE_SIZE - 1, HANDLE_SIZE - 1);
+      ctx.fillRect(p.x - handle_size / 2, p.y - handle_size / 2, handle_size, handle_size);
+      ctx.strokeRect(p.x - handle_size / 2 + 0.5, p.y - handle_size / 2 + 0.5, handle_size - 1, handle_size - 1);
     }
   }
 }

@@ -20,7 +20,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 5. [ ] **Shell + Terminal + Command palette** (ADR-007)
 6. [ ] **Desktop** (ADR-011: multi-select, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
 7. [ ] **Deep linking + share** (ADR-010)
-8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell done; apps pass next
+8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
 
 **Parked** (no consumer or nothing breaks without it; revisit only on demand): single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, AppDataHandle, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
 
@@ -378,9 +378,10 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] `MobileDesktopService` (ordered pages, dock, `/var/lib/desktop/home-layout.json`); `DesktopService` base by name + `DesktopFolder`
 - [x] Mobile shell components (fullscreen apps, live-card switcher, paged home, dock, app drawer, long-press menu and drag)
 - [x] Navigation: three-button bar (gestures rejected: device edges)
-- [ ] Back: apps claiming it, OS back gesture through history (brainstorm first, with ADR-010)
-- [ ] Apps pass: adjust apps for phone widths
-- [ ] Dock reorder, mobile-sized menus and dialogs
+- [x] Back: apps claim it with `window.on_back` ([brainstorm](brainstorm/2026-10-12_mobile-apps-pass.md))
+- [ ] OS back gesture through history (brainstorm first, with ADR-010)
+- [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
+- [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes
 - [x] Conditional service registration in `init.ts`
 - [ ] Virtual keyboard handling
 - [ ] Touch gesture support

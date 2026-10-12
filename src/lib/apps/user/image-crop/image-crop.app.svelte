@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Button, EmptyState, IconButton, Input, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_bytes } from "$lib/core/utils";
   import {
-    ArrowDown as ArrowDownIcon,
     ArrowRight as ArrowRightIcon,
     Crop as CropIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -40,6 +39,8 @@
 
   let alpha = $state<number | null>(0);
   let format = $state<ImageFormat>(ImageFormat.PNG);
+  /** A phone shows one image at a time at full size instead of two tiny ones. */
+  let shown = $state<"original" | "cropped">("cropped");
 
   const alpha_percent = $derived(typeof alpha === "number" && Number.isFinite(alpha) ? alpha : 0);
   const pixels = $derived(source ? read_pixels(source.bitmap) : null);
@@ -170,7 +171,7 @@
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-        <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{source.name}</span>
+        <span class="min-w-24 flex-1 truncate px-1 text-ui font-medium">{source.name}</span>
 
         <label class="flex items-center gap-1.5 text-ui text-foreground/80" title="Pixels at or below this opacity count as transparent">
           Alpha
@@ -183,14 +184,26 @@
       </Toolbar>
 
       <div
-        class="stage grid min-h-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] place-items-stretch gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
+        class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] place-items-stretch gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
       >
-        {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap), bounds)}
-        <div class="grid place-items-center text-foreground/65">
-          <ArrowDownIcon class="size-5 @xl:hidden" weight="bold" />
-          <ArrowRightIcon class="hidden size-5 @xl:block" weight="bold" />
+        <Segmented
+          class="justify-self-center @xl:hidden"
+          label="Image shown"
+          options={[
+            { value: "original", label: "Original" },
+            { value: "cropped", label: "Cropped" },
+          ]}
+          bind:value={shown}
+        />
+        <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "original" ? "grid" : "hidden"]}>
+          {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap), bounds)}
         </div>
-        {@render panel("Cropped", cropped.width, cropped.height, paint(cropped), null)}
+        <div class="hidden place-items-center text-foreground/65 @xl:grid">
+          <ArrowRightIcon class="size-5" weight="bold" />
+        </div>
+        <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "cropped" ? "grid" : "hidden"]}>
+          {@render panel("Cropped", cropped.width, cropped.height, paint(cropped), null)}
+        </div>
       </div>
 
       <StatusBar>

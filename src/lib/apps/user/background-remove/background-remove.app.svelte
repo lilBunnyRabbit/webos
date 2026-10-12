@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Button, EmptyState, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_bytes } from "$lib/core/utils";
   import {
-    ArrowDown as ArrowDownIcon,
     ArrowRight as ArrowRightIcon,
     Eraser as EraserIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -44,6 +43,8 @@
 
   let colours = $state<string[]>(["#ffffff"]);
   let format = $state<ImageFormat>(ImageFormat.PNG);
+  /** A phone shows one image at a time at full size instead of two tiny ones. */
+  let shown = $state<"original" | "result">("result");
 
   const result = $derived(source ? remove_colours(source.bitmap, colours) : null);
 
@@ -169,7 +170,7 @@
           <ul class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-1.5">
             {#each colours as colour, index (index)}
               <li class="flex items-center gap-2 rounded-lg bg-background-darker p-1 ring-1 ring-inset ring-foreground/8">
-                <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={colour} title="Pick colour {index + 1}">
+                <label class="relative size-7 pointer-coarse:size-9 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={colour} title="Pick colour {index + 1}">
                   <input
                     type="color"
                     class="absolute inset-0 cursor-pointer opacity-0"
@@ -186,14 +187,26 @@
         </aside>
 
         <div
-          class="stage grid min-h-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
+          class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
         >
-          {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap))}
-          <div class="grid place-items-center text-foreground/65">
-            <ArrowDownIcon class="size-5 @xl:hidden" weight="bold" />
-            <ArrowRightIcon class="hidden size-5 @xl:block" weight="bold" />
+          <Segmented
+            class="justify-self-center @xl:hidden"
+            label="Image shown"
+            options={[
+              { value: "original", label: "Original" },
+              { value: "result", label: "Result" },
+            ]}
+            bind:value={shown}
+          />
+          <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "original" ? "grid" : "hidden"]}>
+            {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap))}
           </div>
-          {@render panel("Result", result.width, result.height, paint(result))}
+          <div class="hidden place-items-center text-foreground/65 @xl:grid">
+            <ArrowRightIcon class="size-5" weight="bold" />
+          </div>
+          <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "result" ? "grid" : "hidden"]}>
+            {@render panel("Result", result.width, result.height, paint(result))}
+          </div>
         </div>
       </div>
 

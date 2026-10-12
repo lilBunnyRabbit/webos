@@ -12,6 +12,12 @@ export const CHANGELOG: Release[] = [
       { kind: FIXED, text: "On phones and tablets, File Explorer opens folders and files with a tap, and holding a file or empty space opens its menu." },
       { kind: NEW, text: "The Back button steps back through an app's own history first, like returning to the previous folder in File Explorer." },
       { kind: IMPROVED, text: "Menus on phones slide up from the bottom, and buttons are bigger on touch screens." },
+      { kind: NEW, text: "Pinch to zoom and drag to pan images in Media Preview, and zoomed images now scroll to every edge." },
+      { kind: NEW, text: "QR Reader now works on iPhone, iPad and other browsers without built-in barcode scanning." },
+      { kind: IMPROVED, text: "Sprite Extract works by touch: pinch the sheet, grab lines and handles with a finger, hold a frame to include or exclude it, and hold and drag thumbnails to reorder." },
+      { kind: IMPROVED, text: "Apps fit a phone: toolbars wrap, image tools show one image at a time, and CSV Viewer shows a cell's full value when you tap it." },
+      { kind: IMPROVED, text: "Drag icons within the dock to reorder it." },
+      { kind: FIXED, text: "Open and Save sheets no longer spill off the side of a phone screen." },
     ],
   },
   {

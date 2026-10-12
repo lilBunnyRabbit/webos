@@ -156,7 +156,7 @@ Hidden items keep whatever position they had. If `to` is somehow occupied, both 
 | `dock` | `() => DesktopItem[]` | Docked items in dock order, at most `DOCK_SIZE` (4) |
 | `dock_full` | `readonly boolean` | `$derived` |
 | `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end), taking it out of the dock if it was there |
-| `set_docked` | `(name, docked) => void` | Appends to the dock (ignored when full) or moves back to the end of home |
+| `set_docked` | `(name, docked, before?) => void` | Docks just before `before` (`null`/absent: the end); an already docked entry just moves. Ignored when full. `docked: false` moves it back to the end of home |
 | `rename_item` | `(name, new_name)` | Swaps the name in the order and dock and saves before renaming, so the icon keeps its place |
 | base members | | Forward to `DesktopFolder` |
 

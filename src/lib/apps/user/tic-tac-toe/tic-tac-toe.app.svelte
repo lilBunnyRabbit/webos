@@ -2,7 +2,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
-  import { ArrowUUpLeft as UndoIcon, Circle as CircleIcon, X as XIcon } from "phosphor-svelte";
+  import { ArrowUUpLeft as UndoIcon, ChartBar as ChartBarIcon, Circle as CircleIcon, X as XIcon } from "phosphor-svelte";
   import {
     board_from,
     choose_move,
@@ -36,6 +36,8 @@
   let mode = $state<Mode>(storage.get("mode", mode_schema) ?? Mode.MEDIUM);
   let moves = $state<number[]>([]);
   let active = $state(4);
+  /** Below the side panel's breakpoint, statistics open as a panel over the bottom of the board. */
+  let show_stats = $state(false);
   const cell_elements: HTMLButtonElement[] = [];
 
   const vs_computer = $derived(mode !== Mode.LOCAL);
@@ -156,13 +158,16 @@
       bind:value={() => mode, set_mode}
     />
     <div class="flex-1"></div>
+    <IconButton size="sm" label="Statistics" class="@3xl:hidden" aria-pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
+      <ChartBarIcon weight={show_stats ? "fill" : "bold"} />
+    </IconButton>
     <IconButton size="sm" label="Undo (Ctrl+Z)" disabled={!can_undo} onclick={undo}>
       <UndoIcon weight="bold" />
     </IconButton>
     <Button size="sm" variant="primary" onclick={new_game}>New game</Button>
   </Toolbar>
 
-  <div class="grid min-h-0 @3xl:grid-cols-[1fr_18rem]">
+  <div class="relative grid min-h-0 @3xl:grid-cols-[1fr_18rem]">
     <div class="flex min-h-0 flex-col items-center gap-3 p-4">
       <p class="text-sm font-semibold" aria-live="polite">{status}</p>
 
@@ -211,7 +216,12 @@
       </div>
     </div>
 
-    <aside class="hidden overflow-auto border-l border-foreground/8 p-4 @3xl:block">
+    <aside
+      class={cn(
+        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+      )}
+    >
       <Section title="Statistics" description="Every finished game, per mode.">
         {#snippet actions()}
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>

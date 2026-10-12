@@ -19,7 +19,9 @@ All of them have `categories: ["system"]`. Nothing reads `categories` except the
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
 
-On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DEFAULT_SHORTCUTS` in `services/desktop/service.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
+**Phones and tablets** (ADR-016 apps pass). Every app runs fullscreen in the [mobile shell](shell/mobile.md). Layout adapts through container queries and the kit's `pointer-coarse:` sizes; File Explorer reads `kernel.platform` to open on tap and uses long press for menus, and claims the Back button with `window.on_back`.
+
+On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DEFAULT_SHORTCUTS` in `services/desktop/folder.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
 
 ---
 
@@ -183,29 +185,37 @@ Text uses the document frame:
 
 States before the frame: no path ("Nothing to preview"), error ("Couldn't read the file"), loading (`Spinner`), not found. Then the document frame: a `Toolbar` with the file name and controls, a stage on `background-darker` (a scoped `.stage` style), and a `StatusBar` with type, size and last-modified time (`format_datetime`).
 
+Below the `@lg` container width the name takes the toolbar's first row (`order-first basis-full`) and the controls wrap onto the next, with Save to disk… pushed right; from `@lg` up it's one row with the name truncating in between.
+
 | Kind | Rendering | Controls |
 |------|-----------|----------|
-| image | `<img>` centered in a `minmax(0,1fr)` grid cell with `p-6`. In fit mode it's `size-full object-contain`, so it fills the cell and small images scale up; the definite cell size is what makes fit work | Zoom out / level / zoom in (0.25 to 5, step 0.25; zooming leaves fit mode; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Save to disk… |
+| image | A box sized in layout to the rotated image times the scale, centred in a `min-w-full min-h-full w-max` grid with padding (24px desktop, 8px mobile). The `<img>` inside is absolutely centred at its natural size times the scale and rotated by `transform`. Fit's scale is `fit_scale()` of the rotated size into the stage (`bind:clientWidth/Height`) minus padding, so small images scale up and a 90° turn still fits | Zoom out / level / zoom in (step 0.25 within 0.25 to 5, the limits widened to include the fit scale; zooming leaves fit mode starting from the fit scale; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Save to disk… |
 | video | `<video controls>`, `max-h-full max-w-full` | Save to disk… |
 | audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
 | unsupported | "Can't preview this file" empty state with the type | Save to disk… |
 
-Transforms (`scale`, `rotate`) animate over 200ms.
+Rotation animates over 200ms; size changes are instant. Because zoom changes the layout size rather than a transform, the scroll area grows with the image and every edge is reachable. The wrapper's `overflow-clip` keeps the image's corners mid-rotation from adding scrollbars. Pure math (`clamp`, `distance`, `midpoint`, `rotated_size`, `fit_scale`) is in `zoom.ts`, tested in `zoom.test.ts`.
+
+Every zoom goes through `zoom_at(scale, anchor)`. It reads the box rect, applies the zoom, `flushSync()`s, and adjusts the stage's `scrollLeft/Top` so the image point under the anchor stays put.
 
 **Interactions.**
 
 | Input | Effect |
 |-------|--------|
-| Ctrl + wheel over the image (trackpad pinch too) | Zoom by ±0.25, default scroll prevented |
-| Toolbar buttons | As above. Each is a labelled `IconButton`; zoom buttons disable at the limits |
+| Ctrl + wheel over the image (trackpad pinch too) | Zoom by ±0.25 around the cursor, default scroll prevented |
+| Two-finger pinch (touch, pen) | Zoom around the pinch midpoint, and pan as the midpoint moves. Ending a pinch at or below the fit scale snaps back to fit |
+| One-finger drag (touch, pen) | Pan the zoomed image by scrolling the stage |
+| Toolbar buttons | As above, zooming around the stage centre. Each is a labelled `IconButton`; zoom buttons disable at the limits |
 | Native media controls | Play, seek, volume |
 
 The toolbar's "Save to disk…" (`HardDrives` icon) calls `save_to_disk(path)` from `components/files/file-actions.ts`, the same action as File Explorer and the desktop: `files.export_to_disk` plus a "Saved to disk" toast or an error toast.
 
+Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer capture; the image wrapper is `touch-none`, so the browser neither scrolls nor page-zooms under it, and the app does both. Gestures end on `lostpointercapture`, which also covers `pointercancel`. Mouse pointers are ignored there: the mouse keeps scrollbars and Ctrl + wheel.
+
 **Known gaps.**
 
-- Zoom is a CSS `transform: scale()` around the centre, with no panning. The zoomed overflow up and to the left is probably unreachable by scrolling (not verified).
-- Rotating a non-square image by 90° in fit mode can overflow the stage, because fit sizes the unrotated box (not verified).
+- Touch pan has no momentum, and there's no double-tap to zoom.
+- Mouse drag doesn't pan; use the scrollbars.
 - No keyboard shortcuts for zoom or rotate. Rotation doesn't apply to video.
 - No gallery or next/previous through the folder.
 - `file` and `error` aren't reset if `path` changes. That's harmless today, because props don't change after launch.
@@ -272,15 +282,15 @@ The toolbar's "Save to disk…" (`HardDrives` icon) calls `save_to_disk(path)` f
 
 `column_count` is the longest row; short rows render empty cells. After the no-path, loading, not-found and read-error states, an empty file shows "This file is empty". Otherwise the app renders:
 
-- **Toolbar:** Open…, the full path in mono, and a "First row is header" `Switch` (on by default).
-- **Table:** each row is its own grid on one shared fixed template: `{digits+3}ch` for row numbers, then `12rem` per column. Rows line up without a `<table>`, so each body row can use `content-visibility: auto` with `contain-intrinsic-block-size: auto 1.75rem`, and the browser skips rendering off-screen rows with no JS virtualization. Table rows can't do this, because containment doesn't apply to them. The header row is sticky on `background-light`: the first row, or A, B, … AA when the header is off. The row-number column is sticky on the left. Cells are mono `text-ui`, truncated, with the full value as `title`.
+- **Toolbar:** Open…, the full path in mono, and a "First row is header" `Switch` (on by default; "Header row" below `@md`).
+- **Table:** each row is its own grid on one shared fixed template: `{digits+3}ch` for row numbers, then `12rem` per column. Rows line up without a `<table>`, so each body row can use `content-visibility: auto` with `contain-intrinsic-block-size: auto 1.75rem`, and the browser skips rendering off-screen rows with no JS virtualization. Table rows can't do this, because containment doesn't apply to them. The header row is sticky on `background-light`: the first row, or A, B, … AA when the header is off. The row-number column is sticky on the left. Cells are mono `text-ui`, truncated, with the full value as `title`. Clicking or tapping a cell (one delegated handler on the scroller) highlights it `primary/12` and shows its full value, wrapped and selectable, in a strip above the status bar with its row number and column; the same cell again closes it, and so does a new file or a header toggle. That's the touch path to long values.
 - **Status bar:** file name, `{rows} rows × {columns} columns` (excluding the header), delimiter (Comma / Tab), size.
 
 **Persistence.** None. The header toggle is per window.
 
 **Known gaps.**
 
-- Fixed column width: long values are truncated (tooltip only), short columns waste space.
+- Fixed column width: long values are truncated (tooltip, or tap for the value strip), short columns waste space.
 - Parses on the main thread and builds every row's DOM; `content-visibility` only skips layout and paint.
 - No delimiter detection (semicolon CSVs show as one column), UTF-8 only, read-only, no sorting or filtering.
 
@@ -308,7 +318,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
   - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
-  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. Peak, media and sparkline columns hide in narrow windows (container queries).
+  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. Peak, media and sparkline columns hide in narrow windows (container queries); below `@md` (a phone) Nodes and the short id hide too and the own-window badge shortens to "this". The long-frames table drops its Blocking column there.
   - **End:** calls `windows.close(id)`, the same as ×.
 - **Performance:**
   - Frame rate (rAF), event-loop lag (drift of a chained 1 s `setTimeout`) and JS heap (`performance.memory`, copied field by field because its fields are prototype getters), each with a sparkline.

@@ -66,7 +66,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - **Long press** (`long-press.ts`): 450ms without moving more than 8px. Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the finger drags instead of scrolling, and the click after release swallowed. Release without moving → menu; move → drag. Android's own long-press `contextmenu` is suppressed; a mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
   - **Icon menu** (`home-actions.ts`): Open, Add to dock (disabled when full) / Remove from dock, Rename, Delete or Remove shortcut, Properties. Rename, delete and properties are `desktop-actions.ts`'s flows.
   - **Empty space menu:** the desktop's background menu (New folder, Paste, Change theme).
-  - **Drag:** a ghost follows the finger. Over an icon, a 2px `primary` bar marks "drop before it"; over a page's empty space, "end of that page"; over the dock, the dock tints `primary/10` with a `primary/60` hairline (not when full or the item is already docked). Holding within 56px of the side for 550ms turns the page, repeatedly. Drop calls `move_item(name, before)` or `set_docked(name, true)`. Dragging a dock icon onto home undocks it.
+  - **Drag:** a ghost follows the finger. Over an icon, a 2px `primary` bar marks "drop before it"; over a page's empty space, "end of that page"; over the dock, the dock tints `primary/10` with a `primary/60` hairline (not when full or the item is already docked). Holding within 56px of the side for 550ms turns the page, repeatedly. Drop calls `move_item(name, before)` or `set_docked(name, true, before)`. Over a dock icon the bar marks "before it", so dragging within the dock reorders it; dragging a dock icon onto home undocks it.
 
 ## App drawer
 
@@ -80,7 +80,6 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 - Apps aren't adjusted for phone widths yet (second pass). Most assume a desktop-sized window.
 - No app-level back (File Explorer up a folder) and no OS back gesture wiring: separate brainstorm.
-- No way to reorder the dock except undocking and docking again.
 - No virtual keyboard handling beyond what `h-dvh` gives.
 - Centred system dialogs use their desktop sizes (capped to the screen); context menus and Open with are bottom sheets.
 - Dragging across pages relies on the 550ms side hold; there's no page indicator while dragging.

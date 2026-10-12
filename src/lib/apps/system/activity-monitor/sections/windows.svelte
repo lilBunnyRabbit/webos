@@ -60,7 +60,7 @@
     return rate < 10 ? rate.toFixed(1) : Math.round(rate).toString();
   }
 
-  const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_3.5rem] @3xl:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem_6rem_3.5rem] @5xl:grid-cols-[minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem_6rem_3.5rem]";
+  const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] @md:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_3.5rem] @3xl:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem_6rem_3.5rem] @5xl:grid-cols-[minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem_6rem_3.5rem]";
 </script>
 
 {#snippet header(label: string, key: SortKey | null, class_name = "")}
@@ -92,7 +92,7 @@
       {@render header("Activity", null, "hidden @5xl:block")}
       {@render header("Mut/s", "rate")}
       {@render header("Peak", "peak", "hidden @3xl:flex")}
-      {@render header("Nodes", "nodes")}
+      {@render header("Nodes", "nodes", "hidden @md:flex")}
       {@render header("Media", null, "hidden text-right @3xl:block")}
       <span></span>
     </div>
@@ -103,8 +103,8 @@
         <div class="flex min-w-0 items-center gap-2">
           <row.icon class="size-4 shrink-0 text-foreground/70" weight="duotone" />
           <span class="truncate">{row.name}</span>
-          <span class="font-mono text-2xs text-foreground/65" title={row.id}>{row.id.slice(0, 4)}</span>
-          {#if own}<Badge tone="primary">this window</Badge>{/if}
+          <span class="hidden font-mono text-2xs text-foreground/65 @md:inline" title={row.id}>{row.id.slice(0, 4)}</span>
+          {#if own}<Badge tone="primary">this<span class="hidden @md:inline">&nbsp;window</span></Badge>{/if}
           {#if row.minimized}<Badge>minimized</Badge>{/if}
         </div>
 
@@ -116,7 +116,7 @@
           {@const stats = row.stats}
           <span class="text-right font-mono text-2xs tabular-nums">{format_rate(stats.rate)}</span>
           <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @3xl:block">{format_rate(stats.peak)}</span>
-          <span class="text-right font-mono text-2xs text-foreground/65 tabular-nums">{stats.nodes}</span>
+          <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @md:block">{stats.nodes}</span>
           <span
             class="hidden items-center justify-end gap-2 font-mono text-2xs text-foreground/65 tabular-nums @3xl:flex"
             title="{stats.canvases} canvas, {stats.media_playing} of {stats.media} media playing, {stats.iframes} iframes"
@@ -137,7 +137,7 @@
         {:else}
           <span class="text-right font-mono text-2xs text-foreground/65">—</span>
           <span class="hidden text-right font-mono text-2xs text-foreground/65 @3xl:block">—</span>
-          <span class="text-right font-mono text-2xs text-foreground/65">—</span>
+          <span class="hidden text-right font-mono text-2xs text-foreground/65 @md:block">—</span>
           <span class="hidden text-right font-mono text-2xs text-foreground/65 @3xl:block">—</span>
         {/if}
 

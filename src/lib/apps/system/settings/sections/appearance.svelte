@@ -57,7 +57,7 @@
             {#each group.tokens as token (token)}
               {@const value = settings.theme[token]}
               <div class="flex items-center gap-2 rounded-lg bg-background-darker p-1 pr-2 ring-1 ring-inset ring-foreground/8">
-                <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={value} title="Pick {label(token)}">
+                <label class="relative size-7 pointer-coarse:size-9 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={value} title="Pick {label(token)}">
                   <input
                     type="color"
                     class="absolute inset-0 cursor-pointer opacity-0"

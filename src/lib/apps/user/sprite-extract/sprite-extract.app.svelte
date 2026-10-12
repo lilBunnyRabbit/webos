@@ -404,7 +404,8 @@
             </Button>
           </Section>
 
-          <Section title={sprite.selected === null ? "Frame" : `Frame #${sprite.selected}`} flush>
+          <!-- On touch the sheet sits above this column, so the frame controls come first, right under it. -->
+          <Section title={sprite.selected === null ? "Frame" : `Frame #${sprite.selected}`} class="pointer-coarse:order-first" flush>
             {#if selected_frame && sprite.selected !== null}
               {@const index = sprite.selected}
               <div class="grid grid-cols-2 gap-2">
@@ -422,9 +423,12 @@
               <Button size="sm" title="Toggle the frame in the sequence (Del)" onclick={() => sprite.toggle_in_sequence(index)}>
                 {#if selected_included}<EyeSlashIcon weight="bold" /> Exclude from sequence{:else}<EyeIcon weight="bold" /> Include in sequence{/if}
               </Button>
-              <p class="text-ui text-foreground/65">Arrows move, Shift ×10, Alt+arrows resize.</p>
+              <p class="text-ui text-foreground/65 pointer-coarse:hidden">Arrows move, Shift ×10, Alt+arrows resize.</p>
             {:else}
-              <p class="text-ui text-foreground/65">Click a frame on the sheet to adjust it. Drag it or its handles, or use the arrow keys.</p>
+              <p class="text-ui text-foreground/65 pointer-coarse:hidden">Click a frame on the sheet to adjust it. Drag it or its handles, or use the arrow keys.</p>
+              <p class="hidden text-ui text-foreground/65 pointer-coarse:block">
+                Tap a frame on the sheet to adjust it, then drag it or its handles. Hold a frame to include or exclude it. Pinch to zoom.
+              </p>
             {/if}
             <Button size="sm" title="Shrink every frame to its visible pixels. Breaks alignment, so export with a uniform size and an anchor" onclick={() => sprite.fit_all_to_content()}>
               <CrosshairIcon weight="bold" /> Fit all to content
@@ -457,7 +461,8 @@
           </Section>
         </aside>
 
-        <div class="stage relative order-1 h-96 shrink-0 @4xl:order-none @4xl:h-auto">
+        <!-- The sheet takes every touch on it, so it never fills the column: there's always room below to scroll by. -->
+        <div class="stage relative order-1 h-[clamp(12rem,60cqh,32rem)] shrink-0 @4xl:order-none @4xl:h-auto">
           <SpriteSheet bind:this={sheet} bind:zoom {sprite} {show_labels} pan_mode={space_held} />
         </div>
 
@@ -503,7 +508,8 @@
         {/if}
         <span>{grid.frames.length} frames</span>
         <span>{sprite.sequence.length} in sequence</span>
-        <span class="ml-auto hidden truncate @3xl:block">Drag lines · click a frame · drag it or its handles · double-click to toggle · Space or Alt drag to pan · Ctrl+scroll to zoom</span>
+        <span class="ml-auto hidden truncate @3xl:block pointer-coarse:@3xl:hidden">Drag lines · click a frame · drag it or its handles · double-click to toggle · Space or Alt drag to pan · Ctrl+scroll to zoom</span>
+        <span class="ml-auto hidden truncate pointer-coarse:@3xl:block">Drag lines · tap a frame · drag it or its handles · hold to toggle · pinch to zoom</span>
       </StatusBar>
     </div>
   {/if}
