@@ -37,7 +37,7 @@
     windows.list().flatMap((id) => {
       const instance = windows.get(id);
       if (!instance) return [];
-      return [{ id, name: instance.app.manifest.name, icon: instance.app.manifest.icon, minimized: instance.flags.has(WindowFlag.MINIMIZED) }];
+      return [{ id, name: instance.title ?? instance.app.manifest.name, icon: instance.app.manifest.icon, minimized: instance.flags.has(WindowFlag.MINIMIZED) }];
     })
   );
 
@@ -142,7 +142,7 @@
             <span class="hidden text-right font-mono text-2xs text-foreground/65 @xl:block">—</span>
           {/if}
 
-          <Button size="sm" variant="quiet" class="justify-self-end" onclick={() => windows.close(row.id)}>End</Button>
+          <Button size="sm" variant="quiet" class="justify-self-end" onclick={() => windows.force_close(row.id)}>End</Button>
         </div>
       {/each}
 

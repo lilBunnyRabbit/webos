@@ -24,12 +24,25 @@
 
   let swipe = $state<{ id: WindowId; pointer: number; start_x: number; start_y: number; dy: number; vertical: boolean | null } | null>(null);
 
+  // A dirty window asks first (ADR-029): bring it on screen for its sheet, and keep the prompt out of a view
+  // transition, whose callback must not wait on the user.
   function close(id: WindowId) {
-    view_transition(() => windows.close(id));
+    if (windows.get(id)?.dirty) {
+      onpick(id);
+      void windows.close(id);
+      return;
+    }
+    view_transition(() => void windows.force_close(id));
   }
 
   function close_all() {
-    view_transition(() => windows.close_all());
+    const dirty = windows.list().filter((id) => windows.get(id)?.dirty);
+    if (dirty.length > 0) {
+      onpick(dirty[0]);
+      void windows.close_all();
+      return;
+    }
+    view_transition(() => void windows.close_all());
   }
 
   function on_pointer_down(event: PointerEvent, id: WindowId) {
@@ -98,7 +111,8 @@
         {#if switcher}
           <div class="flex h-8 items-center gap-2 px-1 select-none">
             <instance.app.manifest.icon class="size-5 shrink-0" weight="duotone" />
-            <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.app.manifest.name}</span>
+            <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
+            {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
             <IconButton label="Close {instance.app.manifest.name}" size="sm" onclick={() => close(id)}>
               <XIcon weight="bold" />
             </IconButton>

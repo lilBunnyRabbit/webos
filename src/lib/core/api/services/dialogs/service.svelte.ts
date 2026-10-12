@@ -4,6 +4,8 @@ import type { Kernel, WindowId, WindowsService } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
 import type { DialogEntry, DialogOptions, DialogProps, DialogsService as IDialogsService, MenuItem } from "./type";
 import ContextMenu from "$lib/core/components/dialogs/context-menu.svelte";
+import SaveChangesDialog from "$lib/core/components/dialogs/save-changes-dialog.svelte";
+import { CloseChoice } from "../windows/close-guard";
 
 export class DialogsService implements IDialogsService {
   name = "DialogsService";
@@ -19,12 +21,19 @@ export class DialogsService implements IDialogsService {
 
   private windows_service!: WindowsService;
   private dispose_watch?: () => void;
+  private dispose_prompt?: () => void;
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
   }
 
   init() {
+    // Windows asks before closing a window with unsaved changes; the sheet is ours (ADR-029).
+    this.dispose_prompt = this.windows_service.set_close_prompt(
+      async ({ id, title, can_save }) =>
+        (await this.show(SaveChangesDialog, { title, can_save }, { window: id, dismissible: false })) ?? CloseChoice.CANCEL
+    );
+
     // A closed window takes its sheets with it: they resolve null like a cancel.
     this.dispose_watch = $effect.root(() => {
       $effect(() => {
@@ -38,6 +47,7 @@ export class DialogsService implements IDialogsService {
 
   destroy() {
     this.dispose_watch?.();
+    this.dispose_prompt?.();
     for (const entry of [...this.stack].reverse()) {
       entry.resolve(null);
     }

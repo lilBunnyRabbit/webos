@@ -13,6 +13,7 @@ import type {
 } from "./type";
 import { WindowFlag } from "./type";
 import type { AppInstance } from "../apps/type";
+import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
 
 export class WindowsService implements DesktopWindowsService {
   name = "WindowsService";
@@ -78,6 +79,41 @@ export class WindowsService implements DesktopWindowsService {
     const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
     return handlers.some((handler) => handler());
   }
+  private guard = new CloseGuard();
+
+  public set_close_prompt(prompt: ClosePrompt): () => void {
+    return this.guard.set_prompt(prompt);
+  }
+
+  public set_title(id: WindowId, title: string | null): void {
+    const instance = this.get(id);
+    if (instance) instance.title = title ?? undefined;
+  }
+
+  public set_dirty(id: WindowId, dirty: boolean, options: DirtyOptions = {}): void {
+    const instance = this.get(id);
+    if (!instance) return;
+    if (instance.dirty !== dirty) instance.dirty = dirty;
+    this.guard.set_save(id, dirty ? options.save : undefined);
+  }
+
+  public has_dirty(): boolean {
+    return Object.values(this.index).some((instance) => instance.dirty);
+  }
+
+  /** The browser's own "Leave site?" prompt; it can't show ours while unloading (ADR-029). */
+  private on_before_unload = (event: BeforeUnloadEvent) => {
+    if (this.has_dirty()) event.preventDefault();
+  };
+
+  init(): void {
+    window.addEventListener("beforeunload", this.on_before_unload);
+  }
+
+  destroy(): void {
+    window.removeEventListener("beforeunload", this.on_before_unload);
+  }
+
 
   public set_container(element?: HTMLElement | null): Bounds {
     if (!element) {
@@ -119,7 +155,15 @@ export class WindowsService implements DesktopWindowsService {
     return this.container.bounds;
   }
 
-  public close(id: WindowId): boolean {
+  // A clean window closes synchronously; only a dirty one waits for the user.
+  public close(id: WindowId): Promise<boolean> {
+    const instance = this.get(id);
+    if (!instance) return Promise.resolve(false);
+    if (!instance.dirty) return Promise.resolve(this.force_close(id));
+    return this.guard.allow(instance, () => this.bring_forward(id)).then((allowed) => allowed && this.force_close(id));
+  }
+
+  public force_close(id: WindowId): boolean {
     if (!this.exists(id)) {
       return false;
     }
@@ -130,6 +174,7 @@ export class WindowsService implements DesktopWindowsService {
     // Remove window from index
     delete this.index[id];
     this.back_handlers.delete(id);
+    this.guard.forget(id);
 
     // Reset max order if no windows are left
     if (Object.keys(this.index).length === 0) {
@@ -141,9 +186,25 @@ export class WindowsService implements DesktopWindowsService {
     return true;
   }
 
-  public close_all(): void {
-    this.record_frames(Object.values(this.index));
-    this.reset_state();
+  public async close_all(): Promise<boolean> {
+    const instances = Object.values(this.index);
+    const clean = instances.filter((instance) => !instance.dirty);
+    if (clean.length === instances.length) {
+      this.record_frames(instances);
+      this.reset_state();
+      this.guard.clear();
+      return true;
+    }
+    for (const instance of clean) this.force_close(instance.id);
+    for (const instance of instances.filter((item) => item.dirty).sort((a, b) => b.order - a.order)) {
+      if (!(await this.close(instance.id))) return false;
+    }
+    return true;
+  }
+
+  private bring_forward(id: WindowId): void {
+    if (this.get(id)?.flags.has(WindowFlag.MINIMIZED)) this.toggle_minimize(id);
+    this.focus(id);
   }
 
   public exists(id: WindowId): boolean {

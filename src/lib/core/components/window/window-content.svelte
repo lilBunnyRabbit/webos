@@ -34,7 +34,7 @@
         <EmptyState icon={WarningIcon} tone="error" title="This app crashed" description={message(error)}>
           {#snippet actions()}
             <Button onclick={reset}><ArrowClockwiseIcon weight="bold" /> Restart app</Button>
-            <Button variant="quiet" onclick={() => windows.close(window_id)}>Close window</Button>
+            <Button variant="quiet" onclick={() => void windows.close(window_id)}>Close window</Button>
           {/snippet}
         </EmptyState>
       {/snippet}

@@ -2,6 +2,7 @@ import type { IService } from "../../type";
 import { Flags } from "$lib/core/utils/flags";
 import type { Bounds, PartialRecord } from "$lib/core/utils/type";
 import type { AppId, AppInstance, AppProps } from "../apps/type";
+import type { ClosePrompt, DirtyOptions } from "./close-guard";
 
 /**
  * Platform-neutral window management (ADR-016): lifecycle, focus, minimize/maximize, session restore. What code outside
@@ -23,16 +24,32 @@ export interface WindowsService extends IService {
   load_frames(frames: WindowFrames): void;
 
   /**
-   * Closes a window by its ID.
-   * @param id - The window ID to close
-   * @returns `true` if the window was closed, `false` if it didn't exist
+   * Closes a window, asking first when it has unsaved changes (ADR-029): the window comes forward and the registered
+   * prompt offers Save / Don't save / Cancel. Resolves `false` when it stays open (Cancel, a failed save, no prompt
+   * registered, or it didn't exist).
    */
-  close(id: WindowId): boolean;
+  close(id: WindowId): Promise<boolean>;
+
+  /** Closes a window without asking (Activity Monitor's End). `false` if it didn't exist. */
+  force_close(id: WindowId): boolean;
 
   /**
-   * Closes all windows and resets the window manager state.
+   * Closes clean windows at once, then asks each dirty one in turn. Resolves `false` when one stayed open; the rest
+   * after it aren't asked.
    */
-  close_all(): void;
+  close_all(): Promise<boolean>;
+
+  /** The document title shown instead of the app name (titlebar, taskbar tooltip, switcher). `null` restores it. */
+  set_title(id: WindowId, title: string | null): void;
+
+  /** Marks the window as having unsaved changes. `save` lets the close prompt offer Save. */
+  set_dirty(id: WindowId, dirty: boolean, options?: DirtyOptions): void;
+
+  /** Whether any window has unsaved changes; the page asks before it unloads. */
+  has_dirty(): boolean;
+
+  /** Registers the close prompt (DialogsService does, at init). Returns the disposer. */
+  set_close_prompt(prompt: ClosePrompt): () => void;
 
   /**
    * Checks if a window exists by its ID.
@@ -215,6 +232,10 @@ export interface WindowInstance {
   constraints: WindowConstraints;
   bounds: Bounds;
   app: AppInstance;
+  /** Set by the app (`window.set_title`); the app name shows when absent. Not saved with the session. */
+  title?: string;
+  /** Unsaved changes (`window.set_dirty`). Not saved with the session. */
+  dirty?: boolean;
 }
 
 export interface WindowOptions {

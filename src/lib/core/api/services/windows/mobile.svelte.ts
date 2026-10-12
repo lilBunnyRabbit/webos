@@ -10,6 +10,7 @@ import type {
   WindowInstance,
   WindowSnapshot,
 } from "./type";
+import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
 import { WindowFlag } from "./type";
 
 /** Flags that mean nothing on mobile: every window is fullscreen, and background windows are simply not focused. */
@@ -59,6 +60,41 @@ export class MobileWindowsService implements IMobileWindowsService {
     const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
     return handlers.some((handler) => handler());
   }
+  private guard = new CloseGuard();
+
+  public set_close_prompt(prompt: ClosePrompt): () => void {
+    return this.guard.set_prompt(prompt);
+  }
+
+  public set_title(id: WindowId, title: string | null): void {
+    const instance = this.get(id);
+    if (instance) instance.title = title ?? undefined;
+  }
+
+  public set_dirty(id: WindowId, dirty: boolean, options: DirtyOptions = {}): void {
+    const instance = this.get(id);
+    if (!instance) return;
+    if (instance.dirty !== dirty) instance.dirty = dirty;
+    this.guard.set_save(id, dirty ? options.save : undefined);
+  }
+
+  public has_dirty(): boolean {
+    return Object.values(this.index).some((instance) => instance.dirty);
+  }
+
+  /** The browser's own "Leave site?" prompt; it can't show ours while unloading (ADR-029). */
+  private on_before_unload = (event: BeforeUnloadEvent) => {
+    if (this.has_dirty()) event.preventDefault();
+  };
+
+  init(): void {
+    window.addEventListener("beforeunload", this.on_before_unload);
+  }
+
+  destroy(): void {
+    window.removeEventListener("beforeunload", this.on_before_unload);
+  }
+
 
   public set_container(element?: HTMLElement | null): void {
     this.container = { element: element ?? null };
@@ -106,12 +142,21 @@ export class MobileWindowsService implements IMobileWindowsService {
     return result;
   }
 
-  public close(id: WindowId): boolean {
+  // A clean window closes synchronously; only a dirty one waits for the user.
+  public close(id: WindowId): Promise<boolean> {
+    const instance = this.get(id);
+    if (!instance) return Promise.resolve(false);
+    if (!instance.dirty) return Promise.resolve(this.force_close(id));
+    return this.guard.allow(instance, () => this.focus(id)).then((allowed) => allowed && this.force_close(id));
+  }
+
+  public force_close(id: WindowId): boolean {
     if (!this.exists(id)) return false;
 
     const was_focused = this.is_focused(id);
     delete this.index[id];
     this.back_handlers.delete(id);
+    this.guard.forget(id);
 
     if (Object.keys(this.index).length === 0) this.max_order = 0;
     // Closing the app on screen goes home, not into another app the user didn't ask for.
@@ -120,9 +165,19 @@ export class MobileWindowsService implements IMobileWindowsService {
     return true;
   }
 
-  public close_all(): void {
-    this.index = {};
-    this.max_order = 0;
+  public async close_all(): Promise<boolean> {
+    const instances = Object.values(this.index);
+    if (instances.every((instance) => !instance.dirty)) {
+      this.index = {};
+      this.max_order = 0;
+      this.guard.clear();
+      return true;
+    }
+    for (const instance of instances.filter((item) => !item.dirty)) this.force_close(instance.id);
+    for (const instance of instances.filter((item) => item.dirty).sort((a, b) => b.order - a.order)) {
+      if (!(await this.close(instance.id))) return false;
+    }
+    return true;
   }
 
   public exists(id: WindowId): boolean {

@@ -55,7 +55,7 @@ export function default_shortcuts({ windows, apps, dialogs, ui, session }: Servi
       label: "Close window",
       category: ShortcutCategory.WINDOW,
       when: () => focused() !== null,
-      run: with_focused((id) => windows().close(id)),
+      run: with_focused((id) => void windows().close(id)),
     },
     {
       id: "window.minimize",

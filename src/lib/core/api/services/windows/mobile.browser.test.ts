@@ -1,6 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { AppInstance } from "../apps/type";
 import { MobileWindowsService } from "./mobile.svelte";
+import { CloseChoice } from "./close-guard";
 import { WindowFlag, type WindowSnapshot } from "./type";
 
 function app(id: string, flags: WindowFlag[] = []): AppInstance {
@@ -92,5 +93,64 @@ describe("MobileWindowsService", () => {
 
     windows.close(a);
     expect(windows.back(a)).toBe(false);
+  });
+
+  test("a dirty window asks first: Cancel keeps it, Don't save closes, Save closes only once saved (ADR-029)", async () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    windows.go_home();
+
+    let choice: CloseChoice = CloseChoice.CANCEL;
+    const prompt = vi.fn(async () => choice);
+    windows.set_close_prompt(prompt);
+    const save = vi.fn(async () => false);
+    windows.set_title(a, "Notes.txt");
+    windows.set_dirty(a, true, { save });
+    expect(windows.has_dirty()).toBe(true);
+
+    expect(await windows.close(a)).toBe(false);
+    expect(prompt).toHaveBeenLastCalledWith({ id: a, title: "Notes.txt", can_save: true });
+    // The sheet needs the window on screen.
+    expect(windows.get_focused()).toBe(a);
+
+    choice = CloseChoice.SAVE;
+    expect(await windows.close(a)).toBe(false);
+    expect(save).toHaveBeenCalledOnce();
+
+    choice = CloseChoice.DISCARD;
+    expect(await windows.close(a)).toBe(true);
+    expect(windows.exists(a)).toBe(false);
+  });
+
+  test("without a prompt a dirty window refuses to close; force_close and clean windows never ask", async () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    const b = windows.open(app("b"));
+    windows.set_dirty(a, true);
+
+    expect(await windows.close(a)).toBe(false);
+    windows.close(b);
+    expect(windows.exists(b)).toBe(false);
+    expect(windows.force_close(a)).toBe(true);
+    expect(windows.has_dirty()).toBe(false);
+  });
+
+  test("close_all closes clean windows at once, then asks each dirty one and stops at Cancel", async () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    const b = windows.open(app("b"));
+    const c = windows.open(app("c"));
+    windows.set_dirty(a, true);
+    windows.set_dirty(c, true);
+    const asked: string[] = [];
+    windows.set_close_prompt(async ({ id }) => {
+      asked.push(id);
+      return id === c ? CloseChoice.DISCARD : CloseChoice.CANCEL;
+    });
+
+    expect(await windows.close_all()).toBe(false);
+    expect(windows.exists(b)).toBe(false);
+    expect(asked).toEqual([c, a]);
+    expect(windows.list()).toEqual([a]);
   });
 });

@@ -21,12 +21,14 @@ Ways a window closes: titlebar ×, Alt+Shift+W, the mobile switcher (card flick,
 | What the titlebar shows | **The document title alone**, the app shown by its icon (macOS). `set_title(null)` goes back to the app name. Taskbar tooltip "Untitled.png — Paint". Not persisted: the app sets it again on restore | "Title — App" everywhere |
 | `close()` semantics | **`close(id)` is guarded and returns `Promise<boolean>`; `force_close(id)` skips the guard.** Callers get the guard by default | Keeping `close` as force and adding `request_close` (a caller that forgets loses work) |
 
+| Who shows the sheet | **DialogsService registers a close prompt** on WindowsService at init (`set_close_prompt`); dependency direction stays dialogs → windows. No prompt registered → a dirty window refuses to close | WindowsService calling dialogs lazily (hidden cycle); the guard outside WindowsService (breaks "close is guarded") |
+
 Against the picks, recorded: the OS sheet can't carry app-specific wording; five dirty windows mean five sheets; `close` turning async ripples through the interface, the mobile service, session and tests.
 
 ## Action items
 
-- [ ] ADR-029
-- [ ] WindowsService: `title` / `dirty` on window state, `set_title`, `set_dirty`, guarded `close` / `close_all`, `force_close`; mobile service too
-- [ ] OS sheet, titlebar title + dot, taskbar tooltip, switcher card, Activity Monitor name and End → `force_close`, `beforeunload`
-- [ ] WindowHandle `set_title` / `set_dirty`
+- [x] ADR-029
+- [x] WindowsService: `title` / `dirty` on window state, `set_title`, `set_dirty`, guarded `close` / `close_all`, `force_close`; mobile service too (`CloseGuard`)
+- [x] OS sheet, titlebar title + dot, taskbar tooltip, switcher card, Activity Monitor name and End → `force_close`, `beforeunload`
+- [x] WindowHandle `set_title` / `set_dirty`
 - [ ] Paint adopts both (after the kit pass merges)

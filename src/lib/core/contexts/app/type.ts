@@ -1,7 +1,7 @@
 import type { ConfirmOptions } from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import type { PromptOptions } from "$lib/core/components/dialogs/prompt-dialog.svelte";
 import type { PickOptions, SaveOptions } from "$lib/core/components/files/file-picker-dialog.svelte";
-import type { AppId, WindowId } from "$lib/core/api";
+import type { AppId, DirtyOptions, WindowId } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { ZodType } from "zod";
 
@@ -20,7 +20,15 @@ export interface WindowHandle {
   readonly bounds: Readonly<Bounds>;
 
   focus(): void;
+  /** Asks first when the window has unsaved changes (ADR-029). An app that just saved calls `set_dirty(false)` first. */
   close(): void;
+  /** Shows a document title instead of the app name (titlebar, taskbar tooltip, switcher). `null` restores it. */
+  set_title(title: string | null): void;
+  /**
+   * Marks unsaved changes: closing asks Save / Don't save / Cancel (Save only with `save`), the titlebar shows a dot and
+   * the page warns before unloading. `$effect(() => window.set_dirty(dirty, { save }))`.
+   */
+  set_dirty(dirty: boolean, options?: DirtyOptions): void;
   minimize(): void;
   maximize(): void;
   restore(): void;

@@ -26,7 +26,8 @@
 
 <div class={cn("flex min-w-0 items-center gap-2 transition-opacity duration-150", !focused && "opacity-80")}>
   <instance.app.manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
-  <span class="truncate text-ui font-medium">{instance.app.manifest.name}</span>
+  <span class="truncate text-ui font-medium" title={instance.title ? `${instance.title} — ${instance.app.manifest.name}` : undefined}>{instance.title ?? instance.app.manifest.name}</span>
+  {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
 </div>
 
 <div class="flex shrink-0 items-center gap-0.5">
@@ -60,7 +61,7 @@
   <IconButton data-window-button label={is_maximized ? "Restore" : "Maximize"} size="sm" onclick={() => view_transition(() => windows.toggle_maximize(window_id))}>
     {#if is_maximized}<CornersInIcon weight="bold" />{:else}<CornersOutIcon weight="bold" />{/if}
   </IconButton>
-  <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => windows.close(window_id)}>
+  <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => void windows.close(window_id)}>
     <XIcon weight="bold" />
   </IconButton>
 </div>

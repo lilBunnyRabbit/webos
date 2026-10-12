@@ -14,6 +14,8 @@ Document apps (Paint, later Text Editor, Image Editor) lose unsaved work on ever
 - **`close_all()`** closes clean windows at once, then asks each dirty window in turn, bringing it forward; Cancel stops the rest.
 - **Titles.** `WindowHandle.set_title(title: string | null)`. The titlebar shows the title alone (app identified by its icon) with a dot when dirty; the taskbar tooltip reads "{title} — {app}"; the mobile switcher card and Activity Monitor show the title. `null` restores the app name. Not persisted.
 
+- **Who prompts.** DialogsService registers the sheet on WindowsService at init (`set_close_prompt`), keeping the dependency direction dialogs → windows. With no prompt registered, a dirty window refuses to close.
+
 ## Alternatives Considered
 
 1. **Discard / Cancel only** — smaller API, but the user has to cancel, save in the app and close again.

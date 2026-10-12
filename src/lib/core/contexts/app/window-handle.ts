@@ -32,7 +32,13 @@ export function create_window_handle(id: WindowId): WindowHandle {
       windows().focus(id);
     },
     close() {
-      windows().close(id);
+      void windows().close(id);
+    },
+    set_title(title) {
+      windows().set_title(id, title);
+    },
+    set_dirty(dirty, options) {
+      windows().set_dirty(id, dirty, options);
     },
     minimize() {
       if (!has(WindowFlag.MINIMIZED)) windows().toggle_minimize(id);

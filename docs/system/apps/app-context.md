@@ -35,7 +35,9 @@ Built by `create_window_handle(id)`. Every member calls `kernel.service<WindowsS
 | `is_minimized` | `boolean` getter | Has the `minimized` flag. `false` once the window is gone |
 | `bounds` | `Readonly<Bounds>` getter | `{ x, y, width, height }` from the instance. A frozen zero rect once the window is gone |
 | `focus()` | `void` | `windows.focus(id)` |
-| `close()` | `void` | `windows.close(id)`. Immediate, no confirmation |
+| `close()` | `void` | `windows.close(id)`: asks first when the window is dirty (ADR-029). Call `set_dirty(false)` before closing after your own save |
+| `set_title(title)` | `void` | The document title shown instead of the app name (titlebar with the app's icon, taskbar tooltip "{title} — {app}", switcher card, Activity Monitor). `null` restores the app name. Not persisted: set it again after a restore |
+| `set_dirty(dirty, { save? })` | `void` | Unsaved changes: closing shows "Save changes to {title}?" with Cancel / Don't save / Save (Save only with `save`, which resolves `true` once saved), the titlebar shows a `primary` dot, and a tab close or reload makes the browser ask. Use `$effect(() => window.set_dirty(dirty, { save }))` |
 | `minimize()` | `void` | Minimizes if not already minimized |
 | `maximize()` | `void` | Un-minimizes first if minimized, then maximizes if not maximized |
 | `on_back(handler)` | `() => void` (disposer) | Claims the mobile nav bar's Back (ADR-003 revision 2026-10-12). `handler` returns `true` when it handled back. Handlers stack per window, newest first: `windows.add_back_handler(id, handler)`. Use `$effect(() => window.on_back(...))`. Desktop never calls it |

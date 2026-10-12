@@ -9,12 +9,13 @@
 
   const is_focused = $derived(windows.is_focused(instance.id));
   const is_minimized = $derived(instance.flags.has(WindowFlag.MINIMIZED));
+  const label = $derived(instance.title ? `${instance.title} — ${instance.app.manifest.name}` : instance.app.manifest.name);
 </script>
 
 <button
-  aria-label={instance.app.manifest.name}
+  aria-label={label}
   aria-pressed={is_focused && !is_minimized}
-  title={instance.app.manifest.name}
+  title={label}
   class={cn(
     "relative grid size-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10",
     is_focused && !is_minimized && "bg-foreground/10",

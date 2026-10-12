@@ -5,7 +5,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | File | Role |
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
-| `window-titlebar.svelte` | Icon, name, zoom pill, min/max/close buttons |
+| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |

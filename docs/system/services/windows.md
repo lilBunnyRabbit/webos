@@ -26,6 +26,8 @@ interface WindowInstance {
   constraints: WindowConstraints; // { width?: { min?, max? }, height?: { min?, max? } }
   bounds: Bounds;                // { x, y, width, height } in px, the "restored" geometry
   app: AppInstance;              // { id, manifest (minus component), component: Promise, props, state }
+  title?: string;                // window.set_title; app name when absent (ADR-029)
+  dirty?: boolean;               // window.set_dirty; never saved with the session
 }
 ```
 
@@ -55,8 +57,13 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `gather` | `() => void` | Desktop only. `clamp_bounds` on every non-minimized window: fully on screen, shrunk if larger than the area. Alt+Shift+G and the desktop's "Gather windows" menu item, both in a view transition |
 | `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.place` (see [Placement](#placement)). |
 | `restore` | `(windows: WindowSnapshot[], create: (snapshot) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
-| `close` | `(id) => boolean` | Records the window's frame (`frames[app.id] = bounds`), then deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
-| `close_all` | `() => void` | Records every window's frame (topmost last, so it wins per app), empties the index and resets `max_order`. The mobile switcher's Close all calls it. |
+| `close` | `(id) => Promise<boolean>` | Guarded (ADR-029). A clean window closes synchronously through `force_close`. A dirty one comes forward (un-minimized, focused) and the registered close prompt asks; Cancel, a `save` resolving `false`, or no prompt registered keep it open (`false`). A second request while its sheet is up resolves `false` without stacking another. |
+| `force_close` | `(id) => boolean` | The old unguarded close: records the frame (`frames[app.id] = bounds`), deletes the record and its back handlers and save, resets `max_order` when it was the last window. Activity Monitor's End uses it. `false` if the id doesn't exist. |
+| `close_all` | `() => Promise<boolean>` | All clean: records every frame (topmost last), empties the index, resets `max_order`. Otherwise clean windows close at once and dirty ones are closed one by one, topmost first; the first that stays open stops the rest (`false`). The mobile switcher's Close all calls it. |
+| `set_title` | `(id, title \| null) => void` | Sets `instance.title`; `null` clears it. Titlebar, taskbar tooltip, switcher card and Activity Monitor read it |
+| `set_dirty` | `(id, dirty, { save? }) => void` | Sets `instance.dirty`; keeps `save` in a plain map while dirty |
+| `has_dirty` | `() => boolean` | Any window dirty. The service's `beforeunload` listener (added in `init()`, removed in `destroy()`) calls `preventDefault()` then, so the browser asks before a tab close or reload |
+| `set_close_prompt` | `(prompt) => () => void` | DialogsService registers the sheet at init; the disposer clears it. `CloseGuard` (`close-guard.ts`) holds it and runs the dirty path for both implementations |
 | `frames` | `readonly WindowFrames` | `$state.raw` `Record<AppId, Bounds>`: each app's last closed window frame. Base interface, so both implementations hold them |
 | `load_frames` | `(frames) => void` | Replaces `frames`. [SessionService](session.md) calls it at init |
 | `exists` | `(id) => boolean` | |
