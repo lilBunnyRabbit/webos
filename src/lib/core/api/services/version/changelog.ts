@@ -5,10 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.19.2",
+    date: "2026-10-12",
+    title: "Pocket",
+    changes: [{ kind: FIXED, text: "Samsung Internet on Android phones gets the phone layout instead of the desktop one." }],
+  },
+  {
     version: "0.19.1",
     date: "2026-10-12",
     title: "Room to read",
-    changes: [{ kind: FIXED, text: "Activity Monitor shows window names in full instead of cutting them to a letter or two." }],
+    changes: [
+      { kind: FIXED, text: "Activity Monitor shows window names in full instead of cutting them to a letter or two." },
+    ],
   },
   {
     version: "0.19.0",

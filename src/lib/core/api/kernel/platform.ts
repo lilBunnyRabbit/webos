@@ -4,15 +4,21 @@ export const Platform = {
 } as const;
 export type Platform = (typeof Platform)[keyof typeof Platform];
 
+interface NavigatorUAData {
+  mobile: boolean;
+}
+
 /**
  * Read once at boot (ADR-016). `?platform=mobile|desktop` wins, for trying the other shell on one machine. Otherwise a
- * touch-first device (coarse primary pointer that can't hover: phones, tablets) is mobile.
+ * phone (User-Agent Client Hints `mobile`) or a touch-first device (coarse primary pointer that can't hover: tablets)
+ * is mobile. Hints come first because Samsung Internet on Galaxy phones reports `hover: hover`.
  */
 export function detect_platform(
   search: string = location.search,
-  touch_first: boolean = matchMedia("(pointer: coarse) and (hover: none)").matches
+  touch_first: boolean = matchMedia("(pointer: coarse) and (hover: none)").matches,
+  phone: boolean = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData?.mobile ?? false
 ): Platform {
   const forced = new URLSearchParams(search).get("platform");
   if (forced === Platform.MOBILE || forced === Platform.DESKTOP) return forced;
-  return touch_first ? Platform.MOBILE : Platform.DESKTOP;
+  return phone || touch_first ? Platform.MOBILE : Platform.DESKTOP;
 }
