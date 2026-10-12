@@ -255,6 +255,7 @@ Rules:
 - Browser tests start each case from an empty OPFS (`opfs.clear_opfs()` in `beforeEach`). The Vitest server's origin is not the dev server's, so the owner's data is never touched.
 - Reactive code: call `flushSync()` after a change so effects run, then `vi.waitFor` for the async part. Dispose what you create (`DirectoryHandler.dispose()`) in `afterEach`.
 - Test behaviour through the public API, not private fields. A test should fail when the behaviour breaks: break the code once on purpose and check.
+- Services: `boot_test_kernel({ files: FilesService, …, session: SessionService })` from `kernel/test-kernel.ts` builds a real `Kernel` with only those services, constructed and `init()`ed in the order given (list dependencies first). A service whose answer only comes from UI (dialogs) goes in as `stub_service("dialogs", { show: vi.fn(async () => true) })`. Call the returned `shutdown()` in `afterEach`. Seed OPFS files before booting.
 - No component tests (ADR-027).
 
 ---

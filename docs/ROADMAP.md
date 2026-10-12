@@ -10,8 +10,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-1. [-] **Foundations** (left: service tests through a real kernel)
-   - [-] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler covered. Service tests through a real kernel still open
+1. [x] **Foundations**
+   - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
    - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
@@ -336,7 +336,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### Testing
 - **ADR:** [ADR-027](adrs/027-testing.md)
 - [x] Testing setup (Vitest: `unit` in Node, `browser` in Chromium; no component tests)
-- [-] Unit tests for core utilities and services (helpers, parsers, opfs, FilesService, DirectoryHandler; services through a kernel open)
+- [x] Unit tests for core utilities and services (helpers, parsers, opfs, FilesService, DirectoryHandler, Version, Session; more as services change)
 - [ ] Integration tests for app launching and file operations
 - [ ] Playwright browser tests in CI (deferred by owner)
 

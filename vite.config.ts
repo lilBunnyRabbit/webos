@@ -67,6 +67,8 @@ export default defineConfig({
       { extends: true, test: { name: "unit", include: ["src/**/*.test.ts"], exclude: ["src/**/*.browser.test.ts"], environment: "node" } },
       {
         extends: true,
+        // Pre-bundled up front: discovering them mid-run makes Vite reload the test page.
+        optimizeDeps: { include: ["zod", "phosphor-svelte", "uuid", "tailwind-merge", "tailwind-variants"] },
         test: {
           name: "browser",
           include: ["src/**/*.browser.test.ts"],

@@ -57,9 +57,8 @@ Browser tests run on the Vitest server's own origin (its own port, not the dev s
 - [x] ADR-027
 - [x] Vitest setup, scripts, CI step
 - [x] First tests: pure helpers, opfs, FilesService revisions, DirectoryHandler
-- [ ] Service tests through a real kernel: needs a test-kernel helper (shape decided when the first one is written)
+- [x] Service tests through a real kernel: owner picked option A, a real `Kernel` filled by the test (`boot_test_kernel`), over `init({ only })` and a full boot. VersionService and SessionService covered
 
 ## Next session topics
 
-- The test-kernel helper for service tests.
 - Playwright in CI, once the browser suite is stable.

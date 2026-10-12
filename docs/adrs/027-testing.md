@@ -2,6 +2,12 @@
 **Date:** 2026-10-12
 **Status:** Implemented (2026-10-12)
 
+> **Revision 2026-10-12: service tests** (owner)
+> - `kernel/test-kernel.ts`: `boot_test_kernel(services)` fills a real `Kernel`'s public `services` map with real service classes, constructed and initialised in the order the test lists. No Kernel API change. `stub_service(name, members)` stands in for a service that only resolves through UI (dialogs).
+> - Rejected: `init({ only })` on the Kernel (an API change only for tests) and a full boot (polling, dialogs and a mounted shell). Cost: the test writes the order by hand, so a broken dependency graph isn't caught here; every page load still boots the real graph.
+> - The helper imports `Kernel` through the `$lib/core/api` barrel. Importing `kernel.svelte` directly starts the service graph mid-cycle (`Cannot access 'Kernel' before initialization`).
+> - The browser project pre-bundles zod, phosphor-svelte, uuid, tailwind-merge and tailwind-variants (`optimizeDeps.include`); found mid-run, Vite reloads the test page.
+
 ## Context
 
 There were no tests. Services grew subtle: session restore, directory revisions, DirectoryHandler's coalesced reloads. Refactors relied on manual browser checks. The riskiest layer, OPFS, exists only in a real browser, and the bugs so far were browser behaviour that a fake wouldn't reproduce. Brainstorm: [2026-10-12 Testing strategy](../brainstorm/2026-10-12_testing-strategy.md).
@@ -43,4 +49,4 @@ There were no tests. Services grew subtle: session restore, directory revisions,
 ### Negative
 - Browser tests run only locally; a push can break them without CI noticing.
 - Three dev dependencies and a local Chromium download.
-- Service tests still need a test-kernel helper, designed when the first one is written.
+- Service tests build a real Kernel by hand (`boot_test_kernel`); see the revision note.
