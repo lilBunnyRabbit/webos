@@ -541,9 +541,9 @@
   </div>
 
   <StatusBar>
-    <span class="font-mono tabular-nums">{format_time(elapsed)}</span>
+    <span class="shrink-0 font-mono tabular-nums">{format_time(elapsed)}</span>
     <span aria-live="polite">{status}</span>
-    <span class="hidden font-mono tabular-nums @md:inline">{filled}/{white_count} filled</span>
+    <span class="hidden shrink-0 font-mono tabular-nums @md:inline">{filled}/{white_count} filled</span>
     <span class="hidden @2xl:inline">Shift+digit or N for notes · H for a hint</span>
   </StatusBar>
 </div>

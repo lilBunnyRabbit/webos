@@ -537,9 +537,9 @@
   </div>
 
   <StatusBar class="hidden @md:flex">
-    <span class="font-mono tabular-nums">{format_time(elapsed)}</span>
+    <span class="shrink-0 font-mono tabular-nums">{format_time(elapsed)}</span>
     <span>{status}</span>
-    <span class="hidden font-mono tabular-nums @md:inline">{filled}/{target} filled</span>
+    <span class="hidden shrink-0 font-mono tabular-nums @md:inline">{filled}/{target} filled</span>
     <span class="hidden @4xl:inline">Right-click or Shift crosses · drag to paint a line</span>
   </StatusBar>
 </div>

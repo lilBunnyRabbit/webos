@@ -484,10 +484,10 @@
   </div>
 
   <StatusBar>
-    <span class="font-mono tabular-nums">{format_time(elapsed)}</span>
+    <span class="shrink-0 font-mono tabular-nums">{format_time(elapsed)}</span>
     <span aria-live="polite">{status}</span>
-    <span class="hidden font-mono tabular-nums @md:inline">{game.found.length}/{total} found</span>
-    {#if game.hints}<span class="hidden font-mono tabular-nums @2xl:inline">{game.hints} hint{game.hints === 1 ? "" : "s"}</span>{/if}
+    <span class="hidden shrink-0 font-mono tabular-nums @md:inline">{game.found.length}/{total} found</span>
+    {#if game.hints}<span class="hidden shrink-0 font-mono tabular-nums @2xl:inline">{game.hints} hint{game.hints === 1 ? "" : "s"}</span>{/if}
   </StatusBar>
 </div>
 

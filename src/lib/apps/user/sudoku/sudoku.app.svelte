@@ -517,7 +517,7 @@
   </div>
 
   <StatusBar>
-    <span class="font-mono tabular-nums">{filled}/81</span>
+    <span class="shrink-0 font-mono tabular-nums">{filled}/81</span>
     <span aria-live="polite">{status}</span>
     <span class="hidden @2xl:inline">1–9 place · Shift+digit or N notes · H hint</span>
   </StatusBar>

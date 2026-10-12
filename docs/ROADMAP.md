@@ -265,7 +265,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [-] Nonogram: black and white, generated puzzles, hints, zoom on phones (2026-10-13). Colour, editor and packs not done
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
-- [-] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku done; Kakuro, Nurikabe in progress
+- [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
