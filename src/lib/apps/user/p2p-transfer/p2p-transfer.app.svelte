@@ -43,7 +43,7 @@
   const step = $derived.by(() => {
     const { phase, code } = session;
     if (phase === Phase.SETUP) return role === "send" ? -1 : 0;
-    if (phase === Phase.CONNECTING) return role === "send" ? (code ? 1 : 0) : 2;
+    if (phase === Phase.CONNECTING) return role === "send" ? (sender.answered ? 2 : code ? 1 : 0) : 2;
     return 3;
   });
 
@@ -142,10 +142,17 @@
               <p class="text-center text-ui text-foreground/65">Scan this on the receiving device</p>
               <CodeDisplay code={session.code} kind="Offer" label="Sender's connection code" />
             </div>
-            <div class="flex flex-col gap-2">
-              <p class="text-center text-ui text-foreground/65">Then scan the answer it shows</p>
-              <CodeScanner onscan={(code) => sender.answer(code)} />
-            </div>
+            {#if sender.answered}
+              <div class="flex flex-col items-center justify-center gap-3 py-10">
+                <Spinner label="Connecting" />
+                <p class="text-center font-mono text-2xs text-foreground/80 uppercase">Answer accepted · opening the encrypted channel</p>
+              </div>
+            {:else}
+              <div class="flex flex-col gap-2">
+                <p class="text-center text-ui text-foreground/65">Then scan the answer it shows</p>
+                <CodeScanner onscan={(code) => sender.answer(code)} />
+              </div>
+            {/if}
           </div>
         {:else}
           <div class="flex flex-col items-center gap-3">

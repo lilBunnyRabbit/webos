@@ -44,13 +44,22 @@ export async function accept_offer(pc: RTCPeerConnection, code: string): Promise
   return local_code(pc, SignalKind.ANSWER);
 }
 
+/** Scanning the same answer twice is harmless; only the first one is applied. */
 export async function accept_answer(pc: RTCPeerConnection, code: string): Promise<void> {
   const signal = decode_signal(code);
   if (signal.kind !== SignalKind.ANSWER) throw new Error("That's a sender's code. Scan the code on the receiving device");
+  if (pc.signalingState !== "have-local-offer") {
+    if (pc.remoteDescription) return;
+    throw new Error("This connection isn't waiting for an answer anymore. Generate a new offer");
+  }
   await pc.setRemoteDescription(write_sdp(signal));
 }
 
-/** Rejects when the connection fails before the channel opens. */
+/**
+ * Resolves once the channel opens; rejects only if the connection is closed. ICE `failed` isn't final here: the answering
+ * side checks the offer's candidates right away and gets no reply until the other device has the answer code, which by
+ * hand can take minutes. Chrome reports `failed` after ~15 s, then recovers to `connected` once the late checks arrive.
+ */
 export function channel_open(pc: RTCPeerConnection, channel?: RTCDataChannel): Promise<RTCDataChannel> {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -58,9 +67,9 @@ export function channel_open(pc: RTCPeerConnection, channel?: RTCDataChannel): P
       pc.removeEventListener("datachannel", adopt);
     };
     const check = () => {
-      if (pc.connectionState !== "failed" && pc.connectionState !== "closed") return;
+      if (pc.connectionState !== "closed") return;
       cleanup();
-      reject(new Error("Couldn't connect to the other device"));
+      reject(new Error("The connection was closed"));
     };
     const watch = (target: RTCDataChannel) => {
       target.binaryType = "arraybuffer";

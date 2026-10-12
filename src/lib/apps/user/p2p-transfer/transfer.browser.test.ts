@@ -1,7 +1,8 @@
 import * as opfs from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { accept_answer, accept_offer, channel_open, create_offer, create_peer, Inbox } from "./peer";
+import { decode_signal, encode_signal } from "./signal";
 import { receive_files, send_files } from "./transfer";
 
 let files: FilesService;
@@ -51,6 +52,23 @@ function events(saved: string[], progress: number[] = []) {
     on_saved: (index: number, path: string) => (saved[index] = path),
   };
 }
+
+describe("channel_open", () => {
+  test("the answering side keeps waiting through ICE failure until the late answer arrives", { timeout: 60_000 }, async () => {
+    const sender = create_peer();
+    const receiver = create_peer();
+    peers.push(sender, receiver);
+    const { code, channel } = await create_offer(sender);
+    // Candidates nobody answers, like a sender that hasn't been given the answer yet: the receiver's checks go unanswered.
+    const offer = decode_signal(code);
+    const answer = await accept_offer(receiver, encode_signal({ ...offer, candidates: [{ type: "host", address: "10.255.255.1", port: 40000 }] }));
+    const opened = channel_open(receiver);
+
+    await vi.waitFor(() => expect(receiver.connectionState).toBe("failed"), { timeout: 30_000, interval: 250 });
+    await accept_answer(sender, answer);
+    await expect(Promise.all([opened, channel_open(sender, channel)])).resolves.toHaveLength(2);
+  });
+});
 
 describe("send_files / receive_files", () => {
   test("delivers every file byte for byte into Downloads, keeping both on a name clash", async () => {
