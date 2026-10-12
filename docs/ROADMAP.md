@@ -399,10 +399,11 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Shared base interface: `WindowsService` (base) / `DesktopWindowsService`
 - [x] `MobileWindowsService` (fullscreen, every app mounted, home = nothing focused)
 - [x] `MobileDesktopService` (ordered pages, dock, `/var/lib/desktop/home-layout.json`); `DesktopService` base by name + `DesktopFolder`
-- [x] Mobile shell components (fullscreen apps, live-card switcher, paged home, dock, app drawer, long-press menu and drag)
+- [x] Mobile shell components (fullscreen apps, live-card switcher, paged home, dock, app drawer, long-press menu; drag removed 2026-10-13)
 - [x] Navigation: three-button bar (gestures rejected: device edges)
 - [x] Back: apps claim it with `window.on_back` ([brainstorm](brainstorm/2026-10-12_mobile-apps-pass.md))
 - [ ] OS back gesture through history (brainstorm first, with ADR-010)
+- [ ] Revisit home icon drag: the hold fired on Samsung Internet but the icon never moved, cause unknown
 - [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
 - [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes
 - [x] Conditional service registration in `init.ts`

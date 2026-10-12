@@ -26,7 +26,6 @@ No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=c
 | Which app is on screen | `windows.get_focused()`. `null` = home |
 | Drawer or switcher open | [UiService](../services/ui.md) `overlay`: `launcher` (drawer), `switcher` or `notifications` (also the switcher) (ADR-028; was local `$state` until the shortcuts service needed to reach it) |
 | Current page | Local in `mobile-home.svelte`, from the scroll position |
-| Drag in progress | Local in `mobile-home.svelte` |
 
 An effect closes the overlay whenever a window comes on screen (drawer launch, a card picked, a file opened from elsewhere). Going home leaves it alone, so closing the on-screen app's card keeps the switcher open.
 
@@ -63,11 +62,11 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 - **Pages:** a horizontal scroll-snap row, one page per `desktop.pages(columns × rows)` chunk. `columns = clamp(floor(width / 88), 4, 8)`, `rows = floor(height / 104)`, measured from the row with `bind:clientWidth/Height`. A phone gets 4 columns; a tablet more; rotation just reflows. `overscroll-x-contain` stops a fling at the last page from turning into browser back. Dots under the pages when there's more than one; tapping one scrolls there.
 - **Icons:** `home-icon.svelte`, a 56px `rounded-2xl` tile on `background-light` with `shadow-raised` and a hairline, a 28px glyph (`ShortcutIcon` / `FileIcon`) and a two-line `text-xs` label. Tap opens through `desktop.open`.
-- **Dock:** the taskbar's look (`rounded-2xl bg-background-light/90 shadow-popover backdrop-blur-xl`): an All apps button (`SquaresFour`), a separator, then up to four docked items without labels. Empty, it says "Hold an icon, then drag it here".
-- **Long press** (`long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the finger drags instead of scrolling, and the click after release swallowed. Release without moving → menu; move → drag. Android's own long-press `contextmenu` is suppressed; a mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
+- **Dock:** the taskbar's look (`rounded-2xl bg-background-light/90 shadow-popover backdrop-blur-xl`): an All apps button (`SquaresFour`), a separator, then up to four docked items without labels. Empty, it says "Hold an icon, then Add to dock".
+- **Long press** (`long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the page doesn't scroll under the finger, and the click after release swallowed. Release without moving → menu; moving after the hold cancels it (home icons pass no drag handlers). Android's own long-press `contextmenu` is suppressed; a mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
   - **Icon menu** (`home-actions.ts`): Open, Add to dock (disabled when full) / Remove from dock, Rename, Delete or Remove shortcut, Properties. Rename, delete and properties are `desktop-actions.ts`'s flows.
   - **Empty space menu:** the desktop's background menu (New folder, Paste, Change theme).
-  - **Drag:** a ghost follows the finger. Over an icon, a 2px `primary` bar marks "drop before it"; over a page's empty space, "end of that page"; over the dock, the dock tints `primary/10` with a `primary/60` hairline (not when full or the item is already docked). Holding within 56px of the side for 550ms turns the page, repeatedly. Drop calls `move_item(name, before)` or `set_docked(name, true, before)`. Over a dock icon the bar marks "before it", so dragging within the dock reorders it; dragging a dock icon onto home undocks it.
+  - **No drag (2026-10-13).** Dragging icons to reorder or dock them was removed: on Samsung Internet the hold fired but the icon never moved, and the cause wasn't found. Docking goes through the menu. `MobileDesktopService.move_item` and the `before` argument of `set_docked` stay, unused by the shell, for when drag comes back.
 
 ## App drawer
 
@@ -83,4 +82,4 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - No app-level back (File Explorer up a folder) and no OS back gesture wiring: separate brainstorm.
 - No virtual keyboard handling beyond what `h-dvh` gives.
 - Centred system dialogs use their desktop sizes (capped to the screen); context menus and Open with are bottom sheets.
-- Dragging across pages relies on the 550ms side hold; there's no page indicator while dragging.
+- Home icons can't be reordered, and dock order is the order items were docked in. Drag is to be revisited.
