@@ -60,14 +60,15 @@
     return rate < 10 ? rate.toFixed(1) : Math.round(rate).toString();
   }
 
-  const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] @md:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_3.5rem] @3xl:grid-cols-[minmax(0,1fr)_4.5rem_4.5rem_4.5rem_6rem_3.5rem] @5xl:grid-cols-[minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem_6rem_3.5rem]";
+  // Breakpoints measure the table (its own @container), not the window: the section is capped at max-w-3xl.
+  const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] @md:grid-cols-[minmax(0,1fr)_4rem_4rem_3.5rem] @xl:grid-cols-[minmax(0,1fr)_4rem_4rem_4rem_4.5rem_3.5rem] @2xl:grid-cols-[minmax(0,1fr)_5rem_4rem_4rem_4rem_4.5rem_3.5rem]";
 </script>
 
 {#snippet header(label: string, key: SortKey | null, class_name = "")}
   {#if key}
     {@const active = sort?.key === key}
     <button
-      class={cn("flex items-center gap-1 hover:text-foreground", key !== "name" && "justify-end", active && "text-foreground", class_name)}
+      class={cn("flex items-center gap-1 tracking-wide uppercase hover:text-foreground", key !== "name" && "justify-end", active && "text-foreground", class_name)}
       onclick={() => toggle_sort(key)}
     >
       {label}
@@ -87,66 +88,67 @@
   {#if rows.length === 0}
     <EmptyState icon={AppWindowIcon} title="No windows" />
   {:else}
-    <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
-      {@render header("Window", "name")}
-      {@render header("Activity", null, "hidden @5xl:block")}
-      {@render header("Mut/s", "rate")}
-      {@render header("Peak", "peak", "hidden @3xl:flex")}
-      {@render header("Nodes", "nodes", "hidden @md:flex")}
-      {@render header("Media", null, "hidden text-right @3xl:block")}
-      <span></span>
-    </div>
-
-    {#each rows as row (row.id)}
-      {@const own = row.id === own_id}
-      <div class={cn(GRID, "h-10 px-3 text-ui")}>
-        <div class="flex min-w-0 items-center gap-2">
-          <row.icon class="size-4 shrink-0 text-foreground/70" weight="duotone" />
-          <span class="truncate">{row.name}</span>
-          <span class="hidden font-mono text-2xs text-foreground/65 @md:inline" title={row.id}>{row.id.slice(0, 4)}</span>
-          {#if own}<Badge tone="primary">this<span class="hidden @md:inline">&nbsp;window</span></Badge>{/if}
-          {#if row.minimized}<Badge>minimized</Badge>{/if}
-        </div>
-
-        <div class="hidden @5xl:block">
-          <Sparkline values={row.stats?.history ?? []} label="Mutations per second, last minute" class="h-6" />
-        </div>
-
-        {#if row.stats}
-          {@const stats = row.stats}
-          <span class="text-right font-mono text-2xs tabular-nums">{format_rate(stats.rate)}</span>
-          <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @3xl:block">{format_rate(stats.peak)}</span>
-          <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @md:block">{stats.nodes}</span>
-          <span
-            class="hidden items-center justify-end gap-2 font-mono text-2xs text-foreground/65 tabular-nums @3xl:flex"
-            title="{stats.canvases} canvas, {stats.media_playing} of {stats.media} media playing, {stats.iframes} iframes"
-          >
-            {#if stats.canvases + stats.media + stats.iframes === 0}
-              —
-            {:else}
-              {#if stats.canvases}<span class="flex items-center gap-0.5"><RectangleIcon class="size-3" />{stats.canvases}</span>{/if}
-              {#if stats.media}
-                <span class={cn("flex items-center gap-0.5", stats.media_playing && "text-primary")}>
-                  {#if stats.media_playing}<PlayIcon class="size-3" weight="fill" />{:else}<SpeakerHighIcon class="size-3" />{/if}
-                  {stats.media_playing || stats.media}
-                </span>
-              {/if}
-              {#if stats.iframes}<span class="flex items-center gap-0.5"><BrowserIcon class="size-3" />{stats.iframes}</span>{/if}
-            {/if}
-          </span>
-        {:else}
-          <span class="text-right font-mono text-2xs text-foreground/65">—</span>
-          <span class="hidden text-right font-mono text-2xs text-foreground/65 @3xl:block">—</span>
-          <span class="hidden text-right font-mono text-2xs text-foreground/65 @md:block">—</span>
-          <span class="hidden text-right font-mono text-2xs text-foreground/65 @3xl:block">—</span>
-        {/if}
-
-        <Button size="sm" variant="quiet" class="justify-self-end" onclick={() => windows.close(row.id)}>End</Button>
+    <div class="@container divide-y divide-foreground/8">
+      <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
+        {@render header("Window", "name")}
+        {@render header("Activity", null, "hidden @2xl:block")}
+        {@render header("Mut/s", "rate")}
+        {@render header("Peak", "peak", "hidden @xl:flex")}
+        {@render header("Nodes", "nodes", "hidden @md:flex")}
+        {@render header("Media", null, "hidden text-right @xl:block")}
+        <span></span>
       </div>
-    {/each}
 
-    <p class="px-3 py-2 text-right font-mono text-2xs text-foreground/65 tabular-nums">
-      {rows.length} windows · {format_rate(total_rate)} mutations/s
-    </p>
+      {#each rows as row (row.id)}
+        {@const own = row.id === own_id}
+        <div class={cn(GRID, "h-10 px-3 text-ui")}>
+          <div class="flex min-w-0 items-center gap-2">
+            <row.icon class="size-4 shrink-0 text-foreground/70" weight="duotone" />
+            <span class="truncate" title="{row.name} · {row.id}">{row.name}</span>
+            {#if own}<Badge tone="primary" class="shrink-0">this</Badge>{/if}
+            {#if row.minimized}<Badge class="shrink-0">minimized</Badge>{/if}
+          </div>
+
+          <div class="hidden @2xl:block">
+            <Sparkline values={row.stats?.history ?? []} label="Mutations per second, last minute" class="h-6" />
+          </div>
+
+          {#if row.stats}
+            {@const stats = row.stats}
+            <span class="text-right font-mono text-2xs tabular-nums">{format_rate(stats.rate)}</span>
+            <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @xl:block">{format_rate(stats.peak)}</span>
+            <span class="hidden text-right font-mono text-2xs text-foreground/65 tabular-nums @md:block">{stats.nodes}</span>
+            <span
+              class="hidden items-center justify-end gap-2 font-mono text-2xs text-foreground/65 tabular-nums @xl:flex"
+              title="{stats.canvases} canvas, {stats.media_playing} of {stats.media} media playing, {stats.iframes} iframes"
+            >
+              {#if stats.canvases + stats.media + stats.iframes === 0}
+                —
+              {:else}
+                {#if stats.canvases}<span class="flex items-center gap-0.5"><RectangleIcon class="size-3" />{stats.canvases}</span>{/if}
+                {#if stats.media}
+                  <span class={cn("flex items-center gap-0.5", stats.media_playing && "text-primary")}>
+                    {#if stats.media_playing}<PlayIcon class="size-3" weight="fill" />{:else}<SpeakerHighIcon class="size-3" />{/if}
+                    {stats.media_playing || stats.media}
+                  </span>
+                {/if}
+                {#if stats.iframes}<span class="flex items-center gap-0.5"><BrowserIcon class="size-3" />{stats.iframes}</span>{/if}
+              {/if}
+            </span>
+          {:else}
+            <span class="text-right font-mono text-2xs text-foreground/65">—</span>
+            <span class="hidden text-right font-mono text-2xs text-foreground/65 @xl:block">—</span>
+            <span class="hidden text-right font-mono text-2xs text-foreground/65 @md:block">—</span>
+            <span class="hidden text-right font-mono text-2xs text-foreground/65 @xl:block">—</span>
+          {/if}
+
+          <Button size="sm" variant="quiet" class="justify-self-end" onclick={() => windows.close(row.id)}>End</Button>
+        </div>
+      {/each}
+
+      <p class="px-3 py-2 text-right font-mono text-2xs text-foreground/65 tabular-nums">
+        {rows.length} windows · {format_rate(total_rate)} mutations/s
+      </p>
+    </div>
   {/if}
 </Section>

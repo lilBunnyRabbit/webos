@@ -316,11 +316,11 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
 **Sections** (`SideNav`, Settings-style frame):
 
 - **Windows:**
-  - One row per window from `windows.list()`: manifest icon and name, a 4-character id, and badges for "this window" and "minimized".
+  - One row per window from `windows.list()`: manifest icon and name (the full name and window id in its tooltip), and badges "this" and "minimized".
   - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
-  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. Peak, media and sparkline columns hide in narrow windows (container queries); below `@md` (a phone) Nodes and the short id hide too and the own-window badge shortens to "this". The long-frames table drops its Blocking column there.
+  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not. The long-frames table drops its Blocking column there.
   - **End:** calls `windows.close(id)`, the same as ×.
 - **Performance:**
   - Frame rate (rAF), event-loop lag (drift of a chained 1 s `setTimeout`) and JS heap (`performance.memory`, copied field by field because its fields are prototype getters), each with a sparkline.
