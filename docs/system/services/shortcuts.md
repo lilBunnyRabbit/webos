@@ -71,6 +71,7 @@ On every `keydown`, in order:
 | `window.reopen` | Alt+Shift+T | `session.reopen_closed()`; only while `session.closed` isn't empty (Ctrl+Shift+T is the browser's) | ✓ | ✓ |
 | `desktop.show` | Alt+Shift+D | Minimize every visible window / `go_home()` | Show desktop | Go home |
 | `window.maximize` | Alt+Shift+↑ | `toggle_maximize(focused)` | ✓ | — |
+| `window.gather` | Alt+Shift+G | `gather()`: every visible window fully on screen | ✓ | — |
 | `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | Leave maximize, snap to the half; the same key again unsnaps | ✓ | — |
 | `apps.launcher` | Mod+K | `ui.toggle("launcher")`: the start menu / the app drawer | ✓ | ✓ |
 | `apps.settings` | Mod+, | `apps.launch("settings")` | ✓ | ✓ |

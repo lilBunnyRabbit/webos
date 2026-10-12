@@ -7,6 +7,9 @@ export const CASCADE_OFFSET = 28;
 /** A first-ever window's share of the window area (ADR-014 revision). */
 const DEFAULT_SHARE = { width: 0.62, height: 0.7 };
 
+/** How much of a window's titlebar must stay on screen when the area shrinks: enough to grab and drag back. */
+export const REACHABLE = { width: 96, titlebar: 40 };
+
 /** Before the window area is measured there's nothing to scale against. */
 const FALLBACK_SIZE = { width: 600, height: 400 };
 
@@ -57,6 +60,19 @@ export class WindowsHelper {
     }
 
     return WindowsHelper.clamp_bounds({ x, y, width, height }, container);
+  }
+
+  /**
+   * Moves a window just enough that a grab-able strip of its titlebar is on screen (macOS/Windows behaviour). Size is
+   * untouched, so growing the area back doesn't leave windows squeezed.
+   */
+  public static keep_reachable(bounds: Bounds, container: Bounds): Bounds {
+    if (container.width <= 0 || container.height <= 0) return { ...bounds };
+    return {
+      ...bounds,
+      x: Math.max(REACHABLE.width - bounds.width, Math.min(bounds.x, container.width - REACHABLE.width)),
+      y: Math.max(0, Math.min(bounds.y, container.height - REACHABLE.titlebar)),
+    };
   }
 
   /** Pulls saved bounds back inside the container, which may be smaller than when they were saved. */

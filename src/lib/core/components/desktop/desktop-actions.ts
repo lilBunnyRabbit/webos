@@ -5,7 +5,10 @@ import kernel, {
   type DesktopItem,
   type DesktopService,
   type DialogsService,
+  type DesktopWindowsService,
+  type WindowsService,
 } from "$lib/core/api";
+import { view_transition } from "$lib/core/utils/view-transition";
 import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { Position } from "$lib/core/utils/type";
 import {
@@ -18,6 +21,7 @@ import {
   FolderPlus as FolderPlusIcon,
   HardDrives as HardDrivesIcon,
   Palette as PaletteIcon,
+  ArrowsIn as ArrowsInIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
@@ -147,16 +151,22 @@ export async function item_menu(item: DesktopItem, anchor: Position): Promise<vo
 }
 
 export async function background_menu(anchor: Position): Promise<void> {
+  const windows = kernel.service<WindowsService>("windows");
+  const gather = "gather" in windows ? (windows as DesktopWindowsService) : null;
   const choice = await dialogs().menu(
     [
       { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
       { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard().content },
       { separator: true },
+      ...(gather
+        ? [{ id: "gather", label: "Gather windows", icon: ArrowsInIcon, shortcut: "Alt+Shift+G", disabled: windows.list().length === 0 }]
+        : []),
       { id: "appearance", label: "Change theme", icon: PaletteIcon },
     ],
     { anchor }
   );
   if (choice === "new_folder") create_folder();
   else if (choice === "paste") paste();
+  else if (choice === "gather") view_transition(() => gather?.gather());
   else if (choice === "appearance") apps().launch("settings");
 }

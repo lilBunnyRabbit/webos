@@ -142,6 +142,9 @@ export interface DesktopWindowsService extends WindowsService {
    * @returns `true` if the window was snapped, `false` if it didn't exist
    */
   snap(id: WindowId, zone: SnapZone | null): boolean;
+
+  /** Moves every visible window fully on screen, shrinking any larger than the area. The recovery for lost windows. */
+  gather(): void;
 }
 
 /**

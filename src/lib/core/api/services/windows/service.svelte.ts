@@ -110,7 +110,11 @@ export class WindowsService implements DesktopWindowsService {
 
     // console.log("WindowService:set_container", this.container);
 
-    // TODO: recalculate bounds for all windows
+    // A shrinking area never strands a window: a strip of each titlebar stays reachable.
+    for (const instance of Object.values(this.index)) {
+      const reachable = WindowsHelper.keep_reachable(instance.bounds, this.container.bounds);
+      if (reachable.x !== instance.bounds.x || reachable.y !== instance.bounds.y) instance.bounds = reachable;
+    }
 
     return this.container.bounds;
   }
@@ -258,6 +262,13 @@ export class WindowsService implements DesktopWindowsService {
 
     instance.snap_zone = zone;
     return true;
+  }
+
+  public gather(): void {
+    for (const instance of Object.values(this.index)) {
+      if (instance.flags.has(WindowFlag.MINIMIZED)) continue;
+      instance.bounds = WindowsHelper.clamp_bounds(instance.bounds, this.container.bounds);
+    }
   }
 
   public toggle_maximize(id: WindowId): boolean {

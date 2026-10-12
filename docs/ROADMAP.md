@@ -308,7 +308,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ## Open bugs
 
-- [ ] **Windows stranded off-screen after the browser shrinks** (inbox, 2026-10-12). `clamp_bounds` runs on restore and since 0.14.0 on open, never on container resize ([windows.md](system/services/windows.md) Known gaps). Maximized and snapped windows already re-fit: they're CSS percentages of the container. Options, lightest first, **owner's call**:
+- [x] **Windows stranded off-screen after the browser shrinks** (inbox, 2026-10-12). Fixed with options 2 + 4: titlebars stay reachable on resize, and Alt+Shift+G / desktop menu "Gather windows". `clamp_bounds` runs on restore and since 0.14.0 on open, never on container resize ([windows.md](system/services/windows.md) Known gaps). Maximized and snapped windows already re-fit: they're CSS percentages of the container. Options, lightest first, **owner's call**:
   1. Clamp stored bounds on container resize. Simple, but permanent: growing the browser back leaves windows squeezed.
   2. Keep a grab handle reachable: clamp only so N px of the titlebar stays on screen (macOS/Windows). Size untouched.
   3. Render-time clamp: display = clamp(stored, container); stored bounds change only on drag, so growing back restores the layout. Needs a stored vs displayed split.

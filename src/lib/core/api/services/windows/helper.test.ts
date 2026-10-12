@@ -1,7 +1,29 @@
 import { describe, expect, test } from "vitest";
-import { CASCADE_OFFSET, WindowsHelper } from "./helper";
+import { CASCADE_OFFSET, REACHABLE, WindowsHelper } from "./helper";
 
 const container = { x: 0, y: 0, width: 1500, height: 800 };
+
+describe("WindowsHelper.keep_reachable", () => {
+  test("leaves a window that's still grab-able alone, even partly off screen", () => {
+    const bounds = { x: 1300, y: 600, width: 600, height: 400 };
+    expect(WindowsHelper.keep_reachable(bounds, container)).toEqual(bounds);
+  });
+
+  test("pulls a window back so a strip of its titlebar shows, without resizing", () => {
+    expect(WindowsHelper.keep_reachable({ x: 1700, y: 900, width: 600, height: 400 }, container)).toEqual({
+      x: container.width - REACHABLE.width,
+      y: container.height - REACHABLE.titlebar,
+      width: 600,
+      height: 400,
+    });
+    expect(WindowsHelper.keep_reachable({ x: -800, y: -20, width: 600, height: 400 }, container)).toEqual({
+      x: REACHABLE.width - 600,
+      y: 0,
+      width: 600,
+      height: 400,
+    });
+  });
+});
 
 describe("WindowsHelper.place", () => {
   test("first window: centred at a share of the area", () => {

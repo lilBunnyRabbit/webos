@@ -6,6 +6,7 @@
 > **Revision 2026-10-12: placement, motion, reopen** (owner, [brainstorm](../brainstorm/2026-10-12_window-polish.md))
 > - **Cascading positioning is replaced by remembered frames.** An app's last closed window frame is reused, clamped fully on screen. A second window of an open app cascades 28px from that app's frontmost window, wrapping to the top-left when it would overflow. No frame yet: centred at 62% × 70% of the window area within the app's constraints. Frames are recorded on close only, held by WindowsService and saved by SessionService (ADR-023 revision).
 > - **Animations:** open and close are Svelte transitions (fade + scale from 0.96); minimize/restore morph to and from the taskbar button and maximize/snap morph between frames with View Transitions. Not configurable through SettingsService: reduced motion turns them off; a motion setting belongs to ADR-015.
+> - **Staying reachable** (owner, from the inbox bug): when the window area shrinks, each window moves just enough to keep 96px of its titlebar on screen, never resized. "Gather windows" (Alt+Shift+G, desktop background menu) moves every visible window fully on screen.
 > - **Reopen last closed window:** Alt+Shift+T, not Ctrl+Shift+T (the browser owns it). The stack lives in SessionService: last 10, memory only.
 
 > **Revision 2026-10-12: single-instance parked** (owner, [brainstorm](../brainstorm/2026-10-12_roadmap-order.md))

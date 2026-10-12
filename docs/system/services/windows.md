@@ -51,7 +51,8 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |
-| `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Doesn't touch existing windows (TODO at `service.svelte.ts:70`). Called by the window manager. |
+| `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Then runs `WindowsHelper.keep_reachable` on every window, so a shrinking area (browser resize, taskbar move) never strands one. Called by the window manager. |
+| `gather` | `() => void` | Desktop only. `clamp_bounds` on every non-minimized window: fully on screen, shrunk if larger than the area. Alt+Shift+G and the desktop's "Gather windows" menu item, both in a view transition |
 | `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.place` (see [Placement](#placement)). |
 | `restore` | `(windows: WindowSnapshot[], create: (snapshot) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
 | `close` | `(id) => boolean` | Records the window's frame (`frames[app.id] = bounds`), then deletes the record. Resets `max_order` to 0 when it was the last window. `false` if the id doesn't exist. |
@@ -112,6 +113,8 @@ Size is then clamped to the manifest's `constraints` and capped at the container
 
 - **Coordinate spaces.** `bounds` is container-relative: it's rendered as `left/top` inside the window-manager element. `container.bounds.x/y` is the container's viewport offset, and it's only used to convert pointer `clientX/Y` into container space.
 
+**Staying reachable** (owner's pick of options 2 + 4 from the off-screen bug, 2026-10-12). When the container is measured, `keep_reachable(bounds, container)` moves (never resizes) each window just enough that 96px of its titlebar is inside horizontally and its titlebar's 40px fits vertically (`REACHABLE`), like macOS and Windows. Windows already reachable aren't touched, and growing the browser back doesn't move anything back. Drags can't strand a window: the pointer is clamped to the container and `top` to ≥ 0. Maximized and snapped windows re-fit on their own (CSS percentages); their stored `bounds` are kept reachable too. `gather()` is the explicit recovery.
+
 **Constraints.** `min` and `max` apply to the initial size and to resizing. The resize fallback minimum is 400×300 (`WindowGeometryHandler.MIN_WIDTH/MIN_HEIGHT`).
 
 **Maximize / minimize / restore.** These are flags only. Maximized renders at `0,0,100%,100%` of the container. Minimized renders with `display: none`, but the app **stays mounted** and keeps its state. The WindowHandle's `maximize()` and `restore()` compose these toggles ([apps/app-context.md](../apps/app-context.md)).
@@ -159,7 +162,7 @@ ADR-014's 2026-10-12 revision records the code: remembered frames instead of pla
 
 ## Known gaps
 
-- Container shrink doesn't re-clamp windows, so they can end up off-screen after a resize or a taskbar move. Only `restore()` clamps.
+- Resizing keeps only a titlebar strip on screen, not the whole window; "Gather windows" is the full fix, on demand.
 - `snap()` is unused.
 - The container is measured by a ResizeObserver plus an rAF after taskbar moves. Both are paused in hidden tabs, so a tab that starts hidden keeps the `window.innerWidth/innerHeight` default until it's shown.
 - `index` is a plain record (`// TODO: map?`). `list()` order is insertion order, not z-order.

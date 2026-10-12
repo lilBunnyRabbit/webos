@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.15.0",
+    date: "2026-10-12",
+    title: "Round up",
+    changes: [
+      { kind: FIXED, text: "Making the browser smaller no longer leaves windows out of reach: part of every titlebar stays on screen so you can drag it back." },
+      { kind: NEW, text: "Gather windows, from the desktop's right-click menu or Alt+Shift+G, brings every window fully back on screen." },
+    ],
+  },
+  {
     version: "0.14.0",
     date: "2026-10-12",
     title: "Settle in",

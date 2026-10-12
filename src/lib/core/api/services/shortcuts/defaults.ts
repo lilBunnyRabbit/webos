@@ -164,6 +164,14 @@ export function default_shortcuts({ windows, apps, dialogs, ui, session }: Servi
         run: snap("left"),
       },
       {
+        id: "window.gather",
+        keys: "alt+shift+g",
+        label: "Gather windows on screen",
+        category: ShortcutCategory.WINDOW,
+        when: () => desktop().list().length > 0,
+        run: () => view_transition(() => desktop().gather()),
+      },
+      {
         id: "window.snap_right",
         keys: "alt+shift+right",
         label: "Snap window right",
