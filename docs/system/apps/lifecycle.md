@@ -48,7 +48,7 @@ Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(pa
 3. Wraps the app in `<div class="h-full w-full overflow-auto @container" style:zoom>`. The `@container` is what app `@sm:`/`@md:` queries resolve against.
 4. `{#await instance.app.component}`:
    - pending: a centred `Spinner` ("Loading app").
-   - resolved: `<Component {...instance.app.props} />`.
+   - resolved: `<Component {...instance.app.props} />` inside `<svelte:boundary>`. A render, effect or `$derived` error shows "This app crashed" with Restart app (`reset()`, remounts) and Close window, logs it and posts an error toast from the app's id. Event-handler errors aren't caught.
    - rejected: an error `EmptyState`, "This app failed to load", with the error message. No notification, no retry.
 5. With the `debug` flag, the window's debug `children` render under the app.
 

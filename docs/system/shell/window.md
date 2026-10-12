@@ -6,7 +6,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
 | `window-titlebar.svelte` | Icon, name, zoom pill, min/max/close buttons |
-| `window-content.svelte` | Awaits the lazy component, renders it |
+| `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 
@@ -95,6 +95,7 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 - The app context is set one level up, in `window.svelte` (`set_app_context({ window_id, app_id, window, storage })` once at init, `app_id` under `untrack`), so sheets rendered beside the app share it ([apps/app-context.md](../apps/app-context.md)).
 - The content area is a size container (`container-type: size`) so sheets can size against the window (`cqw`/`cqh`), and the app is wrapped in `inert` while sheets are open.
 - `{#await instance.app.component}` shows a centered `Spinner` ("Loading app") while the chunk loads, then `<Component {...instance.app.props} />`. On failure it shows an error `EmptyState` ("This app failed to load" plus the message). The promise was started by `AppsService.launch()`, not here.
+- `<svelte:boundary>` catches errors thrown while the app renders, in its effects and in its `$derived`: the window shows an error `EmptyState` ("This app crashed" plus the message) with **Restart app** (the boundary's `reset()`, which remounts the app: component state is lost, `persisted()` and `storage.window()` values survive) and **Close window**. The error is logged and posted as an `error` toast from the app's id, so a crash in a minimized window isn't silent. Errors in event handlers and un-awaited promises aren't caught by boundaries (Svelte rule); they still reach the console only.
 - The wrapper is `h-full w-full overflow-auto @container`. That container is what apps' `@sm:`/`@md:` queries resolve against ([CONVENTIONS](../../CONVENTIONS.md)).
 - With `WindowFlag.DEBUG` it also renders the debug snippet passed from `window.svelte`: `bounds` and `move` as JSON.
 

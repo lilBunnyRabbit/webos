@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.9.0",
+    date: "2026-10-12",
+    title: "Contained",
+    changes: [
+      { kind: IMPROVED, text: "An app that crashes now shows the error in its own window, with Restart app and Close window, instead of breaking WebOS." },
+    ],
+  },
+  {
     version: "0.8.2",
     date: "2026-10-12",
     title: "In step",

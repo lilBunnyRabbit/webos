@@ -12,7 +12,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 1. [-] **Foundations**
    - [-] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler covered. Service tests through a real kernel still open
-   - [ ] Error boundaries: a crashing app shows an error in its window, not a dead OS
+   - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
    - [ ] Mobile groundwork only (ADR-016): platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
 3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
@@ -342,7 +342,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 
 ### Error Handling
 - [ ] Error handling strategy
-- [ ] Error boundaries for app crashes
+- [x] Error boundaries for app crashes (per window, Restart app / Close window, error toast)
 
 ### Performance
 - [ ] Lazy loading for apps (dynamic imports — already in place via `component()`)
