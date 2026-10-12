@@ -191,7 +191,7 @@
 
   <div class="relative grid min-h-0 @2xl:grid-cols-[1fr_18rem]">
     <div class="flex min-h-0 flex-col">
-      <div class="flex min-h-24 flex-col items-end justify-end gap-1 px-4 pt-3 pb-2 text-right font-mono tabular-nums">
+      <div class="flex min-h-24 flex-col items-end justify-end gap-1 px-3 pt-3 pb-2 text-right font-mono tabular-nums">
         <p
           class={cn(
             "max-w-full break-all transition-[font-size,color] duration-150",

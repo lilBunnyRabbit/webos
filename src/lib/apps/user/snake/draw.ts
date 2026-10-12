@@ -15,7 +15,7 @@ export function read_palette(probe: HTMLElement): Palette {
     return getComputedStyle(probe).color;
   };
   const palette = {
-    board: token("var(--background-darker)"),
+    board: token("light-dark(var(--background-lightest), var(--background-darker))"),
     grid: token("color-mix(in oklch, var(--foreground) 5%, transparent)"),
     snake: token("color-mix(in oklch, var(--primary) 80%, transparent)"),
     head: token("var(--primary)"),

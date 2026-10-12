@@ -125,32 +125,33 @@
     if (direction) step(direction);
   }
 
+  // Tints pair with their own colour as ink and solids with text-background, so every step keeps its contrast in both themes.
   function tile_class(value: number): string {
     switch (value) {
       case 2:
-        return "bg-foreground/10 text-foreground";
+        return "bg-foreground/8 text-foreground";
       case 4:
-        return "bg-foreground/18 text-foreground";
+        return "bg-foreground/16 text-foreground";
       case 8:
-        return "bg-tertiary/35 text-foreground";
+        return "bg-tertiary/18 text-tertiary";
       case 16:
-        return "bg-tertiary/60 text-foreground";
-      case 32:
         return "bg-tertiary text-background";
+      case 32:
+        return "bg-secondary/18 text-secondary";
       case 64:
-        return "bg-secondary/55 text-foreground";
-      case 128:
         return "bg-secondary text-background";
+      case 128:
+        return "bg-accent/18 text-accent";
       case 256:
-        return "bg-primary/40 text-foreground";
+        return "bg-accent text-background";
       case 512:
-        return "bg-primary/60 text-foreground";
+        return "bg-primary/18 text-primary";
       case 1024:
-        return "bg-primary/80 text-background";
+        return "bg-primary/35 text-primary";
       case 2048:
         return "bg-primary text-background";
       default:
-        return "bg-accent text-background";
+        return "bg-foreground text-background";
     }
   }
 
@@ -167,11 +168,11 @@
 <div bind:this={root} tabindex="-1" class="grid h-full grid-rows-[auto_1fr_auto] outline-none" onkeydown={on_keydown}>
   <Toolbar>
     <div class="flex flex-col px-2">
-      <span class="text-2xs tracking-wide text-foreground/65 uppercase">Score</span>
+      <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Score</span>
       <span class="font-mono text-sm font-semibold tabular-nums">{game.score}</span>
     </div>
     <div class="flex flex-col px-2">
-      <span class="text-2xs tracking-wide text-foreground/65 uppercase">Best</span>
+      <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Best</span>
       <span class="font-mono text-sm font-semibold tabular-nums">{best.value}</span>
     </div>
     <div class="flex-1"></div>
@@ -198,7 +199,7 @@
         {@const merged = last?.merged.has(tile.id) ?? false}
         {@const spawned = last?.spawned === tile.id}
         <div
-          class={cn("cell tile", game.tiles.includes(tile) ? "z-10" : "z-0")}
+          class={cn("cell tile", game.tiles.includes(tile) ? "z-10" : "consumed z-0")}
           style:--row={tile.row}
           style:--col={tile.col}
         >
@@ -218,11 +219,11 @@
 
       {#if winning || over}
         <div
-          class="absolute inset-0 z-20 grid animate-in place-items-center rounded-[3cqmin] bg-background/80 backdrop-blur-[2px] fade-in"
+          class="absolute inset-0 z-20 grid animate-in place-items-center rounded-[3cqmin] bg-background/80 p-4 text-center backdrop-blur-[2px] fade-in"
         >
-          <div class="flex flex-col items-center gap-3 p-4 text-center">
-            <p class="text-lg font-semibold" aria-live="polite">{winning ? `You reached ${WIN_VALUE}` : "Game over"}</p>
-            <p class="font-mono text-2xs text-foreground/65 tabular-nums">Score {game.score} · Best {best.value}</p>
+          <div class="flex flex-col items-center gap-3">
+            <p class="text-base font-semibold" aria-live="polite">{winning ? `You reached ${WIN_VALUE}` : "Game over"}</p>
+            <p class="font-mono text-2xs text-foreground/80 tabular-nums">Score {game.score} · Best {best.value}</p>
             <div class="flex flex-wrap justify-center gap-2">
               {#if winning}
                 <Button size="sm" variant="quiet" onclick={start_over}>New game</Button>
@@ -266,6 +267,17 @@
     transition: transform 100ms var(--ease-in-out);
   }
 
+  /* Tiles merged away vanish once they've slid under the merged tile, so a tint never shows their value through it. */
+  .consumed {
+    animation: tile-consumed 1ms 100ms forwards;
+  }
+
+  @keyframes tile-consumed {
+    to {
+      opacity: 0;
+    }
+  }
+
   /* New tiles wait for the slide to finish, so they never show up on top of a tile still moving. */
   .appear {
     animation: tile-appear 160ms var(--ease-out) 100ms backwards;
@@ -302,6 +314,11 @@
     .appear,
     .pop {
       animation: none;
+    }
+
+    .consumed {
+      animation: none;
+      opacity: 0;
     }
   }
 </style>

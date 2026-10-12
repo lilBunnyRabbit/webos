@@ -44,15 +44,16 @@
     custom: "Custom",
   };
   const DIFFICULTY_OPTIONS = DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
+  // Primary stays out: in Brand Dark it's the same green as 2, and it means selection everywhere else.
   const NUMBER_COLOURS = [
     "",
     "text-info",
     "text-success",
     "text-error",
-    "text-primary",
     "text-secondary",
     "text-accent",
     "text-tertiary",
+    "text-foreground",
     "text-foreground/65",
   ];
 
@@ -345,10 +346,8 @@
                   class={cn(
                     "grid place-items-center rounded-[18%] font-mono leading-none font-bold transition-[background-color] duration-100",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-                    shown
-                      ? "bg-foreground/4"
-                      : "bg-background-light shadow-raised ring-1 ring-foreground/10 ring-inset",
-                    !shown && !finished && "cursor-pointer hover:bg-foreground/12",
+                    shown ? "bg-foreground/4" : "bg-foreground/14 shadow-raised",
+                    !shown && !finished && "cursor-pointer hover:bg-foreground/20",
                     shown && mine && index === game.exploded && "bg-error/30",
                     shown && !mine && NUMBER_COLOURS[count]
                   )}
