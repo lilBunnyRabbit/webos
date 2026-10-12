@@ -1,23 +1,28 @@
 <script lang="ts">
   import kernel, { type AppsService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, IconButton, Section, Segmented, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, Segmented, Spinner, Toolbar } from "$lib/core/components/ui";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { format_bytes } from "$lib/core/utils";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
-    CheckCircle as CheckCircleIcon,
     Devices as DevicesIcon,
     DownloadSimple as DownloadSimpleIcon,
     FolderOpen as FolderOpenIcon,
     Plus as PlusIcon,
+    QrCode as QrCodeIcon,
     UploadSimple as UploadSimpleIcon,
-    WarningCircle as WarningCircleIcon,
     X as XIcon,
   } from "phosphor-svelte";
+  import BlockBar from "./block-bar.svelte";
   import CodeDisplay from "./code-display.svelte";
   import CodeScanner from "./code-scanner.svelte";
+  import EventLog from "./event-log.svelte";
+  import Handshake from "./handshake.svelte";
+  import LinkStatus from "./link-status.svelte";
+  import RouteMap from "./route-map.svelte";
   import { Phase, ReceiveSession, SendSession } from "./session.svelte";
+  import Throughput from "./throughput.svelte";
 
   type Role = "send" | "receive";
 
@@ -30,6 +35,17 @@
   const receiver = new ReceiveSession();
   const session = $derived(role === "send" ? sender : receiver);
   const busy = $derived(session.phase === Phase.CONNECTING || session.phase === Phase.TRANSFERRING);
+
+  const STEPS: Record<Role, string[]> = {
+    send: ["Offer", "Answer", "Channel"],
+    receive: ["Scan", "Answer", "Channel"],
+  };
+  const step = $derived.by(() => {
+    const { phase, code } = session;
+    if (phase === Phase.SETUP) return role === "send" ? -1 : 0;
+    if (phase === Phase.CONNECTING) return role === "send" ? (code ? 1 : 0) : 2;
+    return 3;
+  });
 
   $effect(() => () => {
     sender.close();
@@ -47,12 +63,23 @@
     sender.add(await pick_device_files({ multiple: true }));
   }
 
-  function percent(bytes: number, total: number): number {
-    return total === 0 ? 100 : Math.round((bytes / total) * 100);
+  function ratio(bytes: number, total: number): number {
+    return total === 0 ? 1 : bytes / total;
+  }
+
+  function clock(seconds: number | null): string {
+    if (seconds === null || !Number.isFinite(seconds)) return "--:--";
+    const whole = Math.ceil(seconds);
+    return `${String(Math.floor(whole / 60)).padStart(2, "0")}:${String(whole % 60).padStart(2, "0")}`;
+  }
+
+  function reset() {
+    if (role === "send") sender.reset();
+    else receiver.reset();
   }
 </script>
 
-<div class="grid h-full grid-rows-[auto_1fr]">
+<div class="grid h-full grid-rows-[auto_auto_1fr]">
   <Toolbar>
     <Segmented
       size="sm"
@@ -64,103 +91,135 @@
       ]}
     />
     {#if busy}
-      <Button variant="quiet" size="sm" class="ml-auto" onclick={() => (role === "send" ? sender.reset() : receiver.reset())}>
-        <XIcon weight="bold" /> Cancel
-      </Button>
+      <Button variant="quiet" size="sm" class="ml-auto" onclick={reset}><XIcon weight="bold" /> Cancel</Button>
     {/if}
   </Toolbar>
 
+  <LinkStatus phase={session.phase} route={session.link?.route ?? null} rtt={session.link?.rtt ?? null} rate={session.rate} />
+
   <div class="min-h-0 overflow-auto">
-    <div class="mx-auto flex max-w-xl flex-col gap-6 p-4 @md:p-6">
+    <div class="mx-auto flex max-w-xl flex-col gap-5 p-4 @md:p-6">
+      <Handshake steps={STEPS[role]} {step} />
+
       {#if session.phase === Phase.SETUP && role === "send"}
-        <Section title="Files to send" description="Both devices need this app open. Nothing is uploaded anywhere.">
-          {#if sender.files.length === 0}
-            <p class="p-3 text-ui text-foreground/65">No files yet.</p>
+        <section class="flex flex-col rounded-xl bg-background-light ring-1 ring-foreground/8">
+          <header class="flex items-baseline justify-between gap-3 border-b border-foreground/8 px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase tabular-nums">
+            <span>Manifest</span>
+            <span>{sender.files.length} file{sender.files.length === 1 ? "" : "s"} · {format_bytes(sender.total)}</span>
+          </header>
+          {#each sender.entries as entry, index (index)}
+            <div class="flex items-center gap-3 px-3 py-1.5">
+              <span class="w-5 shrink-0 font-mono text-2xs text-foreground/80 tabular-nums">{String(index + 1).padStart(2, "0")}</span>
+              <span class="min-w-0 flex-1 truncate text-ui">{entry.name}</span>
+              <span class="font-mono text-2xs text-foreground/80 tabular-nums">{format_bytes(entry.size)}</span>
+              <IconButton label="Remove" size="sm" onclick={() => sender.remove(index)}><XIcon weight="bold" /></IconButton>
+            </div>
           {:else}
-            {#each sender.entries as entry, index (index)}
-              <div class="flex items-center gap-3 p-2">
-                <span class="min-w-0 flex-1 truncate text-ui">{entry.name}</span>
-                <span class="font-mono text-2xs text-foreground/65 tabular-nums">{format_bytes(entry.size)}</span>
-                <IconButton label="Remove" size="sm" onclick={() => sender.remove(index)}><XIcon weight="bold" /></IconButton>
-              </div>
-            {/each}
-          {/if}
-          <div class="flex flex-wrap gap-1 p-1">
+            <p class="px-3 py-6 text-center text-ui text-foreground/65">Add the files to send. They're read on this device and go straight to the other one.</p>
+          {/each}
+          <div class="flex flex-wrap gap-1 border-t border-foreground/8 p-1">
             <Button variant="quiet" size="sm" onclick={add_from_files}><PlusIcon weight="bold" /> Add file…</Button>
             <Button variant="quiet" size="sm" onclick={add_from_device}><DevicesIcon weight="bold" /> From device…</Button>
           </div>
-        </Section>
-        <Button variant="primary" class="self-center" disabled={sender.files.length === 0} onclick={() => sender.offer()}>Create code</Button>
+        </section>
+        <Button variant="primary" class="self-center" disabled={sender.files.length === 0} onclick={() => sender.offer()}>
+          <QrCodeIcon weight="bold" /> Generate offer
+        </Button>
       {:else if session.phase === Phase.SETUP}
-        <Section title="Scan the sender's code" description="Open P2P Transfer on the sending device, add files and create a code.">
-          <div class="p-3"><CodeScanner onscan={(code) => receiver.accept(code)} /></div>
-        </Section>
+        <div class="flex flex-col gap-2">
+          <p class="text-center text-ui text-foreground/65">On the sending device: open P2P Transfer, add files, generate an offer. Then scan it here.</p>
+          <CodeScanner onscan={(code) => receiver.accept(code)} />
+        </div>
       {:else if session.phase === Phase.CONNECTING}
         {#if !session.code}
-          <div class="grid place-items-center py-12"><Spinner label="Preparing a code" /></div>
+          <div class="flex flex-col items-center gap-3 py-10">
+            <Spinner label="Gathering ICE candidates" />
+            <p class="font-mono text-2xs text-foreground/80 uppercase">Gathering ICE candidates…</p>
+          </div>
         {:else if role === "send"}
-          <Section title="1. Scan this with the receiving device">
-            <div class="p-4"><CodeDisplay code={session.code} label="Sender's connection code" /></div>
-          </Section>
-          <Section title="2. Scan the code it shows back">
-            <div class="p-3"><CodeScanner onscan={(code) => sender.answer(code)} /></div>
-          </Section>
-        {:else}
-          <Section title="Scan this with the sending device">
-            <div class="flex flex-col items-center gap-4 p-4">
-              <CodeDisplay code={session.code} label="Receiver's connection code" />
-              <Spinner label="Waiting for the sender to connect" />
+          <div class="grid gap-6 @lg:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <p class="text-center text-ui text-foreground/65">Scan this on the receiving device</p>
+              <CodeDisplay code={session.code} kind="Offer" label="Sender's connection code" />
             </div>
-          </Section>
-        {/if}
-      {:else}
-        {#if session.phase === Phase.INTERRUPTED}
-          <div class="flex items-start gap-3 rounded-lg bg-error/12 p-3">
-            <WarningCircleIcon weight="fill" class="size-5 shrink-0 text-error" />
-            <div class="min-w-0 flex-1">
-              <p class="text-ui font-semibold">Transfer interrupted</p>
-              <p class="text-ui text-foreground/65">{session.error}. Reconnect to continue where it stopped.</p>
+            <div class="flex flex-col gap-2">
+              <p class="text-center text-ui text-foreground/65">Then scan the answer it shows</p>
+              <CodeScanner onscan={(code) => sender.answer(code)} />
             </div>
           </div>
-        {:else if session.phase === Phase.DONE}
-          <div class="flex items-center gap-3 rounded-lg bg-success/12 p-3">
-            <CheckCircleIcon weight="fill" class="size-5 shrink-0 text-success" />
-            <p class="text-ui font-semibold">{role === "send" ? "All files sent" : "All files saved to Downloads"}</p>
+        {:else}
+          <div class="flex flex-col items-center gap-3">
+            <p class="text-center text-ui text-foreground/65">Scan this on the sending device</p>
+            <CodeDisplay code={session.code} kind="Answer" label="Receiver's connection code" />
+            <p class="flex items-center gap-2 font-mono text-2xs text-foreground/80 uppercase"><Spinner label="Waiting" /> Waiting for the sender</p>
+          </div>
+        {/if}
+      {:else}
+        {@const tone = session.phase === Phase.INTERRUPTED ? "error" : session.phase === Phase.DONE ? "success" : "primary"}
+        <section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+          <div class="flex items-end justify-between gap-3">
+            <div class="flex flex-col">
+              <span class="font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">
+                {session.phase === Phase.DONE ? "Complete" : session.phase === Phase.INTERRUPTED ? "Interrupted" : role === "send" ? "Sending" : "Receiving"}
+              </span>
+              <span class="font-mono text-3xl font-semibold tabular-nums">{(ratio(session.done_bytes, session.total) * 100).toFixed(1)}<span class="text-lg text-foreground/65">%</span></span>
+            </div>
+            <dl class="grid grid-cols-[auto_auto] gap-x-3 text-right font-mono text-2xs tabular-nums">
+              <dt class="text-foreground/80 uppercase">Data</dt>
+              <dd>{format_bytes(session.done_bytes)} / {format_bytes(session.total)}</dd>
+              <dt class="text-foreground/80 uppercase">Rate</dt>
+              <dd>{session.phase === Phase.TRANSFERRING ? `${format_bytes(session.rate)}/s` : "—"}</dd>
+              <dt class="text-foreground/80 uppercase">ETA</dt>
+              <dd>{session.phase === Phase.TRANSFERRING ? clock(session.eta) : "—"}</dd>
+            </dl>
+          </div>
+          <BlockBar value={ratio(session.done_bytes, session.total)} {tone} class="h-2" />
+          <Throughput samples={session.samples} />
+        </section>
+
+        {#if session.phase === Phase.INTERRUPTED}
+          <div class="flex flex-col gap-2 rounded-xl bg-error/12 p-3">
+            <p class="font-mono text-2xs text-error">ERR {session.error}</p>
+            <p class="text-ui">What arrived is kept. Reconnect with a new code and it carries on from there.</p>
+            <div class="flex justify-end gap-2">
+              <Button size="sm" onclick={reset}>Start over</Button>
+              <Button variant="primary" size="sm" onclick={() => (role === "send" ? sender.offer() : receiver.rescan())}>
+                <ArrowCounterClockwiseIcon weight="bold" /> Reconnect
+              </Button>
+            </div>
           </div>
         {/if}
 
-        <Section title={role === "send" ? "Sending" : "Receiving"} description="{format_bytes(session.done_bytes)} of {format_bytes(session.total)}">
+        <section class="flex flex-col rounded-xl bg-background-light ring-1 ring-foreground/8">
+          <header class="border-b border-foreground/8 px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">Files</header>
           {#each session.entries as entry, index (index)}
             {@const bytes = session.progress[index] ?? 0}
             {@const path = role === "receive" ? receiver.saved_path(entry) : null}
-            <div class="flex flex-col gap-1.5 p-2">
+            <div class="flex flex-col gap-1.5 px-3 py-2">
               <div class="flex items-center gap-3">
+                <span class="w-5 shrink-0 font-mono text-2xs text-foreground/80 tabular-nums">{String(index + 1).padStart(2, "0")}</span>
                 <span class="min-w-0 flex-1 truncate text-ui">{entry.name}</span>
-                <span class="font-mono text-2xs text-foreground/65 tabular-nums">{percent(bytes, entry.size)}%</span>
+                <span class="font-mono text-2xs text-foreground/80 tabular-nums">{format_bytes(bytes)} / {format_bytes(entry.size)}</span>
                 {#if path}
-                  <IconButton label="Open" size="sm" onclick={() => apps.open(path)}><FolderOpenIcon weight="bold" /></IconButton>
+                  <IconButton label="Open {path}" size="sm" onclick={() => apps.open(path)}><FolderOpenIcon weight="bold" /></IconButton>
                 {/if}
               </div>
-              <div class="h-1 overflow-hidden rounded-full bg-foreground/12">
-                <div class="h-full rounded-full bg-primary transition-[width] duration-300" style:width="{percent(bytes, entry.size)}%"></div>
-              </div>
+              <BlockBar value={ratio(bytes, entry.size)} tone={bytes === entry.size ? "success" : tone} />
+              {#if path}
+                <span class="truncate font-mono text-2xs text-foreground/80" title={path}>→ {path}</span>
+              {/if}
             </div>
           {/each}
-        </Section>
+        </section>
 
-        {#if session.phase === Phase.INTERRUPTED}
-          <div class="flex justify-center gap-2">
-            <Button onclick={() => (role === "send" ? sender.reset() : receiver.reset())}>Start over</Button>
-            <Button variant="primary" onclick={() => (role === "send" ? sender.offer() : receiver.rescan())}>
-              <ArrowCounterClockwiseIcon weight="bold" /> Reconnect
-            </Button>
-          </div>
-        {:else if session.phase === Phase.DONE}
-          <Button class="self-center" onclick={() => (role === "send" ? sender.reset() : receiver.reset())}>
-            {role === "send" ? "Send more" : "Receive more"}
-          </Button>
+        {#if session.phase === Phase.DONE}
+          <Button class="self-center" onclick={reset}>{role === "send" ? "Send more" : "Receive more"}</Button>
         {/if}
       {/if}
+
+      <RouteMap {role} phase={session.phase} link={session.link} />
+
+      <EventLog lines={session.log} />
     </div>
   </div>
 </div>

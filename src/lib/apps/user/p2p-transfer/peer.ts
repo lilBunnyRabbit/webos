@@ -111,3 +111,76 @@ export class Inbox {
     return new Promise((resolve, reject) => (this.#waiting = { resolve, reject }));
   }
 }
+
+export const Route = { LAN: "lan", INTERNET: "internet" } as const;
+export type Route = (typeof Route)[keyof typeof Route];
+
+export interface Endpoint {
+  /** An IP, or a random `.local` name when the browser hides the LAN address (mDNS). */
+  address: string | null;
+  port: number | null;
+  /** ICE candidate type: `host` (own interface), `srflx` (public address seen by STUN), `prflx`, `relay`. */
+  type: string | null;
+}
+
+export interface LinkStats {
+  route: Route | null;
+  /** Seconds, from the last STUN round trip on the selected pair. */
+  rtt: number | null;
+  local: Endpoint | null;
+  remote: Endpoint | null;
+  protocol: string | null;
+  /** DTLS cipher suite and version protecting the channel. */
+  cipher: string | null;
+  tls_version: string | null;
+  /** Bytes on the wire for this connection, encryption and headers included. */
+  bytes_sent: number;
+  bytes_received: number;
+}
+
+interface CandidateStats {
+  address?: string;
+  port?: number;
+  candidateType?: string;
+  protocol?: string;
+}
+
+interface TransportStats {
+  type: "transport";
+  selectedCandidatePairId?: string;
+  dtlsCipher?: string;
+  tlsVersion?: string;
+  bytesSent?: number;
+  bytesReceived?: number;
+}
+
+function endpoint(candidate: CandidateStats | undefined): Endpoint | null {
+  if (!candidate) return null;
+  return { address: candidate.address ?? null, port: candidate.port ?? null, type: candidate.candidateType ?? null };
+}
+
+/** Which path ICE picked. A remote `prflx` on a local pair is the other device's mDNS host address, learned in-band. */
+export async function read_link(pc: RTCPeerConnection): Promise<LinkStats> {
+  const stats = await pc.getStats();
+  let transport: TransportStats | undefined;
+  stats.forEach((report) => {
+    if (report.type === "transport") transport = report as TransportStats;
+  });
+  const pair = transport?.selectedCandidatePairId
+    ? (stats.get(transport.selectedCandidatePairId) as RTCIceCandidatePairStats | undefined)
+    : undefined;
+  const local = pair ? (stats.get(pair.localCandidateId) as CandidateStats | undefined) : undefined;
+  const remote = pair ? (stats.get(pair.remoteCandidateId) as CandidateStats | undefined) : undefined;
+  const lan = local?.candidateType === "host" && (remote?.candidateType === "host" || remote?.candidateType === "prflx");
+  return {
+    route: pair ? (lan ? Route.LAN : Route.INTERNET) : null,
+    rtt: pair?.currentRoundTripTime ?? null,
+    local: endpoint(local),
+    remote: endpoint(remote),
+    protocol: local?.protocol ?? null,
+    cipher: transport?.dtlsCipher ?? null,
+    tls_version: transport?.tlsVersion ?? null,
+    bytes_sent: transport?.bytesSent ?? 0,
+    bytes_received: transport?.bytesReceived ?? 0,
+  };
+}

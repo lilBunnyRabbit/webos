@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button, Textarea } from "$lib/core/components/ui";
+  import Viewfinder from "./viewfinder.svelte";
   import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
   import { Camera as CameraIcon, CameraSlash as CameraSlashIcon, PlugsConnected as PlugsConnectedIcon } from "phosphor-svelte";
 
@@ -84,14 +85,17 @@
 </script>
 
 <div class="flex flex-col gap-3">
+  <Viewfinder scanning={!!stream}>
+    {#if stream}
+      <video bind:this={video} muted playsinline class="size-full bg-background-darker object-cover"></video>
+    {:else}
+      <div class="grid size-full place-items-center bg-[light-dark(var(--background-lightest),var(--background-darker))]">
+        <Button variant="primary" disabled={starting} onclick={start_camera}><CameraIcon weight="bold" /> Scan with camera</Button>
+      </div>
+    {/if}
+  </Viewfinder>
   {#if stream}
-    <div class="relative mx-auto overflow-hidden rounded-lg bg-background-darker">
-      <video bind:this={video} muted playsinline class="block max-h-64 max-w-full"></video>
-      <div class="pointer-events-none absolute inset-0 animate-pulse rounded-lg ring-2 ring-primary ring-inset"></div>
-    </div>
     <Button variant="quiet" size="sm" class="self-center" onclick={() => (stream = null)}><CameraSlashIcon weight="bold" /> Stop camera</Button>
-  {:else}
-    <Button variant="primary" class="self-center" disabled={starting} onclick={start_camera}><CameraIcon weight="bold" /> Scan with camera</Button>
   {/if}
 
   <form
@@ -102,11 +106,11 @@
       void submit(pasted);
     }}
   >
-    <Textarea mono bind:value={pasted} rows={3} placeholder="…or paste the code here" aria-label="Connection code" class="min-h-16" />
+    <Textarea mono bind:value={pasted} rows={3} placeholder="WEBOS-P2P1|… paste the code here" aria-label="Connection code" class="min-h-16" />
     <Button type="submit" size="sm" class="self-end" disabled={busy || !pasted.trim()}><PlugsConnectedIcon weight="bold" /> Connect</Button>
   </form>
 
   {#if error}
-    <p role="alert" class="text-ui text-error">{error}</p>
+    <p role="alert" class="font-mono text-2xs text-error">ERR {error}</p>
   {/if}
 </div>

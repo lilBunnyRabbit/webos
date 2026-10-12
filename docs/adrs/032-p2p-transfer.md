@@ -15,7 +15,8 @@ The roadmap lists P2P file transfer (ADR-009, Utilities). WebRTC data channels m
 5. **QR encoding through `uqr`** (new dependency, owner-approved), wrapped as `qr_path()` in `$lib/core/utils/qr.ts`. The detector (`BarcodeDetector`, jsQR fallback) moved there from QR Reader.
 6. **Protocol** on one ordered, reliable channel: `manifest` → `resume {offsets}` → per file `start`, 64 KB binary chunks, `end` → `done` → `received`. Sender backpressure at 4 MB buffered. Messages are zod-validated and file names sanitised; the peer is untrusted.
 7. **Files land in `/home/Downloads`**, through `/tmp/p2p-transfer/{size}-{name}.part`, then `move_file` to a free name.
-8. **Resume** on reconnect: the receiver offers each part file's size as the offset and `null` for files already saved this session. `/tmp` is emptied at boot, so resume survives a dropped connection but not a reload.
+8. **The UI shows the real connection** (`read_link()` over `getStats()`): route, RTT, rate, endpoints, DTLS cipher, bytes on the wire, where files are written, and a timestamped event log. STUN is drawn as address lookup only.
+9. **Resume** on reconnect: the receiver offers each part file's size as the offset and `null` for files already saved this session. `/tmp` is emptied at boot, so resume survives a dropped connection but not a reload.
 
 ## Alternatives Considered
 

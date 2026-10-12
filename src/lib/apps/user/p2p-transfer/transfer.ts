@@ -45,17 +45,20 @@ export function describe_file(file: File): FileEntry {
   return { name: file.name, size: file.size, type: file.type };
 }
 
+export interface SendEvents {
+  /** The receiver's answer to the manifest: bytes it holds per file, `null` for files it already saved. */
+  on_resume?(offsets: (number | null)[]): void;
+  on_progress(index: number, bytes: number): void;
+}
+
 /** Sends `files` from wherever the receiver says it left off. Resolves once the receiver has saved everything. */
-export async function send_files(
-  channel: RTCDataChannel,
-  inbox: Inbox,
-  files: File[],
-  on_progress: (index: number, bytes: number) => void
-): Promise<void> {
+export async function send_files(channel: RTCDataChannel, inbox: Inbox, files: File[], events: SendEvents): Promise<void> {
+  const { on_progress } = events;
   channel.bufferedAmountLowThreshold = LOW_WATER;
   send_message(channel, { type: "manifest", files: files.map(describe_file) });
   const { offsets } = await expect_message(inbox, "resume");
   if (offsets.length !== files.length) throw new Error("The other device answered for a different set of files");
+  events.on_resume?.(offsets);
 
   for (const [index, file] of files.entries()) {
     const offset = offsets[index];
@@ -82,6 +85,8 @@ export async function send_files(
 
 export interface ReceiveEvents {
   on_manifest(entries: FileEntry[]): void;
+  /** What this side asked the sender for: bytes held per file, `null` for files already saved. */
+  on_resume?(offsets: (number | null)[]): void;
   on_progress(index: number, bytes: number): void;
   /** `path` is where the finished file landed in Downloads, after any rename for a taken name. */
   on_saved(index: number, path: string): void;
@@ -131,6 +136,7 @@ export async function receive_files(
     events.on_progress(index, held ?? entry.size);
   }
   send_message(channel, { type: "resume", offsets });
+  events.on_resume?.(offsets);
 
   let current: OpenPart | null = null;
   try {

@@ -41,6 +41,18 @@ receiver → received              // sender closes only now; closing earlier dr
 
 No checksums: SCTP over DTLS is reliable and authenticated, so a delivered byte is the sent byte. The resume offset comes from the `.part` file's size; the part name includes the size so a different file with the same name never resumes onto the wrong bytes.
 
+### UI: show what's going on
+
+The owner wanted a polished, technical look, and above all to see where the files go and that no server is involved. Everything shown comes from the real connection, not from copy:
+
+- **Status strip**: link state, route (LAN, or WAN via STUN), RTT, rate. Route and RTT come from `getStats()` on the selected ICE candidate pair.
+- **Handshake steps**: offer → answer → channel (scan → answer → channel on the receiver).
+- **Data path**: this device ⇄ other device with each side's candidate type and port, the DTLS version and cipher, bytes on the wire (transport stats). STUN is drawn off to the side as "address lookup only". The receiver shows where files are written (`/tmp/p2p-transfer/*.part → /home/Downloads`), the sender shows "read in memory, nothing is uploaded".
+- **Progress**: big mono percentage, rate, ETA, a 20 s throughput graph, block progress bars per file, the saved path per file.
+- **Event log**: timestamped lines for candidate gathering, answer, DTLS up, manifest, resume, route, cipher, each saved file, errors.
+
+Chrome blanks LAN addresses in `getStats()` (and uses `.local` mDNS names in SDP), so a same-network endpoint shows as `private:{port}`. A public (srflx) address shows in full.
+
 ## Key takeaways
 
 - Signaling is the only server-shaped part of WebRTC, and two QR scans replace it.

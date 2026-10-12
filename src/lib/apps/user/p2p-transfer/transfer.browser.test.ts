@@ -61,7 +61,7 @@ describe("send_files / receive_files", () => {
     const { sender, receiver } = await connect();
     const saved: string[] = [];
     await Promise.all([
-      send_files(sender.channel, sender.inbox, sent, () => {}),
+      send_files(sender.channel, sender.inbox, sent, { on_progress: () => {} }),
       receive_files(files, receiver.channel, receiver.inbox, new Set(), events(saved)),
     ]);
 
@@ -79,7 +79,7 @@ describe("send_files / receive_files", () => {
 
     const first = await connect();
     const progress: number[] = [];
-    const sending = send_files(first.sender.channel, first.sender.inbox, sent, () => {}).catch(() => {});
+    const sending = send_files(first.sender.channel, first.sender.inbox, sent, { on_progress: () => {} }).catch(() => {});
     const receiving = receive_files(files, first.receiver.channel, first.receiver.inbox, completed, {
       ...events(saved, progress),
       on_progress: (index, bytes) => {
@@ -97,9 +97,11 @@ describe("send_files / receive_files", () => {
     let resent_from = -1;
     const counted: number[] = [];
     await Promise.all([
-      send_files(second.sender.channel, second.sender.inbox, sent, (index, bytes) => {
-        if (counted[index] === undefined) counted[index] = bytes;
-        if (index === 1 && resent_from < 0) resent_from = bytes;
+      send_files(second.sender.channel, second.sender.inbox, sent, {
+        on_progress: (index, bytes) => {
+          if (counted[index] === undefined) counted[index] = bytes;
+          if (index === 1 && resent_from < 0) resent_from = bytes;
+        },
       }),
       receive_files(files, second.receiver.channel, second.receiver.inbox, completed, events(saved)),
     ]);
