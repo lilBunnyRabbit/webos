@@ -64,6 +64,15 @@ The owner tried it between a desktop and a phone:
 | First camera tap closes, second opens but doesn't scan, "failed to set remote description" | The first tap scanned the answer, and the camera closing was the success path, but nothing confirmed it. Re-scanning applied the answer twice (signaling state already `stable`) | "Answer accepted" state replaces the scanner; a repeated answer is a no-op. `getUserMedia` now runs before the detector import so the tap's user activation isn't spent |
 | Copy and paste on a phone is clumsy | — | Share button (Web Share API) next to Copy |
 
+### Second device test
+
+| Symptom | Root cause | Fix |
+|---------|-----------|-----|
+| Phone on mobile data ↔ desktop at home: "Answer accepted", then nothing | Carrier symmetric NAT: the port STUN reports isn't the one used toward the desktop; no direct path exists. Needs a TURN relay | Owner: **no relay**. Sender stops after ICE fails post-answer and says to use the same Wi-Fi or a hotspot |
+| Same network: phone says 100 %, desktop shows 0 B, data arrives a minute later | The sender's progress counted bytes queued in its 4 MB buffer, so a small file read 100 % instantly. The owner put the phone away, the page froze, the link went quiet (`Link quiet` in the log, both sides on `HOST` LAN addresses) | Receiver `ack`s, sender shows confirmed bytes; "waiting for the receiver to confirm" state; wake lock; stall warning |
+| Rate `3e-20 B/s`, ETA `1e27` | Smoothed rate decaying toward zero, printed raw | Below 1 B/s shows 0 and `--:--` |
+| "I was kinda lost" | Technical readout without a plain summary | Status banner on top: what's happening and what to do |
+
 ## Key takeaways
 
 - Signaling is the only server-shaped part of WebRTC, and two QR scans replace it.

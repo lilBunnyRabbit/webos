@@ -1,13 +1,16 @@
 import type { FilesService } from "$lib/core/api";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import type { Inbox } from "./peer";
-import { parse_message, part_name, resume_offset, type FileEntry, type Message } from "./protocol";
+import { parse_message, part_name, PROTOCOL_VERSION, resume_offset, type FileEntry, type Message } from "./protocol";
 
 /** Small enough for every browser's SCTP message limit, big enough to keep the per-message overhead low. */
 const CHUNK_SIZE = 64 * 1024;
 /** `send()` never blocks; past this much queued data the sender waits for the channel to drain. */
 const HIGH_WATER = 4 * 1024 * 1024;
 const LOW_WATER = 1024 * 1024;
+/** How often the receiver confirms progress: whichever comes first. */
+const ACK_BYTES = 256 * 1024;
+const ACK_MS = 250;
 /** Half-received files. /tmp is emptied at boot, so a resume survives a lost connection but not a reload. */
 const PARTS_FOLDER = "p2p-transfer";
 
@@ -48,39 +51,54 @@ export function describe_file(file: File): FileEntry {
 export interface SendEvents {
   /** The receiver's answer to the manifest: bytes it holds per file, `null` for files it already saved. */
   on_resume?(offsets: (number | null)[]): void;
+  /** Bytes of file `index` the receiver confirmed writing. Queued bytes don't count: a small file queues instantly. */
   on_progress(index: number, bytes: number): void;
+  /** Every byte is handed to the channel; what's left is the receiver confirming it. */
+  on_queued?(): void;
 }
 
 /** Sends `files` from wherever the receiver says it left off. Resolves once the receiver has saved everything. */
 export async function send_files(channel: RTCDataChannel, inbox: Inbox, files: File[], events: SendEvents): Promise<void> {
   const { on_progress } = events;
   channel.bufferedAmountLowThreshold = LOW_WATER;
-  send_message(channel, { type: "manifest", files: files.map(describe_file) });
+  send_message(channel, { type: "manifest", protocol: PROTOCOL_VERSION, files: files.map(describe_file) });
   const { offsets } = await expect_message(inbox, "resume");
   if (offsets.length !== files.length) throw new Error("The other device answered for a different set of files");
   events.on_resume?.(offsets);
+  offsets.forEach((offset, index) => on_progress(index, offset ?? files[index].size));
 
-  for (const [index, file] of files.entries()) {
-    const offset = offsets[index];
-    if (offset === null || offset > file.size) {
-      on_progress(index, file.size);
+  // Acks arrive while chunks are still going out, so the inbox is read alongside the send loop.
+  const confirmed = (async () => {
+    while (true) {
+      const data = await inbox.next();
+      const message = typeof data === "string" ? parse_message(data) : null;
+      if (message?.type === "received") return;
+      if (message?.type !== "ack" || !files[message.index]) throw new Error("The other device sent something unexpected");
+      on_progress(message.index, Math.min(message.bytes, files[message.index].size));
+    }
+  })();
+
+  const sending = (async () => {
+    for (const [index, file] of files.entries()) {
+      const offset = offsets[index];
       if (offset === null) continue;
-      throw new Error("The other device holds more of a file than there is");
-    }
-    on_progress(index, offset);
+      if (offset > file.size) throw new Error("The other device holds more of a file than there is");
 
-    send_message(channel, { type: "start", index, offset });
-    for (let position = offset; position < file.size; position += CHUNK_SIZE) {
-      const chunk = await file.slice(position, position + CHUNK_SIZE).arrayBuffer();
-      await drained(channel);
-      channel.send(chunk);
-      on_progress(index, position + chunk.byteLength);
+      send_message(channel, { type: "start", index, offset });
+      for (let position = offset; position < file.size; position += CHUNK_SIZE) {
+        const chunk = await file.slice(position, position + CHUNK_SIZE).arrayBuffer();
+        await drained(channel);
+        channel.send(chunk);
+      }
+      send_message(channel, { type: "end", index });
     }
-    send_message(channel, { type: "end", index });
-  }
+    send_message(channel, { type: "done" });
+    events.on_queued?.();
+  })();
+  // If the receiver side fails first, the send loop is abandoned; its own later rejection isn't news.
+  sending.catch(() => {});
 
-  send_message(channel, { type: "done" });
-  await expect_message(inbox, "received");
+  await Promise.all([sending, confirmed]);
 }
 
 export interface ReceiveEvents {
@@ -125,8 +143,20 @@ export async function receive_files(
   if (!tmp || !downloads) throw new Error("The Downloads or /tmp folder is missing");
   const parts = await tmp.getDirectoryHandle(PARTS_FOLDER, { create: true });
 
-  const { files: entries } = await expect_message(inbox, "manifest");
+  const manifest = await expect_message(inbox, "manifest");
+  if ((manifest.protocol ?? 1) !== PROTOCOL_VERSION) {
+    throw new Error("The other device runs a different version of P2P Transfer. Reload WebOS on both devices");
+  }
+  const entries = manifest.files;
   events.on_manifest(entries);
+
+  let acked = { bytes: -1, at: 0 };
+  const ack = (index: number, bytes: number, force = false) => {
+    const now = performance.now();
+    if (!force && bytes - acked.bytes < ACK_BYTES && now - acked.at < ACK_MS) return;
+    acked = { bytes, at: now };
+    send_message(channel, { type: "ack", index, bytes });
+  };
 
   const offsets: (number | null)[] = [];
   for (const [index, entry] of entries.entries()) {
@@ -149,6 +179,7 @@ export async function receive_files(
         if (current.written > entries[current.index].size) throw new Error("The other device sent more than it announced");
         await current.writable.write(data);
         events.on_progress(current.index, current.written);
+        ack(current.index, current.written);
         continue;
       }
 
@@ -161,6 +192,7 @@ export async function receive_files(
         await writable.truncate(message.offset);
         await writable.seek(message.offset);
         current = { index: message.index, handle, writable, written: message.offset };
+        acked = { bytes: message.offset, at: performance.now() };
       } else if (message.type === "end") {
         if (current?.index !== message.index) throw new Error("The transfer got out of step");
         const finished: OpenPart = current;
@@ -171,6 +203,7 @@ export async function receive_files(
         const saved = await files.move_file(parts, finished.handle, downloads, entry.name);
         completed.add(part_name(entry));
         events.on_saved(finished.index, `${PATHS.downloads}/${saved.name}`);
+        ack(finished.index, finished.written, true);
       } else if (message.type === "done") {
         send_message(channel, { type: "received" });
         return;

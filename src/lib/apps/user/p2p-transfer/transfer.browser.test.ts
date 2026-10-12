@@ -133,4 +133,37 @@ describe("send_files / receive_files", () => {
       "small.bin",
     ]);
   });
+
+  test("the sender's progress is what the receiver confirmed, not what it queued", async () => {
+    const sent = [random_file("video.bin", 3_000_000)];
+    const { sender, receiver } = await connect();
+    let written = 0;
+    const reported: number[] = [];
+    let queued_at = -1;
+    await Promise.all([
+      send_files(sender.channel, sender.inbox, sent, {
+        on_progress: (_, bytes) => {
+          expect(bytes).toBeLessThanOrEqual(written);
+          reported.push(bytes);
+        },
+        on_queued: () => (queued_at = reported.length),
+      }),
+      receive_files(files, receiver.channel, receiver.inbox, new Set(), {
+        ...events([]),
+        on_progress: (_, bytes) => (written = bytes),
+      }),
+    ]);
+    expect(reported.at(-1)).toBe(3_000_000);
+    expect(reported.length).toBeGreaterThan(3);
+    expect(queued_at).toBeGreaterThan(-1);
+  });
+
+  test("refuses a sender from before acknowledgements, with a reason", async () => {
+    const { sender, receiver } = await connect();
+    sender.channel.send(JSON.stringify({ type: "manifest", files: [{ name: "a.txt", size: 1, type: "" }] }));
+    await expect(receive_files(files, receiver.channel, receiver.inbox, new Set(), events([]))).rejects.toThrow(
+      "different version of P2P Transfer"
+    );
+  });
 });
+

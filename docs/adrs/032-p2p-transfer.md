@@ -34,6 +34,12 @@ The roadmap lists P2P file transfer (ADR-009, Utilities). WebRTC data channels m
 > - The live camera struggled with the version 8 QR: codes moved from a text format (`WEBOS-P2P1|…`, ~165 chars) to Base45 binary (decision 3), plus the photo fallback (decision 10).
 > - Re-scanning an answer after it was applied failed with "Failed to set remote description"; it's now a no-op, and the UI confirms the answer.
 
+> **Revision 2026-10-13: second device test (phone on Wi-Fi ↔ desktop on cable, same network)**
+> - **No relay, confirmed by the owner.** Mobile data ↔ home network fails behind a carrier's symmetric NAT; that stays a known limit. Once the sender has the answer, both sides have tried every path, so ICE `failed` is final there: the sender stops with "No direct path… same Wi-Fi or a hotspot".
+> - **Progress is confirmed, not queued.** The sender counted bytes handed to the channel, so a 200 KB photo showed 100 % before a byte left the phone; the owner then put the phone away and the page froze. The receiver now sends `ack {index, bytes}` (every 256 KB or 250 ms) and the sender shows those. Protocol version 2: the manifest carries `protocol`, and a receiver refuses a version 1 sender with a reason.
+> - **Screen Wake Lock** while connecting or transferring, re-taken when the page becomes visible again. **Stall** shown after 10 s without confirmed progress while the link is up.
+> - **A "what's happening now" banner** gives one plain sentence and the next action for every state, above the technical readout.
+
 ## Consequences
 
 ### Positive

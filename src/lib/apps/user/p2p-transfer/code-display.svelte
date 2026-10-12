@@ -25,12 +25,14 @@
       <path d={qr.d} class="fill-[light-dark(var(--foreground),var(--background-darkest))]" />
     </svg>
   </Viewfinder>
-  <figcaption class="flex items-center gap-1.5 font-mono text-2xs text-foreground/80 uppercase tabular-nums">
+  <figcaption class="flex flex-wrap items-center justify-center gap-x-1.5 font-mono text-2xs whitespace-nowrap text-foreground/80 uppercase tabular-nums">
     <span class="text-primary">{kind}</span>
-    <span aria-hidden="true">·</span>{code.length} B
-    <span aria-hidden="true">·</span>QR v{version}
-    <span aria-hidden="true">·</span>ECC L
-    <CopyButton text={code} />
-    <IconButton label="Share code" size="sm" onclick={share}><ShareNetworkIcon weight="bold" /></IconButton>
+    <span>· {code.length} B</span>
+    <span>· QR v{version}</span>
+    <span>· ECC L</span>
+    <span class="flex">
+      <CopyButton text={code} />
+      <IconButton label="Share code" size="sm" onclick={share}><ShareNetworkIcon weight="bold" /></IconButton>
+    </span>
   </figcaption>
 </figure>
