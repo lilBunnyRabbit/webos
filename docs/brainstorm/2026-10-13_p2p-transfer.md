@@ -53,6 +53,17 @@ The owner wanted a polished, technical look, and above all to see where the file
 
 Chrome blanks LAN addresses in `getStats()` (and uses `.local` mDNS names in SDP), so a same-network endpoint shows as `private:{port}`. A public (srflx) address shows in full.
 
+### First real-device test (desktop ↔ phone)
+
+The owner tried it between a desktop and a phone:
+
+| Symptom | Root cause | Fix |
+|---------|-----------|-----|
+| Times out before the answer is pasted | The answering side checks the offer's candidates at once; nobody replies until the sender has the answer. Chrome reports ICE `failed` at ~15 s and recovers when checks arrive (measured: failed at 15 s, connected at 45 s), but `channel_open` rejected on `failed` | Only `closed` ends the wait before the channel opens. Browser test holds the answer until the receiver reports `failed`, then connects |
+| Phone camera slow to focus | Version 8 QR (49 modules) shown at 256px | Base45 binary codes: version 4–5. 1080p + continuous autofocus. "Take photo" with the native camera. QR shown at up to 288px |
+| First camera tap closes, second opens but doesn't scan, "failed to set remote description" | The first tap scanned the answer, and the camera closing was the success path, but nothing confirmed it. Re-scanning applied the answer twice (signaling state already `stable`) | "Answer accepted" state replaces the scanner; a repeated answer is a no-op. `getUserMedia` now runs before the detector import so the tap's user activation isn't spent |
+| Copy and paste on a phone is clumsy | — | Share button (Web Share API) next to Copy |
+
 ## Key takeaways
 
 - Signaling is the only server-shaped part of WebRTC, and two QR scans replace it.
@@ -63,7 +74,7 @@ Chrome blanks LAN addresses in `getStats()` (and uses `.local` mDNS names in SDP
 
 - [x] ADR-032
 - [x] App, tests (unit: codec, protocol; browser: two real peers, transfer and resume)
-- [ ] Try it phone ↔ laptop on the same Wi-Fi and on mobile data (the owner)
+- [-] Try it phone ↔ laptop on the same Wi-Fi and on mobile data (the owner): first round found the timeout and scanning issues above, retest pending
 
 ## Next session topics
 

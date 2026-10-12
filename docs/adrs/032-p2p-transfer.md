@@ -10,13 +10,15 @@ The roadmap lists P2P file transfer (ADR-009, Utilities). WebRTC data channels m
 
 1. **A user app, `user/p2p-transfer`.** No service; nothing else calls it yet.
 2. **Manual signaling by QR code.** The sender shows an offer code, the receiver scans it and shows an answer code, the sender scans that. Each code can also be copied and pasted.
-3. **Compact codes.** `signal.ts` reduces the SDP to ICE ufrag and password, SHA-256 fingerprint, DTLS role and UDP candidates (`WEBOS-P2P1|kind|ufrag|pwd|fingerprint|role|candidates`, ~170 characters) and rebuilds a data-channel SDP from it. ICE gathering completes (or times out after 4 s) before the code is shown; there is no trickle.
+3. **Compact codes.** `signal.ts` reduces the SDP to ICE ufrag and password, SHA-256 fingerprint, DTLS role and UDP candidates, packs them as bytes (ICE strings base64-decoded, IPv4 as 4 bytes, mDNS names as 16) and writes them in Base45 (RFC 9285). Base45 stays inside the QR alphanumeric charset, so a Chrome offer is ~125 characters and a version 4–5 QR instead of version 8. ICE gathering completes (or times out after 4 s) before the code is shown; there is no trickle.
 4. **STUN: `stun:stun.l.google.com:19302`.** No TURN: symmetric NAT or carrier-grade NAT (CGNAT) on both sides fails to connect.
 5. **QR encoding through `uqr`** (new dependency, owner-approved), wrapped as `qr_path()` in `$lib/core/utils/qr.ts`. The detector (`BarcodeDetector`, jsQR fallback) moved there from QR Reader.
 6. **Protocol** on one ordered, reliable channel: `manifest` → `resume {offsets}` → per file `start`, 64 KB binary chunks, `end` → `done` → `received`. Sender backpressure at 4 MB buffered. Messages are zod-validated and file names sanitised; the peer is untrusted.
 7. **Files land in `/home/Downloads`**, through `/tmp/p2p-transfer/{size}-{name}.part`, then `move_file` to a free name.
 8. **The UI shows the real connection** (`read_link()` over `getStats()`): route, RTT, rate, endpoints, DTLS cipher, bytes on the wire, where files are written, and a timestamped event log. STUN is drawn as address lookup only.
-9. **Resume** on reconnect: the receiver offers each part file's size as the offset and `null` for files already saved this session. `/tmp` is emptied at boot, so resume survives a dropped connection but not a reload.
+9. **Waiting for a late answer is normal.** The answering side's ICE checks go unanswered until the other device has the answer, and Chrome reports `failed` after ~15 s, then recovers once checks arrive. Before the channel opens only `closed` ends the attempt; the user cancels otherwise. A second scan of the same answer is ignored.
+10. **Scanning** asks for 1080p with continuous autofocus, and offers "Take photo" (the native camera app) as a fallback for screens the live preview can't focus on. Codes can be shared with the Web Share API.
+11. **Resume** on reconnect: the receiver offers each part file's size as the offset and `null` for files already saved this session. `/tmp` is emptied at boot, so resume survives a dropped connection but not a reload.
 
 ## Alternatives Considered
 
@@ -26,6 +28,11 @@ The roadmap lists P2P file transfer (ADR-009, Utilities). WebRTC data channels m
 - **Partial files in `/home/Downloads/*.part`**: resume across reloads, but visible clutter.
 - **Raw or deflated SDP in the QR**: works, but a ~1 kB code is a dense QR that a phone reads poorly off a screen.
 - **WebTorrent swarming**: heavy, and pointless for one sender and a few receivers.
+
+> **Revision 2026-10-13: first real-device test (desktop ↔ phone)**
+> - Codes timed out while being copied by hand: the receiver treated ICE `failed` as final and closed. Now only `closed` is final before the channel opens (decision 9).
+> - The live camera struggled with the version 8 QR: codes moved from a text format (`WEBOS-P2P1|…`, ~165 chars) to Base45 binary (decision 3), plus the photo fallback (decision 10).
+> - Re-scanning an answer after it was applied failed with "Failed to set remote description"; it's now a no-op, and the UI confirms the answer.
 
 ## Consequences
 

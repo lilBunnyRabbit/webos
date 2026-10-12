@@ -107,6 +107,7 @@ abstract class Session {
       const state = pc.connectionState;
       if (state === "connected") this.write("DTLS handshake complete, link up", LogTone.OK);
       else if (state === "disconnected") this.write("Link quiet, waiting for it to recover");
+      else if (state === "failed" && this.phase === Phase.CONNECTING) this.write("No reply yet, still listening for the other device");
     });
     return pc;
   }
@@ -177,6 +178,8 @@ abstract class Session {
 
 export class SendSession extends Session {
   files = $state.raw<File[]>([]);
+  /** The receiver's answer is in; what's left is ICE and DTLS on their own. */
+  answered = $state(false);
 
   add(files: File[]) {
     this.files = [...this.files, ...files];
@@ -191,6 +194,7 @@ export class SendSession extends Session {
   /** Shows a new offer code and sends once the receiver connects. Also how an interrupted transfer resumes. */
   async offer(): Promise<void> {
     const pc = this.connect();
+    this.answered = false;
     this.phase = Phase.CONNECTING;
     this.write(`Gathering ICE candidates for ${this.files.length} file${this.files.length === 1 ? "" : "s"}`);
     try {
@@ -224,8 +228,10 @@ export class SendSession extends Session {
   /** Throws when `code` isn't the receiver's answer, so the scanner can say so and keep scanning. */
   async answer(code: string): Promise<void> {
     if (!this.peer) throw new Error("There's no open connection to answer");
+    if (this.answered) return;
     await accept_answer(this.peer, code);
-    this.write(`Answer accepted: ${describe_candidates(code)}`);
+    this.answered = true;
+    this.write(`Answer accepted: ${describe_candidates(code)}. Connecting`);
   }
 
   reset() {

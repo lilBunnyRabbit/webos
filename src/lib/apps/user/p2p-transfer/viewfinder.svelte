@@ -5,7 +5,7 @@
   let { scanning = false, children }: { scanning?: boolean; children: Snippet } = $props();
 </script>
 
-<div class="relative mx-auto aspect-square w-full max-w-64 p-2.5">
+<div class="relative mx-auto aspect-square w-full max-w-72 p-2.5">
   {#each ["top-0 left-0 border-t-2 border-l-2 rounded-tl-lg", "top-0 right-0 border-t-2 border-r-2 rounded-tr-lg", "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-lg", "right-0 bottom-0 border-r-2 border-b-2 rounded-br-lg"] as corner (corner)}
     <span class="pointer-events-none absolute size-6 border-primary {corner}"></span>
   {/each}

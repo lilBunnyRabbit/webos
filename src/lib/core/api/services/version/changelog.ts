@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.24.0",
+    date: "2026-10-13",
+    title: "Easier handoff",
+    changes: [
+      { kind: FIXED, text: "P2P Transfer no longer gives up while you take your time passing the second code over." },
+      { kind: FIXED, text: "Scanning the same code twice in P2P Transfer no longer shows an error, and you now see when the code was accepted." },
+      { kind: IMPROVED, text: "P2P Transfer codes are smaller and easier for a phone camera to read." },
+      { kind: NEW, text: "Send a P2P Transfer code with the Share button, or scan one from a photo taken with your camera app." },
+    ],
+  },
+  {
     version: "0.23.0",
     date: "2026-10-13",
     title: "Hand it over",

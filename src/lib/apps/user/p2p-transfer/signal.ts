@@ -1,19 +1,22 @@
 /**
  * Squeezes a data-channel-only SDP into a short code that fits a scannable QR code, and rebuilds an SDP from it.
  * Only what WebRTC needs to connect survives: ICE credentials, the DTLS fingerprint, the DTLS role and the UDP
- * candidates. Everything else in the rebuilt SDP is the fixed shape every browser emits for one data channel.
+ * candidates, packed as bytes and written in Base45 (RFC 9285). Base45 uses only the characters of a QR code's
+ * alphanumeric mode, which stores 5.5 bits per character instead of 8, so the QR comes out a few versions smaller.
+ * Everything else in the rebuilt SDP is the fixed shape every browser emits for one data channel.
  */
 
-const PREFIX = "WEBOS-P2P1";
+const FORMAT_VERSION = 1;
 
 export const SignalKind = { OFFER: "o", ANSWER: "a" } as const;
 export type SignalKind = (typeof SignalKind)[keyof typeof SignalKind];
 
-const SETUP_ROLES = { actpass: "x", active: "a", passive: "p" } as const;
-type SetupRole = keyof typeof SETUP_ROLES;
+/** Index order is the wire format. */
+const SETUP_ROLES = ["actpass", "active", "passive"] as const;
+type SetupRole = (typeof SETUP_ROLES)[number];
 
-const CANDIDATE_TYPES = { host: "h", srflx: "s", prflx: "p", relay: "r" } as const;
-type CandidateType = keyof typeof CANDIDATE_TYPES;
+const CANDIDATE_TYPES = ["host", "srflx", "prflx", "relay"] as const;
+type CandidateType = (typeof CANDIDATE_TYPES)[number];
 
 /** Local candidates first, so a same-network pair is tried before a route through the router. */
 const TYPE_PREFERENCE: Record<CandidateType, number> = { host: 126, prflx: 110, srflx: 100, relay: 0 };
@@ -34,25 +37,9 @@ export interface Signal {
   candidates: Candidate[];
 }
 
-function invert<K extends string, V extends string>(map: Record<K, V>): Record<V, K> {
-  return Object.fromEntries(Object.entries(map).map(([key, value]) => [value, key])) as Record<V, K>;
-}
-
-const ROLE_BY_CODE = invert(SETUP_ROLES);
-const TYPE_BY_CODE = invert(CANDIDATE_TYPES);
-
 function attribute(sdp: string, name: string): string | null {
   const line = sdp.split(/\r?\n/).find((entry) => entry.startsWith(`a=${name}:`));
   return line ? line.slice(name.length + 3).trim() : null;
-}
-
-function to_base64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function from_base64url(text: string): Uint8Array {
-  const binary = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
 export function parse_candidate(line: string): Candidate | null {
@@ -60,7 +47,7 @@ export function parse_candidate(line: string): Candidate | null {
   const parts = line.replace(/^(a=)?candidate:/, "").trim().split(/\s+/);
   if (parts.length < 8 || parts[6] !== "typ") return null;
   const [, component, transport, , address, port, , type] = parts;
-  if (component !== "1" || transport.toLowerCase() !== "udp" || !(type in CANDIDATE_TYPES)) return null;
+  if (component !== "1" || transport.toLowerCase() !== "udp" || !CANDIDATE_TYPES.includes(type as CandidateType)) return null;
   return { type: type as CandidateType, address, port: Number(port) };
 }
 
@@ -74,7 +61,7 @@ export function read_sdp(kind: SignalKind, sdp: string): Signal {
 
   const [algorithm, hex] = fingerprint.split(" ");
   if (algorithm.toLowerCase() !== "sha-256" || !hex) throw new Error(`Unsupported certificate fingerprint: ${algorithm}`);
-  if (!(setup in SETUP_ROLES)) throw new Error(`Unsupported DTLS role: ${setup}`);
+  if (!SETUP_ROLES.includes(setup as SetupRole)) throw new Error(`Unsupported DTLS role: ${setup}`);
 
   const seen = new Set<string>();
   const candidates = sdp
@@ -99,43 +86,172 @@ export function read_sdp(kind: SignalKind, sdp: string): Signal {
   };
 }
 
-export function encode_signal(signal: Signal): string {
-  const candidates = signal.candidates
-    .map((candidate) => `${CANDIDATE_TYPES[candidate.type]},${candidate.address},${candidate.port}`)
-    .join(";");
-  return [
-    PREFIX,
-    signal.kind,
-    signal.ufrag,
-    signal.pwd,
-    to_base64url(signal.fingerprint),
-    SETUP_ROLES[signal.setup],
-    candidates,
-  ].join("|");
+const BASE45 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+
+export function to_base45(bytes: Uint8Array): string {
+  let text = "";
+  for (let index = 0; index < bytes.length; index += 2) {
+    if (index + 1 === bytes.length) {
+      const value = bytes[index];
+      text += BASE45[value % 45] + BASE45[Math.floor(value / 45)];
+    } else {
+      const value = bytes[index] * 256 + bytes[index + 1];
+      text += BASE45[value % 45] + BASE45[Math.floor(value / 45) % 45] + BASE45[Math.floor(value / 2025)];
+    }
+  }
+  return text;
 }
 
-/** Throws a user-readable error when `code` isn't a WebOS connection code. */
-export function decode_signal(code: string): Signal {
-  const parts = code.trim().split("|");
-  if (parts[0] !== PREFIX || parts.length !== 7) throw new Error("This isn't a P2P Transfer code");
-  const [, kind, ufrag, pwd, fingerprint, setup, candidates] = parts;
-  if (kind !== SignalKind.OFFER && kind !== SignalKind.ANSWER) throw new Error("This isn't a P2P Transfer code");
-  if (!(setup in ROLE_BY_CODE)) throw new Error("This isn't a P2P Transfer code");
+export function from_base45(text: string): Uint8Array {
+  const digits = Array.from(text, (char) => BASE45.indexOf(char));
+  if (digits.includes(-1) || digits.length % 3 === 1) throw new Error("not base45");
+  const bytes: number[] = [];
+  for (let index = 0; index < digits.length; index += 3) {
+    const [c, d, e] = digits.slice(index, index + 3);
+    if (e === undefined) {
+      const value = c + d * 45;
+      if (value > 255) throw new Error("not base45");
+      bytes.push(value);
+    } else {
+      const value = c + d * 45 + e * 2025;
+      if (value > 65535) throw new Error("not base45");
+      bytes.push(value >> 8, value & 255);
+    }
+  }
+  return Uint8Array.from(bytes);
+}
 
-  return {
-    kind,
-    ufrag,
-    pwd,
-    fingerprint: from_base64url(fingerprint),
-    setup: ROLE_BY_CODE[setup as keyof typeof ROLE_BY_CODE],
-    candidates: candidates
-      ? candidates.split(";").map((entry) => {
-          const [type, address, port] = entry.split(",");
-          if (!(type in TYPE_BY_CODE) || !address || !Number(port)) throw new Error("The connection code is damaged");
-          return { type: TYPE_BY_CODE[type as keyof typeof TYPE_BY_CODE], address, port: Number(port) };
-        })
-      : [],
-  };
+const ICE_CHARS = /^[A-Za-z0-9+/]+$/;
+const MDNS = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\.local$/;
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+const AddressKind = { IPV4: 0, MDNS: 1, TEXT: 2 } as const;
+
+class Writer {
+  bytes: number[] = [];
+
+  byte(value: number) {
+    this.bytes.push(value & 255);
+  }
+
+  raw(values: ArrayLike<number>) {
+    for (let index = 0; index < values.length; index++) this.byte(values[index]);
+  }
+
+  text(value: string) {
+    if (value.length > 255) throw new Error("The connection offer has an unexpectedly long field");
+    this.byte(value.length);
+    this.raw(Array.from(value, (char) => char.charCodeAt(0)));
+  }
+
+  /** ICE ufrag and password use the base64 alphabet; four characters pack into three bytes. */
+  ice(value: string) {
+    if (ICE_CHARS.test(value) && value.length % 4 === 0 && value.length <= 168) {
+      const bytes = Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+      this.byte(0x80 | bytes.length);
+      this.raw(bytes);
+    } else {
+      if (value.length > 127) throw new Error("The connection offer has an unexpectedly long field");
+      this.text(value);
+    }
+  }
+}
+
+class Reader {
+  #at = 0;
+
+  constructor(private bytes: Uint8Array) {}
+
+  byte(): number {
+    if (this.#at >= this.bytes.length) throw new Error("truncated");
+    return this.bytes[this.#at++];
+  }
+
+  raw(length: number): Uint8Array {
+    if (this.#at + length > this.bytes.length) throw new Error("truncated");
+    return this.bytes.slice(this.#at, (this.#at += length));
+  }
+
+  text(length = this.byte()): string {
+    return String.fromCharCode(...this.raw(length));
+  }
+
+  ice(): string {
+    const head = this.byte();
+    if (head & 0x80) return btoa(String.fromCharCode(...this.raw(head & 0x7f)));
+    return this.text(head);
+  }
+
+  get done(): boolean {
+    return this.#at === this.bytes.length;
+  }
+}
+
+export function encode_signal(signal: Signal): string {
+  const writer = new Writer();
+  writer.byte((FORMAT_VERSION << 4) | (signal.kind === SignalKind.ANSWER ? 0x08 : 0) | SETUP_ROLES.indexOf(signal.setup));
+  writer.ice(signal.ufrag);
+  writer.ice(signal.pwd);
+  writer.raw(signal.fingerprint);
+  writer.byte(signal.candidates.length);
+  for (const candidate of signal.candidates) {
+    const type = CANDIDATE_TYPES.indexOf(candidate.type) << 4;
+    const mdns = candidate.address.match(MDNS);
+    const ipv4 = candidate.address.match(IPV4);
+    if (mdns) {
+      writer.byte(type | AddressKind.MDNS);
+      const hex = mdns.slice(1).join("");
+      writer.raw(Array.from({ length: 16 }, (_, index) => parseInt(hex.slice(index * 2, index * 2 + 2), 16)));
+    } else if (ipv4) {
+      writer.byte(type | AddressKind.IPV4);
+      writer.raw(ipv4.slice(1).map(Number));
+    } else {
+      writer.byte(type | AddressKind.TEXT);
+      writer.text(candidate.address);
+    }
+    writer.byte(candidate.port >> 8);
+    writer.byte(candidate.port);
+  }
+  return to_base45(Uint8Array.from(writer.bytes));
+}
+
+function read_address(reader: Reader, kind: number): string {
+  if (kind === AddressKind.IPV4) return Array.from(reader.raw(4)).join(".");
+  if (kind === AddressKind.MDNS) {
+    const hex = Array.from(reader.raw(16), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}.local`;
+  }
+  if (kind === AddressKind.TEXT) return reader.text();
+  throw new Error("unknown address kind");
+}
+
+/** Throws a user-readable error when `code` isn't a P2P Transfer code. Line breaks from pasting are ignored. */
+export function decode_signal(code: string): Signal {
+  try {
+    const reader = new Reader(from_base45(code.replace(/[\r\n\t]/g, "")));
+    const head = reader.byte();
+    if (head >> 4 !== FORMAT_VERSION || (head & 0x03) > 2) throw new Error("wrong version");
+    const signal: Signal = {
+      kind: head & 0x08 ? SignalKind.ANSWER : SignalKind.OFFER,
+      setup: SETUP_ROLES[head & 0x03],
+      ufrag: reader.ice(),
+      pwd: reader.ice(),
+      fingerprint: reader.raw(32),
+      candidates: [],
+    };
+    const count = reader.byte();
+    for (let index = 0; index < count; index++) {
+      const head = reader.byte();
+      const type = CANDIDATE_TYPES[head >> 4];
+      if (!type) throw new Error("unknown candidate type");
+      const address = read_address(reader, head & 0x0f);
+      const port = (reader.byte() << 8) | reader.byte();
+      signal.candidates.push({ type, address, port });
+    }
+    if (!reader.done) throw new Error("trailing bytes");
+    return signal;
+  } catch {
+    throw new Error("This isn't a P2P Transfer code");
+  }
 }
 
 function candidate_line(candidate: Candidate, index: number): string {
