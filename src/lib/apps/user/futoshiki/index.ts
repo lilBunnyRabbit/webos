@@ -1,0 +1,20 @@
+import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
+import { LessThan as LessThanIcon } from "phosphor-svelte";
+
+export default define_app({
+  id: "futoshiki",
+  name: "Futoshiki",
+  icon: LessThanIcon,
+  version: "1.0.0",
+  category: AppCategory.GAMES,
+  description: "Fill the grid so every row and column holds each digit once and every sign is obeyed.",
+  keywords: ["unequal", "inequality", "latin square", "sudoku", "puzzle", "logic", "numbers"],
+  defaults: {
+    constraints: {
+      width: { min: 340 },
+      height: { min: 460 },
+    },
+  },
+  component: () => import("./futoshiki.app.svelte"),
+});

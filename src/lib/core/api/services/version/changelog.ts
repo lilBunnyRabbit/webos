@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, text: "Nonogram: fill the grid from the number clues to reveal a picture, with endless new puzzles that always have one answer." },
       { kind: NEW, text: "Word Search: find themed words hidden in a grid of letters, from across-and-down only up to every direction and backwards." },
+      { kind: NEW, text: "Futoshiki: fill a Latin square where the signs between cells say which number is bigger." },
     ],
   },
   {
