@@ -18,7 +18,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
 5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
-6. [ ] **Desktop** (ADR-011: multi-select, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
+6. [ ] **Desktop** (ADR-011: multi-select shared with File Explorer, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
 7. [ ] **Deep linking + share** (ADR-010)
 8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
 
@@ -57,7 +57,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] File search/filter (case-insensitive substring)
 - [x] File explorer errors surfaced as notifications
 - [x] Auto-rename on every name clash: upload, copy, move, new file, new folder (`name (1).ext`)
-- [ ] Drag-and-drop file operations (must auto-rename via `available_name()`)
+- [ ] Multi-select: Ctrl/Shift+Click, marquee, Ctrl+A; bulk copy/cut/delete/drag. Same selection model as desktop multi-select (ADR-011 revision, decide with block 6)
+- [ ] Drag-and-drop file operations: drop files onto a folder to move them (must auto-rename via `available_name()`; pairs with multi-select)
 - [-] Back/forward navigation buttons (Back done, no Forward)
 
 ### Service Lifecycle Hooks
@@ -144,7 +145,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Desktop Enhancements
 - **ADR:** [ADR-011](adrs/011-desktop-enhancements.md)
 - **Status:** Context menu done (ADR-025)
-- [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click)
+- [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click), sharing its selection model with File Explorer
 - [x] Desktop context menu (right-click on background and icons; ADR-025)
 - [ ] Desktop wallpapers (solid, gradient, image with fit/blur/tint)
 - [ ] Icon auto-arrange
@@ -304,6 +305,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] PDF Viewer app (native browser viewer in an iframe)
 
 ---
+
+## Open bugs
+
+- [ ] **Windows stranded off-screen after the browser shrinks** (inbox, 2026-10-12). `clamp_bounds` runs on restore and since 0.14.0 on open, never on container resize ([windows.md](system/services/windows.md) Known gaps). Maximized and snapped windows already re-fit: they're CSS percentages of the container. Options, lightest first, **owner's call**:
+  1. Clamp stored bounds on container resize. Simple, but permanent: growing the browser back leaves windows squeezed.
+  2. Keep a grab handle reachable: clamp only so N px of the titlebar stays on screen (macOS/Windows). Size untouched.
+  3. Render-time clamp: display = clamp(stored, container); stored bounds change only on drag, so growing back restores the layout. Needs a stored vs displayed split.
+  4. Recovery action ("Gather windows" in a taskbar menu or a shortcut). Combines with 2.
 
 ## Known bugs (system reference pass, 2026-10-11)
 
