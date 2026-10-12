@@ -33,6 +33,25 @@ How apps are put together. The app's root fills the window content, which is an 
 - A filter field narrows below `@lg` (`w-28`) rather than disappearing, so an active filter can always be seen and cleared.
 - Status bars never wrap: they truncate and drop secondary items below `@sm`/`@md`.
 
+## Game app
+
+Tic-Tac-Toe, Minesweeper, 2048, Snake and Maze share one frame:
+
+```
+┌ Toolbar ─────────────────────────────────────┐  mode or difficulty (sm Segmented; a Select in narrow windows), stats toggle, New game (primary)
+│        ┌──────────┐  ┌ stats ┐               │
+│        │  board   │  │ panel │               │  square board, centered; stats panel at @3xl, a pressed toggle below
+│        └──────────┘  └───────┘               │
+│        status line                           │
+├ StatusBar ───────────────────────────────────┤  score, best, the keys
+```
+
+- **Board:** square and as large as the window allows (sized in `cqmin`), with a `foreground/8` hairline. It takes the keyboard: a focusable `role="application"` (Snake, Maze) or a `role="grid"` of cells (Tic-Tac-Toe, Minesweeper), with an `aria-label` that names the keys.
+- **Status line:** one short line under or over the board for whose turn it is or what just happened, `text-ui`, `aria-live="polite"`. Numbers that change go in the status bar in mono.
+- **Stats panel (optional, Tic-Tac-Toe and Minesweeper):** a side panel from `@3xl` (wins, best times, streaks). Below that, a `pressed` "Statistics" `IconButton` in the toolbar shows it over the board.
+- **Pause and end:** a `BoardOverlay` inside the board: the title ("Paused", "Game over"), one mono line (score, best), the primary action (Resume, Play again, New game) last. Starting cues that must not hide the board (Snake's "swipe to start") sit at its edge instead.
+- **Touch:** swipes on the board; a direction pad only on `pointer-coarse`. Touch targets stay the kit's 36px; a dense board (Minesweeper Expert) may go down to 32px cells.
+
 ## Breadcrumbs
 
 Show the real path, not the history. `/` in mono, then each segment; the current one is `font-medium` and not clickable; separators are a small `CaretRight` at `foreground/35`.
