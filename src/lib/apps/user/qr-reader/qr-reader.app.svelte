@@ -16,7 +16,8 @@
     Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { QrEntries, create_qr_detector, detect_qr, is_url, thumbnail, type BarcodeDetector, type QrEntry } from "./qr";
+  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
+  import { QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
 
   const { path }: { path?: string } = $props();
   const { window, storage, app_id } = get_app_context();
