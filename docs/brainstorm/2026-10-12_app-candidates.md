@@ -177,6 +177,19 @@ Modelled on the owner's E-Loterija (named configurations, each a list of `{min, 
 | Preset shape | Name + any number of lists, each with a range and a count | Fixed one or two groups |
 | Defaults | **None**: empty state with "New preset" | E-Loterija's Loto / Eurojackpot / Vikinglotto |
 
+### Gaps after the design passes (owner: "go")
+
+| Gap | Decision |
+|-----|----------|
+| Textarea, CopyButton, Slider, pressed Button/IconButton, `sm` Segmented, games' in-board overlay | **Kit pass**: each into the kit, design docs and Style Guide (two-apps rule); apps migrate, local copies deleted |
+| Five games share a square board + status line + stats panel | **patterns.md "Game app"** section; overlay as kit `BoardOverlay` |
+| Touch targets | **Keep the kit's 36px** (the 40px was a wrong brief); Minesweeper's 32px floor accepted for Expert |
+| Paint toolbar wraps on phones | Zoom controls move into the tool panel below `@sm` |
+| Display sizes in RNG results | foundations.md: display sizes are fine for app content, reserved only for chrome |
+| 2048 accent, Calculator toolbar | Left as is |
+| Speed Reader pauses (automatic vs hand-marked stops) | Open; automatic for now |
+| Speed Reader parity with the deployed `/speed-reader` (editor cleanup, stop tokens, video export via mediabunny, export presets) | **Deferred**: the owner will rework the whole app later; current WebOS version stays |
+
 ## Next session topics
 
 - Close guard (G2), before any editor app

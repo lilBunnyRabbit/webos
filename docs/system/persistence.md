@@ -35,7 +35,7 @@ App storage keys in use today:
 | `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
 | `app.snake.{speed,wrap,high_scores}` | `user/snake` | Last mode; high score per speed and wall mode |
 | `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
-| `app.rng-tools.{section,number,dice.notation,list,password,coin.tally}` | `user/rng-tools` | Last section and per-section settings; coin tally |
+| `app.rng-tools.{section,number,dice.notation,list,password,coin.tally,draws}` | `user/rng-tools` | Last section and per-section settings; coin tally; Draws presets |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped) |
 | `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
 | `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |

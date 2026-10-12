@@ -15,7 +15,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "Speed Reader shows a text or file one word at a time at the speed you choose and remembers where you stopped." },
       { kind: NEW, text: "Music Visualizer plays an audio file as moving bars, a waveform or a ring." },
       { kind: NEW, text: "Dev Tools for Base64, hashes, URLs, UUIDs, regular expressions and JSON." },
-      { kind: NEW, text: "RNG Tools for random numbers, dice, coin flips, picking from a list and passwords." },
+      { kind: NEW, text: "RNG Tools for random numbers, dice, coin flips, picking from a list and passwords, plus your own lottery-style draw presets." },
       { kind: NEW, text: "Unit Converter for length, weight, temperature, data size and more." },
     ],
   },
