@@ -3,8 +3,11 @@ import type { Position } from "$lib/core/utils/type";
 
 /** Long enough not to fire on a slow tap, short enough to feel like the platform's own long press. */
 const HOLD_MS = 450;
-/** Movement before the hold fires is a scroll or swipe, handed to the browser. */
-const SLOP_PX = 8;
+/**
+ * Movement before the hold fires is a scroll or swipe, handed to the browser. A still finger on Samsung Internet drifts
+ * past 8px within the hold, so this matches Chrome's own tap slop (15px) instead.
+ */
+const SLOP_PX = 16;
 
 // Temporary (2026-10-12): `?debug-touch` prints the events a long press sees, to diagnose drags failing on a real phone.
 const DEBUG = new URLSearchParams(location.search).has("debug-touch");
