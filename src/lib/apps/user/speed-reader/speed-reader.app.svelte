@@ -239,7 +239,7 @@
           bind:value={draft}
           aria-label="Text to read"
           placeholder="Paste or type the text you want to read, or open a .txt or .md file."
-          class={field({ class: "h-full resize-none py-2 leading-6" })}
+          class={field({ class: "h-full resize-none py-2 leading-6 pointer-coarse:h-full" })}
           onkeydown={(event) => {
             if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
               event.preventDefault();

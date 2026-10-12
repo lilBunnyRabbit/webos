@@ -4,6 +4,7 @@ import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import { WindowsService } from "../windows/service.svelte";
 import { UiService } from "../ui/service.svelte";
 import { UiOverlay } from "../ui/type";
+import { run_in_effect } from "./effect-fixture.svelte";
 import { ShortcutsService } from "./service.svelte";
 import { ShortcutCategory } from "./type";
 
@@ -95,6 +96,18 @@ describe("ShortcutsService", () => {
     press("KeyJ", { altKey: true });
     expect(global).toHaveBeenCalledTimes(2);
     expect(windows.exists(b)).toBe(true);
+  });
+
+  test("registering from an effect runs the effect once", async () => {
+    const kernel = await boot();
+    const shortcuts = kernel.service<ShortcutsService>("shortcuts");
+    const effect = run_in_effect(() =>
+      shortcuts.register({ id: "test.effect", keys: "alt+k", label: "", category: ShortcutCategory.APP, run: () => {} })
+    );
+    expect(effect.runs()).toBe(1);
+    expect(shortcuts.list().filter((shortcut) => shortcut.id === "test.effect")).toHaveLength(1);
+    effect.stop();
+    expect(shortcuts.list().some((shortcut) => shortcut.id === "test.effect")).toBe(false);
   });
 
   test("leaves keys alone in text fields, behind a system dialog, and when already handled", async () => {

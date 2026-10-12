@@ -17,6 +17,8 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "Dev Tools for Base64, hashes, URLs, UUIDs, regular expressions and JSON." },
       { kind: NEW, text: "RNG Tools for random numbers, dice, coin flips, picking from a list and passwords." },
       { kind: NEW, text: "Unit Converter for length, weight, temperature, data size and more." },
+      { kind: FIXED, text: "Opening Paint no longer freezes the whole page." },
+      { kind: FIXED, text: "Dropdowns that should only appear in narrow windows no longer show next to their wide-window buttons." },
     ],
   },
   {

@@ -31,7 +31,7 @@ interface KeyShortcut {
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `register` | `(shortcut) => () => void` | Normalizes `keys`, appends, returns the disposer (made for `$effect`). Same keys in the same scope: `console.warn` and the newer one wins |
+| `register` | `(shortcut) => () => void` | Normalizes `keys`, appends, returns the disposer (made for `$effect`). Both run untracked, so an effect that registers doesn't subscribe to the list it writes (that looped forever: Paint, 0.19.0). Same keys in the same scope: `console.warn` and the newer one wins |
 | `list` | `() => KeyShortcut[]` | Everything registered, for the cheat sheet and the inspector |
 | `mac` | `readonly boolean` | `is_mac()` once: `userAgentData.platform` (else `navigator.platform`) matching mac, iOS, iPhone or iPad. Decides what `mod` means and how keys display |
 

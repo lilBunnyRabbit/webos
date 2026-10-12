@@ -38,7 +38,7 @@
   let active = $state(4);
   /** Below the side panel's breakpoint, statistics open as a panel over the bottom of the board. */
   let show_stats = $state(false);
-  const cell_elements: HTMLButtonElement[] = [];
+  const cell_elements: HTMLButtonElement[] = $state([]);
 
   const vs_computer = $derived(mode !== Mode.LOCAL);
   const board = $derived(board_from(moves));

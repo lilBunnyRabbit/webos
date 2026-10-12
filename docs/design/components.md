@@ -7,7 +7,7 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Button` | Text button | `variant`: `primary` (one per view), `secondary` (default), `quiet` (toolbars, low emphasis), `danger` (destructive only). `size`: `sm` 28px, `md` 32px, `lg` 40px; on a coarse pointer (`pointer-coarse:`) `sm` is 36px and `md` 40px, so touch targets fit a finger without a mobile flag. Fields and `Segmented` grow the same way. Icons go first, `weight="bold"` |
 | `IconButton` | Icon-only button | `label` is required: accessible name and tooltip. Defaults to `quiet` |
 | `Input` | Text field | The field surface (`light-dark()`, see foundations) with a `foreground/30` ring, `leading` / `trailing` snippets for an icon or a clear button. Sizes match `Button` |
-| `Select` | Native `<select>` | `appearance: base-select`, so the popup is styled and keyboard, positioning and form behaviour stay native |
+| `Select` | Native `<select>` | `appearance: base-select`, so the popup is styled and keyboard, positioning and form behaviour stay native. Layout is utility classes (no scoped `display`), so `class="hidden @lg:flex"` works on it |
 | `Switch` | On/off that applies immediately | A `role="switch"` checkbox |
 | `Checkbox` | A choice that applies on submit | `accent-primary` |
 | `Segmented` | Pick one of 2–4 short options | A real radio group (shared `name`): one Tab stop, arrow keys move the choice. Takes `id` / `aria-describedby` from a `SettingRow` |

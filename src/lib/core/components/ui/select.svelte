@@ -13,7 +13,7 @@
 </script>
 
 <!-- Customizable native select (appearance: base-select): the platform handles keyboard, popup and positioning. -->
-<select bind:value class={field({ size, class: ["ui-select pr-7", class_name as string] })} {...rest}>
+<select bind:value class={field({ size, class: ["ui-select flex cursor-pointer items-center gap-2 pr-7", class_name as string] })} {...rest}>
   {#each options as option (option.value)}
     <option value={option.value}>{option.label}</option>
   {/each}
@@ -23,13 +23,6 @@
   .ui-select,
   .ui-select::picker(select) {
     appearance: base-select;
-  }
-
-  .ui-select {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
   }
 
   .ui-select::picker-icon {

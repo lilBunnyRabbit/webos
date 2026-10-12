@@ -71,7 +71,7 @@
   let active = $state(0);
   let show_stats = $state(false);
   let draft = $state<Config>({ ...custom.value });
-  const cell_elements: HTMLButtonElement[] = [];
+  const cell_elements: HTMLButtonElement[] = $state([]);
 
   const config = $derived(game.config);
   const finished = $derived(game.status === Status.WON || game.status === Status.LOST);

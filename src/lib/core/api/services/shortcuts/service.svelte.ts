@@ -1,3 +1,4 @@
+import { untrack } from "svelte";
 import type { AppsService, DialogsService, Kernel, SessionService, UiService, WindowsService } from "$lib/core/api";
 import { default_shortcuts } from "./defaults";
 import { event_keys, has_command_modifier, is_mac, normalize } from "./keys";
@@ -43,15 +44,21 @@ export class ShortcutsService implements IShortcutsService {
     for (const dispose of this.dispose_defaults) dispose();
   }
 
+  /**
+   * Untracked: apps register from `$effect`, and an effect that read `shortcuts` while writing it would re-run
+   * (dispose, register) forever.
+   */
   public register(shortcut: KeyShortcut): () => void {
     const entry = { ...shortcut, keys: normalize(shortcut.keys) };
-    const clash = this.shortcuts.find((other) => other.keys === entry.keys && other.window === entry.window);
-    if (clash) console.warn(`[ShortcutsService] "${entry.id}" takes ${entry.keys} from "${clash.id}"`);
-
-    this.shortcuts = [...this.shortcuts, entry];
-    return () => {
-      this.shortcuts = this.shortcuts.filter((shortcut) => shortcut !== entry);
-    };
+    untrack(() => {
+      const clash = this.shortcuts.find((other) => other.keys === entry.keys && other.window === entry.window);
+      if (clash) console.warn(`[ShortcutsService] "${entry.id}" takes ${entry.keys} from "${clash.id}"`);
+      this.shortcuts = [...this.shortcuts, entry];
+    });
+    return () =>
+      untrack(() => {
+        this.shortcuts = this.shortcuts.filter((shortcut) => shortcut !== entry);
+      });
   }
 
   public list(): KeyShortcut[] {
