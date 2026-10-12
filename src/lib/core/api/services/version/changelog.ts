@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.26.0",
+    date: "2026-10-13",
+    title: "More puzzles",
+    changes: [
+      { kind: NEW, text: "Kakuro: a crossword of numbers where each run adds up to its clue, with the possible combinations shown for the cell you're on." },
+    ],
+  },
+  {
     version: "0.25.1",
     date: "2026-10-13",
     title: "Honest progress",
