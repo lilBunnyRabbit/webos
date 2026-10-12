@@ -4,6 +4,7 @@
   import { z } from "zod";
   import CoinSection from "./sections/coin-section.svelte";
   import DiceSection from "./sections/dice-section.svelte";
+  import DrawsSection from "./sections/draws-section.svelte";
   import ListSection from "./sections/list-section.svelte";
   import NumberSection from "./sections/number-section.svelte";
   import PasswordSection from "./sections/password-section.svelte";
@@ -28,6 +29,8 @@
       <h1 class="text-lg font-semibold">{current.label}</h1>
       {#if section.value === "number"}
         <NumberSection />
+      {:else if section.value === "draws"}
+        <DrawsSection />
       {:else if section.value === "dice"}
         <DiceSection />
       {:else if section.value === "coin"}

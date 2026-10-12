@@ -4,10 +4,12 @@ import {
   Hash as HashIcon,
   ListBullets as ListBulletsIcon,
   Password as PasswordIcon,
+  Ticket as TicketIcon,
 } from "phosphor-svelte";
 
 export const SECTIONS = [
   { value: "number", label: "Number", icon: HashIcon },
+  { value: "draws", label: "Draws", icon: TicketIcon },
   { value: "dice", label: "Dice", icon: DiceFiveIcon },
   { value: "coin", label: "Coin", icon: CoinIcon },
   { value: "list", label: "List", icon: ListBulletsIcon },
