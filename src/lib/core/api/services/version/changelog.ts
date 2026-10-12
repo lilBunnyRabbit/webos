@@ -10,6 +10,8 @@ export const CHANGELOG: Release[] = [
     title: "More puzzles",
     changes: [
       { kind: NEW, text: "Kakuro: a crossword of numbers where each run adds up to its clue, with the possible combinations shown for the cell you're on." },
+      { kind: NEW, text: "Nurikabe: shade the sea so every number becomes an island of that size, with no pools and one connected sea." },
+      { kind: FIXED, text: "Puzzle games keep the timer and counters readable when the window is narrow." },
     ],
   },
   {
