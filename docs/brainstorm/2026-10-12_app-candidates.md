@@ -167,6 +167,16 @@ Open questions the agents raised, for the owner:
 - Paint: white default canvas, black/white swatches treated as content not chrome; undo keeps full snapshots (50 / 256 MB).
 - Dev Tools regex runs on the main thread: catastrophic backtracking freezes the tab (worker + timeout fixes it).
 
+### RNG Tools: Draws presets (owner, after batch 1)
+
+Modelled on the owner's E-Loterija (named configurations, each a list of `{min, max, amount}` unique sorted draws, one Draw button per card).
+
+| Question | Decision | Rejected |
+|----------|----------|----------|
+| Where | **A new Draws section** beside Number. Number stays the quick single-range tool | Number turning into Draws; presets in every section |
+| Preset shape | Name + any number of lists, each with a range and a count | Fixed one or two groups |
+| Defaults | **None**: empty state with "New preset" | E-Loterija's Loto / Eurojackpot / Vikinglotto |
+
 ## Next session topics
 
 - Close guard (G2), before any editor app
