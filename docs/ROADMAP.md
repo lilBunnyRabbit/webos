@@ -6,6 +6,26 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ---
 
+## Order
+
+Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
+
+1. [ ] **Foundations**
+   - Testing strategy brainstorm, then Vitest (new dependency, owner OK at setup) covering pure `.ts` and the subtle services (session, files revisions, DirectoryHandler)
+   - Error boundaries: a crashing app shows an error in its window, not a dead OS
+   - Mobile groundwork only (ADR-016): platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
+2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
+3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
+4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
+5. [ ] **Shell + Terminal + Command palette** (ADR-007)
+6. [ ] **Desktop** (ADR-011: multi-select, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
+7. [ ] **Deep linking + share** (ADR-010)
+8. [ ] **Mobile shell** (ADR-016): `MobileWindowsService`, home screen, gestures
+
+**Parked** (no consumer or nothing breaks without it; revisit only on demand): single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, AppDataHandle, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
+
+---
+
 ## P0 — Core Infrastructure
 
 ### Files Service Overhaul
@@ -46,8 +66,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] `init()` / `destroy()` on services (side effects moved out of constructors)
 - [x] Kernel bootstrap sequence with lifecycle (dependency order, awaited init, `pagehide` shutdown)
 - [x] Service inspectors + Kernel app redesign: per-service basic/detailed views, expand all, persisted ([ADR-020](adrs/020-service-inspectors.md))
-- [x] Settings persisted to `localStorage["webos.settings"]` (versioned)
-- [ ] `get_state()` / `set_state()` + `kernel.swap()`: deferred until session persistence defines the state shape
+- [x] Settings persisted, versioned (now `/etc/settings.json`, ADR-021 revision)
+- [ ] `get_state()` / `set_state()` + `kernel.swap()`: parked. Session persistence shipped without it; no consumer
 
 ### App Context System
 - **ADR:** [ADR-003](adrs/003-app-context.md)
@@ -57,8 +77,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 - [x] StorageHandle (localStorage scoped to app, optional zod validation)
 - [ ] AppDataHandle (OPFS scoped to app), deferred until an app needs it
 - [ ] WindowHandle: `set_title` / `set_icon`
-- [ ] WindowHandle: overlays (`pick_file`, `pick_directory`, `confirm`, `prompt`)
-- [ ] WindowHandle: status bar
+- [x] WindowHandle: overlays (`pick_file`, `pick_directory`, `pick_save`, `confirm`, `prompt`; ADR-025)
+- [ ] WindowHandle: status bar (parked: the kit `StatusBar` covers apps)
 - [ ] WindowHandle: taskbar `request_attention` / `set_badge`
 
 ---
@@ -79,7 +99,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 ### Window Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md)
 - **Status:** Not started
-- [ ] Single-instance app flag in manifest (focus existing window)
+- [ ] Single-instance app flag in manifest: parked, nothing breaks without it ([brainstorm](brainstorm/2026-10-12_roadmap-order.md))
 - [ ] Window open/close/minimize/maximize animations (CSS-based)
 - [ ] Cascading window positioning (offset new windows)
 - [ ] Reopen last closed window (Ctrl+Shift+T)
@@ -87,9 +107,9 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Window API Expansion
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
-- **Status:** Not started
+- **Status:** Overlays done (ADR-025)
 - [ ] Expanded WindowHandle (set_title, set_icon, request_attention, set_badge)
-- [ ] Window overlays: file picker, confirm, prompt (promise-based)
+- [x] Window overlays: file picker, confirm, prompt (promise-based; window sheets, ADR-025)
 - [ ] Window status bar (left/right text, progress indicator)
 
 ### Session Persistence
@@ -123,9 +143,9 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 ### Desktop Enhancements
 - **ADR:** [ADR-011](adrs/011-desktop-enhancements.md)
-- **Status:** Not started
+- **Status:** Context menu done (ADR-025)
 - [ ] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click)
-- [ ] Desktop context menu (right-click on background and icons)
+- [x] Desktop context menu (right-click on background and icons; ADR-025)
 - [ ] Desktop wallpapers (solid, gradient, image with fit/blur/tint)
 - [ ] Icon auto-arrange
 - [ ] Desktop icon settings (size, labels, grid spacing)
@@ -329,7 +349,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Performance targets: <100ms interaction, <3s initial load
 
 ### PWA & Offline
-- [ ] Service Worker (Workbox) for offline support
+- [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)
 - [ ] Cache strategies (cache-first for assets, network-first for version check)
 - [ ] Background sync for queued operations
 - [ ] Install prompt customization
@@ -378,7 +398,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 
 Owner-requested topics. Each needs a design session (brainstorm log, then an ADR) before any code. Agents: don't implement these, grill the owner.
 
-- [ ] **Multi-window sync.** Two explorers on the same folder should see each other's changes. Constraints from ADR-005: the path-keyed cache went stale on rename/move, and event-based invalidation is the recorded way back, likely via kernel events (see Unscheduled Ideas).
+- [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [ ] **Testing strategy.** Decide what to test and where:
   - Pure `.ts` first (`opfs.ts`, parsers, helpers)
   - Reactive `.svelte.ts` handlers

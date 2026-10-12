@@ -3,6 +3,11 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+> **Revision 2026-10-12: single-instance parked** (owner, [brainstorm](../brainstorm/2026-10-12_roadmap-order.md))
+> - Nothing breaks without it. Settings is one shared store, and per-window state (ADR-003 revision) made several Settings windows behave correctly.
+> - The design gap: a relaunch with props (Settings › What's new while Settings is open) needs a way to reach the existing window. Focus-only drops the props; replacing props misses identical repeats. A `window.on_relaunch` hook was the candidate. Revisit only if duplicates become a real complaint.
+> - "Task Manager" and "Profiler" in the candidate list no longer exist: both became Activity Monitor.
+
 ## Context
 
 The window system handles core operations (drag, resize, snap, minimize, maximize) but lacks several expected desktop behaviors: single-instance enforcement, open/close animations, taskbar grouping, and session persistence. These were planned in the legacy version.
