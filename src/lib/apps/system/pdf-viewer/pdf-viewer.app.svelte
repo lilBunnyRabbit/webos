@@ -1,20 +1,27 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
-  import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { Devices as DevicesIcon, FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { untrack } from "svelte";
   import manifest from "./index";
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place.
-  let path = $state(untrack(() => initial_path));
+  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
+  const path = $derived(typeof source === "string" ? source : undefined);
   const { window } = get_app_context();
 
   async function pick() {
     const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in PDF Viewer" });
-    if (chosen) path = chosen;
+    if (chosen) source = chosen;
+  }
+
+  async function pick_device() {
+    const [picked] = await pick_device_files({ accept: manifest.associations });
+    if (picked) source = picked;
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -25,12 +32,16 @@
   let url = $state<string | null>(null);
 
   $effect(() => {
-    if (!path) return;
-    file = undefined;
+    if (!source) return;
     error = null;
+    if (source instanceof File) {
+      file = source;
+      return;
+    }
+    file = undefined;
     let cancelled = false;
     files
-      .get_file(path)
+      .get_file(source)
       .then((result) => {
         if (!cancelled) file = result;
       })
@@ -54,9 +65,9 @@
   });
 </script>
 
-{#if !path}
+{#if !source}
   <EmptyState icon={FilePdfIcon} title="No PDF open" description="Pick a PDF, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
   </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
@@ -68,6 +79,7 @@
   <div class="grid h-full grid-rows-[auto_1fr]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
     </Toolbar>
     <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>

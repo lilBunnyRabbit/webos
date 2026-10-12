@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { format_bytes } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
@@ -8,6 +9,7 @@
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Warning as WarningIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { crop, find_crop_bounds, type CropBounds } from "./crop";
@@ -71,6 +73,8 @@
     const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Open in Image Crop" });
     if (chosen) load(() => load_image_at(chosen));
   }
+
+  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
 
   function take(files: File[]) {
     const [file] = files;
@@ -161,16 +165,17 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !bounds || !cropped}
     <EmptyState icon={CropIcon} title="No image open" description="Trims transparent borders from an image. Open one, drop it here or paste it.">
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-24 flex-1 truncate px-1 text-ui font-medium">{source.name}</span>
 
         <label class="flex items-center gap-1.5 text-ui text-foreground/80" title="Pixels at or below this opacity count as transparent">

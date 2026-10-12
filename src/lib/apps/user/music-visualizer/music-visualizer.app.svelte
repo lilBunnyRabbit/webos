@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { format_bytes } from "$lib/core/utils";
   import { has_files, parent_folder } from "$lib/core/utils/image";
@@ -19,6 +20,7 @@
     SpeakerX as SpeakerXIcon,
     Warning as WarningIcon,
     Waveform as WaveformIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { onDestroy, tick, untrack } from "svelte";
   import { z } from "zod";
@@ -169,6 +171,11 @@
     if (chosen) await open_path(chosen);
   }
 
+  async function pick_device() {
+    const [picked] = await pick_device_files({ accept: ACCEPT });
+    if (picked) await load(async () => ({ file: picked, path: null }));
+  }
+
   function seek(event: Event & { currentTarget: HTMLInputElement }) {
     if (audio) audio.currentTime = Number(event.currentTarget.value);
   }
@@ -239,12 +246,13 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading audio" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the audio" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else if !file && !mic}
     <EmptyState icon={EqualizerIcon} title="Nothing playing" description="Open a song to see it as bars, a waveform or a circle. You can also drop one here or listen to the microphone.">
       {#snippet actions()}
         <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open audio…</Button>
+        <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         <Button onclick={toggle_mic}><MicrophoneIcon weight="bold" /> Use microphone</Button>
       {/snippet}
     </EmptyState>
@@ -252,6 +260,7 @@
     <div class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{title}</span>
         <Segmented size="sm" label="Visualization" options={MODE_OPTIONS} bind:value={mode.value} />
         <Separator vertical class="hidden @md:block" />

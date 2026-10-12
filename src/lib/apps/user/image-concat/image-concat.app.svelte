@@ -2,6 +2,7 @@
   import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     Columns as ColumnsIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -11,6 +12,7 @@
     Rows as RowsIcon,
     Trash as TrashIcon,
     X as XIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { Align, Direction, concat_images } from "./concat";
@@ -103,6 +105,8 @@
     if (chosen) add([() => load_image_at(chosen)]);
   }
 
+  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"], multiple: true }));
+
   function take(files: File[]) {
     add(files.map((file) => () => load_image(file)));
   }
@@ -172,13 +176,14 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
       <EmptyState icon={RowsIcon} title="No images yet" description="Joins images into one, stacked or side by side. Add them one by one, drop them here or paste them.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
+        <IconButton label="Add from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{images.length} {images.length === 1 ? "image" : "images"}</span>
         {#if loading}<Spinner label="Loading images" />{/if}
 

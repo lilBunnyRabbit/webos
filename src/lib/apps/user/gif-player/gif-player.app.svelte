@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -14,6 +15,7 @@
     SkipForward as SkipForwardIcon,
     Trash as TrashIcon,
     Warning as WarningIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { GifDecoder, type WarmupProgress } from "./gif-decoder";
@@ -128,6 +130,8 @@
     const chosen = await window.pick_file({ accept: ACCEPT, title: "Open in GIF Player" });
     if (chosen) await open_path(chosen);
   }
+
+  const pick_device = async () => load_first(await pick_device_files({ accept: ACCEPT }));
 
   function load_first(list: File[]) {
     const file = list.find(is_media_file) ?? list[0];
@@ -256,18 +260,19 @@
 >
   {#if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the file" description={error}>
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else if !media}
     {#if !loading}
       <EmptyState icon={FilmStripIcon} title="No media loaded" description="Open a GIF or video to step through it frame by frame. You can also drop or paste one here.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{media.name}</span>
         <Select size="sm" class="w-20" aria-label="Speed" options={speed_options} bind:value={speed_value} />
         <Separator vertical />

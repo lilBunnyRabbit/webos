@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { format_bytes } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
@@ -10,6 +11,7 @@
     Plus as PlusIcon,
     Warning as WarningIcon,
     X as XIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { remove_colours } from "./background-remove";
@@ -72,6 +74,8 @@
     const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Open in Background Remove" });
     if (chosen) load(() => load_image_at(chosen));
   }
+
+  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
 
   function take(files: File[]) {
     const [file] = files;
@@ -149,16 +153,17 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !result}
     <EmptyState icon={EraserIcon} title="No image open" description="Makes chosen colours transparent. Open an image, drop it here or paste it.">
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{source.name}</span>
         <Select size="sm" options={FORMATS} bind:value={format} aria-label="Format" />
         <Button variant="primary" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>

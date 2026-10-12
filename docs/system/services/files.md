@@ -255,9 +255,9 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 
 ## Upload flow
 
-1. `upload_files(target, { multiple = true, accept })` creates a detached `<input type="file">` and `click()`s it.
+1. `upload_files(target, { multiple = true, accept })` calls `pick_device_files` (`$lib/core/utils/device-file`, ADR-031), which creates a detached `<input type="file">` and `click()`s it.
 2. `cancel` or an empty selection resolves `[]`.
-3. On `change`, each file in turn goes through `opfs.store_file`: `available_name` → `getFileHandle(name, { create: true })` → `write_file(handle, file)`. Dropped OS files use the same function (`import_entries`).
+3. Each chosen file in turn goes through `opfs.store_file`: `available_name` → `getFileHandle(name, { create: true })` → `write_file(handle, file)`. Dropped OS files use the same function (`import_entries`).
 4. The first failure rejects. Files already written stay written.
 5. It resolves with the stored files (`file_handle.getFile()` after each write), so `.name` is the saved name after any auto-rename.
 

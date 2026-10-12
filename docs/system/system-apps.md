@@ -155,7 +155,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 **Behaviour.** Always editable. Launched without a path it's an untitled buffer ("Untitled", path "Not saved yet"). States: loading (`Spinner`), ready, not found and read error (error empty states with Open a file…), drawn over the editor so CodeMirror stays mounted. `text` mirrors the document (update listener); `dirty = text !== saved_text`.
 
-- **Toolbar:** New, Open…, Save, Save as… (`IconButton`s), the path in mono, the Markdown view switch (`.md` only), wrap toggle (`pressed`), Copy all (`CopyButton`).
+- **Toolbar:** New, Open…, Open from device…, Save, Save as… (`IconButton`s), the path in mono, the Markdown view switch (`.md` only), wrap toggle (`pressed`), Copy all (`CopyButton`).
 - **Status bar:** file name, lines, characters, UTF-8 size.
 - **Files** like Paint: `pick_file` / `pick_save` with `accept: manifest.associations`, written with `files.create_file(…, { overwrite: true })`. New and Open ask before discarding unsaved changes.
 - **Close guard:** `set_title(file name)`, `set_dirty(dirty, { save })` (ADR-029).
@@ -424,6 +424,12 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 - Keyboard shortcuts don't go through ShortcutsService, so they aren't in the Mod+/ cheat sheet.
 - The expression can't be edited in the middle; Backspace works from the end only.
 
-## "Open…" in the viewers (ADR-025)
+## "Open…" in the viewers (ADR-025, ADR-031)
 
-Text Editor, Media Preview, PDF Viewer, HTML Preview and CSV Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.
+Text Editor, Media Preview, PDF Viewer, HTML Preview and CSV Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched file as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.
+
+Next to each sits "Open from device…" (toolbar `IconButton`, `Devices` icon) and "From device…" (empty state). It calls `pick_device_files({ accept: manifest.associations })` and opens the `File` in memory, with no OPFS copy. The viewers hold `source: string | File` and derive `path` from it, so a device file has no path:
+
+- Media Preview hides Save to disk.
+- The viewers show the file name where they would show the path.
+- Text Editor opens it as untitled under the file's name (`device_name`). It isn't dirty until edited, Save goes to Save as with that name, and there is no disk watch.

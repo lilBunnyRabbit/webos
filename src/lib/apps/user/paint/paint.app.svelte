@@ -10,7 +10,8 @@
   import { Button, IconButton, Input, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message, file_stem, load_image_at, parent_folder } from "$lib/core/utils/image";
+  import { pick_device_files } from "$lib/core/utils/device-file";
+  import { error_message, file_stem, load_image, load_image_at, parent_folder, type SourceImage } from "$lib/core/utils/image";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -23,6 +24,7 @@
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
+    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     Hand as HandIcon,
     LineSegment as LineSegmentIcon,
@@ -126,6 +128,8 @@
   let height = $state(DEFAULT_HEIGHT);
   let zoom = $state(1);
   let file_path = $state<string | null>(null);
+  /** The name Save as suggests while there's no path: a new canvas, or an image opened from the device. */
+  let untitled_name = $state("Untitled.png");
   let history = $state.raw<History<ImageData> | null>(null);
   let saved = $state.raw<ImageData | null>(null);
   let loading = $state(false);
@@ -136,7 +140,7 @@
   let new_background = $state<Background>(Background.WHITE);
 
   const dirty = $derived(history !== null && current(history) !== saved);
-  const file_name = $derived(file_path ? base_name(file_path) : "Untitled.png");
+  const file_name = $derived(file_path ? base_name(file_path) : untitled_name);
   const undoable = $derived(history !== null && can_undo(history));
   const redoable = $derived(history !== null && can_redo(history));
 
@@ -234,6 +238,7 @@
     if (!(await discard_ok())) return;
     blank(clamp_side(new_width ?? DEFAULT_WIDTH), clamp_side(new_height ?? DEFAULT_HEIGHT), new_background);
     file_path = null;
+    untitled_name = "Untitled.png";
     reset_history();
     size_popover?.hidePopover();
     fit();
@@ -257,16 +262,17 @@
     return canvas;
   }
 
-  async function open_path(path: string) {
+  async function open_image(task: () => Promise<SourceImage>) {
     loading = true;
     try {
-      const image = await load_image_at(path);
+      const image = await task();
       set_size(image.bitmap.width, image.bitmap.height);
       const ctx = context();
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(image.bitmap, 0, 0);
       image.bitmap.close();
-      file_path = path;
+      file_path = image.path;
+      untitled_name = image.name;
       reset_history();
       fit();
     } catch (reason) {
@@ -283,7 +289,13 @@
       start_path: file_path ? parent_folder(file_path) : undefined,
       title: "Open in Paint",
     });
-    if (chosen) await open_path(chosen);
+    if (chosen) await open_image(() => load_image_at(chosen));
+  }
+
+  async function open_device() {
+    if (!(await discard_ok())) return;
+    const [file] = await pick_device_files({ accept: ["image/*"] });
+    if (file) await open_image(() => load_image(file));
   }
 
   async function write(path: string): Promise<boolean> {
@@ -303,7 +315,7 @@
 
   async function save_as(): Promise<boolean> {
     const path = await win.pick_save({
-      name: file_path ? base_name(file_path) : "Untitled.png",
+      name: file_name,
       accept: ["image/*"],
       start_path: file_path ? parent_folder(file_path) : "/home",
     });
@@ -481,7 +493,7 @@
     blank(DEFAULT_WIDTH, DEFAULT_HEIGHT, Background.WHITE);
     reset_history();
     fit();
-    if (path) open_path(path);
+    if (path) open_image(() => load_image_at(path));
   });
 
   $effect(() => {
@@ -523,6 +535,7 @@
       <FilePlusIcon weight="bold" />
     </IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
+    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />

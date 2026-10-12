@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -10,6 +11,7 @@
     Rows as RowsIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
     WarningCircle as WarningCircleIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { clamp_count, compute_layout, draw_preview, MAX_COUNT, render_tiles, SplitDirection } from "./image-split";
@@ -73,6 +75,11 @@
     const start_path = source?.path ? parent_folder(source.path) : undefined;
     const chosen = await win.pick_file({ accept: ["image/*"], title: "Open in Image Split", start_path });
     if (chosen) open_path(chosen);
+  }
+
+  async function pick_device() {
+    const [file] = await pick_device_files({ accept: ["image/*"] });
+    if (file) await open_file(file, null);
   }
 
   untrack(() => path && open_path(path));
@@ -152,7 +159,7 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
     {:else if load_error}
       <EmptyState icon={WarningCircleIcon} tone="error" title={load_error.title} description={load_error.description}>
-        {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
+        {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
       </EmptyState>
     {:else}
       <EmptyState
@@ -160,13 +167,14 @@
         title="Split an image into tiles"
         description="Cut an image into equal squares for grid layouts. Open one, or drop or paste it here."
       >
-        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @md:block" title={source.path ?? source.name}>{source.name}</span>
         <span class="flex-1 @md:hidden"></span>
         <Segmented

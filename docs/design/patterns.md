@@ -33,6 +33,7 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 - Order: navigation (back, reload) → location (breadcrumb or title) → `flex-1` → filter → separator → actions.
 - Controls are `size="sm"`. Icon buttons are `quiet`.
 - A filter field narrows below `@lg` (`w-28`) rather than disappearing, so an active filter can always be seen and cleared.
+- Open… is followed by "Open from device…" (`Devices` icon, `pick_device_files`), and an empty state's "Open a file…" by a "From device…" `Button`. A file on the phone or PC opens without an upload first (ADR-031).
 - Status bars never wrap: they truncate and drop secondary items below `@sm`/`@md`.
 
 ## Game app

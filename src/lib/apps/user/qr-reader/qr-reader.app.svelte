@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Section, Toolbar, button } from "$lib/core/components/ui";
   import { cn, format_datetime } from "$lib/core/utils";
   import {
@@ -12,6 +13,7 @@
     Trash as TrashIcon,
     Warning as WarningIcon,
     X as XIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { QrEntries, create_qr_detector, detect_qr, is_url, thumbnail, type BarcodeDetector, type QrEntry } from "./qr";
@@ -149,6 +151,8 @@
     if (confirmed) entries.value = [];
   }
 
+  const pick_device = async () => scan_first(await pick_device_files({ accept: ["image/*"] }));
+
   function scan_first(list: File[]) {
     const file = list.find((item) => item.type.startsWith("image/")) ?? list[0];
     if (file) void scan_file(file);
@@ -192,6 +196,7 @@
   >
     <Toolbar>
       <Button variant="quiet" size="sm" onclick={pick}><ImageSquareIcon weight="bold" /> Open image…</Button>
+      <Button variant="quiet" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
       {#if stream}
         <Button variant="quiet" size="sm" onclick={stop_camera}><CameraSlashIcon weight="bold" /> Stop camera</Button>
       {:else}
@@ -204,6 +209,7 @@
         <EmptyState icon={QrCodeIcon} title="No QR codes scanned yet" description="Open an image or use the camera. You can also paste or drop an image here.">
           {#snippet actions()}
             <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Open image…</Button>
+            <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
             <Button onclick={start_camera} disabled={starting}><CameraIcon weight="bold" /> Use camera</Button>
           {/snippet}
         </EmptyState>

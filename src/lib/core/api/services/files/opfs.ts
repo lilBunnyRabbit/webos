@@ -1,3 +1,4 @@
+import { pick_device_files } from "$lib/core/utils/device-file";
 import type {
   FileSystemItem,
   FileSystemFileItem,
@@ -301,39 +302,11 @@ export async function upload_files(
   options: UploadOptions = {}
 ): Promise<File[]> {
   const { multiple = true, accept } = options;
-
-  return new Promise((resolve, reject) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.multiple = multiple;
-    if (accept) {
-      input.accept = accept;
-    }
-
-    input.onchange = async (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (!files || files.length === 0) {
-        resolve([]);
-        return;
-      }
-
-      try {
-        const uploaded: File[] = [];
-        for (const file of Array.from(files)) {
-          uploaded.push(await (await store_file(target_dir, file)).getFile());
-        }
-        resolve(uploaded);
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    input.oncancel = () => {
-      resolve([]);
-    };
-
-    input.click();
-  });
+  const uploaded: File[] = [];
+  for (const file of await pick_device_files({ multiple, accept: accept ? [accept] : undefined })) {
+    uploaded.push(await (await store_file(target_dir, file)).getFile());
+  }
+  return uploaded;
 }
 
 type WellKnownDirectory = "desktop" | "documents" | "downloads" | "music" | "pictures" | "videos";

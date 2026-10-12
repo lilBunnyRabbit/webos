@@ -8,6 +8,7 @@
     type ShortcutsService,
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
   import { error_message, parent_folder } from "$lib/core/utils/image";
@@ -19,6 +20,7 @@
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
+    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     TextAlignLeft as TextAlignLeftIcon,
     Warning as WarningIcon,
@@ -49,6 +51,8 @@
   type Status = (typeof Status)[keyof typeof Status];
 
   let path = $state<string | null>(untrack(() => initial_path ?? null));
+  /** The name of a file opened from the device: it has no path until Save as gives it one. */
+  let device_name = $state<string | null>(null);
   let status = $state<Status>(untrack(() => (initial_path ? Status.LOADING : Status.READY)));
   let error = $state("");
   let text = $state.raw("");
@@ -63,7 +67,8 @@
   const language_slot = new Compartment();
 
   const dirty = $derived(text !== saved_text);
-  const is_markdown = $derived(!!path && language_for(path) === Language.MARKDOWN);
+  const name = $derived(path ? path.slice(path.lastIndexOf("/") + 1) : (device_name ?? "Untitled"));
+  const is_markdown = $derived(language_for(name) === Language.MARKDOWN);
   const mode = $derived(is_markdown ? markdown_mode.value : MarkdownMode.EDIT);
 
   let preview_html = $state.raw("");
@@ -71,7 +76,6 @@
   let preview_scroll = 0;
   const nonce = crypto.randomUUID();
   const preview_srcdoc = $derived(preview_document(preview_html, settings.theme, untrack(() => preview_scroll), nonce));
-  const name = $derived(path ? path.slice(path.lastIndexOf("/") + 1) : "Untitled");
   const line_count = $derived(text.split("\n").length);
 
   function mount(host: HTMLElement) {
@@ -114,10 +118,10 @@
     text = content;
   }
 
-  async function set_language(target: string | null) {
-    const language = target ? language_for(target) : null;
+  async function set_language(file_name: string) {
+    const language = language_for(file_name);
     const support = language ? await load_language(language) : [];
-    if (target !== path || !view) return;
+    if (file_name !== name || !view) return;
     view.dispatch({ effects: language_slot.reconfigure(support) });
   }
 
@@ -137,7 +141,7 @@
       stale_modified = null;
       set_doc(content, keep_position);
       status = Status.READY;
-      set_language(target);
+      set_language(name);
       if (!keep_position) view?.focus();
     } catch (reason) {
       path = target;
@@ -157,13 +161,18 @@
 
   async function new_file() {
     if (!(await discard_ok())) return;
+    open_untitled(null, "");
+  }
+
+  function open_untitled(file_name: string | null, content: string) {
     path = null;
+    device_name = file_name;
     base_modified = 0;
-    saved_text = "";
+    saved_text = content;
     stale_modified = null;
-    set_doc("", false);
+    set_doc(content, false);
     status = Status.READY;
-    set_language(null);
+    set_language(name);
     view?.focus();
   }
 
@@ -175,6 +184,17 @@
       title: "Open in Text Editor",
     });
     if (chosen) await load(chosen);
+  }
+
+  async function open_device() {
+    if (!(await discard_ok())) return;
+    const [file] = await pick_device_files({ accept: manifest.associations });
+    if (!file) return;
+    try {
+      open_untitled(file.name, await file.text());
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the file", message: error_message(reason) });
+    }
   }
 
   async function write(target: string): Promise<boolean> {
@@ -200,7 +220,7 @@
       stale_modified = null;
       if (target !== path) {
         path = target;
-        set_language(target);
+        set_language(name);
       }
       return true;
     } catch (reason) {
@@ -213,7 +233,7 @@
 
   async function save_as(): Promise<boolean> {
     const target = await win.pick_save({
-      name: path ? name : "Untitled.txt",
+      name: path ? name : (device_name ?? "Untitled.txt"),
       accept: manifest.associations,
       start_path: path ? parent_folder(path) : "/home",
     });
@@ -301,6 +321,7 @@
   <Toolbar>
     <IconButton label="New" size="sm" onclick={new_file}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
+    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />
@@ -352,11 +373,11 @@
           <div class="grid place-items-center"><Spinner label="Reading file" /></div>
         {:else if status === Status.MISSING}
           <EmptyState icon={WarningCircleIcon} tone="error" title="File not found" description={path ?? ""}>
-            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
           </EmptyState>
         {:else}
           <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error}>
-            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
           </EmptyState>
         {/if}
       </div>

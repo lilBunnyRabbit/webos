@@ -3,7 +3,8 @@
   import { Button, CopyButton, IconButton, Section, Spinner, Textarea } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_bytes } from "$lib/core/utils";
-  import { FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
+  import { pick_device_files } from "$lib/core/utils/device-file";
+  import { Devices as DevicesIcon, FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
   import { digest_all, type HashResult } from "../hash";
   import type { DevToolsState } from "../tools";
 
@@ -13,7 +14,8 @@
   const files = $derived(kernel.service<FilesService>("files"));
 
   interface PickedFile {
-    path: string;
+    /** The WebOS path, or the bare name of a file from the device. */
+    label: string;
     size: number;
     hashes: Promise<HashResult[]>;
   }
@@ -23,18 +25,27 @@
 
   const text_hashes = $derived(digest_all(value.input));
 
+  function hash(file: File, label: string) {
+    file_error = null;
+    picked = { label, size: file.size, hashes: file.arrayBuffer().then(digest_all) };
+  }
+
   async function pick() {
     const path = await win.pick_file({ title: "Hash a file" });
     if (!path) return;
-    file_error = null;
     try {
       const file = await files.get_file(path);
       if (!file) throw new Error("The file is gone.");
-      picked = { path, size: file.size, hashes: file.arrayBuffer().then(digest_all) };
+      hash(file, path);
     } catch (reason) {
       picked = null;
       file_error = reason instanceof Error ? reason.message : String(reason);
     }
+  }
+
+  async function pick_device() {
+    const [file] = await pick_device_files();
+    if (file) hash(file, file.name);
   }
 </script>
 
@@ -66,17 +77,18 @@
 <Section title="File" flush>
   {#snippet actions()}
     <Button size="sm" onclick={pick}><FolderOpenIcon weight="bold" />Choose file</Button>
+    <Button size="sm" onclick={pick_device}><DevicesIcon weight="bold" />From device</Button>
   {/snippet}
   {#if file_error}
     <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">Couldn't read the file: {file_error}</p>
   {:else if picked}
     <div class="flex min-w-0 items-center gap-2 text-ui">
-      <span class="min-w-0 flex-1 truncate font-mono text-2xs" title={picked.path}>{picked.path}</span>
+      <span class="min-w-0 flex-1 truncate font-mono text-2xs" title={picked.label}>{picked.label}</span>
       <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{format_bytes(picked.size)}</span>
       <IconButton label="Clear file" size="sm" onclick={() => (picked = null)}><XIcon weight="bold" /></IconButton>
     </div>
     {@render results(picked.hashes)}
   {:else}
-    <p class="text-ui text-foreground/65">Pick a file from WebOS to hash its bytes.</p>
+    <p class="text-ui text-foreground/65">Pick a file from WebOS or your device to hash its bytes.</p>
   {/if}
 </Section>

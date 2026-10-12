@@ -256,6 +256,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
 - [x] Calculator (2026-10-12)
 - [x] Text Editor: Text Viewer renamed and rebuilt on CodeMirror 6, save / save as / new, close guard, disk-change reload and banner (2026-10-13, ADR-030)
+- [x] Open from device: every Open… gets a secondary device action, read in memory with no OPFS copy (2026-10-13, ADR-031)
 - [x] Style Guide (component showcase)
 
 ### Games

@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { format_bytes } from "$lib/core/utils";
   import {
@@ -8,6 +9,7 @@
     Code as CodeIcon,
     Eye as EyeIcon,
     FileHtml as FileHtmlIcon,
+    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
@@ -16,8 +18,9 @@
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place.
-  let path = $state(untrack(() => initial_path));
+  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
+  const path = $derived(typeof source === "string" ? source : undefined);
   let view = $state<"preview" | "source">("preview");
   let revision = $state(0);
 
@@ -25,22 +28,27 @@
 
   async function pick() {
     const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in HTML Preview" });
-    if (chosen) path = chosen;
+    if (chosen) source = chosen;
+  }
+
+  async function pick_device() {
+    const [picked] = await pick_device_files({ accept: manifest.associations });
+    if (picked) source = picked;
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
   // Reading `revision` makes Reload produce a new promise, which re-reads the file and remounts the iframe.
   const loading = $derived.by(() => {
     void revision;
-    if (!path) return null;
-    return files.get_file(path).then(async (file) => (file ? { file, text: await file.text() } : null));
+    if (!source) return null;
+    return (source instanceof File ? Promise.resolve(source) : files.get_file(source)).then(async (file) => (file ? { file, text: await file.text() } : null));
   });
-  const name = $derived(path?.split("/").at(-1) ?? "");
+  const name = $derived(source instanceof File ? source.name : (source?.split("/").at(-1) ?? ""));
 </script>
 
 {#if !loading}
   <EmptyState icon={FileHtmlIcon} title="No file open" description="Pick an HTML file, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
   </EmptyState>
 {:else}
   {#await loading}
@@ -52,8 +60,9 @@
       <div class="grid h-full grid-rows-[auto_1fr_auto]">
         <Toolbar>
           <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+          <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
           <IconButton label="Reload" size="sm" onclick={() => revision++}><ArrowClockwiseIcon weight="bold" /></IconButton>
-          <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
+          <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path ?? name}</span>
           <Segmented
             size="sm"
             label="View"

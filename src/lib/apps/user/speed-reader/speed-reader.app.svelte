@@ -1,12 +1,14 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Separator, Slider, Spinner, Switch, Textarea, Toolbar } from "$lib/core/components/ui";
   import {
     BookOpenText as BookOpenTextIcon,
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
     ClipboardText as ClipboardTextIcon,
+    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     Minus as MinusIcon,
     Pause as PauseIcon,
@@ -177,21 +179,28 @@
 
   let request = 0;
 
-  async function open_path(target: string) {
+  async function open_file(load: () => Promise<File>, path: string | null) {
     const id = ++request;
     pause();
     loading = true;
     error = null;
     try {
-      const file = await files.get_file(target);
-      if (!file) throw new Error(`File not found: ${target}`);
+      const file = await load();
       const text = await file.text();
-      if (id === request) await show({ path: target, name: file.name, text, tokens: tokenize(text) });
+      if (id === request) await show({ path, name: file.name, text, tokens: tokenize(text) });
     } catch (reason) {
       if (id === request) error = reason instanceof Error ? reason.message : String(reason);
     } finally {
       if (id === request) loading = false;
     }
+  }
+
+  function open_path(target: string) {
+    return open_file(async () => {
+      const file = await files.get_file(target);
+      if (!file) throw new Error(`File not found: ${target}`);
+      return file;
+    }, target);
   }
 
   const initial = untrack(() => initial_path);
@@ -201,6 +210,11 @@
     const start_path = source?.path ? source.path.slice(0, source.path.lastIndexOf("/")) || "/" : undefined;
     const chosen = await win.pick_file({ accept: manifest.tools, start_path, title: "Open in Speed Reader" });
     if (chosen) open_path(chosen);
+  }
+
+  async function pick_device() {
+    const [file] = await pick_device_files({ accept: manifest.tools });
+    if (file) open_file(async () => file, null);
   }
 
   function read_draft() {
@@ -256,12 +270,14 @@
       {#snippet actions()}
         <Button onclick={edit_text}><ClipboardTextIcon weight="bold" /> Paste text</Button>
         <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
+        <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else if !source}
     <div class="grid h-full grid-rows-[auto_1fr]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">Paste text</span>
         <Button variant="primary" size="sm" disabled={!draft.trim()} onclick={read_draft}><PlayIcon weight="fill" /> Read</Button>
       </Toolbar>
@@ -285,12 +301,14 @@
       {#snippet actions()}
         <Button onclick={edit_text}><ClipboardTextIcon weight="bold" /> Paste text</Button>
         <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
+        <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else}
     <div class="grid h-full grid-rows-[auto_auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <IconButton label={source.path ? "Paste text" : "Edit text"} size="sm" onclick={edit_text}><ClipboardTextIcon weight="bold" /></IconButton>
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={source.path ?? undefined}>{source.name}</span>
 

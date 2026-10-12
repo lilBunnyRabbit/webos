@@ -11,9 +11,11 @@
     Warning as WarningIcon,
     FileImage as FileImageIcon,
     FolderOpen as FolderOpenIcon,
+    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { save_to_disk } from "$lib/core/components/files/file-actions";
   import { flushSync, untrack } from "svelte";
   import manifest from "./index";
@@ -26,13 +28,19 @@
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place.
-  let path = $state(untrack(() => initial_path));
+  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
+  const path = $derived(typeof source === "string" ? source : null);
   const { window } = get_app_context();
 
   async function pick() {
     const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in Media Preview" });
-    if (chosen) path = chosen;
+    if (chosen) source = chosen;
+  }
+
+  async function pick_device() {
+    const [picked] = await pick_device_files({ accept: manifest.associations });
+    if (picked) source = picked;
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -71,13 +79,17 @@
   });
 
   $effect(() => {
-    if (!path) return;
-    file = undefined;
+    if (!source) return;
     error = null;
     reset_view();
+    if (source instanceof File) {
+      file = source;
+      return;
+    }
+    file = undefined;
     let cancelled = false;
     files
-      .get_file(path)
+      .get_file(source)
       .then((result) => {
         if (!cancelled) file = result;
       })
@@ -182,20 +194,21 @@
 
 </script>
 
-{#if !path}
+{#if !source}
   <EmptyState icon={FileImageIcon} title="Nothing to preview" description="Pick an image, video or audio file, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
   </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
 {:else if file === undefined}
   <div class="grid h-full place-items-center"><Spinner label="Loading file" /></div>
 {:else if file === null}
-  <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path} />
+  <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path ?? undefined} />
 {:else}
   <div class="grid h-full grid-rows-[auto_1fr_auto]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <!-- Below @lg the controls don't leave the name room, so it takes the first row of the wrapping toolbar. -->
       <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{file.name}</span>
 
@@ -216,9 +229,11 @@
         <Separator vertical />
       {/if}
 
-      <IconButton label="Save to disk…" size="sm" class="ml-auto @lg:ml-0" onclick={() => path && save_to_disk(path)}>
-        <HardDrivesIcon weight="bold" />
-      </IconButton>
+      {#if path}
+        <IconButton label="Save to disk…" size="sm" class="ml-auto @lg:ml-0" onclick={() => path && save_to_disk(path)}>
+          <HardDrivesIcon weight="bold" />
+        </IconButton>
+      {/if}
     </Toolbar>
 
     <div class="stage min-h-0 overflow-auto" bind:this={stage} bind:clientWidth={stage_width} bind:clientHeight={stage_height}>
