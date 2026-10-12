@@ -1,9 +1,9 @@
 <script lang="ts">
-  import kernel, { type DesktopService } from "$lib/core/api";
+  import kernel, { type GridDesktopService } from "$lib/core/api";
   import DesktopItem from "./desktop-item.svelte";
   import { background_menu, paste } from "./desktop-actions";
 
-  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const desktop = $derived(kernel.service<GridDesktopService>("desktop"));
 </script>
 
 <div

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import type { DesktopGridItem } from "./type";
+import type { DesktopItem } from "./type";
 import { DesktopHelper } from "./helper";
 
-const item = (name: string) => ({ name }) as DesktopGridItem;
-const names = (grid: (DesktopGridItem | undefined)[][]) => grid.map((row) => (row ?? []).map((cell) => cell?.name ?? null));
+const item = (name: string) => ({ name }) as DesktopItem;
+const names = (grid: (DesktopItem | undefined)[][]) => grid.map((row) => (row ?? []).map((cell) => cell?.name ?? null));
 
 describe("DesktopHelper.arrange", () => {
   test("places entries at saved cells, the rest is unplaced", () => {

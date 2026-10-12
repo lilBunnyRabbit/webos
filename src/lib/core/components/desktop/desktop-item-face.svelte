@@ -1,9 +1,9 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DesktopGridItem } from "$lib/core/api";
+  import kernel, { type AppsService, type DesktopItem } from "$lib/core/api";
   import FileIcon from "../files/file-icon.svelte";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
 
-  let { item }: { item: DesktopGridItem } = $props();
+  let { item }: { item: DesktopItem } = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const missing_app = $derived(item.kind === "shortcut" && !apps.get(item.app_id));

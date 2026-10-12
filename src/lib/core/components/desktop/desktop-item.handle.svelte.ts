@@ -1,8 +1,8 @@
 import type { Position } from "$lib/core/utils/type";
-import kernel, { type DesktopService } from "$lib/core/api";
+import kernel, { type GridDesktopService } from "$lib/core/api";
 import type { Attachment } from "svelte/attachments";
 
-const desktop = $derived(kernel.service<DesktopService>("desktop"));
+const desktop = $derived(kernel.service<GridDesktopService>("desktop"));
 
 // TODO: cleanup just ported - unify position and state
 

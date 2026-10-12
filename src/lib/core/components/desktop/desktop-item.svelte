@@ -1,14 +1,14 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { type DesktopGridItem, type DesktopService } from "$lib/core/api";
+  import kernel, { type DesktopItem, type GridDesktopService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { ItemHandler } from "./desktop-item.handle.svelte";
   import DesktopItemFace from "./desktop-item-face.svelte";
   import { copy_item, cut_item, desktop_path, item_menu, remove_item, rename_item, show_properties } from "./desktop-actions";
   import type { ClipboardService } from "$lib/core/api";
 
-  let { item, x, y }: { item: DesktopGridItem; x: number; y: number } = $props();
-  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  let { item, x, y }: { item: DesktopItem; x: number; y: number } = $props();
+  const desktop = $derived(kernel.service<GridDesktopService>("desktop"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
   function open(event: MouseEvent | KeyboardEvent) {
@@ -35,19 +35,19 @@
   oncontextmenu={(event) => {
     event.preventDefault();
     event.currentTarget.focus();
-    item_menu(item, { x, y }, { x: event.clientX, y: event.clientY });
+    item_menu(item, { x: event.clientX, y: event.clientY });
   }}
   onkeydown={(event) => {
     if (document.activeElement !== event.currentTarget) return;
     const rect = event.currentTarget.getBoundingClientRect();
     if (event.key === "Enter" && event.altKey) show_properties(item);
     else if (event.key === "Enter") open(event);
-    else if (event.key === "F2") rename_item(item, { x, y });
+    else if (event.key === "F2") rename_item(item);
     else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") copy_item(item);
     else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "x") cut_item(item);
-    else if (event.key === "Delete") remove_item(item, { x, y });
+    else if (event.key === "Delete") remove_item(item);
     else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
-      item_menu(item, { x, y }, { x: rect.left + rect.width / 2, y: rect.bottom });
+      item_menu(item, { x: rect.left + rect.width / 2, y: rect.bottom });
     } else return;
     event.preventDefault();
   }}

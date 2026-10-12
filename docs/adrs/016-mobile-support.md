@@ -1,13 +1,21 @@
 # ADR-016: Mobile Support
 
 **Date:** 2026-02-01
-**Status:** Accepted (groundwork implemented 2026-10-12)
+**Status:** Accepted (groundwork implemented 2026-10-12, shell in progress)
 
 > **Revision 2026-10-12: groundwork** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-groundwork.md))
 > - Built early, before the mobile shell: `kernel.platform` and the interface split. Everything else waits for the last roadmap block.
 > - **Detection:** `?platform=mobile|desktop` wins; otherwise `(pointer: coarse) and (hover: none)` means mobile. A plain readonly value, not reactive (it never changes).
 > - **Interfaces:** the sketch below is outdated. The base keeps the name `WindowsService` and holds what shared code calls, including `toggle_maximize` and `container.element`. `DesktopWindowsService extends WindowsService` adds `container.bounds`, `set_container`, `snap`. Shared callers were checked one by one (apps, dialogs, session, window handle, Activity Monitor).
 > - Until a mobile shell exists, `platform` is read by nothing: mobile devices still get the desktop services and shell.
+
+> **Revision 2026-10-12: mobile shell** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-shell.md)). Replaces the Mobile UX Model and the service sketch below.
+> - Phones and tablets share one shell. `init.ts` registers `MobileWindowsService` and `MobileDesktopService` on mobile; `os.svelte` renders `MobileShell` or `DesktopShell` once.
+> - **Windows:** every app stays mounted. The focused one is fullscreen; home is "nothing focused". The switcher scales the live windows into cards. Maximize and bounds are no-ops. Switcher and drawer state are local to the shell.
+> - **Navigation:** a three-button bar (back, home, running apps). No WebOS gesture starts at a screen edge: those belong to the device. Back closes the drawer or switcher, then sends the app home; the OS back gesture keeps its browser meaning (apps claiming back and history wiring: separate brainstorm).
+> - **Home:** the `/home/Desktop` items in an ordered flow (no gaps), paged by measured capacity, plus a dock. Order and dock live in `/var/lib/desktop/home-layout.json`. An app drawer with search replaces the start menu. Long press opens the item menu; long press and move reorders.
+> - **Desktop service split:** base `DesktopService` addresses items by name; `GridDesktopService` (desktop) and `MobileDesktopService` extend it. Both own a `DesktopFolder` for the folder logic.
+> - No WebOS status bar: the device has one. Safe-area insets pad the shell. Sessions use the same file; mobile ignores geometry.
 
 ## Context
 

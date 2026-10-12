@@ -8,19 +8,30 @@ The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon.
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `DesktopService` interface, `DesktopGrid`, `DesktopGridItem` |
-| `service.svelte.ts` | Implementation, `DEFAULT_SHORTCUTS` |
+| `type.ts` | `DesktopService` (base), `GridDesktopService`, `MobileDesktopService` interfaces, `DesktopGrid`, `DesktopItem` |
+| `folder.svelte.ts` | `DesktopFolder`: the folder state and operations both layouts share, `DEFAULT_SHORTCUTS`, `write_var_lib()` |
+| `service.svelte.ts` | Desktop implementation (`GridDesktopService`) |
 | `helper.ts` | `DesktopHelper.arrange()` and `DesktopHelper.fit()`, both pure |
 | `layout.ts` | `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions` |
 
 Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/shortcut.ts`, see [apps.md](apps.md#shortcuts-desktop-files).
 
+## Interfaces
+
+Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)):
+
+- **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
+- **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_item(from, to)`. The desktop shell (`desktop.svelte`, `desktop-item.svelte`, the drag handle) and this inspector use it.
+- **`MobileDesktopService`**: the mobile home. Not built yet.
+
+Both implementations own a `DesktopFolder` (composition, not a base class). It holds `entries`, the revision watch, reload, seeding trigger, and the file operations. The owner passes `read_layout`, `seed` and `loaded` callbacks, so each layout file stays with its service.
+
 ## Model
 
 ```ts
-type DesktopGrid = Array<Array<DesktopGridItem | undefined>>; // grid[y][x], sparse
+type DesktopGrid = Array<Array<DesktopItem | undefined>>; // grid[y][x], sparse
 
-type DesktopGridItem =
+type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };
@@ -56,9 +67,10 @@ Three layers of state turn the folder into a grid:
 | `set_container` | `(element?, options?: { cell_size?, padding? }) => void` | Measures the element. `columns = floor(width / cell_size)`, same for rows. Defaults are `cell_size 88`, `padding 12` (`DEFAULT_CONFIG`; the shell passes no options). A new size re-derives `grid`. A falsy element resets to the viewport size with a 0×0 grid. |
 | `list` | `() => DesktopGrid` | The derived visible `grid`. |
 | `has_item_in_position` | `(position) => boolean` | Against the visible grid |
+| `items` | `() => DesktopItem[]` | Folder entries in folder order |
 | `move_item` | `(from, to) => Position` | No-op (returns `from`) when `from` equals `to` or `from` shows nothing. Otherwise rewrites `positions` (below), saves the layout file without awaiting, returns `to`. Doesn't check `to`; the shell refuses occupied cells. |
-| `remove_item` | `(position) => Promise<void>` | Deletes the entry shown at `position` from `/home/Desktop` (folders recursively). The caller confirms first (`desktop-actions.ts`, ADR-025). The deletion bumps the folder's revision, which reloads the desktop. |
-| `rename_item` | `(position, new_name) => Promise<void>` | Saves the cell under the new name first, then `files.rename_entry`, so the icon keeps its cell. Throws if the name is taken |
+| `remove_item` | `(name) => Promise<void>` | Deletes the entry from `/home/Desktop` (folders recursively); an unknown name does nothing. The caller confirms first (`desktop-actions.ts`, ADR-025). The deletion bumps the folder's revision, which reloads the desktop. |
+| `rename_item` | `(name, new_name) => Promise<void>` | Saves the cell (if it has one) under the new name first, then `files.rename_entry`, so the icon keeps its cell. Throws if the name is taken |
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
@@ -68,16 +80,16 @@ Three layers of state turn the folder into a grid:
 
 ## State
 
-- `entries`: `$state<DesktopGridItem[]>`, replaced wholesale by `reload()`.
-- `positions`: `$state<Positions>`, replaced by `reload()` and `move_item()`.
+- `folder.entries`: `$state<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()`.
+- `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_item()`.
 - `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
 - `files_service`, `apps_service`: `$derived(kernel.service(...))` set in the constructor.
-- `reload_id`, `dispose_watch`: plain fields.
+- `reload_id`, `dispose_watch`: plain fields on the `DesktopFolder`.
 
 ## Lifecycle
 
-`init()`, async:
+`init()` and `destroy()` forward to the `DesktopFolder`. Its `init()`, async:
 
 1. `await reload()`.
 2. Start an `$effect.root` with one effect that reads `files.revision("/home/Desktop")`. Its first run only subscribes (`init()` already loaded). Every later change calls `reload()`; a rejection goes to `console.error`.
@@ -88,11 +100,10 @@ Three layers of state turn the folder into a grid:
 
 1. Take `id = ++reload_id`.
 2. `files.get_directory("/home/Desktop")`. Missing → throws `/home/Desktop is missing` (FilesService recreates it at boot, so this means it was deleted this session).
-3. List it, read `/var/lib/desktop/layout.json` (`files.get_file`).
-4. **Seed** when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
+3. List it, and read the owner's layout through `read_layout()` (here `/var/lib/desktop/layout.json`; `null` when missing).
+4. **Seed** (the owner's `seed()`) when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
 5. Build `entries`. Each `.desktop` file is read and parsed here, so listing costs one read per shortcut (and opening one reads it again in `apps.open`).
-6. `parse_layout()` the layout file, or `{}`.
-7. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries` and `positions`.
+6. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries` and call `loaded(layout)`, where this service runs `parse_layout()` (or `{}`) into `positions` in the same tick.
 
 A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.md](../kernel.md#failed-init)).
 

@@ -2,7 +2,7 @@ import kernel, {
   type AppsService,
   type ClipboardService,
   type ConflictChoice,
-  type DesktopGridItem,
+  type DesktopItem,
   type DesktopService,
   type DialogsService,
 } from "$lib/core/api";
@@ -34,13 +34,13 @@ const dialogs = () => kernel.service<DialogsService>("dialogs");
 const apps = () => kernel.service<AppsService>("apps");
 const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
-export const desktop_path = (item: DesktopGridItem): string => `${PATHS.desktop}/${item.name}`;
+export const desktop_path = (item: DesktopItem): string => `${PATHS.desktop}/${item.name}`;
 
-export function copy_item(item: DesktopGridItem): void {
+export function copy_item(item: DesktopItem): void {
   clipboard().copy_files([desktop_path(item)]);
 }
 
-export function cut_item(item: DesktopGridItem): void {
+export function cut_item(item: DesktopItem): void {
   clipboard().cut_files([desktop_path(item)]);
 }
 
@@ -54,7 +54,7 @@ export async function paste(): Promise<void> {
   }
 }
 
-export async function remove_item(item: DesktopGridItem, position: Position): Promise<void> {
+export async function remove_item(item: DesktopItem): Promise<void> {
   const shortcut = item.kind === "shortcut";
   const confirmed = await dialogs().show(
     ConfirmDialog,
@@ -73,7 +73,7 @@ export async function remove_item(item: DesktopGridItem, position: Position): Pr
   if (!confirmed) return;
 
   try {
-    await desktop().remove_item(position);
+    await desktop().remove_item(item.name);
   } catch (error) {
     report_file_error(`Could not delete "${item.name}"`, error);
   }
@@ -96,7 +96,7 @@ export async function create_folder(): Promise<void> {
   }
 }
 
-export async function rename_item(item: DesktopGridItem, position: Position): Promise<void> {
+export async function rename_item(item: DesktopItem): Promise<void> {
   const name = await dialogs().show(PromptDialog, {
     message: `Rename “${item.name}”`,
     initial: item.name,
@@ -107,20 +107,20 @@ export async function rename_item(item: DesktopGridItem, position: Position): Pr
   if (!name || name === item.name) return;
 
   try {
-    await desktop().rename_item(position, name);
+    await desktop().rename_item(item.name, name);
   } catch (error) {
     report_file_error(`Could not rename "${item.name}"`, error);
   }
 }
 
-export function show_properties(item: DesktopGridItem): void {
+export function show_properties(item: DesktopItem): void {
   void dialogs().show(PropertiesDialog, {
     path: desktop_path(item),
     kind: item.kind === "directory" ? ("directory" as const) : ("file" as const),
   });
 }
 
-export async function item_menu(item: DesktopGridItem, position: Position, anchor: Position): Promise<void> {
+export async function item_menu(item: DesktopItem, anchor: Position): Promise<void> {
   const shortcut = item.kind === "shortcut";
   const choice = await dialogs().menu(
     [
@@ -138,10 +138,10 @@ export async function item_menu(item: DesktopGridItem, position: Position, ancho
     { anchor }
   );
   if (choice === "open") desktop().open(item, { anchor });
-  else if (choice === "rename") rename_item(item, position);
+  else if (choice === "rename") rename_item(item);
   else if (choice === "copy") copy_item(item);
   else if (choice === "cut") cut_item(item);
-  else if (choice === "delete") remove_item(item, position);
+  else if (choice === "delete") remove_item(item);
   else if (choice === "properties") show_properties(item);
   else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
 }

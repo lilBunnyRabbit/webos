@@ -1,4 +1,4 @@
-import type { DesktopGrid, DesktopGridItem } from "./type";
+import type { DesktopGrid, DesktopItem } from "./type";
 import type { Positions } from "./layout";
 
 export class DesktopHelper {
@@ -6,9 +6,9 @@ export class DesktopHelper {
    * The user's arrangement: each entry at its saved cell. Entries without a position, or whose cell is already taken,
    * come back as `unplaced`.
    */
-  public static arrange(entries: DesktopGridItem[], positions: Positions): { layout: DesktopGrid; unplaced: DesktopGridItem[] } {
+  public static arrange(entries: DesktopItem[], positions: Positions): { layout: DesktopGrid; unplaced: DesktopItem[] } {
     const layout: DesktopGrid = [];
-    const unplaced: DesktopGridItem[] = [];
+    const unplaced: DesktopItem[] = [];
 
     for (const entry of entries) {
       const position = positions[entry.name];
@@ -29,10 +29,10 @@ export class DesktopHelper {
   public static fit(
     dimensions: { columns: number; rows: number },
     layout: DesktopGrid,
-    unplaced: DesktopGridItem[] = []
+    unplaced: DesktopItem[] = []
   ): DesktopGrid {
     const fitted: DesktopGrid = [];
-    const overflow: DesktopGridItem[] = [];
+    const overflow: DesktopItem[] = [];
 
     layout.forEach((row, y) => {
       row?.forEach((item, x) => {

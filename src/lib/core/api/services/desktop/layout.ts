@@ -4,7 +4,8 @@ import type { Position } from "$lib/core/utils/type";
 import { PATHS } from "../files/hierarchy";
 
 /** Icon positions are OS state about the desktop, so they live in system storage, not among the user's files. */
-export const LAYOUT_DIRECTORY = `${PATHS.var_lib}/desktop`;
+export const LAYOUT_DIRECTORY_NAME = "desktop";
+export const LAYOUT_DIRECTORY = `${PATHS.var_lib}/${LAYOUT_DIRECTORY_NAME}`;
 export const LAYOUT_FILE = "layout.json";
 export const LAYOUT_PATH = `${LAYOUT_DIRECTORY}/${LAYOUT_FILE}`;
 const LAYOUT_VERSION = 1;

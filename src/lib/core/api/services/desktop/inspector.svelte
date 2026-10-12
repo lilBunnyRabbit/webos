@@ -1,8 +1,8 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DesktopService, type InspectorProps } from "$lib/core/api";
+  import kernel, { type AppsService, type GridDesktopService, type InspectorProps } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
 
-  let { service, detailed }: InspectorProps<DesktopService> = $props();
+  let { service, detailed }: InspectorProps<GridDesktopService> = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
 

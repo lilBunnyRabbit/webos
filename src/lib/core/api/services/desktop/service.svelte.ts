@@ -1,24 +1,17 @@
-import type { DesktopGrid, DesktopGridItem, DesktopService as IDesktopService } from "./type";
+import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
-import { parse_shortcut, serialize_shortcut, shortcut_label, SHORTCUT_EXTENSION } from "../apps/shortcut";
-import { file_extension } from "../apps/associations";
-import { PATHS } from "../files/hierarchy";
-import { available_name } from "../files/opfs";
-import { join_path, split_path } from "../files/path";
 import { DesktopHelper } from "./helper";
-import { LAYOUT_DIRECTORY, LAYOUT_FILE, LAYOUT_PATH, parse_layout, serialize_layout, take_v0_pins, type Positions } from "./layout";
+import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
+import { LAYOUT_DIRECTORY_NAME, LAYOUT_FILE, LAYOUT_PATH, parse_layout, serialize_layout, take_v0_pins, type Positions } from "./layout";
 
-/** Shortcuts written into an empty desktop on first boot. */
-const DEFAULT_SHORTCUTS: AppId[] = ["settings", "file-explorer"];
-
-export class DesktopService implements IDesktopService {
+export class DesktopService implements GridDesktopService {
   name = "DesktopService";
   description = "Desktop folder: shortcuts and files in /home/Desktop";
   inspector = () => import("./inspector.svelte");
 
   to_string(): string {
-    return `DesktopService: ${this.entries.length} items`;
+    return `DesktopService: ${this.folder.entries.length} items`;
   }
 
   private static DEFAULT_CONFIG = {
@@ -34,7 +27,7 @@ export class DesktopService implements IDesktopService {
     this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
   }
 
-  public container = $state.raw<IDesktopService["container"]>({
+  public container = $state.raw<GridDesktopService["container"]>({
     bounds: {
       x: 0,
       y: 0,
@@ -53,109 +46,42 @@ export class DesktopService implements IDesktopService {
     element: null,
   });
 
-  /** What's in /home/Desktop and where the user put it. The folder is the source of truth (ADR-022). */
-  private entries = $state<DesktopGridItem[]>([]);
+  private folder = new DesktopFolder({
+    files: () => this.files_service,
+    apps: () => this.apps_service,
+    read_layout: async () => (await (await this.files_service.get_file(LAYOUT_PATH))?.text()) ?? null,
+    seed: (folder) => this.seed(folder),
+    loaded: (layout) => {
+      this.positions = layout === null ? {} : parse_layout(layout);
+    },
+  });
+
+  /** Where the user put each entry. The folder is the source of truth (ADR-022). */
   private positions = $state<Positions>({});
-  private arranged = $derived(DesktopHelper.arrange(this.entries, this.positions));
+  private arranged = $derived(DesktopHelper.arrange(this.folder.entries, this.positions));
   private grid = $derived(DesktopHelper.fit(this.container.grid, this.arranged.layout, this.arranged.unplaced));
 
-  private dispose_watch?: () => void;
-  private reload_id = 0;
-
   async init(): Promise<void> {
-    await this.reload();
-
-    this.dispose_watch = $effect.root(() => {
-      let first = true;
-      $effect(() => {
-        this.files_service.revision(PATHS.desktop);
-        // The first run only subscribes; init() already loaded the folder.
-        if (first) {
-          first = false;
-          return;
-        }
-        this.reload().catch((error) => console.error("[DesktopService] Failed to reload the desktop", error));
-      });
-    });
+    await this.folder.init();
   }
 
   destroy(): void {
-    this.dispose_watch?.();
+    this.folder.destroy();
   }
 
-  private async folder(): Promise<FileSystemDirectoryHandle> {
-    const folder = await this.files_service.get_directory(PATHS.desktop);
-    if (!folder) throw new Error(`${PATHS.desktop} is missing`);
-    return folder;
-  }
-
-  private async reload(): Promise<void> {
-    const id = ++this.reload_id;
-    const folder = await this.folder();
-    const items = await this.files_service.list(folder);
-
-    const layout_file = await this.files_service.get_file(LAYOUT_PATH);
-    const visible = items.filter((item) => !item.name.startsWith("."));
-
-    // An empty folder with no layout file has never been set up: seed it once, then read what was written. The layout
-    // file the seed writes stops this from running again.
-    if (!layout_file && visible.length === 0) {
-      await this.seed(folder);
-      return this.reload();
-    }
-
-    const entries: DesktopGridItem[] = [];
-    for (const item of visible) {
-      if (item.kind === "directory") {
-        entries.push({ kind: "directory", name: item.name });
-        continue;
-      }
-
-      const shortcut =
-        file_extension(item.name) === SHORTCUT_EXTENSION ? parse_shortcut(await (await item.handle.getFile()).text()) : null;
-      entries.push(
-        shortcut
-          ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), ...shortcut }
-          : { kind: "file", name: item.name, type: item.type ?? "" }
-      );
-    }
-
-    const positions = layout_file ? parse_layout(await layout_file.text()) : {};
-
-    // A newer reload started while this one was reading; its result wins.
-    if (id !== this.reload_id) return;
-    this.entries = entries;
-    this.positions = positions;
-  }
-
-  private async seed(folder: FileSystemDirectoryHandle): Promise<void> {
+  private async seed(folder: DesktopFolder): Promise<void> {
     const pins = take_v0_pins() ?? DEFAULT_SHORTCUTS.map((app_id, x) => ({ app_id, position: { x, y: 0 } }));
     const positions: Positions = {};
     for (const { app_id, position } of pins) {
       // Pins of v0 apps that weren't ported are dropped by write_shortcut.
-      const name = await this.write_shortcut(folder, app_id);
+      const name = await folder.write_shortcut(app_id);
       if (name) positions[name] = position;
     }
     await this.save_positions(positions);
   }
 
-  private async write_shortcut(folder: FileSystemDirectoryHandle, app_id: AppId, props?: AppProps): Promise<string | null> {
-    const manifest = this.apps_service.get(app_id);
-    if (!manifest) return null;
-
-    const name = await available_name(folder, `${manifest.name}${SHORTCUT_EXTENSION}`);
-    await this.files_service.create_file(folder, name, { content: serialize_shortcut({ app_id, props }) });
-    return name;
-  }
-
   private async save_positions(positions: Positions): Promise<void> {
-    let directory = await this.files_service.get_directory(LAYOUT_DIRECTORY);
-    if (!directory) {
-      const var_lib = await this.files_service.get_directory(PATHS.var_lib);
-      if (!var_lib) throw new Error(`${PATHS.var_lib} is missing`);
-      directory = await this.files_service.create_directory(var_lib, "desktop");
-    }
-    await this.files_service.create_file(directory, LAYOUT_FILE, { content: serialize_layout(positions), overwrite: true });
+    await write_var_lib(this.files_service, LAYOUT_DIRECTORY_NAME, LAYOUT_FILE, serialize_layout(positions));
   }
 
   public set_container(element?: HTMLElement | null, options?: { cell_size?: number; padding?: number }): void {
@@ -221,7 +147,7 @@ export class DesktopService implements IDesktopService {
     return this.get_item(position) !== undefined;
   }
 
-  private get_item(position: Position): DesktopGridItem | undefined {
+  private get_item(position: Position): DesktopItem | undefined {
     return this.grid[position.y]?.[position.x];
   }
 
@@ -234,7 +160,7 @@ export class DesktopService implements IDesktopService {
     if (!item) return from;
 
     // Positions of entries that no longer exist are dropped here.
-    const names = new Set(this.entries.map((entry) => entry.name));
+    const names = new Set(this.folder.names());
     const positions: Positions = Object.fromEntries(Object.entries(this.positions).filter(([name]) => names.has(name)));
     // Pin every visible item to where it's shown, so relocated items don't jump once this cell changes hands.
     this.grid.forEach((row, y) => row?.forEach((entry, x) => entry && (positions[entry.name] = { x, y })));
@@ -246,47 +172,38 @@ export class DesktopService implements IDesktopService {
     return to;
   }
 
-  public async remove_item(position: Position): Promise<void> {
-    const item = this.get_item(position);
-    if (!item) return;
-    await this.files_service.delete_entry(await this.folder(), item.name, { recursive: item.kind === "directory" });
-  }
-
-  public async rename_item(position: Position, new_name: string): Promise<void> {
-    const item = this.get_item(position);
-    if (!item || item.name === new_name) return;
-
-    // Carry the cell over to the new name before the rename's reload reads the layout, so the icon doesn't jump.
-    const { [item.name]: _old, ...rest } = this.positions;
-    const positions = { ...rest, [new_name]: position };
-    this.positions = positions;
-    await this.save_positions(positions);
-    await this.files_service.rename_entry(await this.folder(), item.name, new_name);
-  }
-
-  public async create_folder(name: string): Promise<void> {
-    await this.files_service.create_directory(await this.folder(), name);
+  public items(): DesktopItem[] {
+    return this.folder.entries;
   }
 
   public names(): string[] {
-    return this.entries.map((entry) => entry.name);
+    return this.folder.names();
+  }
+
+  public async remove_item(name: string): Promise<void> {
+    await this.folder.remove(name);
+  }
+
+  public async rename_item(name: string, new_name: string): Promise<void> {
+    if (!this.folder.get(name) || name === new_name) return;
+
+    // Carry the cell over to the new name before the rename's reload reads the layout, so the icon doesn't jump.
+    const { [name]: position, ...rest } = this.positions;
+    const positions = position ? { ...rest, [new_name]: position } : rest;
+    this.positions = positions;
+    await this.save_positions(positions);
+    await this.folder.rename(name, new_name);
+  }
+
+  public async create_folder(name: string): Promise<void> {
+    await this.folder.create_folder(name);
   }
 
   public async pin(app_id: AppId, props?: AppProps): Promise<string | null> {
-    return this.write_shortcut(await this.folder(), app_id, props);
+    return this.folder.write_shortcut(app_id, props);
   }
 
-  public open(item: DesktopGridItem, options?: OpenOptions): void {
-    switch (item.kind) {
-      case "shortcut":
-      case "file":
-        // Shortcuts go through open() too, so a missing target app gets the same "Broken shortcut" toast as in Explorer.
-        this.apps_service
-          .open(join_path(split_path(PATHS.desktop), item.name), options)
-          .catch((error) => console.error(`[DesktopService] Failed to open ${item.name}`, error));
-        return;
-      case "directory":
-        this.apps_service.launch("file-explorer", { path: join_path(split_path(PATHS.desktop), item.name) });
-    }
+  public open(item: DesktopItem, options?: OpenOptions): void {
+    this.folder.open(item, options);
   }
 }
