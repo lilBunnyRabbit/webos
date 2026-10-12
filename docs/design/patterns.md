@@ -4,7 +4,7 @@ How apps are put together. The app's root fills the window content, which is an 
 
 ## App frames
 
-**Document or viewer app** (File Explorer, Text Viewer, Media Preview):
+**Document or viewer app** (File Explorer, Text Editor, Media Preview):
 
 ```
 ┌ Toolbar ──────────────────────────────┐  bg-background-light, 44px
@@ -13,6 +13,8 @@ How apps are put together. The app's root fills the window content, which is an 
 ```
 
 `grid h-full grid-rows-[auto_1fr_auto]`; the middle row scrolls (`min-h-0 overflow-auto`).
+
+A notice about the open document (Text Editor's "changed on disk") is a strip between toolbar and content: `bg-warning/10`, hairline below, a filled warning icon, one sentence in `text-ui`, then `sm` buttons (secondary, then the primary action last).
 
 **Settings-style app** (Settings, Style Guide):
 

@@ -53,7 +53,7 @@ interface Shortcut { app_id: AppId; props?: AppProps }
 ```
 
 ```json
-{ "app_id": "text-viewer", "props": { "path": "/home/notes.md" } }
+{ "app_id": "text-editor", "props": { "path": "/home/notes.md" } }
 ```
 
 `parse_shortcut` returns `null` for bad JSON or a failed schema, never throws. Unknown keys are stripped. `app_id` isn't checked against the registry there; `open()` does that. `props` must be an object, and the target app's own schema validates it at launch.

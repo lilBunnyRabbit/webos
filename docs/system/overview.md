@@ -86,7 +86,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `src/lib/core/components/ui/` | The UI kit (ADR-024): Button, IconButton (both with a `pressed` toggle state), CopyButton, Input, Textarea, Select, Slider, Switch, Checkbox, Segmented (`sm` / `md`), Section, SettingRow, SideNav, Toolbar, StatusBar, Badge, EmptyState, BoardOverlay, Spinner, Kbd, Separator, plus `variants.ts` (`button`, `field`, `badge` recipes) and `types.ts` (`IconComponent`). Imported from `$lib/core/components/ui`. Documented in [docs/design/components.md](../design/components.md) |
 | `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `Flags<T>`, `Order<T>`, geometry types; `image.ts`: image load, drop/paste, canvas and save helpers shared by the image user apps (imported directly, not through the barrel) |
 | `src/lib/apps/index.ts` | Eager glob of `./system/*/index.ts` and `./user/*/index.ts` → `apps: AppManifest[]` |
-| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-viewer, media-preview, pdf-viewer, html-preview, csv-viewer, activity-monitor, style-guide ([system-apps.md](system-apps.md)) |
+| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-editor, media-preview, pdf-viewer, html-preview, csv-viewer, activity-monitor, style-guide ([system-apps.md](system-apps.md)) |
 | `src/lib/apps/user/` | Non-OS apps (out of scope for these docs) |
 | `vite-plugin-version.ts` | `__VERSION_INFO__` define and `version.json` ([services/version.md](services/version.md)) |
 | `public/` | Static assets: logo, PWA icons, `files/` sample media (static only, not seeded into OPFS) |

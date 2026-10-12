@@ -26,7 +26,7 @@ define_app({
 
 All comparisons are lowercase. The MIME is `File.type` as the browser reports it for the OPFS file, which the browser derives from the extension. An empty type matches no MIME entry.
 
-`file_extension()` is everything from the **last** dot, lowercased (`archive.tar.gz` → `.gz`). A dotfile is its own extension (`.env` → `.env`, `.gitignore` → `.gitignore`), so Text Viewer's `.env` entry matches both `.env` and `prod.env`. A name with no dot has no extension.
+`file_extension()` is everything from the **last** dot, lowercased (`archive.tar.gz` → `.gz`). A dotfile is its own extension (`.env` → `.env`, `.gitignore` → `.gitignore`), so Text Editor's `.env` entry matches both `.env` and `prod.env`. A name with no dot has no extension.
 
 An app that declares associations should also declare `props: FILE_PROPS` (or a schema that accepts `{ path: string }`). Otherwise every open discards the props with a warning and the app opens empty.
 
@@ -43,19 +43,19 @@ Each app scores its best entry against the file:
 
 Only the apps on the highest tier are candidates. One → launch it. Several → the Open-with dropdown. None → toast.
 
-Listing an extension is how an app beats a broader type. A `.ts` file can get the MIME `video/mp2t` (MPEG transport stream), so Media Preview (`video/*`) scores 1 and Text Viewer (`.ts`) scores 3: Text Viewer opens it with no prompt.
+Listing an extension is how an app beats a broader type. A `.ts` file can get the MIME `video/mp2t` (MPEG transport stream), so Media Preview (`video/*`) scores 1 and Text Editor (`.ts`) scores 3: Text Editor opens it with no prompt.
 
 ### Current associations
 
 | App | Entries |
 |-----|---------|
-| `text-viewer` | `text/*`, `.md`, `.json`, `.ts`, `.js`, `.svelte`, `.yaml`, `.yml`, `.toml`, `.ini`, `.log`, `.env` |
+| `text-editor` | `text/*`, `.md`, `.json`, `.ts`, `.js`, `.svelte`, `.yaml`, `.yml`, `.toml`, `.ini`, `.log`, `.env` |
 | `media-preview` | `image/*`, `video/*`, `audio/*` |
 | `pdf-viewer` | `application/pdf`, `.pdf` |
 | `html-preview` | `text/html`, `.html`, `.htm` |
 | `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
 
-HTML and CSV files used to open in Text Viewer through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Viewer can't be picked for them from File Explorer. Its own Open… still accepts them.
+HTML and CSV files used to open in Text Viewer (now Text Editor) through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Editor can't be picked for them from File Explorer. Its own Open… still accepts them.
 
 An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else today, since `text/*` doesn't match it. Ties come from two apps on the same tier, for example two apps both listing `.md`.
 
@@ -123,7 +123,7 @@ const files = $derived(kernel.service<FilesService>("files"));
 const content = $derived(path ? files.get_file(path).then((file) => file?.text() ?? null) : null);
 ```
 
-Handle `path` being `undefined` (launched from the start menu) and `get_file` returning `null` (deleted since). Text Viewer is the smallest reference.
+Handle `path` being `undefined` (launched from the start menu) and `get_file` returning `null` (deleted since). Text Editor and Media Preview are the references.
 
 ## Known gaps
 

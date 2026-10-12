@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.21.0",
+    date: "2026-10-13",
+    title: "Write it down",
+    changes: [
+      { kind: NEW, text: "Text Viewer is now Text Editor: edit and save text and code files, with syntax highlighting, search and undo." },
+      { kind: NEW, text: "Markdown files get a live preview, next to the text or on its own." },
+      { kind: NEW, text: "When a file you have open changes elsewhere, Text Editor reloads it, or asks first if you have unsaved changes." },
+      { kind: IMPROVED, text: "Text Viewer windows from a saved session don't come back after this update; open the files again in Text Editor." },
+    ],
+  },
+  {
     version: "0.20.2",
     date: "2026-10-13",
     title: "Hold on",

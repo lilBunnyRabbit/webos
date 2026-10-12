@@ -1,6 +1,6 @@
 # ADR-030: Text Editor
 **Date:** 2026-10-13
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -13,6 +13,7 @@ Text Viewer can only read. The ROADMAP's Text Editor was waiting on the close gu
 - **Always editable.** Untitled buffer without a path; Save on an untitled buffer is Save as.
 - **Files like Paint:** `pick_file` / `pick_save`, `set_title(file name)`, `set_dirty(dirty, { save })`.
 - **Disk changes like code editors:** watch `files.revision(parent folder)`; when the file's `lastModified` is newer than the loaded one, a clean buffer reloads (cursor and scroll kept) and a dirty one shows a banner with Reload / Keep mine. Save checks `lastModified` first and asks before overwriting.
+- **Markdown preview** (`.md` only, added the same day): Edit / Split / Preview per window. `marked` (GFM) renders into a `srcdoc` iframe with `sandbox="allow-scripts allow-popups"` (opaque origin) and a CSP whose `script-src` is one nonce: only the editor's scroll-keeping script runs, nothing from the file.
 - **Keys through ShortcutsService**, window-scoped: Save (Mod+S), Save as (Mod+Shift+S), Open (Mod+O). This is the convention for app commands; continuous game input stays on the app root.
 
 ## Alternatives Considered
@@ -20,7 +21,9 @@ Text Viewer can only read. The ROADMAP's Text Editor was waiting on the close gu
 1. **Separate editor app, viewer stays default** — no rename, but two apps doing one job on `text/*`.
 2. **`<textarea>`** — no dependency; no highlighting, and line numbers only line up with wrap off.
 3. **Last save wins / banner only** — less code, silently loses or nags.
-4. **Alias for `text-viewer`** — keeps old sessions and defaults, at the cost of a permanent special case.
+4. **Own Markdown renderer on `@lezer/markdown`** — no new dependency, but a renderer and its CommonMark edge cases to own.
+5. **Preview inline with DOMPurify** — live tokens and kit typography, but a sanitizer bug means script in the WebOS origin.
+6. **Alias for `text-viewer`** — keeps old sessions and defaults, at the cost of a permanent special case.
 
 ## Consequences
 
@@ -29,5 +32,5 @@ Text Viewer can only read. The ROADMAP's Text Editor was waiting on the close gu
 - Two windows on one file stay in sync without new infrastructure.
 
 ### Negative
-- First third-party UI dependency; the app chunk grows (lazy, but real) and CodeMirror's styling must be kept on tokens.
+- First third-party UI dependencies (CodeMirror, `marked`); the app chunk grows (lazy, but real) and CodeMirror's styling must be kept on tokens.
 - Saved sessions lose open Text Viewer windows once; a custom `text-viewer` file default resets.

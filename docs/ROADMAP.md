@@ -248,14 +248,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Brainstorm:** [2026-10-12 App candidates](brainstorm/2026-10-12_app-candidates.md): every candidate rated build now / after a gate / skip, and the rules for building apps in parallel
 - [x] Categories + launcher sections + ranked search (ADR-001 revision, 2026-10-12)
 - [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
-- [-] Batch 1 follow-ups: done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: in-app keys vs ShortcutsService, colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
+- [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
-- [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
+- [x] Markdown preview: Edit / Split / Preview in Text Editor, `marked` in a sandboxed frame (2026-10-13, ADR-030)
 - [x] CSV Viewer (`.csv`/`.tsv` as a table)
 - [x] HTML Preview (sandboxed iframe, `srcdoc`, no `allow-same-origin`)
 - [x] Calculator (2026-10-12)
-- [ ] Text Editor (tests file ops + persistence)
+- [x] Text Editor: Text Viewer renamed and rebuilt on CodeMirror 6, save / save as / new, close guard, disk-change reload and banner (2026-10-13, ADR-030)
 - [x] Style Guide (component showcase)
 
 ### Games

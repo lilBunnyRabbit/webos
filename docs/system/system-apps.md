@@ -9,7 +9,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `file-explorer` | File Explorer | none | `FILE_PROPS` (a folder path) | none | files, apps, notifications (through the shared components) | none |
 | `settings` | Settings | none | `{ section }` (one of the section ids) | min 640×480 | settings, version, apps | window: `section` |
 | `kernel` | Kernel | none | none | none | the kernel itself | window: `expanded` |
-| `text-viewer` | Text Viewer | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files | window: `wrap` |
+| `text-editor` | Text Editor | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files, notifications, shortcuts, settings | window: `wrap`, `markdown` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
@@ -143,31 +143,36 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 ---
 
-## Text Viewer
+## Text Editor
 
-`text-viewer` · `FileText` icon · source `system/text-viewer/`
+`text-editor` · `NotePencil` icon · source `system/text-editor/` · [ADR-030](../adrs/030-text-editor.md)
 
-**Purpose.** Read-only text display. It's the seed of the future Text Editor (ROADMAP).
+**Purpose.** Edit text and code files. Replaced Text Viewer on 2026-10-13 (id renamed, no alias: old `text-viewer` session entries are skipped on restore, a `text-viewer` file default falls back to the built-in).
 
 **Associations.** `text/*` (tier 1) plus explicit extensions (tier 3). The extensions win over any MIME-wildcard app, for example `.ts` even if the browser reports a `video/` type for it.
 
-**Behaviour.** `file` is `$derived` from `path` as the `files.get_file(path)` promise; the template awaits it plus `file.text()`. States: no path ("No file open" empty state), loading (`Spinner`), not found and read error (error empty states), and text.
+**Engine.** CodeMirror 6 (`basicSetup`: line numbers, folding, history, search on Mod+F, bracket matching; Tab indents). `editor.ts` holds the theme and highlight style, both written against the raw theme variables (`--primary`, `--background`, …), so any theme, derived ones included, applies without rebuilding the editor. `@theme inline` doesn't emit font or text-size variables at runtime, so the editor's font stack and size are literal. Syntax colours: keywords and tags `primary`, strings `secondary`, numbers and literals `accent`, types `tertiary`, comments `foreground/55` italic; state colours only for invalid tokens. `language.ts` maps the extension to a language package (`javascript`/`typescript`, `json`, `markdown`, `css`, `html`, `yaml`), each loaded on first use; anything else is plain text.
 
-Text uses the document frame:
+**Behaviour.** Always editable. Launched without a path it's an untitled buffer ("Untitled", path "Not saved yet"). States: loading (`Spinner`), ready, not found and read error (error empty states with Open a file…), drawn over the editor so CodeMirror stays mounted. `text` mirrors the document (update listener); `dirty = text !== saved_text`.
 
-- **Toolbar:** a file icon, the full path in mono (truncated, full path as `title`), a wrap toggle (`IconButton` with `pressed`) and Copy all, the kit `CopyButton` (a green check for 1.2 s, disabled for an empty file, an error toast from Text Viewer if the clipboard refuses).
-- **Body:** one `grid-cols-[auto_minmax(0,1fr)]` grid with a sticky line-number gutter (`tabular-nums`, not selectable) and the lines in mono `text-ui`. Gutter and text share the grid, so a wrapped line keeps its number on its first visual row. Wrap on: `whitespace-pre-wrap wrap-anywhere`; the `minmax(0,1fr)` column lets long unbroken lines wrap instead of overflowing. Off: `whitespace-pre`, scrolling horizontally.
-- **Status bar:** file name, line count, character count, size, MIME type (`text/plain` when empty).
+- **Toolbar:** New, Open…, Save, Save as… (`IconButton`s), the path in mono, the Markdown view switch (`.md` only), wrap toggle (`pressed`), Copy all (`CopyButton`).
+- **Status bar:** file name, lines, characters, UTF-8 size.
+- **Files** like Paint: `pick_file` / `pick_save` with `accept: manifest.associations`, written with `files.create_file(…, { overwrite: true })`. New and Open ask before discarding unsaved changes.
+- **Close guard:** `set_title(file name)`, `set_dirty(dirty, { save })` (ADR-029).
+- **Disk changes**, like a code editor. `base_modified` is the `lastModified` the buffer is based on. An effect reads `files.revision(parent folder)`; any write there (another window, Explorer) runs `check_disk`. Newer on disk with the same text: adopt it silently. Clean buffer: reload, keeping cursor and scroll. Dirty buffer: a `warning/10` banner, "This file changed on disk", with Keep mine (adopts the disk version as the base, so Save won't ask) and Reload. Save checks again and asks "changed on disk… Overwrite" when the disk is newer and differs. A save in progress is ignored by the watcher.
+- **Markdown preview** (`.md` only): Edit / Split / Preview `Segmented`, per window. Split is side by side at `@2xl`, stacked below. The preview re-renders 250ms after typing stops, with `marked` (GFM) loaded on first use, in an iframe: `srcdoc`, `sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"` (opaque origin: nothing in it can reach WebOS or OPFS) and a CSP of `default-src 'none'; script-src 'nonce-…'; style-src 'unsafe-inline'; img-src data: blob: https:`. Only the editor's own nonce'd script runs (Markdown `<script>` and `on*=` handlers are blocked): it restores the scroll position after a re-render and posts it back (`text-editor:scroll`, checked against the frame's `contentWindow`). Theme variables are written into the frame, so theme changes re-render it. Links open in a new tab (`<base target="_blank">`).
 
-**Persistence.** Line wrap is `storage.window("wrap", true, z.boolean())`: per window, on by default, restored with the session.
+**Persistence.** Per window via `storage.window`: `wrap` (on by default) and `markdown` (`split` by default).
 
-**Interactions.** Scroll, select, the two toolbar buttons. No keyboard shortcuts.
+**Shortcuts** (ShortcutsService, window-scoped, in Mod+/): Open… Mod+O, Save Mod+S, Save as… Mod+Shift+S. CodeMirror's own keys work inside the editor (Mod+F search, Mod+Z undo).
 
 **Known gaps.**
 
-- No size limit or binary check. It reads the whole file into one string and renders two spans per line, so a large file builds a very large DOM.
-- No syntax highlighting, editing, or saving (`get_file` returns no handle).
-- No window defaults, so it opens at the windows-service default size.
+- No size limit or binary check; a huge file is one CodeMirror document.
+- UTF-8 only. Svelte, TOML, INI and `.env` have no highlighting.
+- Relative images in Markdown (`./a.png`) don't resolve: the preview can't read OPFS. The frame uses system fonts (Inter and Hack aren't loaded inside it).
+- No scroll sync between editor and preview.
+- A file deleted while open isn't flagged; Save writes it back.
 
 ---
 
@@ -246,7 +251,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Purpose.** Render an HTML file the way a browser would, or read its source.
 
-**Associations.** `text/html` (tier 2) plus `.html` and `.htm` (tier 3), so it beats Text Viewer's `text/*` (tier 1) with no prompt.
+**Associations.** `text/html` (tier 2) plus `.html` and `.htm` (tier 3), so it beats Text Editor's `text/*` (tier 1) with no prompt.
 
 **Behaviour.** `path` is local state seeded from the prop (`untrack`), and "Open…" swaps it. A `$derived.by` turns `path` into a `files.get_file(path)` + `file.text()` promise and also reads a `revision` counter. Reload bumps the counter, which re-reads the file and remounts the iframe. The states are: no path ("No file open" with "Open a file…"), loading (`Spinner`), not found and read error (error empty states), then the document frame:
 
@@ -271,7 +276,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Purpose.** Read CSV and TSV files as a table.
 
-**Associations.** `text/csv`, `text/tab-separated-values` (tier 2) plus `.csv`, `.tsv` (tier 3), so it beats Text Viewer's `text/*`.
+**Associations.** `text/csv`, `text/tab-separated-values` (tier 2) plus `.csv`, `.tsv` (tier 3), so it beats Text Editor's `text/*`.
 
 **Behaviour.** The same `path` pattern as HTML Preview. The `get_file` promise resolves into `{ file, delimiter, rows, column_count }`. The delimiter comes from the extension: `.tsv` is tab, anything else is comma.
 
@@ -421,4 +426,4 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## "Open…" in the viewers (ADR-025)
 
-Text Viewer, Media Preview, PDF Viewer, HTML Preview and CSV Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.
+Text Editor, Media Preview, PDF Viewer, HTML Preview and CSV Viewer have an "Open…" toolbar button and an "Open a file…" action in their empty state. It calls `window.pick_file({ accept: manifest.associations })` and swaps the file in place: each viewer keeps the launched `path` as local state seeded from its prop (`untrack`), and Media Preview / PDF Viewer reset their loading state and view when it changes. PDF Viewer gained a toolbar for this.

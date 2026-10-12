@@ -2,14 +2,16 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 // Not via the barrel: manifests load while the barrel is still initializing, so its constants are not yet defined.
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { FileText as FileTextIcon } from "phosphor-svelte";
+import { NotePencil as NotePencilIcon } from "phosphor-svelte";
 
 export default define_app({
-  id: "text-viewer",
-  name: "Text Viewer",
-  icon: FileTextIcon,
-  version: "1.0.0",
+  id: "text-editor",
+  name: "Text Editor",
+  icon: NotePencilIcon,
+  version: "2.0.0",
   category: AppCategory.PRODUCTIVITY,
+  description: "Edit text and code files, with highlighting for common formats.",
+  keywords: ["text", "code", "notepad", "viewer", "markdown", "json"],
   associations: [
     "text/*",
     ".md",
@@ -25,5 +27,5 @@ export default define_app({
     ".env",
   ],
   props: FILE_PROPS,
-  component: () => import("./text-viewer.app.svelte"),
+  component: () => import("./text-editor.app.svelte"),
 });

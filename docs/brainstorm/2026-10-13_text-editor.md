@@ -18,6 +18,15 @@ ROADMAP lists the Text Editor first among the small apps, waiting on the close g
 | File changed elsewhere | **Like code editors:** a clean buffer reloads, keeping cursor and scroll; a dirty one shows a banner (Reload / Keep mine); Save asks before overwriting a newer file. Watched with `files.revision(parent)` plus `lastModified`, no new infrastructure | Last save wins; banner only |
 | In-app keys | **ShortcutsService, like Paint.** Commands (Save, Save as, Open) register per window and show in Mod+/. Continuous game input (arrows in Snake) stays on the app root. Settles the open shortcuts convention | Root `keydown` per app |
 
+### Markdown preview (owner, mid-build)
+
+| Question | Decision | Rejected |
+|----------|----------|----------|
+| Parser | **`marked`** (GFM, renders HTML). Owner asked why not Lezer: `@lezer/markdown` only parses (a tree for highlighting); the HTML renderer and its CommonMark edge cases would be ours | Own renderer on `@lezer/markdown`; markdown-it |
+| Safety | **Sandboxed `srcdoc` iframe**, opaque origin | Inline + DOMPurify (a sanitizer bug = script in WebOS's origin); inline with HTML escaped |
+| Layout | **Edit / Split / Preview** `Segmented`, `.md` only, per window, Split default, stacked below `@2xl` | One Edit/Preview toggle |
+| Scroll across re-renders | **Our nonce'd script** in the frame: CSP `script-src 'nonce-…'` blocks the file's scripts and handlers, ours restores and reports the scroll | Accept the jump to the top; re-render only on pause |
+
 ## Key takeaways
 
 - One app, one id, no migration code: the owner accepts losing old Text Viewer windows from a saved session.
@@ -27,10 +36,10 @@ ROADMAP lists the Text Editor first among the small apps, waiting on the close g
 ## Action items
 
 - [x] ADR-030
-- [ ] Build: rename the app, CodeMirror themed from tokens, open / save / save as / new, close guard, title, disk watch
-- [ ] System reference, design docs, changelog
+- [x] Build: rename the app, CodeMirror themed from tokens, open / save / save as / new, close guard, title, disk watch
+- [x] Markdown preview
+- [x] System reference, design docs, changelog
 
 ## Next session topics
 
 - Block 6: wallpapers, desktop auto-arrange, Theming ADR-015
-- Markdown Viewer: a preview mode in the editor or its own app
