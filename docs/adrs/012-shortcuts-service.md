@@ -1,7 +1,15 @@
 # ADR-012: Shortcuts Service
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Implemented 2026-10-12 (see revision)
+
+> **Revision 2026-10-12: implementation** (owner, [brainstorm](../brainstorm/2026-10-12_shortcuts.md))
+> - Scopes are **global** and **window** only; "app" is dropped. Keys that act on a focused element (Explorer rows, desktop icons) stay on that element.
+> - `register(shortcut)` returns its disposer; there's no `unregister(id)`. `Shortcut` is `{ id, keys: "mod+shift+k", label, category, window?, run, when? }`. Keys are matched by `KeyboardEvent.code`, so layout and Option-on-macOS don't change them.
+> - The service registers the OS defaults in `init()`; the key set is in the ADR-017 revision. Launcher and switcher state live in the new `ui` service (ADR-028), so `init()` can reach them.
+> - No remapping, no enable toggle in v1. Conflicts: registering keys already bound in the same scope logs a warning; the newer one wins.
+> - Cheat sheet on Mod+/ as a system dialog. Mod is Cmd on macOS, Ctrl elsewhere.
+
 
 ## Context
 

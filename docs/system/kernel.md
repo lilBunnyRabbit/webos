@@ -64,6 +64,8 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `desktop` | `DesktopService` | `files`, `apps` |
 | `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
 | `clipboard` | `ClipboardService` | `files` |
+| `ui` | `UiService` | none |
+| `shortcuts` | `ShortcutsService` | `windows`, `apps`, `dialogs`, `ui` |
 
 ### Dependency graph
 
@@ -81,10 +83,10 @@ files, notifications, dialogs, apps ──────────────�
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → version
+files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shortcuts → version
 ```
 
-Shutdown runs the reverse: `version → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+Shutdown runs the reverse: `version → shortcuts → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 

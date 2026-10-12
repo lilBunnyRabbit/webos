@@ -38,6 +38,8 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/desktop.md](services/desktop.md) | `desktop` |
 | [services/session.md](services/session.md) | `session` |
 | [services/clipboard.md](services/clipboard.md) | `clipboard` |
+| [services/ui.md](services/ui.md) | `ui` |
+| [services/shortcuts.md](services/shortcuts.md) | `shortcuts` |
 
 ### Shell
 

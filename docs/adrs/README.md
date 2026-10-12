@@ -45,12 +45,12 @@ What are the implications of this decision?
 | [009](./009-app-ecosystem.md) | App Ecosystem | 2026-02-01 | Accepted |
 | [010](./010-url-deep-linking.md) | URL Deep Linking | 2026-02-01 | Accepted |
 | [011](./011-desktop-enhancements.md) | Desktop Enhancements | 2026-02-01 | Accepted |
-| [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Accepted |
+| [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted |
 | [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Accepted |
 | [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Accepted |
 | [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented (core shell; apps pass and back pending) |
-| [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Accepted |
+| [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Revised (Alt+Shift scheme) |
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
 | [019](./019-system-dialogs.md) | System Dialogs Service | 2026-10-11 | Implemented |
 | [020](./020-service-inspectors.md) | Service Inspectors | 2026-10-11 | Implemented |
@@ -61,6 +61,7 @@ What are the implications of this decision?
 | [025](./025-menus-sheets-clipboard.md) | Context Menus, Window Sheets and Clipboard | 2026-10-11 | Implemented |
 | [026](./026-release-notes-intro.md) | Release Notes and First-Run Introduction | 2026-10-11 | Implemented |
 | [027](./027-testing.md) | Testing | 2026-10-12 | Implemented |
+| [028](./028-ui-service.md) | UI Service | 2026-10-12 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

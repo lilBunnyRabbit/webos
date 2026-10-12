@@ -24,11 +24,11 @@ No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=c
 | What | Where |
 |------|-------|
 | Which app is on screen | `windows.get_focused()`. `null` = home |
-| Drawer or switcher open | `layer: "drawer" \| "switcher" \| null`, local `$state` in `mobile-shell.svelte` |
+| Drawer or switcher open | [UiService](../services/ui.md) `overlay`: `launcher` (drawer) or `switcher` (ADR-028; was local `$state` until the shortcuts service needed to reach it) |
 | Current page | Local in `mobile-home.svelte`, from the scroll position |
 | Drag in progress | Local in `mobile-home.svelte` |
 
-An effect closes `layer` whenever a window comes on screen (drawer launch, a card picked, a file opened from elsewhere). Going home leaves it alone, so closing the on-screen app's card keeps the switcher open.
+An effect closes the overlay whenever a window comes on screen (drawer launch, a card picked, a file opened from elsewhere). Going home leaves it alone, so closing the on-screen app's card keeps the switcher open.
 
 ## Navigation
 

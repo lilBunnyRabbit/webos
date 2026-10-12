@@ -85,3 +85,9 @@ Questions that belong to one window's task (confirm, prompt, the file picker) ar
 - Sentence case, plain words, no exclamation marks, no "please".
 - Say what happened and what to do: "Couldn't read the file", "Nothing here is called "x"."
 - Use the user's terms: "folder", not "directory"; "app", not "manifest".
+
+## Keyboard shortcuts
+
+- OS shortcuts use Alt+Shift (Option+Shift on macOS) for windows and Mod (Cmd/Ctrl) for launching: see [ShortcutsService](../system/services/shortcuts.md). Never bind plain Ctrl+Shift+W/T/N or Ctrl+W/T/N: the browser keeps them.
+- Show keys with `Kbd` chips built by `format_keys(keys, shortcuts.mac)`: `⌘ ⌥ ⇧` on Apple devices, words elsewhere.
+- An app's own shortcuts register with `window: window_id` and `category: "app"`, so they appear under "This app" in the Mod+/ cheat sheet.

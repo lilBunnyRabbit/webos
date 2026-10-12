@@ -14,7 +14,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
    - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
-2. [ ] **Shortcuts service** (ADR-012, ADR-017). Unlocks Ctrl+Shift+T, Ctrl+K, Ctrl+Shift+Esc, the cheat sheet
+2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping; the closed-window stack needs a key other than Ctrl+Shift+T
 3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
 4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
 5. [ ] **Shell + Terminal + Command palette** (ADR-007)

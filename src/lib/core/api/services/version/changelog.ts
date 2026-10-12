@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.12.0",
+    date: "2026-10-12",
+    title: "Hotkeys",
+    changes: [
+      { kind: NEW, text: "Keyboard shortcuts for windows: Alt+Shift+W closes, arrows maximize, minimize and snap, Alt+` switches back to the previous window." },
+      { kind: NEW, text: "Ctrl+K (⌘K on a Mac) opens the app search from anywhere, and Ctrl+, opens Settings." },
+      { kind: NEW, text: "Press Ctrl+/ (⌘/ on a Mac) to see every shortcut." },
+    ],
+  },
+  {
     version: "0.11.0",
     date: "2026-10-12",
     title: "Fingertips",
