@@ -1,5 +1,12 @@
 <script lang="ts">
-  import kernel, { UiOverlay, type DialogsService, type MobileWindowsService, type UiService, type WindowId } from "$lib/core/api";
+  import kernel, {
+    UiOverlay,
+    type DialogsService,
+    type MobileWindowsService,
+    type NotificationsService,
+    type UiService,
+    type WindowId,
+  } from "$lib/core/api";
   import LogoMark from "../brand/logo-mark.svelte";
   import ToastArea from "../notifications/toast-area.svelte";
   import DialogsHost from "../dialogs/dialogs-host.svelte";
@@ -17,6 +24,9 @@
   /** The drawer (launcher) and switcher live in `ui`, so shortcuts can open them too (ADR-028). */
   const ui = $derived(kernel.service<UiService>("ui"));
   const layer = $derived(ui.overlay);
+  /** The switcher hosts the notification center, so either overlay opens it (ADR-006 revision). */
+  const switcher = $derived(layer === UiOverlay.SWITCHER || layer === UiOverlay.NOTIFICATIONS);
+  const unread = $derived(kernel.service<NotificationsService>("notifications").unread_count > 0);
 
   // An app coming on screen (launched from the drawer, a file opened, a card picked) closes whatever was over it.
   $effect(() => {
@@ -44,7 +54,7 @@
   }
 
   function recents() {
-    view_transition(() => ui.toggle(UiOverlay.SWITCHER));
+    view_transition(() => (switcher ? ui.close() : ui.open(UiOverlay.SWITCHER)));
   }
 
   function pick(id: WindowId) {
@@ -71,14 +81,14 @@
       aria-hidden="true"
     />
     <MobileHome ondrawer={() => view_transition(() => ui.open(UiOverlay.LAUNCHER))} />
-    <MobileWindows switcher={layer === UiOverlay.SWITCHER} onpick={pick} />
+    <MobileWindows {switcher} onpick={pick} />
     {#if layer === UiOverlay.LAUNCHER}
       <AppDrawer onclose={() => ui.close()} />
     {/if}
-    <ToastArea class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
+    <ToastArea from="top" class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
   </main>
 
-  <NavBar {running} switcher={layer === UiOverlay.SWITCHER} onback={back} onhome={home} onrecents={recents} />
+  <NavBar {running} {unread} {switcher} onback={back} onhome={home} onrecents={recents} />
 </div>
 
 <DialogsHost anchored="sheet" />

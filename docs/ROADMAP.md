@@ -15,7 +15,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
    - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping; the closed-window stack needs a key other than Ctrl+Shift+T
-3. [ ] **Notification center + system tray** (ADR-006, ADR-014): panel, unread badge, toast position. Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
+3. [-] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014): cascade, animations, closed-window stack with Ctrl+Shift+T
 4. [ ] **Tasks service** (ADR-013): tray badge, Activity Monitor tasks tab
 5. [ ] **Shell + Terminal + Command palette** (ADR-007)
 6. [ ] **Desktop** (ADR-011: multi-select, wallpaper, auto-arrange) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
@@ -124,11 +124,11 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Notifications Service
 - **ADR:** [ADR-006](adrs/006-notifications-service.md)
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
-- **Status:** In progress
+- **Status:** Done (2026-10-12)
 - [x] NotificationsService (notify, update, dismiss, hide_toast, mark_read)
-- [-] Toast area UI (bottom-right; position setting not yet)
-- [ ] Notification center panel (accessible from taskbar)
-- [ ] Unread badge on taskbar icon
+- [x] Toast area UI (corner nearest the tray; no setting, ADR-006 revision)
+- [x] Notification center panel (tray popover; switcher on mobile)
+- [x] Unread badge on the tray (dot on the mobile running-apps button)
 - [x] Progress notification type (determinate/indeterminate)
 
 ### App Props Validation
@@ -153,7 +153,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Taskbar Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md), [ADR-015](adrs/015-customization-theming.md)
 - **Status:** Not started
-- [ ] System tray area (notifications, background tasks)
+- [-] System tray area (notifications done; background tasks with ADR-013)
 - [ ] Context menus for taskbar items
 - [ ] Window grouping by app (badge count, expand to list)
 - [ ] Quick launch area

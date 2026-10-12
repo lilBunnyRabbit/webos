@@ -52,7 +52,7 @@ export interface SystemNotification extends NotifyOptions {
  * history (`all`) until dismissed.
  */
 export interface NotificationsService extends IService {
-  /** Every notification, newest first. */
+  /** Every notification, newest first. Capped at 50; ones still shown as toasts are kept past the cap. */
   readonly all: SystemNotification[];
 
   /** Notifications currently shown as toasts, newest first. */

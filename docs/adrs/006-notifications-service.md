@@ -1,6 +1,14 @@
 # ADR-006: Notifications Service
 **Date:** 2026-01-31
-**Status:** Implemented (service + toasts; notification center and badge pending)
+**Status:** Implemented
+
+> **Revision 2026-10-12: notification center** (owner, [brainstorm](../brainstorm/2026-10-12_notification-center.md))
+> - Desktop: the taskbar clock becomes the tray button (bell + unread badge + clock). It opens the center as a popover anchored to the dock. No tray-item registry.
+> - Mobile: the center is a list at the top of the running-apps switcher; the Cards button shows an unread dot.
+> - Open state is `ui.overlay === "notifications"` (ADR-028 revision). On mobile that opens the switcher.
+> - Opening the center marks everything read and hides the toasts. `mark_read(id)` stays for API completeness.
+> - History stays in memory, capped at 50. Notifications still shown as toasts are never trimmed.
+> - **Toast position follows the tray**, no SettingsService preference: bottom-right for a bottom or right dock, top-right for a top dock, bottom-left for a left dock. Mobile: top, centred.
 
 > **Revision 2026-10-10: implementation notes**
 > - The notification type is `SystemNotification`, not `Notification`, so it doesn't shadow the DOM `Notification` global.

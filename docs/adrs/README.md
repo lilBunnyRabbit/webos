@@ -39,7 +39,7 @@ What are the implications of this decision?
 | [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Implemented (no app_data/overlays yet) |
 | [004](./004-version-update-system.md) | Version & Update Detection | 2026-01-27 | Implemented |
 | [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented (explorer features pending) |
-| [006](./006-notifications-service.md) | Notifications Service | 2026-01-31 | Implemented (center + badge pending) |
+| [006](./006-notifications-service.md) | Notifications Service | 2026-01-31 | Implemented |
 | [007](./007-shell-service.md) | Shell Service & Terminal | 2026-01-31 | Accepted |
 | [008](./008-app-props-validation.md) | App Props Validation (zod) | 2026-01-31 | Implemented |
 | [009](./009-app-ecosystem.md) | App Ecosystem | 2026-02-01 | Accepted |

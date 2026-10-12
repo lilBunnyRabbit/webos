@@ -73,6 +73,7 @@ On every `keydown`, in order:
 | `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | Leave maximize, snap to the half; the same key again unsnaps | ✓ | — |
 | `apps.launcher` | Mod+K | `ui.toggle("launcher")`: the start menu / the app drawer | ✓ | ✓ |
 | `apps.settings` | Mod+, | `apps.launch("settings")` | ✓ | ✓ |
+| `system.notifications` | Alt+Shift+N | `ui.toggle("notifications")`: the tray panel / the switcher with its list | ✓ | ✓ |
 | `system.shortcuts` | Mod+/ | The cheat sheet (`ShortcutsDialog`, system dialog) | ✓ | ✓ |
 
 Close, minimize, maximize and snap have `when: focused !== null`, so with nothing focused the key falls through.

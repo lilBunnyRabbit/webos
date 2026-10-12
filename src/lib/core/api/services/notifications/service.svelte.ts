@@ -10,6 +10,7 @@ import type {
 import { NotificationType } from "./type";
 
 const DEFAULT_DURATION = 5000;
+const MAX_HISTORY = 50;
 
 export class NotificationsService implements INotificationsService {
   name = "NotificationsService";
@@ -42,6 +43,7 @@ export class NotificationsService implements INotificationsService {
       ...this.all,
     ];
     this.toast_ids = [id, ...this.toast_ids];
+    this.trim();
 
     // A progress toast stays until its work finishes, unless the caller set a duration.
     const duration = options.duration !== undefined ? options.duration : options.type === NotificationType.PROGRESS ? null : DEFAULT_DURATION;
@@ -62,6 +64,20 @@ export class NotificationsService implements INotificationsService {
     if (finished_progress && notification.duration === undefined && this.toast_ids.includes(id)) {
       this.schedule_hide(id, DEFAULT_DURATION);
     }
+  }
+
+  /** Drops the oldest past the cap, but never one still on screen as a toast (a running progress toast can be old). */
+  private trim(): void {
+    let excess = this.all.length - MAX_HISTORY;
+    if (excess <= 0) return;
+    const dropped = new Set<NotificationId>();
+    for (let index = this.all.length - 1; index >= 0 && excess > 0; index--) {
+      const { id } = this.all[index];
+      if (this.toast_ids.includes(id)) continue;
+      dropped.add(id);
+      excess--;
+    }
+    this.all = this.all.filter((notification) => !dropped.has(notification.id));
   }
 
   private schedule_hide(id: NotificationId, duration: number): void {

@@ -23,8 +23,7 @@
 
 <time
   datetime={now.toISOString()}
-  title={now.toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
-  class={cn("flex shrink-0 flex-col justify-center rounded-lg px-2.5 leading-tight select-none", vertical ? "items-center py-1.5 text-center" : "items-end")}
+  class={cn("flex shrink-0 flex-col justify-center px-2.5 leading-tight select-none", vertical ? "items-center py-1.5 text-center" : "items-end")}
 >
   <span class="font-mono text-ui font-medium tabular-nums">{time}</span>
   <span class="text-2xs text-foreground/80">{date}</span>

@@ -1,6 +1,6 @@
 # NotificationsService
 
-Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/`, `src/lib/core/components/notifications/toast-area.svelte` · Inspector: `inspector.svelte` (ADR-020)
+Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/`, `src/lib/core/components/notifications/` (`toast-area`, `notification-list`, `notification-item`) · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -10,7 +10,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `all` | `SystemNotification[]` | Every notification, newest first. Reactive |
+| `all` | `SystemNotification[]` | Every notification, newest first, capped at 50. Reactive |
 | `toasts` | `SystemNotification[]` | `$derived`: the subset currently shown as toasts, newest first |
 | `unread_count` | `number` | `$derived`: `all` where `!read` |
 | `notify(app_id, options)` | `(app_id: AppId, options: NotifyOptions): NotificationId` | Adds to history and shows a toast |
@@ -63,18 +63,22 @@ No `init()`. `destroy()` clears all pending timers.
 
 ## Persistence
 
-None. History is in memory and gone on reload.
+None. History is in memory and gone on reload (ADR-006 revision: actions are functions, progress is live work).
 
 ## Behaviour & invariants
 
-- `notify` prepends to `all` and `toast_ids`, then starts the hide timer (private `schedule_hide`, which clears any existing timer for the id first). Duration: the caller's `duration` if set (`null` → no timer); otherwise none for `type: "progress"`, 5 s for every other type. Returns a uuid.
+- `notify` prepends to `all` and `toast_ids`, trims the history to 50 (oldest first, skipping any notification still shown as a toast, so a long-running progress toast survives), then starts the hide timer (private `schedule_hide`, which clears any existing timer for the id first). Duration: the caller's `duration` if set (`null` → no timer); otherwise none for `type: "progress"`, 5 s for every other type. Returns a uuid.
 - `update()` that switches a `"progress"` notification to another type, when the caller never set `duration` and the toast is still showing, starts the default 5 s timer. So `notify({ type: "progress" })` → `update({ type: "info" })` stays up while working and hides 5 s after it finishes.
 - A caller-set `duration` on a progress toast is a fixed lifetime from `notify`. `update()` never restarts it.
 - The toast's close button calls `hide_toast`, not `dismiss`.
 
+### Notification center
+
+Desktop: the tray popover ([taskbar](../shell/taskbar.md#tray-and-notification-center)). Mobile: a list on top of the switcher ([mobile shell](../shell/mobile.md#windows-and-switcher)). Both render `notification-list.svelte` and open through `ui.overlay === "notifications"` ([UiService](ui.md)). While shown, everything is marked read (`mark_all_read`) and toasts are hidden. An entry's close button and actions call `dismiss`; "Clear all" dismisses every one. The unread badge reads `unread_count`.
+
 ### Toast area
 
-`toast-area.svelte`, mounted in `os.svelte` in the same grid cell as the desktop, so it follows the taskbar position. A `pointer-events-none` flex column, aligned bottom-right (`items-end justify-end`, `p-4`), newest on top. Each toast:
+`toast-area.svelte`. On desktop, `desktop-shell.svelte` mounts it in the desktop's grid cell and places it in the corner nearest the tray (ADR-006 revision): bottom-right for a bottom or right dock, top-right for a top dock, bottom-left for a left dock; toasts slide in from the left only for a left dock (`from` prop). On mobile it's top, centred, sliding down. A `pointer-events-none` flex column, `p-4`, newest on top. Each toast is a `notification-item.svelte` (shared with the notification center):
 
 - `w-80`, `rounded-xl bg-background-lighter p-3 shadow-popover`. `role="alert"` for errors, `role="status"` otherwise.
 - Grid: icon tile | title + message | dismiss `IconButton` ("Dismiss"). The icon tile is the type's colour at 12% with the full colour as ink (`info`, `warning`, `error`; `progress` uses `primary` and spins). The title is `text-ui font-semibold`, the message `text-ui` at 80%. A custom `icon` replaces the type icon.
@@ -94,10 +98,10 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 
 ## Divergence from ADR
 
-Covered by ADR-006's revision note: `SystemNotification` name, separate `toasts`/`hide_toast`, `duration` applies only to the toast.
+Covered by ADR-006's revision notes: `SystemNotification` name, separate `toasts`/`hide_toast`, `duration` applies only to the toast; the history cap; toast position follows the tray instead of a setting.
 
 ## Known gaps
 
-- No notification center and no unread badge (ADR-006, pending). Nothing reads `all`, `unread_count`, `mark_read` or `mark_all_read`, and nothing calls `dismiss` or `update`. Hidden toasts accumulate in `all` until reload with no way to see them.
-- Toast position is fixed bottom-right of the desktop area; ADR-006's SettingsService preference doesn't exist.
-- `app_id` is stored but not shown in the toast.
+- `mark_read(id)` and `update()` have no caller.
+- No toast tap action: a toast doesn't open the center or the sending app.
+- `app_id` is shown in the center, not in the toast.

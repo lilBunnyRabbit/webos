@@ -4,11 +4,12 @@
 
   let {
     running,
+    unread,
     switcher,
     onback,
     onhome,
     onrecents,
-  }: { running: number; switcher: boolean; onback: () => void; onhome: () => void; onrecents: () => void } = $props();
+  }: { running: number; unread: boolean; switcher: boolean; onback: () => void; onhome: () => void; onrecents: () => void } = $props();
 
   const button = "relative grid h-10 w-16 place-items-center rounded-xl text-foreground/80 transition-colors duration-150 active:bg-foreground/10";
 </script>
@@ -24,13 +25,17 @@
   <button class={button} aria-label="Home" onclick={onhome}>
     <HouseIcon class="size-5.5" weight="bold" />
   </button>
-  <button class={cn(button, switcher && "bg-foreground/10 text-foreground")} aria-label="Running apps" aria-pressed={switcher} onclick={onrecents}>
+  <button class={cn(button, switcher && "bg-foreground/10 text-foreground")} aria-label={unread ? "Running apps, new notifications" : "Running apps"}
+    aria-pressed={switcher} onclick={onrecents}>
     <CardsIcon class="size-5.5" weight={switcher ? "fill" : "bold"} />
     {#if running > 0}
       <span
         class="absolute top-1 right-3.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-background"
         aria-hidden="true">{running}</span
       >
+    {/if}
+    {#if unread}
+      <span class="absolute top-1.5 left-4 size-2 rounded-full bg-primary ring-2 ring-background-light" aria-hidden="true"></span>
     {/if}
   </button>
 </nav>

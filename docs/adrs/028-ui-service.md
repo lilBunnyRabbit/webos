@@ -2,6 +2,8 @@
 **Date:** 2026-10-12
 **Status:** Implemented
 
+> **Revision 2026-10-12: notifications overlay** ([brainstorm](../brainstorm/2026-10-12_notification-center.md)). `UiOverlay.NOTIFICATIONS` opens the notification center: the tray popover on desktop, the switcher on mobile (where the list lives). Alt+Shift+N toggles it.
+
 ## Context
 
 The shortcuts service registers the OS shortcuts in `init()` (ADR-012 revision). Two of them open shell overlays whose state was local to a component: the desktop start menu (a native popover's own open state) and, on mobile, the app drawer and the running-apps switcher (`layer` in `mobile-shell.svelte`, ADR-016). A service can't reach component state. [Brainstorm](../brainstorm/2026-10-12_shortcuts.md).

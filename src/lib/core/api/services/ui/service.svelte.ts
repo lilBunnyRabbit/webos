@@ -2,7 +2,7 @@ import type { UiOverlay, UiService as IUiService } from "./type";
 
 export class UiService implements IUiService {
   name = "UiService";
-  description = "Shell overlay state: launcher and switcher";
+  description = "Shell overlay state: launcher, switcher, notification center";
   inspector = () => import("./inspector.svelte");
 
   to_string(): string {

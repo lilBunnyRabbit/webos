@@ -24,7 +24,7 @@ No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=c
 | What | Where |
 |------|-------|
 | Which app is on screen | `windows.get_focused()`. `null` = home |
-| Drawer or switcher open | [UiService](../services/ui.md) `overlay`: `launcher` (drawer) or `switcher` (ADR-028; was local `$state` until the shortcuts service needed to reach it) |
+| Drawer or switcher open | [UiService](../services/ui.md) `overlay`: `launcher` (drawer), `switcher` or `notifications` (also the switcher) (ADR-028; was local `$state` until the shortcuts service needed to reach it) |
 | Current page | Local in `mobile-home.svelte`, from the scroll position |
 | Drag in progress | Local in `mobile-home.svelte` |
 
@@ -38,7 +38,7 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 |--------|------|
 | Back | In order: closes the drawer or switcher; asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); dismisses the app's top sheet when it's dismissible (a required one stays); sends the app home (it keeps running). Nothing on home. The OS back gesture keeps its browser meaning |
 | Home | Closes any layer and goes home |
-| Running apps | Toggles the switcher. A `primary` badge shows the count of running apps |
+| Running apps | Opens the switcher, or closes it (or the notification view of it). A `primary` badge shows the count of running apps; a `primary` dot (ringed in the bar colour) on the other corner means unread notifications |
 
 Escape also closes an open layer. Every change runs through `view_transition()` (`view-transition.ts`): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion`. A rejected `ready` (hidden tab, a newer transition) is swallowed.
 
@@ -47,10 +47,11 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 `mobile-windows.svelte` renders every window in `windows.list()` order, keyed, so switching modes never remounts an app.
 
 - **Normal:** each window is `absolute inset-0`; only the focused one shows (`hidden` otherwise, still mounted, like a minimized desktop window). It runs `animate-pop-in` each time it appears. With nothing focused, the layer is `pointer-events-none` and home takes the taps.
-- **Switcher:** the same elements become a horizontal scroll-snap row on the scrim with `backdrop-blur-xl`. Cards are the live windows: a box of `66cqw × 66cqh` holding the window at full stage size (`100cqw × 100cqh`) with `scale: 0.66`, `inert`. CSS `order` sorts them by `windows.recent()`, most recent first. Each has a header (icon, name, close button) and a transparent button over the card:
+- **Switcher:** the same elements become a horizontal scroll-snap row on the scrim with `backdrop-blur-xl`. Cards are the live windows: a box of `66cqw × 66cqh` holding the window at full stage size (`100cqw × 100cqh`) with `scale: 0.66` (`--card-scale`), `inert`. CSS `order` sorts them by `windows.recent()`, most recent first. Each has a header (icon, name, close button) and a transparent button over the card:
   - tap opens it;
   - a flick up past 96px closes the app (the card follows the finger and fades);
   - sideways is the browser scrolling the row (`touch-action: pan-x`). The first clear direction decides.
+- **Notification center** (ADR-006 revision): with any notifications, the switcher opens with `NotificationList` on top (safe-area padded, at most `32cqh`, scrolling), cards on `bg-background-lighter shadow-raised`, and the cards shrink to `0.55`. The row's side padding is `(1 − scale) × 50cqw`, so a card always centres. Showing the list marks everything read and hides the toasts.
 - "Close all" under the row; "No running apps" when empty.
 - Each card has `view-transition-name: window-{id}`, so opening and closing the switcher morphs between card and fullscreen.
 

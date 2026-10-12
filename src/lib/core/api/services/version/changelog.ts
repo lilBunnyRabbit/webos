@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.13.0",
+    date: "2026-10-12",
+    title: "Inbox",
+    changes: [
+      { kind: NEW, text: "Click the clock to see every notification, even after its pop-up is gone. A badge counts the ones you haven't seen." },
+      { kind: NEW, text: "On phones and tablets, notifications are listed above your running apps, and a dot on the running apps button means something new." },
+      { kind: NEW, text: "Alt+Shift+N opens notifications." },
+      { kind: IMPROVED, text: "Pop-up notifications appear in the corner nearest the clock, wherever the taskbar is." },
+    ],
+  },
+  {
     version: "0.12.0",
     date: "2026-10-12",
     title: "Hotkeys",

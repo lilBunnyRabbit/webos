@@ -19,7 +19,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 
 - A floating dock: a `rounded-2xl` `bg-background-light/90` bar with `backdrop-blur` and `shadow-popover`. It follows the taskbar position setting (horizontal or vertical).
 - **One gap everywhere: 8px.** Screen edge to dock, dock to windows, screen edges to snapped windows, and between snapped windows. The dock's strip pads only its screen-edge sides; the side facing the windows takes its 8px from the window area's snap inset.
-- Order: start button (the logo mark in `primary`), a hairline separator, running windows, and the clock at the far end.
+- Order: start button (the logo mark in `primary`), a hairline separator, running windows, and the tray at the far end.
 - Window buttons are 40px `rounded-xl`. The focused window gets a `foreground/10` fill, a filled icon and a 16px `primary` bar; other open windows show a small dot; minimized windows dim their icon.
 - The clock shows mono 24-hour `HH:MM` and a short date in `text-2xs`, and ticks on the minute.
 
@@ -39,9 +39,15 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - Footer: page dots (the current one is a `primary` pill), Back (quiet) and Next (primary, `lg`). Pages enter with `animate-pop-in`.
 - Preferences chosen here (theme, taskbar) apply live and use the same controls as Settings (`ThemeCard`, `Segmented`).
 
+## Tray and notification center
+
+- The tray is one button: a bell (filled when something's unread) with a `primary` count badge, then the clock. It opens the notification center.
+- The center is a popover like the start menu, flush with the dock's far end: `rounded-2xl bg-background-lighter shadow-popover` over the scrim, a "Notifications" header with a quiet "Clear all", then the entries. Entries are toasts without the shadow, with the sender and time as a `text-2xs` line above the title. Empty: an `EmptyState` with the bell.
+- Looking is reading: the badge counts what arrived since the center was last open.
+
 ## Toasts
 
-- Bottom-right stack, `w-80`, `rounded-xl bg-background-lighter shadow-popover`, sliding in from the right.
+- Stacked in the desktop corner nearest the tray, `w-80`, `rounded-xl bg-background-lighter shadow-popover`, sliding in from the right.
 - A tinted icon tile per type (`info`, `warning`, `error`, `progress` → primary). Title `text-ui font-semibold`, message at 70%.
 - Actions are small buttons: the first is primary, the rest secondary. Progress shows a 4px primary bar.
 
@@ -55,6 +61,6 @@ Phones and tablets share one shell ([system reference](../system/shell/mobile.md
 - **Dock:** the taskbar's floating dock, centred, fitting its content: an All apps button (`SquaresFour`, duotone), a hairline separator, up to four tiles without labels.
 - **Long press** is the right-click: 450ms, a short vibration, then the menu. Moving after the hold drags: a ghost tile at `scale-110` with `shadow-popover`, a 2px `primary` bar marking where it lands, the dock tinting `primary/10` with a `primary/60` hairline when it accepts.
 - **App drawer:** a `rounded-t-3xl` sheet on `background-lighter` over the scrim, with a small grab bar, the large search field and the home tiles in an auto-fill grid. The grab bar means it: pull the top of the sheet down to close it.
-- **Switcher:** the scrim with a strong blur behind a row of live app cards at 66%, `rounded-2xl`, `shadow-window-focused`, a `foreground/12` hairline, each under a header with the app's icon, name and close button. Flick a card up to close it. "Close all" is a secondary button below.
+- **Switcher:** the scrim with a strong blur behind a row of live app cards at 66% (55% under notifications), `rounded-2xl`, `shadow-window-focused`, a `foreground/12` hairline, each under a header with the app's icon, name and close button. Flick a card up to close it. "Close all" is a secondary button below. Notifications, when there are any, list above the cards on `background-lighter` tiles; the running-apps button shows a `primary` dot when one is unread.
 - **Motion:** shell changes (opening an app, the switcher, going home) run as View Transitions; cards morph to fullscreen. Apps pop in (`animate-pop-in`) when they come on screen. All of it respects reduced motion.
 - **Toasts** come from the top, centred.

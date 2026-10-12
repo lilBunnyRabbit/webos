@@ -56,11 +56,11 @@ App.svelte
       │  │     ├─ window-titlebar.svelte
       │  │     ├─ window-content.svelte  → lazy app component
       │  │     └─ window-sheets.svelte   → this window's dialog sheets (ADR-025)
-      │  ├─ notifications/toast-area.svelte
+      │  ├─ notifications/toast-area.svelte → notification-item.svelte
       │  └─ taskbar/taskbar.svelte
       │     ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
       │     ├─ taskbar-item.svelte  (per window)
-      │     └─ taskbar-clock.svelte
+      │     └─ taskbar-tray.svelte → taskbar-clock.svelte, notifications/notification-list.svelte
       └─ dialogs/dialogs-host.svelte  (sibling of either shell; native <dialog>)
          └─ (component from DialogsService.stack: open-with-dialog.svelte, restore-session-dialog.svelte)
 ```

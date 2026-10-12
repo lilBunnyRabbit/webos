@@ -48,7 +48,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [shell/window.md](shell/window.md) | Window frame, titlebar, drag/resize, app content |
 | [shell/window-manager.md](shell/window-manager.md) | Renders all windows |
 | [shell/desktop.md](shell/desktop.md) | Desktop surface and icons |
-| [shell/taskbar.md](shell/taskbar.md) | Taskbar dock, items, clock, start menu |
+| [shell/taskbar.md](shell/taskbar.md) | Taskbar dock, items, tray + notification center, start menu |
 | [shell/mobile.md](shell/mobile.md) | Phone and tablet shell: home pages, dock, app drawer, switcher, nav bar |
 
 ### Apps

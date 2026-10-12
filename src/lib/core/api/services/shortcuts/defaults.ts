@@ -107,6 +107,13 @@ export function default_shortcuts({ windows, apps, dialogs, ui }: Services): Key
       run: () => apps().launch("settings"),
     },
     {
+      id: "system.notifications",
+      keys: "alt+shift+n",
+      label: "Notifications",
+      category: ShortcutCategory.SYSTEM,
+      run: () => ui().toggle(UiOverlay.NOTIFICATIONS),
+    },
+    {
       id: "system.shortcuts",
       keys: "mod+/",
       label: "Keyboard shortcuts",

@@ -40,7 +40,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022). `MobileDesktopService` (pages + dock) on mobile (ADR-016) | files, apps |
 | `session` | SessionService | Saves open windows to `/var/lib/session/session.json`, restore dialog at boot (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
-| `ui` | UiService | Shell overlay state: launcher, mobile switcher (ADR-028) | none |
+| `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center (ADR-028) | none |
 | `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.

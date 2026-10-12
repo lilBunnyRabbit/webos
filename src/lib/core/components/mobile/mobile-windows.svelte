@@ -1,8 +1,9 @@
 <script lang="ts">
-  import kernel, { type MobileWindowsService, type WindowId } from "$lib/core/api";
+  import kernel, { type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Cards as CardsIcon, X as XIcon } from "phosphor-svelte";
   import { Button, IconButton } from "../ui";
+  import NotificationList from "../notifications/notification-list.svelte";
   import MobileWindow from "./mobile-window.svelte";
   import { view_transition } from "./view-transition";
 
@@ -13,9 +14,11 @@
   const recent = $derived(windows.recent());
   const rank = $derived(new Map(recent.map((id, index) => [id, index])));
   const focused = $derived(windows.get_focused());
+  /** The notification center sits above the cards (ADR-006 revision), only when there's something in it. */
+  const center = $derived(switcher && kernel.service<NotificationsService>("notifications").all.length > 0);
 
-  /** Cards are the live windows at this scale: no screenshots, the app keeps running inside. */
-  const SCALE = 0.66;
+  /** Cards are the live windows at this scale: no screenshots, the app keeps running inside. Smaller under notifications. */
+  const scale = $derived(center ? 0.55 : 0.66);
   /** A card flicked up past this many px closes its app. */
   const CLOSE_DISTANCE = 96;
 
@@ -68,12 +71,19 @@
     return () => windows.set_container(null);
   }}
   class={cn("absolute inset-0 flex flex-col", switcher ? "bg-(--overlay) backdrop-blur-xl" : "pointer-events-none")}
-  style:--card-scale={SCALE}
+  style:--card-scale={scale}
 >
+  {#if center}
+    <NotificationList
+      class="max-h-[32cqh] shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
+      item_class="bg-background-lighter shadow-raised"
+    />
+  {/if}
+
 <div
   class={cn(
     "min-h-0 flex-1",
-    switcher ? "flex snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain px-[17cqw] [scrollbar-width:none]" : "relative"
+    switcher ? "flex snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain px-[calc((1-var(--card-scale))*50cqw)] [scrollbar-width:none]" : "relative"
   )}
   aria-label={switcher ? "Running apps" : undefined}
 >

@@ -4,7 +4,7 @@
   import kernel, { type SettingsService, TaskbarPosition, type WindowsService } from "$lib/core/api";
   import TaskbarItem from "./taskbar-item.svelte";
   import StartMenu from "./start-menu.svelte";
-  import TaskbarClock from "./taskbar-clock.svelte";
+  import TaskbarTray from "./taskbar-tray.svelte";
 
   let { class: class_name, ...rest_props }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
@@ -44,7 +44,7 @@
       {/each}
     </div>
 
-    <TaskbarClock {vertical} />
+    <TaskbarTray {vertical} />
   </nav>
 </div>
 

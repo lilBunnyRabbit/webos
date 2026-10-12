@@ -4,18 +4,19 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 
 | File | Role |
 |------|------|
-| `taskbar.svelte` | The floating dock, laid out per `settings.taskbar.position`: start button, separator, window items, clock |
+| `taskbar.svelte` | The floating dock, laid out per `settings.taskbar.position`: start button, separator, window items, tray |
 | `taskbar-item.svelte` | One button per open window, with a running indicator |
-| `taskbar-clock.svelte` | Time and short date |
+| `taskbar-tray.svelte` | The tray button (bell, unread badge, clock) and the notification center popover |
+| `taskbar-clock.svelte` | Time and short date, rendered inside the tray button |
 | `start-menu.svelte` | Start button + anchored `popover` element |
 | `start-menu-popover.svelte` | Popover contents: search, app tile grid, pin buttons, footer |
 
 ## Responsibilities
 
-- Show a start button, one item per window and a clock.
+- Show a start button, one item per window and the tray.
 - Lay itself out for the taskbar position. `os.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
 - Styling: a floating dock. The outer strip is transparent and pads only its screen-edge sides by 8px (bottom bar: `px-2 pb-2`, and so on). The side facing the windows gets its 8px from the window area's own snap inset, so every gap (screen edge, between snapped windows, window to dock) is 8px. Inside the strip, `<nav aria-label="Taskbar" class="taskbar-dock">` (`anchor-name: --taskbar-dock`) is a `rounded-2xl bg-background-light/90 backdrop-blur-xl shadow-popover` bar, `h-13` (horizontal) or `w-13` (vertical), with a `p-1.5` inset and `gap-1`.
-- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the clock at the far end.
+- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the tray at the far end.
 
 The position comes from [settings](../services/settings.md) (`taskbar.position`: `top | bottom | left | right`, persisted there). The bar re-renders when it changes, and the [window manager](window-manager.md) re-measures its container.
 
@@ -38,7 +39,17 @@ The indicator sits under the button when horizontal and to its left when vertica
 
 ## Clock
 
-`taskbar-clock.svelte` keeps a local `now` and re-reads it with a `setTimeout` aimed at the next minute boundary, so the time never lags. It renders a `<time datetime>`: mono `text-ui` time, always 24-hour `HH:MM` (`hourCycle: "h23"`) in every locale, over a `text-2xs` date at 80% (`weekday day month` horizontally, `day month` vertically). The `title` is the full date and time. It has no click action.
+`taskbar-clock.svelte` keeps a local `now` and re-reads it with a `setTimeout` aimed at the next minute boundary, so the time never lags. It renders a `<time datetime>`: mono `text-ui` time, always 24-hour `HH:MM` (`hourCycle: "h23"`) in every locale, over a `text-2xs` date at 80% (`weekday day month` horizontally, `day month` vertically). It's the label half of the tray button and has no action of its own.
+
+## Tray and notification center
+
+ADR-006 revision, [brainstorm](../../brainstorm/2026-10-12_notification-center.md). No tray registry: Tasks (ADR-013) will add its indicator here.
+
+- One button: a `BellSimple` (`fill` with unread, `bold` otherwise) with a `primary` count badge (`99+` past 99), then the clock. `aria-label` and `title` are "Notifications" or "Notifications, N unread". `foreground/10` fill while open; bell beside the clock horizontally, above it vertically.
+- `popovertarget="notification-center-popover"`. The popover mirrors [UiService](../services/ui.md) `notifications` exactly like the start menu mirrors `launcher`, so Alt+Shift+N opens it and opening one closes the other.
+- Anchored to the dock, flush with its **far** end: `top span-left` (bottom bar), `bottom span-left` (top), `right span-top` (left), `left span-top` (right); same 8px margins, fallbacks, scrim, `animate-pop-in`. `min(24rem, 100vw − 1rem)` wide, at most `min(34rem, 100dvh − 5rem)` tall, `p-2`.
+- Contents mount only while open: `notifications/notification-list.svelte`, header "Notifications" with a quiet "Clear all" (dismisses every notification), the entries newest first (`animate:flip`), or an `EmptyState` ("No notifications"). Each entry is `notification-item.svelte` with the sender (the app's name, "System" for non-app ids like `apps` and `session`) and time (`HH:MM` today, `format_datetime` otherwise). Its close button and actions `dismiss()` it.
+- While the list is mounted an effect marks everything read and hides every toast, new arrivals included.
 
 ## Start menu
 
@@ -62,12 +73,15 @@ Contents (`start-menu-popover.svelte`):
 | Click | Window item, focused | `windows.toggle_minimize(id)`. Minimizes it; focus moves to the next visible window. |
 | Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
 | Click | Start button | Toggle the start menu |
+| Click | Tray | Toggle the notification center |
+| Click | Entry's close button / action | Run the action, then `notifications.dismiss(id)` |
+| Click | Clear all | Dismiss every notification |
 | Type | Search field | Filter the tiles |
 | Enter | Search field | With a non-empty query, launch the first match (`apps.launch(id)`) and close the menu. Nothing with an empty query |
 | Click | App tile | `apps.launch(id)` with no props, then `hidePopover()` |
 | Click | Pin button ("Pin {name} to desktop") | `desktop.pin(id)`: writes `{App name}.desktop` into `/home/Desktop`, which appears on the desktop in the first free cell. Errors go to `console.error`. The menu stays open. |
 | Escape / outside click | Open menu | Close it (native light dismiss) |
-| Keyboard | Bar | Native button Tab/Enter only. No shortcuts (ADR-017 not built). No arrow-key movement in the tile grid. |
+| Keyboard | Bar | Native button Tab/Enter. Mod+K start menu, Alt+Shift+N notification center ([shortcuts](../services/shortcuts.md)). No arrow-key movement in the tile grid. |
 
 ## Platform APIs
 
@@ -78,4 +92,4 @@ Contents (`start-menu-popover.svelte`):
 ## Known gaps
 
 - "Pin to desktop" can pin duplicates (`Settings (1).desktop`) and gives no feedback: not on success, not when the grid is full and the new icon is hidden, not on failure.
-- No notification-center entry, no grouping, no context menus, no auto-hide or size options (ROADMAP "Taskbar Enhancements").
+- No grouping, no context menus, no auto-hide or size options (ROADMAP "Taskbar Enhancements").
