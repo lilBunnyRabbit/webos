@@ -2,8 +2,10 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import {
     Badge,
+    BoardOverlay,
     Button,
     Checkbox,
+    CopyButton,
     EmptyState,
     IconButton,
     Input,
@@ -13,17 +15,21 @@
     Select,
     SettingRow,
     SideNav,
+    Slider,
     Spinner,
     StatusBar,
     Switch,
+    Textarea,
     Toolbar,
   } from "$lib/core/components/ui";
   import {
     Bell as BellIcon,
     CursorClick as CursorClickIcon,
+    Eraser as EraserIcon,
     Folder as FolderIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     PaperPlaneTilt as PaperPlaneTiltIcon,
+    PencilSimple as PencilSimpleIcon,
     Plus as PlusIcon,
     SquaresFour as SquaresFourIcon,
     Stack as StackIcon,
@@ -69,6 +75,13 @@
   let agree = $state(true);
   let view = $state<"list" | "grid">("list");
   let sort = $state<"name" | "size" | "date">("name");
+  let notes = $state("");
+  let volume = $state(60);
+  let bold = $state(true);
+  let italic = $state(false);
+  let large = $state(true);
+  let tool = $state<"pencil" | "eraser">("pencil");
+  let speed = $state<"slow" | "normal" | "fast">("normal");
 </script>
 
 {#snippet swatch(token: string)}
@@ -189,6 +202,28 @@
             <IconButton label="Delete" variant="danger"><TrashIcon weight="bold" /></IconButton>
           </div>
         </Section>
+        <Section title="Toggles" description="pressed: a button that stays on. Sets aria-pressed and the primary tint; the label stays the same.">
+          <div class="flex flex-wrap items-center gap-2 px-4 py-3">
+            <Button size="sm" variant="quiet" pressed={bold} onclick={() => (bold = !bold)}>Bold</Button>
+            <Button size="sm" variant="quiet" pressed={italic} onclick={() => (italic = !italic)}>Italic</Button>
+            <IconButton label="Large text" size="sm" pressed={large} onclick={() => (large = !large)}><TextAaIcon weight="bold" /></IconButton>
+            <span class="flex gap-1" role="group" aria-label="Tool">
+              <IconButton label="Pencil" size="sm" pressed={tool === "pencil"} onclick={() => (tool = "pencil")}>
+                <PencilSimpleIcon weight={tool === "pencil" ? "fill" : "bold"} />
+              </IconButton>
+              <IconButton label="Eraser" size="sm" pressed={tool === "eraser"} onclick={() => (tool = "eraser")}>
+                <EraserIcon weight={tool === "eraser" ? "fill" : "bold"} />
+              </IconButton>
+            </span>
+          </div>
+        </Section>
+        <Section title="Copy button" description="Copies text to the clipboard, shows Copied for a moment, disabled while there's nothing to copy.">
+          <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+            <code class="font-mono text-ui">3f9a1c2e</code>
+            <CopyButton text="3f9a1c2e" label="Copy hash" />
+            <span class="ml-auto flex items-center gap-2 text-ui text-foreground/65">Nothing to copy <CopyButton text="" /></span>
+          </div>
+        </Section>
       {:else if section.value === "inputs"}
         <Section title="Fields" description="Recessed in dark themes, raised paper in light ones (light-dark()); a 30% ring marks the edge.">
           <SettingRow label="Name">
@@ -221,6 +256,30 @@
               <Segmented {id} aria-describedby={describedby} label="View" bind:value={view} options={[{ value: "list", label: "List" }, { value: "grid", label: "Grid" }]} />
             {/snippet}
           </SettingRow>
+          <SettingRow label="Speed" description="Segmented sm: in a toolbar, next to sm buttons">
+            {#snippet children({ id, describedby })}
+              <Segmented
+                {id}
+                aria-describedby={describedby}
+                size="sm"
+                label="Speed"
+                bind:value={speed}
+                options={[
+                  { value: "slow", label: "Slow" },
+                  { value: "normal", label: "Normal" },
+                  { value: "fast", label: "Fast" },
+                ]}
+              />
+            {/snippet}
+          </SettingRow>
+          <SettingRow label="Volume" description="Slider: a native range input, md and sm">
+            {#snippet children({ id, describedby })}
+              <span class="flex w-56 flex-col">
+                <Slider {id} aria-describedby={describedby} min={0} max={100} bind:value={volume} class="w-full" />
+                <Slider aria-label="Volume (small)" size="sm" min={0} max={100} bind:value={volume} class="w-full" />
+              </span>
+            {/snippet}
+          </SettingRow>
           <SettingRow label="Notifications" description="Switch: on/off that applies immediately">
             {#snippet children({ id, describedby })}<Switch {id} aria-describedby={describedby} bind:checked={notify} />{/snippet}
           </SettingRow>
@@ -230,6 +289,12 @@
           <SettingRow label="Checkbox" description="For choices that apply on submit">
             <label class="flex items-center gap-2 text-ui"><Checkbox bind:checked={agree} /> Remember this</label>
           </SettingRow>
+        </Section>
+        <Section title="Text area" description="The field surface over several lines; mono for code and data, without spellcheck.">
+          <div class="flex flex-col gap-3 p-4">
+            <Textarea bind:value={notes} rows={3} aria-label="Notes" placeholder="Notes" />
+            <Textarea mono value={'{ "name": "Notes", "size": 1420 }'} rows={3} readonly aria-label="JSON" />
+          </div>
         </Section>
       {:else}
         <Section title="Badges" flush>
@@ -246,6 +311,17 @@
           <div class="flex flex-wrap items-center gap-4 text-ui">
             <span class="flex items-center gap-1"><Kbd>⌘</Kbd><Kbd>K</Kbd> search</span>
             <span class="flex items-center gap-2"><Spinner /> Loading</span>
+          </div>
+        </Section>
+        <Section title="Board overlay" description="A game's pause and end screen over its board: title, one mono line, actions with the primary last." flush>
+          <div class="relative size-56 overflow-hidden rounded-lg bg-background-darker ring-1 ring-foreground/8">
+            <div class="grid size-full grid-cols-4 gap-1.5 p-2">
+              {#each Array.from({ length: 16 }, (_, i) => i) as cell (cell)}<span class="rounded-md bg-foreground/8"></span>{/each}
+            </div>
+            <BoardOverlay title="Game over" detail="Score 1234 · Best 2048">
+              <Button size="sm" variant="quiet">Undo</Button>
+              <Button size="sm" variant="primary">New game</Button>
+            </BoardOverlay>
           </div>
         </Section>
         <Section title="Empty state" description="Icon tile, one line of title, one of help, optional action.">

@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import { BoardOverlay, Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import {
     ArrowDown as ArrowDownIcon,
     ArrowLeft as ArrowLeftIcon,
@@ -219,6 +219,7 @@
 <div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
     <Segmented
+      size="sm"
       class="hidden @lg:inline-flex"
       label="Speed"
       options={SPEED_OPTIONS}
@@ -269,25 +270,14 @@
             <p class="text-ui text-foreground/80">Arrow keys, WASD or a swipe to start</p>
             <Button size="sm" variant="primary" onclick={play}>Start</Button>
           </div>
+        {:else if game.status === Status.PAUSED}
+          <BoardOverlay title="Paused" detail="Score {game.score}">
+            <Button size="sm" variant="primary" onclick={play}>Resume</Button>
+          </BoardOverlay>
         {:else if game.status !== Status.PLAYING}
-          <div
-            class="absolute inset-0 grid animate-in place-items-center rounded-[inherit] bg-background/80 p-4 text-center backdrop-blur-[2px] fade-in"
-            aria-live="polite"
-          >
-            <div class="flex flex-col items-center gap-3">
-              {#if game.status === Status.PAUSED}
-                <p class="text-base font-semibold">Paused</p>
-                <p class="font-mono text-2xs text-foreground/80 tabular-nums">Score {game.score}</p>
-                <Button size="sm" variant="primary" onclick={play}>Resume</Button>
-              {:else}
-                <p class="text-base font-semibold">{game.status === Status.WON ? "You filled the board" : "Game over"}</p>
-                <p class="font-mono text-2xs text-foreground/80 tabular-nums">
-                  Score {game.score}{new_best ? " · New best" : ""}
-                </p>
-                <Button size="sm" variant="primary" onclick={new_game}>Play again</Button>
-              {/if}
-            </div>
-          </div>
+          <BoardOverlay title={game.status === Status.WON ? "You filled the board" : "Game over"} detail="Score {game.score}{new_best ? ' · New best' : ''}">
+            <Button size="sm" variant="primary" onclick={new_game}>Play again</Button>
+          </BoardOverlay>
         {/if}
       </div>
     </div>

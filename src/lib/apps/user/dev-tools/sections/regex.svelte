@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { Badge, Input, Section, button } from "$lib/core/components/ui";
+  import { Badge, Button, CopyButton, Input, Section, Textarea } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { MAX_MATCHES, find_matches, segment_text } from "../regex";
   import type { DevToolsState } from "../tools";
-  import CopyButton from "./copy-button.svelte";
-  import TextArea from "./text-area.svelte";
 
   let { value = $bindable() }: { value: DevToolsState["regex"] } = $props();
 
@@ -37,19 +35,9 @@
   <div class="flex flex-wrap gap-1" role="group" aria-label="Flags">
     {#each FLAGS as { flag, label } (flag)}
       {@const on = value.flags.includes(flag)}
-      <button
-        type="button"
-        aria-pressed={on}
-        title={label}
-        class={button({
-          variant: "quiet",
-          size: "sm",
-          class: cn("gap-1 px-2 font-normal", on && "bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary active:bg-primary/20"),
-        })}
-        onclick={() => toggle(flag)}
-      >
+      <Button size="sm" variant="quiet" pressed={on} title={label} class="gap-1 px-2 font-normal" onclick={() => toggle(flag)}>
         <span class="font-mono font-semibold">{flag}</span>{label}
-      </button>
+      </Button>
     {/each}
   </div>
   {#if result && !result.ok}
@@ -58,7 +46,7 @@
 </div>
 
 <Section title="Test text" flush>
-  <TextArea bind:value={value.text} rows={6} aria-label="Test text" placeholder="Text to search" />
+  <Textarea mono bind:value={value.text} rows={6} aria-label="Test text" placeholder="Text to search" />
 </Section>
 
 <Section title="Matches" flush>

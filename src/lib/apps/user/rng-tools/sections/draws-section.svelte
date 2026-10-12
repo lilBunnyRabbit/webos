@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type DialogsService, type MenuItem } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Input, Section, SettingRow } from "$lib/core/components/ui";
+  import { Button, CopyButton, EmptyState, IconButton, Input, Section, SettingRow } from "$lib/core/components/ui";
   import {
     ArrowDown as ArrowDownIcon,
     ArrowUp as ArrowUpIcon,
@@ -12,7 +12,6 @@
     Ticket as TicketIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
-  import CopyButton from "../copy-button.svelte";
   import {
     MAX_DRAW_LISTS,
     MAX_DRAW_PRESETS,

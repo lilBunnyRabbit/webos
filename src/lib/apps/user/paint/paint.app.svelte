@@ -6,7 +6,7 @@
     type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { Button, IconButton, Input, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, Input, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, file_stem, load_image_at, parent_folder } from "$lib/core/utils/image";
@@ -495,13 +495,20 @@
   });
 </script>
 
+{#snippet zoom_controls()}
+  <IconButton label="Zoom out" size="sm" onclick={() => (zoom = step_zoom(zoom, -1))}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
+  <span class="w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(zoom * 100)}%</span>
+  <IconButton label="Zoom in" size="sm" onclick={() => (zoom = step_zoom(zoom, 1))}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
+  <IconButton label="Fit to window" size="sm" onclick={fit}><CornersOutIcon weight="bold" /></IconButton>
+{/snippet}
+
 <div class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
   <Toolbar>
     <IconButton
       label={panel_open.value ? "Hide tools" : "Show tools"}
       size="sm"
       class="@md:hidden"
-      aria-pressed={panel_open.value}
+      pressed={panel_open.value}
       onclick={() => (panel_open.value = !panel_open.value)}
     >
       <ToolboxIcon weight="bold" />
@@ -521,10 +528,7 @@
       {#if dirty}<span class="size-2 shrink-0 rounded-full bg-primary" title="Unsaved changes"></span>{/if}
     </span>
 
-    <IconButton label="Zoom out" size="sm" onclick={() => (zoom = step_zoom(zoom, -1))}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
-    <span class="hidden w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums @sm:inline">{Math.round(zoom * 100)}%</span>
-    <IconButton label="Zoom in" size="sm" onclick={() => (zoom = step_zoom(zoom, 1))}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
-    <IconButton label="Fit to window" size="sm" onclick={fit}><CornersOutIcon weight="bold" /></IconButton>
+    <div class="hidden items-center gap-1.5 @md:flex">{@render zoom_controls()}</div>
   </Toolbar>
 
   <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @md:grid-cols-[auto_minmax(0,1fr)] @md:grid-rows-1">
@@ -542,9 +546,7 @@
           <IconButton
             label="{TOOL_LABELS[item]} ({TOOL_KEYS[item].toUpperCase()})"
             size="sm"
-            variant={tool.value === item ? "secondary" : "quiet"}
-            class={tool.value === item ? "text-primary" : ""}
-            aria-pressed={tool.value === item}
+            pressed={tool.value === item}
             onclick={() => (tool.value = item)}
           >
             <Icon weight={tool.value === item ? "fill" : "bold"} />
@@ -600,7 +602,7 @@
       {#if uses_size(tool.value)}
         <label class="flex items-center gap-2 text-ui text-foreground/80">
           {tool.value === Tool.TEXT ? "Text" : "Size"}
-          <input type="range" min="1" max="100" bind:value={size.value} class="min-w-20 flex-1 accent-primary" />
+          <Slider min={1} max={100} bind:value={size.value} size="sm" class="flex-1" />
           <span class="w-8 text-right font-mono text-2xs tabular-nums">{tool.value === Tool.TEXT ? text_font_size(size.value) : size.value}</span>
         </label>
       {/if}
@@ -620,10 +622,12 @@
       {#if tool.value === Tool.FILL}
         <label class="flex items-center gap-2 text-ui text-foreground/80" title="How different a colour may be and still get filled">
           Tolerance
-          <input type="range" min="0" max="100" bind:value={tolerance.value} class="min-w-20 flex-1 accent-primary" />
+          <Slider min={0} max={100} bind:value={tolerance.value} size="sm" class="flex-1" />
           <span class="w-8 text-right font-mono text-2xs tabular-nums">{tolerance.value}%</span>
         </label>
       {/if}
+
+      <div class="flex items-center gap-1.5 @md:hidden" role="group" aria-label="Zoom">{@render zoom_controls()}</div>
     </aside>
 
     <div

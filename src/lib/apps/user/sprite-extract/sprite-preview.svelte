@@ -78,7 +78,7 @@
 
   <div class="flex items-center gap-1">
     <IconButton label="Previous frame ([)" size="sm" onclick={prev}><CaretLeftIcon weight="bold" /></IconButton>
-    <IconButton label={playing ? "Pause (P)" : "Play (P)"} size="sm" aria-pressed={playing} class={cn(playing && "bg-foreground/10 text-foreground")} onclick={toggle}>
+    <IconButton label={playing ? "Pause (P)" : "Play (P)"} size="sm" pressed={playing} onclick={toggle}>
       {#if playing}<PauseIcon weight="fill" />{:else}<PlayIcon weight="fill" />{/if}
     </IconButton>
     <IconButton label="Next frame (])" size="sm" onclick={next}><CaretRightIcon weight="bold" /></IconButton>

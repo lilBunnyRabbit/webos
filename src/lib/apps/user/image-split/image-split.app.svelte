@@ -170,6 +170,7 @@
         <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @md:block" title={source.path ?? source.name}>{source.name}</span>
         <span class="flex-1 @md:hidden"></span>
         <Segmented
+          size="sm"
           label="Split into"
           bind:value={direction}
           options={[

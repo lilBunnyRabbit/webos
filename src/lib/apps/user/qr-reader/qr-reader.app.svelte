@@ -1,14 +1,12 @@
 <script lang="ts">
-  import kernel, { NotificationType, type ClipboardService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Section, Toolbar, button } from "$lib/core/components/ui";
+  import { Button, CopyButton, EmptyState, IconButton, Section, Toolbar, button } from "$lib/core/components/ui";
   import { cn, format_datetime } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
     Camera as CameraIcon,
     CameraSlash as CameraSlashIcon,
-    Check as CheckIcon,
-    Copy as CopyIcon,
     ImageSquare as ImageSquareIcon,
     QrCode as QrCodeIcon,
     Trash as TrashIcon,
@@ -22,7 +20,6 @@
   const { window, storage, app_id } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
-  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
   const detector_ready = create_qr_detector();
   let detector = $state.raw<BarcodeDetector | null>(null);
@@ -39,12 +36,8 @@
   let dragging = $state(false);
   let destroyed = false;
 
-  let copied_id = $state<string | null>(null);
-  let copied_timer: ReturnType<typeof setTimeout> | undefined;
-
   $effect(() => () => {
     destroyed = true;
-    clearTimeout(copied_timer);
   });
 
   function report(title: string, reason?: unknown, type: NotificationType = NotificationType.ERROR) {
@@ -141,17 +134,6 @@
       element.srcObject = null;
     };
   });
-
-  async function copy(entry: QrEntry) {
-    try {
-      await clipboard.copy_text(entry.content);
-    } catch (reason) {
-      return report("Couldn't copy to the clipboard", reason);
-    }
-    copied_id = entry.id;
-    clearTimeout(copied_timer);
-    copied_timer = setTimeout(() => (copied_id = null), 1200);
-  }
 
   function remove(id: string) {
     entries.value = entries.value.filter((entry) => entry.id !== id);
@@ -257,9 +239,7 @@
                         <ArrowSquareOutIcon weight="bold" />
                       </a>
                     {/if}
-                    <IconButton label={copied_id === entry.id ? "Copied" : "Copy"} size="sm" onclick={() => copy(entry)}>
-                      {#if copied_id === entry.id}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
-                    </IconButton>
+                    <CopyButton text={entry.content} />
                     <IconButton label="Remove" size="sm" onclick={() => remove(entry.id)}><XIcon weight="bold" /></IconButton>
                   </div>
                 </div>

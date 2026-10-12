@@ -145,6 +145,7 @@
 <div class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
     <Segmented
+      size="sm"
       class="hidden @lg:inline-flex"
       label="Mode"
       options={MODE_OPTIONS}
@@ -158,7 +159,7 @@
       bind:value={() => mode, set_mode}
     />
     <div class="flex-1"></div>
-    <IconButton size="sm" label="Statistics" class="@3xl:hidden" aria-pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
+    <IconButton size="sm" label="Statistics" class="@3xl:hidden" pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
       <ChartBarIcon weight={show_stats ? "fill" : "bold"} />
     </IconButton>
     <IconButton size="sm" label="Undo (Ctrl+Z)" disabled={!can_undo} onclick={undo}>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { format_bytes } from "$lib/core/utils";
   import { has_files, parent_folder } from "$lib/core/utils/image";
   import {
@@ -253,7 +253,7 @@
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
         <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{title}</span>
-        <Segmented label="Visualization" options={MODE_OPTIONS} bind:value={mode.value} />
+        <Segmented size="sm" label="Visualization" options={MODE_OPTIONS} bind:value={mode.value} />
         <Separator vertical class="hidden @md:block" />
         <IconButton label={mic ? "Stop microphone" : "Use microphone"} size="sm" variant={mic ? "secondary" : "quiet"} onclick={toggle_mic}>
           {#if mic}<MicrophoneSlashIcon weight="bold" />{:else}<MicrophoneIcon weight="bold" />{/if}
@@ -273,15 +273,15 @@
       <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 py-2">
         <div class="flex items-center gap-2 font-mono text-2xs text-foreground/80 tabular-nums">
           <span class="w-10 text-right">{mic ? "live" : format_time(current_time)}</span>
-          <input
-            type="range"
+          <Slider
             aria-label="Position"
             min={0}
             max={duration || 0}
             step="any"
             value={current_time}
             disabled={mic || !duration}
-            class="min-w-0 flex-1 accent-primary"
+            size="sm"
+            class="flex-1"
             oninput={seek}
           />
           <span class="w-10">{mic ? "" : format_time(duration)}</span>
@@ -295,17 +295,17 @@
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80">
             <span class="sr-only">Volume</span>
             {#if volume.value === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
-            <input type="range" min={0} max={1} step={0.01} bind:value={volume.value} class="min-w-0 flex-1 accent-primary" />
+            <Slider min={0} max={1} step={0.01} bind:value={volume.value} size="sm" class="flex-1" />
           </label>
 
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80" title="How slowly the picture reacts to changes">
             Smoothing
-            <input type="range" min={0} max={1} step={0.05} bind:value={smoothing.value} class="min-w-0 flex-1 accent-primary" />
+            <Slider min={0} max={1} step={0.05} bind:value={smoothing.value} size="sm" class="flex-1" />
           </label>
 
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80" title="How strongly quiet sound moves the picture">
             Sensitivity
-            <input type="range" min={0.5} max={3} step={0.1} bind:value={sensitivity.value} class="min-w-0 flex-1 accent-primary" />
+            <Slider min={0.5} max={3} step={0.1} bind:value={sensitivity.value} size="sm" class="flex-1" />
           </label>
         </div>
       </div>

@@ -181,8 +181,8 @@
     <IconButton
       label="History"
       size="sm"
-      class={cn("@2xl:hidden", show_history.value && "bg-foreground/10 text-foreground")}
-      aria-pressed={show_history.value}
+      class="@2xl:hidden"
+      pressed={show_history.value}
       onclick={() => (show_history.value = !show_history.value)}
     >
       <HistoryIcon weight="bold" />

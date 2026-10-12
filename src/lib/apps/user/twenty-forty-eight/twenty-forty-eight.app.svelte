@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { BoardOverlay, Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon } from "phosphor-svelte";
   import { z } from "zod";
@@ -218,23 +218,15 @@
       {/each}
 
       {#if winning || over}
-        <div
-          class="absolute inset-0 z-20 grid animate-in place-items-center rounded-[3cqmin] bg-background/80 p-4 text-center backdrop-blur-[2px] fade-in"
-        >
-          <div class="flex flex-col items-center gap-3">
-            <p class="text-base font-semibold" aria-live="polite">{winning ? `You reached ${WIN_VALUE}` : "Game over"}</p>
-            <p class="font-mono text-2xs text-foreground/80 tabular-nums">Score {game.score} · Best {best.value}</p>
-            <div class="flex flex-wrap justify-center gap-2">
-              {#if winning}
-                <Button size="sm" variant="quiet" onclick={start_over}>New game</Button>
-                <Button size="sm" variant="primary" onclick={keep_going}>Keep going</Button>
-              {:else}
-                <Button size="sm" variant="quiet" disabled={!previous} onclick={undo}>Undo</Button>
-                <Button size="sm" variant="primary" onclick={start_over}>New game</Button>
-              {/if}
-            </div>
-          </div>
-        </div>
+        <BoardOverlay class="z-20 rounded-[3cqmin]" title={winning ? `You reached ${WIN_VALUE}` : "Game over"} detail="Score {game.score} · Best {best.value}">
+          {#if winning}
+            <Button size="sm" variant="quiet" onclick={start_over}>New game</Button>
+            <Button size="sm" variant="primary" onclick={keep_going}>Keep going</Button>
+          {:else}
+            <Button size="sm" variant="quiet" disabled={!previous} onclick={undo}>Undo</Button>
+            <Button size="sm" variant="primary" onclick={start_over}>New game</Button>
+          {/if}
+        </BoardOverlay>
       {/if}
     </div>
   </div>

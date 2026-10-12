@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     CaretLeft as CaretLeftIcon,
@@ -298,14 +298,14 @@
 
         {#if frame_count > 1}
           <div class="flex flex-col gap-0.5">
-            <input
-              type="range"
+            <Slider
               aria-label="Frame"
               min={0}
               max={frame_count - 1}
               step={1}
               value={index}
-              class="w-full accent-primary"
+              size="sm"
+              class="w-full"
               oninput={(event) => seek(Number(event.currentTarget.value))}
             />
             <div class="h-0.5 overflow-hidden rounded-full bg-foreground/8" title={warmup ? `Decoded ${warmup.done} of ${warmup.total} frames` : undefined}>

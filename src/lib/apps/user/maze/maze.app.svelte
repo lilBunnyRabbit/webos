@@ -382,7 +382,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
-    <Segmented class="hidden @lg:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
+    <Segmented size="sm" class="hidden @lg:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     <Select class="w-24 @lg:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     <div class="flex-1"></div>
     {#if mode === Mode.BUILD}

@@ -1,11 +1,9 @@
 <script lang="ts">
-  import kernel, { type ClipboardService, type FilesService } from "$lib/core/api";
+  import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Button, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, CopyButton, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
   import {
-    Check as CheckIcon,
-    Copy as CopyIcon,
     FileText as FileTextIcon,
     FolderOpen as FolderOpenIcon,
     TextAlignLeft as TextAlignLeftIcon,
@@ -14,7 +12,6 @@
   import { z } from "zod";
   import { untrack } from "svelte";
   import manifest from "./index";
-  import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -32,23 +29,6 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const file = $derived(path ? files.get_file(path) : null);
   const name = $derived(path?.split("/").at(-1) ?? "");
-
-  let copied = $state(false);
-  let copied_timer: ReturnType<typeof setTimeout> | undefined;
-
-  $effect(() => () => clearTimeout(copied_timer));
-
-  async function copy(text: string) {
-    try {
-      await kernel.service<ClipboardService>("clipboard").copy_text(text);
-    } catch (error) {
-      report_file_error("Couldn't copy to the clipboard", error);
-      return;
-    }
-    copied = true;
-    clearTimeout(copied_timer);
-    copied_timer = setTimeout(() => (copied = false), 1200);
-  }
 </script>
 
 {#if !file}
@@ -67,12 +47,10 @@
         <Toolbar>
           <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
           <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path}</span>
-          <IconButton label={wrap.value ? "Don't wrap lines" : "Wrap lines"} size="sm" aria-pressed={wrap.value} class={cn(wrap.value && "bg-foreground/10 text-foreground")} onclick={() => (wrap.value = !wrap.value)}>
+          <IconButton label={wrap.value ? "Don't wrap lines" : "Wrap lines"} size="sm" pressed={wrap.value} onclick={() => (wrap.value = !wrap.value)}>
             <TextAlignLeftIcon weight="bold" />
           </IconButton>
-          <IconButton label={copied ? "Copied" : "Copy all"} size="sm" onclick={() => copy(loaded.text)}>
-            {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
-          </IconButton>
+          <CopyButton text={loaded.text} label="Copy all" />
         </Toolbar>
 
         <div class="min-h-0 overflow-auto">

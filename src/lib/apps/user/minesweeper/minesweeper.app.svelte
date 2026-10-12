@@ -218,6 +218,7 @@
   <div>
     <Toolbar>
       <Segmented
+        size="sm"
         class="hidden @xl:inline-flex"
         label="Difficulty"
         options={DIFFICULTY_OPTIONS}
@@ -235,7 +236,7 @@
         size="sm"
         label="Statistics"
         class="@3xl:hidden"
-        aria-pressed={show_stats}
+        pressed={show_stats}
         onclick={() => (show_stats = !show_stats)}
       >
         <ChartBarIcon weight={show_stats ? "fill" : "bold"} />
