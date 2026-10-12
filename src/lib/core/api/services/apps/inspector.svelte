@@ -5,7 +5,7 @@
   let { service, detailed }: InspectorProps<AppsService> = $props();
 
   const manifests = $derived([...service.list()].map(([, manifest]) => manifest));
-  const system_count = $derived(manifests.filter((manifest) => manifest.categories.includes("system")).length);
+  const system_count = $derived(manifests.filter((manifest) => manifest.system).length);
   const association_count = $derived(manifests.reduce((total, manifest) => total + (manifest.associations?.length ?? 0), 0));
 </script>
 

@@ -1,4 +1,5 @@
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 // Not via the barrel: manifests load while the barrel is still initializing, so its constants are not yet defined.
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
 import { FilmStrip as FilmStripIcon } from "phosphor-svelte";
@@ -8,7 +9,7 @@ export default define_app({
   name: "Sprite Extractor",
   icon: FilmStripIcon,
   version: "1.0.0",
-  categories: ["user"],
+  category: AppCategory.MEDIA,
   description: "Slice a sprite sheet into frames, fix the grid, preview the animation and export frames or a clean sheet",
   keywords: ["sprite", "sheet", "frames", "animation", "extract", "slice"],
   tools: ["image/*"],

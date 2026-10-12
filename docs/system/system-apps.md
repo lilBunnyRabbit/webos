@@ -2,7 +2,7 @@
 
 The apps bundled with the OS, in `src/lib/apps/system/{id}/`. Each one is an `index.ts` manifest made with `define_app` plus a lazy `{id}.app.svelte`, and they're auto-discovered like any other app ([manifest](apps/manifest.md), [writing an app](apps/writing-an-app.md)). Apps in `src/lib/apps/user/` aren't OS and aren't covered here.
 
-All of them have `categories: ["system"]`. Nothing reads `categories` except the apps inspector's count: system apps appear wherever user apps do. All UI is built from the kit in `$lib/core/components/ui` and follows the app frames in [docs/design/patterns.md](../design/patterns.md) (ADR-024).
+All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: the launcher lists them under System, last. Each still declares a `category` for search. All UI is built from the kit in `$lib/core/components/ui` and follows the app frames in [docs/design/patterns.md](../design/patterns.md) (ADR-024).
 
 | id | Name | Associations | Props | Window `defaults` | Services | App storage ([app context](apps/app-context.md)) |
 |----|------|--------------|-------|-------------------|----------|-------------|

@@ -29,8 +29,8 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 
 - A popover anchored to the dock (CSS anchor positioning): flush with the dock's start edge, 8px off it, opening away from the screen edge the taskbar is on and flipping if it doesn't fit.
 - It's a floating layer: `bg-background-lighter`, `shadow-popover`, on the shared scrim, so it reads as on top even over a window.
-- A large search field (focused on open) filters apps by name, id and keywords; Enter launches the first match once something is typed.
-- Apps are a 4-column grid of icon tiles. A pin button appears on hover or focus.
+- A large search field (focused on open) finds apps by name, then id, keywords, description and category, best match first; Enter launches the first match once something is typed.
+- With nothing typed, apps are grouped into sections (Productivity, Media, Utilities, Developer, Games, then System), each an overline over a 4-column grid of icon tiles. A pin button appears on hover or focus.
 - Footer: the logo mark, the name, and the build version in mono.
 
 ## Introduction
@@ -62,7 +62,7 @@ Phones and tablets share one shell ([system reference](../system/shell/mobile.md
 - **Home:** the desktop surface (`background-darkest` with the `background-dark` glow from the top) and the logo mark centred as a watermark in `primary/10`. Icons are 56px `rounded-2xl` tiles on `background-light` with `shadow-raised` and a hairline, a 28px duotone glyph and a two-line `text-xs` label. They flow with no gaps; pages snap sideways, with dots below (the current one a `primary` pill, like the introduction).
 - **Dock:** the taskbar's floating dock, centred, fitting its content: an All apps button (`SquaresFour`, duotone), a hairline separator, up to four tiles without labels.
 - **Long press** is the right-click: 450ms, a short vibration, then the menu. Moving after the hold drags: a ghost tile at `scale-110` with `shadow-popover`, a 2px `primary` bar marking where it lands, the dock tinting `primary/10` with a `primary/60` hairline when it accepts.
-- **App drawer:** a `rounded-t-3xl` sheet on `background-lighter` over the scrim, with a small grab bar, the large search field and the home tiles in an auto-fill grid. The grab bar means it: pull the top of the sheet down to close it.
+- **App drawer:** a `rounded-t-3xl` sheet on `background-lighter` over the scrim, with a small grab bar, the large search field and the home tiles in auto-fill grids, sectioned like the start menu. The grab bar means it: pull the top of the sheet down to close it.
 - **Switcher:** the scrim with a strong blur behind a row of live app cards at 66% (55% under notifications), `rounded-2xl`, `shadow-window-focused`, a `foreground/12` hairline, each under a header with the app's icon, name and close button. Flick a card up to close it. "Close all" is a secondary button below. Notifications, when there are any, list above the cards on `background-lighter` tiles; the running-apps button shows a `primary` dot when one is unread.
 - **Motion:** shell changes (opening an app, the switcher, going home) run as View Transitions; cards morph to fullscreen. Apps pop in (`animate-pop-in`) when they come on screen. All of it respects reduced motion.
 - **Toasts** come from the top, centred.

@@ -1,4 +1,5 @@
 import { define_app, WindowFlag } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Hand as HandIcon } from "phosphor-svelte";
 import { z } from "zod";
 
@@ -8,7 +9,7 @@ export default define_app({
   icon: HandIcon,
   version: "1.0.0",
   author: "John Doe",
-  categories: ["user"],
+  category: AppCategory.DEVELOPER,
   defaults: {
     constraints: {
       width: {

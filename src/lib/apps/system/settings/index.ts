@@ -1,4 +1,5 @@
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Gear as GearIcon } from "phosphor-svelte";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
@@ -8,7 +9,7 @@ export default define_app({
   name: "Settings",
   icon: GearIcon,
   version: "1.0.0",
-  categories: ["system"],
+  category: AppCategory.UTILITIES,
   defaults: {
     constraints: {
       width: { min: 640 },

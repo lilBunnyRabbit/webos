@@ -71,7 +71,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 ## App drawer
 
-`app-drawer.svelte`: the start menu's counterpart. A `rounded-t-3xl bg-background-lighter` sheet on the scrim, flying up 48px, below the top safe area plus 2rem. Search field (not auto-focused, so the keyboard stays down; Enter launches the first match), then every app in an auto-fill grid of the home's tiles (`search_apps()` from `services/apps/search.ts`, shared with the start menu). Tap launches; long press offers "Add to home screen" (`desktop.pin`). Tapping the scrim closes it. So does pulling the top of the sheet (grab bar and search row, `touch-none`) down past 96px; the sheet follows the finger and springs back when released short.
+`app-drawer.svelte`: the start menu's counterpart. A `rounded-t-3xl bg-background-lighter` sheet on the scrim, flying up 48px, below the top safe area plus 2rem. Search field (not auto-focused, so the keyboard stays down; Enter launches the first match), then the apps in auto-fill grids of the home's tiles: sectioned by `group_apps()` with no query, one ranked "Results" grid while searching (`services/apps/search.ts`, shared with the start menu). Tap launches; long press offers "Add to home screen" (`desktop.pin`). Tapping the scrim closes it. So does pulling the top of the sheet (grab bar and search row, `touch-none`) down past 96px; the sheet follows the finger and springs back when released short.
 
 ## Services read
 

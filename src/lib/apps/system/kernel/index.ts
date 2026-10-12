@@ -1,4 +1,5 @@
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Brain as BrainIcon } from "phosphor-svelte";
 
 export default define_app({
@@ -6,6 +7,6 @@ export default define_app({
   name: "Kernel",
   icon: BrainIcon,
   version: "1.0.0",
-  categories: ["system"],
+  category: AppCategory.DEVELOPER,
   component: () => import("./kernel.app.svelte"),
 });

@@ -1,18 +1,17 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
 ## `define_app(config)`
 
 ```ts
-function define_app<TProps extends AppProps = {}>(config: AppConfig<TProps>): AppManifest<TProps>
+function define_app<TProps extends AppProps = {}>(config: AppConfig<TProps>): AppDefinition<TProps>
 ```
 
-Takes an `AppConfig`, returns an `AppManifest`. It does two things:
+Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. Discovery (`src/lib/apps/index.ts`) turns each one into an `AppManifest` by adding `system: true` for apps under `./system/`. `define_app` itself does one thing:
 
-- `categories` defaults to `["user"]`.
 - `component` is wrapped: `() => config.component().then((m) => m.default)`. You write a plain dynamic import; the manifest's loader resolves straight to the component.
 
 `TProps` is inferred from the `props` schema.
@@ -26,9 +25,10 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 | `version` | `string` | yes | Stored only. Nothing reads it |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. Use a `phosphor-svelte` icon |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
-| `categories` | `AppCategory[]` | no, default `["user"]` | Stored only. Nothing filters or groups by it yet |
-| `description` | `string` | no | Stored only |
-| `keywords` | `string[]` | no | Start menu search matches them (substring, case-insensitive), alongside `name` and `id` |
+| `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
+| `system` | `boolean` | set by discovery | `true` for apps in `src/lib/apps/system/`. Puts the app in the launcher's System section; the apps inspector counts it. Not written in `define_app` |
+| `description` | `string` | no | Launcher search (lowest rank, with the category label) |
+| `keywords` | `string[]` | no | Launcher search, ranked with `id` below any name match |
 | `author` | `string` | no | Stored only |
 | `license` | `string` | no | Stored only |
 | `repository` | `string` | no | Stored only |
@@ -40,9 +40,16 @@ Takes an `AppConfig`, returns an `AppManifest`. It does two things:
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
 
-### `categories`
+### `category` and `system`
 
-`AppCategory = "system" | "user" | \`custom-${string}\``. ADR-001's `"utilities"` doesn't type-check; it would have to be `"custom-utilities"`. The folder (`system/` vs `user/`) and the category are independent: the default is `"user"` even for an app in `system/`, so system apps set `categories: ["system"]` explicitly.
+`AppCategory` is a const object: `PRODUCTIVITY`, `MEDIA`, `UTILITIES`, `DEVELOPER`, `GAMES`. One per app, required, closed: a new kind is a core edit. Labels live in `APP_CATEGORY_LABELS` (`search.ts`).
+
+Whether an app is a system app is where it lives, not what it declares. A system app still sets a `category`; it only feeds search, since every system app is grouped under System.
+
+### Launcher search and sections (`search.ts`)
+
+- `search_apps(apps, query)`: an empty (trimmed) query returns every app A–Z. Otherwise a case-insensitive substring match, ranked: name starts with the query, then a word of the name (split on spaces and hyphens) starts with it, then the name contains it, then `id` or a keyword, then `description` or the category label. Ties sort A–Z. The start menu and drawer launch the first result on Enter.
+- `group_apps(apps)`: `AppSection[]` (`{ id, label, apps }`) in `AppCategory` order, then System; each sorted A–Z; empty sections are dropped.
 
 ### `defaults: WindowOptions`
 
@@ -75,11 +82,12 @@ A manifest may import only **types and functions** from `$lib/core/api`. Import 
 ```ts
 import { define_app } from "$lib/core/api";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 ```
 
 Why: manifests are evaluated eagerly while the barrel is still initializing. The chain is `$lib/core/api` → `kernel` → `init.ts` → `apps/service.svelte.ts` → `$lib/apps` (eager glob) → your `index.ts` → `$lib/core/api` again, which is mid-evaluation. Function declarations are hoisted, so `define_app` works. A `const` from a module that hasn't run yet is in the temporal dead zone and throws.
 
-`FILE_PROPS` lives in `helpers.ts`, which nothing on that chain has evaluated yet, so importing it via the barrel throws. Importing `helpers.ts` directly evaluates it on the spot.
+`FILE_PROPS` (`helpers.ts`) and `AppCategory` (`type.ts`) live in modules nothing on that chain has evaluated yet, so importing them via the barrel throws. Importing the module directly evaluates it on the spot.
 
 Oddity: the Example app imports the const `WindowFlag` from the barrel and works. That's luck: `init.ts` imports `WindowsService` before `AppsService`, so `windows/type.ts` has already run. Don't rely on it.
 
@@ -87,6 +95,7 @@ Oddity: the Example app imports the const `WindowFlag` from the barrel and works
 
 ```ts
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
 import { FilePdf as FilePdfIcon } from "phosphor-svelte";
 
@@ -95,7 +104,7 @@ export default define_app({
   name: "PDF Viewer",
   icon: FilePdfIcon,
   version: "1.0.0",
-  categories: ["system"],
+  category: AppCategory.PRODUCTIVITY,
   associations: ["application/pdf", ".pdf"],
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 400 }, height: { min: 300 } } },
@@ -107,5 +116,5 @@ export default define_app({
 
 - ADR-001 `defaults.size`: not implemented.
 - ADR-001 glob `./**/index.ts`: the code uses `./system/*/index.ts` and `./user/*/index.ts`.
-- ADR-001 categories example `"utilities"`: not a valid `AppCategory`.
+- ADR-001 `categories: ["utilities"]` (an array): replaced by one `category` plus a folder-derived `system` (ADR-001 revision 2026-10-12).
 - ADR-008 sketches `define_app<TSchema extends ZodType>`. The code is generic over `TProps` with `props?: ZodType<TProps>`; inference works the same.

@@ -73,6 +73,7 @@ Always wrapped in `$derived` so service swapping (ADR-016) stays possible. Never
 
 ```ts
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Calculator as CalculatorIcon } from "phosphor-svelte";
 
 export default define_app({
@@ -80,7 +81,7 @@ export default define_app({
   name: "Calculator",
   icon: CalculatorIcon,
   version: "1.0.0",
-  categories: ["user"],
+  category: AppCategory.UTILITIES,
   defaults: { constraints: { width: { min: 300 } } },
   component: () => import("./calculator.app.svelte"),
 });

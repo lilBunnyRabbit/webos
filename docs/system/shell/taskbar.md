@@ -61,8 +61,8 @@ ADR-006 revision, [brainstorm](../../brainstorm/2026-10-12_notification-center.m
 
 Contents (`start-menu-popover.svelte`):
 
-1. A large `Input` ("Search apps"), focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It filters on the trimmed, lowercased query as a substring of the manifest's `name`, `id` or any `keywords` entry.
-2. An overline ("All apps", or "Results" while searching), then a 4-column grid of app tiles, sorted by name: a 44px icon tile (`bg-background`, `shadow-raised`, duotone glyph) over a one-line `text-2xs` name. No matches shows an `EmptyState` ("No apps match").
+1. A large `Input` ("Search apps"), focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): ranked substring over name, id, keywords, description and category label.
+2. With no query, one section per `group_apps()` entry (Productivity … Games, then System), each an overline and a grid. While searching, one "Results" overline and grid in rank order. Grids are 4 columns of app tiles: a 44px icon tile (`bg-background`, `shadow-raised`, duotone glyph) over a one-line `text-2xs` name. No matches shows an `EmptyState` ("No apps match").
 3. A pin `IconButton` in each tile's top-right corner, invisible until the tile is hovered or the pin has keyboard focus.
 4. A footer on `bg-background`: the logo lockup and "WebOS", a `↵ open` hint while a query has a first match, and `v{version} · {commit}` in mono.
 

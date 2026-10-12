@@ -1,4 +1,5 @@
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Swatches as SwatchesIcon } from "phosphor-svelte";
 
 export default define_app({
@@ -7,7 +8,7 @@ export default define_app({
   description: "Every design token and UI kit component, live in the current theme (docs/design).",
   icon: SwatchesIcon,
   version: "1.0.0",
-  categories: ["system"],
+  category: AppCategory.DEVELOPER,
   keywords: ["design", "components", "tokens"],
   defaults: {
     constraints: {

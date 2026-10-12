@@ -28,7 +28,15 @@ export interface OpenOptions {
   /** Where the user clicked; the "Open with" chooser anchors here (ADR-018). */
   anchor?: Position;
 }
-export type AppCategory = "system" | "user" | `custom-${string}`;
+/** What an app is, for grouping and search. Whether it's a system app comes from its folder, not from this. */
+export const AppCategory = {
+  PRODUCTIVITY: "productivity",
+  MEDIA: "media",
+  UTILITIES: "utilities",
+  DEVELOPER: "developer",
+  GAMES: "games",
+} as const;
+export type AppCategory = (typeof AppCategory)[keyof typeof AppCategory];
 export type AppProps = Record<string, unknown>;
 
 /** Resolved app manifest with normalized fields */
@@ -38,7 +46,9 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   version: string;
   icon: Component;
   description?: string;
-  categories: AppCategory[];
+  category: AppCategory;
+  /** Set at discovery: the app lives in `src/lib/apps/system/`. */
+  system: boolean;
   keywords?: string[];
   author?: string;
   license?: string;
@@ -56,10 +66,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   component: () => Promise<Component<Partial<TProps>>>;
 }
 
-/** Input type for define_app - categories optional, component returns module */
-export interface AppConfig<TProps extends AppProps = AppProps>
-  extends Omit<AppManifest<TProps>, "categories" | "component"> {
-  categories?: AppCategory[];
+/** What `define_app` returns: a manifest before discovery knows its folder. */
+export type AppDefinition<TProps extends AppProps = AppProps> = Omit<AppManifest<TProps>, "system">;
+
+/** Input type for define_app - component returns module */
+export interface AppConfig<TProps extends AppProps = AppProps> extends Omit<AppDefinition<TProps>, "component"> {
   component: () => Promise<{ default: Component<Partial<NoInfer<TProps>>> }>;
 }
 

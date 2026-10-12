@@ -244,6 +244,11 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Tic-Tac-Toe game (+ AI, stats, undo)
 - [x] Profiler → Activity Monitor system app (per-window DOM activity, FPS, long frames, network, storage, workers; only while open) — [brainstorm](brainstorm/2026-10-11_app-ports.md)
 
+### App catalogue
+- **Brainstorm:** [2026-10-12 App candidates](brainstorm/2026-10-12_app-candidates.md): every candidate rated build now / after a gate / skip, and the rules for building apps in parallel
+- [x] Categories + launcher sections + ranked search (ADR-001 revision, 2026-10-12)
+- [ ] Batch 1: owner picks from the build-now list
+
 ### New System Apps
 - [ ] Markdown Viewer (rendered `.md`, extension tier over Text Viewer; parser is a dependency question)
 - [x] CSV Viewer (`.csv`/`.tsv` as a table)

@@ -2,6 +2,11 @@
 **Date:** 2026-01-24
 **Status:** Implemented
 
+> **Revision 2026-10-12: one category, system from the folder** (owner, [brainstorm](../brainstorm/2026-10-12_app-candidates.md))
+> - `categories: AppCategory[]` (`"system" | "user" | custom-*`) is replaced by a required `category` from a closed const object: Productivity, Media, Utilities, Developer, Games.
+> - `system: boolean` is set at discovery from the folder (`./system/*`). `define_app` returns an `AppDefinition` without it.
+> - The start menu and mobile drawer group apps into sections by category, System last, while the query is empty. Search ranks name prefix, word prefix, name substring, then id/keywords, then description/category.
+
 ## Context
 
 Need a consistent structure for defining app metadata, window configuration, and component loading. Apps should be auto-discovered (no manual registration) with lazy component loading but eager metadata access.

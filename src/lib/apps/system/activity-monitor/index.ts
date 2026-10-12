@@ -1,4 +1,5 @@
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Pulse as PulseIcon } from "phosphor-svelte";
 
 export default define_app({
@@ -6,7 +7,7 @@ export default define_app({
   name: "Activity Monitor",
   icon: PulseIcon,
   version: "1.0.0",
-  categories: ["system"],
+  category: AppCategory.DEVELOPER,
   defaults: {
     constraints: {
       width: { min: 480 },

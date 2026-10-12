@@ -17,6 +17,7 @@ The folder must sit directly under `system/` or `user/`; deeper folders aren't d
 ```ts
 // index.ts
 import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
 import { Notepad as NotepadIcon } from "phosphor-svelte";
 
@@ -25,7 +26,7 @@ export default define_app({
   name: "Notes",
   icon: NotepadIcon,
   version: "1.0.0",
-  categories: ["user"],
+  category: AppCategory.PRODUCTIVITY,
   associations: [".note"],
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 240 } } },
