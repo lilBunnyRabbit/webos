@@ -36,14 +36,14 @@
   {#if result.ok}
     <TextArea value={result.value} rows={4} readonly aria-label="Result" />
   {:else}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 text-ui text-error">{result.error}</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{result.error}</p>
   {/if}
 </Section>
 
 <Section title="Parse a URL" flush>
   <Input bind:value={value.parse_input} aria-label="URL to parse" placeholder="https://example.com/path?q=1#top" class="font-mono" />
   {#if value.parse_input.trim() && !parsed}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 text-ui text-error">Not an absolute URL. Include the scheme, such as https://.</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">Not an absolute URL. Include the scheme, such as https://.</p>
   {:else if parsed}
     <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
       {#each parsed.parts as part (part.label)}

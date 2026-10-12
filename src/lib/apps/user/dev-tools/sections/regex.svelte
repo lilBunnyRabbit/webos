@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Badge, Input, Section } from "$lib/core/components/ui";
+  import { Badge, Input, Section, button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { MAX_MATCHES, find_matches, segment_text } from "../regex";
   import type { DevToolsState } from "../tools";
@@ -41,10 +41,11 @@
         type="button"
         aria-pressed={on}
         title={label}
-        class={cn(
-          "flex h-6 items-center gap-1 rounded-md px-2 text-2xs transition-colors duration-150 pointer-coarse:h-8",
-          on ? "bg-primary/15 text-primary" : "text-foreground/65 hover:bg-foreground/8 hover:text-foreground"
-        )}
+        class={button({
+          variant: "quiet",
+          size: "sm",
+          class: cn("gap-1 px-2 font-normal", on && "bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary active:bg-primary/20"),
+        })}
         onclick={() => toggle(flag)}
       >
         <span class="font-mono font-semibold">{flag}</span>{label}
@@ -52,7 +53,7 @@
     {/each}
   </div>
   {#if result && !result.ok}
-    <p role="alert" class="rounded-md bg-error/10 px-3 py-2 font-mono text-2xs text-error">{result.error}</p>
+    <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{result.error}</p>
   {/if}
 </div>
 

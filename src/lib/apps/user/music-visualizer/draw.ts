@@ -2,7 +2,8 @@ import { clamp, wave_sample } from "./spectrum";
 
 export interface Palette {
   primary: string;
-  secondary: string;
+  /** Primary at low opacity: the brand allows a gradient within one colour, never between two. */
+  primary_faint: string;
   foreground: string;
 }
 
@@ -16,11 +17,15 @@ export interface Surface {
 
 // A token may be written with var() or relative colour syntax, which a canvas can't parse, so it's resolved by a probe.
 export function read_palette(probe: HTMLElement): Palette {
-  const token = (name: string) => {
-    probe.style.color = `var(--${name})`;
+  const resolve = (value: string) => {
+    probe.style.color = value;
     return getComputedStyle(probe).color;
   };
-  const palette = { primary: token("primary"), secondary: token("secondary"), foreground: token("foreground") };
+  const palette = {
+    primary: resolve("var(--primary)"),
+    primary_faint: resolve("color-mix(in oklab, var(--primary) 40%, transparent)"),
+    foreground: resolve("var(--foreground)"),
+  };
   probe.style.color = "";
   return palette;
 }
@@ -38,8 +43,8 @@ export function draw_bars({ ctx, width, height, dpr, palette }: Surface, levels:
   const bar = Math.max(1, slot - gap);
   const floor = height - 4 * dpr;
   const gradient = ctx.createLinearGradient(0, floor, 0, 0);
-  gradient.addColorStop(0, palette.primary);
-  gradient.addColorStop(1, palette.secondary);
+  gradient.addColorStop(0, palette.primary_faint);
+  gradient.addColorStop(1, palette.primary);
   ctx.fillStyle = gradient;
   ctx.beginPath();
   for (let i = 0; i < count; i++) {
@@ -96,8 +101,8 @@ export function draw_radial({ ctx, width, height, dpr, palette }: Surface, level
 
   const spokes = count * 2;
   const gradient = ctx.createRadialGradient(cx, cy, radius, cx, cy, radius + reach);
-  gradient.addColorStop(0, palette.primary);
-  gradient.addColorStop(1, palette.secondary);
+  gradient.addColorStop(0, palette.primary_faint);
+  gradient.addColorStop(1, palette.primary);
   ctx.strokeStyle = gradient;
   ctx.lineWidth = Math.max(dpr, ((Math.PI * 2 * radius) / spokes) * 0.6);
   ctx.lineCap = "round";

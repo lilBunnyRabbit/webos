@@ -76,11 +76,11 @@
   }
 </script>
 
-<Section flush>
-  <div class="flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+<Section>
+  <div class="flex flex-col gap-3 p-4">
     <div class="flex items-start gap-2">
       <output aria-live="polite" class="min-w-0 flex-1 font-mono text-lg break-all select-all">{generated?.password ?? ""}</output>
-      <IconButton label="New password" size="sm" disabled={!checked.ok} onclick={regenerate}><ArrowsClockwiseIcon /></IconButton>
+      <IconButton label="New password" size="sm" disabled={!checked.ok} onclick={regenerate}><ArrowsClockwiseIcon weight="bold" /></IconButton>
       <CopyButton text={generated?.password ?? ""} label="Copy password" disabled={!generated} />
     </div>
     {#if generated}

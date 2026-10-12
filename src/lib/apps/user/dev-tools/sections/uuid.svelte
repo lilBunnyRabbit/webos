@@ -39,7 +39,7 @@
       }}
     />
   </label>
-  <Button size="md" variant="primary" onclick={generate}><ArrowsClockwiseIcon /> Generate</Button>
+  <Button size="md" variant="primary" onclick={generate}><ArrowsClockwiseIcon weight="bold" />Generate</Button>
 </div>
 
 <Section title={ids.length === 1 ? "UUID" : `${ids.length} UUIDs`} flush>

@@ -40,9 +40,9 @@
 </div>
 
 {#if check?.ok}
-  <p class="flex items-center gap-1.5 text-ui text-success"><CheckCircleIcon weight="fill" class="size-4" /> Valid JSON</p>
+  <p class="flex items-center gap-1.5 text-ui text-success"><CheckCircleIcon weight="fill" class="size-4" />Valid JSON</p>
 {:else if check}
-  <div role="alert" class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-error/10 px-3 py-2 text-ui text-error">
+  <div role="alert" class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-error/12 px-3 py-2 text-ui text-error">
     <span class="min-w-0 flex-1">{check.error}</span>
     {#if check.position}
       <button type="button" class="font-mono text-2xs underline underline-offset-2 hover:opacity-85" onclick={show_error}>
