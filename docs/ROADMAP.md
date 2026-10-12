@@ -291,7 +291,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
 - [ ] Compression Tools — DEFLATE, LZ77, Huffman + WASM
-- [ ] P2P File Transfer — WebRTC, room codes, QR share
+- [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
 
 ### static-utils Ports
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
