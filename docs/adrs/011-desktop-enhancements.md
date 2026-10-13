@@ -3,6 +3,14 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+> **Revision 2026-10-13: wallpaper and Sort by decided** (owner, [brainstorm](../brainstorm/2026-10-13_desktop-theming.md))
+> - Wallpaper is a token **preset** (CSS drawn from theme tokens, so it follows every theme) or a user **image** with fit (fill, fit, tile, center), dim and blur. No solid colour or gradient pickers: they would add colours outside the token system.
+> - It's an additive `wallpaper` field in `/etc/settings.json` on SettingsService. `set_wallpaper_image(source: string | File)` copies the image to `/var/lib/wallpaper/` and deletes the previous copy, so moving or deleting the original doesn't break it.
+> - One `Wallpaper` component sits behind both the desktop and the phone home screen. The phone has no icon cells, so the grid preset draws without dots there.
+> - Set from Settings › Appearance (presets, Choose image…, From device…) or "Set as wallpaper" on an image file.
+> - Auto-arrange is a one-shot **Sort by** submenu in the desktop background menu: Name, Kind, Date modified. It rewrites `layout.json` once, column by column from the top left. Folders have no modified time in OPFS, so they come first by date. No persistent arranged mode.
+> - Icon size, labels and spacing settings are not part of this.
+
 > **Revision 2026-10-12: multi-select decided** (owner, [brainstorm](../brainstorm/2026-10-12_multi-select.md))
 > - Selection is local state in each surface (desktop, File Explorer list) with one pure helper for the click rules and rectangle hit-testing. Not persisted, not on a service. Desktop pointer only: mobile is unchanged.
 > - Marquee, Ctrl+Click toggle, Shift+Click range, Ctrl+A, Esc. Delete / Cut / Copy / Open act on the whole selection; Rename, Properties and Save to disk need exactly one.
