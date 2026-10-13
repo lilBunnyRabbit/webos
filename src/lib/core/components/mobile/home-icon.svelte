@@ -11,18 +11,21 @@
   const text = $derived(item.kind === "shortcut" ? item.label : item.name);
 </script>
 
-<span
-  class={cn(
-    "grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10",
-    class_name
-  )}
->
-  {#if item.kind === "shortcut"}
-    <ShortcutIcon app_id={item.app_id} class="size-7" />
-  {:else}
-    <FileIcon name={item.name} kind={item.kind} mime_type={item.kind === "file" ? item.type : undefined} class="size-7" weight="duotone" />
-  {/if}
-</span>
+<!-- Same rule as the desktop: apps on a tile, files and folders bare. -->
+{#if item.kind === "shortcut"}
+  <span
+    class={cn(
+      "grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10",
+      class_name
+    )}
+  >
+    <ShortcutIcon app_id={item.app_id} badge={false} class="size-7" />
+  </span>
+{:else}
+  <span class={cn("grid size-14 shrink-0 place-items-center", class_name)}>
+    <FileIcon name={item.name} kind={item.kind} mime_type={item.kind === "file" ? item.type : undefined} class={cn("bare-glyph size-12", item.kind === "directory" ? "text-primary" : "text-foreground/85")} weight={item.kind === "directory" ? "fill" : "duotone"} />
+  </span>
+{/if}
 {#if label}
   <span data-wallpaper-label class="line-clamp-2 max-w-full px-0.5 text-center text-xs leading-tight font-medium break-words">
     {text}{#if missing_app}<span class="text-error"> · missing</span>{/if}

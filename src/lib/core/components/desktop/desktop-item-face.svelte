@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService, type DesktopItem } from "$lib/core/api";
+  import { cn } from "$lib/core/utils";
   import FileIcon from "../files/file-icon.svelte";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
 
@@ -10,15 +11,18 @@
   const label = $derived(item.kind === "shortcut" ? item.label : item.name);
 </script>
 
-<div
-  class="grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-transform duration-150 group-hover:-translate-y-0.5"
->
-  {#if item.kind === "shortcut"}
-    <ShortcutIcon app_id={item.app_id} class="size-6" />
-  {:else}
-    <FileIcon name={item.name} kind={item.kind} mime_type={item.kind === "file" ? item.type : undefined} class="size-6" weight="duotone" />
-  {/if}
-</div>
+<!-- Apps sit on a raised tile, files and folders are bare glyphs, so a program never reads as a document. -->
+{#if item.kind === "shortcut"}
+  <div
+    class="grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-transform duration-150 group-hover:-translate-y-0.5"
+  >
+    <ShortcutIcon app_id={item.app_id} badge={false} class="size-6" />
+  </div>
+{:else}
+  <div class="grid size-11 shrink-0 place-items-center transition-transform duration-150 group-hover:-translate-y-0.5">
+    <FileIcon name={item.name} kind={item.kind} mime_type={item.kind === "file" ? item.type : undefined} class={cn("bare-glyph size-10", item.kind === "directory" ? "text-primary" : "text-foreground/85")} weight={item.kind === "directory" ? "fill" : "duotone"} />
+  </div>
+{/if}
 <span data-wallpaper-label class="line-clamp-2 max-w-full px-0.5 text-center text-2xs leading-tight font-medium break-words text-foreground/80" title={item.name}>
   {label}{#if missing_app}<span class="text-error"> · missing</span>{/if}
 </span>

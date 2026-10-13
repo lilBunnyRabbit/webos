@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Hands off the system",
     changes: [
       { kind: IMPROVED, text: "System files open read-only, and Save as won't write into system folders. Save as… keeps an editable copy." },
+      { kind: IMPROVED, text: "Apps on the desktop and home screen sit on tiles while files and folders don't, so the shortcut arrows are gone." },
     ],
   },
   {

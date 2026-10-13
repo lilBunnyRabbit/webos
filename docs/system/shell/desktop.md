@@ -38,16 +38,16 @@ Set from Settings › Appearance › Wallpaper, or "Set as wallpaper" on an imag
 
 Each icon is an entry of `/home/Desktop` ([services/desktop.md](../services/desktop.md#model)). `DesktopItemFace` draws it:
 
-The icon sits in a 44px `rounded-xl` tile (`bg-background-light`, `shadow-raised`, hairline ring) with a 24px glyph:
+Apps and files look different without a badge: an app shortcut sits in a 44px `rounded-xl` tile (`bg-background-light`, `shadow-raised`, hairline ring) with a 24px glyph; files and folders are a bare 40px glyph (`.bare-glyph` in `app.css`: a soft `background-darkest` drop shadow, and on a photo wallpaper a 1px `background` halo too):
 
 | Kind | Glyph | Label |
 |------|-------|-------|
-| `shortcut` | `ShortcutIcon` (`components/files/shortcut-icon.svelte`): the target app's icon with an arrow badge in the bottom-right corner, or a generic `AppWindow` glyph when the app isn't registered | `item.label` (file name without `.desktop`), plus " · missing" in `text-error` when the app isn't registered |
-| `file` | `FileIcon` by MIME, then extension (duotone) | File name |
-| `directory` | `FileIcon` folder (duotone) | Folder name |
+| `shortcut` | `ShortcutIcon` (`components/files/shortcut-icon.svelte`) with `badge={false}`: the target app's icon, or a generic `AppWindow` glyph when the app isn't registered. File Explorer rows keep the arrow badge (the default) | `item.label` (file name without `.desktop`), plus " · missing" in `text-error` when the app isn't registered |
+| `file` | `FileIcon` by MIME, then extension, duotone at `foreground/85` | File name |
+| `directory` | `FileIcon` folder, `fill` in `primary` | Folder name |
 
 - The label is up to two lines (`line-clamp-2`, `text-2xs`, `break-words`), with the full entry name as its `title`.
-- It's a `<button>` filling its cell (`rounded-xl`, `draggable`, `data-desktop-name`, `aria-pressed` when selected). Hover tints the cell `foreground/6` and lifts the tile 2px (`group-hover:-translate-y-0.5`). Selected: `primary/14` with an inset `primary/40` ring. Drop target (a folder under a drag): `primary/18`, inset `primary/70` 2px ring. Dragged or cut: 40% opacity. Keyboard focus: `foreground/8` plus the global cottontail outline.
+- It's a `<button>` filling its cell (`rounded-xl`, `draggable`, `data-desktop-name`, `aria-pressed` when selected). Hover tints the cell `foreground/6` and lifts the tile or glyph 2px (`group-hover:-translate-y-0.5`). Selected: `primary/14` with an inset `primary/40` ring. Drop target (a folder under a drag): `primary/18`, inset `primary/70` 2px ring. Dragged or cut: 40% opacity. Keyboard focus: `foreground/8` plus the global cottontail outline.
 
 ## Selection (ADR-011 revision)
 
