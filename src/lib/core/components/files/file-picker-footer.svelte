@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { join_path } from "$lib/core/api/services/files/path";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Input } from "../ui";
   import type { PickerMode } from "./picker";
 
@@ -16,7 +17,9 @@
   const trimmed = $derived(name.trim());
   const existing = $derived(handler.items.find((item) => item.name === trimmed));
   const invalid = $derived(!trimmed || trimmed === "." || trimmed === ".." || trimmed.includes("/"));
-  const save_path = $derived(invalid || existing?.kind === "directory" ? null : join_path(handler.segments, trimmed));
+  // OS folders are read-only to apps: their files belong to the OS, which rewrites them on its own.
+  const system = $derived(is_system_path(handler.path));
+  const save_path = $derived(system || invalid || existing?.kind === "directory" ? null : join_path(handler.segments, trimmed));
 </script>
 
 {#if picker.kind === "save"}
@@ -28,13 +31,15 @@
     }}
   >
     <Input bind:value={name} aria-label="File name" placeholder="File name" class="min-w-48 flex-1" autofocus />
-    {#if existing?.kind === "directory"}
+    {#if system}
+      <span class="shrink-0 text-2xs text-error">System folders are read-only</span>
+    {:else if existing?.kind === "directory"}
       <span class="shrink-0 text-2xs text-error">A folder has this name</span>
     {:else if existing}
       <span class="shrink-0 text-2xs text-foreground/80">Replaces the existing file</span>
     {/if}
     <Button type="button" variant="quiet" onclick={picker.oncancel}>Cancel</Button>
-    <Button type="submit" variant={existing ? "danger" : "primary"} disabled={!save_path}>{existing ? "Replace" : "Save"}</Button>
+    <Button type="submit" variant={existing && !system ? "danger" : "primary"} disabled={!save_path}>{existing && !system ? "Replace" : "Save"}</Button>
   </form>
 {:else}
   <div class="flex shrink-0 items-center gap-3 border-t border-foreground/8 bg-background-light px-3 py-2.5">

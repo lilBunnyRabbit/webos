@@ -10,6 +10,7 @@
   import { Button, IconButton, Input, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message, file_stem, load_image, load_image_at, parent_folder, type SourceImage } from "$lib/core/utils/image";
   import {
@@ -317,13 +318,16 @@
     const path = await win.pick_save({
       name: file_name,
       accept: ["image/*"],
-      start_path: file_path ? parent_folder(file_path) : "/home",
+      start_path: file_path && !read_only ? parent_folder(file_path) : "/home",
     });
     return path ? write(path) : false;
   }
 
+  /** An OS file (/etc, /var, /tmp) is never written back; Save asks where to keep a copy. */
+  const read_only = $derived(file_path !== null && is_system_path(file_path));
+
   function save(): Promise<boolean> {
-    return file_path ? write(file_path) : save_as();
+    return file_path && !read_only ? write(file_path) : save_as();
   }
 
   // The OS owns the unsaved-changes flow (ADR-029): titlebar title and dot, the close sheet, the tab-close warning.

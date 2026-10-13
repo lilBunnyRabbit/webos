@@ -8,6 +8,7 @@
     type ShortcutsService,
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
@@ -22,6 +23,7 @@
     FloppyDiskBack as FloppyDiskBackIcon,
     Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
+    LockSimple as LockSimpleIcon,
     TextAlignLeft as TextAlignLeftIcon,
     Warning as WarningIcon,
     WarningCircle as WarningCircleIcon,
@@ -65,8 +67,11 @@
   let view = $state.raw<EditorView | null>(null);
   const wrap_slot = new Compartment();
   const language_slot = new Compartment();
+  const read_only_slot = new Compartment();
 
   const dirty = $derived(text !== saved_text);
+  /** OS files (/etc, /var, /tmp) are for reading; a change can only be saved as a copy elsewhere. */
+  const read_only = $derived(path !== null && is_system_path(path));
   const name = $derived(path ? path.slice(path.lastIndexOf("/") + 1) : (device_name ?? "Untitled"));
   const is_markdown = $derived(language_for(name) === Language.MARKDOWN);
   const mode = $derived(is_markdown ? markdown_mode.value : MarkdownMode.EDIT);
@@ -89,6 +94,7 @@
           token_highlight,
           wrap_slot.of(untrack(() => wrap.value) ? EditorView.lineWrapping : []),
           language_slot.of([]),
+          read_only_slot.of([]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) text = update.state.doc.toString();
           }),
@@ -235,13 +241,13 @@
     const target = await win.pick_save({
       name: path ? name : (device_name ?? "Untitled.txt"),
       accept: manifest.associations,
-      start_path: path ? parent_folder(path) : "/home",
+      start_path: path && !read_only ? parent_folder(path) : "/home",
     });
     return target ? write(target) : false;
   }
 
   function save(): Promise<boolean> {
-    return path ? write(path) : save_as();
+    return path && !read_only ? write(path) : save_as();
   }
 
   async function check_disk() {
@@ -300,6 +306,11 @@
     view?.dispatch({ effects: wrap_slot.reconfigure(on ? EditorView.lineWrapping : []) });
   });
 
+  $effect(() => {
+    const locked = read_only;
+    view?.dispatch({ effects: read_only_slot.reconfigure(locked ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []) });
+  });
+
   $effect(() => win.set_title(name));
   $effect(() => win.set_dirty(dirty, { save }));
 
@@ -322,7 +333,7 @@
     <IconButton label="New" size="sm" onclick={new_file}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
     <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
-    <IconButton label="Save" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
+    <IconButton label="Save" size="sm" disabled={read_only} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />
     <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={path ?? "Not saved yet"}>{path ?? "Not saved yet"}</span>
@@ -343,6 +354,14 @@
     </IconButton>
     <CopyButton {text} label="Copy all" />
   </Toolbar>
+
+  {#if read_only}
+    <div class="flex flex-wrap items-center gap-2 border-b border-foreground/8 bg-info/10 px-3 py-1.5 text-ui">
+      <LockSimpleIcon class="size-4 shrink-0 text-info" weight="fill" />
+      <span class="min-w-0 flex-1">This is a system file, so it opens read-only. Save as… keeps a copy you can edit.</span>
+      <Button size="sm" variant="secondary" onclick={save_as}>Save as…</Button>
+    </div>
+  {/if}
 
   {#if stale_modified !== null}
     <div role="alert" class="flex flex-wrap items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-1.5 text-ui">
@@ -386,6 +405,7 @@
 
   <StatusBar>
     <span class="truncate">{name}</span>
+    {#if read_only}<span class="shrink-0">Read-only</span>{/if}
     <span class="ml-auto">{line_count} lines</span>
     <span>{text.length} chars</span>
     <span>{format_bytes(new TextEncoder().encode(text).length)}</span>
