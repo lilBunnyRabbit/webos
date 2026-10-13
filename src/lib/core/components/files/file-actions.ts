@@ -11,6 +11,7 @@ import kernel, {
   type FilesService,
   type MenuItem,
   type NotificationsService,
+  type SettingsService,
 } from "$lib/core/api";
 import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { FileSystemItem } from "$lib/core/api/services/files";
@@ -137,5 +138,16 @@ export async function save_to_disk(path: string): Promise<void> {
     kernel.service<NotificationsService>("notifications").notify("file-explorer", { title: "Saved to disk", message: written });
   } catch (error) {
     report_file_error(`Could not save "${name}" to disk`, error);
+  }
+}
+
+export const is_image = (type: string | undefined): boolean => type?.startsWith("image/") ?? false;
+
+/** Copies the image into the OS's own storage, so the wallpaper survives the file moving or being deleted. */
+export async function set_wallpaper(source: string | File): Promise<void> {
+  try {
+    await kernel.service<SettingsService>("settings").set_wallpaper_image(source);
+  } catch (error) {
+    report_file_error("Couldn't set the wallpaper", error);
   }
 }

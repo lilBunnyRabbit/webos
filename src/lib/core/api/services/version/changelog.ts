@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.27.0",
+    date: "2026-10-13",
+    title: "Wallpapers",
+    changes: [
+      { kind: NEW, text: "Wallpapers: pick a background that follows your theme, or use your own photo with fill, fit, tile, dim and blur. It shows on the phone's home screen too." },
+      { kind: NEW, text: "Right-click an image and choose Set as wallpaper, from the desktop, File Explorer or Media Preview." },
+      { kind: NEW, text: "Sort desktop icons by name, kind or date from the desktop's right-click menu." },
+    ],
+  },
+  {
     version: "0.26.0",
     date: "2026-10-13",
     title: "More puzzles",

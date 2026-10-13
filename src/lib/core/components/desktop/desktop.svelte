@@ -1,10 +1,11 @@
 <script lang="ts">
-  import kernel, { type ClipboardService, type DesktopItem as Item, type GridDesktopService } from "$lib/core/api";
+  import kernel, { type ClipboardService, type DesktopItem as Item, type GridDesktopService, type SettingsService } from "$lib/core/api";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { click_select, intersects, rect_from_points, type Rect } from "$lib/core/utils/selection";
   import type { Position } from "$lib/core/utils/type";
   import { drop_paths, has_drag_paths, has_os_files, import_dropped, read_drag_paths, read_os_entries, set_drag_paths } from "../files/drag";
   import DesktopItem from "./desktop-item.svelte";
+  import Wallpaper from "./wallpaper.svelte";
   import {
     background_menu,
     copy_items,
@@ -20,6 +21,7 @@
 
   const desktop = $derived(kernel.service<GridDesktopService>("desktop"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
 
   /** Every visible item with its cell, in reading order: rows top to bottom, cells left to right. */
   const cells = $derived.by(() => {
@@ -221,7 +223,7 @@
     event.preventDefault();
     background_menu({ x: event.clientX, y: event.clientY });
   }}
-  class="desktop-surface relative grid size-full place-items-center overflow-hidden outline-none"
+  class="desktop-surface relative isolate grid size-full place-items-center overflow-hidden outline-none"
   style:grid-template-columns={`repeat(${desktop.container.grid.columns}, minmax(64px, 1fr))`}
   style:grid-template-rows={`repeat(${desktop.container.grid.rows}, minmax(64px, 1fr))`}
   style:grid-auto-flow="dense"
@@ -229,7 +231,10 @@
   style:--cell-width="{desktop.container.cell.width || 88}px"
   style:--cell-height="{desktop.container.cell.height || 88}px"
   style:--grid-offset="{desktop.container.config.padding}px"
+  data-dots={settings.wallpaper.kind === "preset" && settings.wallpaper.preset === "grid" ? "" : undefined}
+  data-wallpaper-image={settings.wallpaper.kind === "image" ? "" : undefined}
 >
+  <Wallpaper />
   {#if desktop.container.grid.columns > 0 && desktop.container.grid.rows > 0}
     {#each drag_targets as target, idx (idx)}
       {#if target.x >= 0 && target.y >= 0 && target.x < desktop.container.grid.columns && target.y < desktop.container.grid.rows}
@@ -277,18 +282,16 @@
 </div>
 
 <style>
-  /* The dot grid marks the icon cells; a soft glow from the top keeps the darkest shade from reading as a void.
-     Both are shades of the same surface (gradients between shades are allowed by the brand). */
-  .desktop-surface {
-    background-color: var(--background-darkest);
-    background-image:
-      radial-gradient(circle at center, color-mix(in oklch, var(--foreground) 14%, transparent) 1px, transparent 1.5px),
-      radial-gradient(ellipse 90% 70% at 50% -10%, var(--background-dark), transparent 70%);
-    background-size:
-      var(--cell-width) var(--cell-height),
-      100% 100%;
-    background-position:
-      calc(var(--grid-offset) - var(--cell-width) / 2) calc(var(--grid-offset) - var(--cell-height) / 2),
-      0 0;
+  /* The grid wallpaper's dots mark the icon cells; they're drawn here because only the desktop knows the cell size. */
+  .desktop-surface[data-dots]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(circle at center, color-mix(in oklch, var(--foreground) 14%, transparent) 1px, transparent 1.5px);
+    background-size: var(--cell-width) var(--cell-height);
+    background-position: calc(var(--grid-offset) - var(--cell-width) / 2) calc(var(--grid-offset) - var(--cell-height) / 2);
   }
+
 </style>

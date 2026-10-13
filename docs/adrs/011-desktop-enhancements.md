@@ -1,7 +1,7 @@
 # ADR-011: Desktop Enhancements
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Implemented (icon size, labels and spacing settings not built)
 
 > **Revision 2026-10-13: wallpaper and Sort by decided** (owner, [brainstorm](../brainstorm/2026-10-13_desktop-theming.md))
 > - Wallpaper is a token **preset** (CSS drawn from theme tokens, so it follows every theme) or a user **image** with fit (fill, fit, tile, center), dim and blur. No solid colour or gradient pickers: they would add colours outside the token system.

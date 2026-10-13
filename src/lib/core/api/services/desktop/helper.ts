@@ -2,6 +2,13 @@ import type { DesktopGrid, DesktopItem } from "./type";
 import type { Positions } from "./layout";
 import type { Position } from "$lib/core/utils/type";
 
+export const DesktopSort = {
+  NAME: "name",
+  KIND: "kind",
+  DATE: "date",
+} as const;
+export type DesktopSort = (typeof DesktopSort)[keyof typeof DesktopSort];
+
 export interface DesktopMove {
   name: string;
   to: Position;
@@ -97,4 +104,33 @@ export class DesktopHelper {
 
     return fitted;
   }
+
+  /**
+   * Moves that lay `items` out in sorted order, column by column from the top left (ADR-011 revision). Kind: folders,
+   * app shortcuts, then files by extension. Date: newest first; folders have no modified time in OPFS, so they lead.
+   */
+  public static sort_moves(items: DesktopItem[], by: DesktopSort, rows: number, modified: Map<string, number> = new Map()): DesktopMove[] {
+    if (rows <= 0) return [];
+    const sorted = [...items].sort((a, b) => {
+      if (by === DesktopSort.KIND) return kind_rank(a) - kind_rank(b) || extension(a).localeCompare(extension(b)) || compare_names(a, b);
+      if (by === DesktopSort.DATE) {
+        if (a.kind === "directory" || b.kind === "directory") return kind_rank(a) - kind_rank(b) || compare_names(a, b);
+        return (modified.get(b.name) ?? 0) - (modified.get(a.name) ?? 0) || compare_names(a, b);
+      }
+      return compare_names(a, b);
+    });
+    return sorted.map((item, i) => ({ name: item.name, to: { x: Math.floor(i / rows), y: i % rows } }));
+  }
+}
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+
+const display_name = (item: DesktopItem) => (item.kind === "shortcut" ? item.label : item.name);
+const compare_names = (a: DesktopItem, b: DesktopItem) => collator.compare(display_name(a), display_name(b));
+const kind_rank = (item: DesktopItem) => (item.kind === "directory" ? 0 : item.kind === "shortcut" ? 1 : 2);
+
+function extension(item: DesktopItem): string {
+  if (item.kind !== "file") return "";
+  const dot = item.name.lastIndexOf(".");
+  return dot > 0 ? item.name.slice(dot + 1).toLowerCase() : "";
 }

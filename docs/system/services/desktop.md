@@ -11,7 +11,7 @@ The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon.
 | `type.ts` | `DesktopService` (base), `GridDesktopService`, `MobileDesktopService` interfaces, `DesktopGrid`, `DesktopItem` |
 | `folder.svelte.ts` | `DesktopFolder`: the folder state and operations both layouts share, `DEFAULT_SHORTCUTS`, `write_var_lib()` |
 | `service.svelte.ts` | Desktop implementation (`GridDesktopService`) |
-| `helper.ts` | `DesktopHelper.arrange()` and `DesktopHelper.fit()`, both pure |
+| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()` and `sort_moves()`, all pure; `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
 | `layout.ts` | `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions` |
 
 Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/shortcut.ts`, see [apps.md](apps.md#shortcuts-desktop-files).

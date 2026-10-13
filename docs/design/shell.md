@@ -4,7 +4,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 
 ## Desktop
 
-- Surface: `background-darkest` with a soft `background-dark` glow from the top (a gradient between shades of one surface), and a dot at every icon-cell corner in `foreground/14`. The dots are the grid icons snap to.
+- Surface: the wallpaper. The default Grid preset is `background-darkest` with a soft `background-dark` glow from the top (a gradient between shades of one surface) and a dot at every icon-cell corner in `foreground/14`, the grid icons snap to. Other presets: Glow (no dots), Tint (one `primary` glow from the bottom right), Plain. A user image may be dimmed toward `background-darkest` and blurred; on an image, labels get a `background/72` backing.
 - Cells are 88px. An icon is a 44px `rounded-xl` tile on `background-light` with `shadow-raised` and a hairline, a 24px duotone glyph, and a two-line `text-2xs` label below. Shortcuts show the target app's icon with an arrow badge.
 - Hover lifts the tile 2px and tints the cell `foreground/6`; keyboard focus tints `foreground/8` with the cottontail ring. Selected icons are `primary/14` with a `primary/40` inset ring. A drag shows the browser's ghost and a `foreground/6` outline on each target cell; a folder under the drag lights up `primary/18` with a `primary/70` ring. See [Selection](patterns.md#selection-and-drag).
 

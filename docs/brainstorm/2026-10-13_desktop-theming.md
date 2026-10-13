@@ -59,11 +59,11 @@ ADR-011 asks for solid, gradient and image wallpapers (fit modes, blur, tint, br
 ## Action items
 
 - [x] ADR-011 revision: wallpaper and Sort by
-- [ ] Settings: `wallpaper` field, `set_wallpaper_image`, parse/sanitize, tests
-- [ ] `Wallpaper` component behind desktop and mobile home
-- [ ] Settings › Appearance › Wallpaper; "Set as wallpaper" on image files
-- [ ] Desktop background menu: Sort by Name / Kind / Date modified
-- [ ] docs/system, design patterns, ROADMAP, changelog
+- [x] Settings: `wallpaper` field, `set_wallpaper_image`, parse/sanitize, tests
+- [x] `Wallpaper` component behind desktop and mobile home
+- [x] Settings › Appearance › Wallpaper; "Set as wallpaper" on image files
+- [x] Desktop background menu: Sort by Name / Kind / Date modified
+- [x] docs/system, design patterns, ROADMAP, changelog
 
 ## Next session topics
 

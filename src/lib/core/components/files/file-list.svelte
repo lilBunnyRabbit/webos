@@ -23,6 +23,8 @@
     open_with_items,
     paste,
     save_to_disk,
+    set_wallpaper,
+    is_image,
     rename_item,
     show_properties,
     upload,
@@ -37,6 +39,7 @@
     Scissors as ScissorsIcon,
     AppWindow as AppWindowIcon,
     Info as InfoIcon,
+    Image as ImageIcon,
     PencilSimple as PencilSimpleIcon,
     FolderOpen as FolderOpenIcon,
     HardDrives as HardDrivesIcon,
@@ -233,6 +236,7 @@
             { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
           ]
         : []),
+      ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
       { separator: true },
       { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true },
       ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
@@ -246,6 +250,7 @@
     else if (choice === "delete") delete_items(handler, window, entries);
     else if (choice === "properties") show_properties(handler, window, item);
     else if (choice === "save_to_disk") save_to_disk(join_path(handler.segments, item.name));
+    else if (choice === "wallpaper") set_wallpaper(join_path(handler.segments, item.name));
     else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
   }
 

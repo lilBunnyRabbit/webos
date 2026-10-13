@@ -12,11 +12,12 @@
     FileImage as FileImageIcon,
     FolderOpen as FolderOpenIcon,
     Devices as DevicesIcon,
+    Image as ImageIcon,
   } from "phosphor-svelte";
   import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import { save_to_disk } from "$lib/core/components/files/file-actions";
+  import { save_to_disk, set_wallpaper } from "$lib/core/components/files/file-actions";
   import { flushSync, untrack } from "svelte";
   import manifest from "./index";
   import { clamp, distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
@@ -229,8 +230,13 @@
         <Separator vertical />
       {/if}
 
+      {#if kind === "image" && source}
+        <IconButton label="Set as wallpaper" size="sm" class="ml-auto @lg:ml-0" onclick={() => source && set_wallpaper(source)}>
+          <ImageIcon weight="bold" />
+        </IconButton>
+      {/if}
       {#if path}
-        <IconButton label="Save to disk…" size="sm" class="ml-auto @lg:ml-0" onclick={() => path && save_to_disk(path)}>
+        <IconButton label="Save to disk…" size="sm" class={cn(kind !== "image" && "ml-auto @lg:ml-0")} onclick={() => path && save_to_disk(path)}>
           <HardDrivesIcon weight="bold" />
         </IconButton>
       {/if}

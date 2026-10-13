@@ -9,7 +9,7 @@ The shell phones and tablets get. `os.svelte` renders it instead of `desktop-she
 ```
 mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touch-action: manipulation
 ├─ DialogsHost anchored="sheet"   menus as bottom sheets
-├─ main (stage)           container-type: size; the desktop glow; logo mark watermark in the centre
+├─ main (stage)           container-type: size, isolate; the wallpaper (shell/desktop.md#wallpaper); logo mark watermark in the centre (presets only)
 │  ├─ mobile-home.svelte  pages + page dots + dock
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
 │  ├─ app-drawer.svelte   when open
@@ -65,7 +65,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - **Dock:** the taskbar's look (`rounded-2xl bg-background-light/90 shadow-popover backdrop-blur-xl`): an All apps button (`SquaresFour`), a separator, then up to four docked items without labels. Empty, it says "Hold an icon, then Add to dock".
 - **Long press** (`long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the page doesn't scroll under the finger, and the click after release swallowed. Release without moving → menu; moving after the hold cancels it (home icons pass no drag handlers). Android's own long-press `contextmenu` is suppressed; a mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
   - **Icon menu** (`home-actions.ts`): Open, Add to dock (disabled when full) / Remove from dock, Rename, Delete or Remove shortcut, Properties. Rename, delete and properties are `desktop-actions.ts`'s flows.
-  - **Empty space menu:** the desktop's background menu (New folder, Paste, Change theme).
+  - **Empty space menu:** the desktop's background menu (New folder, Paste, Change wallpaper or theme). Sort by isn't offered: the home is an ordered flow with no cells.
   - **No drag (2026-10-13).** Dragging icons to reorder or dock them was removed: on Samsung Internet the hold fired but the icon never moved, and the cause wasn't found. Docking goes through the menu. `MobileDesktopService.move_item` and the `before` argument of `set_docked` stay, unused by the shell, for when drag comes back.
 
 ## App drawer

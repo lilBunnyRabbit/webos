@@ -4,18 +4,35 @@ Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/de
 
 | File | Role |
 |------|------|
-| `desktop.svelte` | The CSS grid, the surface (dot grid + glow, scoped `<style>`), measurement, selection, marquee, drag and drop, keyboard |
+| `desktop.svelte` | The CSS grid, the wallpaper and the grid preset's dots, measurement, selection, marquee, drag and drop, keyboard |
+| `wallpaper.svelte` | The wallpaper layer, shared with the phone home |
 | `desktop-item.svelte` | One icon: a draggable button showing selected, dimmed and drop-target states; reports clicks, menus and drag start/end up |
 | `desktop-item-face.svelte` | Icon + label |
 
 ## Responsibilities
 
 - Measure itself into `desktop.set_container()` (ResizeObserver) and render a CSS grid with `repeat(columns, minmax(64px, 1fr))` × `repeat(rows, …)`, with padding from `container.config.padding` (12px). Cells are at least 88px (`cell_size`), so the 64px floor never bites.
-- Paint the surface (`.desktop-surface`): `background-darkest`, a dot at every cell corner (`foreground` at 14%, a 1px `radial-gradient` sized to `container.cell` and offset by the padding, so the dots sit on the cell corners), and a soft `background-dark` ellipse glowing from the top. Both gradients are shades of one surface, which the brand allows. The cell size reaches CSS as `--cell-width` / `--cell-height` (88px until measured), the padding as `--grid-offset`.
+- Paint the surface: the [wallpaper](#wallpaper), and for the grid preset a dot at every cell corner (`.desktop-surface[data-dots]::before`: `foreground` at 14%, a 1px `radial-gradient` sized to `container.cell` and offset by the padding, so the dots sit on the cell corners). The cell size reaches CSS as `--cell-width` / `--cell-height` (88px until measured), the padding as `--grid-offset`.
 - Flatten `desktop.list()` into `cells` (`{ item, x, y }`, reading order: rows top to bottom, cells left to right) and render each as a `DesktopItem` at `grid-column: x+1; grid-row: y+1`, keyed by entry name.
 - Render nothing until the grid has at least 1×1.
 
-It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too. There's no wallpaper yet (ADR-011).
+It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too.
+
+## Wallpaper
+
+`wallpaper.svelte` (ADR-011 revision) draws `settings.wallpaper`, or its `value` prop (Settings' previews). It's an `absolute inset-0 -z-10` layer on `bg-background-darkest`, so its parent is `isolate`: the layer stays above the parent's background and below the icons.
+
+| Kind | Drawn as |
+|------|----------|
+| Preset `grid` | The glow; the desktop adds the dots (above). The phone home has no cells, so it shows the glow alone |
+| Preset `glow` | A `background-dark` ellipse glowing from the top: shades of one surface, which the brand allows |
+| Preset `tint` | The glow plus one `primary` ellipse (30%) fading in from the bottom right: one brand colour into the surface, never a blend of two |
+| Preset `plain` | `background-darkest` only |
+| Image | The file at `path` as an object URL (revoked on change), `background-size` cover / contain / auto (tile repeats, center doesn't), `filter: blur()` with the layer grown by twice the blur so the edges don't fade, then `background-darkest` at `dim` opacity on top. A missing file draws the glow |
+
+The surface gets `data-wallpaper-image` while an image is set. An unlayered rule in `app.css` then gives every `[data-wallpaper-label]` (desktop and phone home labels) a `background/72` backing, so labels stay readable on any photo.
+
+Set from Settings › Appearance › Wallpaper, or "Set as wallpaper" on an image file (desktop, File Explorer, Media Preview), which calls `set_wallpaper()` in `components/files/file-actions.ts` → `settings.set_wallpaper_image(path)` with an error toast.
 
 ## Desktop item
 
@@ -88,9 +105,15 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" �
 
 | Where | Menu |
 |-------|------|
-| An icon (right-click, ContextMenu key, Shift+F10) | For one: Open; Cut (Ctrl+X); Copy (Ctrl+C); Rename (F2); Save to disk… (files, folders); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter). For a selection of N: Open N items, Cut, Copy, Delete N items |
-| Empty desktop | New folder (system prompt, validated against desktop names); Paste (Ctrl+V; conflicts ask in a system dialog); Gather windows (Alt+Shift+G: every visible window moved fully on screen, `windows.gather()` in a view transition; disabled with no windows; only when the windows service has `gather`); Change theme (opens Settings) |
+| An icon (right-click, ContextMenu key, Shift+F10) | For one: Open; Cut (Ctrl+X); Copy (Ctrl+C); Rename (F2); Save to disk… (files, folders); Set as wallpaper (`image/*` files); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter). For a selection of N: Open N items, Cut, Copy, Delete N items |
+| Empty desktop | New folder (system prompt, validated against desktop names); Paste (Ctrl+V; conflicts ask in a system dialog); Sort by ▸ Name, Kind, Date modified (only when the desktop service has `move_items`, so not on the phone home; see below); Gather windows (Alt+Shift+G: every visible window moved fully on screen, `windows.gather()` in a view transition; disabled with no windows; only when the windows service has `gather`); Change wallpaper or theme (opens Settings) |
 
 Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries, "Delete N items?" once for a selection. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)`, `names()`, and `rename_item(name, new_name)`, which moves the saved cell to the new name before renaming so the icon doesn't jump.
+
+**Sort by** (`sort_items(by)` in `desktop-actions.ts`, ADR-011 revision) is one-shot: `DesktopHelper.sort_moves(items, by, rows, modified)` orders every entry and lays it out column by column from the top left, and `move_items` writes the layout once inside a view transition. Icons stay free to drag afterwards; new ones still take the first free cell.
+
+- Name: the shown name (a shortcut's label), `Intl.Collator` with `numeric` and base sensitivity, so "notes 2" comes before "notes 10" and case is ignored.
+- Kind: folders, app shortcuts, then files by extension, each by name.
+- Date modified: folders first (OPFS folders have no modified time), then files and shortcuts newest first by `File.lastModified`, read with `files.get_file` only for this sort.
 
 Cut icons are dimmed like a drag (`clipboard.is_cut`).

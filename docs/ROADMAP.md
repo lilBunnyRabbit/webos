@@ -18,7 +18,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
 5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
-6. [-] **Desktop** (ADR-011: multi-select shared with File Explorer done 2026-10-12, [brainstorm](brainstorm/2026-10-12_multi-select.md); wallpaper, auto-arrange left) and **Theming** (ADR-015: radius, shadows, motion speed, export/import)
+6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015: radius, shadows, motion speed, export/import) deferred by the owner on 2026-10-13
 7. [ ] **Deep linking + share** (ADR-010)
 8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
 
@@ -149,8 +149,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Status:** Context menu done (ADR-025)
 - [x] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click, Ctrl+A), group drag keeping its shape, drop into folders (2026-10-12)
 - [x] Desktop context menu (right-click on background and icons; ADR-025)
-- [ ] Desktop wallpapers (solid, gradient, image with fit/blur/tint)
-- [ ] Icon auto-arrange
+- [x] Desktop wallpapers: token presets and a user image with fit, dim and blur, on the desktop and the phone home (2026-10-13). No free colour or gradient pickers (brand)
+- [x] Icon auto-arrange: one-shot Sort by Name, Kind, Date modified (2026-10-13)
 - [ ] Desktop icon settings (size, labels, grid spacing)
 
 ### Taskbar Enhancements

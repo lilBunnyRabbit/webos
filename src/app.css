@@ -147,3 +147,12 @@
     }
   }
 }
+
+/* Icon labels on a photo wallpaper, which can be any colour, get a backing. Unlayered, so it beats the label's
+   text utilities. */
+[data-wallpaper-image] [data-wallpaper-label] {
+  padding-inline: 0.25rem;
+  border-radius: var(--radius-xs);
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--background) 72%, transparent);
+}

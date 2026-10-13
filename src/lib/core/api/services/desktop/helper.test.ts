@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DesktopItem } from "./type";
-import { DesktopHelper } from "./helper";
+import { DesktopHelper, DesktopSort } from "./helper";
 
 const item = (name: string) => ({ name }) as DesktopItem;
 const names = (grid: (DesktopItem | undefined)[][]) => grid.map((row) => (row ?? []).map((cell) => cell?.name ?? null));
@@ -53,5 +53,34 @@ describe("DesktopHelper.fit", () => {
   test("leaves out what doesn't fit", () => {
     const fitted = DesktopHelper.fit({ columns: 1, rows: 1 }, [], [item("a"), item("b")]);
     expect(names(fitted)).toEqual([["a"]]);
+  });
+});
+
+describe("DesktopHelper.sort_moves", () => {
+  const folder = { kind: "directory", name: "Work" } as const;
+  const app = { kind: "shortcut", name: "Paint.desktop", label: "Paint", app_id: "paint" } as const;
+  const notes = { kind: "file", name: "notes 10.txt", type: "text/plain" } as const;
+  const notes2 = { kind: "file", name: "Notes 2.txt", type: "text/plain" } as const;
+  const photo = { kind: "file", name: "beach.jpg", type: "image/jpeg" } as const;
+  const items: DesktopItem[] = [notes, photo, app, folder, notes2];
+  const order = (by: DesktopSort, modified?: Map<string, number>) =>
+    DesktopHelper.sort_moves(items, by, 3, modified).map((move) => move.name);
+
+  test("name sorts by the shown name, numbers naturally, ignoring case", () => {
+    expect(order(DesktopSort.NAME)).toEqual(["beach.jpg", "Notes 2.txt", "notes 10.txt", "Paint.desktop", "Work"]);
+  });
+
+  test("kind puts folders, then shortcuts, then files by extension", () => {
+    expect(order(DesktopSort.KIND)).toEqual(["Work", "Paint.desktop", "beach.jpg", "Notes 2.txt", "notes 10.txt"]);
+  });
+
+  test("date puts folders first, then newest", () => {
+    const modified = new Map([["notes 10.txt", 3], ["beach.jpg", 5], ["Paint.desktop", 1], ["Notes 2.txt", 4]]);
+    expect(order(DesktopSort.DATE, modified)).toEqual(["Work", "beach.jpg", "Notes 2.txt", "notes 10.txt", "Paint.desktop"]);
+  });
+
+  test("fills column by column", () => {
+    const cells = DesktopHelper.sort_moves(items, DesktopSort.NAME, 2).map((move) => move.to);
+    expect(cells).toEqual([{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 0 }]);
   });
 });

@@ -1,29 +1,31 @@
 # SettingsService
 
-Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
+Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults` |
+| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit` |
 | `service.svelte.ts` | The class |
-| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `parse_settings()`, `serialize_settings()`, `take_legacy_settings()`, sanitizing (`merge_theme`) |
+| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset` |
 
 `index.ts` exports `type.ts` and `themes.ts`. `persistence.ts` stays private to the service.
 
 ## Purpose
 
-Owns the user's persisted OS preferences: theme colour tokens, taskbar position, and per-extension default apps. It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
+Owns the user's persisted OS preferences: theme colour tokens, taskbar position, per-extension default apps, and the wallpaper. It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
 
 ## Public API
 
-The API is three plain reactive fields. There are no setter methods. Consumers assign to them directly.
+The API is four plain reactive fields, which consumers assign to directly, plus one method for wallpaper images, which need a file copied.
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `theme` | `theme: Theme` (`Record<ThemeToken, string>`) | 17 tokens (`snake_case` keys). Replace it wholesale (`settings.theme = { ...settings.theme, primary: v }`) or mutate a key. Both trigger the effects, because it's deep `$state`. |
 | `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition }` | Read by `os.svelte`, `taskbar.svelte`, `window-manager.svelte`. The Settings app mutates `taskbar.position`. |
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
+| `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`. Assign a preset, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
+| `set_wallpaper_image` | `(source: string \| File) => Promise<void>` | Copies a path or a device file (ADR-031 `string \| File`) to `/var/lib/wallpaper/{base36 time}-{name}`, sets `wallpaper` to it keeping the previous image's fit, dim and blur (else fill, 0, 0), then prunes the folder. Throws when the path doesn't exist. Callers: Settings › Appearance, `set_wallpaper()` in `file-actions.ts` (Explorer, desktop, Media Preview) |
 | `init` | `init(): Promise<void>` | See Lifecycle. |
 | `destroy` | `destroy(): void` | Disposes the effect root. |
 | `to_string` | `to_string(): string` | Taskbar position plus the JSON of the theme. |
@@ -48,6 +50,7 @@ Token list and semantics: [theming.md](../theming.md).
 taskbar       = $state<Taskbar>({ position: "bottom" });
 theme         = $state<Theme>({ ...BRAND_DARK });
 file_defaults = $state<FileDefaults>({});
+wallpaper     = $state<Wallpaper>({ kind: "preset", preset: "grid" });
 ```
 
 Private: `files_service` (`$derived` in the constructor), `dispose_effects`, and `writer: LatestWriter` for `SETTINGS_PATH`.
@@ -61,10 +64,10 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 1. `files.get_file("/etc/settings.json")`.
 2. `take_legacy_settings()`: read and **remove** the old localStorage key `webos.settings`. This runs on every boot, file or not, so a stale legacy copy can never come back later.
    `take_v0_settings()` does the same for the v0 React key `settings` (zustand `{ state: { theme, taskbar } }`): it keeps the taskbar position, and the theme only if it differs from v0's saved defaults (otherwise Brand Dark). `webos.settings` wins if both exist.
-3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar` and `file_defaults`. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
+3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar`, `file_defaults` and `wallpaper`. Then prune `/var/lib/wallpaper` without awaiting: every file but the current image is deleted, so an image left behind when a preset was chosen goes at the next boot. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
 4. Start an `$effect.root` with two effects:
    - **Token writer:** for each `[key, value]` of `theme`, call `document.documentElement.style.setProperty("--" + key.replaceAll("_", "-"), value)`, so `background_dark` is written as `--background-dark`. Then set `documentElement.style.colorScheme` to `light` when the applied background's lightness is above 0.6, otherwise `dark`. The lightness comes from a probe element (`background_lightness()`), so hex and relative colour syntax work too ([theming](../theming.md#color-scheme)).
-   - **Saver:** `writer.write(serialize_settings({ version: 1, theme, taskbar, file_defaults }))`. It tracks all three fields deeply, because `JSON.stringify` reads every property.
+   - **Saver:** `writer.write(serialize_settings({ version: 1, theme, taskbar, file_defaults, wallpaper }))`. It tracks all four fields deeply, because `JSON.stringify` reads every property.
 
 `destroy()` disposes the root. A write already queued still finishes. Nothing extra is saved on destroy, because the saver has already run after every change.
 
@@ -76,7 +79,8 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 |-|-|
 | Store | OPFS, through FilesService |
 | Path | `/etc/settings.json` (ADR-021: OS config lives in `/etc`) |
-| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": … }, "file_defaults": { ".ext": "app-id" } }`, pretty-printed (2 spaces) |
+| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": … }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper }`, pretty-printed (2 spaces) |
+| Images | `/var/lib/wallpaper/`, copies owned by the OS. Only the current image is kept |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | On every change, after the effect flush. Also once right after `init()`, which creates or normalizes the file. |
 | Legacy | localStorage `webos.settings` (same format), then v0 `settings` (zustand). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
@@ -91,6 +95,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - `theme` (`merge_theme`): starts from `BRAND_DARK`, overlaid with a surface ladder, then copies over only known token keys whose value is a `string`. Unknown keys are dropped. The ladder fills tokens a save predates: if the saved `background` equals Brand Dark's or Brand Light's, that palette's exact shades (and its other tokens) are the fallback; otherwise `derive_surfaces()`, so the ladder follows the saved background. Other missing tokens get the Brand Dark value. **Values are not validated as CSS.** A garbage string gets written to the variable as-is.
 - `taskbar.position`: must be one of `TaskbarPosition`, otherwise `bottom`.
 - `file_defaults`: keeps entries whose key starts with `.` and whose value is a string. It's an additive field, so v1 blobs without it load as `{}`. The app id is not checked against the registry here. `apps.open()` deals with stale ids.
+- `wallpaper` (`parse_wallpaper`, zod): additive like `file_defaults`, so a missing or invalid value is the grid preset. An image path must be inside `/var/lib/wallpaper/`; a bad `fit` becomes `fill`, an out-of-range `dim` or `blur` becomes 0. The image file isn't checked here; a missing one draws the glow.
 - Write errors (quota, OPFS failure) → `console.error("Failed to save settings:")`; the writer moves on to the next queued text. A legacy-key read or remove that throws counts as no legacy copy.
 
 ## Behaviour & invariants
@@ -100,14 +105,14 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - Derived presets store strings like `oklch(from var(--primary) l 0.14 140)` as the token value. They resolve at use time in CSS, so editing `primary` live re-derives the states.
 - No cross-tab sync, and none possible through `storage` events now that the store is OPFS. Two tabs each write their own state, and the last write wins on reload.
 - The file isn't watched. Editing or deleting `/etc/settings.json` (File Explorer can delete it) takes effect on the next boot, and the next settings change in this tab overwrites it.
-- The Settings app's About → Reset (`sections/about.svelte:25`) resets `taskbar`, `theme` and `file_defaults`. Default apps → Forget / Forget all clears `file_defaults` entries only.
+- The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar`, `theme`, `file_defaults` and `wallpaper` (grid preset; the image copy is pruned at the next boot). Default apps → Forget / Forget all clears `file_defaults` entries only.
 - `color-scheme` is set in the same effect as the tokens, so native controls switch together with the palette.
 
 ## Divergence from ADR
 
-- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` without a version bump (ADR-018; noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
+- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018) and `wallpaper` (ADR-011 revision) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
 
 ## Known gaps
 
-- ADR-015's non-colour settings (radius, shadow, animation, font, icons, sound, export/import) aren't built. Radius, shadows and easing are constants in `app.css`.
+- ADR-015's non-colour settings (radius, shadow, animation, font, icons, sound, export/import) aren't built; deferred by the owner on 2026-10-13. Radius, shadows and easing are constants in `app.css`.
 - No migration path. A future `version: 2` would discard v1 saves unless `parse_settings()` learns to migrate.

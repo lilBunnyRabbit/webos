@@ -67,7 +67,8 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 | File | Contents |
 |------|----------|
 | `settings.app.svelte` | `SideNav` + the open page, `max-w-2xl` centered, `h1` with the section name |
-| `sections/appearance.svelte` | Theme cards and the colour customiser |
+| `sections/appearance.svelte` | Theme cards, the colour customiser, then the wallpaper section |
+| `sections/wallpaper.svelte` | Wallpaper tiles, image pickers, fit, dim and blur |
 | `sections/taskbar.svelte` | Position `Segmented` + live preview |
 | `sections/files.svelte` | Default apps |
 | `sections/whats-new.svelte` | The changelog (ADR-026) |
@@ -80,11 +81,12 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 | Section | What it does |
 |---------|--------------|
 | Appearance → Theme | A grid of `ThemeCard`s, one per `THEME_PRESETS` entry. Clicking one replaces the theme with a copy. The active preset is the one whose 17 tokens all equal `settings.theme`; it gets a `primary` ring and a check. The section description names it, or says "A customised theme is active." ([theming](theming.md)) |
+| Appearance → Wallpaper | Tiles (16:10 previews drawn by the real `wallpaper.svelte` with `value`) for Grid, Glow, Tint and Plain, then Image: the current image, or "Image…" which opens the picker. The active tile gets the `primary` ring and a check. "Choose image…" (`window.pick_file`, `image/*`) and "From device…" (`pick_device_files`) call `settings.set_wallpaper_image`; failures toast. With an image: Fit (Segmented: Fill, Fit, Tile, Center), Dim (slider 0–60%) and Blur (slider 0–20px), each writing a new `wallpaper` object |
 | Appearance → Customise colours | A `<details>` disclosure, closed by default. Tokens grouped Surfaces (the seven ladder shades), Text and brand (foreground, primary, secondary, tertiary, accent, cottontail) and States. Each token: a swatch that opens `<input type="color">`, the label, and a mono text field. Both write on `change` (the text field on blur or Enter). The rows only render while the disclosure is open (`bind:open`), so the hex conversions cost nothing when it's closed. The picker shows `to_hex(value)` (sRGB, clipped) and stores `to_oklch(hex)`, the computed `oklch(from <hex> l c h)`. Picking or typing a derived token replaces its live expression with a fixed value |
 | Taskbar | A `Segmented` (Bottom, Top, Left, Right, with icons) bound to `settings.taskbar.position`, and a miniature screen preview that moves its dock to the chosen edge |
 | Default apps | Lists `settings.file_defaults` sorted by extension: the extension in mono, the app's icon and name (or "{id} (no longer installed)" in `error`), and a Forget `IconButton` that removes that entry. "Forget all" in the section header sets `{}`. Empty: "No default apps yet". Entries are added by "Always use" in the Open-with menu ([file associations](apps/file-associations.md)) |
 | What's new | `version.changelog`, newest first: one `background-light` card per release with title, mono version `Badge`, a primary "New to you" `Badge` for releases in `version.unseen`, and the date (`format_date` of the local day). Each change is a row: kind `Badge` (New `primary`, Improved `info`, Fixed `success`) and the text |
-| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Introduction: "Show again" calls `version.show_intro()` (doesn't touch the seen marker). Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK` and `file_defaults` to `{}`, with no confirmation. A "Source on GitHub" link |
+| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Introduction: "Show again" calls `version.show_intro()` (doesn't touch the seen marker). Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK`, `file_defaults` to `{}` and the wallpaper to the grid preset, with no confirmation. A "Source on GitHub" link |
 
 Every write goes straight to service state. Persistence is the settings service's job (`/etc/settings.json`).
 
@@ -214,6 +216,8 @@ Every zoom goes through `zoom_at(scale, anchor)`. It reads the box rect, applies
 | One-finger drag (touch, pen) | Pan the zoomed image by scrolling the stage |
 | Toolbar buttons | As above, zooming around the stage centre. Each is a labelled `IconButton`; zoom buttons disable at the limits |
 | Native media controls | Play, seek, volume |
+
+For an image, "Set as wallpaper" (`Image` icon) comes before Save to disk… and calls `set_wallpaper(source)`, so a device file works too.
 
 The toolbar's "Save to disk…" (`HardDrives` icon) calls `save_to_disk(path)` from `components/files/file-actions.ts`, the same action as File Explorer and the desktop: `files.export_to_disk` plus a "Saved to disk" toast or an error toast.
 

@@ -24,7 +24,7 @@
   {/if}
 </span>
 {#if label}
-  <span class="line-clamp-2 max-w-full px-0.5 text-center text-xs leading-tight font-medium break-words">
+  <span data-wallpaper-label class="line-clamp-2 max-w-full px-0.5 text-center text-xs leading-tight font-medium break-words">
     {text}{#if missing_app}<span class="text-error"> · missing</span>{/if}
   </span>
 {:else}

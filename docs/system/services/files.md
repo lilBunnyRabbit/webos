@@ -325,7 +325,7 @@ Rows are 32px (44px on a coarse pointer) `rounded-md` `<button role="row">`s in 
 | Back button (mobile nav bar) | | `window.on_back`: the previous folder in this explorer's history; unclaimed when there's none, so the shell takes over |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Delete, Properties |
+| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Set as wallpaper (one `image/*` file), Delete, Properties |
 | Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload |
 | Ctrl/Cmd+C, Ctrl/Cmd+X | Focused row | Copy or cut to the clipboard (ClipboardService); cut rows are dimmed |
 | Ctrl/Cmd+V | Anywhere in the list | Paste into this folder; name clashes ask in a `ConflictDialog` sheet |

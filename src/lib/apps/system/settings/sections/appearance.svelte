@@ -4,6 +4,7 @@
   import { CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { to_hex, to_oklch } from "../color";
   import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
+  import WallpaperSection from "./wallpaper.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
@@ -81,4 +82,6 @@
     </div>
     {/if}
   </details>
+
+  <WallpaperSection />
 </div>

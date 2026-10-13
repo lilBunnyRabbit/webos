@@ -177,7 +177,7 @@ export async function write_var_lib(
   files: FilesService,
   directory: string,
   file: string,
-  content: string
+  content: string | Blob
 ): Promise<void> {
   let handle = await files.get_directory(`${PATHS.var_lib}/${directory}`);
   if (!handle) {

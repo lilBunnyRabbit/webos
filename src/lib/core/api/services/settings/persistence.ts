@@ -1,9 +1,25 @@
-import { TaskbarPosition, type FileDefaults, type Taskbar, type Theme, type ThemeToken } from "./type";
+import { z } from "zod";
+import {
+  TaskbarPosition,
+  WallpaperFit,
+  WallpaperPreset,
+  type FileDefaults,
+  type Taskbar,
+  type Theme,
+  type ThemeToken,
+  type Wallpaper,
+} from "./type";
 import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
 import { PATHS } from "../files/hierarchy";
 
 /** OS config lives in system storage (ADR-021). */
 export const SETTINGS_PATH = `${PATHS.etc}/settings.json`;
+
+/** Wallpaper images are copies the OS owns, so moving or deleting the original doesn't break the wallpaper. */
+export const WALLPAPER_DIRECTORY_NAME = "wallpaper";
+export const WALLPAPER_DIRECTORY = `${PATHS.var_lib}/${WALLPAPER_DIRECTORY_NAME}`;
+
+export const DEFAULT_WALLPAPER: Wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
 
 /** Where settings lived before `/etc`; imported once, then removed. */
 const LEGACY_STORAGE_KEY = "webos.settings";
@@ -27,6 +43,7 @@ export interface PersistedSettings {
   theme: Theme;
   taskbar: Taskbar;
   file_defaults: FileDefaults;
+  wallpaper: Wallpaper;
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -44,6 +61,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
       theme: merge_theme(data.theme),
       taskbar: { position },
       file_defaults: sanitize_file_defaults(data.file_defaults),
+      wallpaper: parse_wallpaper(data.wallpaper),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
@@ -71,6 +89,23 @@ function sanitize_file_defaults(saved: unknown): FileDefaults {
     if (extension.startsWith(".") && typeof app_id === "string") defaults[extension] = app_id;
   }
   return defaults;
+}
+
+const wallpaper_schema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("preset"), preset: z.enum(Object.values(WallpaperPreset)) }),
+  z.object({
+    kind: z.literal("image"),
+    path: z.string().startsWith(`${WALLPAPER_DIRECTORY}/`),
+    fit: z.enum(Object.values(WallpaperFit)).catch(WallpaperFit.FILL),
+    dim: z.number().min(0).max(0.6).catch(0),
+    blur: z.number().min(0).max(20).catch(0),
+  }),
+]);
+
+// Added after version 1 shipped, like file_defaults: a missing or broken value is the default, not a lost save.
+export function parse_wallpaper(saved: unknown): Wallpaper {
+  const result = wallpaper_schema.safeParse(saved);
+  return result.success ? result.data : DEFAULT_WALLPAPER;
 }
 
 export function serialize_settings(settings: PersistedSettings): string {

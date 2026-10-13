@@ -19,6 +19,6 @@
     <FileIcon name={item.name} kind={item.kind} mime_type={item.kind === "file" ? item.type : undefined} class="size-6" weight="duotone" />
   {/if}
 </div>
-<span class="line-clamp-2 max-w-full px-0.5 text-center text-2xs leading-tight font-medium break-words text-foreground/80" title={item.name}>
+<span data-wallpaper-label class="line-clamp-2 max-w-full px-0.5 text-center text-2xs leading-tight font-medium break-words text-foreground/80" title={item.name}>
   {label}{#if missing_app}<span class="text-error"> · missing</span>{/if}
 </span>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { BRAND_DARK, TaskbarPosition, type SettingsService, type VersionService } from "$lib/core/api";
+  import kernel, { BRAND_DARK, TaskbarPosition, WallpaperPreset, type SettingsService, type VersionService } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
   import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
@@ -28,6 +28,7 @@
     settings.taskbar.position = TaskbarPosition.BOTTOM;
     settings.theme = { ...BRAND_DARK };
     settings.file_defaults = {};
+    settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
   }
 </script>
 
@@ -81,7 +82,7 @@
   </Section>
 
   <Section title="Reset">
-    <SettingRow label="Reset settings" description="Brand Dark theme, taskbar at the bottom, default apps forgotten. Files are kept.">
+    <SettingRow label="Reset settings" description="Brand Dark theme, grid wallpaper, taskbar at the bottom, default apps forgotten. Files are kept.">
       <Button variant="danger" onclick={reset_settings}>
         <ArrowCounterClockwiseIcon /> Reset
       </Button>

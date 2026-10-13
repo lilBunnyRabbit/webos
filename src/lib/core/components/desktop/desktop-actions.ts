@@ -6,7 +6,11 @@ import kernel, {
   type DesktopService,
   type DialogsService,
   type DesktopWindowsService,
+  type FilesService,
+  type GridDesktopService,
   type WindowsService,
+  DesktopHelper,
+  DesktopSort,
 } from "$lib/core/api";
 import { view_transition } from "$lib/core/utils/view-transition";
 import ConflictDialog from "../dialogs/conflict-dialog.svelte";
@@ -17,11 +21,13 @@ import {
   Copy as CopyIcon,
   Scissors as ScissorsIcon,
   Info as InfoIcon,
+  Image as ImageIcon,
   PencilSimple as PencilSimpleIcon,
   FolderPlus as FolderPlusIcon,
   HardDrives as HardDrivesIcon,
   Palette as PaletteIcon,
   ArrowsIn as ArrowsInIcon,
+  SortAscending as SortAscendingIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
@@ -30,7 +36,7 @@ import PropertiesDialog from "../files/properties-dialog.svelte";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
-import { save_to_disk } from "../files/file-actions";
+import { is_image, save_to_disk, set_wallpaper } from "../files/file-actions";
 
 // The desktop is the shell, not an app window, so its questions are system dialogs (ADR-025).
 const desktop = () => kernel.service<DesktopService>("desktop");
@@ -171,6 +177,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       ...(single ? [{ id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" }] : []),
       ...(single && !shortcut ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
+      ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
       { separator: true },
       {
         id: "delete",
@@ -179,7 +186,9 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
         shortcut: "Del",
         danger: true,
       },
-      ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
+      ...(single
+        ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }]
+        : []),
     ],
     { anchor }
   );
@@ -190,20 +199,44 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
   else if (choice === "delete") remove_items(items);
   else if (choice === "properties") show_properties(item);
   else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
+  else if (choice === "wallpaper") set_wallpaper(desktop_path(item));
 }
 
 export async function background_menu(anchor: Position): Promise<void> {
   const windows = kernel.service<WindowsService>("windows");
   const gather = "gather" in windows ? (windows as DesktopWindowsService) : null;
+  // The phone home is an ordered flow with no cells to sort into (ADR-016).
+  const grid = "move_items" in desktop();
   const choice = await dialogs().menu(
     [
       { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
       { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard().content },
+      ...(grid
+        ? [
+            {
+              label: "Sort by",
+              icon: SortAscendingIcon,
+              items: [
+                { id: "sort_name", label: "Name" },
+                { id: "sort_kind", label: "Kind" },
+                { id: "sort_date", label: "Date modified" },
+              ],
+            },
+          ]
+        : []),
       { separator: true },
       ...(gather
-        ? [{ id: "gather", label: "Gather windows", icon: ArrowsInIcon, shortcut: "Alt+Shift+G", disabled: windows.list().length === 0 }]
+        ? [
+            {
+              id: "gather",
+              label: "Gather windows",
+              icon: ArrowsInIcon,
+              shortcut: "Alt+Shift+G",
+              disabled: windows.list().length === 0,
+            },
+          ]
         : []),
-      { id: "appearance", label: "Change theme", icon: PaletteIcon },
+      { id: "appearance", label: "Change wallpaper or theme", icon: PaletteIcon },
     ],
     { anchor }
   );
@@ -211,4 +244,26 @@ export async function background_menu(anchor: Position): Promise<void> {
   else if (choice === "paste") paste();
   else if (choice === "gather") view_transition(() => gather?.gather());
   else if (choice === "appearance") apps().launch("settings");
+  else if (choice === "sort_name") sort_items(DesktopSort.NAME);
+  else if (choice === "sort_kind") sort_items(DesktopSort.KIND);
+  else if (choice === "sort_date") sort_items(DesktopSort.DATE);
+}
+
+export async function sort_items(by: DesktopSort): Promise<void> {
+  const grid = desktop() as GridDesktopService;
+  const items = grid.items();
+  const modified = new Map<string, number>();
+  if (by === DesktopSort.DATE) {
+    const files = kernel.service<FilesService>("files");
+    await Promise.all(
+      items
+        .filter((item) => item.kind !== "directory")
+        .map(async (item) => {
+          const file = await files.get_file(desktop_path(item));
+          if (file) modified.set(item.name, file.lastModified);
+        })
+    );
+  }
+  const moves = DesktopHelper.sort_moves(items, by, grid.container.grid.rows, modified);
+  view_transition(() => grid.move_items(moves));
 }

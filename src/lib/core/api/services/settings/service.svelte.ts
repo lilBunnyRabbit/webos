@@ -1,15 +1,19 @@
-import type { FileDefaults, SettingsService as ISettingsService, Taskbar, Theme } from "./type";
+import type { FileDefaults, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
 import type { FilesService, Kernel } from "$lib/core/api";
 import { LatestWriter } from "../files/latest-writer";
+import { write_var_lib } from "../desktop/folder.svelte";
 import {
+  DEFAULT_WALLPAPER,
   SETTINGS_PATH,
   SETTINGS_VERSION,
   parse_settings,
   serialize_settings,
   take_legacy_settings,
   take_v0_settings,
+  WALLPAPER_DIRECTORY,
+  WALLPAPER_DIRECTORY_NAME,
 } from "./persistence";
 
 export class SettingsService implements ISettingsService {
@@ -24,6 +28,7 @@ export class SettingsService implements ISettingsService {
   public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM });
   public theme = $state<Theme>({ ...BRAND_DARK });
   public file_defaults = $state<FileDefaults>({});
+  public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -44,7 +49,9 @@ export class SettingsService implements ISettingsService {
       this.theme = saved.theme;
       this.taskbar = saved.taskbar;
       this.file_defaults = saved.file_defaults;
+      this.wallpaper = saved.wallpaper;
     }
+    this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
     this.dispose_effects = $effect.root(() => {
       $effect(() => {
@@ -62,10 +69,33 @@ export class SettingsService implements ISettingsService {
             theme: this.theme,
             taskbar: this.taskbar,
             file_defaults: this.file_defaults,
+            wallpaper: this.wallpaper,
           })
         );
       });
     });
+  }
+
+  public async set_wallpaper_image(source: string | File): Promise<void> {
+    const file = typeof source === "string" ? await this.files_service.get_file(source) : source;
+    if (!file) throw new Error(`${source} doesn't exist`);
+    // A fresh name each time, so choosing an image with the same name still changes the path the desktop watches.
+    const name = `${Date.now().toString(36)}-${file.name}`;
+    await write_var_lib(this.files_service, WALLPAPER_DIRECTORY_NAME, name, file);
+
+    const previous = this.wallpaper.kind === "image" ? this.wallpaper : null;
+    this.wallpaper = { kind: "image", path: `${WALLPAPER_DIRECTORY}/${name}`, fit: previous?.fit ?? "fill", dim: previous?.dim ?? 0, blur: previous?.blur ?? 0 };
+    await this.prune_wallpapers();
+  }
+
+  /** Deletes copies the wallpaper no longer uses (replaced, or a preset was chosen since). */
+  private async prune_wallpapers(): Promise<void> {
+    const directory = await this.files_service.get_directory(WALLPAPER_DIRECTORY);
+    if (!directory) return;
+    const current = this.wallpaper.kind === "image" ? this.wallpaper.path : null;
+    for (const item of await this.files_service.list(directory)) {
+      if (`${WALLPAPER_DIRECTORY}/${item.name}` !== current) await this.files_service.delete_entry(directory, item.name);
+    }
   }
 
   destroy() {
