@@ -12,6 +12,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "Wallpapers: pick a background that follows your theme, or use your own photo with fill, fit, tile, dim and blur. It shows on the phone's home screen too." },
       { kind: NEW, text: "Right-click an image and choose Set as wallpaper, from the desktop, File Explorer or Media Preview." },
       { kind: NEW, text: "Sort desktop icons by name, kind or date from the desktop's right-click menu." },
+      { kind: FIXED, text: "Picking an option in a switch-style control (like Settings' taskbar position) no longer scrolls the window's contents out of view." },
     ],
   },
   {
