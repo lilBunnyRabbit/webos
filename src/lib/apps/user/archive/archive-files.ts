@@ -23,11 +23,13 @@ export async function extract_entries(
   entries: ZipEntry[],
   folder: string,
   name: string,
-  options: StreamOptions
+  options: StreamOptions,
+  on_target?: (path: string) => void
 ): Promise<ExtractResult> {
   const parent = await files().get_directory(folder);
   if (!parent) throw new Error(`The folder ${folder} no longer exists.`);
   const target = await files().create_directory(parent, name);
+  on_target?.(join(folder, target.name));
   const folders = new Map<string, FileSystemDirectoryHandle>([["", target]]);
 
   const folder_at = async (segments: string[]): Promise<FileSystemDirectoryHandle> => {
@@ -111,4 +113,9 @@ export async function write_at(path: string, data: Blob): Promise<void> {
   const directory = await files().get_directory(folder);
   if (!directory) throw new Error(`The folder ${folder} no longer exists.`);
   await files().create_file(directory, base_name(path), { content: data, overwrite: true });
+}
+
+export async function remove_at(path: string): Promise<void> {
+  const parent = await files().get_directory(parent_path(path));
+  if (parent) await files().delete_entry(parent, base_name(path), { recursive: true });
 }

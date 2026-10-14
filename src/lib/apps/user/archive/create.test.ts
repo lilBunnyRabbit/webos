@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { archive_name, base_name, parent_path, rename_sources, stem, unique_name, type CreateItem } from "./create";
+import { add_item, archive_name, base_name, parent_path, rename_sources, stem, unique_name, type CreateItem } from "./create";
 
 const item = (name: string, directory = false): CreateItem => ({ id: name, name, directory, path: null, size: 0, files: 0, sources: [] });
 
@@ -19,6 +19,13 @@ describe("create helpers", () => {
   it("renames a folder's sources under a new top name", () => {
     const sources = [{ name: "Photos", directory: true }, { name: "Photos/a.png" }];
     expect(rename_sources(sources, "Photos", "Photos (1)").map((source) => source.name)).toEqual(["Photos (1)", "Photos (1)/a.png"]);
+  });
+
+  it("adds an item under a free top name", () => {
+    const folder = { ...item("Photos", true), sources: [{ name: "Photos", directory: true }, { name: "Photos/a.png" }] };
+    const items = add_item(add_item([], folder), { ...folder, id: "again" });
+    expect(items.map((entry) => entry.name)).toEqual(["Photos", "Photos (1)"]);
+    expect(items[1].sources.map((source) => source.name)).toEqual(["Photos (1)", "Photos (1)/a.png"]);
   });
 
   it("splits paths", () => {

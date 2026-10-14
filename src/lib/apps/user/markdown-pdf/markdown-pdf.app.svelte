@@ -50,13 +50,15 @@
     SettingsSchema,
     type DocumentMeta,
     type FontUrls,
+    with_launch_settings,
   } from "./layout";
+  import type { MarkdownPdfProps } from "./props";
   import { render_markdown, toc_html, type Rendered } from "./render";
   import { SAMPLE } from "./sample";
   import SettingsPanel from "./settings-panel.svelte";
   import manifest from "./index";
 
-  const { path: initial_path }: { path?: string } = $props();
+  const { path: initial_path, print, ...launch_settings }: Partial<MarkdownPdfProps> = $props();
 
   const { app_id, window_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
@@ -80,6 +82,13 @@
 
   const settings = storage.persisted("settings", DEFAULT_SETTINGS, SettingsSchema);
   const view = storage.window<View>("view", View.SPLIT, z.enum(View));
+  // A restored window gets `false` back, so a launch's settings and print apply once, not on every session restore.
+  const fresh = storage.window("fresh", true, z.boolean());
+  let print_pending = untrack(() => fresh.value && print === true);
+  untrack(() => {
+    if (fresh.value) settings.value = with_launch_settings(settings.value, launch_settings);
+    fresh.value = false;
+  });
   const panel_open = storage.window("panel", false, z.boolean());
   const doc_path = storage.window<string | null>(
     "path",
@@ -271,6 +280,15 @@
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the print dialog", message: error_message(reason) });
     }
   }
+
+  $effect(() => {
+    if (!print_pending || status !== Status.READY) return;
+    print_pending = false;
+    untrack(() => {
+      rendered = render_markdown(text);
+      void export_pdf();
+    });
+  });
 
   $effect(() => {
     const source = text;

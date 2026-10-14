@@ -326,7 +326,7 @@ Rows are 32px (44px on a coarse pointer) `rounded-md` `<button role="row">`s in 
 | Back button (mobile nav bar) | | `window.on_back`: the previous folder in this explorer's history; unclaimed when there's none, so the shell takes over |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Set as wallpaper (one `image/*` file), Delete, Properties. Cut, Rename and Delete are disabled when any target is locked (`is_locked_path`) |
+| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Set as wallpaper (one `image/*` file), Compress, Extract here (one `.zip`), Delete, Properties. Cut, Rename and Delete are disabled when any target is locked (`is_locked_path`); Compress and Extract here inside a system folder |
 | Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload. In a system folder New folder, Upload and Paste are disabled; drops onto a system folder or into one are refused |
 | Ctrl/Cmd+C, Ctrl/Cmd+X | Focused row | Copy or cut to the clipboard (ClipboardService); cut rows are dimmed |
 | Ctrl/Cmd+V | Anywhere in the list | Paste into this folder; name clashes ask in a `ConflictDialog` sheet |

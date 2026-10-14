@@ -12,10 +12,19 @@ export interface JobReport {
   actions?: NotificationAction[];
 }
 
+export interface JobDone<T> extends JobReport {
+  result: T;
+}
+
 export interface JobTexts {
   title: string;
   cancelled: string;
   failed: string;
+}
+
+export interface Leftover {
+  path: string;
+  discard: () => Promise<void>;
 }
 
 export function error_message(error: unknown): string {
@@ -26,15 +35,19 @@ export function error_message(error: unknown): string {
 export class ArchiveJob {
   done = $state(0);
   readonly title: string;
+  failure: string | null = null;
   private readonly controller = new AbortController();
   private slice_start = performance.now();
+  private leftover: Leftover | null = null;
 
   constructor(
     private readonly app_id: AppId,
     private readonly texts: JobTexts,
-    readonly total: number
+    readonly total: number,
+    signal?: AbortSignal
   ) {
     this.title = texts.title;
+    signal?.addEventListener("abort", () => this.cancel(), { once: true });
   }
 
   get fraction(): number {
@@ -49,7 +62,11 @@ export class ArchiveJob {
     this.controller.abort(new DOMException("Cancelled", "AbortError"));
   }
 
-  async run(work: (options: StreamOptions) => Promise<JobReport>): Promise<boolean> {
+  wrote(leftover: Leftover | null): void {
+    this.leftover = leftover;
+  }
+
+  async run<T>(work: (options: StreamOptions) => Promise<JobDone<T>>): Promise<T | null> {
     const notifications = kernel.service<NotificationsService>("notifications");
     const id = notifications.notify(this.app_id, {
       type: NotificationType.PROGRESS,
@@ -77,17 +94,38 @@ export class ArchiveJob {
     };
 
     try {
-      const report = await work(options);
+      const { result, ...report } = await work(options);
       notifications.update(id, { type: NotificationType.INFO, progress: null, message: undefined, actions: [], ...report });
-      return true;
+      return result;
     } catch (error) {
-      if (is_abort(error)) {
-        notifications.update(id, { type: NotificationType.WARNING, title: this.texts.cancelled, message: undefined, progress: null, actions: [] });
-      } else {
-        console.error(`[${this.app_id}] ${this.texts.failed}`, error);
-        notifications.update(id, { type: NotificationType.ERROR, title: this.texts.failed, message: error_message(error), progress: null, actions: [] });
-      }
-      return false;
+      const aborted = is_abort(error);
+      this.failure = aborted ? "cancelled" : error_message(error);
+      if (!aborted) console.error(`[${this.app_id}] ${this.texts.failed}`, error);
+      const leftover = this.leftover;
+      const lines = [aborted ? null : this.failure, leftover ? `Already written: ${leftover.path}` : null].filter((line) => line !== null);
+      notifications.update(id, {
+        type: aborted ? NotificationType.WARNING : NotificationType.ERROR,
+        title: aborted ? this.texts.cancelled : this.texts.failed,
+        message: lines.join(" · ") || undefined,
+        progress: null,
+        actions: leftover
+          ? [
+              { label: "Discard", on_click: () => void this.discard(leftover) },
+              { label: "Keep", on_click: () => {} },
+            ]
+          : [],
+      });
+      return null;
+    }
+  }
+
+  private async discard(leftover: Leftover): Promise<void> {
+    const notifications = kernel.service<NotificationsService>("notifications");
+    try {
+      await leftover.discard();
+      notifications.notify(this.app_id, { title: "Discarded", message: leftover.path });
+    } catch (error) {
+      notifications.notify(this.app_id, { type: NotificationType.ERROR, title: "Couldn't discard", message: error_message(error) });
     }
   }
 }

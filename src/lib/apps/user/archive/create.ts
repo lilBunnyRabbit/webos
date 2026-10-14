@@ -50,3 +50,8 @@ export function rename_sources(sources: ZipSource[], from: string, to: string): 
 export function all_sources(items: CreateItem[]): ZipSource[] {
   return items.flatMap((item) => item.sources);
 }
+
+export function add_item(items: CreateItem[], item: CreateItem): CreateItem[] {
+  const name = unique_name(item.name, new Set(items.map((existing) => existing.name)));
+  return [...items, name === item.name ? item : { ...item, name, sources: rename_sources(item.sources, item.name, name) }];
+}

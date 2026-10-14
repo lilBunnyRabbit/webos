@@ -1,5 +1,5 @@
-import { Change, diff, type Chunk } from "@codemirror/merge";
-import type { Text } from "@codemirror/state";
+import { Change, Chunk, diff } from "@codemirror/merge";
+import { Text } from "@codemirror/state";
 
 export const DiffMode = { SPLIT: "split", UNIFIED: "unified" } as const;
 export type DiffMode = (typeof DiffMode)[keyof typeof DiffMode];
@@ -65,6 +65,12 @@ export function summarize(chunks: readonly Chunk[], a: Text, b: Text): DiffSumma
     added += line_span(b, chunk.fromB, chunk.toB, chunk.endB);
   }
   return { changes: chunks.length, added, removed };
+}
+
+export function diff_stat(a: string, b: string): DiffSummary {
+  const doc_a = Text.of(a.split(/\r\n?|\n/));
+  const doc_b = Text.of(b.split(/\r\n?|\n/));
+  return summarize(Chunk.build(doc_a, doc_b, { scanLimit: SCAN_LIMIT }), doc_a, doc_b);
 }
 
 function line_after(doc: Text, pos: number): number {

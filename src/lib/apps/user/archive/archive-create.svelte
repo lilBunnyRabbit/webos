@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_bytes } from "$lib/core/utils";
@@ -17,16 +17,15 @@
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
-  import { device_item, item_at, write_at } from "./archive-files";
-  import { all_sources, archive_name, parent_path, rename_sources, unique_name, type CreateItem } from "./create";
+  import { device_item, item_at } from "./archive-files";
+  import { add_item, all_sources, archive_name, parent_path, type CreateItem } from "./create";
   import { ArchiveJob, error_message } from "./job.svelte";
   import { Method } from "./zip-format";
-  import { write_zip } from "./zip-write";
+  import { zip_sources } from "./operations";
 
   const { tabs, initial_paths }: { tabs: Snippet; initial_paths: string[] } = $props();
 
   const { app_id, window: win, storage } = get_app_context();
-  const apps = $derived(kernel.service<AppsService>("apps"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const METHODS = [
@@ -44,8 +43,7 @@
   const start_path = $derived(items.find((item) => item.path)?.path);
 
   function add(item: CreateItem) {
-    const name = unique_name(item.name, new Set(items.map((existing) => existing.name)));
-    items = [...items, name === item.name ? item : { ...item, name, sources: rename_sources(item.sources, item.name, name) }];
+    items = add_item(items, item);
   }
 
   async function add_paths(paths: string[]) {
@@ -89,20 +87,8 @@
     const path = await win.pick_save({ name: archive_name(items), accept: [".zip"], start_path: start_path ? parent_path(start_path) : "/home", title: "Save archive as" });
     if (!path) return;
 
-    const sources = all_sources(items);
     const zip_method = method.value === "store" ? Method.STORE : Method.DEFLATE;
-    const name = path.slice(path.lastIndexOf("/") + 1);
-    job = new ArchiveJob(app_id, { title: `Compressing ${name}`, cancelled: "Compression cancelled", failed: "Couldn't create the archive" }, total);
-    await job.run(async (options) => {
-      const zip = await write_zip(sources, { method: zip_method, ...options });
-      await write_at(path, zip);
-      return {
-        title: "Archive saved",
-        message: `${path} · ${format_bytes(zip.size)}`,
-        actions: [{ label: "Open", on_click: () => apps.open(path) }],
-      };
-    });
-    job = null;
+    await zip_sources(all_sources(items), total, path, zip_method, { on_job: (next) => (job = next) });
   }
 </script>
 

@@ -110,6 +110,27 @@ export function open_terminal(cwd: string): void {
   kernel.service<AppsService>("apps").launch("terminal", { cwd });
 }
 
+// Lazy: the zip code stays out of Explorer's bundle until it's used.
+const archive = () => import("$lib/apps/user/archive/operations");
+
+export const is_zip = (item: FileSystemItem): boolean => item.kind === "file" && file_extension(item.name) === ".zip";
+
+export async function compress_items(handler: DirectoryHandler, items: FileSystemItem[]): Promise<void> {
+  try {
+    await (await archive()).compress_into(items.map((item) => join_path(handler.segments, item.name)), handler.path);
+  } catch (error) {
+    report_file_error("Couldn't compress", error);
+  }
+}
+
+export async function extract_here(handler: DirectoryHandler, item: FileSystemItem): Promise<void> {
+  try {
+    await (await archive()).extract_to(join_path(handler.segments, item.name), handler.path);
+  } catch (error) {
+    report_file_error(`Couldn't extract "${item.name}"`, error);
+  }
+}
+
 const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
 export function copy_items(handler: DirectoryHandler, items: FileSystemItem[]): void {

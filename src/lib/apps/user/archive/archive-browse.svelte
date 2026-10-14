@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+  import kernel, { type FilesService } from "$lib/core/api";
   import { Button, Checkbox, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_bytes } from "$lib/core/utils";
@@ -18,9 +18,9 @@
   import { untrack, type Snippet } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
   import ArchivePreview from "./archive-preview.svelte";
-  import { extract_entries } from "./archive-files";
-  import { parent_path, stem } from "./create";
+  import { parent_path } from "./create";
   import { ArchiveJob, error_message } from "./job.svelte";
+  import { extract_blob } from "./operations";
   import { build_tree, entries_to_extract, folder_keys, format_ratio, is_covered, visible_rows, type TreeNode } from "./tree";
   import { read_zip, readable, type ZipArchive } from "./zip-read";
 
@@ -42,7 +42,6 @@
 
   const { app_id, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const apps = $derived(kernel.service<AppsService>("apps"));
 
   let opened = $state.raw<Opened | null>(null);
   let loading = $state(false);
@@ -119,18 +118,7 @@
     if (!folder) return;
 
     const entries = entries_to_extract(source.archive.entries, selection);
-    const total = entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0);
-    job = new ArchiveJob(app_id, { title: `Extracting ${source.name}`, cancelled: "Extraction cancelled", failed: "Couldn't extract the archive" }, total);
-    await job.run(async (options) => {
-      const result = await extract_entries(source.blob, entries, folder, stem(source.name), options);
-      const skipped = result.skipped.length ? ` · ${result.skipped.length} skipped (encrypted or unsupported)` : "";
-      return {
-        title: `Extracted ${result.files} ${result.files === 1 ? "file" : "files"}`,
-        message: `${result.path}${skipped}`,
-        actions: [{ label: "Show folder", on_click: () => apps.launch("file-explorer", { path: result.path }) }],
-      };
-    });
-    job = null;
+    await extract_blob(source.blob, source.name, entries, folder, { on_job: (next) => (job = next) });
   }
 </script>
 

@@ -1,12 +1,9 @@
 import { z } from "zod";
 import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
+import { PageSize, Template, type MarkdownPdfProps } from "./props";
 import { escape_html } from "./render";
 
-export const Template = { CLEAN: "clean", REPORT: "report", NOTES: "notes" } as const;
-export type Template = (typeof Template)[keyof typeof Template];
-
-export const PageSize = { A4: "a4", LETTER: "letter" } as const;
-export type PageSize = (typeof PageSize)[keyof typeof PageSize];
+export { PageSize, Template };
 
 export const Orientation = { PORTRAIT: "portrait", LANDSCAPE: "landscape" } as const;
 export type Orientation = (typeof Orientation)[keyof typeof Orientation];
@@ -61,6 +58,16 @@ export const SettingsSchema: z.ZodType<PdfSettings> = z.object({
   show_date: z.boolean(),
   page_numbers: z.boolean(),
 });
+
+export function with_launch_settings(settings: PdfSettings, props: Omit<MarkdownPdfProps, "path">): PdfSettings {
+  return {
+    ...settings,
+    ...(props.template ? { template: props.template } : {}),
+    ...(props.size ? { page_size: props.size } : {}),
+    ...(props.landscape === undefined ? {} : { orientation: props.landscape ? Orientation.LANDSCAPE : Orientation.PORTRAIT }),
+    ...(props.toc === undefined ? {} : { toc: props.toc }),
+  };
+}
 
 export const TEMPLATE_LABELS: Record<Template, string> = { clean: "Clean", report: "Report", notes: "Notes" };
 export const PAGE_SIZE_LABELS: Record<PageSize, string> = { a4: "A4", letter: "Letter" };
