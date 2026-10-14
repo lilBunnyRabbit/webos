@@ -152,6 +152,11 @@ export function name_for_format(name: string, format: ImageFormat, extension: st
   return `${dot > 0 ? name.slice(0, dot) : name}${extension}`;
 }
 
+export function resize_size(current: Size, width: number, height?: number): Size {
+  if (height === undefined) return resize_to(current, "width", width, true);
+  return { width: clamp(Math.round(width) || 1, 1, MAX_SIDE), height: clamp(Math.round(height) || 1, 1, MAX_SIDE) };
+}
+
 export const ZOOM_MIN = 0.05;
 export const ZOOM_MAX = 16;
 const ZOOM_LEVELS = [0.05, 0.1, 0.125, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16];

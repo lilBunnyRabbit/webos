@@ -1,12 +1,13 @@
 <script lang="ts">
   import kernel, { NotificationType, ShortcutCategory, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
-  import { Button, EmptyState, IconButton, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files } from "$lib/core/utils/image";
   import type { Position } from "$lib/core/utils/type";
   import {
+    ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowLeft as ArrowLeftIcon,
     ArrowRight as ArrowRightIcon,
     Devices as DevicesIcon,
@@ -19,6 +20,7 @@
     SpeakerHigh as SpeakerHighIcon,
     SpeakerX as SpeakerXIcon,
     SquaresFour as SquaresFourIcon,
+    Stack as StackIcon,
     Stop as StopIcon,
     Textbox as TextboxIcon,
     Trash as TrashIcon,
@@ -34,6 +36,8 @@
     free_keys,
     is_audio,
     move_pad,
+    PLAY_MODES,
+    PlayMode,
     sound_in_use,
     sounds_freed_by_board,
     unique_board_name,
@@ -42,10 +46,14 @@
   } from "./board";
   import PadDialog, { type PadEdit } from "./pad-dialog.svelte";
   import PadTile from "./pad-tile.svelte";
-  import { SoundPlayer } from "./player.svelte";
-  import { delete_sound, import_sound, read_sound } from "./store";
+  import { acquire_player } from "./player.svelte";
+  import { delete_sound, import_sound } from "./store";
 
   const ACCEPT = ["audio/*"];
+  const MODE_OPTIONS = [
+    { value: PlayMode.RESTART, label: "Restart", icon: ArrowCounterClockwiseIcon },
+    { value: PlayMode.OVERLAP, label: "Overlap", icon: StackIcon },
+  ];
   const PAD_TYPE = "application/x-soundboard-pad";
 
   const { path }: { path?: string } = $props();
@@ -57,15 +65,19 @@
 
   const data = storage.file("board.json", EMPTY_FILE, BoardFileSchema);
   const volume = storage.persisted("volume", 0.8, z.number().min(0).max(1));
+  const mode = storage.persisted<PlayMode>("mode", PlayMode.RESTART, z.enum(PLAY_MODES));
   const active_id = storage.window("board", DEFAULT_BOARD_ID, z.string());
   const imported = storage.window("imported", false, z.boolean());
 
   const board = $derived(data.value.boards.find((entry) => entry.id === active_id.value) ?? data.value.boards[0]);
   const board_options = $derived(data.value.boards.map((entry) => ({ value: entry.id, label: entry.name })));
 
-  const player = new SoundPlayer((sound) => read_sound(files, sound));
-  onDestroy(() => player.close());
+  const { player, release } = acquire_player();
+  onDestroy(release);
   $effect(() => player.set_volume(volume.value));
+  $effect(() => {
+    player.mode = mode.value;
+  });
 
   let root = $state<HTMLDivElement>();
   let busy = $state(0);
@@ -342,7 +354,8 @@
     <IconButton label="Add from device…" size="sm" onclick={add_from_device}><DevicesIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @md:block" />
     <IconButton label="Stop all (Esc)" size="sm" disabled={playing_count === 0} onclick={() => player.stop_all()}><StopIcon weight="fill" /></IconButton>
-    <label class="flex basis-full items-center gap-2 px-1 text-foreground/80 @md:basis-auto @md:px-0" title="Master volume">
+    <Segmented size="sm" label="Pressing a playing pad again" options={MODE_OPTIONS} bind:value={mode.value} />
+    <label class="flex min-w-36 flex-1 items-center gap-2 px-1 text-foreground/80 @md:flex-none @md:px-0" title="Master volume">
       <span class="sr-only">Master volume</span>
       {#if volume.value === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
       <Slider min={0} max={1} step={0.01} bind:value={volume.value} size="sm" class="flex-1 @md:w-28 @md:flex-none" />

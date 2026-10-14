@@ -27,12 +27,16 @@
     VideoCamera as VideoCameraIcon,
     Waveform as WaveformIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { z } from "zod";
-  import { error_copy, is_media_file, kind_of_file, PhotoFormat, RECORDINGS_DIR, Source, TakeKind } from "./media";
+  import { error_copy, kind_of_file, PhotoFormat, RECORDINGS_DIR, Source, TakeKind } from "./media";
+  import type { RecorderProps } from "./props";
+  import { list_recordings } from "./recordings";
   import RecorderMeter from "./recorder-meter.svelte";
   import { Phase, RecorderSession } from "./session.svelte";
 
+  const { source: initial_source }: RecorderProps = $props();
   const { window: win, storage, app_id } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -51,7 +55,8 @@
   const KIND_ICON: Record<TakeKind, IconComponent> = { audio: FileAudioIcon, video: FileVideoIcon, photo: FileImageIcon };
   const ERROR_ICON: Record<Source, IconComponent> = { mic: MicrophoneSlashIcon, screen: MonitorIcon, camera: CameraSlashIcon };
 
-  const stored_source = storage.window<Source>("source", Source.MIC, z.enum([Source.MIC, Source.SCREEN, Source.CAMERA]));
+  // The prop only seeds a new window; a restored one keeps the source the user switched to.
+  const stored_source = storage.window<Source>("source", untrack(() => initial_source) ?? Source.MIC, z.enum([Source.MIC, Source.SCREEN, Source.CAMERA]));
   if (!can_share_screen && stored_source.value === Source.SCREEN) stored_source.value = Source.MIC;
   const mic_mix = storage.persisted("screen_mic", true, z.boolean());
   const photo_format = storage.persisted<PhotoFormat>("photo_format", PhotoFormat.JPEG, z.enum([PhotoFormat.JPEG, PhotoFormat.PNG]));
@@ -155,10 +160,7 @@
     let current = true;
     void (async () => {
       try {
-        const directory = await files.get_directory(RECORDINGS_DIR);
-        const items = directory ? await files.list(directory, { include_metadata: true }) : [];
-        const media = items.filter((item): item is FileSystemFileItem => item.kind === "file" && is_media_file(item.name));
-        media.sort((a, b) => (b.last_modified ?? 0) - (a.last_modified ?? 0));
+        const media = await list_recordings(files);
         if (current) recent = media;
       } catch (reason) {
         console.warn("[Recorder] couldn't list recordings", reason);

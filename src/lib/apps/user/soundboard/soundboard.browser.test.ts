@@ -1,7 +1,12 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { flushSync } from "svelte";
+import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import kernel from "$lib/core/api";
+import type { CommandContext, Value } from "$lib/core/api/services/shell/type";
+import { app_data_path, json_file } from "$lib/core/contexts/app/json-file.svelte";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
-import type { Pad } from "./board";
+import { BoardFileSchema, EMPTY_FILE, PlayMode, type Pad } from "./board";
+import { add, list } from "./shell";
 import { SoundPlayer } from "./player.svelte";
 import { delete_sound, import_sound, read_sound, SOUNDS_DIR } from "./store";
 
@@ -34,6 +39,11 @@ beforeEach(async () => {
   await clear_opfs();
   files = new FilesService();
   await files.init();
+  kernel.services.set("files", files);
+});
+
+afterAll(() => {
+  kernel.services.delete("files");
 });
 
 afterEach(() => {
@@ -59,6 +69,7 @@ describe("SoundPlayer", () => {
   test("overlaps voices, toggles loops and stops all", async () => {
     const sound = await import_sound(files, wav(2));
     player = new SoundPlayer((name) => read_sound(files, name));
+    player.mode = PlayMode.OVERLAP;
 
     await player.trigger(pad({ sound }));
     await player.trigger(pad({ sound }));
@@ -73,9 +84,67 @@ describe("SoundPlayer", () => {
     expect(player.playing.size).toBe(0);
   });
 
+  test("restart mode replaces the sounding copy and starts it over", async () => {
+    const sound = await import_sound(files, wav(2));
+    player = new SoundPlayer((name) => read_sound(files, name));
+
+    await player.trigger(pad({ sound }));
+    const first = player.playing.get("p")!.started;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await player.trigger(pad({ sound }));
+    expect(player.playing.get("p")?.count).toBe(1);
+    expect(player.playing.get("p")!.started).toBeGreaterThan(first);
+  });
+
+  test("calls on_idle once the last sound ends, not between a restart", async () => {
+    const sound = await import_sound(files, wav(2));
+    let idle = 0;
+    player = new SoundPlayer(
+      (name) => read_sound(files, name),
+      () => idle++
+    );
+    await player.trigger(pad({ sound }));
+    await player.trigger(pad({ sound }));
+    await Promise.resolve();
+    expect(idle).toBe(0);
+    player.stop_all();
+    await Promise.resolve();
+    expect(idle).toBe(1);
+  });
+
   test("a missing sound rejects and isn't cached", async () => {
     player = new SoundPlayer((name) => read_sound(files, name));
     await expect(player.trigger(pad({ sound: "gone.wav" }))).rejects.toThrow("missing");
     expect(player.playing.size).toBe(0);
+  });
+});
+
+function context<T>(args: T): CommandContext<T> {
+  const input = (async function* (): AsyncGenerator<Value> {})();
+  return { args, input, piped: false, session: { cwd: "/home" }, signal: new AbortController().signal, elevated: false } as unknown as CommandContext<T>;
+}
+
+async function collect(values: AsyncGenerator<Value>): Promise<Value[]> {
+  const out: Value[] = [];
+  for await (const value of values) out.push(value);
+  return out;
+}
+
+describe("shell", () => {
+  test("sb add puts pads on the board an open window holds, sb ls lists them", async () => {
+    await files.create_file(await files.get_directory("/home"), "beep.wav", { content: wav() });
+    const window_board = json_file(app_data_path("soundboard", "board.json"), EMPTY_FILE, BoardFileSchema);
+    await vi.waitFor(() => expect(window_board.ready).toBe(true));
+
+    const added = await collect(add(context({ paths: ["beep.wav"], board: undefined })));
+    expect(added).toMatchObject([{ $type: "pad", label: "beep", key: "1", board: "My board", loop: false }]);
+    flushSync();
+    expect(window_board.value.boards[0].pads.map((pad) => pad.label)).toEqual(["beep"]);
+    expect(await files.get_file(`${SOUNDS_DIR}/beep.wav`)).not.toBeNull();
+
+    expect(await collect(list(context({ board: "my board" })))).toHaveLength(1);
+    await expect(collect(list(context({ board: "nope" })))).rejects.toThrow('no board "nope"');
+    await expect(collect(add(context({ paths: ["missing.wav"], board: undefined })))).rejects.toThrow("no such file");
+    window_board.release();
   });
 });
