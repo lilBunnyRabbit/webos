@@ -15,7 +15,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "World clock, alarms, timers and a stopwatch.",
-  keywords: ["time", "alarm", "timer", "stopwatch", "countdown", "world clock", "time zone"],
+  keywords: ["time", "clock", "alarm", "timer", "stopwatch", "countdown", "world clock", "time zone", "wake up"],
   props: CLOCK_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },
   shell: {
@@ -25,13 +25,15 @@ export default define_app({
     values: {
       alarm: {
         columns: ["id", "time", "repeat", "label", "on", "next"],
-        text: (alarm) => `${alarm.id}  ${alarm.time}  ${alarm.on ? "on " : "off"}  ${alarm.repeat}${alarm.label ? `  ${alarm.label}` : ""}`,
+        text: (alarm) =>
+          `${alarm.id}  ${alarm.time}  ${alarm.on ? "on " : "off"}  ${alarm.repeat}${alarm.label ? `  ${alarm.label}` : ""}`,
         cell: (alarm, column) => (column === "on" ? (alarm.on ? "on" : "off") : String(alarm[column] ?? "")),
         open: () => void logic().then((m) => m.open_alarms()),
       },
       timer: {
         columns: ["id", "label", "left", "duration", "state"],
-        text: (timer) => `${timer.id}  ${String(timer.left).padStart(7)}  ${timer.state}  ${timer.label || timer.duration}`,
+        text: (timer) =>
+          `${timer.id}  ${String(timer.left).padStart(7)}  ${timer.state}  ${timer.label || timer.duration}`,
         open: () => void logic().then((m) => m.open_timers()),
       },
     },

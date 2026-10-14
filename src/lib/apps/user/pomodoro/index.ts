@@ -13,7 +13,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Focus in timed sessions with short and long breaks, and see how your week went.",
-  keywords: ["timer", "focus", "tomato", "break", "productivity", "pomo"],
+  keywords: ["timer", "focus", "tomato", "break", "productivity", "pomo", "study", "work"],
   defaults: {
     constraints: {
       width: { min: 300 },
@@ -24,7 +24,8 @@ export default define_app({
     values: {
       "focus-day": {
         columns: ["day", "sessions", "minutes"],
-        text: (day) => `${day.day}  ${String(day.sessions).padStart(2)} sessions  ${String(day.minutes).padStart(4)} min`,
+        text: (day) =>
+          `${day.day}  ${String(day.sessions).padStart(2)} sessions  ${String(day.minutes).padStart(4)} min`,
         open: () => void logic().then((m) => m.open_app()),
       },
     },

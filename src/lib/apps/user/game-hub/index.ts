@@ -15,7 +15,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Every game in one place, with play time, stats and today's daily puzzles.",
-  keywords: ["games", "library", "daily", "puzzle", "streak", "stats"],
+  keywords: ["games", "game", "library", "launcher", "daily", "puzzle", "streak", "stats", "play time"],
   props: z.object({ tab: z.enum(Tab).optional() }),
   defaults: {
     constraints: {
@@ -30,14 +30,16 @@ export default define_app({
         text: (game) => `${String(game.name).padEnd(14)} ${format_duration(Number(game.time))}`,
         cell: (game, column) => {
           if (column === "time") return format_duration(Number(game.time));
-          if (column === "last") return game.last === null ? "never" : format_last_played(new Date(Number(game.last)).toISOString());
+          if (column === "last")
+            return game.last === null ? "never" : format_last_played(new Date(Number(game.last)).toISOString());
           return String(game[column]);
         },
         open: (game) => void logic().then((m) => m.launch(String(game.id))),
       },
       "game-daily": {
         columns: ["id", "name", "solved", "time"],
-        text: (daily) => `${String(daily.name).padEnd(14)} ${daily.solved ? `solved in ${format_time(Number(daily.time))}` : "not solved"}`,
+        text: (daily) =>
+          `${String(daily.name).padEnd(14)} ${daily.solved ? `solved in ${format_time(Number(daily.time))}` : "not solved"}`,
         cell: (daily, column) => {
           if (column === "solved") return daily.solved ? "yes" : "no";
           if (column === "time") return daily.time === null ? "" : format_time(Number(daily.time));

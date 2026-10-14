@@ -16,7 +16,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Your events by month, week or agenda, with reminders, worked hours and due cards.",
-  keywords: ["calendar", "events", "schedule", "agenda", "reminder", "appointment", "date"],
+  keywords: ["calendar", "events", "schedule", "agenda", "planner", "reminder", "appointment", "date", "month", "week"],
   props: CALENDAR_PROPS,
   badge: today_badge,
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },

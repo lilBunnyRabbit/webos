@@ -7,8 +7,9 @@ import { ClockUser as ClockUserIcon } from "phosphor-svelte";
 import { WORK_HOURS_PROPS } from "./props";
 
 const logic = () => import("./shell");
-const hours_minutes = (row: Tagged) => `${Math.floor(Number(row.minutes) / 60)}:${String(Number(row.minutes) % 60).padStart(2, "0")}`;
-const month_arg =() => z.string().optional().describe("YYYY-MM, a month number, last or next; this month by default");
+const hours_minutes = (row: Tagged) =>
+  `${Math.floor(Number(row.minutes) / 60)}:${String(Number(row.minutes) % 60).padStart(2, "0")}`;
+const month_arg = () => z.string().optional().describe("YYYY-MM, a month number, last or next; this month by default");
 
 export default define_app({
   id: "work-hours",
@@ -17,7 +18,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Clock in and out, see your hours per day, week and month, print a time sheet.",
-  keywords: ["time", "tracker", "timesheet", "hours", "clock in", "work"],
+  keywords: ["time", "tracker", "time tracking", "timesheet", "hours", "clock in", "work", "job", "overtime"],
   props: WORK_HOURS_PROPS,
   defaults: {
     constraints: {

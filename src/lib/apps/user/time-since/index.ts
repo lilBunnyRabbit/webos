@@ -17,7 +17,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Count up from the last time something happened, and see how long each run lasted.",
-  keywords: ["counter", "streak", "since", "habit", "quit", "timer", "days"],
+  keywords: ["counter", "count up", "streak", "since", "habit", "quit", "sober", "timer", "days", "last time"],
   props: TIME_SINCE_PROPS,
   defaults: {
     constraints: {
