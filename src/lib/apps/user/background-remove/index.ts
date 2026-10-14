@@ -10,7 +10,7 @@ export default define_app({
   icon: EraserIcon,
   version: "1.0.0",
   description: "Makes chosen colours in an image transparent.",
-  keywords: ["transparent", "colour key", "chroma", "image"],
+  keywords: ["transparent", "colour key", "chroma", "green screen", "image", "photo", "remove background", "cutout"],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
   props: FILE_PROPS,

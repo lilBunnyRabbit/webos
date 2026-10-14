@@ -11,7 +11,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.MEDIA,
   description: "Split an image into square tiles, for grid layouts like Instagram",
-  keywords: ["image", "split", "tiles", "grid", "instagram"],
+  keywords: ["image", "photo", "split", "tiles", "grid", "instagram", "slice"],
   tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {

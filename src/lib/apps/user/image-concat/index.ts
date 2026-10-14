@@ -10,7 +10,7 @@ export default define_app({
   icon: RowsIcon,
   version: "1.0.0",
   description: "Joins several images into one, side by side or stacked.",
-  keywords: ["join", "merge", "combine", "stitch", "image"],
+  keywords: ["join", "merge", "combine", "stitch", "collage", "image", "photo"],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
   props: FILE_PROPS,

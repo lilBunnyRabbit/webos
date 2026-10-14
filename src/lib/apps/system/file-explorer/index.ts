@@ -10,6 +10,7 @@ export default define_app({
   icon: FolderIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
+  keywords: ["files", "folders", "finder", "browse", "explorer", "manager", "directory", "upload", "download"],
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,
   component: () => import("./file-explorer.app.svelte"),

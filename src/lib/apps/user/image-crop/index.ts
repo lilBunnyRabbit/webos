@@ -10,7 +10,7 @@ export default define_app({
   icon: CropIcon,
   version: "1.0.0",
   description: "Trims transparent borders from an image.",
-  keywords: ["trim", "transparent", "alpha", "image"],
+  keywords: ["trim", "transparent", "alpha", "image", "photo", "crop"],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
   props: FILE_PROPS,

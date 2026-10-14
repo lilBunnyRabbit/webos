@@ -10,6 +10,7 @@ export default define_app({
   icon: QrCodeIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
+  keywords: ["qr", "barcode", "scan", "scanner", "camera", "code"],
   tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {

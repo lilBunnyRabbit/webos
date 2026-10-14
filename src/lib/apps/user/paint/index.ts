@@ -9,7 +9,7 @@ export default define_app({
   icon: PaintBrushIcon,
   version: "1.0.0",
   description: "Draw and edit images with brushes, shapes and fill.",
-  keywords: ["draw", "drawing", "canvas", "brush", "pencil", "image", "png"],
+  keywords: ["draw", "drawing", "canvas", "brush", "pencil", "sketch", "art", "image", "png", "mspaint"],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
   props: FILE_PROPS,

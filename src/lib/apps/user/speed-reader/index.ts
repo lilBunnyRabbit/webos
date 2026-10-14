@@ -10,7 +10,7 @@ export default define_app({
   icon: BookOpenTextIcon,
   version: "1.0.0",
   description: "Reads text one word at a time, fast.",
-  keywords: ["rsvp", "reading", "wpm", "spritz"],
+  keywords: ["rsvp", "reading", "read", "wpm", "spritz", "books", "text"],
   category: AppCategory.PRODUCTIVITY,
   tools: ["text/plain", ".txt", ".md"],
   props: FILE_PROPS,

@@ -10,7 +10,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Run commands over files, windows and apps, and pipe their results.",
-  keywords: ["shell", "command", "console", "cli", "prompt"],
+  keywords: ["shell", "command", "console", "cli", "prompt", "bash", "command line"],
   props: z.object({
     /** The folder to start in; home by default. */
     cwd: z.string().optional(),

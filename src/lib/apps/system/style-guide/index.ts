@@ -9,7 +9,7 @@ export default define_app({
   icon: SwatchesIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  keywords: ["design", "components", "tokens"],
+  keywords: ["design", "components", "tokens", "ui kit", "colours", "typography"],
   defaults: {
     constraints: {
       width: { min: 720 },

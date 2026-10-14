@@ -10,6 +10,7 @@ export default define_app({
   icon: GearIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
+  keywords: ["preferences", "options", "theme", "dark mode", "wallpaper", "taskbar", "configuration", "control panel"],
   defaults: {
     constraints: {
       width: { min: 640 },

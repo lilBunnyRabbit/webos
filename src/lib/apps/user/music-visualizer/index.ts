@@ -10,7 +10,7 @@ export default define_app({
   icon: EqualizerIcon,
   version: "1.0.0",
   description: "Plays an audio file and draws it live as bars, a waveform or a circle.",
-  keywords: ["audio", "music", "spectrum", "waveform", "oscilloscope", "microphone"],
+  keywords: ["audio", "music", "spectrum", "waveform", "oscilloscope", "microphone", "sound", "visualiser"],
   category: AppCategory.MEDIA,
   tools: ["audio/*"],
   props: FILE_PROPS,

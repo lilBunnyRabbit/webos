@@ -8,7 +8,8 @@ import { MusicNotes as MusicNotesIcon } from "phosphor-svelte";
 
 const logic = () => import("./shell");
 const board_arg = () => z.string().optional().describe("Board name");
-const complete_board = (field: string, partial: string) => (field === "board" ? logic().then((m) => m.complete_boards(partial)) : undefined);
+const complete_board = (field: string, partial: string) =>
+  field === "board" ? logic().then((m) => m.complete_boards(partial)) : undefined;
 
 export default define_app({
   id: "soundboard",
@@ -16,7 +17,7 @@ export default define_app({
   icon: MusicNotesIcon,
   version: "1.0.0",
   description: "A grid of pads that play your own sounds, by click or key.",
-  keywords: ["sound", "audio", "pads", "sfx", "effects", "board"],
+  keywords: ["sound", "audio", "pads", "sfx", "effects", "board", "music", "meme", "buttons"],
   category: AppCategory.MEDIA,
   tools: ["audio/*"],
   props: FILE_PROPS,
@@ -33,8 +34,18 @@ export default define_app({
     values: {
       pad: {
         columns: ["key", "label", "board", "loop"],
-        text: (pad) => `${String(pad.key || "-").toUpperCase().padEnd(2)} ${pad.label}${pad.loop ? " (loop)" : ""}  ${pad.board}`,
-        cell: (pad, column) => (column === "key" ? String(pad.key).toUpperCase() : column === "loop" ? (pad.loop ? "loop" : "") : String(pad[column] ?? "")),
+        text: (pad) =>
+          `${String(pad.key || "-")
+            .toUpperCase()
+            .padEnd(2)} ${pad.label}${pad.loop ? " (loop)" : ""}  ${pad.board}`,
+        cell: (pad, column) =>
+          column === "key"
+            ? String(pad.key).toUpperCase()
+            : column === "loop"
+              ? pad.loop
+                ? "loop"
+                : ""
+              : String(pad[column] ?? ""),
         open: (pad) => void logic().then((m) => m.open_pad(String(pad.id))),
       },
     },

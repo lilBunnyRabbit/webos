@@ -10,13 +10,18 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Shade the sea so every number becomes an island of exactly that size.",
-  keywords: ["islands", "sea", "wall", "nikoli", "puzzle", "logic"],
+  keywords: ["islands", "sea", "wall", "nikoli", "puzzle", "logic", "game", "brain"],
   defaults: {
     constraints: {
       width: { min: 340 },
       height: { min: 420 },
     },
   },
-  props: z.object({ daily: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  props: z.object({
+    daily: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  }),
   component: () => import("./nurikabe.app.svelte"),
 });

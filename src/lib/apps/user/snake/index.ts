@@ -9,7 +9,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Classic Snake: eat, grow, don't bite yourself.",
-  keywords: ["game", "arcade"],
+  keywords: ["game", "arcade", "classic", "retro"],
   defaults: {
     constraints: {
       width: { min: 300 },

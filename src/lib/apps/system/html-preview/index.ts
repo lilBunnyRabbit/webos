@@ -10,6 +10,7 @@ export default define_app({
   icon: FileHtmlIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
+  keywords: ["html", "web page", "website", "preview", "browser", "render"],
   associations: ["text/html", ".html", ".htm"],
   props: FILE_PROPS,
   defaults: {

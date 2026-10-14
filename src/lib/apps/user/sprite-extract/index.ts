@@ -10,8 +10,9 @@ export default define_app({
   icon: FilmStripIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
-  description: "Slice a sprite sheet into frames, fix the grid, preview the animation and export frames or a clean sheet",
-  keywords: ["sprite", "sheet", "frames", "animation", "extract", "slice"],
+  description:
+    "Slice a sprite sheet into frames, fix the grid, preview the animation and export frames or a clean sheet",
+  keywords: ["sprite", "sheet", "frames", "animation", "extract", "slice", "game assets", "pixel art"],
   tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {

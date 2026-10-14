@@ -15,7 +15,20 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.MEDIA,
   description: "Record your voice, your screen or your camera, and take photos.",
-  keywords: ["voice", "microphone", "audio", "screen", "screencast", "camera", "video", "photo", "webcam"],
+  keywords: [
+    "voice",
+    "microphone",
+    "audio",
+    "record",
+    "screen",
+    "screencast",
+    "screen recording",
+    "camera",
+    "video",
+    "photo",
+    "webcam",
+    "selfie",
+  ],
   props: RECORDER_PROPS,
   defaults: {
     constraints: {
@@ -29,7 +42,11 @@ export default define_app({
         columns: ["name", "kind", "size", "date"],
         text: (value) => `${value.name}  ${value.kind}`,
         cell: (value, column) =>
-          column === "size" ? format_bytes(Number(value.size)) : column === "date" ? format_datetime(Number(value.date)) : String(value[column] ?? ""),
+          column === "size"
+            ? format_bytes(Number(value.size))
+            : column === "date"
+              ? format_datetime(Number(value.date))
+              : String(value[column] ?? ""),
         open: (value) => void logic().then((m) => m.open_recording(String(value.path))),
       },
     },

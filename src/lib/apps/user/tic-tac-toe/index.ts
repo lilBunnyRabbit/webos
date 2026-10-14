@@ -8,6 +8,7 @@ export default define_app({
   icon: GridNineIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
+  keywords: ["noughts and crosses", "x and o", "xo", "game", "classic", "two player"],
   defaults: {
     constraints: {
       width: { min: 340 },

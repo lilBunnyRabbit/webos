@@ -10,13 +10,18 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Clear the board without hitting a mine.",
-  keywords: ["mines", "puzzle"],
+  keywords: ["mines", "bombs", "puzzle", "logic", "game", "classic"],
   defaults: {
     constraints: {
       width: { min: 320 },
       height: { min: 360 },
     },
   },
-  props: z.object({ daily: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  props: z.object({
+    daily: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  }),
   component: () => import("./minesweeper.app.svelte"),
 });

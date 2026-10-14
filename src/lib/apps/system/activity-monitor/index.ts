@@ -8,6 +8,18 @@ export default define_app({
   icon: PulseIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
+  keywords: [
+    "task manager",
+    "processes",
+    "performance",
+    "fps",
+    "memory",
+    "storage",
+    "network",
+    "profiler",
+    "monitor",
+    "widgets",
+  ],
   defaults: {
     constraints: {
       width: { min: 480 },

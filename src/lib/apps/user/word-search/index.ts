@@ -10,13 +10,18 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Find the hidden words in a grid of letters.",
-  keywords: ["wordsearch", "word find", "words", "puzzle", "letters"],
+  keywords: ["wordsearch", "word find", "osmosmerka", "words", "puzzle", "letters", "game", "vocabulary"],
   defaults: {
     constraints: {
       width: { min: 340 },
       height: { min: 460 },
     },
   },
-  props: z.object({ daily: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  props: z.object({
+    daily: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  }),
   component: () => import("./word-search.app.svelte"),
 });
