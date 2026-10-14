@@ -73,6 +73,8 @@ The owner asked to use the quno CLI (`~/dev/orgs/lilbunnyrabbit/quno`) as inspir
 
 15. **Widgets as built.** Pinning is `desktop.pin_widget(app_id, { label, props, size })`: from the app (pin buttons, hidden on mobile) or `quno pin <note>` / `quno t pin`. A sticky is 3×2 and edits the note in place, sharing `NoteDraft` with the app. The todo widget is 3×3. The frame's title strip is the handle; the body is the app's. Sort leaves widgets in place. No resize yet.
 
+16. **Links as built.** Obsidian syntax: `[[target]]`, `[[target|alias]]`, `[[target#heading]]`. A target resolves by exact id, file name without `.md` (what Obsidian writes), title (what you type), then a unique id prefix. Under the editor, "Links to" lists the targets (an unknown one is a `+` chip that creates the note, titled by the link) and "Linked from" lists the backlinks. Titles show link text without brackets. No `[[` autocomplete yet, and no link commands in the shell.
+
 ## Key takeaways
 
 - Quick Notes is the first consumer of three app extension points: `shell`, `badge` and `widget` on `define_app`. These are recorded in [ADR-034](../adrs/034-app-extension-points.md).

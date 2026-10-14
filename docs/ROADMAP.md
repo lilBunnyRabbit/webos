@@ -278,12 +278,12 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [-] Quick Notes (ADR-034, [brainstorm](brainstorm/2026-10-14_quick-notes.md)), quno-inspired
+- [x] Quick Notes (ADR-034, [brainstorm](brainstorm/2026-10-14_quick-notes.md)), quno-inspired
   - [x] App commands (`define_app({ shell })`)
   - [x] Core: `/home/Notes`, ids, Todo | Notes | Inbox tabs, `note`/`notes`/`todo` commands and values, capture dialog with context stamp, Alt+Shift+Q
   - [x] Manifest badge (open todos), shown where the icon shows
   - [x] Desktop widgets (`.widget` files, multi-cell), stickies; mobile and resizing later
-  - [ ] Wikilinks and backlinks
+  - [x] Wikilinks and backlinks
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
 - [ ] Markdown-to-PDF converter — live preview, templates, TOC
 - [ ] Work Hours Tracker — time in/out, monthly reports, PDF export

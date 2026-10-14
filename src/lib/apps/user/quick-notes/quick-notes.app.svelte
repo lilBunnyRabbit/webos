@@ -20,6 +20,9 @@
     tags_of,
     title_of,
     newest_first,
+    backlinks_of,
+    links_of,
+    resolve_link,
     type Note,
   } from "./notes";
   import { create_note, delete_note, list_notes, read_todo, save_note, write_todo } from "./store";
@@ -218,6 +221,26 @@
     { value: Tab.TODO, label: open_todos ? `Todo ${open_todos}` : "Todo", icon: CheckSquare },
   ]);
 
+  const links = $derived(selected ? links_of(draft.body).map((target) => ({ target, note: resolve_link(notes, target) })) : []);
+  const backlinks = $derived(selected ? backlinks_of(notes, selected) : []);
+
+  function follow(target: Note) {
+    if (target.status === NoteStatus.RAW) tab.value = Tab.INBOX;
+    else {
+      tab.value = Tab.NOTES;
+      filter_status.value = target.status;
+    }
+    query = "";
+    selected_id.value = target.id;
+  }
+
+  /** A link to a note that doesn't exist yet creates it, titled by the link, like Obsidian. */
+  async function create_linked(title: string) {
+    const note = await create_note(files, `# ${title}\n`, "");
+    await reload();
+    follow(note);
+  }
+
   const status_options = NOTE_STATUSES.map((status) => ({ value: status, label: status[0].toUpperCase() + status.slice(1) }));
 </script>
 
@@ -341,11 +364,38 @@
             <Textarea
               bind:element={editor}
               value={draft.body}
-              placeholder="Write it down, #tags inline"
+              placeholder="Write it down, #tags inline, [[another note]] to link"
               oninput={(event) => draft.edit(event.currentTarget.value)}
               aria-label="Note"
               class="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3 ring-0 focus-visible:ring-0"
             />
+            {#if links.length > 0 || backlinks.length > 0}
+              <div class="grid gap-1 border-t border-foreground/8 px-3 py-2 text-ui">
+                {#if links.length > 0}
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="w-20 shrink-0 text-2xs tracking-wide text-foreground/55 uppercase">Links to</span>
+                    {#each links as link (link.target)}
+                      {#if link.note}
+                        {@const target = link.note}
+                        <Button variant="quiet" size="sm" class="h-6 px-2 text-primary underline decoration-primary/40 underline-offset-2" onclick={() => follow(target)}>{title_of(target.body)}</Button>
+                      {:else}
+                        <Button variant="quiet" size="sm" class="h-6 px-2 text-foreground/55" title="No note is called this yet. Click to create it." onclick={() => create_linked(link.target)}>
+                          <Plus />{link.target}
+                        </Button>
+                      {/if}
+                    {/each}
+                  </div>
+                {/if}
+                {#if backlinks.length > 0}
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="w-20 shrink-0 text-2xs tracking-wide text-foreground/55 uppercase">Linked from</span>
+                    {#each backlinks as source (source.id)}
+                      <Button variant="quiet" size="sm" class="h-6 px-2 text-primary underline decoration-primary/40 underline-offset-2" onclick={() => follow(source)}>{title_of(source.body)}</Button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/if}
             <div class="flex flex-wrap items-center gap-2 border-t border-foreground/8 px-3 py-1.5 font-mono text-2xs text-foreground/55">
               {#if note.created}<span>{format_datetime(new Date(note.created))}</span>{/if}
               {#if note.from}

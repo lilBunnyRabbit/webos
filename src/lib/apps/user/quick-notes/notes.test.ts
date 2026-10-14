@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   add_todo,
+  backlinks_of,
+  links_of,
+  resolve_link,
   clear_todos,
   file_name_for,
   NoteStatus,
@@ -36,6 +39,7 @@ describe("notes", () => {
 
   test("title, tags and file name", () => {
     expect(title_of("\n# Call Bob #work\nbody")).toBe("Call Bob #work");
+    expect(title_of("see [[Call Bob]] and [[x#part|the plan]]")).toBe("see Call Bob and the plan");
     expect(tags_of("call bob #Work and #home, not a#b")).toEqual(["work", "home"]);
     expect(file_name_for("Fix the dock gap #webos now", new Date(2026, 9, 4))).toBe("2026-10-04-fix-the-dock-gap-now.md");
   });
@@ -62,5 +66,28 @@ describe("todos", () => {
     expect(set_todo(text, 9, true)).toBeNull();
     const cleared = clear_todos(text);
     expect(cleared).toEqual({ text: "# Todo\n- [ ] call bob #work\n", removed: 1 });
+  });
+});
+
+describe("links", () => {
+  const notes = [
+    { ...note("a3f9c1e", "Dock gap\nsee [[Call Bob]] and [[nope]]"), file: "2026-10-14-dock-gap.md" },
+    { ...note("b120000", "Call Bob\nre [[2026-10-14-dock-gap|the dock]]"), file: "2026-10-14-call-bob.md" },
+    note("c330000", "unrelated [[b12]]"),
+  ];
+
+  test("parses targets, aliases and headings once each", () => {
+    expect(links_of("[[a]] [[b|alias]] [[c#part]] [[a]]")).toEqual(["a", "b", "c"]);
+  });
+
+  test("resolves by file name, title or id prefix", () => {
+    expect(resolve_link(notes, "2026-10-14-dock-gap")?.id).toBe("a3f9c1e");
+    expect(resolve_link(notes, "call bob")?.id).toBe("b120000");
+    expect(resolve_link(notes, "b12")?.id).toBe("b120000");
+    expect(resolve_link(notes, "nope")).toBeNull();
+  });
+
+  test("backlinks", () => {
+    expect(backlinks_of(notes, notes[1]).map((n) => n.id)).toEqual(["a3f9c1e", "c330000"]);
   });
 });

@@ -32,7 +32,12 @@ export function tags_of(text: string): string[] {
 
 export function title_of(body: string): string {
   const line = body.split("\n").find((line) => line.trim() !== "") ?? "";
-  return line.replace(/^#+\s*/, "").trim() || "Untitled";
+  return (
+    line
+      .replace(/^#+\s*/, "")
+      .replace(/\[\[([^\]|#\n]+)(?:#[^\]|\n]*)?(?:\|([^\]\n]*))?\]\]/g, (_, target: string, alias?: string) => alias?.trim() || target.trim())
+      .trim() || "Untitled"
+  );
 }
 
 export function new_id(taken: Iterable<string>): string {
@@ -156,4 +161,27 @@ export function clear_todos(text: string, all = false): { text: string; removed:
     return !drop;
   });
   return { text: join(kept), removed };
+}
+
+const LINK = /\[\[([^\]|#\n]+)(?:[|#][^\]\n]*)?\]\]/g;
+
+/** `[[target]]`, `[[target|alias]]` and `[[target#heading]]` targets, in order, once each (Obsidian syntax). */
+export function links_of(body: string): string[] {
+  return [...new Set([...body.matchAll(LINK)].map((match) => match[1].trim()).filter(Boolean))];
+}
+
+/** A link target as Obsidian would write it (file name without `.md`), or by id or title, which quno users type. */
+export function resolve_link(notes: Note[], target: string): Note | null {
+  const t = target.trim().toLowerCase();
+  const by_prefix = t.length >= 3 ? notes.filter((note) => note.id.startsWith(t)) : [];
+  return (
+    notes.find((note) => note.id === t) ??
+    notes.find((note) => note.file.toLowerCase() === `${t}.md`) ??
+    notes.find((note) => title_of(note.body).toLowerCase() === t) ??
+    (by_prefix.length === 1 ? by_prefix[0] : null)
+  );
+}
+
+export function backlinks_of(notes: Note[], target: Note): Note[] {
+  return notes.filter((note) => note.id !== target.id && links_of(note.body).some((link) => resolve_link(notes, link)?.id === target.id));
 }
