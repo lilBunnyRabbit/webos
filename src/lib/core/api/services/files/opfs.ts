@@ -18,6 +18,20 @@ export function default_sort(a: FileSystemItem, b: FileSystemItem): number {
   return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 }
 
+/** Unchanged entries keep their old object, so a keyed list re-renders only the rows that changed. */
+export function keep_unchanged(previous: FileSystemItem[], next: FileSystemItem[]): FileSystemItem[] {
+  const by_name = new Map(previous.map((item) => [item.name, item]));
+  return next.map((item) => {
+    const old = by_name.get(item.name);
+    if (!old || old.kind !== item.kind) return item;
+    if (old.kind === "file" && item.kind === "file") {
+      const same = old.size === item.size && old.last_modified === item.last_modified && old.type === item.type;
+      return same ? old : item;
+    }
+    return old;
+  });
+}
+
 export async function list_directory(
   dir: FileSystemDirectoryHandle,
   options: ListOptions = {}
