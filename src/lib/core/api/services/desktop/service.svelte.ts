@@ -132,8 +132,6 @@ export class DesktopService implements GridDesktopService {
         element: null,
       };
 
-      // console.log("DesktopService:set_container", this.container);
-
       return;
     }
 
@@ -162,8 +160,6 @@ export class DesktopService implements GridDesktopService {
       },
       element,
     };
-
-    // console.log("DesktopService:set_container", this.container);
   }
 
   public list(): DesktopGrid {
