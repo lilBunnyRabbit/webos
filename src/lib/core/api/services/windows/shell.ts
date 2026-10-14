@@ -93,7 +93,11 @@ export function windows_shell(windows: WindowsService): ShellContribution {
           await windows.close_all();
           return;
         }
-        for (const id of await targets(context.args.ids, context)) await windows.close(id);
+        for (const id of await targets(context.args.ids, context)) {
+          const instance = windows.get(id);
+          if (instance?.flags.has(WindowFlag.MAXIMIZED) && !instance.dirty) view_transition(() => void windows.close(id));
+          else await windows.close(id);
+        }
       },
     }),
     define_command({

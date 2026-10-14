@@ -69,7 +69,11 @@
   <IconButton data-window-button label={is_maximized ? "Restore" : "Maximize"} size="sm" onclick={() => view_transition(() => windows.toggle_maximize(window_id))}>
     {#if is_maximized}<CornersInIcon weight="bold" />{:else}<CornersOutIcon weight="bold" />{/if}
   </IconButton>
-  <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => void windows.close(window_id)}>
+  <IconButton data-window-button label="Close" size="sm" class="hover:bg-error hover:text-background active:bg-error/85" onclick={() => {
+      // A clean maximized window closes inside a view transition so the dock morphs back; a dirty one asks first.
+      if (is_maximized && !instance.dirty) view_transition(() => void windows.close(window_id));
+      else void windows.close(window_id);
+    }}>
     <XIcon weight="bold" />
   </IconButton>
 </div>

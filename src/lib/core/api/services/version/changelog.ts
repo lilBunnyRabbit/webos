@@ -9,7 +9,7 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-14",
     title: "Smoother taskbar",
     changes: [
-      { kind: IMPROVED, text: "The taskbar now glides into place when you maximize or restore a window, instead of jumping." },
+      { kind: IMPROVED, text: "The taskbar now glides into place when you maximize, restore or close a window, instead of jumping." },
     ],
   },
   {
