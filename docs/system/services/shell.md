@@ -157,6 +157,6 @@ Files:
 
 ## Known gaps
 
-- No terminal app and no palette yet (ADR-033). Today the shortcuts are the only callers.
+- No palette yet (ADR-033). The callers are the shortcuts and the [Terminal](../system-apps.md#terminal).
 - No background jobs, variables, globs or chaining (ADR-033, deferred).
 - `touch` on an existing file doesn't update its modified time.

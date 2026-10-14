@@ -63,8 +63,9 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
         positional: ["id"],
         run({ args }) {
           const manifest = require_app(args.id);
+          const { $type: _, ...app } = app_value(manifest);
           return {
-            ...app_value(manifest),
+            ...app,
             version: manifest.version,
             opens: (manifest.associations ?? []).join(" "),
             props: manifest.props ? "yes" : "no",

@@ -16,6 +16,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
 | `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | window: `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
+| `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell, files (path display) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
@@ -428,6 +429,54 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 - No memory keys, powers, roots or scientific functions; no locale number formatting (always `.` decimals, no grouping).
 - Keyboard shortcuts don't go through ShortcutsService, so they aren't in the Mod+/ cheat sheet.
 - The expression can't be edited in the middle; Backspace works from the end only.
+
+## Terminal
+
+ADR-033. A [shell](services/shell.md) session per window, on `bg-background-darker` in `font-mono text-ui`.
+
+| File | Contents |
+|------|----------|
+| `terminal.app.svelte` | Session, persistence, layout |
+| `prompt-input.svelte` | The prompt line: input, ghost text, completion popup, history, keys |
+| `terminal-entry.svelte` / `entry-output.svelte` / `output-table.svelte` | One run: prompt line, output blocks, error or `^C` |
+| `key-row.svelte` | Touch key row |
+| `blocks.ts` / `line.ts` | Pure: values to blocks, cells, saved text; common prefix, applying a completion, history hint. Unit-tested |
+
+**Layout.**
+- The scroller is `flex-col-reverse` around a single `mb-auto` child. The browser keeps the view pinned to the newest output while you're at the bottom and leaves it alone when you've scrolled up. Short output stays at the top.
+- The prompt follows the last entry.
+- Clicking empty space focuses the prompt, unless you clicked a button or a row, or are selecting text.
+- The window title is the cwd (`~/Pictures`).
+
+**Output.** `to_blocks` groups each entry's values:
+- Tagged values of one known type become a table with the type's columns and `cell` formatting. Rows are clickable and focusable when the type has `open`: a file opens in its app, a window comes forward, an app launches.
+- Plain records with the same keys become a table; a lone record becomes a key/value list.
+- Everything else is pre-wrapped text, with consecutive lines joined.
+- Tables show 500 rows, then "… N more". Numeric columns are right-aligned `tabular-nums`.
+
+**Prompt (fish-style).**
+
+| Key | Does |
+|-----|------|
+| Typing | Ghost text: the newest history line that continues it, else the single completion that fits. → at the end accepts it |
+| Tab | One completion: applied (a space after unless it's a folder). Several: fills the common prefix and opens a popup (top-layer popover, anchored under the prompt row, flips above). Tab / Shift+Tab / ↑ ↓ move, Enter picks, Esc closes. Picking a folder lists its contents. Typing refreshes the list |
+| ↑ ↓ | History (shared by all terminals), keeping the line you were typing as a draft |
+| Enter | Runs the line; ignored while one is running |
+| Ctrl+C | Aborts the run, or clears the line |
+| Ctrl+L | Clears the screen (`session.clear()`) |
+| Ctrl+U | Deletes to the start of the line |
+
+Ctrl means the Control key on every platform; Cmd+C still copies.
+
+**Touch.** The key row shows on `pointer-coarse`: Ctrl (sticky: the next typed letter acts as Ctrl+letter), Tab, Esc, arrows, `|`, `~`, `/`. Its buttons `preventDefault` on pointerdown, so the field keeps focus and the soft keyboard stays up. `index.html` sets `interactive-widget=resizes-content`, so on Android the layout shrinks above the keyboard and the row stays visible.
+
+**Persistence.**
+- Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached once an entry finishes) and `started`. Session restore therefore brings back the folder and the screen.
+- Restored output is plain text. An entry restored mid-run shows as aborted.
+- `run` executes only on the first mount (`started`), so a restore doesn't rerun it.
+- Closing the window aborts the running line.
+
+**Known gaps.** iOS Safari ignores `interactive-widget`, so the keyboard can cover the key row there. The popup sits at the start of the prompt row, not at the completed word. Long lines scroll the field and hide the ghost text.
 
 ## "Open…" in the viewers (ADR-025, ADR-031)
 

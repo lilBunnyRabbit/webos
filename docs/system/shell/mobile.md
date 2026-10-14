@@ -17,7 +17,7 @@ mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touc
 └─ nav-bar.svelte         back, home, running apps
 ```
 
-No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=cover`, and the shell pads with `env(safe-area-inset-*)`: the home and each app pad the top, the nav bar the bottom.
+No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=cover` and `interactive-widget=resizes-content` (the layout shrinks above the soft keyboard, so fixed rows like the Terminal's key row stay visible), and the shell pads with `env(safe-area-inset-*)`: the home and each app pad the top, the nav bar the bottom.
 
 ## State
 

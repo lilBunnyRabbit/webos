@@ -170,15 +170,15 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Shell Service
 - **ADR:** [ADR-033](adrs/033-shell.md) (supersedes [ADR-007](adrs/007-shell-service.md))
 - **Brainstorm:** [2026-10-14 Shell, terminal and palette](brainstorm/2026-10-14_shell-terminal.md), [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
-- **Status:** Decided, not started
-- [ ] ShellService: reactive registry from each service's `shell()` hook (commands, completers, value types)
-- [ ] Parser: quotes, longest-prefix command ids, positionals, flags, zod coercion and validation
-- [ ] Structured values and pipes; verbs `where sort select first last count get`
-- [ ] Streaming runs with AbortSignal (Ctrl+C, window close)
-- [ ] ShellSession (cwd, entries); shared history in `/var/lib/shell/history`
-- [ ] Completion by arg kind with per-arg override
-- [ ] `sudo` (system dialog) for writes to system folders
-- [ ] Service commands: files, windows, apps, settings, notifications, clipboard, version, router, kernel
+- **Status:** Done except deferred items (2026-10-14)
+- [x] ShellService: reactive registry from each service's `shell()` hook (commands, completers, value types)
+- [x] Parser: quotes, longest-prefix command ids, positionals, flags, zod coercion and validation
+- [x] Structured values and pipes; verbs `where sort select first last count get`
+- [x] Streaming runs with AbortSignal (Ctrl+C, window close)
+- [x] ShellSession (cwd, entries); shared history in `/var/lib/shell/history`
+- [x] Completion by arg kind with per-arg override
+- [x] `sudo` (system dialog) for writes to system folders
+- [x] Service commands: files, windows, apps, settings, notifications, clipboard, version, router, kernel
 - [ ] Background jobs (`&`, `jobs`, `kill`), likely with Tasks (ADR-013): waiting on a use case
 - [ ] App-registered commands (window-scoped via app context); app shortcuts then become commands too
 - [ ] `where` expression language (OR, grouping)
@@ -186,18 +186,18 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Terminal App
 - **ADR:** [ADR-033](adrs/033-shell.md)
-- **Status:** Decided, not started
-- [ ] Terminal system app (`/src/lib/apps/system/terminal/`), one session per window
-- [ ] Rich value rendering (tables, service renderers, clickable values)
-- [ ] fish-style completion: ghost text, Tab popup
-- [ ] cwd and scrollback restored with the session (`storage.window()`)
-- [ ] Mobile key row (Tab, Esc, Ctrl, arrows, `|`, `~`, `/`)
+- **Status:** Done (2026-10-14)
+- [x] Terminal system app (`/src/lib/apps/system/terminal/`), one session per window
+- [x] Rich value rendering (tables, clickable values); custom per-type `render` components not used yet
+- [x] fish-style completion: ghost text, Tab popup
+- [x] cwd and scrollback restored with the session (`storage.window()`)
+- [x] Mobile key row (Tab, Esc, Ctrl, arrows, `|`, `~`, `/`)
 
 ### Command Palette
 - **ADR:** [ADR-033](adrs/033-shell.md)
 - **Status:** Decided, not started
 - [ ] Mod+K launcher `>` mode: commands with completion, inline results, "Open in Terminal"
-- [ ] OS shortcuts run commands (KeyShortcut `command` or `run`)
+- [x] OS shortcuts run commands (KeyShortcut `command` or `run`)
 
 ### Shortcuts Service
 - **ADR:** [ADR-012](adrs/012-shortcuts-service.md)
