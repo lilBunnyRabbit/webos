@@ -35,6 +35,19 @@ Four read-only audits ran first: encapsulation (with a real fork experiment), bo
 
 Done without asking (existing patterns, fixes, moves): lazy imports for dialogs boot doesn't show (intro, changelog, shortcuts, open-with, save-changes, file picker, properties, conflict); parallel OPFS work inside services; default widgets off the init path; a test-only app for router/session tests; dead files and unused exports; `write_var_lib` out of the desktop module; deep imports switched to existing barrels; missing barrel exports; marquee/selection handlers for `file-list` and `desktop`, like `window.handler`; one copy of the Paint/Image Editor file flow.
 
+### Runtime performance audit (arrived after the questions)
+
+The shell itself is healthy: no long tasks at boot, during window drag, icon drag, marquee or Terminal typing, even at 4x CPU throttle. Prod boot to desktop: 157 ms (477 ms at 4x). Minimized windows and hidden tabs cost 0 script.
+
+The measured problem is Explorer on big folders: 2000 files = 252 ms long task to open, and adding one file re-reads all 2000 (`getFile` per entry) and re-renders every row (151 ms). Fixed in this pass without new structure: `$state.raw` with unchanged items reused, `content-visibility` on rows, marquee hit-test by index math. The desktop folder gets the same reuse.
+
+Left for the owner (architectural, on the roadmap):
+- **Windowed rendering for long lists** (Explorer). A shared kit pattern if it lands.
+- **Session save cadence.** Every focus click and every `storage.window()` write re-serializes all windows; `LatestWriter` coalesces, so cost is low today. Changing what triggers a save changes persistence timing.
+- **Covered widgets keep ticking.** A widget under a maximized window has no visibility signal; adding one is new desktop state.
+
+The owner added mid-session that the pass covers apps too, not just core; an app-by-app audit runs after the core changes merge.
+
 ## Key takeaways
 
 - The fork test is the encapsulation check worth keeping: delete `src/lib/apps/user`, run check and build.
