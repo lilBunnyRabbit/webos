@@ -1,10 +1,12 @@
 <script lang="ts">
   import kernel, { group_apps, search_apps, type AppManifest, type AppsService, type DesktopService, type VersionService } from "$lib/core/api";
-  import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon } from "phosphor-svelte";
+  import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
   import CommandMode from "./command-mode.svelte";
-  import { EmptyState, IconButton, Input, Kbd } from "../ui";
+  import { Button, EmptyState, IconButton, Input, Kbd } from "../ui";
   import AppBadge from "../apps/app-badge.svelte";
+
+  const APP_LIBRARY = "app-library";
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
@@ -32,6 +34,11 @@
 
   function launch(manifest: AppManifest) {
     apps.launch(manifest.id);
+    close();
+  }
+
+  function launch_library() {
+    apps.launch(APP_LIBRARY);
     close();
   }
 </script>
@@ -67,8 +74,9 @@
   </section>
 {/snippet}
 
-<div class="flex flex-col gap-3 p-3 pb-2">
+<div class="flex items-center gap-2 p-3 pb-2">
   <Input
+    class="min-w-0 flex-1"
     bind:value={query}
     bind:element={search}
     size="lg"
@@ -81,6 +89,7 @@
   >
     {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
   </Input>
+  <Button variant="quiet" size="lg" class="px-3" onclick={() => launch_library()}><SquaresFourIcon weight="duotone" /> All apps</Button>
 </div>
 
 <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">

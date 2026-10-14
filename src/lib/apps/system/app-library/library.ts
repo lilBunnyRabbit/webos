@@ -1,0 +1,93 @@
+import { APP_CATEGORY_LABELS, group_apps, search_apps } from "$lib/core/api/services/apps/search";
+import { AppCategory, type AppId, type AppManifest } from "$lib/core/api/services/apps/type";
+
+export const LibraryCategory = { ALL: "all", ...AppCategory, SYSTEM: "system" } as const;
+export type LibraryCategory = (typeof LibraryCategory)[keyof typeof LibraryCategory];
+
+export const LIBRARY_CATEGORIES: { id: LibraryCategory; label: string }[] = [
+  { id: LibraryCategory.ALL, label: "All" },
+  ...Object.values(AppCategory).map((id) => ({ id, label: APP_CATEGORY_LABELS[id] })),
+  { id: LibraryCategory.SYSTEM, label: "System" },
+];
+
+export const LibraryFilter = {
+  WIDGET: "widget",
+  FILES: "files",
+  COMMANDS: "commands",
+  USED: "used",
+} as const;
+export type LibraryFilter = (typeof LibraryFilter)[keyof typeof LibraryFilter];
+
+export const LibrarySort = {
+  NAME: "name",
+  CATEGORY: "category",
+} as const;
+export type LibrarySort = (typeof LibrarySort)[keyof typeof LibrarySort];
+
+export interface LibrarySection {
+  id: LibraryCategory;
+  label: string | null;
+  apps: AppManifest[];
+}
+
+export interface LibraryQuery {
+  query: string;
+  category: LibraryCategory;
+  filters: readonly LibraryFilter[];
+  /** Apps with an open window, a recently closed one, or a remembered window frame. */
+  used: ReadonlySet<AppId>;
+}
+
+export function category_of(manifest: AppManifest): Exclude<LibraryCategory, "all"> {
+  return manifest.system ? LibraryCategory.SYSTEM : manifest.category;
+}
+
+export function has_filter(manifest: AppManifest, filter: LibraryFilter, used: ReadonlySet<AppId>): boolean {
+  switch (filter) {
+    case LibraryFilter.WIDGET:
+      return manifest.widget !== undefined;
+    case LibraryFilter.FILES:
+      return (manifest.associations?.length ?? 0) > 0 || (manifest.tools?.length ?? 0) > 0;
+    case LibraryFilter.COMMANDS:
+      return app_commands(manifest).length > 0;
+    case LibraryFilter.USED:
+      return used.has(manifest.id);
+  }
+}
+
+function matching(apps: Iterable<AppManifest>, { query, filters, used }: Omit<LibraryQuery, "category">): AppManifest[] {
+  return search_apps(apps, query).filter((manifest) => filters.every((filter) => has_filter(manifest, filter, used)));
+}
+
+export function category_counts(apps: Iterable<AppManifest>, query: Omit<LibraryQuery, "category">): Record<LibraryCategory, number> {
+  const counts = Object.fromEntries(LIBRARY_CATEGORIES.map(({ id }) => [id, 0])) as Record<LibraryCategory, number>;
+  for (const manifest of matching(apps, query)) {
+    counts[LibraryCategory.ALL]++;
+    counts[category_of(manifest)]++;
+  }
+  return counts;
+}
+
+/** The search only narrows; the order always comes from `sort`, so tiles keep their order while typing. */
+export function library_sections(apps: Iterable<AppManifest>, { category, sort, ...rest }: LibraryQuery & { sort: LibrarySort }): LibrarySection[] {
+  const list = matching(apps, rest).filter((manifest) => category === LibraryCategory.ALL || category_of(manifest) === category);
+  if (list.length === 0) return [];
+  if (sort === LibrarySort.CATEGORY) return group_apps(list);
+  return [{ id: LibraryCategory.ALL, label: null, apps: list.sort((a, b) => a.name.localeCompare(b.name)) }];
+}
+
+export function app_commands(manifest: AppManifest): { id: string; description: string }[] {
+  return (manifest.shell?.commands ?? []).map(({ id, description }) => ({ id, description })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function sort_types(types: string[] | undefined): string[] {
+  return [...(types ?? [])].sort((a, b) => Number(!a.startsWith(".")) - Number(!b.startsWith(".")) || a.localeCompare(b));
+}
+
+export function app_file_types(manifest: AppManifest): { opens: string[]; works_on: string[] } {
+  return { opens: sort_types(manifest.associations), works_on: sort_types(manifest.tools) };
+}
+
+export function category_label(manifest: AppManifest): string {
+  return manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category];
+}
