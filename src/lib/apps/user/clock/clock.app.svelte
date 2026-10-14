@@ -18,7 +18,6 @@
     laps_of,
     next_alarm,
     StopwatchSchema,
-    WIDGET_SIZES,
     type Alarm,
     type AlarmDraft,
   } from "./clock";
@@ -93,7 +92,7 @@
         { anchor }
       );
       if (face !== ClockFace.ANALOG && face !== ClockFace.DIGITAL) return;
-      const name = await desktop.pin_widget(app_id, { label: "Clock", props: { face }, size: WIDGET_SIZES[face] });
+      const name = await desktop.pin_widget(app_id, { label: "Clock", props: { face } });
       if (!name) throw new Error("The desktop is full");
       notifications.notify(app_id, { title: "Clock added to the desktop", message: "It keeps alarms and timers ringing with this window closed." });
     } catch (reason) {

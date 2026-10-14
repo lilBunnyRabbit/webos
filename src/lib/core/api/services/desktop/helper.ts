@@ -1,6 +1,8 @@
 import type { DesktopGrid, DesktopItem } from "./type";
 import type { Positions } from "./layout";
 import type { Position } from "$lib/core/utils/type";
+import type { WidgetSize, WidgetSizeLimits } from "../apps/type";
+import { clamp_widget_size } from "../apps/widget";
 
 export const DesktopSort = {
   NAME: "name",
@@ -48,6 +50,15 @@ const fits_in = (dimensions: { columns: number; rows: number }, x: number, y: nu
   const { w, h } = item_span(item);
   return x >= 0 && y >= 0 && x + w <= dimensions.columns && y + h <= dimensions.rows;
 };
+
+export interface ResizeTarget {
+  size: WidgetSize;
+  valid: boolean;
+}
+
+export function snap_cells(delta_px: number, cell_px: number): number {
+  return cell_px > 0 ? Math.round(delta_px / cell_px) : 0;
+}
 
 export class DesktopHelper {
   /**
@@ -106,6 +117,28 @@ export class DesktopHelper {
     }
 
     return resolved;
+  }
+
+  /** Cut at the grid edge before clamping to `limits`, so dragging past the edge stops there instead of failing. */
+  public static resize_target(
+    grid: DesktopGrid,
+    dimensions: { columns: number; rows: number },
+    name: string,
+    size: WidgetSize,
+    limits: WidgetSizeLimits
+  ): ResizeTarget | null {
+    const placed = grid_items(grid).find(({ item }) => item.name === name);
+    if (!placed || placed.item.kind !== "widget") return null;
+    const { item, x, y } = placed;
+
+    const edged = { w: Math.min(size.w, dimensions.columns - x), h: Math.min(size.h, dimensions.rows - y) };
+    const target = clamp_widget_size(edged, limits);
+    const resized: DesktopItem = { ...item, size: target };
+
+    const taken: DesktopGrid = [];
+    for (const other of grid_items(grid)) if (other.item.name !== name) place(taken, other.x, other.y, other.item);
+
+    return { size: target, valid: fits_in(dimensions, x, y, resized) && region_free(taken, x, y, resized) };
   }
 
   /**

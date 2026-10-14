@@ -1,6 +1,7 @@
 import type { AppId, AppProps, AppsService, FilesService, OpenOptions } from "$lib/core/api";
 import { parse_shortcut, serialize_shortcut, shortcut_label, SHORTCUT_EXTENSION } from "../apps/shortcut";
-import { parse_widget, serialize_widget, widget_label, WIDGET_EXTENSION } from "../apps/widget";
+import { clamp_widget_size, initial_widget_size, parse_widget, serialize_widget, widget_label, WIDGET_EXTENSION } from "../apps/widget";
+import type { WidgetSize } from "../apps/type";
 import { file_extension } from "../apps/associations";
 import { PATHS } from "../files/hierarchy";
 import { available_name } from "../files/opfs";
@@ -34,6 +35,7 @@ export class DesktopFolder {
   private dispose_watch?: () => void;
   private reload_id = 0;
   private layout_loaded = false;
+  private size_writes: Promise<void> = Promise.resolve();
 
   constructor(private options: DesktopFolderOptions) {}
 
@@ -115,7 +117,9 @@ export class DesktopFolder {
         const widget = parse_widget(await (await item.handle.getFile()).text());
         if (widget) {
           const { app, props, w, h } = widget;
-          entries.push({ kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size: { w, h } });
+          // Clamped for display only; the file keeps what it says until the user resizes it.
+          const size = clamp_widget_size({ w, h }, this.options.apps().get(app)?.widget_size);
+          entries.push({ kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size });
           continue;
         }
       }
@@ -152,15 +156,30 @@ export class DesktopFolder {
   }
 
   /** Writes `{label}.widget`, auto-renamed on a clash. Returns the file name, or `null` for an app without a widget. */
-  public async write_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
-    if (!this.options.apps().get(app_id)?.widget) return null;
+  public async write_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null> {
+    const manifest = this.options.apps().get(app_id);
+    if (!manifest?.widget) return null;
 
     const folder = await this.handle();
     const label = options.label.replace(/[/\\:]/g, " ").trim() || "Widget";
     const name = await available_name(folder, `${label}${WIDGET_EXTENSION}`);
-    const content = serialize_widget({ app: app_id, props: options.props, w: options.size.w, h: options.size.h });
-    await this.options.files().create_file(folder, name, { content });
+    const { w, h } = initial_widget_size(manifest.widget_size, options.size);
+    await this.options.files().create_file(folder, name, { content: serialize_widget({ app: app_id, props: options.props, w, h }) });
     return name;
+  }
+
+  public write_widget_size(name: string, size: WidgetSize): Promise<void> {
+    // Shown at once: the reload the write triggers lands later, and a second Shift+arrow must build on this size.
+    this.entries = this.entries.map((entry) => (entry.name === name && entry.kind === "widget" ? { ...entry, size } : entry));
+    // Queued, so quick resizes reach the file in the order they were made.
+    this.size_writes = this.size_writes.catch(() => {}).then(async () => {
+      const folder = await this.handle();
+      const file = await this.options.files().get_file(join_path(split_path(PATHS.desktop), name));
+      const widget = file && parse_widget(await file.text());
+      if (!widget) return;
+      await this.options.files().create_file(folder, name, { content: serialize_widget({ ...widget, w: size.w, h: size.h }), overwrite: true });
+    });
+    return this.size_writes;
   }
 
   public async remove(name: string): Promise<void> {

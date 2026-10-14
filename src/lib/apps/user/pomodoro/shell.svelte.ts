@@ -1,6 +1,6 @@
 import kernel, { type AppsService, type DesktopService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
-import { APP_ID, Status, status_text, WIDGET_SIZE } from "./pomodoro";
+import { APP_ID, Status, status_text } from "./pomodoro";
 import { last_days } from "./stats";
 import { acquire_timer, type PomodoroTimer } from "./timer.svelte";
 
@@ -88,7 +88,7 @@ export async function* stats(): AsyncGenerator<Tagged> {
 }
 
 export async function pin(): Promise<string> {
-  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Pomodoro", size: WIDGET_SIZE });
+  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Pomodoro" });
   if (!name) throw new ShellError("pomo pin: couldn't pin the timer");
   return `pinned ${name} to the desktop`;
 }

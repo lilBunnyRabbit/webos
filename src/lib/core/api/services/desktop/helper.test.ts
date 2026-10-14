@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DesktopItem } from "./type";
-import { DesktopHelper, DesktopSort } from "./helper";
+import { DesktopHelper, DesktopSort, snap_cells } from "./helper";
 
 const item = (name: string) => ({ name }) as DesktopItem;
 const names = (grid: (DesktopItem | undefined)[][]) => grid.map((row) => (row ?? []).map((cell) => cell?.name ?? null));
@@ -111,5 +111,48 @@ describe("widgets span cells", () => {
 
   test("sorting leaves widgets where they are", () => {
     expect(DesktopHelper.sort_moves([widget("w", 2, 2), item("b")], DesktopSort.NAME, 4).map((move) => move.name)).toEqual(["b"]);
+  });
+});
+
+describe("widget resize", () => {
+  const widget = (name: string, w: number, h: number) => ({ kind: "widget", name, label: name, app_id: "x", size: { w, h } }) as DesktopItem;
+  const limits = { min: { w: 2, h: 1 }, max: { w: 4, h: 3 }, default: { w: 3, h: 1 } };
+  const dims = { columns: 6, rows: 4 };
+  const at = (entry: DesktopItem, x: number, y: number) => DesktopHelper.arrange([entry], { [entry.name]: { x, y } }).layout;
+
+  test("snap rounds the pointer's travel to whole cells", () => {
+    expect(snap_cells(0, 88)).toBe(0);
+    expect(snap_cells(43, 88)).toBe(0);
+    expect(snap_cells(45, 88)).toBe(1);
+    expect(snap_cells(-140, 88)).toBe(-2);
+    expect(snap_cells(100, 0)).toBe(0);
+  });
+
+  test("clamps to the app's min and max", () => {
+    const grid = at(widget("w", 3, 1), 0, 0);
+    expect(DesktopHelper.resize_target(grid, dims, "w", { w: 1, h: 0 }, limits)).toEqual({ size: { w: 2, h: 1 }, valid: true });
+    expect(DesktopHelper.resize_target(grid, dims, "w", { w: 6, h: 4 }, limits)).toEqual({ size: { w: 4, h: 3 }, valid: true });
+  });
+
+  test("stops at the grid edge instead of leaving it", () => {
+    const grid = at(widget("w", 2, 1), 3, 2);
+    expect(DesktopHelper.resize_target(grid, dims, "w", { w: 4, h: 3 }, limits)).toEqual({ size: { w: 3, h: 2 }, valid: true });
+  });
+
+  test("is refused when the grid edge is closer than the minimum", () => {
+    const grid = at(widget("w", 2, 1), 4, 0);
+    expect(DesktopHelper.resize_target(grid, { columns: 5, rows: 4 }, "w", { w: 2, h: 1 }, limits)).toEqual({ size: { w: 2, h: 1 }, valid: false });
+  });
+
+  test("is refused over another item; its own cells don't count", () => {
+    const grid = DesktopHelper.arrange([widget("w", 2, 1), item("icon")], { w: { x: 0, y: 0 }, icon: { x: 3, y: 0 } }).layout;
+    expect(DesktopHelper.resize_target(grid, dims, "w", { w: 3, h: 2 }, limits)?.valid).toBe(true);
+    expect(DesktopHelper.resize_target(grid, dims, "w", { w: 4, h: 1 }, limits)).toEqual({ size: { w: 4, h: 1 }, valid: false });
+  });
+
+  test("only widgets on the grid resize", () => {
+    const grid = at(item("icon"), 0, 0);
+    expect(DesktopHelper.resize_target(grid, dims, "icon", { w: 2, h: 2 }, limits)).toBeNull();
+    expect(DesktopHelper.resize_target(grid, dims, "gone", { w: 2, h: 2 }, limits)).toBeNull();
   });
 });

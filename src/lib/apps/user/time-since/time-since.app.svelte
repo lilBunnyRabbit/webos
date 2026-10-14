@@ -57,7 +57,6 @@
   );
 
   const can_pin = kernel.platform !== Platform.MOBILE;
-  const WIDGET_SIZE = { w: 3, h: 2 };
 
   function change(id: string, update: (counter: Counter) => Counter) {
     file.value = update_counter(file.value, id, update);
@@ -113,7 +112,7 @@
         notifications.notify(app_id, { type: NotificationType.INFO, title: "Removed from the desktop", message: existing.label });
         return;
       }
-      await desktop.pin_widget(app_id, { label: counter.name, props: { counter: counter.id }, size: WIDGET_SIZE });
+      await desktop.pin_widget(app_id, { label: counter.name, props: { counter: counter.id } });
       notifications.notify(app_id, { type: NotificationType.INFO, title: "Counter added to the desktop", message: `${counter.name}: reset it right there.` });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });

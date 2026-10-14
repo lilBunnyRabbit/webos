@@ -8,7 +8,7 @@
   import { list_notes, read_todo, save_note, write_todo } from "./store";
 
   /** A sticky for one note (`props.note`), or the todo list without one (ADR-034). */
-  let { props }: WidgetProps = $props();
+  let { props, size }: WidgetProps = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
   const note_id = $derived(typeof props.note === "string" ? props.note : null);
@@ -53,7 +53,10 @@
 {#if note_id}
   {#if note}
     <textarea
-      class="size-full resize-none bg-primary/8 px-3 py-2 text-ui leading-relaxed text-foreground outline-none placeholder:text-foreground/40"
+      class={cn(
+        "size-full resize-none bg-primary/8 leading-relaxed text-foreground outline-none placeholder:text-foreground/40",
+        size.w >= 4 && size.h >= 3 ? "px-4 py-3 text-base" : "px-3 py-2 text-ui"
+      )}
       value={draft.body}
       placeholder="Write it down"
       aria-label={title_of(note.body)}

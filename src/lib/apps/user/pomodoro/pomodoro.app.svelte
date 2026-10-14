@@ -9,7 +9,7 @@
   import { untrack } from "svelte";
   import { z } from "zod";
   import { chime, prime_audio } from "./chime";
-  import { format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, WIDGET_SIZE, type Settings } from "./pomodoro";
+  import { format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, type Settings } from "./pomodoro";
   import Ring from "./ring.svelte";
   import { day_stats, format_minutes, last_days, streak, totals } from "./stats";
   import { acquire_timer } from "./timer.svelte";
@@ -99,7 +99,7 @@
         await desktop.remove_item(widget.name);
         return;
       }
-      await desktop.pin_widget(app_id, { label: "Pomodoro", size: WIDGET_SIZE });
+      await desktop.pin_widget(app_id, { label: "Pomodoro" });
       notifications.notify(app_id, { title: "Timer added to the desktop", message: "Start and pause it right there." });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });

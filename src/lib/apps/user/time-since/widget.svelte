@@ -3,13 +3,13 @@
   import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
   import { IconButton } from "$lib/core/components/ui";
   import { app_data_path, json_file } from "$lib/core/contexts/app/json-file.svelte";
-  import { format_datetime } from "$lib/core/utils";
+  import { cn, format_datetime } from "$lib/core/utils";
   import { ArrowCounterClockwise, Play } from "phosphor-svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import Duration from "./duration.svelte";
   import { APP_ID, COUNTERS_FILE, CountersFileSchema, EMPTY_FILE, elapsed_of, format_duration, reset, start, tick_interval, update_counter } from "./counters";
 
-  let { props }: WidgetProps = $props();
+  let { props, size }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -40,14 +40,21 @@
 </script>
 
 {#if counter}
+  {@const compact = size.h < 2}
+  {@const value = cn("leading-tight", compact ? "text-xl" : "text-[clamp(1.5rem,12cqi,3.5rem)]")}
   <div class="@container flex h-full items-center gap-2 px-3">
-    <div class="grid min-w-0 flex-1 gap-0.5">
+    <div class="grid min-w-0 flex-1">
+      <span class="truncate text-2xs font-medium text-foreground/65">{counter.name}</span>
       {#if counter.current_start === null}
-        <span class="truncate font-mono text-2xl text-foreground/45 tabular-nums">Stopped</span>
-        <span class="truncate text-2xs text-foreground/65">{counter.runs.length} {counter.runs.length === 1 ? "run" : "runs"}</span>
+        <span class={cn("truncate font-mono text-foreground/45 tabular-nums", value)}>Stopped</span>
+        {#if !compact}
+          <span class="mt-0.5 truncate text-2xs text-foreground/65">{counter.runs.length} {counter.runs.length === 1 ? "run" : "runs"}</span>
+        {/if}
       {:else}
-        <Duration ms={clock.now - counter.current_start} class="text-2xl text-primary" />
-        <span class="truncate font-mono text-2xs text-foreground/65 tabular-nums">since {format_datetime(counter.current_start)}</span>
+        <Duration ms={clock.now - counter.current_start} class={cn("text-primary", value)} />
+        {#if !compact}
+          <span class="mt-0.5 truncate font-mono text-2xs text-foreground/65 tabular-nums">since {format_datetime(counter.current_start)}</span>
+        {/if}
       {/if}
     </div>
     <IconButton label={counter.current_start === null ? "Start" : "Reset"} variant="secondary" onclick={press}>

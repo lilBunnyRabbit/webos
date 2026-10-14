@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parse_additions, pending_widgets, serialize_additions, type DefaultWidget } from "./additions";
 
-const widget = (id: string): DefaultWidget => ({ id, app_id: id, label: id, size: { w: 2, h: 2 } });
+const widget = (id: string): DefaultWidget => ({ id, app_id: id, label: id });
 
 describe("desktop additions", () => {
   it("round-trips, deduplicated and sorted", () => {

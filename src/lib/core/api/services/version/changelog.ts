@@ -5,10 +5,11 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "0.35.2",
-    date: "2026-10-14",
-    title: "Time Since counts again",
+    version: "0.36.0",
+    date: "2026-10-15",
+    title: "Resizable widgets",
     changes: [
+      { kind: NEW, text: "Resize desktop widgets by dragging their bottom-right corner, or with Shift and the arrow keys; each widget rearranges itself to fit." },
       { kind: FIXED, text: "A new or reset Time Since counter now counts up every second right away, instead of sitting still for up to a minute." },
     ],
   },

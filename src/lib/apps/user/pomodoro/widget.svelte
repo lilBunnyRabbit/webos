@@ -31,7 +31,7 @@
   const rest = $derived(is_break(run.phase));
 </script>
 
-<div class="@container grid size-full place-items-center p-2">
+<div class="grid size-full place-items-center p-2 [container-type:size]">
   {#if !timer.ready}
     <Spinner label="Loading the timer" />
   {:else}
