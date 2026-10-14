@@ -460,6 +460,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
+- [ ] **Backup system** (owner, 2026-10-14). Back up and restore WebOS data: `/home`, `/etc`, `/var/lib` (app data in `/var/lib/apps`, game stats, session, desktop layout) and app `localStorage` keys. Open questions: one archive file (zip, via Archive's codec) or a folder export; what to include or exclude per area; restore as merge vs replace; versioning/migration of old backups; manual only or scheduled (File System Access handle to a real folder); does it cover the shared-origin risk (other sites can `localStorage.clear()`)?
 - [x] **Release notifications.** Done as [ADR-026](adrs/026-release-notes-intro.md): typed changelog, "Updated" and "update available" toasts, Settings › What's new, full-screen first-boot introduction. Originally: after an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
   - What shows before vs after reloading into the new version?
   - How do we track which version a user has seen?
