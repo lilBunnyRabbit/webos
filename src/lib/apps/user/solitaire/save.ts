@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Tagged } from "$lib/core/api/services/shell/type";
 import { move_schema, type Draw, type Move } from "./klondike";
 
 export const draw_schema: z.ZodType<Draw> = z.union([z.literal(1), z.literal(3)]);
@@ -41,6 +42,13 @@ export const stats_key = (draw: Draw): keyof Stats => (draw === 1 ? "draw1" : "d
 export function record_played(stats: Stats, draw: Draw): Stats {
   const key = stats_key(draw);
   return { ...stats, [key]: { ...stats[key], played: stats[key].played + 1 } };
+}
+
+export function stats_values(stats: Stats): Tagged[] {
+  return ([1, 3] as const).map((draw) => {
+    const entry = stats[stats_key(draw)];
+    return { $type: "solitaire-stats", mode: `draw ${draw}`, played: entry.played, won: entry.won, best_time: entry.best_ms, best_score: entry.best_score };
+  });
 }
 
 export function record_win(stats: Stats, draw: Draw, ms: number, score: number): Stats {

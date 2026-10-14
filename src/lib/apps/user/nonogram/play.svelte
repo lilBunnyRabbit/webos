@@ -1,8 +1,9 @@
 <script lang="ts" module>
   import type { Drawing } from "./file";
+  import type { Mode as FreshMode, Size as FreshSize } from "./game";
 
   export type Source =
-    | { kind: "free" }
+    | { kind: "free"; fresh?: { size?: FreshSize; mode?: FreshMode } }
     | { kind: "daily"; day: string }
     | { kind: "file"; path: string; drawing: Drawing }
     | { kind: "test"; drawing: Drawing };
@@ -180,6 +181,12 @@
       puzzle.palette.forEach((_, index) => disposers.push(scoped(`color-${index + 1}`, String(index + 1), `Colour ${index + 1}`, () => choose(index + 1))));
     }
     return () => disposers.forEach((dispose) => dispose());
+  });
+
+  $effect(() => {
+    untrack(() => {
+      if (source.kind === "free" && source.fresh) void new_puzzle(source.fresh.size ?? size, source.fresh.mode ?? mode);
+    });
   });
 
   $effect(() => {

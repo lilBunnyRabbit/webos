@@ -1,7 +1,7 @@
 import type { Plays } from "$lib/core/games";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { entries, format_duration, format_last_played, highlight_dailies, Sort, sort_entries, streak, supports_daily, totals } from "./hub";
+import { daily_value, entries, format_duration, format_last_played, game_value, highlight_dailies, Sort, sort_entries, streak, supports_daily, totals } from "./hub";
 
 const EMPTY_PLAYS: Plays = { version: 1, games: {}, daily: {} };
 const plays = (patch: Partial<Plays>): Plays => ({ ...EMPTY_PLAYS, ...patch });
@@ -93,5 +93,31 @@ describe("highlight_dailies", () => {
     const list = [game("a"), game("b"), game("c"), game("d")];
     expect(highlight_dailies(list, plays, "2026-10-14").map((g) => g.id)).toEqual(["b", "a", "d"]);
     expect(highlight_dailies(list, plays, "2026-10-14", 4).map((g) => g.id)).toEqual(["b", "a", "d", "c"]);
+  });
+});
+
+describe("shell values", () => {
+  const data = plays({
+    games: { a: { ms: 90_000, sessions: 3, last: "2026-10-14T10:00:00.000Z" } },
+    daily: { "2026-10-14": { a: { ms: 61_000 } } },
+  });
+  const alpha = { id: "a", name: "Alpha" };
+  const bravo = { id: "b", name: "Bravo" };
+
+  it("keeps time and last as numbers", () => {
+    expect(game_value({ game: alpha, stats: data.games.a })).toEqual({
+      $type: "game",
+      id: "a",
+      name: "Alpha",
+      time: 90_000,
+      sessions: 3,
+      last: Date.parse("2026-10-14T10:00:00.000Z"),
+    });
+    expect(game_value({ game: bravo, stats: null })).toMatchObject({ time: 0, sessions: 0, last: null });
+  });
+
+  it("marks a daily solved with its best time", () => {
+    expect(daily_value(alpha, data, "2026-10-14")).toEqual({ $type: "game-daily", id: "a", name: "Alpha", day: "2026-10-14", solved: true, time: 61_000 });
+    expect(daily_value(bravo, data, "2026-10-14")).toMatchObject({ solved: false, time: null });
   });
 });

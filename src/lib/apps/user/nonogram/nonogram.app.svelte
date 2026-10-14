@@ -10,18 +10,26 @@
   import { blank_drawing } from "./drawing";
   import Editor from "./editor.svelte";
   import { NONOGRAM_EXTENSION, parse_nonogram, type Drawing } from "./file";
+  import type { Mode, Size } from "./game";
   import Play, { type Source } from "./play.svelte";
 
-  const { path, daily }: { path?: string; daily?: string } = $props();
+  const { path, daily, size, mode, edit }: { path?: string; daily?: string; size?: Size; mode?: Mode; edit?: boolean } = $props();
 
-  const { app_id, window: win } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  let source = $state<Source>(untrack(() => (daily ? { kind: "daily", day: daily } : { kind: "free" })));
+  // Window state survives session restore, so a restored window doesn't act on its launch request again.
+  const handled = storage.window("handled", false);
+  const request = untrack(() => (handled.value ? {} : { size, mode, edit }));
+  handled.value = true;
+
+  let source = $state<Source>(
+    untrack(() => (daily ? { kind: "daily", day: daily } : { kind: "free", fresh: request.size || request.mode ? { size: request.size, mode: request.mode } : undefined }))
+  );
   let loading = $state(untrack(() => Boolean(path)));
   let load_error = $state<string | null>(null);
-  let editing = $state<{ drawing: Drawing; path: string | null } | null>(null);
+  let editing = $state<{ drawing: Drawing; path: string | null } | null>(request.edit && !untrack(() => path) ? { drawing: blank_drawing(), path: null } : null);
   let testing = $state<Drawing | null>(null);
   let editor = $state<ReturnType<typeof Editor>>();
 
@@ -39,7 +47,10 @@
     const target = untrack(() => path);
     if (!target) return;
     read(target)
-      .then((drawing) => (source = { kind: "file", path: target, drawing }))
+      .then((drawing) => {
+        source = { kind: "file", path: target, drawing };
+        if (request.edit) editing = { drawing, path: target };
+      })
       .catch((reason) => (load_error = error_message(reason)))
       .finally(() => (loading = false));
   });

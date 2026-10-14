@@ -1,4 +1,5 @@
 import type { GameStats, Plays } from "$lib/core/games";
+import type { Tagged } from "$lib/core/api/services/shell/type";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z, type ZodType } from "zod";
 
@@ -120,4 +121,22 @@ export function highlight_dailies<T extends GameInfo>(games: T[], plays: Plays, 
   return [...games]
     .sort((a, b) => Number(a.id in solved) - Number(b.id in solved) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name))
     .slice(0, max);
+}
+
+/** Times stay numbers so `sort` and `where` work; the manifest formats the cells. */
+export function game_value({ game, stats }: GameEntry): Tagged {
+  const last = stats?.last ? Date.parse(stats.last) : NaN;
+  return {
+    $type: "game",
+    id: game.id,
+    name: game.name,
+    time: stats?.ms ?? 0,
+    sessions: stats?.sessions ?? 0,
+    last: Number.isNaN(last) ? null : last,
+  };
+}
+
+export function daily_value(game: GameInfo, plays: Plays, day: string): Tagged {
+  const ms = plays.daily[day]?.[game.id]?.ms ?? null;
+  return { $type: "game-daily", id: game.id, name: game.name, day, solved: ms !== null, time: ms };
 }

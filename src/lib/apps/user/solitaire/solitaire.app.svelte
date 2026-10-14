@@ -48,8 +48,9 @@
     type Saved,
   } from "./save";
 
-  const { daily: daily_prop }: { daily?: string } = $props();
+  const { daily: daily_prop, draw: draw_prop }: { daily?: string; draw?: Draw } = $props();
   const daily = untrack(() => daily_prop);
+  const requested_draw = untrack(() => (daily ? undefined : draw_prop));
 
   const DRAW_OPTIONS = [
     { value: "1", label: "Draw 1" },
@@ -64,6 +65,8 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
   const draw_pref = storage.persisted<Draw>("draw", 1, draw_schema);
+  // Window state survives session restore, so a restored window doesn't deal its launch request again.
+  const dealt = storage.window("dealt", false);
   // Declared before the save file: teardown runs in creation order, so the last elapsed time lands before it's released.
   $effect(() => () => persist());
   const save = storage.file(daily ? "daily.json" : "game.json", EMPTY_SAVE, save_file_schema);
@@ -122,6 +125,10 @@
       if (saved && same_day && (daily || !saved.won)) restore(saved);
       loaded = true;
       persist();
+      if (requested_draw && !dealt.value) {
+        dealt.value = true;
+        void deal_requested(requested_draw);
+      }
     });
   });
 
@@ -251,6 +258,12 @@
 
   async function new_game() {
     if (await confirm_discard("Start a new game?", "New game")) reset(random_seed(), draw_pref.value, false);
+  }
+
+  async function deal_requested(next: Draw) {
+    if (!(await confirm_discard("Start a new game?", "New game"))) return;
+    draw_pref.value = next;
+    reset(random_seed(), next, false);
   }
 
   async function restart() {

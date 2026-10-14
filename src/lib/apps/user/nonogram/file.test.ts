@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { compact, parse_nonogram, serialize_nonogram, type Drawing } from "./file";
-import { Ink } from "./puzzle";
+import { check_drawing, compact, parse_nonogram, serialize_nonogram, VERDICT_TEXT, type Drawing } from "./file";
+import { Ink, Verdict } from "./puzzle";
 
 const heart: Drawing = {
   width: 3,
@@ -61,5 +61,19 @@ describe("parse_nonogram", () => {
     const result = parse_nonogram(text);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain(message);
+  });
+});
+
+describe("check_drawing", () => {
+  const bw = (width: number, cells: number[]): Drawing => ({ width, height: cells.length / width, palette: [Ink.FOREGROUND], cells });
+
+  test("a picture the clues pin down is unique", () => {
+    expect(check_drawing(bw(2, [1, 1, 1, 0]))).toBe(Verdict.LOGIC);
+    expect(check_drawing(heart)).toBe(Verdict.LOGIC);
+  });
+
+  test("a diagonal could go either way", () => {
+    expect(check_drawing(bw(2, [1, 0, 0, 1]))).toBe(Verdict.MULTIPLE);
+    expect(VERDICT_TEXT[Verdict.MULTIPLE]).toMatch(/^multiple:/);
   });
 });
