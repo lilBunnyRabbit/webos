@@ -1,5 +1,3 @@
-import kernel, { type FilesService } from "$lib/core/api";
-import { ImageFormat, parent_folder } from "$lib/core/utils/image";
 import { OperationType, filter_string, operation_size, type Adjustments, type Operation } from "./edit";
 
 type Drawable = CanvasImageSource & { width: number; height: number };
@@ -34,28 +32,12 @@ export function render_operations(source: Drawable, operations: readonly Operati
   return operations.reduce<Drawable>(apply, source);
 }
 
-export function render_final(source: Drawable, operations: readonly Operation[], adjustments: Adjustments, format: ImageFormat): OffscreenCanvas {
+export function render_final(source: Drawable, operations: readonly Operation[], adjustments: Adjustments): OffscreenCanvas {
   const geometry = render_operations(source, operations);
   const canvas = new OffscreenCanvas(geometry.width, geometry.height);
   const context = canvas.getContext("2d")!;
-  // JPEG has no alpha; without a backdrop transparent pixels encode as black.
-  if (format === ImageFormat.JPEG) {
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-  }
   context.filter = filter_string(adjustments);
   context.drawImage(geometry, 0, 0);
   return canvas;
 }
 
-export function encode(canvas: OffscreenCanvas, format: ImageFormat, quality: number): Promise<Blob> {
-  return canvas.convertToBlob({ type: format, quality });
-}
-
-export async function write_image(path: string, blob: Blob): Promise<void> {
-  const files = kernel.service<FilesService>("files");
-  const folder = parent_folder(path);
-  const directory = await files.get_directory(folder);
-  if (!directory) throw new Error(`Folder not found: ${folder}`);
-  await files.create_file(directory, path.slice(path.lastIndexOf("/") + 1), { content: blob, overwrite: true });
-}

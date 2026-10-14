@@ -9,13 +9,16 @@
     ImageFormat,
     error_message,
     extension_for,
+    format_of,
     has_files,
+    has_quality,
     image_files,
     load_image,
     load_image_at,
     paint,
     parent_folder,
     type SourceImage,
+    write_image,
   } from "$lib/core/utils/image";
   import {
     ArrowArcLeft as ArrowArcLeftIcon,
@@ -47,8 +50,6 @@
     clamp_zoom,
     filter_string,
     fit_zoom,
-    format_of,
-    has_quality,
     name_for_format,
     resize_to,
     result_size,
@@ -61,7 +62,7 @@
     type Size,
   } from "./edit";
   import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
-  import { encode, render_final, render_operations, write_image } from "./render";
+  import { render_final, render_operations } from "./render";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -325,8 +326,7 @@
     if (!source) return false;
     const state = doc;
     try {
-      const blob = await encode(render_final(source.bitmap, state.operations, state.adjustments, format), format, quality.value / 100);
-      await write_image(path, blob);
+      await write_image(path, render_final(source.bitmap, state.operations, state.adjustments), { format, quality: quality.value / 100 });
       file_path = path;
       file_name = path.slice(path.lastIndexOf("/") + 1);
       saved = state;

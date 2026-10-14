@@ -1,4 +1,4 @@
-import type { ImageFormat } from "$lib/core/utils/image";
+import { format_of, type ImageFormat } from "$lib/core/utils/image-format";
 
 export interface Size {
   width: number;
@@ -146,27 +146,10 @@ export function resize_to(current: Size, changed: "width" | "height", value: num
     : { width: clamp(Math.round(side * ratio) || 1, 1, MAX_SIDE), height: side };
 }
 
-const EXTENSIONS: Record<string, ImageFormat> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-};
-
-/** The format a file name is written in, or `null` when the browser can't encode it (GIF, SVG, BMP…). */
-export function format_of(name: string): ImageFormat | null {
-  const dot = name.lastIndexOf(".");
-  return (dot > 0 && EXTENSIONS[name.slice(dot).toLowerCase()]) || null;
-}
-
 export function name_for_format(name: string, format: ImageFormat, extension: string): string {
   if (format_of(name) === format) return name;
   const dot = name.lastIndexOf(".");
   return `${dot > 0 ? name.slice(0, dot) : name}${extension}`;
-}
-
-export function has_quality(format: ImageFormat): boolean {
-  return format !== "image/png";
 }
 
 export const ZOOM_MIN = 0.05;

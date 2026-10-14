@@ -5,7 +5,6 @@ import {
   add_operation,
   filter_string,
   fit_zoom,
-  format_of,
   name_for_format,
   normalize_degrees,
   result_size,
@@ -92,13 +91,6 @@ describe("filter_string", () => {
 });
 
 describe("formats", () => {
-  it("reads writable formats from the extension", () => {
-    expect(format_of("a.JPG")).toBe("image/jpeg");
-    expect(format_of("a.webp")).toBe("image/webp");
-    expect(format_of("a.gif")).toBeNull();
-    expect(format_of("png")).toBeNull();
-  });
-
   it("swaps the extension for another format", () => {
     expect(name_for_format("cat.png", "image/webp", ".webp")).toBe("cat.webp");
     expect(name_for_format("cat.jpeg", "image/jpeg", ".jpg")).toBe("cat.jpeg");
