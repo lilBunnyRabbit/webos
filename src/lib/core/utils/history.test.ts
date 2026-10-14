@@ -33,6 +33,13 @@ describe("history", () => {
     expect(can_redo(history)).toBe(false);
   });
 
+  test("keeps the last 100 entries by default", () => {
+    let history = create_history(0);
+    for (let i = 1; i <= 150; i++) history = push(history, i);
+    expect(history.entries).toHaveLength(100);
+    expect(current(history)).toBe(150);
+  });
+
   test("drops the oldest entries past max_entries", () => {
     let history = create_history(0);
     for (let i = 1; i <= 5; i++) history = push(history, i, { max_entries: 3 });

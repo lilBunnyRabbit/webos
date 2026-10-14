@@ -59,7 +59,7 @@
     type Rect,
     type Size,
   } from "./edit";
-  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
+  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
   import { render_final, render_operations } from "./render";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";

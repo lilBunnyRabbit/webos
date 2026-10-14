@@ -43,7 +43,7 @@
   import { z } from "zod";
   import { draw_shape, stamp_pencil, stroke_brush } from "./draw";
   import { flood_fill } from "./flood-fill";
-  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
+  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
   import { css_to_hex } from "./paint-file";
   import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point } from "./shapes";
   import {
