@@ -48,7 +48,7 @@
         await desktop.remove_item(widget.name);
         notifications.notify(app_id, { type: NotificationType.INFO, title: "Removed from the desktop", message: widget.label });
       } else {
-        await desktop.pin_widget(app_id, { label: "Game Hub", size: { w: 4, h: 4 } });
+        await desktop.pin_widget(app_id, { label: "Game Hub", size: { w: 4, h: 2 } });
       }
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });

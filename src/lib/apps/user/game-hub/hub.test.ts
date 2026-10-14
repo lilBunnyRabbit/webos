@@ -1,7 +1,7 @@
 import type { Plays } from "$lib/core/games";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { entries, format_duration, format_last_played, Sort, sort_entries, streak, supports_daily, totals } from "./hub";
+import { entries, format_duration, format_last_played, highlight_dailies, Sort, sort_entries, streak, supports_daily, totals } from "./hub";
 
 const EMPTY_PLAYS: Plays = { version: 1, games: {}, daily: {} };
 const plays = (patch: Partial<Plays>): Plays => ({ ...EMPTY_PLAYS, ...patch });
@@ -80,4 +80,18 @@ describe("format_last_played", () => {
     expect(format_last_played(new Date(2026, 9, 10).toISOString(), now)).toBe("4 days ago");
   });
   it("is empty for a bad date", () => expect(format_last_played("", now)).toBe(""));
+});
+
+describe("highlight_dailies", () => {
+  const game = (id: string, name = id) => ({ id, name });
+  it("puts unsolved first, then recently played, then A–Z, and caps the count", () => {
+    const plays = {
+      version: 1 as const,
+      games: { b: { ms: 1, sessions: 1, last: "2026-10-13T10:00:00.000Z" }, c: { ms: 1, sessions: 1, last: "2026-10-14T10:00:00.000Z" } },
+      daily: { "2026-10-14": { c: { ms: 5 } } },
+    };
+    const list = [game("a"), game("b"), game("c"), game("d")];
+    expect(highlight_dailies(list, plays, "2026-10-14").map((g) => g.id)).toEqual(["b", "a", "d"]);
+    expect(highlight_dailies(list, plays, "2026-10-14", 4).map((g) => g.id)).toEqual(["b", "a", "d", "c"]);
+  });
 });

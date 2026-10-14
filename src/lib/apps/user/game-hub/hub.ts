@@ -112,3 +112,12 @@ export function format_last_played(iso: string, now = new Date()): string {
     year: then.getFullYear() === now.getFullYear() ? undefined : "numeric",
   });
 }
+
+/** The few dailies a small view shows: unsolved first, recently played first, then A–Z. */
+export function highlight_dailies<T extends GameInfo>(games: T[], plays: Plays, today: string, max = 3): T[] {
+  const solved = plays.daily[today] ?? {};
+  const last = (game: T) => plays.games[game.id]?.last ?? "";
+  return [...games]
+    .sort((a, b) => Number(a.id in solved) - Number(b.id in solved) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name))
+    .slice(0, max);
+}

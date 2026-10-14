@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.35.1",
+    date: "2026-10-14",
+    title: "A smaller Game Hub widget",
+    changes: [
+      { kind: IMPROVED, text: "The Game Hub widget is smaller: your streak, today's progress and play time, up to three puzzles of the day, and a button to open Game Hub." },
+    ],
+  },
+  {
     version: "0.35.0",
     date: "2026-10-14",
     title: "Game Hub on the desktop",

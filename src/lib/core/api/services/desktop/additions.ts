@@ -11,7 +11,7 @@ export interface DefaultWidget {
   size: { w: number; h: number };
 }
 
-export const DEFAULT_WIDGETS: DefaultWidget[] = [{ id: "game-hub", app_id: "game-hub", label: "Game Hub", size: { w: 4, h: 4 } }];
+export const DEFAULT_WIDGETS: DefaultWidget[] = [{ id: "game-hub", app_id: "game-hub", label: "Game Hub", size: { w: 4, h: 2 } }];
 
 export const ADDITIONS_FILE = "additions.json";
 export const ADDITIONS_PATH = `${LAYOUT_DIRECTORY}/${ADDITIONS_FILE}`;
