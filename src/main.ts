@@ -2,6 +2,7 @@ import { mount, unmount } from "svelte";
 import "./app.css";
 import App from "./App.svelte";
 import kernel from "./lib/core/api";
+import "./lib/core/utils/install.svelte";
 
 async function main() {
   await kernel.init();

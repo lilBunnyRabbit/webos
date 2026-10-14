@@ -48,6 +48,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - One page at a time in a `max-w-3xl` column: an overline step, a `text-2xl` title (the Hello page uses `text-3xl` under the logo mark), a lead at 65%, then content. Display sizes are only used here.
 - Content is cards (`background-light`, `ring-foreground/8`, tinted icon tile + title + one or two lines). Warnings get a `warning` tile.
 - Footer: page dots (the current one is a `primary` pill), Back (quiet) and Next (primary, `lg`). Pages enter with `animate-pop-in`.
+- Install is the second page, right after Hello: the one place the intro asks for an action. A single card with a `primary` ring (`ring-2 ring-primary/40`), a larger icon tile and two lines on why, then the state: a `primary` `lg` "Install WebOS" button, "Installed" with a `success` check, or the platform's manual steps in an inset hint box.
 - Preferences chosen here (theme, taskbar) apply live and use the same controls as Settings (`ThemeCard`, `Segmented`).
 
 ## Tray and notification center

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { installer } from "$lib/core/utils/install.svelte";
 import { define_command } from "../shell/define";
 import type { ShellContribution, Value } from "../shell/type";
 import type { VersionService } from "./type";
@@ -28,6 +29,20 @@ export function version_shell(version: VersionService): ShellContribution {
             if (!args.changes) yield { $type: "release", version: release.version, date: release.date, title: release.title };
             else for (const change of release.changes) yield { version: release.version, kind: change.kind, text: change.text };
           }
+        },
+      }),
+      define_command({
+        id: "install",
+        description: "Install WebOS as an app",
+        available: () => !installer.installed,
+        async *run() {
+          if (!installer.can_install) {
+            yield installer.hint;
+            return;
+          }
+          yield "Installing…";
+          const outcome = await installer.install();
+          yield outcome === "accepted" ? "Installed." : outcome === "dismissed" ? "Install dismissed." : installer.hint;
         },
       }),
     ],

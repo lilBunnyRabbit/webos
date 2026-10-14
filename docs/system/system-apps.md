@@ -60,7 +60,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 
 `settings` · `Gear` icon · source `system/settings/`
 
-**Purpose.** Edit the theme, taskbar position and remembered default apps, read every release's notes, see build info, check for updates, replay the introduction, and reset.
+**Purpose.** Edit the theme, taskbar position and remembered default apps, read every release's notes, see build info, install WebOS, check for updates, replay the introduction, and reset.
 
 **Services.** `settings` ([settings](services/settings.md)), `version` ([version](services/version.md)) and `apps` (Default apps names and icons). All through `$derived(kernel.service(...))`.
 
@@ -75,7 +75,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | `sections/files.svelte` | Default apps |
 | `sections/whats-new.svelte` | The changelog (ADR-026) |
 | `sections.ts` | `SECTIONS` (id, label, icon) and `SECTION_IDS`, shared by the manifest's props schema and the app |
-| `sections/about.svelte` | Build info, updates, introduction replay, reset, source link |
+| `sections/about.svelte` | Install, build info, updates, introduction replay, reset, source link |
 | `color.ts` | `to_hex()` and `to_oklch()` for the colour picker, through a probe element and relative colour syntax |
 
 **Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
@@ -88,7 +88,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | Taskbar | A `Segmented` (Bottom, Top, Left, Right, with icons) bound to `settings.taskbar.position`, and a miniature screen preview that moves its dock to the chosen edge |
 | Default apps | Lists `settings.file_defaults` sorted by extension: the extension in mono, the app's icon and name (or "{id} (no longer installed)" in `error`), and a Forget `IconButton` that removes that entry. "Forget all" in the section header sets `{}`. Empty: "No default apps yet". Entries are added by "Always use" in the Open-with menu ([file associations](apps/file-associations.md)) |
 | What's new | `version.changelog`, newest first: one `background-light` card per release with title, mono version `Badge`, a primary "New to you" `Badge` for releases in `version.unseen`, and the date (`format_date` of the local day). Each change is a row: kind `Badge` (New `primary`, Improved `info`, Fixed `success`) and the text |
-| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Introduction: "Show again" calls `version.show_intro()` (doesn't touch the seen marker). Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK`, `file_defaults` to `{}` and the wallpaper to the grid preset, with no confirmation. A "Source on GitHub" link |
+| About | A card with the logo lockup, a one-line blurb, a Development/Production badge and the version. Install: "Install WebOS" with the why line; a primary Install button (`installer.install()`) while a prompt is held, "Installed" in `success` once installed, otherwise the platform hint appended to the description. Build: Version, Commit, Branch, Built (`version.info`, `format_datetime`: medium date, 24-hour time). Updates: "Update and reload" (`version.apply_update()`) when an update is available, otherwise "Check now" (`version.check()`), disabled in dev and while checking. Introduction: "Show again" calls `version.show_intro()` (doesn't touch the seen marker). Reset: a `danger` button that sets taskbar to `BOTTOM`, theme to a copy of `BRAND_DARK`, `file_defaults` to `{}` and the wallpaper to the grid preset, with no confirmation. A "Source on GitHub" link |
 
 Every write goes straight to service state. Persistence is the settings service's job (`/etc/settings.json`).
 

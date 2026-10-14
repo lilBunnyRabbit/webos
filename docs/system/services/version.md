@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -74,7 +74,7 @@ No check runs at boot. The first check happens on the first tab-visible event (`
 
 ## Consumers
 
-- Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev.
+- Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev. Its Install row reads `installer` directly (see [Install](#install)).
 - Settings › What's new: `changelog`, `unseen`, `info.version`.
 - Its own toasts (below).
 
@@ -101,12 +101,29 @@ Both toasts use app id `version`, so they're in the notification history.
 | Page | Content |
 |------|---------|
 | Hello | Logo mark, "Welcome to WebOS", one-line pitch. Button "Get started" |
-| Your files | Four cards: stored on this device, works offline, Save to disk, clearing site data deletes them (`warning` tile) |
+| Install | "Install WebOS first". One highlighted card (`ring-2 ring-primary/40`): why it matters in two lines (own window and offline; installed apps' storage is far less likely to be cleared), then the [install](#install) state: primary "Install WebOS" button, "Installed" in `success`, or the platform hint |
+| Your files | Four cards: stored on this device, one browser one disk, Save to disk, clearing site data deletes them (`warning` tile) |
 | Getting around | Start menu, windows (drag, snap, double-click), right-click menus, the desktop folder. Keyboard line with `Kbd`s |
 | Make it yours | `ThemeCard` grid of `THEME_PRESETS` and a taskbar `Segmented`, both writing `settings` live |
 | Ready | Updates, windows come back, work in progress, replay from About. Button "Start using WebOS" |
 
 Paging: Back/Next, dot buttons, and ←/→ on `window` (ignored inside inputs and radio groups). Each page enters with `animate-pop-in`, keyed on the page. The primary button carries `autofocus`. Cards switch to two columns at `@xl` of the content column. Display sizes `text-2xl`/`text-3xl` are used only here.
+
+### Install
+
+`src/lib/core/utils/install.svelte.ts` exports `installer`, a module singleton, not a service: `beforeinstallprompt` fires once, early, so `main.ts` imports the module before `kernel.init()` and the listener is live before the introduction mounts. Pure detection is in `install.ts` (unit-tested).
+
+| Member | Notes |
+|--------|-------|
+| `can_install` | A `beforeinstallprompt` event is held (`preventDefault()`ed) and WebOS isn't installed |
+| `installed` | `matchMedia("(display-mode: standalone)")` (live), iOS `navigator.standalone`, or `appinstalled` / an accepted prompt this session |
+| `platform_hint` | `prompt` (the API exists), `ios` (any iOS browser, iPadOS posing as a Mac), `safari-mac`, `other`. `$state` only so a test can stub it |
+| `hint` | `INSTALL_HINTS[platform_hint]`: Install app in the address bar or menu; Share › Add to Home Screen; File › Add to Dock; the browser's Install app / Add to Home Screen |
+| `install()` | `Promise<"accepted" \| "dismissed" \| "unavailable">`. Shows the held prompt once (the event is dropped either way) and returns `userChoice.outcome`. Needs a user gesture |
+
+Consumers: the Install page of the introduction, Settings › About › Install, and the `install` command. Nothing is persisted.
+
+The manifest (`VitePWA` in `vite.config.ts`) has what Chromium needs: `name`, `short_name`, 192 and 512 icons plus a maskable 512, and vite-plugin-pwa's defaults `start_url` and `scope` = `/webos/`, `display: "standalone"`.
 
 ## Persistence
 
@@ -138,11 +155,12 @@ If the browser already installed the new worker before the click, `installing` a
 
 ## Shell
 
-Contributes `version`, `changelog` and the `release` value type (`version/shell.ts`). See [shell](shell.md#contributions).
+Contributes `version`, `changelog`, `install` and the `release` value type (`version/shell.ts`). `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
 
 ## Known gaps
 
 - With two tabs open, the first to boot writes the seen marker; the other shows no toast.
+- A browser tab of an already installed WebOS gets no prompt event and isn't standalone, so it shows the hint instead of "Installed".
 
 - `update_available` is never cleared, even if a later check finds nothing newer.
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.
