@@ -5,6 +5,31 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.34.0",
+    date: "2026-10-14",
+    title: "Sixteen new apps",
+    changes: [
+      { kind: NEW, text: "Game Hub: all your games in one place with play time, a Today tab with daily puzzles everyone gets the same, and your streak." },
+      { kind: NEW, text: "Daily puzzles in Sudoku, Kakuro, Futoshiki, Nurikabe, Word Search, Minesweeper, Nonogram and Solitaire." },
+      { kind: NEW, text: "Solitaire: classic Klondike with draw 1 or 3, drag or tap to move, unlimited undo and stats." },
+      { kind: NEW, text: "Nonogram has colour puzzles, an editor that checks your puzzle has one answer, and .nonogram files you can save and share." },
+      { kind: NEW, text: "Work Hours: clock in and out, add entries, see your month and print a time sheet." },
+      { kind: NEW, text: "Kanban: a board for your life, with columns, labels, due dates and checklists. Due cards show on its icon." },
+      { kind: NEW, text: "Calendar: month, week and agenda views with reminders, plus your Work Hours days and Kanban due dates." },
+      { kind: NEW, text: "Pomodoro: focus and break cycles that tell you when time's up, even in another tab, with daily stats." },
+      { kind: NEW, text: "Clock: world times, alarms, timers and a stopwatch, plus a desktop clock widget that keeps your alarms ringing." },
+      { kind: NEW, text: "Time Since: count up from anything, reset it and see the history of every run." },
+      { kind: NEW, text: "Image Editor: crop, resize, rotate, flip and adjust a picture, then save it as PNG, JPEG or WebP." },
+      { kind: NEW, text: "Recorder: record your voice, your screen or your camera, and take photos. Everything lands in your Recordings folder." },
+      { kind: NEW, text: "Soundboard: add your own sounds, give them keys and play them over each other." },
+      { kind: NEW, text: "Archive: open, create and extract zip files, and see how compression works on your own text." },
+      { kind: NEW, text: "Diff: compare two files side by side or in one column, and edit and save either side." },
+      { kind: NEW, text: "Markdown to PDF: write Markdown, see the printed pages as you type, pick a template and export a PDF." },
+      { kind: IMPROVED, text: "Games, animations and timers pause while their window is minimized or the tab is in the background." },
+      { kind: FIXED, text: "Sudoku's timer no longer keeps running while the window is minimized." },
+    ],
+  },
+  {
     version: "0.33.0",
     date: "2026-10-14",
     title: "Desktop widgets",

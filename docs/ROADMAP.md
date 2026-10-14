@@ -260,6 +260,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
 - **Triage:** [2026-10-14 App triage](brainstorm/2026-10-14_app-triage.md): yes / maybe / no for every remaining app, and the core work each yes app waits on
 - Remove the `example` app: left for now (owner, 2026-10-14); `ui`, `session` and `router` browser tests launch it
+- [ ] Wave 2 follow-ups (agents' reports, [triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)): shell commands for every new app (owner approval), File Explorer Compress / Extract here, shared CodeMirror module (Diff and Markdown to PDF import Text Editor's), core `write_image(path, canvas, { format, quality })`, kit: colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`, a shared ticking clock; `print_html` should wait for fonts
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
@@ -273,10 +274,11 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Games
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Game Hub (library browser, play time tracking, categories, saves)
-- [-] Nonogram: black and white, generated puzzles, hints, zoom on phones (2026-10-13). Colour, editor and packs not done
-- [ ] Solitaire (Klondike)
-- [ ] Daily puzzle (seeded, one per day)
+- [x] Game Hub: library with play time, Today tab with daily puzzles and streak, stats, widget (2026-10-14)
+- [x] Nonogram: black and white (2026-10-13); colour mode, editor with uniqueness check, `.nonogram` files (2026-10-14). Hand-made colour pack not done
+- [x] Solitaire (Klondike) (2026-10-14)
+- [x] Daily puzzles: `daily` prop in 8 games, Game Hub Today tab (2026-10-14)
+- [x] Games on the kit: Stopwatch pauses when unseen, play time, Sudoku timer fix (2026-10-14)
 - Later: Chess, Sokoban, Blocks
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
@@ -291,12 +293,12 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [x] Desktop widgets (`.widget` files, multi-cell), stickies; mobile and resizing later
   - [x] Wikilinks and backlinks
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
-- [ ] Markdown-to-PDF converter — live preview, templates, TOC
-- [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
-- [ ] Pomodoro and Clock (one app or two: open)
-- [ ] Time Since
-- [ ] Kanban (personal "life" board)
-- [ ] Calendar
+- [x] Markdown to PDF: paged preview, templates, TOC, header/footer, export via print (2026-10-14)
+- [x] Work Hours: clock in/out, month view, printable time sheet, widget (2026-10-14)
+- [x] Pomodoro and Clock, two apps (2026-10-14)
+- [x] Time Since (2026-10-14)
+- [x] Kanban, a personal "life" board (2026-10-14)
+- [x] Calendar, with Work Hours days and Kanban due dates (2026-10-14)
 - [ ] Habit Tracker (yes, not now)
 - Later: Spreadsheet
 
@@ -305,9 +307,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - ~~Series Tracker~~ dropped in the 2026-10-14 triage
 - [x] Paint (2026-10-12)
 - [x] Music Visualizer (2026-10-12)
-- [ ] Image Editor — crop, resize, rotate, filters
-- [ ] Voice Recorder, Screen Recorder, Camera
-- [ ] Soundboard (user-loaded sounds)
+- [x] Image Editor — crop, resize, rotate, flip, adjustments, save as (2026-10-14)
+- [x] Recorder: mic, screen, camera and photos in one app (2026-10-14). Real microphone untested by the agents
+- [x] Soundboard (user-loaded sounds) (2026-10-14)
 - Later: Video Tools (trim, merge, audio extraction), Video → GIF
 
 ### Utilities
@@ -317,9 +319,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
-- [ ] Archive / Compression — zip, DEFLATE, LZ77, Huffman; first Tasks + Workers consumer
+- [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Moves onto Tasks once built
 - [ ] PDF Tools — merge, split, reorder, sign, all client-side (library choice open)
-- [ ] Diff
+- [x] Diff on `@codemirror/merge` (2026-10-14)
 - Maybe: Hex Viewer, Font Viewer, Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
 

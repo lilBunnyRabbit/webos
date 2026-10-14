@@ -134,3 +134,52 @@ The owner asked for the core work first, then one agent per app, each with a des
 Recorded as [ADR-035](../adrs/035-app-platform-wave-2.md).
 
 Consequence of the Calendar pick: Work Hours' and Kanban's file formats become a contract. Calendar is built after both merge and imports their schemas.
+
+## Wave 2 results
+
+16 agents in worktrees, one per app plus a sweep of the existing games, each with a desktop and mobile visual pass in both themes. All merged on 2026-10-14; `bun run check` 0 errors. Every worktree started behind master and fast-forwarded itself first.
+
+**Core bug found by two agents (Work Hours, Clock):** `json_file` re-read the folder while its own write was still on the way, so a sibling file's write, or the folder being created by the first write, reverted the change. Fixed in core: a re-read waits for `LatestWriter.idle()`. Clock and Work Hours still carry their local workarounds; they can drop them.
+
+**Second core bug (Calendar agent):** a shared cell created during a component's init was linked into that component's effect tree. A change landing during its outro (a closing window) left the cell's root dirty, and it never saved or re-read again, for every holder. Fixed with `detached_root` (created from a microtask), also applied to `persisted()` cells, the Quick Notes and Kanban badges and Pomodoro's timer. Reproduced in a browser test with a component that plays an outro.
+
+### Shell commands proposed (owner to approve; none built)
+
+| App | Proposal |
+|-----|----------|
+| Game Hub | `games` (columns, click launches), `games daily`, `games stats` |
+| Soundboard | `sb`, `sb ls` (pad values, open plays), `sb play <pad>` (needs a headless player), `sb stop`, `sb add <path…>` |
+| Pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset`, `pomo status`, `pomo stats`, `pomo pin` |
+| Time Since | `since` (counter values), `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>`, a `counter` completer |
+| Diff | `diff <left> <right>`, `diff --stat`, "Compare with…" on file values |
+| Image Editor | `image edit`, `image convert --format --quality`, `image resize`, `image rotate` |
+| Work Hours | `wh in [desc]`, `wh out`, `wh status`, `wh ls [month]`, `wh add`, `wh report [month]`, `wh target` (needs month/day props) |
+| Markdown to PDF | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` |
+| Solitaire | `solitaire [--draw 1\|3]`, `solitaire daily [day]`, `solitaire stats` |
+| Clock | `clock [tab]`, `alarm ls\|add\|on\|off\|rm`, `timer <dur> [label]`, `timer ls\|stop`, `clock pin`, `time [zone]` (zone completer) |
+| Nonogram | `nonogram new [--size] [--colour]`, `nonogram daily`, `nonogram edit [path]`, `nonogram check <path>` |
+| Kanban | `kanban [card]`, `kanban ls [-b] [--due]` (card values), `kanban add <title> [-c] [-d]`, `kanban mv\|done\|archive`, a `card` completer |
+| Recorder | `rec list`, `rec start [--source]` (needs a click; maybe only a `source` prop) |
+| Calendar | `cal [day]` (event values), `cal add <title> --day [--at] [--until] [--repeat] [--remind]`, `cal agenda [--days N]`, `cal open [date]` |
+| Archive | `zip <paths…> [--to] [--store]`, `unzip <path> [--to]`, `zip list <path>`; Explorer "Compress" and "Extract here" |
+
+### Choices agents made, for review
+
+- Pomodoro keeps its settings in `/var/lib/apps/pomodoro/timer.json` (its widget has no app context) and runs one module-level timer for all windows and the widget.
+- Clock and Pomodoro only fire while a window or widget is alive; Clock's widget hosts alarm checks.
+- Daily games: "New puzzle" leaves daily mode (Minesweeper replays the daily); daily solves also count in medium stats; Minesweeper's daily board starts opened in the middle.
+- Kanban takes `{ board, card }` props (for Calendar); Calendar takes `{ view, day }`.
+- Calendar: editing one occurrence edits the series; monthly repeats on the 29th–31st land on the month's last day; all-day reminders count from 09:00.
+- Markdown to PDF always prints in Brand Light; Work Hours' report uses plain greys.
+- Soundboard keeps playing when hidden; Archive keeps working after its window closes.
+- Diff and Markdown to PDF import Text Editor's CodeMirror theme and language loader: the first app-to-app import.
+- Pure `.ts` files must import `$lib/core/games/time`, not the `$lib/core/games` barrel (it pulls in the kernel and breaks Node tests).
+
+### Kit and core gaps reported
+
+Colour swatch picker (Soundboard, Nonogram), stat tile (Game Hub), tree list (Archive), `Segmented` disabled / icon-only / controlled modes, `EmptyState` actions wrapping, `format_date` without the year, `NotificationType.SUCCESS`, a shared ticking clock (Time Since, Clock, Pomodoro), core `write_image(path, canvas, { format, quality })` (Paint, Image Editor), `FilesService.ensure_directory(path)`, `print_html` waiting for fonts, a shared CodeMirror module.
+
+### Not verified
+
+- Recorder's real microphone: the agent's sandbox blocked macOS audio, so the mic was simulated.
+- MediaRecorder WebM has no duration, so Media Preview shows no length for recordings.

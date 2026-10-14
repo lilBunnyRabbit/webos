@@ -1,7 +1,7 @@
 # ADR-035: App Platform for the Second App Wave
 
 **Date:** 2026-10-14
-**Status:** Implemented (core)
+**Status:** Implemented
 
 ## Context
 
