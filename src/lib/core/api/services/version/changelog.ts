@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.32.0",
+    date: "2026-10-14",
+    title: "Quick Notes",
+    changes: [
+      { kind: NEW, text: "Quick Notes: press Alt+Shift+Q anywhere to jot down a note or a todo without leaving what you're doing. It remembers which app or file you were in." },
+      { kind: NEW, text: "New notes land in an Inbox; mark them Ready, Done or Dropped, filter by #tag, and tick off todos. Everything is plain text in your Notes folder." },
+      { kind: NEW, text: "In the Terminal: note, notes and todo capture and list, as in todo call bob or notes | where tags == work." },
+    ],
+  },
+  {
     version: "0.31.2",
     date: "2026-10-14",
     title: "Smoother taskbar",

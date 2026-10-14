@@ -278,9 +278,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Quick Notes (ADR-034, [brainstorm](brainstorm/2026-10-14_quick-notes.md)), quno-inspired
-  - [ ] App commands (`define_app({ shell })`)
-  - [ ] Core: `/home/Notes`, ids, Todo | Notes | Inbox tabs, `note`/`notes`/`todo` commands and values, capture dialog with context stamp, Alt+Shift+Q
+- [-] Quick Notes (ADR-034, [brainstorm](brainstorm/2026-10-14_quick-notes.md)), quno-inspired
+  - [x] App commands (`define_app({ shell })`)
+  - [x] Core: `/home/Notes`, ids, Todo | Notes | Inbox tabs, `note`/`notes`/`todo` commands and values, capture dialog with context stamp, Alt+Shift+Q
   - [ ] Manifest badge (open todos), shown where the icon shows
   - [ ] Desktop widgets (`.widget` files, multi-cell), stickies
   - [ ] Wikilinks and backlinks
