@@ -45,6 +45,8 @@
   import { clock_in, clock_out, edit_month, open_month, open_state, set_running_description } from "./store";
   import { TextDraft } from "./draft.svelte";
 
+  const { month: initial_month, day: initial_day }: { month?: string; day?: string } = $props();
+
   const { app_id, window: win, storage } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
@@ -56,8 +58,13 @@
   const now = $derived(new Date(ticker.now));
   const today = $derived(day_key(now));
 
-  const month = storage.window("month", month_key(new Date()), MonthKeySchema);
-  const selected = storage.window("day", day_key(new Date()), DayKeySchema);
+  const opened_month = untrack(() => (initial_day ? month_of(initial_day) : (initial_month ?? month_key(new Date()))));
+  const month = storage.window("month", opened_month, MonthKeySchema);
+  const selected = storage.window(
+    "day",
+    untrack(() => initial_day ?? (opened_month === month_key(new Date()) ? day_key(new Date()) : `${opened_month}-01`)),
+    DayKeySchema
+  );
 
   const state_file = open_state();
   $effect(() => () => state_file.release());
