@@ -19,7 +19,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 
 ## Taskbar
 
-- A floating dock: a `rounded-2xl` `bg-background-light/90` bar with `backdrop-blur` and `shadow-popover`. It follows the taskbar position setting (horizontal or vertical). While a window is maximized it goes flush: no margin, no radius or shadow, a hairline toward the window, so the two read as one surface.
+- A floating dock: a `rounded-2xl` `bg-background-light/90` bar with `backdrop-blur` and `shadow-popover`. It follows the taskbar position setting (horizontal or vertical). While a window is maximized it goes flush: no margin, no radius or shadow, a hairline toward the window, so the two read as one surface. It morphs into and out of that shape together with the window.
 - **One gap everywhere: 8px.** Screen edge to dock, dock to windows, screen edges to snapped windows, and between snapped windows. The dock's strip pads only its screen-edge sides; the side facing the windows takes its 8px from the window area's snap inset.
 - Order: start button (the logo mark in `primary`), a hairline separator, running windows, and the tray at the far end.
 - Window buttons are 40px `rounded-xl`. The focused window gets a `foreground/10` fill, a filled icon and a 16px `primary` bar; other open windows show a small dot; minimized windows dim their icon.

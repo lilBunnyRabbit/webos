@@ -31,8 +31,10 @@
   )}
   {...rest_props}
 >
+  <!-- Named so going flush morphs inside the maximize/minimize view transition, together with the window. -->
   <nav
     aria-label="Taskbar"
+    style:view-transition-name="taskbar-dock"
     class={cn(
       "relative flex items-center gap-1 bg-background-light/90 p-1.5 backdrop-blur-xl",
       flush

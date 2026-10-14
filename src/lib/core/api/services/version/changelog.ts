@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.31.2",
+    date: "2026-10-14",
+    title: "Smoother taskbar",
+    changes: [
+      { kind: IMPROVED, text: "The taskbar now glides into place when you maximize or restore a window, instead of jumping." },
+    ],
+  },
+  {
     version: "0.31.1",
     date: "2026-10-14",
     title: "Maximized windows",
