@@ -30,3 +30,18 @@ export function daily_seed(day: string, app_id: string): number {
   }
   return hash >>> 0;
 }
+
+export type ParsedDay = { ok: true; day: string } | { ok: false; error: string };
+
+/** A daily puzzle's day as typed: `YYYY-MM-DD`, `today`, `yesterday` or `-N` days ago. Never after today. */
+export function parse_day(input: string, now = new Date()): ParsedDay {
+  const raw = input.trim().toLowerCase();
+  const back = raw === "today" ? 0 : raw === "yesterday" ? 1 : /^-\d+$/.test(raw) ? Number(raw.slice(1)) : null;
+  if (back !== null) return { ok: true, day: day_key(new Date(now.getFullYear(), now.getMonth(), now.getDate() - back)) };
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const date = match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+  if (!match || !date || day_key(date) !== raw) return { ok: false, error: `"${input}" isn't a day: use YYYY-MM-DD, today, yesterday or -N` };
+  if (raw > day_key(now)) return { ok: false, error: `no daily puzzle for ${raw} yet` };
+  return { ok: true, day: raw };
+}

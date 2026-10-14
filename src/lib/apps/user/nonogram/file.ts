@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BW_PALETTE, INKS, Ink, MAX_COLORS } from "./puzzle";
+import { analyze, BW_PALETTE, from_solution, INKS, Ink, MAX_COLORS, Verdict } from "./puzzle";
 
 export const NONOGRAM_EXTENSION = ".nonogram";
 export const MIN_SIDE = 2;
@@ -93,4 +93,18 @@ export function serialize_nonogram(drawing: Drawing): string {
     ),
   };
   return `${JSON.stringify(file, null, 2)}\n`;
+}
+
+export const VERDICT_TEXT: Record<Verdict, string> = {
+  [Verdict.LOGIC]: "unique: solvable by logic alone",
+  [Verdict.UNIQUE]: "needs a guess: one answer, but reaching it needs a guess",
+  [Verdict.MULTIPLE]: "multiple: more than one picture fits the clues",
+  [Verdict.NONE]: "none: no picture fits the clues",
+  [Verdict.UNKNOWN]: "unknown: too complex to check",
+};
+
+export function check_drawing(drawing: Drawing, budget = 20_000, deadline = Infinity): Verdict {
+  const { width, height, palette, cells } = drawing;
+  const puzzle = from_solution(0, width, height, palette, cells);
+  return analyze(width, height, palette.length, puzzle.rows, puzzle.cols, budget, deadline).verdict;
 }
