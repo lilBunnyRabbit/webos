@@ -9,6 +9,7 @@ import {
   name_for_format,
   normalize_degrees,
   result_size,
+  resize_size,
   resize_to,
   rotated_size,
   round_rect,
@@ -116,5 +117,16 @@ describe("zoom", () => {
     expect(step_zoom(1, 1)).toBe(1.5);
     expect(step_zoom(1.2, -1)).toBe(1);
     expect(step_zoom(16, 1)).toBe(16);
+  });
+});
+
+describe("resize_size", () => {
+  it("keeps the aspect ratio with only a width", () => {
+    expect(resize_size({ width: 400, height: 300 }, 200)).toEqual({ width: 200, height: 150 });
+  });
+
+  it("takes both sides as given, clamped", () => {
+    expect(resize_size({ width: 400, height: 300 }, 50, 50)).toEqual({ width: 50, height: 50 });
+    expect(resize_size({ width: 400, height: 300 }, 0, 99999)).toEqual({ width: 1, height: 16384 });
   });
 });

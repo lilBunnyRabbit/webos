@@ -3,6 +3,11 @@ import {
   BoardFileSchema,
   create_pad,
   EMPTY_FILE,
+  find_board,
+  play_action,
+  PlayAction,
+  PlayMode,
+  resolve_pad,
   free_keys,
   is_audio,
   label_from_file,
@@ -114,4 +119,49 @@ test("unique_board_name", () => {
   const boards = [{ id: "a", name: "My board", pads: [] }, { id: "b", name: "My board 2", pads: [] }];
   expect(unique_board_name(boards, "My board")).toBe("My board 3");
   expect(unique_board_name(boards, "Party")).toBe("Party");
+});
+
+describe("play_action", () => {
+  test("starts an idle pad in both modes", () => {
+    expect(play_action(PlayMode.RESTART, false, false)).toBe(PlayAction.START);
+    expect(play_action(PlayMode.OVERLAP, true, false)).toBe(PlayAction.START);
+  });
+
+  test("restart mode restarts a sounding pad, overlap stacks another copy", () => {
+    expect(play_action(PlayMode.RESTART, false, true)).toBe(PlayAction.RESTART);
+    expect(play_action(PlayMode.OVERLAP, false, true)).toBe(PlayAction.START);
+  });
+
+  test("a loop pad toggles off in both modes", () => {
+    expect(play_action(PlayMode.RESTART, true, true)).toBe(PlayAction.STOP);
+    expect(play_action(PlayMode.OVERLAP, true, true)).toBe(PlayAction.STOP);
+  });
+});
+
+describe("resolve_pad", () => {
+  const boards = [
+    { id: "a", name: "Main", pads: [pad("p1", "1"), { ...pad("p2", "2"), label: "Airhorn" }] },
+    { id: "b", name: "Games", pads: [pad("p3", "1"), { ...pad("p4", "a"), label: "Applause" }] },
+  ];
+
+  test("finds by id, label, key and label prefix", () => {
+    expect(resolve_pad(boards, "p3")).toMatchObject({ pad: { id: "p3" }, board: { id: "b" } });
+    expect(resolve_pad(boards, "AIRHORN")).toMatchObject({ pad: { id: "p2" } });
+    expect(resolve_pad(boards, "2")).toMatchObject({ pad: { id: "p2" } });
+    expect(resolve_pad(boards, "app")).toMatchObject({ pad: { id: "p4" } });
+  });
+
+  test("reports ambiguous and missing pads", () => {
+    expect(resolve_pad(boards, "1")).toMatch(/matches 2 pads.*-b/);
+    expect(resolve_pad(boards, "a")).toMatchObject({ pad: { id: "p4" } });
+    expect(resolve_pad(boards, "zzz")).toBe('no pad "zzz"');
+    expect(resolve_pad(boards.slice(0, 1), "1")).toMatchObject({ pad: { id: "p1" } });
+  });
+
+  test("find_board by id or name", () => {
+    const file: BoardFile = { version: 1, boards };
+    expect(find_board(file, "b")?.name).toBe("Games");
+    expect(find_board(file, "games")?.id).toBe("b");
+    expect(find_board(file, "x")).toBeNull();
+  });
 });

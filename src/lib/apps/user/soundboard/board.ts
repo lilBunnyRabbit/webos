@@ -109,3 +109,53 @@ export function unique_board_name(boards: readonly Board[], base: string): strin
   if (!taken.has(base)) return base;
   for (let n = 2; ; n++) if (!taken.has(`${base} ${n}`)) return `${base} ${n}`;
 }
+
+export const PlayMode = {
+  RESTART: "restart",
+  OVERLAP: "overlap",
+} as const;
+export type PlayMode = (typeof PlayMode)[keyof typeof PlayMode];
+export const PLAY_MODES = Object.values(PlayMode);
+
+export const PlayAction = {
+  START: "start",
+  RESTART: "restart",
+  STOP: "stop",
+} as const;
+export type PlayAction = (typeof PlayAction)[keyof typeof PlayAction];
+
+export function play_action(mode: PlayMode, loop: boolean, playing: boolean): PlayAction {
+  if (!playing) return PlayAction.START;
+  if (loop) return PlayAction.STOP;
+  return mode === PlayMode.RESTART ? PlayAction.RESTART : PlayAction.START;
+}
+
+export interface PadMatch {
+  board: Board;
+  pad: Pad;
+}
+
+export function find_board(file: BoardFile, query: string): Board | null {
+  const lower = query.toLowerCase();
+  return file.boards.find((board) => board.id === query) ?? file.boards.find((board) => board.name.toLowerCase() === lower) ?? null;
+}
+
+export function resolve_pad(boards: readonly Board[], query: string): PadMatch | string {
+  const lower = query.trim().toLowerCase();
+  const all = boards.flatMap((board) => board.pads.map((pad) => ({ board, pad })));
+  const tests: ((match: PadMatch) => boolean)[] = [
+    ({ pad }) => pad.id === query,
+    ({ pad }) => pad.label.toLowerCase() === lower,
+    ({ pad }) => pad.key === lower,
+    ({ pad }) => lower.length > 0 && pad.label.toLowerCase().startsWith(lower),
+  ];
+  for (const test of tests) {
+    const found = all.filter(test);
+    if (found.length === 1) return found[0];
+    if (found.length > 1) {
+      const where = found.map(({ board, pad }) => `“${pad.label}” on ${board.name}`).join(", ");
+      return `"${query}" matches ${found.length} pads: ${where}. Use -b to pick the board`;
+    }
+  }
+  return `no pad "${query}"`;
+}

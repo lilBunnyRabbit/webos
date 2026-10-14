@@ -165,6 +165,11 @@ export function name_for_format(name: string, format: ImageFormat, extension: st
   return `${dot > 0 ? name.slice(0, dot) : name}${extension}`;
 }
 
+export function resize_size(current: Size, width: number, height?: number): Size {
+  if (height === undefined) return resize_to(current, "width", width, true);
+  return { width: clamp(Math.round(width) || 1, 1, MAX_SIDE), height: clamp(Math.round(height) || 1, 1, MAX_SIDE) };
+}
+
 export function has_quality(format: ImageFormat): boolean {
   return format !== "image/png";
 }
