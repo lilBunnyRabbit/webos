@@ -14,7 +14,7 @@ export default define_app({
   icon: FileZipIcon,
   version: "1.0.0",
   description: "Opens, extracts and creates zip archives, right in the browser.",
-  keywords: ["zip", "unzip", "compress", "extract", "deflate"],
+  keywords: ["zip", "unzip", "compress", "extract", "decompress", "archive", "deflate", "files", "folder"],
   category: AppCategory.UTILITIES,
   associations: [".zip", "application/zip", "application/x-zip-compressed"],
   props: z.object({ path: z.string().optional(), paths: z.array(z.string()).optional() }),
@@ -63,7 +63,10 @@ export default define_app({
       define_command({
         id: "unzip",
         description: "Extract a zip into a new folder named after it",
-        args: z.object({ path: arg.path(), to: arg.path().optional().describe("Where the new folder goes; the current folder by default") }),
+        args: z.object({
+          path: arg.path(),
+          to: arg.path().optional().describe("Where the new folder goes; the current folder by default"),
+        }),
         positional: ["path"],
         yields: "file",
         run: async (context) => (await logic()).unzip(context),

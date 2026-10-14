@@ -41,7 +41,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Compare two files or pasted texts side by side or inline.",
-  keywords: ["compare", "difference", "merge", "changes", "text"],
+  keywords: ["compare", "difference", "diff", "merge", "changes", "text", "code", "versions"],
   tools: DIFF_ACCEPT,
   props: DIFF_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 280 } } },
