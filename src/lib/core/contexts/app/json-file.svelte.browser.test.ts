@@ -161,4 +161,16 @@ describe("json_file", () => {
     unmount(host);
     target.remove();
   });
+
+  test("a change not yet saved survives a re-read triggered by a sibling", async () => {
+    const path = app_data_path("json-unsaved", "data.json");
+    const cell = json_file(path, { count: 0 }, Schema);
+    await vi.waitFor(() => expect(cell.ready).toBe(true));
+    cell.value.count = 6;
+    await write(app_data_path("json-unsaved", "sibling.json"), "{}");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(cell.value.count).toBe(6);
+    await vi.waitFor(async () => expect(JSON.parse((await read(path))!)).toEqual({ count: 6 }));
+    cell.release();
+  });
 });
