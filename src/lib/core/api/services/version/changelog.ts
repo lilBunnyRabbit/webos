@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.29.1",
+    date: "2026-10-14",
+    title: "System folders stay put",
+    changes: [
+      { kind: FIXED, text: "File Explorer no longer renames, deletes, moves or adds files inside system folders, or touches Home, Desktop, Documents and Downloads themselves." },
+    ],
+  },
+  {
     version: "0.29.0",
     date: "2026-10-14",
     title: "Links",

@@ -4,7 +4,7 @@
   import { IconButton } from "../ui";
   import { report_file_error } from "./file-explorer.errors";
 
-  let { handler }: { handler: DirectoryHandler } = $props();
+  let { handler, disabled = false }: { handler: DirectoryHandler; disabled?: boolean } = $props();
 
   let uploading = $state(false);
 
@@ -20,6 +20,6 @@
   }
 </script>
 
-<IconButton label="Upload files" size="sm" disabled={uploading} onclick={handle_upload}>
+<IconButton label="Upload files" size="sm" disabled={uploading || disabled} onclick={handle_upload}>
   <UploadSimpleIcon weight="bold" />
 </IconButton>

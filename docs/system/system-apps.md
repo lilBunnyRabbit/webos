@@ -43,12 +43,12 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 - **List:** a grid with sticky overline headers (Name, Size, Modified; Modified from `@md`), 32px rows, folders first in `primary`, files as duotone icons, `.desktop` rows drawn as `ShortcutIcon` with the target app's icon, and a "system" badge on `/etc`, `/var`, `/tmp` and below. Skeleton rows while loading, empty states for an empty folder and for a filter with no matches.
 - **Actions:** open a file in its associated app (double-click or Enter; a tap on mobile, through `apps.open`; a `.desktop` shortcut launches its target), enter a folder, delete (Delete or Cmd+Backspace, `confirm()`; folders recursive).
 - **Multi-select and drag** (desktop pointer): click, Ctrl+click, Shift+click, Ctrl+A, a rectangle from empty space; Cut, Copy, Delete and Open act on the selection. Drag rows onto a folder, into another Explorer window or onto the desktop to move them ([details](services/files.md#multi-select-and-drag-and-drop)).
+- **Read-only system folders:** inside `/etc`, `/var`, `/tmp` (`is_system_path`) New folder, Upload, Paste and drops are disabled, and the empty state says "System folders are read-only." A locked entry (`is_locked_path`: anything system, plus the layout folders `/home`, `/home/Desktop`, `Documents`, `Downloads`) can't be cut, renamed, deleted or dragged; its menu items are disabled and F2, Ctrl+X and Delete do nothing. Copy, Open, Save to disk and Properties still work.
 - **Status bar:** one truncating line: item count (folder/file breakdown from `@sm`), and a storage meter with usage of quota (from `@md`).
 
 **Known gaps.**
 
 - Folders update live when another window or a service changes them (each `DirectoryHandler` watches its revision). A folder deleted or moved elsewhere sends the window to the nearest existing parent with a toast. Changes in other browser tabs still need a manual reload.
-- System folders are only marked, not protected: they can be deleted like any folder.
 - No associations, so `apps.open()` on a folder path doesn't reach it. Only `launch("file-explorer", { path })` does.
 - No multi-select on phones and tablets and no arrow-key selection. Real files and folders dropped from the OS are imported (folders need Chromium). New folder and delete use window sheets (`window.prompt` with name validation, `window.confirm` with `danger`).
 

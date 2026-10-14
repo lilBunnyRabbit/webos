@@ -14,6 +14,7 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { create_folder } from "./file-actions";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
 
   interface Props {
     handler: DirectoryHandler;
@@ -26,6 +27,7 @@
   let { handler, can_go_back, onback, onnavigatepath, search = $bindable() }: Props = $props();
 
   let creating_folder = $state(false);
+  const read_only = $derived(is_system_path(handler.path));
 
   const crumbs = $derived([{ label: "/", segments: [] as string[] }, ...handler.segments.map((name, index) => ({ label: name, segments: handler.segments.slice(0, index + 1) }))]);
 
@@ -79,9 +81,9 @@
   <!-- One group, so a wrapping toolbar keeps the two together. -->
   <div class="flex shrink-0 items-center gap-1.5">
     <Separator vertical class="hidden @md:block" />
-    <IconButton label="New folder" size="sm" disabled={creating_folder} onclick={handle_create_folder}>
+    <IconButton label="New folder" size="sm" disabled={creating_folder || read_only} onclick={handle_create_folder}>
       <FolderPlusIcon weight="bold" />
     </IconButton>
-    <FileUploadButton {handler} />
+    <FileUploadButton {handler} disabled={read_only} />
   </div>
 </Toolbar>

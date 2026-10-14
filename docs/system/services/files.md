@@ -22,7 +22,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `type.ts` | `FilesService` interface, `FileSystemItem` union, option types |
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path` |
-| `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `ensure_hierarchy` (ADR-021) |
+| `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
 | `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
@@ -65,6 +65,7 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 | `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `var_lib`, `tmp` → the paths above |
 | `SYSTEM_DIRECTORIES` | `["/etc", "/var", "/tmp"]`, the OS-owned top-level folders |
 | `is_system_path(path)` | `true` for a system directory or anything under one. Plain string prefix check, so pass a normalised path |
+| `is_locked_path(path)` | `is_system_path`, or one of the `PATHS` folders themselves (`/home`, `/home/Desktop`, …). File Explorer won't cut, rename, delete or drag these. UI rule only: the service still writes anywhere |
 | `ensure_hierarchy(root)` | The bootstrap below. Called by `FilesService.init()` and `clear()` |
 
 `ensure_hierarchy(root)`, in order:
@@ -126,7 +127,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 
 `changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
 
-`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer, DesktopService, `desktop/layout.ts` and `settings/persistence.ts`, `is_system_path` by `file-list.svelte`.
+`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer, DesktopService, `desktop/layout.ts` and `settings/persistence.ts`, `is_system_path` by `file-list.svelte`, `file-explorer-navigation.svelte`, the picker footer, Text Editor and Paint; `is_locked_path` by `file-list.svelte`.
 
 ## DirectoryHandler
 
@@ -325,8 +326,8 @@ Rows are 32px (44px on a coarse pointer) `rounded-md` `<button role="row">`s in 
 | Back button (mobile nav bar) | | `window.on_back`: the previous folder in this explorer's history; unclaimed when there's none, so the shell takes over |
 | Enter | Focused file row | `apps.open`, with the anchor at the row's bottom-left |
 | Enter | Focused folder row | Navigate into it |
-| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Set as wallpaper (one `image/*` file), Delete, Properties |
-| Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload |
+| Right-click | A row | Item menu: Open, Open with ▸ (files with 2+ associated apps), Cut, Copy, Rename, Save to disk…, Set as wallpaper (one `image/*` file), Delete, Properties. Cut, Rename and Delete are disabled when any target is locked (`is_locked_path`) |
+| Right-click | Empty space in the list | Folder menu: New folder, Upload files, Paste (disabled when the clipboard is empty), Reload. In a system folder New folder, Upload and Paste are disabled; drops onto a system folder or into one are refused |
 | Ctrl/Cmd+C, Ctrl/Cmd+X | Focused row | Copy or cut to the clipboard (ClipboardService); cut rows are dimmed |
 | Ctrl/Cmd+V | Anywhere in the list | Paste into this folder; name clashes ask in a `ConflictDialog` sheet |
 | F2 | Focused row | Rename: prompt sheet with the stem pre-selected, validated (no clash, no `/`) |

@@ -3,7 +3,7 @@
   import { long_press } from "$lib/core/utils/long-press";
   import type { FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
-  import { SYSTEM_DIRECTORIES } from "$lib/core/api/services/files/hierarchy";
+  import { SYSTEM_DIRECTORIES, is_locked_path, is_system_path } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
@@ -79,6 +79,10 @@
     if (!query) return handler.items;
     return handler.items.filter((item) => item.name.toLowerCase().includes(query));
   });
+
+  // System folders are read-only here as in every save dialog: the OS rewrites their files on its own.
+  const read_only = $derived(is_system_path(handler.path));
+  const locked = (entries: FileSystemItem[]) => entries.some((entry) => is_locked_path(join_path(handler.segments, entry.name)));
 
   // Multi-select (ADR-011 revision): this list's own UI state, desktop pointer only. The picker keeps its single
   // `selected`, and mobile keeps tap to open.
@@ -164,9 +168,18 @@
     return has_os_files(event) ? "os" : null;
   }
 
+  function drop_target(event: DragEvent): string | null {
+    const folder = folder_under(event);
+    const target = folder ? join_path(handler.segments, folder) : handler.path;
+    return is_system_path(target) ? null : target;
+  }
+
   function on_drag_over(event: DragEvent) {
     const kind = drop_kind(event);
-    if (!kind) return;
+    if (!kind || !drop_target(event)) {
+      drop_folder = null;
+      return;
+    }
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = kind === "os" ? "copy" : "move";
     drop_folder = folder_under(event);
@@ -174,10 +187,9 @@
 
   async function on_drop(event: DragEvent) {
     const kind = drop_kind(event);
-    if (!kind) return;
+    const target = drop_target(event);
+    if (!kind || !target) return;
     event.preventDefault();
-    const folder = folder_under(event);
-    const target = folder ? join_path(handler.segments, folder) : handler.path;
     drop_folder = null;
     dragging = new Set();
     if (kind === "os") await import_dropped(read_os_entries(event), target);
@@ -223,22 +235,23 @@
     const [item] = entries;
     if (!item) return;
     const single = entries.length === 1;
+    const fixed = locked(entries);
     const with_apps = single ? await open_with_items(item) : [];
     const items: MenuItem[] = [
       { id: "open", label: single ? "Open" : `Open ${entries.length} items`, icon: ArrowSquareOutIcon, shortcut: "↵" },
       ...(with_apps.length > 1 ? [{ label: "Open with", icon: AppWindowIcon, items: with_apps }] : []),
       { separator: true },
-      { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
+      { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X", disabled: fixed },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       ...(single
         ? [
-            { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" },
+            { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2", disabled: fixed },
             { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
           ]
         : []),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
       { separator: true },
-      { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true },
+      { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true, disabled: fixed },
       ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
     ];
 
@@ -265,10 +278,10 @@
   async function background_menu(anchor: Position) {
     const choice = await dialogs.menu(
       [
-        { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
-        { id: "upload", label: "Upload files", icon: UploadSimpleIcon },
+        { id: "new_folder", label: "New folder", icon: FolderPlusIcon, disabled: read_only },
+        { id: "upload", label: "Upload files", icon: UploadSimpleIcon, disabled: read_only },
         { separator: true },
-        { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard.content },
+        { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: read_only || !clipboard.content },
         { separator: true },
         { id: "reload", label: "Reload", icon: ArrowClockwiseIcon },
       ],
@@ -289,7 +302,7 @@
   class="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
   onkeydown={(event) => {
     if (picker) return;
-    if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content) {
+    if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content && !read_only) {
       event.preventDefault();
       paste(handler, window);
     } else if (multi && mod(event) && event.key.toLowerCase() === "a" && !(event.target as Element).closest("input")) {
@@ -322,7 +335,11 @@
       {/each}
     </div>
   {:else if handler.items.length === 0}
-    <EmptyState icon={FolderOpenIcon} title="This folder is empty" description="Upload files or create a folder, from the toolbar or a right-click." />
+    <EmptyState
+      icon={FolderOpenIcon}
+      title="This folder is empty"
+      description={read_only ? "System folders are read-only." : "Upload files or create a folder, from the toolbar or a right-click."}
+    />
   {:else if filtered_items.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />
   {:else}
@@ -338,7 +355,7 @@
         <button
           data-entry-name={item.name}
           data-entry-kind={item.kind}
-          draggable={multi}
+          draggable={multi && !locked([item])}
           aria-disabled={!choosable && item.kind === "file"}
           aria-selected={picker ? selected === item.name : multi ? selection.has(item.name) : undefined}
           onclick={(event) => {
@@ -383,11 +400,14 @@
             const entries = targets(item);
             if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
             else if (event.key === "Enter") open_all(entries, row_anchor(event.currentTarget));
-            else if (event.key === "F2") rename_item(handler, window, item);
-            else if (mod(event) && event.key.toLowerCase() === "c") copy_items(handler, entries);
-            else if (mod(event) && event.key.toLowerCase() === "x") cut_items(handler, entries);
-            else if (is_delete_key(event)) delete_items(handler, window, entries);
-            else if (is_menu_key(event)) item_menu(entries, row_anchor(event.currentTarget));
+            else if (event.key === "F2") {
+              if (!locked([item])) rename_item(handler, window, item);
+            } else if (mod(event) && event.key.toLowerCase() === "c") copy_items(handler, entries);
+            else if (mod(event) && event.key.toLowerCase() === "x") {
+              if (!locked(entries)) cut_items(handler, entries);
+            } else if (is_delete_key(event)) {
+              if (!locked(entries)) delete_items(handler, window, entries);
+            } else if (is_menu_key(event)) item_menu(entries, row_anchor(event.currentTarget));
             else return;
             event.preventDefault();
           }}

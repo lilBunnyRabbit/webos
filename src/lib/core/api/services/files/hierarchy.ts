@@ -27,6 +27,13 @@ export function is_system_path(path: string): boolean {
   return SYSTEM_DIRECTORIES.some((dir) => path === dir || path.startsWith(`${dir}/`));
 }
 
+const LAYOUT_PATHS: readonly string[] = Object.values(PATHS);
+
+/** Can't be renamed, moved or deleted from the UI: anything under a system folder, and the layout's own folders (`/home/Desktop`). */
+export function is_locked_path(path: string): boolean {
+  return is_system_path(path) || LAYOUT_PATHS.includes(path);
+}
+
 async function ensure_directory(root: FileSystemDirectoryHandle, path: string): Promise<FileSystemDirectoryHandle> {
   let dir = root;
   for (const segment of split_path(path)) {
