@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented (2026-10-10, partially; see revision)
 
+> **Revision 2026-10-14: shell hook** ([ADR-033](./033-shell.md)). `IService` gains an optional `shell?(): ShellContribution` (commands, completers, value types). The shell service reads it from every initialised service.
+
 > **Revision 2026-10-10: implementation** (owner decisions, see [brainstorm](../brainstorm/2026-10-10_service-lifecycle.md))
 > - **Boot waits for everything.** `register()` only records the descriptor. `kernel.init()` resolves dependency order (it throws on a cycle or a missing dependency), constructs each service, awaits `init()`, and only then puts it in `kernel.services`. `main.ts` mounts after `kernel.init()`, so `kernel.service()` stays synchronous and never sees a half-ready service. Registering after init throws. `await_service()` and the pending-service machinery were removed; they had no callers.
 > - **`destroy()` is synchronous.** Unload never awaits promises, so async cleanup would silently not run.

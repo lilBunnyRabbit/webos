@@ -1,7 +1,7 @@
 # ADR-007: Shell Service & Terminal
 
 **Date:** 2026-01-31
-**Status:** Accepted
+**Status:** Superseded by [ADR-033](./033-shell.md) (2026-10-14): structured values and pipes, service `shell()` hook, streaming with abort, zod args, Mod+K palette, shortcuts run commands
 
 ## Context
 

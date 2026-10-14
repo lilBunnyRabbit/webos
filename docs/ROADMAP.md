@@ -17,7 +17,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping. Reopen closed window landed in block 3 as Alt+Shift+T
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
-5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
+5. [ ] **Shell + Terminal + Command palette** (ADR-033, supersedes ADR-007): decided 2026-10-14 ([brainstorm](brainstorm/2026-10-14_shell-terminal.md)). Structured-value pipes, service `shell()` hook, Tab completion, Mod+K `>` mode, shortcuts run commands
 6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015: radius, shadows, motion speed, export/import) deferred by the owner on 2026-10-13
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
@@ -168,28 +168,36 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ## P2 — Power Features
 
 ### Shell Service
-- **ADR:** [ADR-007](adrs/007-shell-service.md)
-- **Brainstorm:** [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
-- **Status:** Not started
-- [ ] ShellService (command registry, parser, executor)
-- [ ] Command definition interface (args, flags, completions)
-- [ ] Progressive prefix parser (tokenize, resolve, validate, execute)
-- [ ] Built-in commands (help, clear, echo, kernel)
-- [ ] Service-registered commands (files, windows, apps, settings)
+- **ADR:** [ADR-033](adrs/033-shell.md) (supersedes [ADR-007](adrs/007-shell-service.md))
+- **Brainstorm:** [2026-10-14 Shell, terminal and palette](brainstorm/2026-10-14_shell-terminal.md), [2026-01-31 Terminal & Shell Design](brainstorm/2026-01-31_terminal-shell-design.md)
+- **Status:** Decided, not started
+- [ ] ShellService: reactive registry from each service's `shell()` hook (commands, completers, value types)
+- [ ] Parser: quotes, longest-prefix command ids, positionals, flags, zod coercion and validation
+- [ ] Structured values and pipes; verbs `where sort select first last count get`
+- [ ] Streaming runs with AbortSignal (Ctrl+C, window close)
+- [ ] ShellSession (cwd, entries); shared history in `/var/lib/shell/history`
+- [ ] Completion by arg kind with per-arg override
+- [ ] `sudo` (system dialog) for writes to system folders
+- [ ] Service commands: files, windows, apps, settings, notifications, clipboard, version, router, kernel
+- [ ] Background jobs (`&`, `jobs`, `kill`), likely with Tasks (ADR-013): waiting on a use case
+- [ ] App-registered commands (window-scoped via app context); app shortcuts then become commands too
+- [ ] `where` expression language (OR, grouping)
+- [ ] Language beyond pipes (variables, globs, chaining, scripts): waiting on a use case
 
 ### Terminal App
-- **ADR:** [ADR-007](adrs/007-shell-service.md)
-- **Status:** Not started
-- [ ] Terminal system app (`/src/lib/apps/system/terminal/`)
-- [ ] Per-instance cwd state
-- [ ] Command history (localStorage via StorageHandle)
-- [ ] Output rendering (text, table, tree, error)
-- [ ] Tab autocomplete via `shell.complete()`
+- **ADR:** [ADR-033](adrs/033-shell.md)
+- **Status:** Decided, not started
+- [ ] Terminal system app (`/src/lib/apps/system/terminal/`), one session per window
+- [ ] Rich value rendering (tables, service renderers, clickable values)
+- [ ] fish-style completion: ghost text, Tab popup
+- [ ] cwd and scrollback restored with the session (`storage.window()`)
+- [ ] Mobile key row (Tab, Esc, Ctrl, arrows, `|`, `~`, `/`)
 
 ### Command Palette
-- **Status:** Not started (depends on Shell Service)
-- [ ] Ctrl+K UI for fuzzy command search
-- [ ] Integration with Shortcuts Service
+- **ADR:** [ADR-033](adrs/033-shell.md)
+- **Status:** Decided, not started
+- [ ] Mod+K launcher `>` mode: commands with completion, inline results, "Open in Terminal"
+- [ ] OS shortcuts run commands (KeyShortcut `command` or `run`)
 
 ### Shortcuts Service
 - **ADR:** [ADR-012](adrs/012-shortcuts-service.md)

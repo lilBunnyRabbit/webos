@@ -3,6 +3,8 @@
 **Date:** 2026-02-01
 **Status:** Implemented 2026-10-12 (see revision)
 
+> **Revision 2026-10-14: shortcuts run commands** (owner, [ADR-033](./033-shell.md)). `KeyShortcut` takes `command` (a shell command line) or `run`. OS defaults name commands and fire only while the command is `available()`, which replaces `when` for them. Window-scoped app shortcuts keep `run` until apps can register commands. The service depends on `shell`.
+
 > **Revision 2026-10-12: implementation** (owner, [brainstorm](../brainstorm/2026-10-12_shortcuts.md))
 > - Scopes are **global** and **window** only; "app" is dropped. Keys that act on a focused element (Explorer rows, desktop icons) stay on that element.
 > - `register(shortcut)` returns its disposer; there's no `unregister(id)`. `Shortcut` is `{ id, keys: "mod+shift+k", label, category, window?, run, when? }`. Keys are matched by `KeyboardEvent.code`, so layout and Option-on-macOS don't change them.

@@ -40,7 +40,7 @@ What are the implications of this decision?
 | [004](./004-version-update-system.md) | Version & Update Detection | 2026-01-27 | Implemented |
 | [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented (explorer features pending) |
 | [006](./006-notifications-service.md) | Notifications Service | 2026-01-31 | Implemented |
-| [007](./007-shell-service.md) | Shell Service & Terminal | 2026-01-31 | Accepted |
+| [007](./007-shell-service.md) | Shell Service & Terminal | 2026-01-31 | Superseded by ADR-033 |
 | [008](./008-app-props-validation.md) | App Props Validation (zod) | 2026-01-31 | Implemented |
 | [009](./009-app-ecosystem.md) | App Ecosystem | 2026-02-01 | Accepted |
 | [010](./010-url-deep-linking.md) | URL Deep Linking | 2026-02-01 | Implemented (app links; file, workspace, demo, embed deferred) |
@@ -66,6 +66,7 @@ What are the implications of this decision?
 | [030](./030-text-editor.md) | Text Editor | 2026-10-13 | Implemented |
 | [031](./031-open-from-device.md) | Open from Device | 2026-10-13 | Implemented |
 | [032](./032-p2p-transfer.md) | P2P Transfer | 2026-10-13 | Implemented |
+| [033](./033-shell.md) | Shell, Terminal and Command Palette | 2026-10-14 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
