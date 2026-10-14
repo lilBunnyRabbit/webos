@@ -212,3 +212,11 @@ The owner pictured Game Hub as a widget, on by default. Decided: seed the widget
 | 18 | Recorder real mic | Probably works |
 
 Also added to the roadmap: Wordle and its variants.
+
+## PDF Tools (owner, 2026-10-15)
+
+- Dependencies approved: `pdf-lib` (write/edit) and `pdfjs-dist` (render pages), lazy-loaded in the app only.
+- One app with sections (Merge, Organize, Split, Sign, Images to PDF, Export images, Signatures) and launch props that open a file straight in a section: `{ section, path, paths }`. `tools` for `.pdf`; PDF Viewer keeps owning the type.
+- Signing needs a signature generator: like Paint, but it produces a single-colour SVG (strokes become one filled outline path), saved to `/home/Signatures/` and stamped into PDFs as a vector with `drawSvgPath`. No cryptographic signing.
+- Search: every query word must match, and long words forgive one typo (owner picked this over keywords only).
+- Soundboard: two modes, Restart (default, a pressed pad starts over) and Overlap (today's stacking).
