@@ -6,8 +6,17 @@
   import { format_time } from "$lib/core/games";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { Play, Stop } from "phosphor-svelte";
-  import { clock_time, day_key, day_minutes, format_hours, month_key, running_minutes, WORK_HOURS_APP_ID, type MonthFile } from "./data";
+  import {
+    clock_time,
+    day_minutes,
+    format_hours,
+    month_key,
+    running_minutes,
+    WORK_HOURS_APP_ID,
+    type MonthFile,
+  } from "./data";
   import { clock_in, clock_out, open_month, open_state } from "./store";
+  import { day_key } from "$lib/core/utils/date";
 
   let { size }: WidgetProps = $props();
 

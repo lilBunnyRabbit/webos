@@ -1,5 +1,5 @@
-import { day_key } from "$lib/core/games/time";
 import { z } from "zod";
+import { day_key } from "$lib/core/utils/date";
 
 export const DayStatsSchema = z.object({
   sessions: z.number().int().min(0),
@@ -57,7 +57,10 @@ export function streak(stats: StatsFile, today: Date): number {
 }
 
 export function totals(stats: StatsFile): DayStats {
-  return Object.values(stats.days).reduce((sum, day) => ({ sessions: sum.sessions + day.sessions, ms: sum.ms + day.ms }), { sessions: 0, ms: 0 });
+  return Object.values(stats.days).reduce(
+    (sum, day) => ({ sessions: sum.sessions + day.sessions, ms: sum.ms + day.ms }),
+    { sessions: 0, ms: 0 }
+  );
 }
 
 export function format_minutes(ms: number): string {

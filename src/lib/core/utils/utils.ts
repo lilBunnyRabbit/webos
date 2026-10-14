@@ -65,6 +65,17 @@ export function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
+/**
+ * A CSS colour as the canvas can take it. Tokens may be written with `var()`, `light-dark()` or relative colour
+ * syntax, which a canvas can't parse, so `probe` (an element in the themed tree) resolves it.
+ */
+export function resolve_token(probe: HTMLElement, value: string): string {
+  probe.style.color = value;
+  const color = getComputedStyle(probe).color;
+  probe.style.color = "";
+  return color;
+}
+
 /** Safe in text and in quoted attribute values. */
 export function escape_html(text: string): string {
   return text

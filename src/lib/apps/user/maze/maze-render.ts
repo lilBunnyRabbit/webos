@@ -1,4 +1,5 @@
 import { is_open, type Maze } from "./maze";
+import { resolve_token } from "$lib/core/utils";
 
 export interface Palette {
   wall: string;
@@ -13,12 +14,8 @@ export interface Palette {
   player: string;
 }
 
-/** Resolved through `probe`'s computed colour, since a token may itself be written with `var()` or relative colour syntax. */
 export function read_palette(probe: HTMLElement): Palette {
-  const token = (name: string) => {
-    probe.style.color = `var(--${name})`;
-    return getComputedStyle(probe).color;
-  };
+  const token = (name: string) => resolve_token(probe, `var(--${name})`);
   const palette: Palette = {
     wall: token("foreground"),
     floor: token("background-light"),
@@ -31,7 +28,6 @@ export function read_palette(probe: HTMLElement): Palette {
     goal: token("secondary"),
     player: token("primary"),
   };
-  probe.style.color = "";
   return palette;
 }
 

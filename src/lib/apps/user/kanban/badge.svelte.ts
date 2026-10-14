@@ -1,8 +1,8 @@
 import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import kernel, { type FilesService } from "$lib/core/api";
-import { day_key } from "$lib/core/games/time";
 import { createSubscriber } from "svelte/reactivity";
 import { parent_path } from "$lib/core/api/services/files/path";
+import { day_key } from "$lib/core/utils/date";
 
 interface Logic {
   BOARDS_PATH: string;

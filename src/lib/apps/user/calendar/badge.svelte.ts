@@ -1,7 +1,7 @@
 import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import kernel, { type FilesService } from "$lib/core/api";
-import { day_key } from "$lib/core/games/time";
 import { createSubscriber } from "svelte/reactivity";
+import { day_key } from "$lib/core/utils/date";
 
 type Logic = typeof import("./calendar");
 

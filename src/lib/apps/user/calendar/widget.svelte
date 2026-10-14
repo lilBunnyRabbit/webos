@@ -3,9 +3,20 @@
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { Bell } from "phosphor-svelte";
-  import { add_days, APP_ID, day_key, day_title, expand, format_day, next_reminder, time_label, time_of, until_label } from "./calendar";
+  import {
+    add_days,
+    APP_ID,
+    day_title,
+    expand,
+    format_day,
+    next_reminder,
+    time_label,
+    time_of,
+    until_label,
+  } from "./calendar";
   import { EVENT_DOT } from "./colors";
   import { open_events, remind_while_alive } from "./store.svelte";
+  import { day_key } from "$lib/core/utils/date";
 
   // Hosts reminders too, so a widget on the desktop keeps them coming with no Calendar window open.
   let { size }: WidgetProps = $props();

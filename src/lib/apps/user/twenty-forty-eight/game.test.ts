@@ -4,14 +4,12 @@ import {
   Direction,
   empty_cells,
   game_schema,
-  key_direction,
   move,
   new_game,
   play,
   shows_win,
   SIZE,
   spawn,
-  swipe_direction,
   type Game,
   type Rng,
 } from "./game";
@@ -69,7 +67,15 @@ describe("move", () => {
   });
 
   test("merges each tile at most once per move", () => {
-    const result = move(game_of([[2, 2, 2, 2], [4, 4, 8, 0], [2, 2, 4, 0], [0, 0, 0, 0]]), Direction.LEFT);
+    const result = move(
+      game_of([
+        [2, 2, 2, 2],
+        [4, 4, 8, 0],
+        [2, 2, 4, 0],
+        [0, 0, 0, 0],
+      ]),
+      Direction.LEFT
+    );
     expect(rows_of(result.game).slice(0, 3)).toEqual([
       [4, 4, 0, 0],
       [8, 8, 0, 0],
@@ -211,30 +217,19 @@ describe("shows_win", () => {
   });
 });
 
-describe("input", () => {
-  test("swipe_direction picks the dominant axis past the threshold", () => {
-    expect(swipe_direction(40, 10, 24)).toBe(Direction.RIGHT);
-    expect(swipe_direction(-40, 10, 24)).toBe(Direction.LEFT);
-    expect(swipe_direction(5, 30, 24)).toBe(Direction.DOWN);
-    expect(swipe_direction(5, -30, 24)).toBe(Direction.UP);
-    expect(swipe_direction(10, 10, 24)).toBeNull();
-  });
-
-  test("key_direction maps arrows and WASD", () => {
-    expect(key_direction("ArrowUp")).toBe(Direction.UP);
-    expect(key_direction("KeyA")).toBe(Direction.LEFT);
-    expect(key_direction("KeyS")).toBe(Direction.DOWN);
-    expect(key_direction("KeyQ")).toBeNull();
-  });
-});
-
 describe("game_schema", () => {
   test("accepts a real game", () => {
     expect(game_schema.safeParse(new_game(Math.random)).success).toBe(true);
   });
 
   test("rejects overlapping tiles and non-powers of two", () => {
-    const overlap = { ...game_of([[2]]), tiles: [{ id: 0, value: 2, row: 0, col: 0 }, { id: 1, value: 4, row: 0, col: 0 }] };
+    const overlap = {
+      ...game_of([[2]]),
+      tiles: [
+        { id: 0, value: 2, row: 0, col: 0 },
+        { id: 1, value: 4, row: 0, col: 0 },
+      ],
+    };
     expect(game_schema.safeParse(overlap).success).toBe(false);
     expect(game_schema.safeParse(game_of([[6]])).success).toBe(false);
   });

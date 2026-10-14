@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { pad2 } from "$lib/core/utils";
+import { day_key } from "$lib/core/utils/date";
 
 /**
  * Work Hours' file format. A contract: Calendar reads these files, so change it only with a new `version` and a
@@ -98,10 +99,6 @@ export function parse_state_file(text: string): StateFile | null {
 
 export function serialize(file: MonthFile | StateFile): string {
   return JSON.stringify(file, null, 2) + "\n";
-}
-
-export function day_key(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 export function month_key(date: Date): string {

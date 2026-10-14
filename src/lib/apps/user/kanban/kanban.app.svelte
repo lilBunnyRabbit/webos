@@ -3,7 +3,6 @@
   import type { MenuItem } from "$lib/core/api/services/dialogs/type";
   import { Button, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { day_key } from "$lib/core/games/time";
   import { cn } from "$lib/core/utils";
   import type { Position } from "$lib/core/utils/type";
   import {
@@ -64,6 +63,7 @@
   } from "./data";
   import { DragKind, BoardDrag } from "./drag.svelte";
   import KanbanColumn from "./kanban-column.svelte";
+  import { day_key } from "$lib/core/utils/date";
 
   const { board: initial_board, card: initial_card }: { board?: string; card?: string } = $props();
 

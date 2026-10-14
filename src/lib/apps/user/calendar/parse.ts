@@ -1,51 +1,7 @@
 import { ShellError } from "$lib/core/api/services/shell/type";
 import { EventColor, minutes_of, new_id, time_of, type CalendarEvent, type Repeat } from "./calendar";
 import { pad2 } from "$lib/core/utils";
-
-function days_in(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
-
-function shift(day: string, by: number): string {
-  const [year, month, date] = day.split("-").map(Number);
-  const next = new Date(Date.UTC(year, month - 1, date + by));
-  return `${next.getUTCFullYear()}-${pad2(next.getUTCMonth() + 1)}-${pad2(next.getUTCDate())}`;
-}
-
-function valid(year: number, month: number, date: number): string | null {
-  if (month < 1 || month > 12 || date < 1 || date > days_in(year, month)) return null;
-  return `${year}-${pad2(month)}-${pad2(date)}`;
-}
-
-const NAMED: Record<string, number> = { today: 0, yesterday: -1, tomorrow: 1 };
-
-/**
- * `today`, `yesterday`, `tomorrow`, `+N` / `-N` days, `YYYY-MM-DD`, `MM-DD` (this year) or `D` (this month). `null`
- * when it isn't a real day.
- */
-export function parse_day(text: string, today: string): string | null {
-  const value = text.trim().toLowerCase();
-  if (value in NAMED) return shift(today, NAMED[value]);
-  if (/^[+-]\d{1,4}$/.test(value)) return shift(today, Number(value));
-  const [year, month] = today.split("-").map(Number);
-  let match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
-  if (match) return valid(Number(match[1]), Number(match[2]), Number(match[3]));
-  match = /^(\d{1,2})-(\d{1,2})$/.exec(value);
-  if (match) return valid(year, Number(match[1]), Number(match[2]));
-  match = /^(\d{1,2})$/.exec(value);
-  if (match) return valid(year, month, Number(match[1]));
-  return null;
-}
-
-/** `9`, `09`, `9:30`, `09:30` or `24:00` to `HH:MM`; `null` otherwise. */
-export function parse_time(text: string): string | null {
-  const match = /^(\d{1,2})(?::(\d{2}))?$/.exec(text.trim());
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2] ?? 0);
-  if (minutes > 59 || hours > 24 || (hours === 24 && minutes > 0)) return null;
-  return `${pad2(hours)}:${pad2(minutes)}`;
-}
+import { resolve_day, parse_time } from "$lib/core/utils/date";
 
 const UNITS: Record<string, number> = { w: 10080, d: 1440, h: 60, m: 1 };
 
@@ -60,7 +16,7 @@ export function parse_duration(text: string): number | null {
 
 export function day_arg(text: string | undefined, what: string, today: string): string {
   if (text === undefined) return today;
-  const day = parse_day(text, today);
+  const day = resolve_day(text, today);
   if (!day) throw new ShellError(`${what}: "${text}" isn't a day; use YYYY-MM-DD, today, tomorrow or +N`);
   return day;
 }

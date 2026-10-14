@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DAY, View } from "./props";
 import { pad2 } from "$lib/core/utils";
+import { day_key } from "$lib/core/utils/date";
 
 export { CALENDAR_PROPS, View } from "./props";
 
@@ -82,10 +83,6 @@ export function parse_events(text: string): EventsFile | null {
 }
 
 export const new_id = (): string => crypto.randomUUID().slice(0, 8);
-
-export function day_key(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
 
 export function parts_of(day: string): [number, number, number] {
   const [year, month, date] = day.split("-").map(Number);
@@ -218,10 +215,6 @@ export function occurrences(event: Pick<CalendarEvent, "day" | "repeat" | "skip"
   return days;
 }
 
-export function occurs_on(event: Pick<CalendarEvent, "day" | "repeat" | "skip">, day: string): boolean {
-  return occurrences(event, day, day).length > 0;
-}
-
 export interface Occurrence {
   event: CalendarEvent;
   day: string;
@@ -322,16 +315,6 @@ export const REMINDER_OPTIONS: { value: string; label: string }[] = [
   { value: "1440", label: "1 day before" },
   { value: "10080", label: "1 week before" },
 ];
-
-export function reminder_label(minutes: number | null, all_day = false): string {
-  if (minutes === null) return "No reminder";
-  if (all_day && minutes === 0) return `At ${ALL_DAY_REMINDER_BASE} on the day`;
-  if (minutes === 0) return "At the start";
-  if (minutes % 10080 === 0) return minutes === 10080 ? "1 week before" : `${minutes / 10080} weeks before`;
-  if (minutes % 1440 === 0) return minutes === 1440 ? "1 day before" : `${minutes / 1440} days before`;
-  if (minutes % 60 === 0) return minutes === 60 ? "1 hour before" : `${minutes / 60} hours before`;
-  return `${minutes} minutes before`;
-}
 
 export function repeat_label(rule: RepeatRule | null, day: string): string {
   if (!rule) return "Does not repeat";

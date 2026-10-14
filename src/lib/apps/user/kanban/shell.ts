@@ -1,7 +1,5 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
-import { day_key } from "$lib/core/games/time";
-import { parse_day } from "$lib/apps/user/calendar/parse";
 import {
   add_card,
   archive_card,
@@ -20,6 +18,7 @@ import {
 } from "./data";
 import { live_file, type LiveFile } from "$lib/core/contexts/app/live-file.svelte";
 import { all_cards, first_open_column, resolve_board, resolve_card, resolve_column, type FoundCard } from "./lookup";
+import { day_key, resolve_day } from "$lib/core/utils/date";
 
 const boards: LiveFile<KanbanFile> = live_file(BOARDS_PATH, default_file(), KanbanFileSchema);
 
@@ -77,7 +76,7 @@ export async function add({
 }: CommandContext<{ title: string[]; column?: string; due?: string; board?: string }>): Promise<Tagged> {
   const title = args.title.join(" ").trim();
   if (!title) throw new ShellError("kanban add: give the card a title");
-  const due = args.due === undefined ? null : parse_day(args.due, day_key());
+  const due = args.due === undefined ? null : resolve_day(args.due, day_key());
   if (due === null && args.due !== undefined)
     throw new ShellError(`kanban add: "${args.due}" isn't a day; use YYYY-MM-DD`);
 

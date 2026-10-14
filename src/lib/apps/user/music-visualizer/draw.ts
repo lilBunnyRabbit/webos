@@ -1,5 +1,5 @@
 import { wave_sample } from "./spectrum";
-import { clamp } from "$lib/core/utils";
+import { clamp, resolve_token } from "$lib/core/utils";
 
 export interface Palette {
   primary: string;
@@ -16,18 +16,13 @@ export interface Surface {
   palette: Palette;
 }
 
-// A token may be written with var() or relative colour syntax, which a canvas can't parse, so it's resolved by a probe.
 export function read_palette(probe: HTMLElement): Palette {
-  const resolve = (value: string) => {
-    probe.style.color = value;
-    return getComputedStyle(probe).color;
-  };
+  const resolve = (value: string) => resolve_token(probe, value);
   const palette = {
     primary: resolve("var(--primary)"),
     primary_faint: resolve("color-mix(in oklab, var(--primary) 40%, transparent)"),
     foreground: resolve("var(--foreground)"),
   };
-  probe.style.color = "";
   return palette;
 }
 

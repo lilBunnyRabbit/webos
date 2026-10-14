@@ -2,7 +2,7 @@
   import kernel, { NotificationType, Platform, type DesktopService, type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Input, Section, Segmented, SettingRow, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { day_key, format_time } from "$lib/core/games/time";
+  import { format_time } from "$lib/core/games/time";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";
@@ -13,6 +13,7 @@
   import Ring from "./ring.svelte";
   import { day_stats, format_minutes, last_days, streak, totals } from "./stats";
   import { acquire_timer } from "./timer.svelte";
+  import { day_key } from "$lib/core/utils/date";
 
   const { window: win, storage, app_id } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));

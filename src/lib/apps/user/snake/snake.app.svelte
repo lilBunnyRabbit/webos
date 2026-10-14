@@ -14,24 +14,8 @@
   import { untrack } from "svelte";
   import { z } from "zod";
   import { draw_board, read_palette, type Palette } from "./draw";
-  import {
-    create_game,
-    Direction,
-    fixed_steps,
-    high_scores_schema,
-    key_direction,
-    mode_key,
-    set_status,
-    Speed,
-    SPEEDS,
-    speed_schema,
-    Status,
-    step,
-    STEP_MS,
-    swipe_direction,
-    turn,
-    type HighScores,
-  } from "./game";
+  import { create_game, Direction, fixed_steps, high_scores_schema, mode_key, set_status, Speed, SPEEDS, speed_schema, Status, step, STEP_MS, turn, type HighScores } from "./game";
+  import { key_direction, swipe_direction } from "$lib/core/games/direction";
 
   const SPEED_LABELS: Record<Speed, string> = { slow: "Slow", normal: "Normal", fast: "Fast" };
   const SPEED_OPTIONS = SPEEDS.map((value) => ({ value, label: SPEED_LABELS[value] }));

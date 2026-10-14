@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { create_rng } from "$lib/core/utils/random";
 import {
   Cell,
   chord,
@@ -14,7 +15,6 @@ import {
   PRESETS,
   record,
   reveal,
-  seeded,
   Status,
   step,
   toggle_flag,
@@ -23,7 +23,10 @@ import {
 } from "./game";
 
 function board(rows: string[]): { config: Config; mines: boolean[] } {
-  const mines = rows.join("").split("").map((c) => c === "*");
+  const mines = rows
+    .join("")
+    .split("")
+    .map((c) => c === "*");
   return { config: { width: rows[0].length, height: rows.length, mines: mines.filter(Boolean).length }, mines };
 }
 
@@ -31,7 +34,12 @@ function cells_of(game: { cells: readonly Cell[]; config: Config }): string[] {
   const symbol = { [Cell.HIDDEN]: "#", [Cell.REVEALED]: ".", [Cell.FLAGGED]: "F" };
   const rows: string[] = [];
   for (let r = 0; r < game.config.height; r++) {
-    rows.push(game.cells.slice(r * game.config.width, (r + 1) * game.config.width).map((c) => symbol[c]).join(""));
+    rows.push(
+      game.cells
+        .slice(r * game.config.width, (r + 1) * game.config.width)
+        .map((c) => symbol[c])
+        .join("")
+    );
   }
   return rows;
 }
@@ -50,7 +58,7 @@ describe("place_mines", () => {
     for (let seed = 1; seed <= 50; seed++) {
       for (const config of Object.values(PRESETS)) {
         const safe = (seed * 37) % (config.width * config.height);
-        const mines = place_mines(config, safe, seeded(seed));
+        const mines = place_mines(config, safe, create_rng(seed));
         expect(mines.filter(Boolean)).toHaveLength(config.mines);
         expect(mines[safe]).toBe(false);
         for (const n of neighbours(config, safe)) expect(mines[n]).toBe(false);
@@ -60,21 +68,21 @@ describe("place_mines", () => {
 
   it("keeps only the clicked cell safe when the board is too full", () => {
     const config = { width: 5, height: 5, mines: 24 };
-    const mines = place_mines(config, 12, seeded(3));
+    const mines = place_mines(config, 12, create_rng(3));
     expect(mines.filter(Boolean)).toHaveLength(24);
     expect(mines[12]).toBe(false);
   });
 
   it("is deterministic for a seed", () => {
     const config = PRESETS.expert;
-    expect(place_mines(config, 0, seeded(42))).toEqual(place_mines(config, 0, seeded(42)));
+    expect(place_mines(config, 0, create_rng(42))).toEqual(place_mines(config, 0, create_rng(42)));
   });
 });
 
 describe("reveal", () => {
   it("never loses on the first click and opens an area", () => {
     for (let seed = 1; seed <= 50; seed++) {
-      const game = reveal(new_game(PRESETS.expert), 200, seeded(seed));
+      const game = reveal(new_game(PRESETS.expert), 200, create_rng(seed));
       expect(game.status).not.toBe(Status.LOST);
       expect(game.counts[200]).toBe(0);
       expect(game.cells.filter((c) => c === Cell.REVEALED).length).toBeGreaterThan(1);

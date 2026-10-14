@@ -4,7 +4,6 @@ import { live_file } from "$lib/core/contexts/app/live-file.svelte";
 import {
   add_days,
   APP_ID,
-  day_key,
   EMPTY_EVENTS,
   EVENTS_PATH,
   EventsFileSchema,
@@ -14,6 +13,7 @@ import {
   type Occurrence,
 } from "./calendar";
 import { day_arg, event_from_args, type AddArgs } from "./parse";
+import { day_key } from "$lib/core/utils/date";
 
 const events = live_file(EVENTS_PATH, EMPTY_EVENTS, EventsFileSchema);
 

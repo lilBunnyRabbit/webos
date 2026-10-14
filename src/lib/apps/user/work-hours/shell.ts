@@ -1,11 +1,9 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { print_html } from "$lib/core/utils/print";
-import { parse_day, parse_time } from "$lib/apps/user/calendar/parse";
 import {
   add_entry,
   clock_time,
-  day_key,
   day_minutes,
   day_span,
   entry_error,
@@ -24,6 +22,7 @@ import {
 import { parse_month } from "./parse";
 import { month_label, month_report_html } from "./report";
 import { clock_in, clock_out, edit_month, read_month, read_state } from "./store";
+import { day_key, resolve_day, parse_time } from "$lib/core/utils/date";
 
 interface Row {
   day: string;
@@ -34,7 +33,15 @@ interface Row {
 }
 
 export function workday_value(row: Row): Tagged {
-  return { $type: "workday", day: row.day, in: row.start, out: row.end, hours: Math.round((row.minutes / 60) * 100) / 100, minutes: row.minutes, work: row.work };
+  return {
+    $type: "workday",
+    day: row.day,
+    in: row.start,
+    out: row.end,
+    hours: Math.round((row.minutes / 60) * 100) / 100,
+    minutes: row.minutes,
+    work: row.work,
+  };
 }
 
 export function open_day(day: string): void {
@@ -64,7 +71,8 @@ export async function* clock_off(): AsyncGenerator<Tagged | string> {
     yield "under a minute, nothing booked";
     return;
   }
-  for (const segment of booked) yield workday_value({ ...segment, minutes: entry_minutes(segment), work: running.description.trim() });
+  for (const segment of booked)
+    yield workday_value({ ...segment, minutes: entry_minutes(segment), work: running.description.trim() });
 }
 
 export async function status(): Promise<string> {
@@ -76,7 +84,10 @@ export async function status(): Promise<string> {
     ? `clocked in at ${clock_time(new Date(running.start))} · ${format_hours(running_minutes(running, now))} so far${running.description ? ` · ${running.description}` : ""}`
     : "clocked out";
   const total = month_minutes(file) + live;
-  const target = file.target_hours !== null ? ` of ${format_hours(file.target_hours * 60)} (${file.target_hours ? Math.round((total / (file.target_hours * 60)) * 100) : 100}%)` : "";
+  const target =
+    file.target_hours !== null
+      ? ` of ${format_hours(file.target_hours * 60)} (${file.target_hours ? Math.round((total / (file.target_hours * 60)) * 100) : 100}%)`
+      : "";
   return `${head}\ntoday ${format_hours(day_minutes(file.days[today]) + live)} · ${month_label(file.month)} ${format_hours(total)}${target}`;
 }
 
@@ -86,13 +97,21 @@ export async function* list({ args }: CommandContext<{ month?: string }>): Async
     const data = file.days[day];
     const span = day_span(data);
     if (!span) continue;
-    const work = [...new Set(sorted_entries(data).map((entry) => entry.description.trim()).filter(Boolean))].join("; ");
+    const work = [
+      ...new Set(
+        sorted_entries(data)
+          .map((entry) => entry.description.trim())
+          .filter(Boolean)
+      ),
+    ].join("; ");
     yield workday_value({ day, start: span.start, end: span.end, minutes: day_minutes(data), work });
   }
 }
 
-export async function add({ args }: CommandContext<{ date: string; start: string; end: string; description: string[] }>): Promise<Tagged> {
-  const day = parse_day(args.date, day_key(new Date()));
+export async function add({
+  args,
+}: CommandContext<{ date: string; start: string; end: string; description: string[] }>): Promise<Tagged> {
+  const day = resolve_day(args.date, day_key(new Date()));
   if (!day) throw new ShellError(`wh add: "${args.date}" isn't a day; use YYYY-MM-DD, today or yesterday`);
   const start = parse_time(args.start);
   const end = parse_time(args.end);
@@ -112,7 +131,10 @@ export async function report({ args }: CommandContext<{ month?: string }>): Prom
 export async function target({ args }: CommandContext<{ hours: string; month?: string }>): Promise<string> {
   const month = month_arg(args.month);
   const hours = args.hours.trim().toLowerCase() === "none" ? null : parse_target(args.hours);
-  if (hours === undefined || args.hours.trim() === "") throw new ShellError(`wh target: "${args.hours}" isn't a number of hours or none`);
+  if (hours === undefined || args.hours.trim() === "")
+    throw new ShellError(`wh target: "${args.hours}" isn't a number of hours or none`);
   await edit_month(month, (file) => set_target(file, hours));
-  return hours === null ? `no target for ${month_label(month)}` : `target for ${month_label(month)}: ${format_hours(hours * 60)}`;
+  return hours === null
+    ? `no target for ${month_label(month)}`
+    : `target for ${month_label(month)}: ${format_hours(hours * 60)}`;
 }

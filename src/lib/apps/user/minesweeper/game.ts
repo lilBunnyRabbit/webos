@@ -1,4 +1,5 @@
 import { daily_seed } from "$lib/core/games/time";
+import { create_rng } from "$lib/core/utils/random";
 import { z } from "zod";
 
 export const Difficulty = {
@@ -102,17 +103,6 @@ export function clamp_config(config: Config): Config {
 
 export function config_of(difficulty: Difficulty, custom: Config): Config {
   return difficulty === Difficulty.CUSTOM ? clamp_config(custom) : PRESETS[difficulty];
-}
-
-export function seeded(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 export function new_game(config: Config): Game {
@@ -220,10 +210,6 @@ export function chord(game: Game, index: number): Game {
   return hidden.length ? open(game, hidden) : game;
 }
 
-export function can_chord(game: Game, index: number): boolean {
-  return chord(game, index) !== game;
-}
-
 export function toggle_flag(game: Game, index: number): Game {
   if (finished(game)) return game;
   const cell = game.cells[index];
@@ -249,7 +235,9 @@ export function mines_left(game: Game): number {
 export function record(stats: Stats, difficulty: Difficulty, won: boolean, time_ms: number): Stats {
   const current = stats[difficulty];
   const best =
-    won && difficulty !== Difficulty.CUSTOM && (current.best === null || time_ms < current.best) ? time_ms : current.best;
+    won && difficulty !== Difficulty.CUSTOM && (current.best === null || time_ms < current.best)
+      ? time_ms
+      : current.best;
   return {
     ...stats,
     [difficulty]: { played: current.played + 1, won: current.won + (won ? 1 : 0), best },
@@ -283,6 +271,6 @@ export const DAILY_DIFFICULTY = Difficulty.INTERMEDIATE;
 export function daily_game(day: string): Game {
   const config = PRESETS[DAILY_DIFFICULTY];
   const start = Math.floor(config.height / 2) * config.width + Math.floor(config.width / 2);
-  const mines = place_mines(config, start, seeded(daily_seed(day, "minesweeper")));
+  const mines = place_mines(config, start, create_rng(daily_seed(day, "minesweeper")));
   return reveal(with_mines(config, mines), start);
 }
