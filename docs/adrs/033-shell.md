@@ -4,6 +4,11 @@
 
 Supersedes [ADR-007](./007-shell-service.md). [Brainstorm](../brainstorm/2026-10-14_shell-terminal.md).
 
+> **Revision 2026-10-15: service command bodies load lazily** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))
+> - Services follow the app pattern (ADR-034). Definitions stay eager in `shell.ts`: id, description, zod args, `positional`, `short`, `yields`, `available()` and the value types' `columns` / `text` / `cell`. Command bodies, heavy helpers and UI imports move to `shell-run.ts`, loaded with `import()` on first use. `IService.shell()` stays sync and `ShellService` is unchanged.
+> - `run` becomes `async (context) => (await logic()).x(service, context)`, a generator `async *run` with `yield*`. Completers and value `open` may load it too: both may be async.
+> - Split where it pays (≥ 1 KB off the boot chunk): files, windows, shortcuts (its cheat-sheet dialog). The rest keep their bodies inline. Boot chunk −10.5 KB min, −2.8 KB gz.
+
 ## Context
 
 ADR-007 (January) designed a flat command dispatcher: one structured result per command, no pipes, no jobs, palette later. It was never built. The owner wants the whole package instead: "all nicely modular by attaching to services ... not just a dumb terminal mimic", with Tab completion.

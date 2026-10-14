@@ -374,7 +374,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 ## Shell
 
-Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and the `file` / `storage` value types (`files/shell.ts`). Writes into system folders need `sudo`. See [shell](shell.md#contributions).
+Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and the `file` / `storage` value types (`files/shell.ts`, bodies and the `path` completer in the lazy `files/shell-run.ts`). Writes into system folders need `sudo`. See [shell](shell.md#contributions).
 
 ## Known gaps
 

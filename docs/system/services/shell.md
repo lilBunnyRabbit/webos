@@ -110,7 +110,34 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 
 ## Contributions
 
-`IService.shell?(): ShellContribution`, built in each service's own `shell.ts`:
+`IService.shell?(): ShellContribution`, built in each service's own `shell.ts`.
+
+### Lazy bodies
+
+`shell.ts` is imported at boot, so it holds only what the shell needs before a command runs: definitions (id, description, args, `positional`, `short`, `yields`, `available()`) and value types' `columns`, `text` and `cell`. When the bodies are worth ≥ 1 KB of the boot chunk, they live in `shell-run.ts` as plain functions taking the service, and `shell.ts` loads it on first use, like an app manifest loads its `shell.ts` (ADR-034):
+
+```ts
+const logic = () => import("./shell-run");
+
+define_command({
+  id: "ls",
+  description: "List a folder",
+  args: z.object({ path: arg.path().optional() }),
+  positional: ["path"],
+  yields: "file",
+  async *run(context) {
+    yield* (await logic()).ls(files, context);
+  },
+}),
+define_command({ id: "cd", /* … */ run: async (context) => (await logic()).cd(files, context) }),
+
+completers: { [ArgKind.PATH]: async (partial, context) => (await logic()).complete_path(files, partial, context) },
+values: { window: { /* columns, text, cell stay here */ open: (value) => void logic().then((m) => m.bring(windows, String(value.id))) } },
+```
+
+`available()`, `text` and `cell` stay sync and eager. Helpers other modules import (`file_value`, `is_file_value`, `assert_writable`, `short_id`) stay in `shell.ts`. Split today: files, windows, shortcuts (the cheat-sheet dialog). The others are small enough to keep their bodies inline.
+
+### By service
 
 | Service | Commands | Completers | Value types |
 |---------|----------|------------|-------------|

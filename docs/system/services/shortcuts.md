@@ -12,6 +12,7 @@ Keyboard shortcuts as data: a registry and one `keydown` listener on `window`. I
 | `keys.ts` | Pure: `normalize`, `code_key`, `event_keys`, `has_command_modifier`, `format_keys`, `is_mac`. Unit-tested |
 | `defaults.ts` | `DEFAULT_SHORTCUTS`: the OS set, keys to command lines |
 | `shell.ts` | Its shell contribution: `shortcuts`, `shortcuts sheet` |
+| `shell-run.ts` | Their bodies and the cheat-sheet dialog, loaded on first use |
 | `service.svelte.ts` | Registry and dispatcher |
 
 The name is `KeyShortcut` because `Shortcut` is the `.desktop` file type in `services/apps`.

@@ -21,6 +21,8 @@ src/lib/
 │   │       ├── index.ts          # export * from "./type" (types only)
 │   │       ├── type.ts           # public interface + domain types
 │   │       ├── service.svelte.ts # implementation class (runes)
+│   │       ├── shell.ts          # shell commands: definitions, eager (ADR-033)
+│   │       ├── shell-run.ts      # their bodies, `import()`ed on first use (when ≥ 1 KB)
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
 │   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; code (shared CodeMirror setup)

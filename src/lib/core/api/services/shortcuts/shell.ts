@@ -1,9 +1,9 @@
 import { define_command } from "../shell/define";
 import type { ShellContribution } from "../shell/type";
 import type { DialogsService } from "../dialogs/type";
-import ShortcutsDialog from "$lib/core/components/dialogs/shortcuts-dialog.svelte";
-import { format_keys } from "./keys";
 import type { ShortcutsService } from "./type";
+
+const logic = () => import("./shell-run");
 
 export function shortcuts_shell(shortcuts: ShortcutsService, dialogs: () => DialogsService): ShellContribution {
   return {
@@ -18,21 +18,14 @@ export function shortcuts_shell(shortcuts: ShortcutsService, dialogs: () => Dial
         id: "shortcuts",
         description: "Keyboard shortcuts in effect",
         yields: "shortcut",
-        *run() {
-          for (const shortcut of shortcuts.list()) {
-            yield {
-              $type: "shortcut",
-              keys: format_keys(shortcut.keys, shortcuts.mac).join(" "),
-              label: shortcut.label,
-              action: "command" in shortcut ? shortcut.command : shortcut.window ? "window" : "app",
-            };
-          }
+        async *run() {
+          yield* (await logic()).list(shortcuts);
         },
       }),
       define_command({
         id: "shortcuts sheet",
         description: "Show the keyboard shortcuts cheat sheet",
-        run: () => void dialogs().show(ShortcutsDialog, {}),
+        run: async () => (await logic()).sheet(dialogs()),
       }),
     ],
   };
