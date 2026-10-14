@@ -2,6 +2,11 @@
 **Date:** 2026-10-12
 **Status:** Implemented
 
+> **Revision 2026-10-14: back** (owner, [brainstorm](../brainstorm/2026-10-14_os-back.md))
+> - UiService owns back for both platforms: `back(): boolean` runs the chain overlay, top system dialog or menu, focused window's top sheet, the app's `on_back`, then (mobile) home. Non-dismissible dialogs swallow it. The nav bar Back calls it.
+> - It also owns the browser-history guard. One same-URL entry is pushed on the next `pointerup` or `keydown` (Chrome skips entries pushed without user activation), and `popstate` runs `back()` and disarms it. It always re-arms, so WebOS doesn't leave while the user is interacting. Hash links (`#/`) are left to the router.
+> - Dependencies become `windows`, `dialogs` (no cycle: neither depends on `ui`). It's no longer "overlay state, nothing else".
+
 > **Revision 2026-10-12: notifications overlay** ([brainstorm](../brainstorm/2026-10-12_notification-center.md)). `UiOverlay.NOTIFICATIONS` opens the notification center: the tray popover on desktop, the switcher on mobile (where the list lives). Alt+Shift+N toggles it.
 
 ## Context

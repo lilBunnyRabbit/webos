@@ -1,7 +1,9 @@
 # ADR-016: Mobile Support
 
 **Date:** 2026-02-01
-**Status:** Implemented 2026-10-12 (core shell; apps pass and back pending)
+**Status:** Implemented 2026-10-12 (core shell, apps pass, OS back 2026-10-14)
+
+> **Revision 2026-10-14: OS back** (owner, [brainstorm](../brainstorm/2026-10-14_os-back.md)). The device's back gesture now runs the same back as the nav bar, through a history guard in UiService (ADR-028 revision). Sheets now come before the app's own back. Desktop browser Back gets the same guard.
 
 > **Revision 2026-10-12: groundwork** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-groundwork.md))
 > - Built early, before the mobile shell: `kernel.platform` and the interface split. Everything else waits for the last roadmap block.
