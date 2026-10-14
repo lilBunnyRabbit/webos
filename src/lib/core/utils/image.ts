@@ -1,21 +1,8 @@
 import kernel, { NotificationType, type AppId, type FilesService, type NotificationsService } from "$lib/core/api";
 import type { WindowHandle } from "$lib/core/contexts/app";
+import { DEFAULT_QUALITY, format_for_name, needs_backdrop, type ImageFormat } from "./image-format";
 
-export const ImageFormat = { PNG: "image/png", JPEG: "image/jpeg", WEBP: "image/webp" } as const;
-export type ImageFormat = (typeof ImageFormat)[keyof typeof ImageFormat];
-
-export const FORMAT_OPTIONS: { value: ImageFormat; label: string }[] = [
-  { value: ImageFormat.PNG, label: "PNG" },
-  { value: ImageFormat.JPEG, label: "JPEG" },
-  { value: ImageFormat.WEBP, label: "WebP" },
-];
-
-const EXTENSIONS: Record<string, ImageFormat> = {
-  ".png": ImageFormat.PNG,
-  ".jpg": ImageFormat.JPEG,
-  ".jpeg": ImageFormat.JPEG,
-  ".webp": ImageFormat.WEBP,
-};
+export * from "./image-format";
 
 export interface SourceImage {
   name: string;
@@ -83,7 +70,7 @@ export function paint(source: Drawable) {
 
 export function canvas_to_blob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the PNG"))), ImageFormat.PNG);
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the PNG"))), "image/png");
   });
 }
 
@@ -97,18 +84,49 @@ export function file_stem(name: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
-export function extension_for(format: ImageFormat): string {
-  return format === ImageFormat.JPEG ? ".jpg" : format === ImageFormat.WEBP ? ".webp" : ".png";
-}
-
-/** The format the saved name asks for, so `x.webp` is WebP even if PNG was selected. */
-function format_for_name(name: string, fallback: ImageFormat): ImageFormat {
-  const dot = name.lastIndexOf(".");
-  return (dot > 0 && EXTENSIONS[name.slice(dot).toLowerCase()]) || fallback;
-}
-
 export function error_message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export interface WriteImageOptions {
+  /** Defaults to the path's extension, then PNG. */
+  format?: ImageFormat;
+  quality?: number;
+}
+
+export async function encode_image(
+  source: HTMLCanvasElement | OffscreenCanvas,
+  format: ImageFormat,
+  quality: number = DEFAULT_QUALITY
+): Promise<Blob> {
+  let canvas = source;
+  if (needs_backdrop(format)) {
+    canvas = new OffscreenCanvas(source.width, source.height);
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(source, 0, 0);
+  }
+  if (canvas instanceof OffscreenCanvas) return canvas.convertToBlob({ type: format, quality });
+  const element = canvas;
+  return new Promise((resolve, reject) => {
+    element.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the image"))), format, quality);
+  });
+}
+
+/** Writes to `path`, replacing any file there. A canvas is encoded first; a Blob is written as is. */
+export async function write_image(
+  path: string,
+  source: HTMLCanvasElement | OffscreenCanvas | Blob,
+  { format, quality }: WriteImageOptions = {}
+): Promise<void> {
+  const files = kernel.service<FilesService>("files");
+  const folder = parent_folder(path);
+  const directory = await files.get_directory(folder);
+  if (!directory) throw new Error(`Folder not found: ${folder}`);
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const content = source instanceof Blob ? source : await encode_image(source, format ?? format_for_name(name), quality);
+  await files.create_file(directory, name, { content, overwrite: true });
 }
 
 export interface SaveImageOptions {
@@ -133,15 +151,10 @@ export async function save_image({
   if (!path) return;
 
   const notifications = kernel.service<NotificationsService>("notifications");
-  const folder = parent_folder(path);
   const file_name = path.slice(path.lastIndexOf("/") + 1);
 
   try {
-    const files = kernel.service<FilesService>("files");
-    const directory = await files.get_directory(folder);
-    if (!directory) throw new Error(`Folder not found: ${folder}`);
-    const blob = await canvas.convertToBlob({ type: format_for_name(file_name, format), quality: 0.92 });
-    await files.create_file(directory, file_name, { content: blob, overwrite: true });
+    await write_image(path, canvas, { format: format_for_name(file_name, format) });
     notifications.notify(app_id, { title: "Image saved", message: path });
   } catch (error) {
     console.error(`[${app_id}] Couldn't save the image`, error);

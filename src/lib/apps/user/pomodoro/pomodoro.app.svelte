@@ -4,7 +4,9 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { day_key, format_time } from "$lib/core/games/time";
   import { cn } from "$lib/core/utils";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import { z } from "zod";
   import { chime, prime_audio } from "./chime";
   import { format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, WIDGET_SIZE, type Settings } from "./pomodoro";
@@ -28,23 +30,18 @@
     { value: View.SETTINGS, label: "Settings", icon: Gear },
   ];
 
-  let now = $state(Date.now());
   const run = $derived(timer.run);
   const settings = $derived(timer.settings);
   const running = $derived(timer.ready && run.status === Status.RUNNING);
+  const ticker = new Ticker(
+    () => win.is_visible,
+    () => (running ? 250 : 60_000)
+  );
+  const now = $derived(ticker.now);
 
   $effect(() => {
-    if (win.is_visible) now = Date.now();
-  });
-
-  $effect(() => {
-    if (!running || !win.is_visible) return;
-    now = Date.now();
-    const id = setInterval(() => {
-      now = Date.now();
-      timer.settle(now);
-    }, 250);
-    return () => clearInterval(id);
+    const at = now;
+    if (running) untrack(() => timer.settle(at));
   });
 
   const remaining = $derived(remaining_ms(run, settings, now));
@@ -89,7 +86,7 @@
   }
 
   function toggle() {
-    now = Date.now();
+    ticker.now = Date.now();
     if (running) timer.pause();
     else timer.start();
   }

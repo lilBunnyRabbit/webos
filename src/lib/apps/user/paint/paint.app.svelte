@@ -12,7 +12,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import { error_message, file_stem, load_image, load_image_at, parent_folder, type SourceImage } from "$lib/core/utils/image";
+  import { error_message, file_stem, load_image, load_image_at, parent_folder, type SourceImage, write_image } from "$lib/core/utils/image";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -44,7 +44,7 @@
   import { draw_shape, stamp_pencil, stroke_brush } from "./draw";
   import { flood_fill } from "./flood-fill";
   import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
-  import { base_name, css_to_hex, write_image } from "./paint-file";
+  import { base_name, css_to_hex } from "./paint-file";
   import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point } from "./shapes";
   import {
     Background,

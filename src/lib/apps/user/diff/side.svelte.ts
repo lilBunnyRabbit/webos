@@ -1,7 +1,7 @@
 import type { FilesService } from "$lib/core/api";
 import { is_system_path } from "$lib/core/api/services/files/hierarchy";
 import { parent_folder } from "$lib/core/utils/image";
-import { language_for } from "$lib/apps/system/text-editor/language";
+import { language_for } from "$lib/core/components/code";
 
 export class DiffSide {
   text = $state.raw("");

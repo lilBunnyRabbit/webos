@@ -23,7 +23,7 @@ src/lib/
 │   │       ├── service.svelte.ts # implementation class (runes)
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
-│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files
+│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; code (shared CodeMirror setup)
 │   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types
 └── apps/
     ├── system/{id}/              # bundled OS apps
