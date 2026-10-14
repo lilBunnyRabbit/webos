@@ -3,6 +3,7 @@
   import { Button } from "$lib/core/components/ui";
   import type { JsonFile } from "$lib/core/contexts/app";
   import { format_time } from "$lib/core/games";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { Play, Stop } from "phosphor-svelte";
   import { clock_time, day_key, day_minutes, format_hours, month_key, running_minutes, WORK_HOURS_APP_ID, type MonthFile } from "./data";
   import { clock_in, clock_out, open_month, open_state } from "./store";
@@ -13,7 +14,11 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
-  let now = $state(new Date());
+  const ticker = new Ticker(
+    () => !windows.page_hidden,
+    () => (running ? 1000 : 30_000)
+  );
+  const now = $derived(new Date(ticker.now));
   const today = $derived(day_key(now));
   const month = $derived(month_key(now));
 
@@ -28,13 +33,6 @@
   });
 
   const running = $derived(state_file.ready ? state_file.value.running : null);
-
-  $effect(() => {
-    if (windows.page_hidden) return;
-    now = new Date();
-    const timer = setInterval(() => (now = new Date()), running ? 1000 : 30_000);
-    return () => clearInterval(timer);
-  });
 
   const booked = $derived(month_file?.ready ? day_minutes(month_file.value.days[today]) : 0);
   const running_today = $derived(running && day_key(new Date(running.start)) === today ? running_minutes(running, now) : 0);

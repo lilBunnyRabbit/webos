@@ -5,7 +5,7 @@
   import { app_data_path, json_file } from "$lib/core/contexts/app/json-file.svelte";
   import { format_datetime } from "$lib/core/utils";
   import { ArrowCounterClockwise, Play } from "phosphor-svelte";
-  import { Clock } from "./clock.svelte";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import Duration from "./duration.svelte";
   import { APP_ID, COUNTERS_FILE, CountersFileSchema, EMPTY_FILE, elapsed_of, format_duration, reset, start, tick_interval, update_counter } from "./counters";
 
@@ -18,7 +18,7 @@
   $effect(() => () => file.release());
 
   const counter = $derived(file.value.counters.find((counter) => counter.id === props.counter) ?? null);
-  const clock = new Clock(
+  const clock = new Ticker(
     () => !windows.page_hidden,
     () => tick_interval(counter ? [elapsed_of(counter, Date.now())] : [])
   );

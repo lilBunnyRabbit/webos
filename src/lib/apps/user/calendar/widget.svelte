@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { Bell } from "phosphor-svelte";
   import { APP_ID, day_key, expand, format_day, next_reminder, time_label, time_of, until_label } from "./calendar";
   import { EVENT_DOT } from "./colors";
@@ -16,13 +17,8 @@
   $effect(() => () => file.release());
   remind_while_alive(file);
 
-  let now = $state(Date.now());
-  $effect(() => {
-    if (windows.page_hidden) return;
-    now = Date.now();
-    const timer = setInterval(() => (now = Date.now()), 30_000);
-    return () => clearInterval(timer);
-  });
+  const ticker = new Ticker(() => !windows.page_hidden, 30_000);
+  const now = $derived(ticker.now);
 
   const today = $derived(day_key(new Date(now)));
   const events = $derived(file.ready ? expand(file.value.events, today, today) : []);

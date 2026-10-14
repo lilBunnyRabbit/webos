@@ -6,7 +6,7 @@
   import AnalogFace from "./analog-face.svelte";
   import { APP_ID, ClockFace, ClockTab, format_hm, format_until, next_alarm, timer_remaining } from "./clock";
   import { gate_clock_file, open_clock_file, ring_while_alive } from "./ringer.svelte";
-  import { Ticker } from "./ticker.svelte";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { pad2 } from "./zones";
 
   // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
@@ -20,7 +20,7 @@
   const file = gate_clock_file(handle);
   ring_while_alive(file);
 
-  const ticker = new Ticker(() => !windows.page_hidden);
+  const ticker = new Ticker(() => !windows.page_hidden, 250);
   const face = $derived(props.face === ClockFace.DIGITAL ? ClockFace.DIGITAL : ClockFace.ANALOG);
   const date = $derived(new Date(ticker.now));
   const upcoming = $derived(file.ready ? next_alarm(file.value.alarms, ticker.now) : null);

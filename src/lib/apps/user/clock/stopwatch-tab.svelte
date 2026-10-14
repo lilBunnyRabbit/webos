@@ -3,7 +3,7 @@
   import { cn } from "$lib/core/utils";
   import { ArrowCounterClockwise, Flag, Pause, Play } from "phosphor-svelte";
   import { EMPTY_STOPWATCH, format_stopwatch, laps_of, stopwatch_elapsed, type StopwatchState } from "./clock";
-  import { Ticker } from "./ticker.svelte";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   let { stopwatch, visible }: { stopwatch: { value: StopwatchState }; visible: boolean } = $props();
 

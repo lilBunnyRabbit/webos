@@ -24,7 +24,7 @@
   } from "./clock";
   import { gate_clock_file, ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
-  import { Ticker } from "./ticker.svelte";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import TimersTab from "./timers-tab.svelte";
   import WorldTab from "./world-tab.svelte";
   import { format_utc_offset, local_zone, zone_offset } from "./zones";
@@ -41,7 +41,7 @@
   const tab = storage.window<ClockTab>("tab", untrack(() => initial_tab ?? ClockTab.WORLD), z.enum(ClockTab));
 
   ring_while_alive(file);
-  const ticker = new Ticker(() => win.is_visible);
+  const ticker = new Ticker(() => win.is_visible, 250);
 
   let adding_zone = $state(false);
   let adding_timer = $state(false);

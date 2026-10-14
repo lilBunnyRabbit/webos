@@ -5,6 +5,7 @@
   import { cn } from "$lib/core/utils";
   import { print_html } from "$lib/core/utils/print";
   import { format_time } from "$lib/core/games";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { CaretLeft, CaretRight, PencilSimple, Play, Printer, Sticker, Stop, Target, Trash } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -48,7 +49,11 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
 
-  let now = $state(new Date());
+  const ticker = new Ticker(
+    () => win.is_visible,
+    () => (running ? 1000 : 30_000)
+  );
+  const now = $derived(new Date(ticker.now));
   const today = $derived(day_key(now));
 
   const month = storage.window("month", month_key(new Date()), MonthKeySchema);
@@ -66,13 +71,6 @@
 
   const file = $derived(month_file?.ready ? month_file.value : null);
   const running = $derived(state_file.ready ? state_file.value.running : null);
-
-  $effect(() => {
-    if (!win.is_visible) return;
-    now = new Date();
-    const timer = setInterval(() => (now = new Date()), running ? 1000 : 30_000);
-    return () => clearInterval(timer);
-  });
 
   const weeks = $derived(calendar_weeks(month.value));
   const week_totals = $derived(file ? week_minutes(file) : []);

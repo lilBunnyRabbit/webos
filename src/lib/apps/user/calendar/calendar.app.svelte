@@ -4,6 +4,7 @@
   import { day_minutes, format_hours, WORK_HOURS_APP_ID } from "$lib/apps/user/work-hours/data";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { CalendarBlank, CaretLeft, CaretRight, ClockUser, DotsThree, Kanban, ListBullets, Plus, Rows, SquaresFour, Sticker } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -59,13 +60,8 @@
 
   remind_while_alive(file);
 
-  let now = $state(Date.now());
-  $effect(() => {
-    if (!win.is_visible) return;
-    now = Date.now();
-    const timer = setInterval(() => (now = Date.now()), 30_000);
-    return () => clearInterval(timer);
-  });
+  const ticker = new Ticker(() => win.is_visible, 30_000);
+  const now = $derived(ticker.now);
   const today = $derived(day_key(new Date(now)));
 
   let width = $state(0);

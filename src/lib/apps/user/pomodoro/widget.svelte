@@ -3,7 +3,9 @@
   import { IconButton, Spinner } from "$lib/core/components/ui";
   import { format_time } from "$lib/core/games/time";
   import { cn } from "$lib/core/utils";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowSquareOut, Pause, Play } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import { APP_ID, is_break, PHASE_LABELS, progress, remaining_ms, Status } from "./pomodoro";
   import Ring from "./ring.svelte";
   import { acquire_timer } from "./timer.svelte";
@@ -16,18 +18,14 @@
   const { timer, release } = acquire_timer();
   $effect(() => release);
 
-  let now = $state(Date.now());
   const run = $derived(timer.run);
   const running = $derived(timer.ready && run.status === Status.RUNNING);
+  const ticker = new Ticker(() => running && !windows.page_hidden, 250);
+  const now = $derived(ticker.now);
 
   $effect(() => {
-    if (!running || windows.page_hidden) return;
-    now = Date.now();
-    const id = setInterval(() => {
-      now = Date.now();
-      timer.settle(now);
-    }, 250);
-    return () => clearInterval(id);
+    const at = now;
+    if (running) untrack(() => timer.settle(at));
   });
 
   const rest = $derived(is_break(run.phase));

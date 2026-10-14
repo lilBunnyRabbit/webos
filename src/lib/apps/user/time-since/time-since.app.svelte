@@ -8,7 +8,7 @@
   import { ArrowCounterClockwise, ArrowLeft, ClockCounterClockwise, Pause, PencilSimple, Play, Plus, Sticker, Trash, Trophy, Warning } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { Clock } from "./clock.svelte";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import CounterHistory from "./counter-history.svelte";
   import Duration from "./duration.svelte";
   import {
@@ -51,7 +51,7 @@
   const selected = $derived(file.value.counters.find((counter) => counter.id === selected_id.value) ?? null);
   const running = $derived(file.value.counters.filter((counter) => counter.current_start !== null));
 
-  const clock = new Clock(
+  const clock = new Ticker(
     () => win.is_visible,
     () => tick_interval(running.map((counter) => elapsed_of(counter, Date.now())))
   );
