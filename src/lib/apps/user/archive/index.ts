@@ -1,0 +1,23 @@
+import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
+import { FileZip as FileZipIcon } from "phosphor-svelte";
+import { z } from "zod";
+
+export default define_app({
+  id: "archive",
+  name: "Archive",
+  icon: FileZipIcon,
+  version: "1.0.0",
+  description: "Opens, extracts and creates zip archives, right in the browser.",
+  keywords: ["zip", "unzip", "compress", "extract", "deflate"],
+  category: AppCategory.UTILITIES,
+  associations: [".zip", "application/zip", "application/x-zip-compressed"],
+  props: z.object({ path: z.string().optional(), paths: z.array(z.string()).optional() }),
+  defaults: {
+    constraints: {
+      width: { min: 340 },
+      height: { min: 320 },
+    },
+  },
+  component: () => import("./archive.app.svelte"),
+});
