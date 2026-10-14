@@ -65,7 +65,8 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
 | `clipboard` | `ClipboardService` | `files` |
 | `ui` | `UiService` | none |
-| `shortcuts` | `ShortcutsService` | `windows`, `apps`, `dialogs`, `ui` |
+| `shortcuts` | `ShortcutsService` | `windows`, `apps`, `dialogs`, `ui`, `session` |
+| `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 
 ### Dependency graph
 
@@ -75,6 +76,7 @@ windows ────────────────────────
 windows, notifications, files, settings, dialogs ───► apps
 files, apps ────────────────────────────────────────► desktop
 windows, apps, files, dialogs, notifications ───────► session
+windows, apps, session, clipboard, notifications ───► router
 files, notifications, dialogs, apps ────────────────► version
 ```
 
@@ -83,10 +85,10 @@ files, notifications, dialogs, apps ──────────────�
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shortcuts → version
+files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shortcuts → router → version
 ```
 
-Shutdown runs the reverse: `version → shortcuts → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+Shutdown runs the reverse: `version → router → shortcuts → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
@@ -115,6 +117,7 @@ Which services implement which hooks today:
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |
 | desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
 | session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
+| router | listen to `hashchange`; an effect opens the hash's link once the session status leaves `pending` ([router](services/router.md#lifecycle)) | remove the listener, dispose the effect |
 | windows, apps | none | none |
 
 ### Failed init

@@ -42,6 +42,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 | `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center (ADR-028) | none |
 | `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui, session |
+| `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for windows whose app takes no `path` (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 

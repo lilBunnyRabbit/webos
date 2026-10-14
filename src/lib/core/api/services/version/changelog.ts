@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.29.0",
+    date: "2026-10-14",
+    title: "Links",
+    changes: [
+      { kind: NEW, text: "Links open apps: a link like /webos/#/app/settings?section=about opens Settings on About, after the question about restoring your windows." },
+      { kind: NEW, text: "The link button in a window's title bar copies a link to that app. Apps that open your files don't have one, since the file wouldn't be there for anyone else." },
+    ],
+  },
+  {
     version: "0.28.0",
     date: "2026-10-13",
     title: "Hands off the system",

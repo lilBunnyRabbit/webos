@@ -15,6 +15,7 @@ import { NotificationsService } from "../services/notifications/service.svelte";
 import { DialogsService } from "../services/dialogs/service.svelte";
 import { UiService } from "../services/ui/service.svelte";
 import { ShortcutsService } from "../services/shortcuts/service.svelte";
+import { RouterService } from "../services/router/service.svelte";
 
 export function register_default_services(kernel: Kernel) {
   // Phones and tablets get their own windows and desktop; every other service is shared (ADR-016).
@@ -73,6 +74,11 @@ export function register_default_services(kernel: Kernel) {
   kernel.register("shortcuts", {
     instance: ShortcutsService,
     dependencies: ["windows", "apps", "dialogs", "ui", "session"],
+  });
+
+  kernel.register("router", {
+    instance: RouterService,
+    dependencies: ["windows", "apps", "session", "clipboard", "notifications"],
   });
 
   // Registered last so it initialises after session: its introduction stacks above the Restore dialog (ADR-026).

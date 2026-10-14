@@ -2,11 +2,12 @@
   import {
     CornersIn as CornersInIcon,
     CornersOut as CornersOutIcon,
+    Link as LinkIcon,
     Minus as MinusIcon,
     Plus as PlusIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import kernel, { type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
+  import kernel, { type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
@@ -14,7 +15,9 @@
   let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
+  const router = $derived(kernel.service<RouterService>("router"));
   const instance = $derived(windows.get(window_id)!);
+  const shareable = $derived(router.link_for(window_id) !== null);
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
 
   const ZOOM_STEP = 0.1;
@@ -55,6 +58,11 @@
     </IconButton>
   </div>
 
+  {#if shareable}
+    <IconButton data-window-button label="Copy link" size="sm" onclick={() => void router.copy_link(window_id)}>
+      <LinkIcon weight="bold" />
+    </IconButton>
+  {/if}
   <IconButton data-window-button label="Minimize" size="sm" onclick={() => view_transition(() => windows.toggle_minimize(window_id))}>
     <MinusIcon weight="bold" />
   </IconButton>

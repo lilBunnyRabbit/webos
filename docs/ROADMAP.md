@@ -19,7 +19,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
 5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
 6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015: radius, shadows, motion speed, export/import) deferred by the owner on 2026-10-13
-7. [ ] **Deep linking + share** (ADR-010)
+7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
 
 **Parked** (no consumer or nothing breaks without it; revisit only on demand): Tasks service (ADR-013, until its first consumer), single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, AppDataHandle, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
@@ -215,13 +215,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### URL Deep Linking & Share System
 - **ADR:** [ADR-010](adrs/010-url-deep-linking.md)
-- **Status:** Not started
-- [ ] Hash-based router (`#/app/{id}`, `#/file/{path}`, `#/demo/{name}`)
-- [ ] App links with query param props (validated via zod)
+- **Status:** Partial (app links, 2026-10-14)
+- [x] RouterService: `#/app/{id}` after the Restore answer, hash cleared after
+- [ ] `#/file/{path}`, `#/demo/{name}` (deferred: paths don't exist on the receiving machine)
+- [x] App links with query param props (JSON per value, validated via zod; bad links open nothing)
 - [ ] Workspace state save/restore via URL
 - [ ] Embed mode (`?embed=true` strips OS chrome)
 - [ ] Demo presets (curated workspace configurations)
-- [ ] Share dialog (copy URL, QR code)
+- [-] Share: titlebar Copy link for apps without a `path` prop. No dialog, no QR, nothing on mobile
 
 ### Customization & Theming
 - **ADR:** [ADR-015](adrs/015-customization-theming.md)

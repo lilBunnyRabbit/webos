@@ -40,6 +40,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/clipboard.md](services/clipboard.md) | `clipboard` |
 | [services/ui.md](services/ui.md) | `ui` |
 | [services/shortcuts.md](services/shortcuts.md) | `shortcuts` |
+| [services/router.md](services/router.md) | `router` |
 
 ### Shell
 

@@ -5,7 +5,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | File | Role |
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
-| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
+| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, Copy link (shareable apps), min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
@@ -92,6 +92,7 @@ Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) 
 | App icon + `manifest.name` | Static. There's no `set_title`/`set_icon` yet (ROADMAP). |
 | App icon (duotone) + `manifest.name` | Static, `text-ui font-medium`. The pair fades to 80% opacity when the window isn't focused. There's no `set_title`/`set_icon` yet (ROADMAP). |
 | Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.5 to 2 in 0.1 steps (rounded to one decimal). − and + are `IconButton`s (Phosphor `Minus` / `Plus`) that disable at the limits. The % button resets to 1; its accessible name is "Reset zoom, now N%". A quiet pill that's invisible until the titlebar is hovered or something in it has focus, and always visible when zoom isn't 100%. The state is local to `window.svelte`, so it's lost on reload and not saved in the session. |
+| Copy link | Phosphor `Link`. Shown only when `router.link_for(id)` isn't `null` (the app's props schema has no `path` key). Calls `router.copy_link(id)`, which copies the URL and toasts "Link copied" ([router](../services/router.md)). Not on mobile: there's no titlebar there. |
 | Minimize | `windows.toggle_minimize(id)` |
 | Maximize / Restore | `windows.toggle_maximize(id)`. The icon swaps between `CornersOut` and `CornersIn`; label and title follow. |
 | Close | `windows.close(id)`. Immediate, no veto. Hover turns it `bg-error text-background`. |
