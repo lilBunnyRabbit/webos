@@ -65,6 +65,12 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   props?: ZodType<TProps>;
   /** Commands, completers and value types that work with no window open (ADR-034). Service commands win an id clash. */
   shell?: ShellContribution;
+  /**
+   * A count on the app's icon wherever it shows, even with no window open (ADR-034). Read inside the shell UI's
+   * reactive scope: back it with `createSubscriber` so the app only checks while an icon is on screen. `null` or `0`
+   * shows nothing.
+   */
+  badge?: () => number | null;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
 }

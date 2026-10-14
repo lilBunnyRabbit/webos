@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.33.0",
+    date: "2026-10-14",
+    title: "Todo count",
+    changes: [
+      { kind: NEW, text: "Quick Notes shows how many todos are still open on its icon: on the desktop, in the taskbar, in the app list and on your phone's home screen." },
+    ],
+  },
+  {
     version: "0.32.0",
     date: "2026-10-14",
     title: "Quick Notes",

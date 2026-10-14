@@ -4,6 +4,7 @@
   import LogoLockup from "../brand/logo-lockup.svelte";
   import CommandMode from "./command-mode.svelte";
   import { EmptyState, IconButton, Input, Kbd } from "../ui";
+  import AppBadge from "../apps/app-badge.svelte";
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
@@ -45,8 +46,9 @@
             class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
             onclick={() => launch(manifest)}
           >
-            <span class="grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+            <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
               <manifest.icon class="size-6" weight="duotone" />
+              <AppBadge app_id={manifest.id} />
             </span>
             <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
             {#if manifest === matches[0] && query}<span class="sr-only">(Enter)</span>{/if}

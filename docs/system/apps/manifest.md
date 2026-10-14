@@ -37,6 +37,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
 | `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
+| `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
@@ -76,6 +77,22 @@ The same `ShellContribution` a service returns from `shell()`. AppsService merge
 - **A service wins an id clash.** The app command is dropped with a warning. When two apps clash, the later one discovered wins, again with a warning.
 - Commands run with no window. Window-scoped app commands don't exist yet: in-app shortcuts still register with `run` (ADR-030).
 - App value types merge under AppsService's, so an app can't replace `app` or `file.open`.
+
+### `badge` (ADR-034)
+
+A sync function that `AppBadge` (`core/components/apps/app-badge.svelte`) reads inside a `$derived`. It shows on the desktop tile, the taskbar button, the start menu, the mobile home and dock tiles, and the app drawer. `null` or `0` shows nothing; above 99 it shows `99+`.
+
+Back the count with `createSubscriber` (`svelte/reactivity`). Then the app only does work while an icon is mounted: the first read starts it, and unmounting the last icon stops it.
+
+```ts
+let open = $state<number | null>(null);
+const subscribe = createSubscriber(() => $effect.root(() => {
+  $effect(() => { files.revision(DIR); void read().then((n) => (open = n)); });
+}));
+export const badge = () => (subscribe(), open);
+```
+
+Quick Notes counts open todos (`badge.svelte.ts`).
 
 ### `component`
 

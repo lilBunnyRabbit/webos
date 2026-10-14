@@ -3,6 +3,7 @@
   import { cn } from "$lib/core/utils";
   import FileIcon from "../files/file-icon.svelte";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
+  import AppBadge from "../apps/app-badge.svelte";
 
   let { item, label = true, class: class_name }: { item: DesktopItem; label?: boolean; class?: string } = $props();
 
@@ -15,11 +16,12 @@
 {#if item.kind === "shortcut"}
   <span
     class={cn(
-      "grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10",
+      "relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10",
       class_name
     )}
   >
     <ShortcutIcon app_id={item.app_id} badge={false} class="size-7" />
+    <AppBadge app_id={item.app_id} />
   </span>
 {:else}
   <span class={cn("grid size-14 shrink-0 place-items-center", class_name)}>

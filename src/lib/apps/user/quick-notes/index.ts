@@ -4,6 +4,7 @@ import { AppCategory } from "$lib/core/api/services/apps/type";
 import { arg } from "$lib/core/api/services/shell/arg";
 import { define_command } from "$lib/core/api/services/shell/define";
 import { NotePencil as NotePencilIcon } from "phosphor-svelte";
+import { open_todos } from "./badge.svelte";
 import { NOTE_STATUSES, NoteStatus } from "./notes";
 
 const logic = () => import("./shell");
@@ -23,6 +24,7 @@ export default define_app({
   description: "Capture a note or a todo from anywhere, triage it later.",
   keywords: ["notes", "todo", "inbox", "capture", "quno"],
   props: QUICK_NOTES_PROPS,
+  badge: open_todos,
   defaults: {
     constraints: {
       width: { min: 320 },

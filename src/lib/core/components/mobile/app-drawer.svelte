@@ -4,6 +4,7 @@
   import { fly } from "svelte/transition";
   import { EmptyState, Input } from "../ui";
   import { long_press } from "$lib/core/utils/long-press";
+  import AppBadge from "../apps/app-badge.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -68,8 +69,9 @@
             class="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-3 pb-2 transition-colors duration-150 active:bg-foreground/8"
             onclick={() => launch(manifest)}
           >
-            <span class="grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+            <span class="relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
               <manifest.icon class="size-7" weight="duotone" />
+              <AppBadge app_id={manifest.id} />
             </span>
             <span class="line-clamp-2 max-w-full text-center text-xs leading-tight font-medium">{manifest.name}</span>
           </button>

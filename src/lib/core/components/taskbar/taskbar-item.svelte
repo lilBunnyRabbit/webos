@@ -2,6 +2,7 @@
   import kernel, { type WindowsService, WindowFlag, type WindowInstance } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import AppBadge from "../apps/app-badge.svelte";
 
   let { instance, vertical }: { instance: WindowInstance; vertical: boolean } = $props();
 
@@ -33,6 +34,7 @@
   }}
 >
   <instance.app.manifest.icon class="size-5.5" weight={is_focused && !is_minimized ? "fill" : "duotone"} />
+  <AppBadge app_id={instance.app.id} class="top-0.5 right-0.5 ring-background-light" />
   <!-- Running indicator: a short bar for the focused window, a dot for the rest. -->
   <span
     class={cn(
