@@ -12,6 +12,7 @@ import {
   remove_run,
   rename,
   reset,
+  resolve_counter,
   set_start,
   sort_counters,
   start,
@@ -195,5 +196,22 @@ describe("file", () => {
     expect(to_datetime_local(at)).toBe("2026-10-14T08:05");
     expect(from_datetime_local(to_datetime_local(at))).toBe(at);
     expect(from_datetime_local("")).toBeNaN();
+  });
+});
+
+describe("resolve_counter", () => {
+  const counters = [create_counter("Last coffee", 0, "ab12"), create_counter("Last cigarette", 0, "ab99"), create_counter("Gym", 0, "cd34")];
+
+  test("by id prefix, exact name or name prefix", () => {
+    expect(resolve_counter(counters, "cd")).toBe(counters[2]);
+    expect(resolve_counter(counters, "last COFFEE")).toBe(counters[0]);
+    expect(resolve_counter(counters, "last ci")).toBe(counters[1]);
+    expect(resolve_counter(counters, "coff")).toBe(counters[0]);
+  });
+
+  test("ambiguous and missing read as errors", () => {
+    expect(resolve_counter(counters, "ab")).toBe('"ab" matches Last coffee, Last cigarette');
+    expect(resolve_counter(counters, "last")).toBe('"last" matches Last coffee, Last cigarette');
+    expect(resolve_counter(counters, "tea")).toBe('no counter "tea"');
   });
 });

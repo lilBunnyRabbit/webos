@@ -13,6 +13,7 @@ import {
   settle,
   skip,
   start,
+  status_text,
   type Run,
   type Settings,
 } from "./pomodoro";
@@ -118,5 +119,15 @@ describe("settle", () => {
     const paused = pause(start(IDLE_RUN, settings, 0), MIN);
     expect(settle(paused, settings, 99 * MIN).completed).toBeNull();
     expect(settle(IDLE_RUN, settings, 99 * MIN).completed).toBeNull();
+  });
+});
+
+describe("status_text", () => {
+  it("reads running, paused and idle", () => {
+    const now = new Date(2026, 9, 14, 14, 0).getTime();
+    const running = start(IDLE_RUN, settings, now);
+    expect(status_text(running, settings, "", now + 12 * MIN + 26_000)).toBe("Focus · 12:34 left · ends 14:25");
+    expect(status_text(pause(running, now + MIN), settings, " Report ", now + 2 * MIN)).toBe("Focus · paused · 24:00 left · Report");
+    expect(status_text(choose(IDLE_RUN, Phase.SHORT), settings, "", now)).toBe("Short break · ready · 5:00");
   });
 });

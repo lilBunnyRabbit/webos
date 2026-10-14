@@ -197,3 +197,20 @@ export function from_datetime_local(value: string): number {
 export function update_counter(file: CountersFile, id: string, change: (counter: Counter) => Counter): CountersFile {
   return { ...file, counters: file.counters.map((counter) => (counter.id === id ? change(counter) : counter)) };
 }
+
+/** Id prefix, then exact name, then name prefix, then any part of the name (case-insensitive). A string is the error to show. */
+export function resolve_counter(counters: Counter[], query: string): Counter | string {
+  const q = query.trim().toLowerCase();
+  if (!q) return "no counter given";
+  const tiers = [
+    counters.filter((counter) => counter.id.startsWith(q)),
+    counters.filter((counter) => counter.name.toLowerCase() === q),
+    counters.filter((counter) => counter.name.toLowerCase().startsWith(q)),
+    counters.filter((counter) => counter.name.toLowerCase().includes(q)),
+  ];
+  for (const found of tiers) {
+    if (found.length === 1) return found[0];
+    if (found.length > 1) return `"${query}" matches ${found.map((counter) => counter.name).join(", ")}`;
+  }
+  return `no counter "${query}"`;
+}

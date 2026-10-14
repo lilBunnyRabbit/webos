@@ -19,6 +19,10 @@ import {
   timer_remaining,
   timer_state,
   TimerState,
+  find_entry,
+  parse_alarm_time,
+  parse_days,
+  parse_duration,
   type Alarm,
   type Timer,
 } from "./clock";
@@ -201,5 +205,44 @@ describe("stopwatch", () => {
       { n: 2, total_ms: 8_000, split_ms: 5_000 },
       { n: 1, total_ms: 3_000, split_ms: 3_000 },
     ]);
+  });
+});
+
+describe("shell parsing", () => {
+  it("reads durations", () => {
+    expect(parse_duration("5m")).toBe(5 * 60_000);
+    expect(parse_duration("1h30m")).toBe(90 * 60_000);
+    expect(parse_duration("1h30m15s")).toBe(90 * 60_000 + 15_000);
+    expect(parse_duration("90s")).toBe(90_000);
+    expect(parse_duration("10")).toBe(10 * 60_000);
+    expect(parse_duration("2H")).toBe(2 * 3_600_000);
+    for (const bad of ["", "0", "0m", "5x", "m", "30m1h", "1.5h"]) expect(parse_duration(bad)).toBeNull();
+  });
+
+  it("reads alarm times", () => {
+    expect(parse_alarm_time("7:30")).toBe("07:30");
+    expect(parse_alarm_time("23:59")).toBe("23:59");
+    for (const bad of ["24:00", "7:60", "730", "7:3", "a:bc"]) expect(parse_alarm_time(bad)).toBeNull();
+  });
+
+  it("reads repeat days", () => {
+    expect(parse_days("weekdays")).toEqual([1, 2, 3, 4, 5]);
+    expect(parse_days("Weekends")).toEqual([0, 6]);
+    expect(parse_days("wed,mon,wed")).toEqual([1, 3]);
+    expect(parse_days("monday,sun")).toEqual([0, 1]);
+    expect(parse_days("once")).toEqual([]);
+    expect(parse_days("mon,xyz")).toBeNull();
+  });
+
+  it("finds by id prefix or label", () => {
+    const entries = [
+      { id: "ab12cd34", label: "Tea" },
+      { id: "ab99ff00", label: "" },
+      { id: "c0ffee00", label: "tea" },
+    ];
+    expect(find_entry(entries, "c0", "timer")).toBe(entries[2]);
+    expect(find_entry(entries, "ab", "timer")).toBe('timer id "ab" is ambiguous');
+    expect(find_entry(entries, "TEA", "timer")).toBe('more than one timer is called "TEA"');
+    expect(find_entry(entries, "zz", "timer")).toBe('no timer "zz"');
   });
 });

@@ -51,9 +51,12 @@ class PomodoroTimer {
     this.file.value.task = task;
   }
 
-  start(): void {
-    void notifications().request_system();
-    if (this.settings.sound) prime_audio();
+  // The permission prompt and audio unlock need a click; a shell command has none.
+  start(from_click = true): void {
+    if (from_click) {
+      void notifications().request_system();
+      if (this.settings.sound) prime_audio();
+    }
     this.change(logic.start(this.run, this.settings, Date.now()));
   }
 

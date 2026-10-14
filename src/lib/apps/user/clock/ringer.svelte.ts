@@ -169,6 +169,32 @@ export function ring_due(data: ClockData, now: number): void {
   });
 }
 
+let hosting = false;
+
+/** A timer started from the shell with no window or widget open would have nobody to ring it. */
+export function ring_while_timers(): void {
+  if (hosting) return;
+  hosting = true;
+  const file = open_clock_file();
+  const stop = $effect.root(() => {
+    $effect(() => {
+      if (!file.ready) return;
+      if (!file.value.timers.some((timer) => timer.end_at !== null)) {
+        queueMicrotask(() => {
+          stop();
+          file.release();
+          hosting = false;
+        });
+        return;
+      }
+      const check = () => untrack(() => ring_due(file.value, Date.now()));
+      check();
+      const timer = setInterval(check, 1000);
+      return () => clearInterval(timer);
+    });
+  });
+}
+
 /**
  * Checks every second while the calling component lives, visible or not: windows and the desktop widget both host
  * it, so alarms keep working with either one alive. Call during component init.

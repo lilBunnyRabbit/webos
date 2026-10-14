@@ -1,3 +1,4 @@
+import { format_time } from "$lib/core/games/time";
 import { z } from "zod";
 
 export const APP_ID = "pomodoro";
@@ -95,6 +96,16 @@ export function progress(run: Run, settings: Settings, now: number): number {
 export function format_clock(ms: number): string {
   const date = new Date(ms);
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+export function status_text(run: Run, settings: Settings, task: string, now: number): string {
+  const left = format_time(Math.ceil(remaining_ms(run, settings, now) / 1000) * 1000);
+  const parts = [PHASE_LABELS[run.phase]];
+  if (run.status === Status.RUNNING) parts.push(`${left} left`, `ends ${format_clock(run.ends_at ?? now)}`);
+  else if (run.status === Status.PAUSED) parts.push("paused", `${left} left`);
+  else parts.push("ready", left);
+  if (task.trim()) parts.push(task.trim());
+  return parts.join(" · ");
 }
 
 export function is_break(phase: Phase): boolean {
