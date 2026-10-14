@@ -127,7 +127,23 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
 
-App commands come in through AppsService and carry `app: <id>`. Today: Quick Notes, as the `quno` group named after the owner's CLI (`quno`, `quno q`, `quno ls`, `quno cat|ready|done|drop|rm`, `quno t`, `quno t done|clear`, `quno pin`, `quno t pin`, completer `note`, values `note` and `todo`). The registry adds them after every service command, so **a service command wins an id clash** and the app's is dropped with a warning. See [manifest](../apps/manifest.md#shell-adr-034).
+App commands come in through AppsService and carry `app: <id>`. The registry adds them after every service command, so **a service command wins an id clash** and the app's is dropped with a warning. See [manifest](../apps/manifest.md#shell-adr-034). Each app's logic loads lazily from its own `shell.ts`.
+
+| App | Commands | Yields, completers |
+|-----|----------|--------------------|
+| quick-notes | `quno`, `quno q`, `quno ls`, `quno cat\|ready\|done\|drop\|rm`, `quno t`, `quno t done\|clear`, `quno pin`, `quno t pin` | `note` / `todo` values; `note` completer |
+| game-hub | `games`, `games daily`, `games stats` | `game` / `game-daily` values (click launches), stats record |
+| solitaire | `solitaire [--draw]`, `solitaire daily [day]`, `solitaire stats` | opens a deal; `solitaire-stats` values |
+| nonogram | `nonogram new [--size] [--colour]`, `nonogram daily [day]`, `nonogram edit [path]`, `nonogram check <path>` | opens; `text` verdict |
+| pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values |
+| clock | `clock [tab]`, `clock pin [-f]`, `time [zone]`, `alarm ls\|add\|on\|off\|rm`, `timer <duration> [label…]`, `timer ls\|stop` | `alarm` / `timer` values, `text`; `zone` completer |
+| time-since | `since`, `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>` | `counter` values; `counter` completer |
+| work-hours | `wh in [desc…]`, `wh out`, `wh status`, `wh ls [month]`, `wh add <date> <start> <end> [desc…]`, `wh report [month]`, `wh target <hours\|none> [month]` | `workday` values (open → `{ day }`), `text` |
+| kanban | `kanban [card]`, `kanban ls [-b] [--due]`, `kanban add <title…> [-c] [-d] [-b]`, `kanban mv <card> <column>`, `kanban done <card>`, `kanban archive [card]` | `card` values (open → `{ board, card }`); `card` completer |
+| calendar | `cal [day]`, `cal add <title…> --day [--at] [--until] [--repeat] [--remind]`, `cal agenda [--days N]`, `cal open [date]` | `event` values (open → `{ day }`) |
+| soundboard | `sb`, `sb ls [-b]`, `sb play <pad> [-b]`, `sb stop`, `sb add <path…> [-b]` | `pad` values (open plays); `pad` completer |
+| recorder | `rec list`, `rec start [-s mic\|screen\|camera]` | `recording` values (open → Media Preview) |
+| image-editor | `image edit <path>`, `image convert <path> -f [-q]`, `image resize <path> <w> [h]`, `image rotate <path> <deg>` | `file` |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
