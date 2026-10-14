@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
+  import { track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon } from "phosphor-svelte";
@@ -22,7 +23,8 @@
   const SWIPE_THRESHOLD_PX = 24;
   const CELLS = Array.from({ length: SIZE * SIZE }, (_, i) => ({ row: Math.floor(i / SIZE), col: i % SIZE }));
 
-  const { window: win, storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
+  track_play(app_id, () => win.is_visible);
   const best = storage.persisted("best", 0, z.number().int().nonnegative());
 
   // Per window, so two open games don't play each other; storage keeps the last one touched for next time.

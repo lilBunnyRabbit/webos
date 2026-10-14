@@ -55,10 +55,3 @@ export const best_ms_schema = z.record(z.string(), z.number().positive());
 export function size_label(size: Size): string {
   return `${size} × ${size}`;
 }
-
-export function format_time(ms: number): string {
-  const tenths = Math.floor(ms / 100);
-  const minutes = Math.floor(tenths / 600);
-  const seconds = Math.floor(tenths / 10) % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}.${tenths % 10}`;
-}

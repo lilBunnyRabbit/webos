@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Section, Select, Segmented, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
@@ -17,13 +18,16 @@
     Lightbulb as LightbulbIcon,
     PencilSimple as PencilIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import {
     clear_notes,
     conflicts,
+    daily_game,
+    daily_saved_schema,
+    DAILY_SIZE,
     digit_counts,
     empty_stats,
     fill_notes,
-    format_time,
     hint,
     new_game,
     place,
@@ -40,6 +44,7 @@
     toggle_note,
     with_cells,
     type Game,
+    type Saved,
   } from "./game";
   import { Relation } from "./puzzle";
 
@@ -50,20 +55,25 @@
     notes: readonly number[];
   }
 
-  const { window_id, window: win, storage } = get_app_context();
+  const { daily: daily_prop }: { daily?: string } = $props();
+  const daily_day = untrack(() => daily_prop);
+
+  const { window_id, app_id, window: win, storage } = get_app_context();
+  const play = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
 
   // Per window, so two open puzzles don't overwrite each other; storage keeps the last one touched for next time.
-  const saved = storage.get("game", saved_schema);
+  // A daily puzzle saves under its own key, so it never replaces the regular game.
+  const saved_daily = daily_day ? storage.get("daily", daily_saved_schema) : null;
+  const saved = daily_day ? (saved_daily?.day === daily_day ? saved_daily.game : null) : storage.get("game", saved_schema);
   const restored = saved ? restore(saved) : null;
-  const initial_size = restored ? saved!.size : (storage.get("size", size_schema) ?? Size.S5);
+  let daily = $state(daily_day ?? null);
+  const initial_size = daily_day ? DAILY_SIZE : restored ? saved!.size : (storage.get("size", size_schema) ?? Size.S5);
   let size = $state<Size>(initial_size);
-  const initial_game = restored ?? new_game(initial_size, random_seed());
+  const initial_game = restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_size, random_seed()));
   let game = $state.raw<Game>(initial_game);
-  let elapsed_before = $state(restored ? saved!.elapsed : 0);
-  let started_at = $state<number | null>(null);
-  let now = $state(Date.now());
+  const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   let new_best = $state(false);
   let notes_mode = $state(false);
   let undo_stack = $state.raw<Snapshot[]>([]);
@@ -78,7 +88,7 @@
   const signs = $derived(sign_states(game));
   const bad = $derived(conflicts(game));
   const counts = $derived(digit_counts(game));
-  const elapsed = $derived(elapsed_before + (started_at === null ? 0 : now - started_at));
+  const elapsed = $derived(clock.elapsed);
   const active_row = $derived(Math.floor(active / n));
   const active_col = $derived(active % n);
   const active_digit = $derived(game.values[active]);
@@ -90,13 +100,8 @@
     if (game.solved) return `Solved in ${format_time(elapsed)}${game.hints ? ` with ${game.hints} hint${game.hints === 1 ? "" : "s"}` : new_best ? ", a new best" : ""}`;
     if (bad.size) return "A digit repeats or a sign is broken";
     if (notes_mode) return "Notes: digits pencil in as candidates";
+    if (daily) return `Daily · ${daily}`;
     return `1 to ${n} once in each row and column`;
-  });
-
-  $effect(() => {
-    if (game.solved || started_at === null) return;
-    const timer = setInterval(() => (now = Date.now()), 500);
-    return () => clearInterval(timer);
   });
 
   $effect(() => {
@@ -118,16 +123,17 @@
     return Math.max(0, of.values.findIndex((value) => !value));
   }
 
-  function current_elapsed(): number {
-    return elapsed_before + (started_at === null ? 0 : Date.now() - started_at);
+  function store_game(saved: Saved) {
+    if (daily) storage.set("daily", { day: daily, game: saved });
+    else storage.set("game", saved);
   }
 
   function save() {
-    storage.set("game", to_saved(game, size, current_elapsed()));
+    store_game(to_saved(game, size, clock.read()));
   }
 
   function apply(next: Game, hints = game.hints) {
-    if (started_at === null) started_at = now = Date.now();
+    if (!clock.running) clock.start();
     game = { ...next, hints };
     if (game.solved) finish();
     save();
@@ -141,9 +147,8 @@
   }
 
   function finish() {
-    const time = current_elapsed();
-    elapsed_before = time;
-    started_at = null;
+    const time = clock.pause();
+    if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, size, time, game.hints);
   }
@@ -189,11 +194,11 @@
       });
       if (!confirmed) return;
     }
+    daily = null;
     size = next_size;
     storage.set("size", next_size);
     game = new_game(next_size, random_seed());
-    elapsed_before = 0;
-    started_at = null;
+    clock.reset();
     new_best = false;
     undo_stack = [];
     redo_stack = [];

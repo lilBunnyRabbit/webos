@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
+  import { track_play } from "$lib/core/games";
   import { Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon, ChartBar as ChartBarIcon, Circle as CircleIcon, X as XIcon } from "phosphor-svelte";
@@ -29,7 +30,8 @@
   const MODE_OPTIONS = MODES.map((value) => ({ value, label: MODE_LABELS[value] }));
   const COMPUTER_DELAY_MS = 350;
 
-  const { window: win, storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
+  track_play(app_id, () => win.is_visible);
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
 
   // Per window, so two open games don't switch each other's mode; storage only remembers the last pick.

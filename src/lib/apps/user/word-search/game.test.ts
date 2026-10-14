@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   capsules,
+  daily_game,
   Difficulty,
   empty_stats,
   hint,
@@ -102,5 +103,13 @@ describe("persistence", () => {
     stats = record(stats, Difficulty.EASY, 5000, 1);
     expect(stats.easy).toEqual({ solved: 2, best: 9000 });
     expect(stats.hard).toEqual({ solved: 0, best: null });
+  });
+});
+
+describe("daily", () => {
+  it("plays the same medium puzzle all day, a new one the next", () => {
+    const today = daily_game("2026-10-14");
+    expect(daily_game("2026-10-14").puzzle).toEqual(today.puzzle);
+    expect(daily_game("2026-10-15").puzzle).not.toEqual(today.puzzle);
   });
 });

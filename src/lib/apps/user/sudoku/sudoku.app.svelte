@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
@@ -13,12 +14,16 @@
     MagicWand as MagicWandIcon,
     PencilSimple as PencilIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import {
     auto_notes,
     apply_hint,
     cell_name,
     completed_units,
     conflicts,
+    DAILY_DIFFICULTY,
+    daily_game,
+    daily_saved_schema,
     DIFFICULTIES,
     Difficulty,
     DIFFICULTY_LABELS,
@@ -26,7 +31,6 @@
     digit_counts,
     empty_stats,
     erase,
-    format_time,
     hint,
     HintKind,
     is_given,
@@ -48,20 +52,29 @@
   const DIFFICULTY_OPTIONS = DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
   const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-  const { window_id, window: win, storage } = get_app_context();
+  const { daily: daily_prop }: { daily?: string } = $props();
+  const daily_day = untrack(() => daily_prop);
+
+  const { window_id, app_id, window: win, storage } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
+  const play = track_play(app_id, () => win.is_visible);
 
   // Per window, so two open puzzles don't overwrite each other; storage keeps the last one touched for next time.
-  const saved = storage.get("game", saved_schema);
+  // A daily puzzle saves under its own key, so it never replaces the regular game.
+  const saved_daily = daily_day ? storage.get("daily", daily_saved_schema) : null;
+  const saved = daily_day ? (saved_daily?.day === daily_day ? saved_daily.game : null) : storage.get("game", saved_schema);
   const restored = saved ? restore(saved) : null;
-  const initial_difficulty = restored ? restored.difficulty : (storage.get("difficulty", difficulty_schema) ?? Difficulty.EASY);
+  let daily = $state(daily_day ?? null);
+  const initial_difficulty = daily_day
+    ? DAILY_DIFFICULTY
+    : restored
+      ? restored.difficulty
+      : (storage.get("difficulty", difficulty_schema) ?? Difficulty.EASY);
   let difficulty = $state<Difficulty>(initial_difficulty);
-  const initial_game = restored ?? new_game(initial_difficulty, random_seed());
+  const initial_game = restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_difficulty, random_seed()));
   let game = $state.raw<Game>(initial_game);
-  let elapsed_before = $state(restored ? saved!.elapsed : 0);
-  let started_at = $state<number | null>(null);
-  let now = $state(Date.now());
+  const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   let new_best = $state(false);
   let notes_mode = $state(false);
   let undo_stack = $state.raw<Board[]>([]);
@@ -77,7 +90,8 @@
   const values = $derived(game.values);
   const clashes = $derived(conflicts(values));
   const counts = $derived(digit_counts(values));
-  const elapsed = $derived(elapsed_before + (started_at === null ? 0 : now - started_at));
+  const elapsed = $derived(clock.elapsed);
+  const label = $derived(daily ? `Daily · ${daily}` : DIFFICULTY_LABELS[difficulty]);
   const focus_digit = $derived(game.solved ? 0 : values[selected]);
   const filled = $derived(values.filter(Boolean).length);
   const best = $derived(stats.value[difficulty].best);
@@ -91,13 +105,8 @@
     if (message) return message;
     if (clashes.size) return "A digit repeats in a row, column or box";
     if (notes_mode) return "Notes on: digits go in as candidates";
+    if (daily) return label;
     return "Every row, column and box holds 1 to 9 once";
-  });
-
-  $effect(() => {
-    if (game.solved || started_at === null) return;
-    const timer = setInterval(() => (now = Date.now()), 500);
-    return () => clearInterval(timer);
   });
 
   $effect(() => {
@@ -126,16 +135,13 @@
     return index < 0 ? 40 : index;
   }
 
-  function current_elapsed(): number {
-    return elapsed_before + (started_at === null ? 0 : Date.now() - started_at);
-  }
-
   function save() {
-    storage.set("game", to_saved(game, current_elapsed()));
+    if (daily) storage.set("daily", { day: daily, game: to_saved(game, clock.read()) });
+    else storage.set("game", to_saved(game, clock.read()));
   }
 
   function set_board(board: Board, hints = game.hints) {
-    if (started_at === null) started_at = now = Date.now();
+    if (!clock.running) clock.start();
     const next = { ...with_board(game, board), hints };
     game = next;
     if (next.solved) finish();
@@ -150,9 +156,8 @@
   }
 
   function finish() {
-    const time = current_elapsed();
-    elapsed_before = time;
-    started_at = null;
+    const time = clock.pause();
+    if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, difficulty, time, game.hints);
   }
@@ -247,11 +252,11 @@
       });
       if (!confirmed) return;
     }
+    daily = null;
     difficulty = next_difficulty;
     storage.set("difficulty", next_difficulty);
     game = new_game(next_difficulty, random_seed());
-    elapsed_before = 0;
-    started_at = null;
+    clock.reset();
     new_best = false;
     undo_stack = [];
     redo_stack = [];
@@ -372,7 +377,7 @@
     <div class="area min-h-0 overflow-hidden p-2 select-none [-webkit-touch-callout:none] @md:p-4">
       <div class="play">
         <div class="meta flex items-baseline gap-2 px-0.5 text-ui">
-          <span class="font-medium">{DIFFICULTY_LABELS[difficulty]}</span>
+          <span class="font-medium">{label}</span>
           {#if game.hints}<span class="text-foreground/65">· {hint_note}</span>{/if}
           <span class="ml-auto font-mono text-foreground/80 tabular-nums">{format_time(elapsed)}</span>
         </div>
@@ -427,7 +432,7 @@
             <BoardOverlay
               class="z-20 bg-background/60"
               title="Solved"
-              detail="{DIFFICULTY_LABELS[difficulty]} · {format_time(elapsed)}{game.hints ? ` · ${hint_note}` : ''}{best !== null ? ` · Best ${format_time(best)}` : ''}"
+              detail="{label} · {format_time(elapsed)}{game.hints ? ` · ${hint_note}` : ''}{best !== null ? ` · Best ${format_time(best)}` : ''}"
             >
               <Button size="sm" variant="primary" onclick={() => start_over()}>New puzzle</Button>
             </BoardOverlay>

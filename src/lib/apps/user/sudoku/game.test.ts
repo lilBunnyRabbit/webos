@@ -4,11 +4,11 @@ import {
   auto_notes,
   completed_units,
   conflicts,
+  daily_game,
   Difficulty,
   digit_counts,
   empty_stats,
   erase,
-  format_time,
   hint,
   HintKind,
   is_solved,
@@ -185,9 +185,13 @@ describe("stats", () => {
     expect(stats.hard).toEqual({ solved: 3, best: 250000 });
     expect(stats.easy).toEqual({ solved: 0, best: null });
   });
+});
 
-  it("formats times", () => {
-    expect(format_time(65000)).toBe("1:05");
-    expect(format_time(3725000)).toBe("1:02:05");
+describe("daily", () => {
+  it("plays the same medium puzzle all day, a new one the next", () => {
+    const today = daily_game("2026-10-14");
+    expect(today.difficulty).toBe(Difficulty.MEDIUM);
+    expect(daily_game("2026-10-14").puzzle.givens).toEqual(today.puzzle.givens);
+    expect(daily_game("2026-10-15").puzzle.givens).not.toEqual(today.puzzle.givens);
   });
 });

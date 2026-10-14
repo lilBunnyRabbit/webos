@@ -1,3 +1,4 @@
+import { daily_seed } from "$lib/core/games/time";
 import { z } from "zod";
 
 export const Difficulty = {
@@ -274,4 +275,14 @@ export function step(config: Config, index: number, key: string): number {
     default:
       return index;
   }
+}
+
+export const DAILY_DIFFICULTY = Difficulty.INTERMEDIATE;
+
+/** Mines placed at the first click would depend on where it lands, so the daily board starts with its middle open. */
+export function daily_game(day: string): Game {
+  const config = PRESETS[DAILY_DIFFICULTY];
+  const start = Math.floor(config.height / 2) * config.width + Math.floor(config.width / 2);
+  const mines = place_mines(config, start, seeded(daily_seed(day, "minesweeper")));
+  return reveal(with_mines(config, mines), start);
 }

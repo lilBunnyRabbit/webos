@@ -88,36 +88,36 @@ export function channel_open(pc: RTCPeerConnection, channel?: RTCDataChannel): P
  * that arrived before the channel closed are still delivered; after that `next()` rejects.
  */
 export class Inbox {
-  #queue: (string | ArrayBuffer)[] = [];
-  #waiting: { resolve: (data: string | ArrayBuffer) => void; reject: (reason: Error) => void } | null = null;
-  #closed: Error | null = null;
+  private readonly queue: (string | ArrayBuffer)[] = [];
+  private waiting: { resolve: (data: string | ArrayBuffer) => void; reject: (reason: Error) => void } | null = null;
+  private closed: Error | null = null;
 
   constructor(channel: RTCDataChannel, pc: RTCPeerConnection) {
     channel.addEventListener("message", (event: MessageEvent<string | ArrayBuffer>) => {
-      if (this.#waiting) this.#take().resolve(event.data);
-      else this.#queue.push(event.data);
+      if (this.waiting) this.take().resolve(event.data);
+      else this.queue.push(event.data);
     });
-    channel.addEventListener("close", () => this.#close());
+    channel.addEventListener("close", () => this.close());
     // SCTP notices a dead path only after its own timeout; ICE says so sooner.
     pc.addEventListener("connectionstatechange", () => pc.connectionState === "failed" && channel.close());
   }
 
-  #take() {
-    const waiting = this.#waiting!;
-    this.#waiting = null;
+  private take() {
+    const waiting = this.waiting!;
+    this.waiting = null;
     return waiting;
   }
 
-  #close() {
-    this.#closed = new Error("The connection was lost");
-    if (this.#waiting) this.#take().reject(this.#closed);
+  private close() {
+    this.closed = new Error("The connection was lost");
+    if (this.waiting) this.take().reject(this.closed);
   }
 
   next(): Promise<string | ArrayBuffer> {
-    const queued = this.#queue.shift();
+    const queued = this.queue.shift();
     if (queued !== undefined) return Promise.resolve(queued);
-    if (this.#closed) return Promise.reject(this.#closed);
-    return new Promise((resolve, reject) => (this.#waiting = { resolve, reject }));
+    if (this.closed) return Promise.reject(this.closed);
+    return new Promise((resolve, reject) => (this.waiting = { resolve, reject }));
   }
 }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
+  import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { Button, IconButton, Input, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
@@ -13,12 +14,15 @@
     SmileyXEyes as SmileyLostIcon,
     X as XIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import {
     activate,
     Cell,
     clamp_config,
     config_of,
     config_schema,
+    DAILY_DIFFICULTY,
+    daily_game,
     DIFFICULTIES,
     Difficulty,
     difficulty_schema,
@@ -57,17 +61,20 @@
     "text-foreground/65",
   ];
 
-  const { window: win, storage } = get_app_context();
+  const { daily: daily_prop }: { daily?: string } = $props();
+  const daily_day = untrack(() => daily_prop);
+
+  const { app_id, window: win, storage } = get_app_context();
+  const play = track_play(app_id, () => win.is_visible);
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
   const custom = storage.persisted<Config>("custom", { width: 20, height: 12, mines: 40 }, config_schema);
 
   // Per window, so two open games don't switch each other's board; storage only remembers the last pick.
-  const initial_difficulty = storage.get("difficulty", difficulty_schema) ?? Difficulty.BEGINNER;
+  const initial_difficulty = daily_day ? DAILY_DIFFICULTY : (storage.get("difficulty", difficulty_schema) ?? Difficulty.BEGINNER);
+  let daily = $state(daily_day ?? null);
   let difficulty = $state<Difficulty>(initial_difficulty);
-  let game = $state.raw<Game>(new_game(config_of(initial_difficulty, custom.value)));
-  let started_at = $state<number | null>(null);
-  let ended_at = $state<number | null>(null);
-  let now = $state(Date.now());
+  let game = $state.raw<Game>(daily_day ? daily_game(daily_day) : new_game(config_of(initial_difficulty, custom.value)));
+  const clock = new Stopwatch(() => win.is_visible);
   let new_best = $state(false);
   let active = $state(0);
   let show_stats = $state(false);
@@ -76,7 +83,7 @@
 
   const config = $derived(game.config);
   const finished = $derived(game.status === Status.WON || game.status === Status.LOST);
-  const elapsed = $derived(started_at === null ? 0 : (ended_at ?? now) - started_at);
+  const elapsed = $derived(clock.elapsed);
   const seconds = $derived(Math.min(Math.floor(elapsed / 1000), 999));
   const counter = $derived(mines_left(game));
   const current = $derived(stats.value[difficulty]);
@@ -86,35 +93,22 @@
       case Status.READY:
         return "Click any cell to start";
       case Status.PLAYING:
-        return "Clear every cell without a mine";
+        return daily ? `Daily · ${daily}` : "Clear every cell without a mine";
       case Status.WON:
-        return `Cleared in ${format_time(elapsed)}${new_best ? ", a new best" : ""}`;
+        return `Cleared in ${format_time(elapsed, { tenths: true })}${new_best ? ", a new best" : ""}`;
       case Status.LOST:
         return "You hit a mine";
     }
   });
 
-  $effect(() => {
-    if (game.status !== Status.PLAYING) return;
-    const timer = setInterval(() => (now = Date.now()), 250);
-    return () => clearInterval(timer);
-  });
-
-  function format_time(ms: number): string {
-    return `${(ms / 1000).toFixed(1)} s`;
-  }
-
   function apply(next: Game) {
     if (next === game) return;
-    const was = game.status;
     game = next;
-    if (was === Status.READY && next.status !== Status.READY) {
-      started_at = now = Date.now();
-    }
+    if (!clock.running && next.status !== Status.READY) clock.start();
     if (next.status === Status.WON || next.status === Status.LOST) {
-      ended_at = Date.now();
       const won = next.status === Status.WON;
-      const time = ended_at - (started_at ?? ended_at);
+      const time = clock.pause();
+      if (won && daily) play.daily(daily, time);
       const best = stats.value[difficulty].best;
       new_best = won && difficulty !== Difficulty.CUSTOM && (best === null || time < best);
       stats.value = record(stats.value, difficulty, won, time);
@@ -122,13 +116,14 @@
   }
 
   function restart(next_config: Config = config_of(difficulty, custom.value)) {
-    game = new_game(next_config);
-    started_at = ended_at = null;
+    game = daily ? daily_game(daily) : new_game(next_config);
+    clock.reset();
     new_best = false;
     active = Math.min(active, next_config.width * next_config.height - 1);
   }
 
   function set_difficulty(next: Difficulty) {
+    daily = null;
     difficulty = next;
     storage.set("difficulty", next);
     restart();
@@ -139,6 +134,7 @@
     const next = clamp_config(draft);
     custom.value = next;
     draft = { ...next };
+    daily = null;
     restart(next);
   }
 
@@ -199,7 +195,7 @@
   function format_record(entry: GameRecord, for_difficulty: Difficulty): string {
     const rate = entry.played ? Math.round((entry.won / entry.played) * 100) : 0;
     const parts = [`Played ${entry.played}`, `Won ${entry.won} (${rate}%)`];
-    if (for_difficulty !== Difficulty.CUSTOM) parts.push(`Best ${entry.best === null ? "–" : format_time(entry.best)}`);
+    if (for_difficulty !== Difficulty.CUSTOM) parts.push(`Best ${entry.best === null ? "–" : format_time(entry.best, { tenths: true })}`);
     return parts.join(" · ");
   }
 
@@ -400,7 +396,7 @@
     <span>{DIFFICULTY_LABELS[difficulty]} · {config.width}×{config.height} · {config.mines} mines</span>
     <span>{status}</span>
     {#if difficulty !== Difficulty.CUSTOM}
-      <span class="hidden @md:inline">Best {current.best === null ? "–" : format_time(current.best)}</span>
+      <span class="hidden @md:inline">Best {current.best === null ? "–" : format_time(current.best, { tenths: true })}</span>
     {/if}
     <span class="hidden @2xl:inline">Right-click or long press to flag</span>
   </StatusBar>

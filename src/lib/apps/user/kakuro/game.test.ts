@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clear,
   conflicts,
+  daily_game,
   empty_stats,
   hint,
   is_solved,
@@ -129,5 +130,13 @@ describe("save", () => {
   it("rejects a save that doesn't fit the puzzle", () => {
     expect(restore({ size: Size.S6, seed: 1, values: [1], notes: [0], hints: 0, elapsed: 0 })).toBeNull();
     expect(saved_schema.safeParse({ size: "7", seed: 1, values: [], notes: [], hints: 0, elapsed: 0 }).success).toBe(false);
+  });
+});
+
+describe("daily", () => {
+  it("plays the same 8×8 puzzle all day, a new one the next", () => {
+    const today = daily_game("2026-10-14");
+    expect(daily_game("2026-10-14").puzzle).toEqual(today.puzzle);
+    expect(daily_game("2026-10-15").puzzle).not.toEqual(today.puzzle);
   });
 });

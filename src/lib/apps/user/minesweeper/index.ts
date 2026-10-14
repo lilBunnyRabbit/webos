@@ -1,6 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Bomb as BombIcon } from "phosphor-svelte";
+import { z } from "zod";
 
 export default define_app({
   id: "minesweeper",
@@ -16,5 +17,6 @@ export default define_app({
       height: { min: 360 },
     },
   },
+  props: z.object({ daily: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   component: () => import("./minesweeper.app.svelte"),
 });

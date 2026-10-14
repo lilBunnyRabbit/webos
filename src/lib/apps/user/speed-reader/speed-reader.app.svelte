@@ -106,7 +106,7 @@
   });
 
   $effect(() => {
-    if (win.is_minimized) untrack(pause);
+    if (!win.is_visible) untrack(pause);
   });
 
   onDestroy(save_position);
@@ -254,13 +254,7 @@
     event.preventDefault();
     action();
   }
-
-  function on_visibility_change() {
-    if (document.hidden) pause();
-  }
 </script>
-
-<svelte:document onvisibilitychange={on_visibility_change} />
 
 <div bind:this={root} role="presentation" tabindex="-1" class="h-full outline-none" onkeydown={on_keydown}>
   {#if loading}

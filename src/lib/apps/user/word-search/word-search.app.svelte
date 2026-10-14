@@ -1,17 +1,21 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
   import { ChartBar as ChartBarIcon, Lightbulb as LightbulbIcon } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import {
     capsules,
+    daily_game,
+    daily_saved_schema,
+    DAILY_DIFFICULTY,
     DIFFICULTIES,
     Difficulty,
     difficulty_schema,
     empty_stats,
-    format_time,
     hint,
     line_between,
     match,
@@ -23,6 +27,7 @@
     stats_schema,
     with_found,
     type Game,
+    type Saved,
   } from "./game";
   import { placement_cells } from "./puzzle";
 
@@ -44,18 +49,23 @@
   ];
   const DOT_CLASSES = ["bg-primary", "bg-info", "bg-accent", "bg-secondary", "bg-success", "bg-tertiary"];
 
-  const { window_id, window: win, storage } = get_app_context();
+  const { daily: daily_prop }: { daily?: string } = $props();
+  const daily_day = untrack(() => daily_prop);
+
+  const { window_id, app_id, window: win, storage } = get_app_context();
+  const play = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
 
-  const saved = storage.get("game", saved_schema);
+  // A daily puzzle saves under its own key, so it never replaces the regular game.
+  const saved_daily = daily_day ? storage.get("daily", daily_saved_schema) : null;
+  const saved = daily_day ? (saved_daily?.day === daily_day ? saved_daily.game : null) : storage.get("game", saved_schema);
   const restored = saved ? restore(saved) : null;
-  const initial_difficulty = restored ? saved!.difficulty : (storage.get("difficulty", difficulty_schema) ?? Difficulty.EASY);
+  let daily = $state(daily_day ?? null);
+  const initial_difficulty = daily_day ? DAILY_DIFFICULTY : restored ? saved!.difficulty : (storage.get("difficulty", difficulty_schema) ?? Difficulty.EASY);
   let difficulty = $state<Difficulty>(initial_difficulty);
-  let game = $state.raw<Game>(restored ?? new_game(initial_difficulty, random_seed()));
-  let elapsed_before = $state(restored ? saved!.elapsed : 0);
-  let started_at = $state<number | null>(null);
-  let now = $state(Date.now());
+  let game = $state.raw<Game>(restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_difficulty, random_seed())));
+  const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   let new_best = $state(false);
   let active = $state(0);
   /** Where a selection starts: a press being dragged, or the first of two taps (or Space presses). */
@@ -81,7 +91,7 @@
     )
   );
   const selection = $derived(anchor === null ? null : (line_between(side, anchor, reach ?? anchor) ?? [anchor]));
-  const elapsed = $derived(elapsed_before + (started_at === null ? 0 : now - started_at));
+  const elapsed = $derived(clock.elapsed);
   const best = $derived(stats.value[difficulty].best);
   const total = $derived(puzzle.placements.length);
 
@@ -92,13 +102,8 @@
     if (feedback?.kind === "miss") return `${feedback.word} isn't on the list`;
     if (feedback?.kind === "hint") return "A word starts at the highlighted letter";
     if (anchor !== null && press === null) return "Now pick the last letter";
+    if (daily) return `Daily · ${daily}`;
     return RULES[difficulty];
-  });
-
-  $effect(() => {
-    if (game.solved || started_at === null) return;
-    const timer = setInterval(() => (now = Date.now()), 500);
-    return () => clearInterval(timer);
   });
 
   $effect(() => {
@@ -120,22 +125,22 @@
     return () => disposers.forEach((dispose) => dispose());
   });
 
-  function current_elapsed(): number {
-    return elapsed_before + (started_at === null ? 0 : Date.now() - started_at);
+  function store_game(saved: Saved) {
+    if (daily) storage.set("daily", { day: daily, game: saved });
+    else storage.set("game", saved);
   }
 
   function start_clock() {
-    if (started_at === null && !game.solved) started_at = now = Date.now();
+    if (!clock.running && !game.solved) clock.start();
   }
 
   function save() {
-    storage.set("game", { difficulty, seed: puzzle.seed, found: [...game.found], hints: game.hints, elapsed: current_elapsed() });
+    store_game({ difficulty, seed: puzzle.seed, found: [...game.found], hints: game.hints, elapsed: clock.read() });
   }
 
   function finish() {
-    const time = current_elapsed();
-    elapsed_before = time;
-    started_at = null;
+    const time = clock.pause();
+    if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, difficulty, time, game.hints);
   }
@@ -180,11 +185,11 @@
       });
       if (!confirmed) return;
     }
+    daily = null;
     difficulty = next;
     storage.set("difficulty", next);
     game = new_game(next, random_seed());
-    elapsed_before = 0;
-    started_at = null;
+    clock.reset();
     new_best = false;
     anchor = reach = null;
     feedback = null;

@@ -82,9 +82,9 @@ abstract class Session {
   stalled = $state(false);
 
   protected peer: RTCPeerConnection | null = null;
-  #log_start = 0;
-  #log_id = 0;
-  #sampler = 0;
+  private log_start = 0;
+  private log_id = 0;
+  private sampler = 0;
 
   get total(): number {
     return this.entries.reduce((sum, entry) => sum + entry.size, 0);
@@ -101,8 +101,8 @@ abstract class Session {
 
   protected write(text: string, tone: LogTone = LogTone.INFO) {
     const now = performance.now();
-    if (this.log.length === 0) this.#log_start = now;
-    this.log = [...this.log, { id: this.#log_id++, at: now - this.#log_start, text, tone }].slice(-LOG_LIMIT);
+    if (this.log.length === 0) this.log_start = now;
+    this.log = [...this.log, { id: this.log_id++, at: now - this.log_start, text, tone }].slice(-LOG_LIMIT);
   }
 
   protected connect(): RTCPeerConnection {
@@ -131,8 +131,8 @@ abstract class Session {
     this.rate = 0;
     this.samples = [];
     this.stalled = false;
-    clearInterval(this.#sampler);
-    this.#sampler = window.setInterval(async () => {
+    clearInterval(this.sampler);
+    this.sampler = window.setInterval(async () => {
       const bytes = this.done_bytes;
       const now = performance.now();
       const instant = ((bytes - last) * 1000) / SAMPLE_MS;
@@ -179,7 +179,7 @@ abstract class Session {
   }
 
   close() {
-    clearInterval(this.#sampler);
+    clearInterval(this.sampler);
     this.rate = 0;
     this.stalled = false;
     this.peer?.close();
@@ -283,7 +283,7 @@ export class SendSession extends Session {
 export class ReceiveSession extends Session {
   /** Downloads path per part name; survives reconnects, so files saved before a drop stay listed. */
   saved = $state<Record<string, string>>({});
-  #completed = new Set<string>();
+  private readonly completed = new Set<string>();
 
   saved_path(entry: FileEntry): string | null {
     return this.saved[part_name(entry)] ?? null;
@@ -304,17 +304,17 @@ export class ReceiveSession extends Session {
     this.write(`Answer ready: ${describe_candidates(answer)}, ${answer.length} B`);
     this.code = answer;
     this.phase = Phase.CONNECTING;
-    void this.#receive(pc);
+    void this.receive(pc);
   }
 
-  async #receive(pc: RTCPeerConnection) {
+  private async receive(pc: RTCPeerConnection) {
     try {
       const channel = await channel_open(pc);
       if (pc !== this.peer) return;
       this.write("Data channel open", LogTone.OK);
       this.phase = Phase.TRANSFERRING;
       this.start_sampling(pc);
-      await receive_files(kernel.service<FilesService>("files"), channel, new Inbox(channel, pc), this.#completed, {
+      await receive_files(kernel.service<FilesService>("files"), channel, new Inbox(channel, pc), this.completed, {
         on_manifest: (entries) => {
           this.entries = entries;
           this.progress = entries.map(() => 0);
@@ -347,6 +347,6 @@ export class ReceiveSession extends Session {
   reset() {
     this.clear();
     this.saved = {};
-    this.#completed.clear();
+    this.completed.clear();
   }
 }
