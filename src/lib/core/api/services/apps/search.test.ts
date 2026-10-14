@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { AppCategory, type AppManifest } from "./type";
-import { group_apps, search_apps } from "./search";
+import { group_apps, search_apps, within_one_edit } from "./search";
 
 const app = (name: string, extra: Partial<AppManifest> = {}) =>
   ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppManifest;
@@ -48,3 +48,41 @@ describe("group_apps", () => {
     ]);
   });
 });
+
+describe("search words and typos", () => {
+  const apps = [
+    app("Word Search", { category: AppCategory.GAMES, keywords: ["puzzle", "letters"] }),
+    app("Sudoku", { category: AppCategory.GAMES, keywords: ["puzzle", "numbers"] }),
+    app("Solitaire", { category: AppCategory.GAMES, keywords: ["cards", "card game"] }),
+    app("Image Editor", { keywords: ["photo", "crop"], description: "Edit a picture" }),
+  ];
+
+  test("every word must match somewhere", () => {
+    expect(names(search_apps(apps, "word puzzle"))).toEqual(["Word Search"]);
+    expect(names(search_apps(apps, "card game"))).toEqual(["Solitaire"]);
+    expect(names(search_apps(apps, "photo edit"))).toEqual(["Image Editor"]);
+  });
+
+  test("a full name with a space still ranks first", () => {
+    expect(names(search_apps([app("Image Crop"), ...apps], "image e"))[0]).toBe("Image Editor");
+  });
+
+  test("words of five letters or more forgive one typo, ranked after exact matches", () => {
+    expect(names(search_apps(apps, "puzle"))).toEqual(["Sudoku", "Word Search"]);
+    expect(names(search_apps([...apps, app("Puzzle Box")], "puzzle"))[0]).toBe("Puzzle Box");
+    expect(names(search_apps(apps, "pzzle"))).toEqual(["Sudoku", "Word Search"]);
+    expect(names(search_apps(apps, "sodoku"))).toEqual(["Sudoku"]);
+  });
+
+  test("short words stay exact", () => {
+    expect(names(search_apps(apps, "crd"))).toEqual([]);
+  });
+
+  test("within_one_edit", () => {
+    expect(within_one_edit("puzzle", "puzle")).toBe(true);
+    expect(within_one_edit("puzzle", "puzzel")).toBe(true);
+    expect(within_one_edit("puzzle", "pazzle")).toBe(true);
+    expect(within_one_edit("puzzle", "pzle")).toBe(false);
+  });
+});
+

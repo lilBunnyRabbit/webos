@@ -51,7 +51,7 @@ Whether an app is a system app is where it lives, not what it declares. A system
 
 ### Launcher search and sections (`search.ts`)
 
-- `search_apps(apps, query)`: an empty (trimmed) query returns every app A–Z. Otherwise a case-insensitive substring match, ranked: name starts with the query, then a word of the name (split on spaces and hyphens) starts with it, then the name contains it, then `id` or a keyword, then `description` or the category label. Ties sort A–Z. The start menu and drawer launch the first result on Enter.
+- `search_apps(apps, query)`: an empty (trimmed) query returns every app A–Z. Otherwise the query splits into words and **every word must match** (owner, 2026-10-15: "word puzzle", "card game"). Each word is a case-insensitive substring, ranked: name starts with it, then a word of the name (split on spaces and hyphens) starts with it, then the name contains it, then `id` or a keyword, then `description` or the category label. A word of five letters or more that matches nothing else may match a word one edit away (insert, delete, substitute or swap neighbours: `within_one_edit`), ranked last ("puzle"). An app ranks by its weakest word, then the sum; a multi-word query that is a prefix of the whole name ranks first. Ties sort A–Z. This replaces the plain ranked substring of ADR-001's 2026-10-12 revision, which rejected fuzzy matching as noisy on short queries; short words stay exact for that reason. The start menu and drawer launch the first result on Enter.
 - `group_apps(apps)`: `AppSection[]` (`{ id, label, apps }`) in `AppCategory` order, then System; each sorted A–Z; empty sections are dropped.
 
 ### `defaults: WindowOptions`
