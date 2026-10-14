@@ -36,7 +36,7 @@ export async function complete(input: string, cursor: number, session: ShellSess
     seen.add(item.value);
     return true;
   });
-  return { from, to: cursor, items: matching.map((item) => ({ ...item, value: escape(item.value) })) };
+  return { from, to: cursor, items: matching.map((item) => ({ ...item, label: item.label ?? item.value, value: escape(item.value) })) };
 }
 
 async function candidates(stage: Token[], partial: string, upstream: Token[][], session: ShellSession, sources: CompletionSources): Promise<Completion[]> {

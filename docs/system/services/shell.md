@@ -157,6 +157,6 @@ Files:
 
 ## Known gaps
 
-- No palette yet (ADR-033). The callers are the shortcuts and the [Terminal](../system-apps.md#terminal).
+- Callers: the shortcuts, the [Terminal](../system-apps.md#terminal) and the launcher's command mode ([taskbar](../shell/taskbar.md#start-menu)).
 - No background jobs, variables, globs or chaining (ADR-033, deferred).
 - `touch` on an existing file doesn't update its modified time.

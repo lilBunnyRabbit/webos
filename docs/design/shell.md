@@ -31,6 +31,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - It's a floating layer: `bg-background-lighter`, `shadow-popover`, on the shared scrim, so it reads as on top even over a window.
 - A large search field (focused on open) finds apps by name, then id, keywords, description and category, best match first; Enter launches the first match once something is typed.
 - With nothing typed, apps are grouped into sections (Productivity, Media, Utilities, Developer, Games, then System), each an overline over a 4-column grid of icon tiles. A pin button appears on hover or focus.
+- Typing `>` makes it the command palette: rows of mono command ids with a muted description and their shortcut as `Kbd` chips, then the args' completions. Output appears in a field-surface card above the rows with an "Open in Terminal" quiet button.
 - Footer: the logo mark, the name, and the build version in mono.
 
 ## Updating

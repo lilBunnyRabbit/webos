@@ -89,6 +89,8 @@ export type Completer = (partial: string, context: { session: ShellSession }) =>
 
 export interface Completion {
   value: string;
+  /** What the list shows; `complete()` sets it to the value before escaping (`Brand Dark`, inserted as `Brand\ Dark`). */
+  label?: string;
   detail?: string;
   /** `false` when typing goes on after it (`Pictures/`); otherwise a space follows. */
   final?: boolean;

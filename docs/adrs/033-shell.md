@@ -1,6 +1,6 @@
 # ADR-033: Shell, Terminal and Command Palette
 **Date:** 2026-10-14
-**Status:** Accepted
+**Status:** Implemented
 
 Supersedes [ADR-007](./007-shell-service.md). [Brainstorm](../brainstorm/2026-10-14_shell-terminal.md).
 

@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, text: "Terminal: run commands over your files, windows, apps and settings. Results come out as tables you can click, and | passes them on, as in ls | where size > 1mb | sort -r size." },
       { kind: NEW, text: "Tab completes commands, options, file paths, apps and windows, and grey text suggests the rest from what you ran before." },
+      { kind: NEW, text: "Type > in the app search (Ctrl+K or Cmd+K) to run any command from there, with its keyboard shortcut shown beside it." },
       { kind: NEW, text: "On phones the Terminal has a row of keys above the keyboard: Tab, Esc, Ctrl, arrows and the symbols commands need." },
     ],
   },

@@ -264,7 +264,7 @@
         onpointerdown={(event) => event.preventDefault()}
         onclick={() => pick(index)}
       >
-        <span class="whitespace-pre">{item.value}</span>
+        <span class="whitespace-pre">{item.label ?? item.value}</span>
         {#if item.detail}<span class="ml-auto truncate text-foreground/50">{item.detail}</span>{/if}
       </button>
     {/each}

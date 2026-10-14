@@ -432,7 +432,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## Terminal
 
-ADR-033. A [shell](services/shell.md) session per window, on `bg-background-darker` in `font-mono text-ui`.
+ADR-033. A [shell](services/shell.md) session per window, on the field surface (`light-dark(background-lightest, background-darker)`) in `font-mono text-ui`.
 
 | File | Contents |
 |------|----------|

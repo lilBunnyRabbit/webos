@@ -61,10 +61,15 @@ ADR-006 revision, [brainstorm](../../brainstorm/2026-10-12_notification-center.m
 
 Contents (`start-menu-popover.svelte`):
 
-1. A large `Input` ("Search apps"), focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): ranked substring over name, id, keywords, description and category label.
+1. A large `Input` ("Search apps, or > for commands"), focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): ranked substring over name, id, keywords, description and category label.
 2. With no query, one section per `group_apps()` entry (Productivity … Games, then System), each an overline and a grid. While searching, one "Results" overline and grid in rank order. Grids are 4 columns of app tiles: a 44px icon tile (`bg-background`, `shadow-raised`, duotone glyph) over a one-line `text-2xs` name. No matches shows an `EmptyState` ("No apps match").
 3. A pin `IconButton` in each tile's top-right corner, invisible until the tile is hovered or the pin has keyboard focus.
-4. A footer on `bg-background`: the logo lockup and "WebOS", a `↵ open` hint while a query has a first match, and `v{version} · {commit}` in mono.
+4. **Command mode** (ADR-033). A query starting with `>` swaps the grids for `command-mode.svelte`. It keeps one [shell](../services/shell.md) session while the menu is open, and the field forwards its keys to the component:
+   - **Naming** (the words typed don't resolve to a command yet): rows list every available command, matched by id or description with prefix matches first. Each row shows its description and its bound keys as `Kbd` chips. ↑ ↓ move, Tab fills the name. Enter runs a command that needs no args; a command with required positionals fills `> id ` instead, so its args come next.
+   - **Args:** rows are `shell.complete()` for the end of the line, shown unescaped (`Brand Dark`) and inserted escaped. Enter runs the line unless a row was picked with the arrows; then Enter applies it.
+   - **Result:** a run with no output and no error closes the menu. Otherwise a card on the field surface shows the line, a spinner while it runs, the error, or the first 8 values in text form ("… N more"), plus **Open in Terminal**. That button, or Mod+Enter, launches the Terminal with `{ run: line }`.
+   - The footer hint reads `↵ run`. The mobile app drawer has no command mode.
+5. A footer on `bg-background`: the logo lockup and "WebOS", a `↵ open` hint while a query has a first match, and `v{version} · {commit}` in mono.
 
 ## User interactions
 

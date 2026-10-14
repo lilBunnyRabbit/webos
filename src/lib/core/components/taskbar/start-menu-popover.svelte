@@ -2,6 +2,7 @@
   import kernel, { group_apps, search_apps, type AppManifest, type AppsService, type DesktopService, type VersionService } from "$lib/core/api";
   import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon } from "phosphor-svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
+  import CommandMode from "./command-mode.svelte";
   import { EmptyState, IconButton, Input, Kbd } from "../ui";
 
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -10,6 +11,10 @@
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
+  let command_mode: CommandMode | undefined = $state();
+
+  /** `>` turns the launcher into the command palette (ADR-033). */
+  const commanding = $derived(query.startsWith(">"));
 
   // `autofocus` doesn't fire here: this content mounts after the popover has already opened.
   $effect(() => {
@@ -65,10 +70,11 @@
     bind:value={query}
     bind:element={search}
     size="lg"
-    placeholder="Search apps"
-    aria-label="Search apps"
+    placeholder="Search apps, or > for commands"
+    aria-label="Search apps, or > for commands"
     onkeydown={(event) => {
-      if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
+      if (commanding) command_mode?.keydown(event);
+      else if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
     }}
   >
     {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
@@ -76,7 +82,17 @@
 </div>
 
 <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-  {#if matches.length === 0}
+  {#if commanding}
+    <CommandMode
+      bind:this={command_mode}
+      line={query.slice(1).trimStart()}
+      online={(line) => {
+        query = `> ${line}`;
+        search?.focus();
+      }}
+      onclose={close}
+    />
+  {:else if matches.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10" />
   {:else if query.trim()}
     {@render grid("Results", matches)}
@@ -92,7 +108,8 @@
 <footer class="flex items-center justify-between gap-3 border-t border-foreground/10 bg-background-light px-4 py-2.5">
   <span class="flex items-center gap-2 text-ui font-semibold"><LogoLockup height={20} /> WebOS</span>
   <div class="flex items-center gap-2 text-2xs text-foreground/80">
-    {#if query && matches[0]}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>{/if}
+    {#if commanding}<span class="flex items-center gap-1"><Kbd>↵</Kbd> run</span>
+    {:else if query && matches[0]}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>{/if}
     <span class="font-mono">v{version.info.version} · {version.info.commit}</span>
   </div>
 </footer>

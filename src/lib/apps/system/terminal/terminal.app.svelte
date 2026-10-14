@@ -85,7 +85,7 @@
 </script>
 
 <!-- column-reverse keeps the view pinned to the newest output natively; mb-auto keeps short output at the top. -->
-<div class="flex h-full flex-col bg-background-darker font-mono text-ui">
+<div class="flex h-full flex-col bg-[light-dark(var(--background-lightest),var(--background-darker))] font-mono text-ui">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
     class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-3 py-2"

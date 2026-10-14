@@ -17,7 +17,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping. Reopen closed window landed in block 3 as Alt+Shift+T
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
-5. [ ] **Shell + Terminal + Command palette** (ADR-033, supersedes ADR-007): decided 2026-10-14 ([brainstorm](brainstorm/2026-10-14_shell-terminal.md)). Structured-value pipes, service `shell()` hook, Tab completion, Mod+K `>` mode, shortcuts run commands
+5. [x] **Shell + Terminal + Command palette** (ADR-033, supersedes ADR-007): decided 2026-10-14 ([brainstorm](brainstorm/2026-10-14_shell-terminal.md)). Structured-value pipes, service `shell()` hook, Tab completion, Mod+K `>` mode, shortcuts run commands
 6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015: radius, shadows, motion speed, export/import) deferred by the owner on 2026-10-13
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
@@ -195,8 +195,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Command Palette
 - **ADR:** [ADR-033](adrs/033-shell.md)
-- **Status:** Decided, not started
-- [ ] Mod+K launcher `>` mode: commands with completion, inline results, "Open in Terminal"
+- **Status:** Done (2026-10-14)
+- [x] Mod+K launcher `>` mode: commands with completion, inline results, "Open in Terminal"
 - [x] OS shortcuts run commands (KeyShortcut `command` or `run`)
 
 ### Shortcuts Service
