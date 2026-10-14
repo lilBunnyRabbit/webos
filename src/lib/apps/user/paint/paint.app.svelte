@@ -9,7 +9,7 @@
   } from "$lib/core/api";
   import { Button, IconButton, Input, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { load_image, load_image_at, type SourceImage, write_image } from "$lib/core/utils/image";
@@ -229,12 +229,7 @@
   }
 
   async function discard_ok(): Promise<boolean> {
-    if (!dirty) return true;
-    return win.confirm(`Discard changes to “${file_name}”?`, {
-      detail: "Your unsaved changes will be lost.",
-      confirm_label: "Discard",
-      danger: true,
-    });
+    return !dirty || confirm_discard(win, file_name);
   }
 
   async function new_canvas() {

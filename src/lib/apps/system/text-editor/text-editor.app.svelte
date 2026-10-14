@@ -7,7 +7,7 @@
     type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -156,12 +156,7 @@
   }
 
   async function discard_ok(): Promise<boolean> {
-    if (!dirty) return true;
-    return win.confirm(`Discard changes to “${name}”?`, {
-      detail: "Your unsaved changes will be lost.",
-      confirm_label: "Discard",
-      danger: true,
-    });
+    return !dirty || confirm_discard(win, name);
   }
 
   async function new_file() {

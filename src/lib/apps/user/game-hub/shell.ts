@@ -1,20 +1,24 @@
-import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import kernel, { type AppsService } from "$lib/core/api";
+import { live_file } from "$lib/core/contexts/app/live-file.svelte";
 import type { Tagged, Value } from "$lib/core/api/services/shell/type";
 import { day_key, EMPTY_PLAYS, PLAYS_PATH, PlaysSchema, type Plays } from "$lib/core/games";
-import { daily_value, entries, format_duration, game_value, list_games, Sort, sort_entries, streak, supports_daily, totals } from "./hub";
+import {
+  daily_value,
+  entries,
+  format_duration,
+  game_value,
+  list_games,
+  Sort,
+  sort_entries,
+  streak,
+  supports_daily,
+  totals,
+} from "./hub";
 
 const apps = () => kernel.service<AppsService>("apps");
 
-async function read_plays(): Promise<Plays> {
-  const file = await kernel.service<FilesService>("files").get_file(PLAYS_PATH);
-  if (!file) return EMPTY_PLAYS;
-  try {
-    const parsed = PlaysSchema.safeParse(JSON.parse(await file.text()));
-    return parsed.success ? parsed.data : EMPTY_PLAYS;
-  } catch {
-    return EMPTY_PLAYS;
-  }
-}
+const plays_file = live_file<Plays>(PLAYS_PATH, EMPTY_PLAYS, PlaysSchema);
+const read_plays = () => plays_file.read();
 
 const games = () => list_games([...apps().list()].map(([, manifest]) => manifest));
 

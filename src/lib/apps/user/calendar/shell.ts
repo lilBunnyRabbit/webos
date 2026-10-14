@@ -1,13 +1,31 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import type { CommandContext, Tagged } from "$lib/core/api/services/shell/type";
-import { live_file } from "$lib/apps/user/kanban/live.svelte";
-import { add_days, APP_ID, day_key, EMPTY_EVENTS, EVENTS_PATH, EventsFileSchema, expand, format_day, time_label, type Occurrence } from "./calendar";
+import { live_file } from "$lib/core/contexts/app/live-file.svelte";
+import {
+  add_days,
+  APP_ID,
+  day_key,
+  EMPTY_EVENTS,
+  EVENTS_PATH,
+  EventsFileSchema,
+  expand,
+  format_day,
+  time_label,
+  type Occurrence,
+} from "./calendar";
 import { day_arg, event_from_args, type AddArgs } from "./parse";
 
 const events = live_file(EVENTS_PATH, EMPTY_EVENTS, EventsFileSchema);
 
 export function event_value({ event, day }: Pick<Occurrence, "event" | "day">): Tagged {
-  return { $type: "event", id: event.id, time: time_label(event), title: event.title, repeat: event.repeat?.every ?? "", day };
+  return {
+    $type: "event",
+    id: event.id,
+    time: time_label(event),
+    title: event.title,
+    repeat: event.repeat?.every ?? "",
+    day,
+  };
 }
 
 export function open_day(day?: string): void {
@@ -21,12 +39,18 @@ function* listed(found: Occurrence[], empty: string): Generator<Tagged | string>
 
 export async function* on_day({ args }: CommandContext<{ day?: string }>): AsyncGenerator<Tagged | string> {
   const day = day_arg(args.day, "cal", day_key(new Date()));
-  yield* listed(expand((await events.read()).events, day, day), `nothing on ${format_day(day, { weekday: "long", month: "short", day: "numeric" })}`);
+  yield* listed(
+    expand((await events.read()).events, day, day),
+    `nothing on ${format_day(day, { weekday: "long", month: "short", day: "numeric" })}`
+  );
 }
 
 export async function* agenda({ args }: CommandContext<{ days: number }>): AsyncGenerator<Tagged | string> {
   const today = day_key(new Date());
-  yield* listed(expand((await events.read()).events, today, add_days(today, args.days - 1)), `nothing in the next ${args.days === 1 ? "day" : `${args.days} days`}`);
+  yield* listed(
+    expand((await events.read()).events, today, add_days(today, args.days - 1)),
+    `nothing in the next ${args.days === 1 ? "day" : `${args.days} days`}`
+  );
 }
 
 export async function add({ args }: CommandContext<AddArgs>): Promise<Tagged> {

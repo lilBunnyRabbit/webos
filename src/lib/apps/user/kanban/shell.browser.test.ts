@@ -4,7 +4,7 @@ import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { json_file } from "$lib/core/contexts/app/json-file.svelte";
 import { BOARDS_PATH, default_file, KanbanFileSchema } from "./data";
-import { LINGER_MS } from "./live.svelte";
+import { LINGER_MS } from "$lib/core/contexts/app/live-file.svelte";
 import { add, archive, done, list, mv } from "./shell";
 import { read_boards } from "./store";
 
@@ -23,10 +23,18 @@ afterAll(async () => {
 
 beforeEach(async () => {
   const apps = await files.get_directory("/var/lib/apps");
-  if (apps && (await files.exists(apps, "kanban", "directory"))) await files.delete_entry(apps, "kanban", { recursive: true });
+  if (apps && (await files.exists(apps, "kanban", "directory")))
+    await files.delete_entry(apps, "kanban", { recursive: true });
 });
 
-const context = <T>(args: T) => ({ args, input: (async function* () {})(), piped: false, signal: new AbortController().signal, elevated: false }) as unknown as CommandContext<T>;
+const context = <T>(args: T) =>
+  ({
+    args,
+    input: (async function* () {})(),
+    piped: false,
+    signal: new AbortController().signal,
+    elevated: false,
+  }) as unknown as CommandContext<T>;
 
 async function collect<T>(values: AsyncIterable<T>): Promise<T[]> {
   const out: T[] = [];

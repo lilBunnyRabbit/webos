@@ -133,6 +133,23 @@ const board = storage.file("board.json", EMPTY_BOARD, BoardSchema);
 - Missing file → `initial`. Invalid JSON or schema → `initial` and `error` set; the file stays on disk until the next change overwrites it.
 - Unit of sync is the folder: a write to any file in it makes every cell in that folder re-read (cheap: one small read each).
 
+### `live_file()` for shell code
+
+```ts
+const boards = live_file(BOARDS_PATH, default_file(), KanbanFileSchema);
+const file = await boards.read();
+await boards.edit((file) => ({ ...file, boards: [...file.boards, board] }));
+```
+
+- `$lib/core/contexts/app/live-file.svelte.ts`. Each `read()` or `edit(change)` takes the `json_file` cell for the path, so an open window holding it shows the change at once, waits until it is `ready`, and returns a snapshot (`edit` returns the new value).
+- An invalid file (`error` set) throws a `ShellError` ("… isn't valid; it was left as it is") instead of acting on `initial`.
+- The cell is released `LINGER_MS` (3 s) after use: the save runs in an effect, and dropping the cell at once could let the next command read the file before that write lands.
+- Used by the Kanban, Calendar, Time Since and Game Hub commands.
+
+### `confirm_discard()`
+
+`confirm_discard(win, name)` from `$lib/core/contexts/app` shows the danger sheet "Discard changes to “{name}”?" ("Your unsaved changes will be lost.", Discard) and resolves the answer. Document apps (Text Editor, Paint, Image Editor, Markdown to PDF, the Nonogram editor) call it as `!dirty || confirm_discard(win, name)` before New, Open or a dropped file. The close prompt is the OS's (ADR-029), not this.
+
 ## Divergence from ADR
 
 ADR-003's revision note describes the implemented subset accurately. The original sketch's `kernel`, `app_data`, `on()`, identity, taskbar, overlays and status bar are not in the code. The error message differs from the sketch's.

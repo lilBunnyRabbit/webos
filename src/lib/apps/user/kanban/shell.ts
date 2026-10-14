@@ -2,13 +2,41 @@ import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { day_key } from "$lib/core/games/time";
 import { parse_day } from "$lib/apps/user/calendar/parse";
-import { add_card, archive_card, archive_done, done_count, get_board, KANBAN_APP_ID, move_card, new_card, update_board, type Board, type KanbanFile } from "./data";
-import { boards } from "./live.svelte";
+import {
+  add_card,
+  archive_card,
+  archive_done,
+  BOARDS_PATH,
+  default_file,
+  done_count,
+  get_board,
+  KanbanFileSchema,
+  KANBAN_APP_ID,
+  move_card,
+  new_card,
+  update_board,
+  type Board,
+  type KanbanFile,
+} from "./data";
+import { live_file, type LiveFile } from "$lib/core/contexts/app/live-file.svelte";
 import { all_cards, first_open_column, resolve_board, resolve_card, resolve_column, type FoundCard } from "./lookup";
 
+const boards: LiveFile<KanbanFile> = live_file(BOARDS_PATH, default_file(), KanbanFileSchema);
+
 export function card_value({ board, column, card }: FoundCard): Tagged {
-  const labels = card.labels.map((id) => board.labels.find((label) => label.id === id)?.name).filter((name) => name !== undefined);
-  return { $type: "card", id: card.id, board: board.name, board_id: board.id, column: column.name, title: card.title, due: card.due, labels: labels.join(", ") };
+  const labels = card.labels
+    .map((id) => board.labels.find((label) => label.id === id)?.name)
+    .filter((name) => name !== undefined);
+  return {
+    $type: "card",
+    id: card.id,
+    board: board.name,
+    board_id: board.id,
+    column: column.name,
+    title: card.title,
+    due: card.due,
+    labels: labels.join(", "),
+  };
 }
 
 function found<T>(result: T | string): T {
@@ -37,15 +65,21 @@ export async function* list({ args }: CommandContext<{ board?: string; due: bool
   const file = await boards.read();
   const board = args.board ? found(resolve_board(file, args.board)) : null;
   let cards = all_cards(file).filter((entry) => !board || entry.board.id === board.id);
-  if (args.due) cards = cards.filter(({ column, card }) => !column.done && card.due !== null).sort((a, b) => a.card.due!.localeCompare(b.card.due!));
+  if (args.due)
+    cards = cards
+      .filter(({ column, card }) => !column.done && card.due !== null)
+      .sort((a, b) => a.card.due!.localeCompare(b.card.due!));
   for (const entry of cards) yield card_value(entry);
 }
 
-export async function add({ args }: CommandContext<{ title: string[]; column?: string; due?: string; board?: string }>): Promise<Tagged> {
+export async function add({
+  args,
+}: CommandContext<{ title: string[]; column?: string; due?: string; board?: string }>): Promise<Tagged> {
   const title = args.title.join(" ").trim();
   if (!title) throw new ShellError("kanban add: give the card a title");
   const due = args.due === undefined ? null : parse_day(args.due, day_key());
-  if (due === null && args.due !== undefined) throw new ShellError(`kanban add: "${args.due}" isn't a day; use YYYY-MM-DD`);
+  if (due === null && args.due !== undefined)
+    throw new ShellError(`kanban add: "${args.due}" isn't a day; use YYYY-MM-DD`);
 
   const card = new_card(title);
   card.due = due;
@@ -109,6 +143,11 @@ export async function complete_cards(partial: string) {
 
 export async function complete_names(field: string, partial: string) {
   const file = await boards.read();
-  const names = field === "board" ? file.boards.map((board) => board.name) : file.boards.flatMap((board) => board.columns.map((column) => column.name));
-  return [...new Set(names)].filter((name) => name.toLowerCase().startsWith(partial.toLowerCase())).map((value) => ({ value }));
+  const names =
+    field === "board"
+      ? file.boards.map((board) => board.name)
+      : file.boards.flatMap((board) => board.columns.map((column) => column.name));
+  return [...new Set(names)]
+    .filter((name) => name.toLowerCase().startsWith(partial.toLowerCase()))
+    .map((value) => ({ value }));
 }

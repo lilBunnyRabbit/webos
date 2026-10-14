@@ -3,6 +3,10 @@
 **Date:** 2026-10-14
 **Status:** Implemented
 
+> **Revision 2026-10-15: `live_file` and `confirm_discard` in core** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))
+> - `live_file(path, initial, schema)` moves from Kanban to `$lib/core/contexts/app/live-file.svelte.ts`. Shell code reads and edits an app file through it: it takes the shared `json_file` cell, waits for `ready`, refuses an invalid file with a `ShellError`, and releases the cell after `LINGER_MS` so the save effect lands first. Calendar no longer imports Kanban; Time Since and Game Hub commands use it too.
+> - `confirm_discard(win, name)` in `$lib/core/contexts/app` is the one "Discard changes to …?" sheet document apps show before New or Open.
+
 ## Context
 
 The [2026-10-14 app triage](../brainstorm/2026-10-14_app-triage.md) picked the next apps: Work Hours, Pomodoro, Clock, Time Since, Kanban, Calendar, Game Hub (with a daily puzzle), Solitaire, Nonogram colour and editor, Image Editor, Recorder, Soundboard, Archive, Diff and Markdown → PDF. They share needs the core doesn't meet:
