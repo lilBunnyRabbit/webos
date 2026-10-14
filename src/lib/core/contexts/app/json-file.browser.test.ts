@@ -77,4 +77,63 @@ describe("json_file", () => {
     cell.release();
     await vi.waitFor(async () => expect(JSON.parse((await read(path))!)).toEqual({ count: 5 }));
   });
+
+  test("a sibling's write doesn't revert a change still being written", async () => {
+    const one = json_file(app_data_path("json-race", "one.json"), { count: 0 }, Schema);
+    const two = json_file(app_data_path("json-race", "two.json"), { count: 0 }, Schema);
+    await vi.waitFor(() => expect(one.ready && two.ready).toBe(true));
+
+    for (let i = 1; i <= 5; i++) {
+      one.value.count = i;
+      flushSync();
+      two.value.count = i * 10;
+      flushSync();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(one.value.count).toBe(5);
+    expect(two.value.count).toBe(50);
+    await vi.waitFor(async () => {
+      expect(JSON.parse((await read(app_data_path("json-race", "one.json")))!)).toEqual({ count: 5 });
+      expect(JSON.parse((await read(app_data_path("json-race", "two.json")))!)).toEqual({ count: 50 });
+    });
+    one.release();
+    two.release();
+  });
+
+  test("a new file's first change survives a sibling's write", async () => {
+    const one = json_file(app_data_path("json-new", "one.json"), { count: 0 }, Schema);
+    const two = json_file(app_data_path("json-new", "two.json"), { count: 0 }, Schema);
+    await vi.waitFor(() => expect(one.ready && two.ready).toBe(true));
+    two.value.count = 1;
+    flushSync();
+    await vi.waitFor(async () => expect(await read(app_data_path("json-new", "two.json"))).not.toBeNull());
+
+    for (let i = 0; i < 20; i++) {
+      one.value.count = i + 1;
+      flushSync();
+      two.value.count = i + 2;
+      flushSync();
+      await new Promise((resolve) => setTimeout(resolve, 2));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(one.value.count).toBe(20);
+    expect(two.value.count).toBe(21);
+    one.release();
+    two.release();
+  });
+
+  test("the first write into a folder that doesn't exist yet sticks", async () => {
+    for (const id of ["fresh-a", "fresh-b", "fresh-c"]) {
+      const path = app_data_path(`json-${id}`, "data.json");
+      const cell = json_file(path, { count: 0 }, Schema);
+      await vi.waitFor(() => expect(cell.ready).toBe(true));
+      cell.value.count = 7;
+      flushSync();
+      await vi.waitFor(async () => expect(await read(path)).not.toBeNull());
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(cell.value.count).toBe(7);
+      expect(cell.error).toBeNull();
+      cell.release();
+    }
+  });
 });

@@ -8,12 +8,24 @@ import { split_path } from "./path";
 export class LatestWriter {
   private queued: string | null = null;
   private writing = false;
+  private waiting: Array<() => void> = [];
 
   constructor(
     private readonly files: () => FilesService,
     private readonly path: string,
     private readonly label: string
   ) {}
+
+  /** A write is queued or on its way to disk. */
+  get busy(): boolean {
+    return this.writing || this.queued !== null;
+  }
+
+  /** Resolves once nothing is queued or being written. */
+  idle(): Promise<void> {
+    if (!this.busy) return Promise.resolve();
+    return new Promise((resolve) => this.waiting.push(resolve));
+  }
 
   write(text: string): void {
     this.queued = text;
@@ -34,6 +46,7 @@ export class LatestWriter {
       }
     }
     this.writing = false;
+    for (const resolve of this.waiting.splice(0)) resolve();
   }
 
   private async ensure_directory(segments: string[]): Promise<FileSystemDirectoryHandle> {

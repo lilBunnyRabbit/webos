@@ -128,7 +128,7 @@ const board = storage.file("board.json", EMPTY_BOARD, BoardSchema);
 - Built on `json_file(path, initial, schema)` from `$lib/core/contexts/app` (`json-file.svelte.ts`), which also works outside an app (a widget, another app's file, the game kit) and returns a handle with `release()`. `app_data_path(app_id, name)` builds the path.
 - One cell per path across the page, reference-counted; the last release stops it.
 - `ready` is `false` until the first read. Nothing is written before it, so a slow read never overwrites the file with `initial`.
-- Re-reads whenever the folder's `files.revision()` changes: another window, Text Editor, Explorer, a delete (back to `initial`, no write). Texts it wrote itself recently are recognized and not read back over newer edits.
+- Re-reads whenever the folder's `files.revision()` changes: another window, Text Editor, Explorer, a delete (back to `initial`, no write). Texts it wrote itself recently are recognized and not read back over newer edits. A re-read while its own write is queued or in flight waits for `LatestWriter.idle()` first: the folder's revision also moves for a sibling file's write or for the folder being created, and disk would still hold the old text (or nothing). A read matching its own write clears `error`.
 - Deep changes save pretty-printed through `LatestWriter` (serialized, newest wins, folders created). A change made right before the last release is still written.
 - Missing file → `initial`. Invalid JSON or schema → `initial` and `error` set; the file stays on disk until the next change overwrites it.
 - Unit of sync is the folder: a write to any file in it makes every cell in that folder re-read (cheap: one small read each).

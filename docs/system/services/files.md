@@ -23,7 +23,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path` |
 | `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
-| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) |
+| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) and `json_file`. `busy` and `idle()` tell whether a write is still on its way |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
 | `index.ts` | `export * from "./type"` |

@@ -69,6 +69,11 @@ class JsonFileCell<T> {
 
   private async load(): Promise<void> {
     const seq = ++this.load_seq;
+    // Disk lags behind a write in flight: reading now would undo it. A sibling file's write in the same folder triggers this.
+    if (this.writer.busy) {
+      await this.writer.idle();
+      if (seq !== this.load_seq) return;
+    }
     let text: string | null;
     try {
       text = (await (await files().get_file(this.path))?.text()) ?? null;
@@ -79,6 +84,7 @@ class JsonFileCell<T> {
     if (seq !== this.load_seq) return;
 
     if (text !== null && (text === this.last || this.written.includes(text))) {
+      this.error = null;
       this.ready = true;
       return;
     }
