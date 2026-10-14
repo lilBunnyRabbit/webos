@@ -7,6 +7,7 @@
   import Files from "./sections/files.svelte";
   import Taskbar from "./sections/taskbar.svelte";
   import WhatsNew from "./sections/whats-new.svelte";
+  import Roadmap from "./sections/roadmap.svelte";
   import { SECTIONS, SECTION_IDS, type Section } from "./sections";
 
   let { section: requested }: { section?: Section } = $props();
@@ -32,6 +33,8 @@
         <Files />
       {:else if section.value === "whats-new"}
         <WhatsNew />
+      {:else if section.value === "roadmap"}
+        <Roadmap />
       {:else}
         <About />
       {/if}

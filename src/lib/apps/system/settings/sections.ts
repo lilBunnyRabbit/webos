@@ -1,6 +1,7 @@
 import {
   FileText as FileTextIcon,
   Info as InfoIcon,
+  MapTrifold as MapTrifoldIcon,
   Palette as PaletteIcon,
   Sparkle as SparkleIcon,
   SquareSplitVertical as SquareSplitVerticalIcon,
@@ -11,6 +12,7 @@ export const SECTIONS = [
   { value: "taskbar", label: "Taskbar", icon: SquareSplitVerticalIcon },
   { value: "files", label: "Default apps", icon: FileTextIcon },
   { value: "whats-new", label: "What's new", icon: SparkleIcon },
+  { value: "roadmap", label: "Roadmap", icon: MapTrifoldIcon },
   { value: "about", label: "About", icon: InfoIcon },
 ] as const;
 

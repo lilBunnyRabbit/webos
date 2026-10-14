@@ -261,6 +261,21 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Triage:** [2026-10-14 App triage](brainstorm/2026-10-14_app-triage.md): yes / maybe / no for every remaining app, and the core work each yes app waits on
 - Remove the `example` app: left for now (owner, 2026-10-14); `ui`, `session` and `router` browser tests launch it
 - [-] Wave 2 follow-ups ([triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)). Done 2026-10-15: shell commands for every new app, File Explorer Compress / Extract here, shared CodeMirror module (`$lib/core/components/code`), core `write_image`, shared `Ticker` (one wall-clock-aligned clock per interval), widget resizing (`widget_size`), App Library, PWA install, word + typo app search, keyword pass. Left: kit additions (colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`), `print_html` waiting for fonts, core → user-app import (Explorer uses Archive's extraction), PDF Tools commands (proposed)
+- [ ] Wave 3 follow-ups (agents' reports, 2026-10-15):
+  - [ ] Kit: colour swatch picker (Soundboard, Nonogram), stat tile (Game Hub), tree list (Archive), pointer reorder for lists and grids (Kanban, PDF Tools, Soundboard), `Segmented` disabled / icon-only / controlled, `format_date` without the year, `NotificationType.SUCCESS`, `EmptyState` actions wrapping; Style Guide demo for `SideNav` counts
+  - [ ] Core: a `live_file` helper next to `json_file` for shell commands (today in Kanban, used by Calendar); shared day/time/duration parsers (today in `calendar/parse.ts`, imported by Work Hours and Kanban); `FilesService.ensure_directory(path)`; a progress-toast job helper (Archive and PDF Tools each have one)
+  - [ ] Core → user-app import: File Explorer's Compress / Extract here load Archive's code. Decide whether zip moves into core
+  - [ ] Value types with secondary actions (Diff's "Compare with…" on files had nowhere to go)
+  - [ ] `print_html` waits for `document.fonts.ready`
+  - [ ] Terminal: wide tables clip on phones (`since`, `alarm ls`, `rec list`)
+  - [ ] Pinning a widget twice quickly from the shell makes a duplicate (`since pin`, `quno pin`): the desktop list hasn't caught up
+  - [ ] Widgets: resize from any corner; a Resize item in the widget menu
+  - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
+  - [ ] Media Preview: no length for MediaRecorder WebM recordings (no duration header)
+  - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
+  - [ ] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, Split's default range errors on short PDFs, errors show twice from commands
+  - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)
+  - [ ] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
