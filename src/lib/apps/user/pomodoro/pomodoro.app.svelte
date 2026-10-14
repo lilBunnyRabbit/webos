@@ -86,7 +86,6 @@
   }
 
   function toggle() {
-    ticker.now = Date.now();
     if (running) timer.pause();
     else timer.start();
   }
