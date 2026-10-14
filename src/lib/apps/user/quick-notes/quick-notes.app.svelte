@@ -1,10 +1,11 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type AppsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { format_keys } from "$lib/core/api/services/shortcuts/keys";
   import { Badge, Button, Checkbox, EmptyState, IconButton, Input, Segmented, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date, format_datetime } from "$lib/core/utils";
-  import { ArrowLeft, CheckSquare, Notepad, Plus, PushPin, Trash, Tray, X } from "phosphor-svelte";
+  import { ArrowLeft, ArrowSquareOut, Check, CheckSquare, Notepad, Plus, Sticker, Trash, Tray, X, XCircle } from "phosphor-svelte";
+  import { long_press } from "$lib/core/utils/long-press";
   import { tick, untrack } from "svelte";
   import { z } from "zod";
   import {
@@ -102,16 +103,64 @@
 
   const draft = new NoteDraft(() => selected, persist);
 
+  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+
   /** Widgets only show on the desktop shell for now (ADR-034). */
   const can_pin = kernel.platform !== Platform.MOBILE;
 
-  async function pin(what: () => Promise<string>) {
+  /** This app's widget on the desktop showing `note`, or the todo list when `note` is null. */
+  function widget_for(note: string | null) {
+    return desktop
+      .items()
+      .find((item): item is Extract<DesktopItem, { kind: "widget" }> => item.kind === "widget" && item.app_id === app_id && (item.props?.note ?? null) === note);
+  }
+
+  /** Adds the widget, or takes it off the desktop when it's already there. */
+  async function toggle_widget(note: Note | null) {
+    const existing = widget_for(note?.id ?? null);
     try {
-      const name = await what();
-      notifications.notify(app_id, { type: NotificationType.INFO, title: "Pinned to the desktop", message: name });
+      if (existing) {
+        await desktop.remove_item(existing.name);
+        notifications.notify(app_id, { type: NotificationType.INFO, title: "Removed from the desktop", message: existing.label });
+        return;
+      }
+      const shell = await import("./shell");
+      const name = note ? await shell.pin_note(note.id === selected?.id ? { ...note, body: draft.body } : note) : await shell.pin_todos();
+      notifications.notify(app_id, {
+        type: NotificationType.INFO,
+        title: note ? "Sticky added to the desktop" : "Todo list added to the desktop",
+        message: `${name.replace(/\.widget$/, "")}: edit it right there, drag it by its title.`,
+      });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't pin it", message: String(reason) });
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });
     }
+  }
+
+  async function note_menu(note: Note, anchor: { x: number; y: number }) {
+    const on_desktop = widget_for(note.id) !== undefined;
+    const choice = await dialogs.menu(
+      [
+        { id: "open", label: "Open", icon: ArrowSquareOut },
+        ...(can_pin
+          ? [
+              { separator: true } as const,
+              { id: "widget", label: on_desktop ? "Remove sticky from desktop" : "Show as sticky on desktop", icon: Sticker },
+            ]
+          : []),
+        { separator: true },
+        ...(note.status !== NoteStatus.READY ? [{ id: NoteStatus.READY, label: "Mark ready", icon: Check }] : []),
+        ...(note.status !== NoteStatus.DONE ? [{ id: NoteStatus.DONE, label: "Mark done", icon: CheckSquare }] : []),
+        ...(note.status !== NoteStatus.DROPPED ? [{ id: NoteStatus.DROPPED, label: "Drop", icon: XCircle }] : []),
+        { separator: true },
+        { id: "delete", label: "Delete", icon: Trash, danger: true },
+      ],
+      { anchor }
+    );
+    if (choice === "open") selected_id.value = note.id;
+    else if (choice === "widget") await toggle_widget(note);
+    else if (choice === "delete") await remove(note);
+    else if (choice && (NOTE_STATUSES as string[]).includes(choice)) await set_status(note, choice as NoteStatus);
   }
   $effect(() => () => draft.cancel());
 
@@ -176,12 +225,19 @@
   <Toolbar>
     <Segmented bind:value={tab.value} options={tabs} label="View" size="sm" />
     {#if tab.value === Tab.TODO}
+      <span class="flex-1"></span>
       {#if can_pin}
-        <IconButton label="Pin todo list to desktop" size="sm" onclick={() => pin(async () => (await import("./shell")).pin_todos())}><PushPin /></IconButton>
+        {@const list = widget_for(null)}
+        <Button
+          variant="quiet"
+          size="sm"
+          pressed={list !== undefined}
+          title={list ? "Your todo list is on the desktop. Click to remove it." : "Show your todo list on the desktop, where you can tick things off."}
+          onclick={() => toggle_widget(null)}
+        >
+          <Sticker />{list ? "On desktop" : "Add to desktop"}
+        </Button>
       {/if}
-      <form class="flex min-w-0 flex-1 justify-end" onsubmit={add}>
-        <Input bind:value={capture_text} size="sm" class="w-full @lg:max-w-72" placeholder="Add a todo, Enter to save" aria-label="Add a todo" />
-      </form>
     {:else}
       <span class="flex-1"></span>
       <Button variant="primary" size="sm" onclick={new_note} title={capture_keys ? `Anywhere: ${capture_keys}` : undefined}><Plus weight="bold" /> New note</Button>
@@ -190,22 +246,28 @@
 
   <div class="min-h-0">
     {#if tab.value === Tab.TODO}
-      <div class="h-full overflow-auto p-2">
-        {#if todos.length === 0}
-          <EmptyState icon={CheckSquare} title="Nothing to do" description="Add one above, or type quno t call bob in the Terminal." class="h-full" />
-        {:else}
-          <ul class="grid gap-0.5">
-            {#each todos as todo (todo.line)}
-              <li class="group flex min-h-8 items-center gap-2.5 rounded-md px-2 hover:bg-foreground/6">
-                <Checkbox checked={todo.done} aria-label={todo.text} onchange={() => update_todo(set_todo(todo_text, todo.n, !todo.done))} />
-                <span class={cn("min-w-0 flex-1 text-ui", todo.done && "text-foreground/45 line-through")}>{todo.text}</span>
-                <IconButton label="Remove" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" onclick={() => update_todo(remove_todo(todo_text, todo.n))}>
-                  <X />
-                </IconButton>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+      <div class="flex h-full flex-col">
+        <form class="flex items-center gap-2 border-b border-foreground/8 p-2" onsubmit={add}>
+          <Input bind:value={capture_text} size="sm" class="min-w-0 flex-1" placeholder="Add a todo, #tags inline" aria-label="Add a todo" />
+          <Button variant="secondary" size="sm" type="submit" disabled={!capture_text.trim()}><Plus weight="bold" />Add</Button>
+        </form>
+        <div class="min-h-0 flex-1 overflow-auto p-2">
+          {#if todos.length === 0}
+            <EmptyState icon={CheckSquare} title="Nothing to do" description="Type one in the field above and press Enter." class="h-full" />
+          {:else}
+            <ul class="grid gap-0.5">
+              {#each todos as todo (todo.line)}
+                <li class="group flex min-h-8 items-center gap-2.5 rounded-md px-2 hover:bg-foreground/6">
+                  <Checkbox checked={todo.done} aria-label={todo.text} onchange={() => update_todo(set_todo(todo_text, todo.n, !todo.done))} />
+                  <span class={cn("min-w-0 flex-1 text-ui", todo.done && "text-foreground/45 line-through")}>{todo.text}</span>
+                  <IconButton label="Remove" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" onclick={() => update_todo(remove_todo(todo_text, todo.n))}>
+                    <X />
+                  </IconButton>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       </div>
     {:else}
       <div class="grid h-full @2xl:grid-cols-[18rem_1fr]">
@@ -239,6 +301,7 @@
                         note.id === selected_id.value && "bg-primary/14 hover:bg-primary/14"
                       )}
                       onclick={() => (selected_id.value = note.id)}
+                      {@attach long_press({ on_menu: (point) => note_menu(note, point) })}
                     >
                       <span class="truncate text-ui font-medium">{title_of(note.body)}</span>
                       <span class="flex items-center gap-2 font-mono text-2xs text-foreground/55 tabular-nums">
@@ -262,7 +325,16 @@
               <Segmented bind:value={() => note.status, (status) => set_status(note, status)} options={status_options} label="Status" size="sm" />
               <span class="flex-1"></span>
               {#if can_pin}
-                <IconButton label="Pin to desktop" size="sm" onclick={() => pin(async () => (await import("./shell")).pin_note({ ...note, body: draft.body }))}><PushPin /></IconButton>
+                {@const sticky = widget_for(note.id)}
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  pressed={sticky !== undefined}
+                  title={sticky ? "This note is a sticky on the desktop. Click to remove it." : "Show this note as a sticky on the desktop, where you can edit it."}
+                  onclick={() => toggle_widget(note)}
+                >
+                  <Sticker />{sticky ? "On desktop" : "Add to desktop"}
+                </Button>
               {/if}
               <IconButton label="Delete note" size="sm" onclick={() => remove(note)}><Trash /></IconButton>
             </header>

@@ -99,7 +99,7 @@ Quick Notes counts open todos (`badge.svelte.ts`).
 
 A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells) and `name` (the file). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size })`. See [desktop](../services/desktop.md#behaviour--invariants).
 
-Quick Notes: a sticky for one note (`{ note: id }`, 3×2, editable in place) or the todo list (no props, 3×3), pinned from the app or with `quno pin <note>` / `quno t pin`.
+Quick Notes: a sticky for one note (`{ note: id }`, 3×2, editable in place) or the todo list (no props, 3×3). Added from the app (a note's right-click menu, or the "Add to desktop" toggle, which reads "On desktop" while the widget exists and removes it on a second click) or with `quno pin <note>` / `quno t pin`.
 
 ### `component`
 

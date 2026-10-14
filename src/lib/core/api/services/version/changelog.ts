@@ -12,6 +12,8 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "Quick Notes shows how many todos are still open on its icon: on the desktop, in the taskbar, in the app list and on your phone's home screen." },
       { kind: IMPROVED, text: "Quick Notes has a New note button that opens a blank note ready to type in, and its Inbox shows the capture shortcut for your keyboard." },
       { kind: NEW, text: "Widgets: pin a Quick Notes note to the desktop as a sticky you can type in, or pin your todo list and tick things off right there. Drag them by their title strip." },
+      { kind: NEW, text: "Right-click a note in Quick Notes to open it, show it as a sticky, mark it ready or done, drop it or delete it. The Add to desktop button shows when a note is already there, and clicking it again takes it off." },
+      { kind: IMPROVED, text: "Adding a todo in Quick Notes now has its own field and Add button at the top of the list." },
       { kind: IMPROVED, text: "Quick Notes' Terminal commands are now quno, like the command-line tool: quno q to jot a note, quno t for todos, quno ls to list, quno cat, done, drop and rm." },
       { kind: FIXED, text: "Typing in a Quick Notes note no longer jumps to a new line when it saves, or loses what you typed while it was saving." },
     ],
