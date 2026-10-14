@@ -1,7 +1,7 @@
 import { Chunk } from "@codemirror/merge";
 import { Text } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
-import { default_mode, DiffMode, ignore_whitespace_diff, map_line, strip_inline_space, summarize } from "./diff";
+import { default_mode, diff_stat, DiffMode, ignore_whitespace_diff, map_line, strip_inline_space, summarize } from "./diff";
 
 const doc = (source: string) => Text.of(source.split("\n"));
 const chunks = (a: string, b: string, whitespace = false) =>
@@ -55,6 +55,13 @@ describe("summarize", () => {
 
   it("is empty for identical text", () => {
     expect(summarize(chunks("x\ny", "x\ny"), doc("x\ny"), doc("x\ny"))).toEqual({ changes: 0, added: 0, removed: 0 });
+  });
+});
+
+describe("diff_stat", () => {
+  it("summarizes two texts without an editor, CRLF or not", () => {
+    expect(diff_stat("one\r\ntwo\r\nthree\r\nfour", "one\nTWO\nthree\nnew\nnewer\nfour")).toEqual({ changes: 2, added: 3, removed: 1 });
+    expect(diff_stat("same", "same")).toEqual({ changes: 0, added: 0, removed: 0 });
   });
 });
 

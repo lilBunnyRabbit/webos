@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   count_pages,
+  with_launch_settings,
   css_string,
   DEFAULT_SETTINGS,
   document_css,
@@ -106,5 +107,18 @@ describe("SettingsSchema", () => {
     expect(SettingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
     expect(SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, font_size: 40 }).success).toBe(false);
     expect(SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, template: "fancy" }).success).toBe(false);
+  });
+});
+
+describe("with_launch_settings", () => {
+  test("overrides only what the launch names", () => {
+    expect(with_launch_settings(DEFAULT_SETTINGS, {})).toEqual(DEFAULT_SETTINGS);
+    expect(with_launch_settings(DEFAULT_SETTINGS, { template: "report", size: "letter", landscape: true, toc: true })).toEqual({
+      ...DEFAULT_SETTINGS,
+      template: "report",
+      page_size: "letter",
+      orientation: "landscape",
+      toc: true,
+    });
   });
 });

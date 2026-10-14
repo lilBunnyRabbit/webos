@@ -1,7 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
+import { arg } from "$lib/core/api/services/shell/arg";
+import { define_command } from "$lib/core/api/services/shell/define";
 import { GitDiff as GitDiffIcon } from "phosphor-svelte";
 import { z } from "zod";
+
+const logic = () => import("./shell");
 
 export const DIFF_ACCEPT = [
   "text/*",
@@ -41,5 +45,28 @@ export default define_app({
   tools: DIFF_ACCEPT,
   props: DIFF_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 280 } } },
+  shell: {
+    values: {
+      "diff-stat": {
+        columns: ["changes", "added", "removed"],
+        text: (stat) => `${stat.changes} ${stat.changes === 1 ? "change" : "changes"}, +${stat.added} -${stat.removed}`,
+        open: (stat) => void logic().then((m) => m.open_diff(String(stat.left), String(stat.right))),
+      },
+    },
+    commands: [
+      define_command({
+        id: "diff",
+        description: "Compare two files in Diff, or count the changes with --stat",
+        args: z.object({
+          left: arg.path(),
+          right: arg.path(),
+          stat: z.boolean().default(false).describe("Count changes, added and removed lines instead of opening Diff"),
+        }),
+        positional: ["left", "right"],
+        yields: "diff-stat",
+        run: async (context) => (await logic()).diff(context),
+      }),
+    ],
+  },
   component: () => import("./diff.app.svelte"),
 });
