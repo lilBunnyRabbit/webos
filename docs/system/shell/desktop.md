@@ -4,7 +4,8 @@ Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/de
 
 | File | Role |
 |------|------|
-| `desktop.svelte` | The CSS grid, the wallpaper and the grid preset's dots, measurement, selection, marquee, drag and drop, keyboard |
+| `desktop.svelte` | The CSS grid, the wallpaper and the grid preset's dots, measurement, keyboard, rendering of selection, marquee, drag targets and resize preview |
+| `desktop.handler.svelte.ts` | `DesktopHandler`: selection, marquee, widget resize and native drag and drop, exposed as `pointer_attachment()` and `drop_attachment()` like `window.handler.svelte.ts`. Takes a getter for the grid cells |
 | `wallpaper.svelte` | The wallpaper layer, shared with the phone home |
 | `desktop-item.svelte` | One icon: a draggable button showing selected, dimmed and drop-target states; reports clicks, menus and drag start/end up |
 | `desktop-item-face.svelte` | Icon + label |
@@ -51,9 +52,9 @@ Apps and files look different without a badge: an app shortcut sits in a 44px `r
 
 ## Selection (ADR-011 revision)
 
-[Brainstorm](../../brainstorm/2026-10-12_multi-select.md). Selection is `desktop.svelte`'s own state: a set of names and a range anchor (`$state.raw`), pruned to visible entries, never persisted. Click rules come from `$lib/core/utils/selection.ts` (`click_select`, tested): click selects one, Ctrl/Cmd+click toggles, Shift+click selects the range from the anchor in reading order, Ctrl+Shift adds it.
+[Brainstorm](../../brainstorm/2026-10-12_multi-select.md). Selection is the desktop's own state, held by `DesktopHandler`: a set of names and a range anchor (`$state.raw`), pruned to visible entries, never persisted. Click rules come from `$lib/core/utils/selection.ts` (`click_select`, tested): click selects one, Ctrl/Cmd+click toggles, Shift+click selects the range from the anchor in reading order, Ctrl+Shift adds it.
 
-- **Marquee.** A primary-button drag on empty desktop (not on an icon) focuses the surface (`tabindex=-1`), clears the selection unless Ctrl/Cmd is held, captures the pointer and draws a `primary/12` rectangle with a `primary/60` hairline. Icons whose **cell** intersects it are selected, by cell math from `container.bounds` and `container.cell` (no DOM reads). `lostpointercapture` ends it. A click on empty desktop is a zero-size marquee, so it clears the selection.
+- **Marquee.** A primary-button drag on empty desktop (not on an icon) focuses the surface (`tabindex=-1`), clears the selection unless Ctrl/Cmd is held, captures the pointer and draws a `primary/12` rectangle with a `primary/60` hairline. Icons whose **cell** intersects it are selected, by cell math from `container.bounds` and `container.cell` (no DOM reads), once per animation frame; the selection is only replaced when its members change. Widget resize moves are coalesced the same way. `selectstart` is cancelled while it runs. `lostpointercapture` ends it, applying the last pending move first. A click on empty desktop is a zero-size marquee, so it clears the selection.
 - **Acting on it.** An action on a selected icon applies to the whole selection; on an unselected icon (right-click, a key with it focused) it first selects just that icon. Rename, Properties and Save to disk need exactly one.
 
 ## Drag and drop (ADR-011 revision)

@@ -65,6 +65,9 @@
 
   const calc_schema = z.object({ expression: z.string(), evaluated: z.boolean() });
 
+  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+
   const { window: win, storage } = get_app_context();
   const history = storage.persisted<HistoryEntry[]>("history", [], history_schema);
   const calc = storage.window("calc", EMPTY_STATE, calc_schema);
@@ -117,10 +120,10 @@
   async function copy() {
     if (!copyable) return;
     try {
-      await kernel.service<ClipboardService>("clipboard").copy_text(copyable);
+      await clipboard.copy_text(copyable);
     } catch (error) {
       console.warn("[Calculator] copy failed", error);
-      kernel.service<NotificationsService>("notifications").notify("calculator", {
+      notifications.notify("calculator", {
         type: "error",
         title: "Couldn't copy to the clipboard",
       });

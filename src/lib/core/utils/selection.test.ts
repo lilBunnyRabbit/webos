@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { click_select, intersects, rect_from_points } from "./selection";
+import { click_select, intersects, rect_from_points, same_members } from "./selection";
+
+describe("same_members", () => {
+  test("ignores order, compares size and membership", () => {
+    expect(same_members(new Set(["a", "b"]), new Set(["b", "a"]))).toBe(true);
+    expect(same_members(new Set(["a"]), new Set(["a", "b"]))).toBe(false);
+    expect(same_members(new Set(["a", "c"]), new Set(["a", "b"]))).toBe(false);
+  });
+});
 
 const order = ["a", "b", "c", "d", "e"];
 const none = { toggle: false, range: false };

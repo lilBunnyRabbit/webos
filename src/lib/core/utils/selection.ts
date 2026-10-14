@@ -30,6 +30,10 @@ export function intersects(a: Rect, b: Rect): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
+export function same_members<T>(a: Set<T>, b: Set<T>): boolean {
+  return a.size === b.size && [...a].every((value) => b.has(value));
+}
+
 /** The selection after a click on `name`. `order` is the surface's reading order, for ranges. */
 export function click_select(state: SelectionState, name: string, modifiers: ClickModifiers, order: string[]): SelectionState {
   const { selection, anchor } = state;

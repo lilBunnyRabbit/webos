@@ -13,10 +13,10 @@ import type {
 } from "./type";
 import { WindowFlag } from "./type";
 import type { AppInstance } from "../apps/type";
-import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
+import { BaseWindowsService } from "./base.svelte";
 import { windows_shell } from "./shell";
 
-export class WindowsService implements DesktopWindowsService {
+export class WindowsService extends BaseWindowsService implements DesktopWindowsService {
   name = "WindowsService";
   description = "Window lifecycle, geometry and z-order";
   inspector = () => import("./inspector.svelte");
@@ -39,8 +39,6 @@ export class WindowsService implements DesktopWindowsService {
   });
 
   private max_order = $state<number>(0);
-  // TODO: map?
-  private index = $state<Record<WindowId, WindowInstance>>({});
 
   public frames = $state.raw<WindowFrames>({});
 
@@ -61,71 +59,8 @@ export class WindowsService implements DesktopWindowsService {
     this.max_order = 0;
   }
 
-  /** Plain, not reactive: only read when Back is pressed. */
-  private back_handlers = new Map<WindowId, Array<() => boolean>>();
-
-  public add_back_handler(id: WindowId, handler: () => boolean): () => void {
-    const handlers = this.back_handlers.get(id) ?? [];
-    handlers.push(handler);
-    this.back_handlers.set(id, handlers);
-    return () => {
-      const current = this.back_handlers.get(id);
-      if (!current) return;
-      const index = current.lastIndexOf(handler);
-      if (index !== -1) current.splice(index, 1);
-      if (current.length === 0) this.back_handlers.delete(id);
-    };
-  }
-
-  public back(id: WindowId): boolean {
-    const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
-    return handlers.some((handler) => handler());
-  }
-  private guard = new CloseGuard();
-
-  public set_close_prompt(prompt: ClosePrompt): () => void {
-    return this.guard.set_prompt(prompt);
-  }
-
-  public set_title(id: WindowId, title: string | null): void {
-    const instance = this.get(id);
-    if (instance) instance.title = title ?? undefined;
-  }
-
-  public set_dirty(id: WindowId, dirty: boolean, options: DirtyOptions = {}): void {
-    const instance = this.get(id);
-    if (!instance) return;
-    if (instance.dirty !== dirty) instance.dirty = dirty;
-    this.guard.set_save(id, dirty ? options.save : undefined);
-  }
-
-  public has_dirty(): boolean {
-    return Object.values(this.index).some((instance) => instance.dirty);
-  }
-
-  /** The browser's own "Leave site?" prompt; it can't show ours while unloading (ADR-029). */
-  private on_before_unload = (event: BeforeUnloadEvent) => {
-    if (this.has_dirty()) event.preventDefault();
-  };
-
-  public page_hidden = $state(document.hidden);
-
-  private on_visibility_change = () => {
-    this.page_hidden = document.hidden;
-  };
-
   public is_visible(id: WindowId): boolean {
     return !this.page_hidden && !(this.index[id]?.flags.has(WindowFlag.MINIMIZED) ?? true);
-  }
-
-  init(): void {
-    window.addEventListener("beforeunload", this.on_before_unload);
-    document.addEventListener("visibilitychange", this.on_visibility_change);
-  }
-
-  destroy(): void {
-    window.removeEventListener("beforeunload", this.on_before_unload);
-    document.removeEventListener("visibilitychange", this.on_visibility_change);
   }
 
   public set_container(element?: HTMLElement | null): Bounds {
@@ -139,8 +74,6 @@ export class WindowsService implements DesktopWindowsService {
         },
         element: null,
       };
-
-      // console.log("WindowService:set_container", this.container);
 
       return this.container.bounds;
     }
@@ -156,8 +89,6 @@ export class WindowsService implements DesktopWindowsService {
       },
       element,
     };
-
-    // console.log("WindowService:set_container", this.container);
 
     // A shrinking area never strands a window: a strip of each titlebar stays reachable.
     for (const instance of Object.values(this.index)) {

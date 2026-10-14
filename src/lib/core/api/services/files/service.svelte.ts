@@ -302,7 +302,7 @@ export class DirectoryHandler {
   readonly handle: FileSystemDirectoryHandle;
   readonly service: FilesService;
 
-  items = $state<FileSystemItem[]>([]);
+  items = $state.raw<FileSystemItem[]>([]);
   loading = $state(true);
   /** Turns false once the folder is deleted or moved away; the handler then disposes itself. */
   exists = $state(true);
@@ -379,7 +379,7 @@ export class DirectoryHandler {
     try {
       const items = await opfs.list_directory(this.handle);
       // An older listing resolving after a newer one would show stale contents.
-      if (id === this.reload_id) this.items = items;
+      if (id === this.reload_id) this.items = opfs.keep_unchanged(this.items, items);
     } finally {
       if (id === this.reload_id) this.loading = false;
     }

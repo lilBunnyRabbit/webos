@@ -95,6 +95,18 @@ describe("DirectoryHandler", () => {
     expect(handler.items.map((item) => item.name)).toEqual(["a"]);
   });
 
+  test("a relist keeps the objects of unchanged entries", async () => {
+    const handler = await open(["tmp"]);
+    await handler.create_file("a.txt", { content: "a" });
+    await handler.create_file("b.txt", { content: "b" });
+    const [a, b] = handler.items;
+    await files.write_file(b.handle as FileSystemFileHandle, "changed");
+    await handler.create_file("c.txt");
+    expect(handler.items.map((item) => item.name)).toEqual(["a.txt", "b.txt", "c.txt"]);
+    expect(handler.items[0]).toBe(a);
+    expect(handler.items[1]).not.toBe(b);
+  });
+
   test("a reload while one runs for the same revision joins it", async () => {
     const handler = await open(["tmp"]);
     expect(handler.reload()).toBe(handler.reload());

@@ -11,13 +11,13 @@ export type LinkOutcome = (typeof LinkOutcome)[keyof typeof LinkOutcome];
 
 /**
  * Deep links (ADR-010): opens `#/app/{id}?{props}` after the session's Restore answer, then clears the hash. Copies a
- * link to a window whose app doesn't take a file path.
+ * link to any window; props that point at this device's files are left out (`shareable_props`).
  */
 export interface RouterService extends IService {
   /** The last hash handled in this tab, and what came of it. */
   readonly last_link: { hash: string; outcome: LinkOutcome } | null;
 
-  /** A full URL that opens this window's app with its launch props, or `null` when the app can't be shared. */
+  /** A full URL that opens this window's app with its shareable launch props, or `null` when the window doesn't exist. */
   link_for(id: WindowId): string | null;
   /** Copies `link_for(id)` to the system clipboard and confirms with a toast. */
   copy_link(id: WindowId): Promise<void>;
