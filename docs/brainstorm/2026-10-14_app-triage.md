@@ -230,3 +230,7 @@ Time Since's widget was too big; the owner asked for 3×1 and for resizing in ge
 The start menu gets an "All apps" button that opens a bigger, structured view. Decided: **App Library, a system app** with a category list, the shared search, filter chips (has widget, opens files, has commands) and a details panel per app (description, keywords, file types, shell commands, widget sizes; Launch, Pin, Add widget). Rejected: a full-screen launchpad overlay (no details, new overlay kind); an expandable start menu (cramped on small screens).
 
 Also noted from the Files agent: File Explorer's Compress / Extract here lazily import `$lib/apps/user/archive/operations`, the first core → user-app import. To review with the shared-code questions.
+
+## Install as a PWA (owner, 2026-10-15)
+
+Installing is a priority: an installed app gets its own window, works offline, and its storage is far less likely to be cleared. Decided: a small core module (`$lib/core/utils/install.svelte.ts`) catches `beforeinstallprompt` from boot and exposes `can_install`, `installed` and `install()`. The introduction gets a highlighted install step, Settings › About the same row, and the shell an `install` command. Safari and iOS have no prompt API, so they get step-by-step hints. Rejected: listening only inside the intro (the event can fire before it mounts); a nagging install toast.
