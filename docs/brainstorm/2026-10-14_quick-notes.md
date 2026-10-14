@@ -71,6 +71,8 @@ The owner asked to use the quno CLI (`~/dev/orgs/lilbunnyrabbit/quno`) as inspir
 
 14. **The commands are named `quno`, after the CLI** (owner, after shipping `note`/`todo`). They use the real CLI's verbs: `quno` (open the app, or one note), `quno q [text]`, `quno ls [-s status] [-a]`, `quno cat|ready|done|drop|rm <note>`, `quno t [text]`, `quno t done <n>`, `quno t clear [-a]`. Alt+Shift+Q runs `quno q`. The app keeps its name, Quick Notes; only the shell speaks quno.
 
+15. **Widgets as built.** Pinning is `desktop.pin_widget(app_id, { label, props, size })`: from the app (pin buttons, hidden on mobile) or `quno pin <note>` / `quno t pin`. A sticky is 3×2 and edits the note in place, sharing `NoteDraft` with the app. The todo widget is 3×3. The frame's title strip is the handle; the body is the app's. Sort leaves widgets in place. No resize yet.
+
 ## Key takeaways
 
 - Quick Notes is the first consumer of three app extension points: `shell`, `badge` and `widget` on `define_app`. These are recorded in [ADR-034](../adrs/034-app-extension-points.md).

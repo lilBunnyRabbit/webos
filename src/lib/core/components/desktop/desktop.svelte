@@ -5,6 +5,8 @@
   import type { Position } from "$lib/core/utils/type";
   import { drop_paths, has_drag_paths, has_os_files, import_dropped, read_drag_paths, read_os_entries, set_drag_paths } from "../files/drag";
   import DesktopItem from "./desktop-item.svelte";
+  import DesktopWidget from "./desktop-widget.svelte";
+  import { grid_items, item_span } from "$lib/core/api/services/desktop/helper";
   import Wallpaper from "./wallpaper.svelte";
   import {
     background_menu,
@@ -24,11 +26,7 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
   /** Every visible item with its cell, in reading order: rows top to bottom, cells left to right. */
-  const cells = $derived.by(() => {
-    const result: { item: Item; x: number; y: number }[] = [];
-    desktop.list().forEach((row, y) => row?.forEach((item, x) => item && result.push({ item, x, y })));
-    return result;
-  });
+  const cells = $derived(grid_items(desktop.list()));
   const order = $derived(cells.map(({ item }) => item.name));
   const cell_of = $derived(new Map(cells.map(({ item, x, y }) => [item.name, { x, y }])));
 
@@ -56,11 +54,11 @@
 
   let surface: HTMLElement | null = $state(null);
 
-  function cell_rect(x: number, y: number): Rect {
+  function cell_rect(x: number, y: number, span = { w: 1, h: 1 }): Rect {
     const { bounds, cell } = desktop.container;
     const left = bounds.x + x * cell.width;
     const top = bounds.y + y * cell.height;
-    return { left, top, right: left + cell.width, bottom: top + cell.height };
+    return { left, top, right: left + cell.width * span.w, bottom: top + cell.height * span.h };
   }
 
   function cell_at(client_x: number, client_y: number): Position {
@@ -76,7 +74,7 @@
   const marquee_rect = $derived(marquee && rect_from_points(marquee.start, marquee.current));
 
   function on_pointer_down(event: PointerEvent) {
-    if (event.button !== 0 || (event.target as Element).closest("button")) return;
+    if (event.button !== 0 || (event.target as Element).closest("button, [data-widget-body]")) return;
     surface?.focus({ preventScroll: true });
     const base = is_mod(event) ? selection : new Set<string>();
     if (!is_mod(event)) chosen = new Set();
@@ -88,7 +86,7 @@
     if (!marquee || event.pointerId !== marquee.pointer) return;
     marquee.current = { x: event.clientX, y: event.clientY };
     const rect = rect_from_points(marquee.start, marquee.current);
-    const hits = cells.filter(({ x, y }) => intersects(cell_rect(x, y), rect)).map(({ item }) => item.name);
+    const hits = cells.filter(({ item, x, y }) => intersects(cell_rect(x, y, item_span(item)), rect)).map(({ item }) => item.name);
     chosen = new Set([...marquee.base, ...hits]);
   }
 
@@ -103,7 +101,8 @@
     const { cell } = hover;
     return drag.names.flatMap((name) => {
       const from = cell_of.get(name);
-      return from ? [{ x: from.x - grab.x + cell.x, y: from.y - grab.y + cell.y }] : [];
+      const item = cells.find((entry) => entry.item.name === name)?.item;
+      return from && item ? [{ x: from.x - grab.x + cell.x, y: from.y - grab.y + cell.y, ...item_span(item) }] : [];
     });
   });
 
@@ -171,6 +170,8 @@
   }
 
   function on_key_down(event: KeyboardEvent) {
+    // Keys typed inside a widget are the widget's (Mod+A in a sticky selects its text, not the desktop).
+    if ((event.target as Element).closest("[data-widget-body]")) return;
     const key = event.key.toLowerCase();
     if (is_mod(event) && key === "a") {
       chosen = new Set(order);
@@ -219,7 +220,7 @@
   }}
   ondrop={on_drop}
   oncontextmenu={(event) => {
-    if ((event.target as Element).closest("button")) return;
+    if ((event.target as Element).closest("button, [data-widget-body]")) return;
     event.preventDefault();
     background_menu({ x: event.clientX, y: event.clientY });
   }}
@@ -240,13 +241,33 @@
       {#if target.x >= 0 && target.y >= 0 && target.x < desktop.container.grid.columns && target.y < desktop.container.grid.rows}
         <div
           class="pointer-events-none size-full rounded-xl bg-foreground/6 ring-1 ring-foreground/20 ring-inset"
-          style:grid-column={target.x + 1}
-          style:grid-row={target.y + 1}
+          style:grid-column="{target.x + 1} / span {target.w}"
+          style:grid-row="{target.y + 1} / span {target.h}"
         ></div>
       {/if}
     {/each}
 
     {#each cells as { item, x, y } (item.name)}
+      {#if item.kind === "widget"}
+        <DesktopWidget
+          {item}
+          {x}
+          {y}
+          selected={selection.has(item.name)}
+          dimmed={(drag?.names.includes(item.name) ?? false) || clipboard.is_cut(desktop_path(item))}
+          onselect={(event) => select(item.name, event)}
+          onopen={(event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
+          onmenu={(event) => {
+            ensure_selected(item);
+            item_menu(targets(item), { x: event.clientX, y: event.clientY });
+          }}
+          ondragstart={(event) => on_item_drag_start(event, item)}
+          ondragend={() => {
+            drag = null;
+            hover = null;
+          }}
+        />
+      {:else}
       <DesktopItem
         {item}
         {x}
@@ -266,6 +287,7 @@
           hover = null;
         }}
       />
+      {/if}
     {/each}
   {/if}
 

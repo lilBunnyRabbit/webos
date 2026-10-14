@@ -116,6 +116,18 @@ export default define_app({
         run: async (context) => (await logic()).remove(context),
       }),
       define_command({
+        id: "quno pin",
+        description: "Pin a note to the desktop as a sticky",
+        args: z.object({ note: note_arg() }),
+        positional: ["note"],
+        run: async (context) => (await logic()).pin(context),
+      }),
+      define_command({
+        id: "quno t pin",
+        description: "Pin the todo list to the desktop",
+        run: async () => (await logic()).todo_pin(),
+      }),
+      define_command({
         id: "quno t",
         description: "Add a todo, or list them with no text",
         args: z.object({ text: z.array(z.string()).default([]).describe("The todo, #tags inline") }),
@@ -142,5 +154,6 @@ export default define_app({
       }),
     ],
   },
+  widget: () => import("./widget.svelte"),
   component: () => import("./quick-notes.app.svelte"),
 });

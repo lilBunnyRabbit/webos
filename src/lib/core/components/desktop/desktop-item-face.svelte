@@ -8,12 +8,12 @@
   let { item }: { item: DesktopItem } = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
-  const missing_app = $derived(item.kind === "shortcut" && !apps.get(item.app_id));
-  const label = $derived(item.kind === "shortcut" ? item.label : item.name);
+  const missing_app = $derived((item.kind === "shortcut" || item.kind === "widget") && !apps.get(item.app_id));
+  const label = $derived(item.kind === "shortcut" || item.kind === "widget" ? item.label : item.name);
 </script>
 
 <!-- Apps sit on a raised tile, files and folders are bare glyphs, so a program never reads as a document. -->
-{#if item.kind === "shortcut"}
+{#if item.kind === "shortcut" || item.kind === "widget"}
   <div
     class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-transform duration-150 group-hover:-translate-y-0.5"
   >

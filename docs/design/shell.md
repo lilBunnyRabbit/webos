@@ -8,6 +8,8 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - Cells are 88px. An app is a 44px `rounded-xl` tile on `background-light` with `shadow-raised` and a hairline around its 24px glyph. Files and folders have no tile: a bare 40px glyph (files duotone at `foreground/85`, folders `primary` fill) with a soft shadow. So the tile itself says "program", with no shortcut arrow. Every icon has a two-line `text-2xs` label below.
 - Hover lifts the tile 2px and tints the cell `foreground/6`; keyboard focus tints `foreground/8` with the cottontail ring. Selected icons are `primary/14` with a `primary/40` inset ring. A drag shows the browser's ghost and a `foreground/6` outline on each target cell; a folder under the drag lights up `primary/18` with a `primary/70` ring. See [Selection](patterns.md#selection-and-drag).
 
+- **Widgets:** an app's live view on the desktop, spanning whole cells (ADR-034). A `rounded-xl` `background-light` card with `shadow-raised` and a `foreground/10` hairline, inset 4px from its cells. A 24px title strip on top (the app's glyph and the widget's name in `text-2xs` at 65%, a hairline below) is the handle: it selects, drags and opens like an icon. Selected: a 2px `primary/40` ring and the strip in `primary/14`. The body is the app's. A Quick Notes sticky is tinted `primary/8`.
+
 ## Windows
 
 - Frame: `rounded-xl`, `bg-background`, a hairline ring (`foreground/8`, focused `foreground/16`), `shadow-window` / `shadow-window-focused`. Maximized drops the radius, ring and shadow.

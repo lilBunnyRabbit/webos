@@ -99,13 +99,13 @@ export async function remove_items(items: DesktopItem[]): Promise<void> {
   }
 
   const [item] = items;
-  const shortcut = item.kind === "shortcut";
+  const shortcut = item.kind === "shortcut" || item.kind === "widget";
   const confirmed = await dialogs().show(
     ConfirmDialog,
     {
-      message: shortcut ? `Remove the “${item.label}” shortcut?` : `Delete “${item.name}”?`,
+      message: shortcut ? `Remove the “${item.label}” ${item.kind}?` : `Delete “${item.name}”?`,
       detail: shortcut
-        ? "Only the shortcut goes; the app stays installed."
+        ? `Only the ${item.kind} goes; the app${item.kind === "widget" ? " and what it shows stay" : " stays installed"}.`
         : item.kind === "directory"
           ? "The folder and everything in it will be deleted. This can't be undone."
           : "This can't be undone.",
@@ -169,7 +169,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
   const [item] = items;
   if (!item) return;
   const single = items.length === 1;
-  const shortcut = single && item.kind === "shortcut";
+  const shortcut = single && (item.kind === "shortcut" || item.kind === "widget");
   const choice = await dialogs().menu(
     [
       { id: "open", label: single ? "Open" : `Open ${items.length} items`, icon: ArrowSquareOutIcon, shortcut: "↵" },
@@ -182,7 +182,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
       { separator: true },
       {
         id: "delete",
-        label: shortcut ? "Remove shortcut" : single ? "Delete" : `Delete ${items.length} items`,
+        label: shortcut ? `Remove ${item.kind}` : single ? "Delete" : `Delete ${items.length} items`,
         icon: TrashIcon,
         shortcut: "Del",
         danger: true,

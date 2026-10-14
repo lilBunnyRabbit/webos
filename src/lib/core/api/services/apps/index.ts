@@ -1,4 +1,6 @@
 export * from "./associations";
 export * from "./helpers";
 export * from "./shortcut";
-export * from "./type";export * from "./search";
+export * from "./type";
+export * from "./search";
+export * from "./widget";

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type AppsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { format_keys } from "$lib/core/api/services/shortcuts/keys";
   import { Badge, Button, Checkbox, EmptyState, IconButton, Input, Segmented, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date, format_datetime } from "$lib/core/utils";
-  import { ArrowLeft, CheckSquare, Notepad, Plus, Trash, Tray, X } from "phosphor-svelte";
+  import { ArrowLeft, CheckSquare, Notepad, Plus, PushPin, Trash, Tray, X } from "phosphor-svelte";
   import { tick, untrack } from "svelte";
   import { z } from "zod";
   import {
@@ -22,6 +22,7 @@
     type Note,
   } from "./notes";
   import { create_note, delete_note, list_notes, read_todo, save_note, write_todo } from "./store";
+  import { NoteDraft } from "./draft.svelte";
 
   const { note: initial_note, tab: initial_tab }: { note?: string; tab?: "inbox" | "notes" | "todo" } = $props();
 
@@ -89,40 +90,39 @@
     (tab.value === Tab.INBOX ? inbox : notes.filter((note) => note.status === filter_status.value)).filter(matches)
   );
 
-  // Edits save shortly after typing stops. `base` is the file's text as of our last save: while the file still holds
-  // it, the local text wins (a reload racing a save would otherwise drop keystrokes); a change made elsewhere wins over it.
-  let local = $state<{ id: string; body: string; base: string } | null>(null);
-  const draft = $derived(selected && local?.id === selected.id && local.base === selected.body ? local.body : (selected?.body ?? ""));
-  let save_timer: ReturnType<typeof setTimeout> | undefined;
-
-  function edit(body: string) {
-    const note = selected;
-    if (!note) return;
-    const base = local?.id === note.id && local.base === note.body ? local.base : note.body;
-    local = { id: note.id, body, base };
-    clearTimeout(save_timer);
-    save_timer = setTimeout(() => void persist({ ...note, body }), 400);
-  }
-
-  async function persist(note: Note) {
+  async function persist(note: Note): Promise<boolean> {
     try {
       await save_note(files, note);
-      if (local?.id === note.id) local = { ...local, base: note.body };
+      return true;
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the note", message: String(reason) });
+      return false;
     }
   }
 
-  $effect(() => () => clearTimeout(save_timer));
+  const draft = new NoteDraft(() => selected, persist);
+
+  /** Widgets only show on the desktop shell for now (ADR-034). */
+  const can_pin = kernel.platform !== Platform.MOBILE;
+
+  async function pin(what: () => Promise<string>) {
+    try {
+      const name = await what();
+      notifications.notify(app_id, { type: NotificationType.INFO, title: "Pinned to the desktop", message: name });
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't pin it", message: String(reason) });
+    }
+  }
+  $effect(() => () => draft.cancel());
 
   async function set_status(note: Note, status: NoteStatus) {
-    clearTimeout(save_timer);
-    await persist({ ...note, body: draft, status });
+    draft.cancel();
+    await persist({ ...note, body: draft.body, status });
   }
 
   async function remove(note: Note) {
     if (!(await win.confirm(`Delete “${title_of(note.body)}”?`, { detail: "The note's file is deleted.", confirm_label: "Delete", danger: true }))) return;
-    clearTimeout(save_timer);
+    draft.cancel();
     await delete_note(files, note);
     selected_id.value = null;
   }
@@ -176,6 +176,9 @@
   <Toolbar>
     <Segmented bind:value={tab.value} options={tabs} label="View" size="sm" />
     {#if tab.value === Tab.TODO}
+      {#if can_pin}
+        <IconButton label="Pin todo list to desktop" size="sm" onclick={() => pin(async () => (await import("./shell")).pin_todos())}><PushPin /></IconButton>
+      {/if}
       <form class="flex min-w-0 flex-1 justify-end" onsubmit={add}>
         <Input bind:value={capture_text} size="sm" class="w-full @lg:max-w-72" placeholder="Add a todo, Enter to save" aria-label="Add a todo" />
       </form>
@@ -258,13 +261,16 @@
               <IconButton label="Back" size="sm" class="@2xl:hidden" onclick={() => (selected_id.value = null)}><ArrowLeft /></IconButton>
               <Segmented bind:value={() => note.status, (status) => set_status(note, status)} options={status_options} label="Status" size="sm" />
               <span class="flex-1"></span>
+              {#if can_pin}
+                <IconButton label="Pin to desktop" size="sm" onclick={() => pin(async () => (await import("./shell")).pin_note({ ...note, body: draft.body }))}><PushPin /></IconButton>
+              {/if}
               <IconButton label="Delete note" size="sm" onclick={() => remove(note)}><Trash /></IconButton>
             </header>
             <Textarea
               bind:element={editor}
-              value={draft}
+              value={draft.body}
               placeholder="Write it down, #tags inline"
-              oninput={(event) => edit(event.currentTarget.value)}
+              oninput={(event) => draft.edit(event.currentTarget.value)}
               aria-label="Note"
               class="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3 ring-0 focus-visible:ring-0"
             />
@@ -273,7 +279,7 @@
               {#if note.from}
                 <Button variant="quiet" size="sm" class="h-5 px-1 font-mono text-2xs" onclick={() => open_source(note.from)}>from {note.from}</Button>
               {/if}
-              {#each tags_of(draft) as tag (tag)}<Badge tone="primary">#{tag}</Badge>{/each}
+              {#each tags_of(draft.body) as tag (tag)}<Badge tone="primary">#{tag}</Badge>{/each}
             </div>
           {:else}
             <EmptyState icon={Notepad} title="No note open" description="Pick one from the list." class="h-full" />

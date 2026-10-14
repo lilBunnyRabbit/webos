@@ -127,7 +127,7 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
 
-App commands come in through AppsService and carry `app: <id>`. Today: Quick Notes, as the `quno` group named after the owner's CLI (`quno`, `quno q`, `quno ls`, `quno cat|ready|done|drop|rm`, `quno t`, `quno t done|clear`, completer `note`, values `note` and `todo`). The registry adds them after every service command, so **a service command wins an id clash** and the app's is dropped with a warning. See [manifest](../apps/manifest.md#shell-adr-034).
+App commands come in through AppsService and carry `app: <id>`. Today: Quick Notes, as the `quno` group named after the owner's CLI (`quno`, `quno q`, `quno ls`, `quno cat|ready|done|drop|rm`, `quno t`, `quno t done|clear`, `quno pin`, `quno t pin`, completer `note`, values `note` and `todo`). The registry adds them after every service command, so **a service command wins an id clash** and the app's is dropped with a warning. See [manifest](../apps/manifest.md#shell-adr-034).
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

@@ -1,5 +1,6 @@
 import type { AppId, AppProps, AppsService, FilesService, OpenOptions } from "$lib/core/api";
 import { parse_shortcut, serialize_shortcut, shortcut_label, SHORTCUT_EXTENSION } from "../apps/shortcut";
+import { parse_widget, serialize_widget, widget_label, WIDGET_EXTENSION } from "../apps/widget";
 import { file_extension } from "../apps/associations";
 import { PATHS } from "../files/hierarchy";
 import { available_name } from "../files/opfs";
@@ -110,6 +111,15 @@ export class DesktopFolder {
         continue;
       }
 
+      if (file_extension(item.name) === WIDGET_EXTENSION) {
+        const widget = parse_widget(await (await item.handle.getFile()).text());
+        if (widget) {
+          const { app, props, w, h } = widget;
+          entries.push({ kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size: { w, h } });
+          continue;
+        }
+      }
+
       const shortcut =
         file_extension(item.name) === SHORTCUT_EXTENSION
           ? parse_shortcut(await (await item.handle.getFile()).text())
@@ -141,6 +151,18 @@ export class DesktopFolder {
     return name;
   }
 
+  /** Writes `{label}.widget`, auto-renamed on a clash. Returns the file name, or `null` for an app without a widget. */
+  public async write_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
+    if (!this.options.apps().get(app_id)?.widget) return null;
+
+    const folder = await this.handle();
+    const label = options.label.replace(/[/\\:]/g, " ").trim() || "Widget";
+    const name = await available_name(folder, `${label}${WIDGET_EXTENSION}`);
+    const content = serialize_widget({ app: app_id, props: options.props, w: options.size.w, h: options.size.h });
+    await this.options.files().create_file(folder, name, { content });
+    return name;
+  }
+
   public async remove(name: string): Promise<void> {
     const item = this.get(name);
     if (!item) return;
@@ -159,6 +181,7 @@ export class DesktopFolder {
     const path = join_path(split_path(PATHS.desktop), item.name);
     switch (item.kind) {
       case "shortcut":
+      case "widget":
       case "file":
         // Shortcuts go through open() too, so a missing target app gets the same "Broken shortcut" toast as in Explorer.
         this.options

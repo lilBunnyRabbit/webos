@@ -38,6 +38,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
 | `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
+| `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
@@ -93,6 +94,12 @@ export const badge = () => (subscribe(), open);
 ```
 
 Quick Notes counts open todos (`badge.svelte.ts`).
+
+### `widget` (ADR-034)
+
+A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells) and `name` (the file). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size })`. See [desktop](../services/desktop.md#behaviour--invariants).
+
+Quick Notes: a sticky for one note (`{ note: id }`, 3×2, editable in place) or the todo list (no props, 3×3), pinned from the app or with `quno pin <note>` / `quno t pin`.
 
 ### `component`
 

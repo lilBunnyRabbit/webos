@@ -42,7 +42,9 @@ export class MobileDesktopService implements IMobileDesktopService {
   });
 
   private layout = $state<HomeLayout>(EMPTY_HOME_LAYOUT);
-  private arranged = $derived(arrange_home(this.folder.entries, this.layout));
+  /** Widgets span several cells and home pages flow without gaps, so the phone leaves them out for now (ADR-034). */
+  private entries = $derived(this.folder.entries.filter((entry) => entry.kind !== "widget"));
+  private arranged = $derived(arrange_home(this.entries, this.layout));
 
   public readonly dock_full = $derived(this.arranged.dock.length >= DOCK_SIZE);
 
@@ -84,7 +86,7 @@ export class MobileDesktopService implements IMobileDesktopService {
   }
 
   public items(): DesktopItem[] {
-    return this.folder.entries;
+    return this.entries;
   }
 
   public names(): string[] {
@@ -148,6 +150,10 @@ export class MobileDesktopService implements IMobileDesktopService {
 
   public async pin(app_id: AppId, props?: AppProps): Promise<string | null> {
     return this.folder.write_shortcut(app_id, props);
+  }
+
+  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
+    return this.folder.write_widget(app_id, options);
   }
 
   public open(item: DesktopItem, options?: OpenOptions): void {

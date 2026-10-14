@@ -2,6 +2,7 @@ import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppP
 import type { DialogsService, FilesService, Kernel, NotificationsService, SettingsService, WindowsService, WindowId } from "$lib/core/api";
 import { best_apps_for, file_extension } from "./associations";
 import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
+import { parse_widget, WIDGET_EXTENSION } from "./widget";
 import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
@@ -91,6 +92,16 @@ export class AppsService implements IAppsService {
         return null;
       }
       return this.launch(shortcut.app_id, shortcut.props);
+    }
+
+    // A widget opens its app with the widget's props, like a shortcut.
+    if (extension === WIDGET_EXTENSION) {
+      const widget = parse_widget(await file.text());
+      if (!widget || !this.registry.has(widget.app)) {
+        this.notifications_service.notify("apps", { type: "error", title: "Broken widget", message: path });
+        return null;
+      }
+      return this.launch(widget.app, widget.props);
     }
 
     const default_id = extension ? this.settings_service.file_defaults[extension] : undefined;

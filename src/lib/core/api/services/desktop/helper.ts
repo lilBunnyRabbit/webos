@@ -14,9 +14,44 @@ export interface DesktopMove {
   to: Position;
 }
 
+/** Cells an item covers from its top-left cell: widgets span `w × h`, everything else one (ADR-034). */
+export function item_span(item: DesktopItem): { w: number; h: number } {
+  return item.kind === "widget" ? item.size : { w: 1, h: 1 };
+}
+
+/** Every visible item once, with its top-left cell, in reading order. The grid holds a widget in each cell it covers. */
+export function grid_items(grid: DesktopGrid): { item: DesktopItem; x: number; y: number }[] {
+  const seen = new Set<string>();
+  const result: { item: DesktopItem; x: number; y: number }[] = [];
+  grid.forEach((row, y) =>
+    row?.forEach((item, x) => {
+      if (!item || seen.has(item.name)) return;
+      seen.add(item.name);
+      result.push({ item, x, y });
+    })
+  );
+  return result;
+}
+
+function region_free(grid: DesktopGrid, x: number, y: number, item: DesktopItem): boolean {
+  const { w, h } = item_span(item);
+  for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) if (grid[y + dy]?.[x + dx] !== undefined) return false;
+  return true;
+}
+
+function place(grid: DesktopGrid, x: number, y: number, item: DesktopItem): void {
+  const { w, h } = item_span(item);
+  for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) (grid[y + dy] ??= [])[x + dx] = item;
+}
+
+const fits_in = (dimensions: { columns: number; rows: number }, x: number, y: number, item: DesktopItem) => {
+  const { w, h } = item_span(item);
+  return x >= 0 && y >= 0 && x + w <= dimensions.columns && y + h <= dimensions.rows;
+};
+
 export class DesktopHelper {
   /**
-   * The user's arrangement: each entry at its saved cell. Entries without a position, or whose cell is already taken,
+   * The user's arrangement: each entry at its saved cell. Entries without a position, or whose cells are already taken,
    * come back as `unplaced`.
    */
   public static arrange(entries: DesktopItem[], positions: Positions): { layout: DesktopGrid; unplaced: DesktopItem[] } {
@@ -25,8 +60,8 @@ export class DesktopHelper {
 
     for (const entry of entries) {
       const position = positions[entry.name];
-      if (position && layout[position.y]?.[position.x] === undefined) {
-        (layout[position.y] ??= [])[position.x] = entry;
+      if (position && region_free(layout, position.x, position.y, entry)) {
+        place(layout, position.x, position.y, entry);
       } else {
         unplaced.push(entry);
       }
@@ -36,26 +71,29 @@ export class DesktopHelper {
   }
 
   /**
-   * Where a dragged group lands (ADR-011 revision). Each item takes its target cell when it's on the grid and not taken
-   * by an item that stays; otherwise the nearest free cell. Earlier moves claim first. An item with nowhere to go is
-   * left out, so it keeps its cell.
+   * Where a dragged group lands (ADR-011 revision). Each item takes its target cell when its whole span is on the grid
+   * and not taken by an item that stays; otherwise the nearest place it fits. Earlier moves claim first. An item with
+   * nowhere to go is left out, so it keeps its cell.
    */
   public static resolve_moves(grid: DesktopGrid, dimensions: { columns: number; rows: number }, moves: DesktopMove[]): Map<string, Position> {
     const moving = new Set(moves.map((move) => move.name));
-    const taken = new Set<string>();
-    grid.forEach((row, y) => row?.forEach((item, x) => item && !moving.has(item.name) && taken.add(`${x},${y}`)));
+    const items = new Map(grid_items(grid).map(({ item }) => [item.name, item]));
+    const taken: DesktopGrid = [];
+    for (const { item, x, y } of grid_items(grid)) if (!moving.has(item.name)) place(taken, x, y, item);
 
-    const free = (x: number, y: number) => x >= 0 && y >= 0 && x < dimensions.columns && y < dimensions.rows && !taken.has(`${x},${y}`);
+    const free = (x: number, y: number, item: DesktopItem) => fits_in(dimensions, x, y, item) && region_free(taken, x, y, item);
     const resolved = new Map<string, Position>();
 
     for (const { name, to } of moves) {
-      let best: Position | null = free(to.x, to.y) ? to : null;
+      // An entry that isn't on the grid yet (just dropped in from Explorer) takes one cell.
+      const item = items.get(name) ?? ({ kind: "file", name, type: "" } as DesktopItem);
+      let best: Position | null = free(to.x, to.y, item) ? to : null;
       if (!best) {
         let distance = Infinity;
         for (let y = 0; y < dimensions.rows; y++) {
           for (let x = 0; x < dimensions.columns; x++) {
             const d = (x - to.x) ** 2 + (y - to.y) ** 2;
-            if (d < distance && free(x, y)) {
+            if (d < distance && free(x, y, item)) {
               distance = d;
               best = { x, y };
             }
@@ -63,7 +101,7 @@ export class DesktopHelper {
         }
       }
       if (!best) continue;
-      taken.add(`${best.x},${best.y}`);
+      place(taken, best.x, best.y, item);
       resolved.set(name, best);
     }
 
@@ -71,8 +109,9 @@ export class DesktopHelper {
   }
 
   /**
-   * The visible grid for the current size. Items inside the grid keep their cell. Items outside it, then unplaced
-   * items, take the first free cells. Whatever still doesn't fit is left out of the view, never out of the layout.
+   * The visible grid for the current size. Items whose span fits keep their cell. Items outside it, then unplaced
+   * items, take the first free cells they fit in. Whatever still doesn't fit is left out of the view, never out of
+   * the layout.
    */
   public static fit(
     dimensions: { columns: number; rows: number },
@@ -82,22 +121,19 @@ export class DesktopHelper {
     const fitted: DesktopGrid = [];
     const overflow: DesktopItem[] = [];
 
-    layout.forEach((row, y) => {
-      row?.forEach((item, x) => {
-        if (item === undefined) return;
-        if (x < dimensions.columns && y < dimensions.rows) {
-          (fitted[y] ??= [])[x] = item;
-        } else {
-          overflow.push(item);
-        }
-      });
-    });
+    for (const { item, x, y } of grid_items(layout)) {
+      if (fits_in(dimensions, x, y, item) && region_free(fitted, x, y, item)) place(fitted, x, y, item);
+      else overflow.push(item);
+    }
     overflow.push(...unplaced);
 
-    for (let y = 0; y < dimensions.rows && overflow.length > 0; y++) {
-      for (let x = 0; x < dimensions.columns && overflow.length > 0; x++) {
-        if (fitted[y]?.[x] === undefined) {
-          (fitted[y] ??= [])[x] = overflow.shift();
+    for (const item of overflow) {
+      search: for (let y = 0; y < dimensions.rows; y++) {
+        for (let x = 0; x < dimensions.columns; x++) {
+          if (fits_in(dimensions, x, y, item) && region_free(fitted, x, y, item)) {
+            place(fitted, x, y, item);
+            break search;
+          }
         }
       }
     }
@@ -111,7 +147,8 @@ export class DesktopHelper {
    */
   public static sort_moves(items: DesktopItem[], by: DesktopSort, rows: number, modified: Map<string, number> = new Map()): DesktopMove[] {
     if (rows <= 0) return [];
-    const sorted = [...items].sort((a, b) => {
+    // Widgets keep their place; the icons flow around them when the moves resolve.
+    const sorted = items.filter((item) => item.kind !== "widget").sort((a, b) => {
       if (by === DesktopSort.KIND) return kind_rank(a) - kind_rank(b) || extension(a).localeCompare(extension(b)) || compare_names(a, b);
       if (by === DesktopSort.DATE) {
         if (a.kind === "directory" || b.kind === "directory") return kind_rank(a) - kind_rank(b) || compare_names(a, b);
@@ -125,9 +162,9 @@ export class DesktopHelper {
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-const display_name = (item: DesktopItem) => (item.kind === "shortcut" ? item.label : item.name);
+const display_name = (item: DesktopItem) => (item.kind === "shortcut" || item.kind === "widget" ? item.label : item.name);
 const compare_names = (a: DesktopItem, b: DesktopItem) => collator.compare(display_name(a), display_name(b));
-const kind_rank = (item: DesktopItem) => (item.kind === "directory" ? 0 : item.kind === "shortcut" ? 1 : 2);
+const kind_rank = (item: DesktopItem) => (item.kind === "directory" ? 0 : item.kind === "shortcut" || item.kind === "widget" ? 1 : 2);
 
 function extension(item: DesktopItem): string {
   if (item.kind !== "file") return "";

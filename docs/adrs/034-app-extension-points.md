@@ -1,6 +1,6 @@
 # ADR-034: App Extension Points: Commands, Badge, Widgets
 **Date:** 2026-10-14
-**Status:** Accepted
+**Status:** Implemented
 
 Extends [ADR-008](./008-app-props-validation.md) (`define_app`), [ADR-022](./022-desktop-folder.md) (desktop as a folder) and [ADR-033](./033-shell.md) (shell). First consumer: Quick Notes. [Brainstorm](../brainstorm/2026-10-14_quick-notes.md).
 

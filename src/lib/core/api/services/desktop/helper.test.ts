@@ -84,3 +84,32 @@ describe("DesktopHelper.sort_moves", () => {
     expect(cells).toEqual([{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 0 }]);
   });
 });
+
+describe("widgets span cells", () => {
+  const widget = (name: string, w: number, h: number) => ({ kind: "widget", name, label: name, app_id: "x", size: { w, h } }) as DesktopItem;
+
+  test("arrange fills every covered cell and refuses an overlap", () => {
+    const sticky = widget("sticky", 2, 2);
+    const { layout, unplaced } = DesktopHelper.arrange([sticky, item("a")], { sticky: { x: 0, y: 0 }, a: { x: 1, y: 1 } });
+    expect(names(layout)).toEqual([["sticky", "sticky"], ["sticky", "sticky"]]);
+    expect(unplaced.map((entry) => entry.name)).toEqual(["a"]);
+  });
+
+  test("fit flows icons around a widget and moves a widget that no longer fits", () => {
+    const sticky = widget("sticky", 2, 2);
+    const { layout } = DesktopHelper.arrange([sticky], { sticky: { x: 2, y: 0 } });
+    expect(names(DesktopHelper.fit({ columns: 3, rows: 2 }, layout, [item("a")]))).toEqual([["sticky", "sticky", "a"], ["sticky", "sticky"]]);
+  });
+
+  test("a moved widget needs its whole span free", () => {
+    const sticky = widget("sticky", 2, 1);
+    const grid = [[sticky, sticky, item("stay")]];
+    // (1,0) would cover "stay" at (2,0); the nearest spot where both cells are free is its own.
+    expect(DesktopHelper.resolve_moves(grid, { columns: 3, rows: 2 }, [{ name: "sticky", to: { x: 1, y: 0 } }]).get("sticky")).toEqual({ x: 0, y: 0 });
+    expect(DesktopHelper.resolve_moves(grid, { columns: 3, rows: 2 }, [{ name: "sticky", to: { x: 1, y: 1 } }]).get("sticky")).toEqual({ x: 1, y: 1 });
+  });
+
+  test("sorting leaves widgets where they are", () => {
+    expect(DesktopHelper.sort_moves([widget("w", 2, 2), item("b")], DesktopSort.NAME, 4).map((move) => move.name)).toEqual(["b"]);
+  });
+});

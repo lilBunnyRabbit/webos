@@ -8,12 +8,12 @@
   let { item, label = true, class: class_name }: { item: DesktopItem; label?: boolean; class?: string } = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
-  const missing_app = $derived(item.kind === "shortcut" && !apps.get(item.app_id));
-  const text = $derived(item.kind === "shortcut" ? item.label : item.name);
+  const missing_app = $derived((item.kind === "shortcut" || item.kind === "widget") && !apps.get(item.app_id));
+  const text = $derived(item.kind === "shortcut" || item.kind === "widget" ? item.label : item.name);
 </script>
 
 <!-- Same rule as the desktop: apps on a tile, files and folders bare. -->
-{#if item.kind === "shortcut"}
+{#if item.kind === "shortcut" || item.kind === "widget"}
   <span
     class={cn(
       "relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10",

@@ -29,10 +29,11 @@ Both implementations own a `DesktopFolder` (composition, not a base class). It h
 ## Model
 
 ```ts
-type DesktopGrid = Array<Array<DesktopItem | undefined>>; // grid[y][x], sparse
+type DesktopGrid = Array<Array<DesktopItem | undefined>>; // grid[y][x], sparse; a widget sits in every cell it covers
 
 type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
+  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: { w: number; h: number } }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };
 
@@ -45,6 +46,8 @@ type Positions = Record<string, Position>; // entry name → saved cell
 | Folder | `directory` |
 | File whose `file_extension()` is `.desktop` and whose body parses as a shortcut | `shortcut`: `label` is the name without `.desktop`, plus `app_id` and `props` from the file |
 | `.desktop` file that doesn't parse | `file` (shown with a file icon) |
+| `.widget` file that parses (`{ app, props?, w, h }`, spans 1–8, `apps/widget.ts`) | `widget` (ADR-034): `label` is the name without `.widget`, `size` is `{ w, h }` in cells |
+| `.widget` file that doesn't parse | `file` |
 | Any other file | `file`, `type` = the browser's MIME for it (`""` when unknown) |
 
 - `name` is the entry's file name and the key for everything: positions, removal, identity.
@@ -74,7 +77,8 @@ Three layers of state turn the folder into a grid:
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
-| `open` | `(item, options?: OpenOptions) => void` | `shortcut` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
+| `pin_widget` | `(app_id, { label, props?, size }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `null` when the app has no `widget`. No position is saved: it takes the first place it fits. Same on mobile, where it's written but not shown |
+| `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
 
@@ -125,6 +129,8 @@ Positions are keyed by entry name, so renaming an entry in File Explorer loses i
 
 **Seeding.** A new default reaches only new devices: existing desktops already have a layout file, so the seed never runs again (owner's call, 2026-10-14). An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` first takes the v0 React pins (`take_v0_pins()` in `layout.ts`: localStorage `desktop`, read and removed) and writes one shortcut per pin at its v0 grid cell. Without v0 pins it writes one shortcut per `DEFAULT_SHORTCUTS` (`settings`, `file-explorer`, `terminal`) at `{ x: i, y: 0 }`. Shortcuts are named after the manifest (`Settings.desktop`, `File Explorer.desktop`); then it saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.
 
+**Spans** (ADR-034). `item_span(item)` is `size` for a widget and 1×1 for everything else. Every step below works on the whole span: a widget is placed only where all its cells are free (and, when fitting or moving, on the grid). The grid holds the widget in each cell it covers; `grid_items(grid)` lists each item once with its top-left cell, which is what positions store and what the shell renders.
+
 **Arrange** (`DesktopHelper.arrange(entries, positions)`): in entry order, each entry with a saved position takes that cell if it's still free. Entries with no position, or whose cell an earlier entry already took, go to `unplaced`. `layout` may contain cells outside the current grid.
 
 **Fit** (`DesktopHelper.fit(dimensions, layout, unplaced)`, re-run whenever the size, entries or positions change):
@@ -139,7 +145,7 @@ Unplaced items are never written back. Their cell is recomputed on every fit, so
 
 1. Resolve the targets (`DesktopHelper.resolve_moves(grid, dimensions, moves)`): cells held by items that aren't moving are taken; each move takes its target when it's on the grid and free, else the nearest free cell by distance (scan order breaks ties, so an item may land back in its own vacated cell). Tested in `helper.test.ts`.
 2. Start from the current `positions`, minus names no longer in `entries` (stale names are pruned here and only here).
-3. Pin every item **visible** in `grid` to the cell it's shown in. Relocated and unplaced icons become real positions, so they don't jump when a cell changes hands.
+3. Pin every item **visible** in `grid` to the (top-left) cell it's shown in. Relocated and unplaced icons become real positions, so they don't jump when a cell changes hands.
 4. Set each resolved item to its cell.
 5. Assign `positions` (the grid updates at once), then write the file in the background.
 
@@ -149,9 +155,13 @@ Hidden items keep whatever position they had.
 
 **Coordinates.** `container.bounds` is viewport space. The shell's drag handler subtracts `bounds.x/y` from `clientX/Y` and divides by `cell` to get a grid cell, so the two stay consistent as long as the element doesn't move without resizing. Moves without a resize aren't observed (ResizeObserver only reports size).
 
+**Sort** (`sort_moves`) leaves widgets out: they keep their place and the sorted icons flow around them when the moves resolve.
+
+**Widgets on the desktop** (`components/desktop/desktop-widget.svelte`). A frame spanning its cells, inset 4px. Its 24px title strip is the handle: a button carrying `data-desktop-name`, so selection, drag, Enter/F2/Delete, the item menu ("Remove widget") and double-click to open (launches the app with the widget's props, through `apps.open`) all work as for icons. The body (`data-widget-body`) belongs to the app's `manifest.widget` component, which gets `{ props, size, name }` with props validated against the manifest's `props`. The desktop ignores pointer-down, right-click and keys that come from inside a body, so a sticky's Mod+A selects its text, not the desktop. A missing app, an app without a widget, or props that fail validation show a one-line message instead.
+
 ## Mobile home
 
-`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
+`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Widgets are filtered out of its entries for now (ADR-034): home pages flow without gaps and can't hold a spanning tile. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
@@ -177,6 +187,7 @@ ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context me
 
 ## Known gaps
 
+- Widgets have a fixed size from their file; there's no resize handle yet. They don't show on the phone.
 - Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.
 - `pin()` doesn't dedupe. The start menu ignores its `null` and its errors beyond `console.error`.

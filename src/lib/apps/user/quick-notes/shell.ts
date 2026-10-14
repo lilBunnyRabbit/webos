@@ -1,4 +1,4 @@
-import kernel, { type AppsService, type DialogsService, type FilesService, type WindowsService } from "$lib/core/api";
+import kernel, { type AppsService, type DesktopService, type DialogsService, type FilesService, type WindowsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { tilde_path } from "$lib/core/api/services/files/path";
 import CaptureDialog, { type Capture } from "./capture-dialog.svelte";
@@ -147,4 +147,28 @@ export async function complete_notes(partial: string) {
     .sort(newest_first)
     .filter((note) => note.id.startsWith(query) || title_of(note.body).toLowerCase().includes(query))
     .map((note) => ({ value: note.id, detail: title_of(note.body) }));
+}
+
+export const STICKY_SIZE = { w: 3, h: 2 };
+export const TODO_WIDGET_SIZE = { w: 3, h: 3 };
+
+export async function pin_note(note: Note): Promise<string> {
+  const desktop = kernel.service<DesktopService>("desktop");
+  const name = await desktop.pin_widget(APP_ID, { label: title_of(note.body).replace(/(^|\s)#[\p{L}\p{N}_-]+/gu, "").trim().slice(0, 40) || "Note", props: { note: note.id }, size: STICKY_SIZE });
+  if (!name) throw new ShellError("couldn't pin the note");
+  return name;
+}
+
+export async function pin_todos(): Promise<string> {
+  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Todo", size: TODO_WIDGET_SIZE });
+  if (!name) throw new ShellError("couldn't pin the todo list");
+  return name;
+}
+
+export async function pin({ args }: CommandContext<{ note: string }>): Promise<string> {
+  return `pinned ${await pin_note(await find(args.note))} to the desktop`;
+}
+
+export async function todo_pin(): Promise<string> {
+  return `pinned ${await pin_todos()} to the desktop`;
 }

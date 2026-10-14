@@ -71,8 +71,19 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * shows nothing.
    */
   badge?: () => number | null;
+  /** What the app renders on the desktop for its `.widget` files (ADR-034). Props are validated against `props`. */
+  widget?: () => Promise<{ default: Component<WidgetProps> }>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
+}
+
+export interface WidgetProps {
+  /** The widget file's props, already validated against the manifest's `props`. */
+  props: AppProps;
+  /** In grid cells. */
+  size: { w: number; h: number };
+  /** The `.widget` file's name in `/home/Desktop`. */
+  name: string;
 }
 
 /** What `define_app` returns: a manifest before discovery knows its folder. */

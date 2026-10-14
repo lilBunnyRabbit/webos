@@ -1,7 +1,7 @@
 import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
-import { DesktopHelper, type DesktopMove } from "./helper";
+import { DesktopHelper, grid_items, type DesktopMove } from "./helper";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
   LAYOUT_DIRECTORY_NAME,
@@ -167,7 +167,7 @@ export class DesktopService implements GridDesktopService {
     const names = new Set(this.folder.names());
     const positions: Positions = Object.fromEntries(Object.entries(this.positions).filter(([name]) => names.has(name)));
     // Pin every visible item to where it's shown, so relocated items don't jump once this cell changes hands.
-    this.grid.forEach((row, y) => row?.forEach((entry, x) => entry && (positions[entry.name] = { x, y })));
+    for (const { item, x, y } of grid_items(this.grid)) positions[item.name] = { x, y };
     for (const [name, position] of resolved) positions[name] = position;
     this.positions = positions;
 
@@ -203,6 +203,10 @@ export class DesktopService implements GridDesktopService {
 
   public async pin(app_id: AppId, props?: AppProps): Promise<string | null> {
     return this.folder.write_shortcut(app_id, props);
+  }
+
+  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
+    return this.folder.write_widget(app_id, options);
   }
 
   public open(item: DesktopItem, options?: OpenOptions): void {

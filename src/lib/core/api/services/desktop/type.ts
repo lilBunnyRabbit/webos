@@ -28,7 +28,13 @@ export interface DesktopService extends IService {
   /** Writes `{App name}.desktop` into `/home/Desktop`. Returns the file name, or `null` for an unknown app. */
   pin(app_id: AppId, props?: AppProps): Promise<string | null>;
 
-  /** Shortcut or file → `apps.open` (a shortcut launches its target), folder → File Explorer there. */
+  /**
+   * Writes `{label}.widget` into `/home/Desktop` (ADR-034). Returns the file name, or `null` for an app without a
+   * widget. The mobile home doesn't show widgets yet, but the file is the same.
+   */
+  pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null>;
+
+  /** Shortcut, widget or file → `apps.open` (a shortcut or widget launches its app), folder → File Explorer there. */
   open(item: DesktopItem, options?: OpenOptions): void;
 }
 
@@ -87,5 +93,6 @@ export type DesktopGrid = Array<Array<DesktopItem | undefined>>;
 
 export type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
+  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: { w: number; h: number } }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };
