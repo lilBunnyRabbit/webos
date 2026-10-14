@@ -41,3 +41,15 @@ export function chunks(count: number, size: number): number[][] {
   }
   return groups;
 }
+
+export interface SplitOptions {
+  ranges?: string;
+  every?: number;
+}
+
+export function split_groups(count: number, { ranges, every }: SplitOptions): RangeResult {
+  if (ranges !== undefined && every !== undefined) return { ok: false, error: "Use --ranges or --every, not both" };
+  if (ranges !== undefined) return parse_ranges(ranges, count);
+  if (every !== undefined) return every >= 1 ? { ok: true, groups: chunks(count, every) } : { ok: false, error: "--every needs at least 1" };
+  return { ok: true, groups: every_page(count) };
+}

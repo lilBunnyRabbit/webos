@@ -13,6 +13,10 @@ describe("launch routing", () => {
     expect(initial_section({ paths: ["/home/a.png", "/home/b.JPG"] })).toBe(Section.IMAGES);
   });
 
+  test("a signature opens Sign", () => {
+    expect(initial_section({ signature: "Me.svg" })).toBe(Section.SIGN);
+  });
+
   test("path comes first, then paths", () => {
     expect(launch_paths({ path: "/a.pdf", paths: ["/b.pdf"] })).toEqual(["/a.pdf", "/b.pdf"]);
   });

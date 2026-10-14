@@ -92,3 +92,22 @@ export function clamp_placement(placement: Placement, aspect: number, page_aspec
     y: Math.min(Math.max(0, 1 - height), Math.max(0, placement.y)),
   };
 }
+
+const PT_TO_MM = 25.4 / 72;
+
+const PAPER_NAMES: [string, number, number][] = [
+  ["A3", 297, 420],
+  ["A4", 210, 297],
+  ["A5", 148, 210],
+  ["Letter", 215.9, 279.4],
+  ["Legal", 215.9, 355.6],
+];
+
+export function page_size_label(width_pt: number, height_pt: number): string {
+  const width = width_pt * PT_TO_MM;
+  const height = height_pt * PT_TO_MM;
+  const [short, long] = width < height ? [width, height] : [height, width];
+  const paper = PAPER_NAMES.find(([, w, h]) => Math.abs(short - w) < 1.5 && Math.abs(long - h) < 1.5)?.[0];
+  const mm = `${Math.round(width)} × ${Math.round(height)} mm`;
+  return paper ? `${mm} · ${paper}${width > height ? " landscape" : ""}` : mm;
+}

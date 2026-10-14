@@ -39,7 +39,7 @@
 
   const paths_for = (target: Section) => (launch.section === target ? launch.paths : []);
 
-  let sign_with = $state<string | null>(null);
+  let sign_with = $state<string | null>(untrack(() => props.signature ?? null));
 
   function use_signature(name: string) {
     sign_with = name;

@@ -1,5 +1,22 @@
 import { describe, expect, test } from "vitest";
-import { chunks, every_page, flatten_groups, parse_ranges } from "./ranges";
+import { chunks, every_page, flatten_groups, parse_ranges, split_groups } from "./ranges";
+
+describe("split_groups", () => {
+  test("every page by default", () => {
+    expect(split_groups(3, {})).toEqual({ ok: true, groups: [[1], [2], [3]] });
+  });
+
+  test("ranges or every N", () => {
+    expect(split_groups(6, { ranges: "1-3,5" })).toEqual({ ok: true, groups: [[1, 2, 3], [5]] });
+    expect(split_groups(5, { every: 2 })).toEqual({ ok: true, groups: [[1, 2], [3, 4], [5]] });
+  });
+
+  test("rejects both, zero and bad ranges", () => {
+    expect(split_groups(5, { ranges: "1", every: 2 }).ok).toBe(false);
+    expect(split_groups(5, { every: 0 }).ok).toBe(false);
+    expect(split_groups(5, { ranges: "9" })).toEqual({ ok: false, error: "Pages go from 1 to 5" });
+  });
+});
 
 describe("parse_ranges", () => {
   test("single pages and ranges", () => {

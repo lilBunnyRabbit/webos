@@ -1,5 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { PageSize, clamp_placement, display_to_pdf, displayed_size, image_page, stamp_geometry } from "./geometry";
+import { PageSize, clamp_placement, display_to_pdf, displayed_size, image_page, page_size_label, stamp_geometry } from "./geometry";
+
+describe("page_size_label", () => {
+  test("names common paper, either way round", () => {
+    expect(page_size_label(595.28, 841.89)).toBe("210 × 297 mm · A4");
+    expect(page_size_label(792, 612)).toBe("279 × 216 mm · Letter landscape");
+  });
+
+  test("other sizes are just millimetres", () => {
+    expect(page_size_label(200, 300)).toBe("71 × 106 mm");
+  });
+});
 
 const BOX = { x: 0, y: 0, width: 600, height: 800 };
 

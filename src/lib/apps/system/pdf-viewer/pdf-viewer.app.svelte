@@ -1,7 +1,13 @@
 <script lang="ts">
-  import kernel, { type FilesService } from "$lib/core/api";
+  import kernel, { type AppsService, type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
-  import { Devices as DevicesIcon, FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import {
+    Devices as DevicesIcon,
+    FilePdf as FilePdfIcon,
+    FolderOpen as FolderOpenIcon,
+    PencilSimple as PencilSimpleIcon,
+    Warning as WarningIcon,
+  } from "phosphor-svelte";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { untrack } from "svelte";
@@ -25,6 +31,8 @@
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const PDF_TOOLS = "pdf-tools";
 
   /** `undefined` while loading, `null` when the path points at nothing. */
   let file = $state<File | null | undefined>(undefined);
@@ -81,6 +89,9 @@
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
       <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
+      {#if path && apps.get(PDF_TOOLS)}
+        <IconButton label="Edit in PDF Tools" size="sm" onclick={() => apps.launch(PDF_TOOLS, { path })}><PencilSimpleIcon weight="bold" /></IconButton>
+      {/if}
     </Toolbar>
     <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
   </div>

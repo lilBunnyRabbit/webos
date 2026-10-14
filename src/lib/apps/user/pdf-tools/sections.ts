@@ -15,12 +15,14 @@ export interface LaunchProps {
   section?: Section;
   path?: string;
   paths?: string[];
+  signature?: string;
 }
 
 const IMAGE_NAME = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
 
 export function initial_section(props: LaunchProps): Section {
   if (props.section) return props.section;
+  if (props.signature) return Section.SIGN;
   const paths = [...(props.paths ?? []), ...(props.path ? [props.path] : [])];
   if (paths.length && paths.every((path) => IMAGE_NAME.test(path))) return Section.IMAGES;
   if (paths.length > 1) return Section.MERGE;
