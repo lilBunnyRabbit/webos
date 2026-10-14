@@ -82,7 +82,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `apps.launcher` | Mod+K | `ui launcher` | ✓ | ✓ |
 | `apps.terminal` | Alt+Shift+↵ | `app launch terminal`: always a new window | ✓ | ✓ |
 | `apps.settings` | Mod+, | `app launch settings` | ✓ | ✓ |
-| `apps.quick_note` | Alt+Shift+Q | `note`, Quick Notes' app command (ADR-034): with no text it opens the capture box | ✓ | ✓ |
+| `apps.quick_note` | Alt+Shift+Q | `quno q`, Quick Notes' app command (ADR-034): with no text it opens the capture box | ✓ | ✓ |
 | `system.notifications` | Alt+Shift+N | `ui notifications` | ✓ | ✓ |
 | `system.shortcuts` | Mod+/ | `shortcuts sheet` | ✓ | ✓ |
 

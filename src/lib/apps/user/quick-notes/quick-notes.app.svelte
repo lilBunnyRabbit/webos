@@ -189,7 +189,7 @@
     {#if tab.value === Tab.TODO}
       <div class="h-full overflow-auto p-2">
         {#if todos.length === 0}
-          <EmptyState icon={CheckSquare} title="Nothing to do" description="Add one above, or type todo call bob in the Terminal." class="h-full" />
+          <EmptyState icon={CheckSquare} title="Nothing to do" description="Add one above, or type quno t call bob in the Terminal." class="h-full" />
         {:else}
           <ul class="grid gap-0.5">
             {#each todos as todo (todo.line)}

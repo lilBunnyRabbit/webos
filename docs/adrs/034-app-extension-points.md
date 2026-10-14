@@ -73,3 +73,7 @@ define_app({ widget: () => import("./widget.svelte") }); // Component<{ props, s
 - Grid occupancy, drag and collision in DesktopService learn multi-cell items.
 - Two apps can still clash on a command id; the last one discovered wins, with a warning.
 - Window-scoped app commands stay on the ROADMAP.
+
+## Revisions
+
+- **2026-10-14:** Quick Notes renamed its commands to a `quno` group (`quno q`, `quno t`, `quno ls`, …), so they match the owner's CLI. Ids stay free; an app picking its own group noun is not the forced prefix rejected above.

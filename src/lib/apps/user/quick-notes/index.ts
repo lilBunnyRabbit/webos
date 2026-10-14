@@ -50,7 +50,14 @@ export default define_app({
     },
     commands: [
       define_command({
-        id: "note",
+        id: "quno",
+        description: "Open Quick Notes, or one note",
+        args: z.object({ note: note_arg().optional() }),
+        positional: ["note"],
+        run: async ({ args }) => (await logic()).open_app(args.note),
+      }),
+      define_command({
+        id: "quno q",
         description: "Capture a note; no text opens the capture box",
         args: z.object({ text: z.array(z.string()).default([]).describe("The note, #tags inline") }),
         positional: ["text"],
@@ -58,7 +65,7 @@ export default define_app({
         run: async (context) => (await logic()).note(context),
       }),
       define_command({
-        id: "notes",
+        id: "quno ls",
         description: "Notes, newest first: open ones, or -s <status>, or -a for all",
         args: z.object({
           status: z.enum(NOTE_STATUSES).optional().describe("Only this status"),
@@ -71,14 +78,14 @@ export default define_app({
         },
       }),
       define_command({
-        id: "note cat",
+        id: "quno cat",
         description: "Print a note",
         args: z.object({ note: note_arg() }),
         positional: ["note"],
         run: async (context) => (await logic()).cat(context),
       }),
       define_command({
-        id: "note ready",
+        id: "quno ready",
         description: "Mark a note triaged",
         args: z.object({ note: note_arg() }),
         positional: ["note"],
@@ -86,7 +93,7 @@ export default define_app({
         run: async (context) => (await logic()).set_status(context, NoteStatus.READY),
       }),
       define_command({
-        id: "note done",
+        id: "quno done",
         description: "Mark a note done",
         args: z.object({ note: note_arg() }),
         positional: ["note"],
@@ -94,7 +101,7 @@ export default define_app({
         run: async (context) => (await logic()).set_status(context, NoteStatus.DONE),
       }),
       define_command({
-        id: "note drop",
+        id: "quno drop",
         description: "Drop a note (it stays on disk, -a lists it)",
         args: z.object({ note: note_arg() }),
         positional: ["note"],
@@ -102,14 +109,14 @@ export default define_app({
         run: async (context) => (await logic()).set_status(context, NoteStatus.DROPPED),
       }),
       define_command({
-        id: "note rm",
+        id: "quno rm",
         description: "Delete a note's file",
         args: z.object({ note: note_arg() }),
         positional: ["note"],
         run: async (context) => (await logic()).remove(context),
       }),
       define_command({
-        id: "todo",
+        id: "quno t",
         description: "Add a todo, or list them with no text",
         args: z.object({ text: z.array(z.string()).default([]).describe("The todo, #tags inline") }),
         positional: ["text"],
@@ -119,7 +126,7 @@ export default define_app({
         },
       }),
       define_command({
-        id: "todo done",
+        id: "quno t done",
         description: "Check off todo n",
         args: z.object({ n: z.number().int().min(1) }),
         positional: ["n"],
@@ -127,7 +134,7 @@ export default define_app({
         run: async (context) => (await logic()).todo_done(context),
       }),
       define_command({
-        id: "todo clear",
+        id: "quno t clear",
         description: "Remove checked todos, -a for all",
         args: z.object({ all: z.boolean().default(false) }),
         short: { all: "a" },

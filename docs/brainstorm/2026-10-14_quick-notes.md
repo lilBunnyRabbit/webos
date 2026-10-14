@@ -69,6 +69,8 @@ The owner asked to use the quno CLI (`~/dev/orgs/lilbunnyrabbit/quno`) as inspir
 
     Completer kind `note`: id prefix, with the title as the detail. A note resolves the quno way: id prefix (3+), then a title substring.
 
+14. **The commands are named `quno`, after the CLI** (owner, after shipping `note`/`todo`). They use the real CLI's verbs: `quno` (open the app, or one note), `quno q [text]`, `quno ls [-s status] [-a]`, `quno cat|ready|done|drop|rm <note>`, `quno t [text]`, `quno t done <n>`, `quno t clear [-a]`. Alt+Shift+Q runs `quno q`. The app keeps its name, Quick Notes; only the shell speaks quno.
+
 ## Key takeaways
 
 - Quick Notes is the first consumer of three app extension points: `shell`, `badge` and `widget` on `define_app`. These are recorded in [ADR-034](../adrs/034-app-extension-points.md).

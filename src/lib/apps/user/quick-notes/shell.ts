@@ -132,6 +132,14 @@ export function open_note(id: string): void {
   kernel.service<AppsService>("apps").launch(APP_ID, { note: id });
 }
 
+export async function open_app(query?: string): Promise<void> {
+  if (!query) {
+    kernel.service<AppsService>("apps").launch(APP_ID);
+    return;
+  }
+  open_note((await find(query)).id);
+}
+
 export async function complete_notes(partial: string) {
   const query = partial.toLowerCase();
   return (await list_notes(files()))
