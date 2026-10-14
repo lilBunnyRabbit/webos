@@ -7,7 +7,7 @@ import type {
   UploadOptions,
 } from "./type";
 import { untrack } from "svelte";
-import { SvelteMap } from "svelte/reactivity";
+import { createSubscriber, SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
 import { ensure_hierarchy } from "./hierarchy";
 import { join_path, split_path } from "./path";
@@ -24,14 +24,16 @@ export class FilesService implements IFilesService {
   }
 
   private _root: Promise<FileSystemDirectoryHandle> | null = null;
-  private revisions = new SvelteMap<string, number>();
+  // One cell per folder: reading a missing key of a SvelteMap subscribes to the whole map, so every watcher of an untouched
+  // folder re-ran whenever any other folder got its first revision (widgets reloaded when an app opened).
+  private revisions = new Map<string, Revision>();
 
   async init(): Promise<void> {
     await ensure_hierarchy(await this.get_root());
   }
 
   revision(path: string): number {
-    return this.revisions.get(join_path(split_path(path))) ?? 0;
+    return this.cell(join_path(split_path(path))).read();
   }
 
   /**
@@ -48,8 +50,17 @@ export class FilesService implements IFilesService {
     if (segments !== null) this.bump(join_path(segments.slice(0, -1)));
   }
 
+  private cell(path: string): Revision {
+    let revision = this.revisions.get(path);
+    if (!revision) {
+      revision = new Revision();
+      this.revisions.set(path, revision);
+    }
+    return revision;
+  }
+
   private bump(path: string): void {
-    this.revisions.set(path, (this.revisions.get(path) ?? 0) + 1);
+    this.cell(path).bump();
   }
 
   async get_root(): Promise<FileSystemDirectoryHandle> {
@@ -280,7 +291,7 @@ export class FilesService implements IFilesService {
     await opfs.clear_opfs();
     const root = await this.get_root();
     await ensure_hierarchy(root);
-    this.revisions.clear();
+    for (const revision of this.revisions.values()) revision.bump();
     await this.changed(root);
   }
 }
@@ -411,5 +422,28 @@ export class DirectoryHandler {
 
   async open_directory(name: string, handle: FileSystemDirectoryHandle): Promise<DirectoryHandler> {
     return this.service.directory([...this.segments, name], handle);
+  }
+}
+
+// createSubscriber rather than $state: a cell made lazily inside the reading effect would count as that effect's own
+// state, which Svelte doesn't track, so the first reader would never re-run.
+class Revision {
+  value = 0;
+  private notify: (() => void) | null = null;
+  private subscribe = createSubscriber((update) => {
+    this.notify = update;
+    return () => {
+      this.notify = null;
+    };
+  });
+
+  read(): number {
+    this.subscribe();
+    return this.value;
+  }
+
+  bump(): void {
+    this.value++;
+    this.notify?.();
   }
 }

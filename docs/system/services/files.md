@@ -205,7 +205,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 ### Revisions
 
-`revision(path)` reads a `SvelteMap`, so it's reactive. Read it in an effect, re-list that folder when it changes.
+`revision(path)` is reactive per folder: each path gets its own counter cell (`Revision`, built on `createSubscriber`), created on first read or bump. Read it in an effect, re-list that folder when it changes. It used to be one `SvelteMap`, where reading a path nobody had bumped yet subscribed to the whole map: every untouched folder's watcher re-ran whenever any other folder got its first revision (the desktop re-read itself and its widgets flashed their loaders whenever an app opened). `createSubscriber` rather than `$state`, because a cell created lazily inside the reading effect would be that effect's own state, which Svelte doesn't track. `clear()` bumps every cell instead of resetting them.
 
 - `changed(dir)` maps a handle back to its path with the native `root.resolve(dir)` and bumps that path. A handle outside the root (`resolve` returns `null`) is ignored.
 - Every mutation bumps only the directory it touched, never its ancestors:

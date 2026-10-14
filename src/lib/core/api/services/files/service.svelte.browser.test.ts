@@ -57,6 +57,25 @@ describe("revisions", () => {
   });
 });
 
+describe("revision watchers", () => {
+  test("a folder's watcher ignores other folders getting their first revision", async () => {
+    let runs = 0;
+    const stop = $effect.root(() => {
+      $effect(() => {
+        files.revision("/home/Desktop");
+        runs++;
+      });
+    });
+    flushSync();
+    expect(runs).toBe(1);
+    const tmp = (await files.get_directory("/tmp"))!;
+    await files.create_directory(tmp, "first-time");
+    flushSync();
+    expect(runs).toBe(1);
+    stop();
+  });
+});
+
 describe("DirectoryHandler", () => {
   test("lists itself and follows changes made elsewhere", async () => {
     const handler = await open(["home"]);
