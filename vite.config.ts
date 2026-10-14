@@ -23,8 +23,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
       workbox: {
-        // mjs: the pdf.js worker (PDF Tools), so rendering pages works offline too (owner, 2026-10-15).
-        globPatterns: ["**/*.{js,mjs,css,html}"],
+        // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
+        globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
