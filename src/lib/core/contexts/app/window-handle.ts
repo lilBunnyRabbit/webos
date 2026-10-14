@@ -24,6 +24,9 @@ export function create_window_handle(id: WindowId): WindowHandle {
     get is_minimized() {
       return has(WindowFlag.MINIMIZED);
     },
+    get is_visible() {
+      return windows().is_visible(id);
+    },
     get bounds() {
       return windows().get(id)?.bounds ?? NO_BOUNDS;
     },

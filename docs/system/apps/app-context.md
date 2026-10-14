@@ -33,6 +33,7 @@ Built by `create_window_handle(id)`. Every member calls `kernel.service<WindowsS
 | `is_focused` | `boolean` getter | `windows.is_focused(id)`: the window has the top `order` |
 | `is_maximized` | `boolean` getter | Has the `maximized` flag. `false` once the window is gone |
 | `is_minimized` | `boolean` getter | Has the `minimized` flag. `false` once the window is gone |
+| `is_visible` | `boolean` getter | `windows.is_visible(id)`: not minimized (mobile: on screen) and the tab isn't hidden (ADR-035). Derive loops and timers from it: `$derived(playing && win.is_visible)` |
 | `bounds` | `Readonly<Bounds>` getter | `{ x, y, width, height }` from the instance. A frozen zero rect once the window is gone |
 | `focus()` | `void` | `windows.focus(id)` |
 | `close()` | `void` | `windows.close(id)`: asks first when the window is dirty (ADR-029). Call `set_dirty(false)` before closing after your own save |
@@ -57,7 +58,7 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 
 Files from the real device aren't a handle member: `pick_device_files({ accept, multiple })` from `$lib/core/utils/device-file` resolves `File[]` in memory, with no OPFS copy (ADR-031).
 
-Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_title`, `set_icon`, taskbar attention/badge, status bar.
+Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_icon`, taskbar attention/badge, status bar.
 
 ## `StorageHandle`
 
@@ -70,6 +71,7 @@ Built by `create_storage_handle(app_id, instance.app.state)` in `window.svelte`.
 | `remove` | `(key): void` | `localStorage.removeItem` (errors logged, not thrown), then resets a live cell to its `initial` without saving; see below |
 | `persisted` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | A reactive cell that saves on change, shared by every window of the app. Must be called during component init. For app data |
 | `window` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | State of this window only, saved with the session. For view state (open tab, expanded rows, toggles) |
+| `file` | `<T>(name, initial: T, schema: ZodType<T>): { value: T; ready; error }` | A JSON file in the app's data folder `/var/lib/apps/{app_id}/{name}`, shared by every window. For app data bigger than settings (ADR-035). Must be called during component init |
 
 ### `persisted()`
 
@@ -115,6 +117,21 @@ section.value = "about"; // this window only
 - A launch prop can be the `initial` (Settings' `section`): it counts for a new window, but a restored window's saved state wins over its saved props.
 
 Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Editor (`wrap`, `markdown`; Text Viewer's `wrap` before the rename). Before 2026-10-11 these were `persisted()` cells, so every window of the app switched together; SessionService's `init()` removes their old `app.{id}.*` keys ([persistence](../persistence.md)).
+
+### `file()` (ADR-035)
+
+```ts
+const board = storage.file("board.json", EMPTY_BOARD, BoardSchema);
+{#if board.ready} … board.value.columns.push(column) … {/if}
+```
+
+- Built on `json_file(path, initial, schema)` from `$lib/core/contexts/app` (`json-file.svelte.ts`), which also works outside an app (a widget, another app's file, the game kit) and returns a handle with `release()`. `app_data_path(app_id, name)` builds the path.
+- One cell per path across the page, reference-counted; the last release stops it.
+- `ready` is `false` until the first read. Nothing is written before it, so a slow read never overwrites the file with `initial`.
+- Re-reads whenever the folder's `files.revision()` changes: another window, Text Editor, Explorer, a delete (back to `initial`, no write). Texts it wrote itself recently are recognized and not read back over newer edits.
+- Deep changes save pretty-printed through `LatestWriter` (serialized, newest wins, folders created). A change made right before the last release is still written.
+- Missing file → `initial`. Invalid JSON or schema → `initial` and `error` set; the file stays on disk until the next change overwrites it.
+- Unit of sync is the folder: a write to any file in it makes every cell in that folder re-read (cheap: one small read each).
 
 ## Divergence from ADR
 

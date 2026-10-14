@@ -51,7 +51,25 @@ export class NotificationsService implements INotificationsService {
     const duration = options.duration !== undefined ? options.duration : options.type === NotificationType.PROGRESS ? null : DEFAULT_DURATION;
     if (duration !== null) this.schedule_hide(id, duration);
 
+    if (options.system && document.hidden) void this.show_system(id, options);
+
     return id;
+  }
+
+  public async request_system(): Promise<boolean> {
+    if (!("Notification" in window)) return false;
+    if (Notification.permission === "default") await Notification.requestPermission();
+    return Notification.permission === "granted";
+  }
+
+  private async show_system(id: NotificationId, options: NotifyOptions): Promise<void> {
+    if (!(await this.request_system())) return;
+    const notification = new Notification(options.title, { body: options.message, tag: id });
+    notification.onclick = () => {
+      window.focus();
+      this.mark_read(id);
+      notification.close();
+    };
   }
 
   public update(id: NotificationId, update: NotificationUpdate): void {

@@ -1,5 +1,6 @@
 import type { AppId } from "$lib/core/api";
 import type { ZodType } from "zod";
+import { app_data_path, json_file } from "./json-file.svelte";
 import type { StorageHandle } from "./type";
 
 // One cell per key across all windows of an app, so they share the value live instead of overwriting each other on save.
@@ -7,21 +8,21 @@ const cells = new Map<string, PersistedCell<unknown>>();
 
 class PersistedCell<T> {
   value = $state() as T;
-  #refs = 0;
-  #skip_save = false;
-  #dispose: () => void;
+  private refs = 0;
+  private skip_save = false;
+  private dispose: () => void;
 
-  readonly #initial: T;
+  private readonly initial: T;
 
   constructor(initial: T, stored: T | null, save: (value: T) => void) {
     // Values are JSON-persisted, so structuredClone is safe; the copy keeps edits to the live value out of the reset target.
-    this.#initial = structuredClone(initial);
+    this.initial = structuredClone(initial);
     this.value = stored ?? initial;
-    this.#dispose = $effect.root(() => {
+    this.dispose = $effect.root(() => {
       $effect(() => {
         const snapshot = $state.snapshot(this.value) as T;
-        if (this.#skip_save) {
-          this.#skip_save = false;
+        if (this.skip_save) {
+          this.skip_save = false;
           return;
         }
         save(snapshot);
@@ -32,19 +33,19 @@ class PersistedCell<T> {
   /** Back to the initial value without writing it, so the key stays removed until the next change. */
   reset(): void {
     // Assigning an equal primitive doesn't re-run the save effect, so the skip flag would leak into the next real change.
-    if (Object.is(this.value, this.#initial)) return;
-    this.#skip_save = true;
-    this.value = structuredClone(this.#initial);
+    if (Object.is(this.value, this.initial)) return;
+    this.skip_save = true;
+    this.value = structuredClone(this.initial);
   }
 
   retain(): void {
-    this.#refs++;
+    this.refs++;
   }
 
   /** Returns true when the last user is gone and the cell is disposed. */
   release(): boolean {
-    if (--this.#refs > 0) return false;
-    this.#dispose();
+    if (--this.refs > 0) return false;
+    this.dispose();
     return true;
   }
 }
@@ -123,5 +124,11 @@ export function create_storage_handle(app_id: AppId, window_state: Record<string
     };
   }
 
-  return { get, set, remove, persisted, window: window_cell };
+  function file<T>(name: string, initial: T, schema: ZodType<T>) {
+    const handle = json_file(app_data_path(app_id, name), initial, schema);
+    $effect(() => () => handle.release());
+    return handle;
+  }
+
+  return { get, set, remove, persisted, window: window_cell, file };
 }

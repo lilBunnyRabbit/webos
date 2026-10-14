@@ -19,6 +19,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `hide_toast(id)` | `(id): void` | Hides the toast, clears its timer, keeps it in history |
 | `mark_read(id)` | `(id): void` | |
 | `mark_all_read()` | `(): void` | |
+| `request_system()` | `(): Promise<boolean>` | Asks for browser notification permission if not decided yet. Call it from a click (Pomodoro's Start) so the prompt isn't blocked. Resolves whether `system` alerts can show |
 
 `NotifyOptions`:
 
@@ -30,6 +31,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `icon` | `Component` | type icon | Replaces the type icon in the toast |
 | `duration` | `number \| null` | `5000`; for `"progress"`, no auto-hide | Toast lifetime in ms. `null` keeps the toast until closed. History is unaffected |
 | `actions` | `NotificationAction[]` | | `{ label, on_click }`. Clicking runs `on_click` then hides the toast |
+| `system` | `boolean` | `false` | While the tab is hidden, also a browser `Notification` (title, message, `tag` = id). Asks for permission on first use; denied → toast only. Clicking it focuses the tab and marks it read (ADR-035) |
 | `progress` | `number \| null` | | `0`–`1` determinate bar, `-1` indeterminate (pulsing) bar, `null`/absent no bar |
 
 `NotificationUpdate` can change `title`, `message`, `type`, `progress`, `actions`. Not `duration` or `icon`.
@@ -109,3 +111,4 @@ Contributes `notify`, `notifications` and the `notification` value type (`notifi
 - `mark_read(id)` and `update()` have no caller.
 - No toast tap action: a toast doesn't open the center or the sending app.
 - `app_id` is shown in the center, not in the toast.
+- `system` alerts depend on a timer firing in a hidden tab, which Chrome throttles to about once a minute: up to a minute late.

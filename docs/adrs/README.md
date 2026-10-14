@@ -68,6 +68,7 @@ What are the implications of this decision?
 | [032](./032-p2p-transfer.md) | P2P Transfer | 2026-10-13 | Implemented |
 | [033](./033-shell.md) | Shell, Terminal and Command Palette | 2026-10-14 | Implemented (jobs, app commands, bigger language deferred) |
 | [034](./034-app-extension-points.md) | App Extension Points: Commands, Badge, Widgets | 2026-10-14 | Implemented (widgets hidden on mobile) |
+| [035](./035-app-platform-wave-2.md) | App Platform for the Second App Wave | 2026-10-14 | Implemented (core; apps in progress) |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

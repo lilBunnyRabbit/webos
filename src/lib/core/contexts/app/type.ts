@@ -4,6 +4,7 @@ import type { PickOptions, SaveOptions } from "$lib/core/components/files/file-p
 import type { AppId, DirtyOptions, WindowId } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { ZodType } from "zod";
+import type { JsonFile } from "./json-file.svelte";
 
 export interface AppContext {
   window_id: WindowId;
@@ -17,6 +18,8 @@ export interface WindowHandle {
   readonly is_focused: boolean;
   readonly is_maximized: boolean;
   readonly is_minimized: boolean;
+  /** Not minimized (mobile: on screen) and the tab isn't hidden. Pause loops and timers on false (ADR-035). */
+  readonly is_visible: boolean;
   readonly bounds: Readonly<Bounds>;
 
   focus(): void;
@@ -61,6 +64,11 @@ export interface StorageHandle {
    * saved value back when it still passes `schema`. Saved with the session, gone when the window closes.
    */
   window<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
+  /**
+   * A JSON file in the app's data folder, `/var/lib/apps/{app_id}/{name}` (ADR-035), shared by every window of the app
+   * and reloaded when it changes on disk. Must be called during component init: it releases on unmount.
+   */
+  file<T>(name: string, initial: T, schema: ZodType<T>): Omit<JsonFile<T>, "release">;
 }
 
 export type { ConfirmOptions, PickOptions, PromptOptions, SaveOptions };

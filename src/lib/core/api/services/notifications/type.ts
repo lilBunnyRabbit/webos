@@ -28,6 +28,8 @@ export interface NotifyOptions {
   actions?: NotificationAction[];
   /** 0-1 for determinate, -1 for indeterminate. */
   progress?: number | null;
+  /** Also a browser Notification while the tab is hidden; asks for permission on first use (ADR-035). */
+  system?: boolean;
 }
 
 export interface NotificationUpdate {
@@ -65,6 +67,9 @@ export interface NotificationsService extends IService {
    * @returns The ID to update or dismiss it with.
    */
   notify(app_id: AppId, options: NotifyOptions): NotificationId;
+
+  /** Asks for browser notification permission, ideally from a click. Resolves whether `system` alerts can show. */
+  request_system(): Promise<boolean>;
 
   /** Updates a notification in place. No-op for unknown IDs. */
   update(id: NotificationId, update: NotificationUpdate): void;

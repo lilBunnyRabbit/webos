@@ -89,12 +89,24 @@ export class MobileWindowsService implements IMobileWindowsService {
     if (this.has_dirty()) event.preventDefault();
   };
 
+  public page_hidden = $state(document.hidden);
+
+  private on_visibility_change = () => {
+    this.page_hidden = document.hidden;
+  };
+
+  public is_visible(id: WindowId): boolean {
+    return !this.page_hidden && this.is_focused(id);
+  }
+
   init(): void {
     window.addEventListener("beforeunload", this.on_before_unload);
+    document.addEventListener("visibilitychange", this.on_visibility_change);
   }
 
   destroy(): void {
     window.removeEventListener("beforeunload", this.on_before_unload);
+    document.removeEventListener("visibilitychange", this.on_visibility_change);
   }
 
   public set_container(element?: HTMLElement | null): void {

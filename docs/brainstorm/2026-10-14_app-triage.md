@@ -108,3 +108,29 @@ Likely shape: pdf-lib for writing, pdf.js for rendering. Both are new dependenci
 - Order of the core work
 - PDF: libraries, print path, PDF Tools scope
 - App data rule (G3), including Calendar's cross-app data
+
+## Session 2: core for the yes apps (same day)
+
+The owner asked for the core work first, then one agent per app, each with a desktop and mobile visual pass. Decided with the owner (AskUserQuestion, three rounds):
+
+| Topic | Decision | Rejected |
+|-------|----------|----------|
+| Pause when not seen | **`WindowHandle.is_visible`**: false when minimized or the tab is hidden. WindowsService tracks the tab's hidden state once. Apps that hand-roll it migrate; Sudoku's timer stops running while minimized | A `use_page_visible()` util; leaving it per app |
+| App data location (G3) | **`/var/lib/apps/{app-id}/`**, beside OS service state, out of the user's way. Owner asked for something Windows-AppData-like | `/home/AppData/{id}` (clutters home); `/home/.local/{id}` (Explorer doesn't hide dotfiles) |
+| App data API | **`storage.file(name, initial, schema)`**: a reactive JSON-file cell like `persisted()`, shared by the app's windows, reloads when the folder's revision changes, saved newest-wins | A path helper with each app syncing by hand |
+| Background alerts | **`NotifyOptions.system: true`**: also a browser Notification while the tab is hidden, permission asked on first use | Apps calling `Notification` themselves; toasts only |
+| PDF | **`print_html(html)`** in core prints a hidden iframe, so only the document prints. PDF Tools waits for a dependency decision | pdf-lib + pdf.js now; pdf-lib for everything |
+| Game kit | **`$lib/core/games/`**: `format_time`, a `Stopwatch` that pauses on `!is_visible`, play-time records in **`/var/lib/games/plays.json`**. Existing games migrate | Kit without play time; fixing only Sudoku |
+| Archive | **Native `CompressionStream`, hand-written ZIP**, a progress toast. Tasks stays parked; roadmap notes Archive needs Tasks later | Building TasksService now |
+| Clock / Pomodoro | **Two apps** | Clock with a Pomodoro tab |
+| Recorders | **One Recorder app**, sources Mic / Screen / Camera | Three apps |
+| Shell | **Agents propose** commands in their report; nothing ships until the owner approves | A fixed small set; launch only |
+| Diff | **`@codemirror/merge`** (approved dependency) | Own Myers diff |
+| Image Editor | **New editor**; Crop, Split and the other tools stay | Absorbing Crop and Split |
+| Daily puzzle | **A Today tab in Game Hub**: seed from the date, games take a `seed` prop, streaks | A separate app |
+| Calendar | **Reads Work Hours and Kanban files** besides its own events | Standalone v1 |
+| Soundboard | Copies sounds into its own app folder | `/home/Sounds` |
+
+Recorded as [ADR-035](../adrs/035-app-platform-wave-2.md).
+
+Consequence of the Calendar pick: Work Hours' and Kanban's file formats become a contract. Calendar is built after both merge and imports their schemas.

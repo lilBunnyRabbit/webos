@@ -85,6 +85,12 @@ export interface WindowsService extends IService {
    */
   is_focused(id: WindowId): boolean;
 
+  /** True while the browser tab is hidden (`document.hidden`), tracked by one listener (ADR-035). */
+  readonly page_hidden: boolean;
+
+  /** On screen and the tab showing: desktop, not minimized; mobile, the app on screen (ADR-035). */
+  is_visible(id: WindowId): boolean;
+
   /**
    * Lists all window IDs.
    * @returns An array of all window IDs

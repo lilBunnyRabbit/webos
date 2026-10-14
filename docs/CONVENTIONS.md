@@ -126,6 +126,7 @@ export type SnapZone = (typeof SnapZone)[keyof typeof SnapZone];
 - `interface` for object shapes, `type` for unions, intersections, mapped types.
 - Discriminated unions over optional-field soup (`FileSystemItem = FileSystemFileItem | FileSystemDirectoryItem`).
 - Branded-ish aliases for IDs: `type WindowId = string`, `type AppId = string`.
+- TypeScript over its JS-era equivalent, always: class members use `private` / `protected` / `readonly`, never `#private` fields (owner, 2026-10-14).
 
 ---
 

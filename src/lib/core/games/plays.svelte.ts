@@ -1,0 +1,105 @@
+import { json_file, type JsonFile } from "$lib/core/contexts/app/json-file.svelte";
+import { z } from "zod";
+
+export const PLAYS_PATH = "/var/lib/games/plays.json";
+
+const GameStatsSchema = z.object({ ms: z.number(), sessions: z.number(), last: z.string() });
+const DailySchema = z.object({ ms: z.number() });
+
+export const PlaysSchema = z.object({
+  version: z.literal(1),
+  games: z.record(z.string(), GameStatsSchema),
+  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id → best time. */
+  daily: z.record(z.string(), z.record(z.string(), DailySchema)),
+});
+export type Plays = z.infer<typeof PlaysSchema>;
+export type GameStats = z.infer<typeof GameStatsSchema>;
+
+export const EMPTY_PLAYS: Plays = { version: 1, games: {}, daily: {} };
+
+// Flushed this often while playing, so closing the tab loses at most this much.
+const FLUSH_MS = 30_000;
+
+/** Every game's play time and daily results, for Game Hub. Call during component init. */
+export function use_plays(): Omit<JsonFile<Plays>, "release"> {
+  const plays = json_file(PLAYS_PATH, EMPTY_PLAYS, PlaysSchema);
+  $effect(() => () => plays.release());
+  return plays;
+}
+
+export interface PlayTracker {
+  /** Records a solved daily puzzle; keeps the best time. */
+  daily(day: string, ms: number): void;
+}
+
+/**
+ * Counts the time this game is visible into `/var/lib/games/plays.json` (ADR-035). Call during component init, as
+ * `track_play(app_id, () => win.is_visible)`.
+ */
+export function track_play(app_id: string, visible: () => boolean): PlayTracker {
+  const plays = json_file(PLAYS_PATH, EMPTY_PLAYS, PlaysSchema);
+  let pending_ms = $state(0);
+  let pending_session = $state(false);
+  let pending_daily = $state<{ day: string; ms: number }[]>([]);
+  let since: number | null = null;
+
+  const fold = () => {
+    if (since === null) return;
+    const now = Date.now();
+    pending_ms += now - since;
+    since = now;
+  };
+
+  $effect(() => {
+    if (!visible()) return;
+    since = Date.now();
+    pending_session = true;
+    const timer = setInterval(fold, FLUSH_MS);
+    return () => {
+      clearInterval(timer);
+      fold();
+      since = null;
+    };
+  });
+
+  $effect(() => {
+    if (!plays.ready || (pending_ms < 1000 && pending_daily.length === 0)) return;
+    const data = plays.value;
+    const stats = data.games[app_id] ?? { ms: 0, sessions: 0, last: "" };
+    data.games[app_id] = {
+      ms: stats.ms + Math.round(pending_ms),
+      sessions: stats.sessions,
+      last: new Date().toISOString(),
+    };
+    for (const { day, ms } of pending_daily) {
+      const best = data.daily[day]?.[app_id]?.ms;
+      data.daily[day] = { ...data.daily[day], [app_id]: { ms: best === undefined ? ms : Math.min(best, ms) } };
+    }
+    pending_ms = 0;
+    pending_daily = [];
+  });
+
+  let counted_session = false;
+  $effect(() => {
+    if (!plays.ready || !pending_session || counted_session) return;
+    counted_session = true;
+    const stats = plays.value.games[app_id];
+    plays.value.games[app_id] = { ms: stats?.ms ?? 0, sessions: (stats?.sessions ?? 0) + 1, last: new Date().toISOString() };
+  });
+
+  $effect(() => () => {
+    fold();
+    since = null;
+    if (plays.ready && pending_ms >= 1000) {
+      const stats = plays.value.games[app_id];
+      if (stats) stats.ms += Math.round(pending_ms);
+    }
+    plays.release();
+  });
+
+  return {
+    daily(day, ms) {
+      pending_daily = [...pending_daily, { day, ms }];
+    },
+  };
+}

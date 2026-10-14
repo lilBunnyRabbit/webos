@@ -78,7 +78,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] `get_app_context()` / `set_app_context()` via Svelte context
 - [x] WindowHandle core: reactive state + controls (no `on()` events, owner decision)
 - [x] StorageHandle (localStorage scoped to app, optional zod validation)
-- [ ] AppDataHandle (OPFS scoped to app), deferred until an app needs it
+- [x] App data (ADR-035, 2026-10-14): `storage.file()` JSON cells in `/var/lib/apps/{id}/`, replacing the parked AppDataHandle
+- [x] `WindowHandle.is_visible`, `notify({ system })`, `print_html`, game kit (`$lib/core/games`: Stopwatch, play time, daily seeds) (ADR-035)
 - [x] WindowHandle: `set_title` + `set_dirty` close guard (ADR-029, 2026-10-12); `set_icon` not built
 - [x] WindowHandle: overlays (`pick_file`, `pick_directory`, `pick_save`, `confirm`, `prompt`; ADR-025)
 - [ ] WindowHandle: status bar (parked: the kit `StatusBar` covers apps)
@@ -212,7 +213,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Tasks Service & Task Manager
 - **ADR:** [ADR-013](adrs/013-tasks-service.md)
 - **Status:** Not started
-- [ ] TasksService wrapping `@lilbunnyrabbit/task-manager`
+- [ ] TasksService wrapping `@lilbunnyrabbit/task-manager`. Archive (2026-10-14) ships on native streams with a progress toast and moves onto Tasks once this exists (owner)
 - [ ] Task lifecycle (create, cancel, retry, remove)
 - [ ] Progress tracking (determinate/indeterminate)
 - [ ] Retry configuration (fixed/exponential backoff)
