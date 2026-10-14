@@ -1,4 +1,5 @@
-import { flushSync } from "svelte";
+import { flushSync, mount, unmount } from "svelte";
+import Host from "./fixtures/json-file-host.svelte";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import kernel from "$lib/core/api";
@@ -23,7 +24,8 @@ async function read(path: string): Promise<string | null> {
 }
 
 async function write(path: string, text: string): Promise<void> {
-  const directory = await files.get_directory(path.slice(0, path.lastIndexOf("/")));
+  let directory = await files.get_root();
+  for (const segment of path.split("/").filter(Boolean).slice(0, -1)) directory = await directory.getDirectoryHandle(segment, { create: true });
   await files.create_file(directory, path.slice(path.lastIndexOf("/") + 1), { content: text, overwrite: true });
 }
 
@@ -135,5 +137,28 @@ describe("json_file", () => {
       expect(cell.error).toBeNull();
       cell.release();
     }
+  });
+
+  test("keeps working when its creator plays an outro while the file changes", async () => {
+    const path = app_data_path("json-outro", "data.json");
+    const target = document.body.appendChild(document.createElement("div"));
+    const props = $state({ path, show: true });
+    const host = mount(Host, { target, props });
+    const other = json_file(path, { count: 0 }, Schema);
+    await vi.waitFor(() => expect(other.ready).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    props.show = false;
+    flushSync();
+    await write(path, JSON.stringify({ count: 3 }));
+    await vi.waitFor(() => expect(other.value.count).toBe(3));
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    other.value.count = 8;
+    flushSync();
+    await vi.waitFor(async () => expect(JSON.parse((await read(path))!)).toEqual({ count: 8 }), { timeout: 2000 });
+    other.release();
+    unmount(host);
+    target.remove();
   });
 });

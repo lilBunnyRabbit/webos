@@ -1,3 +1,4 @@
+import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import kernel, { type FilesService } from "$lib/core/api";
 import { day_key } from "$lib/core/games/time";
 import { createSubscriber } from "svelte/reactivity";
@@ -11,7 +12,7 @@ let today = $state(day_key());
 
 /** Runs only while an icon shows the badge; the minute tick moves "today" past midnight. */
 const subscribe = createSubscriber(() =>
-  $effect.root(() => {
+  detached_root(() => {
     $effect(() => {
       const timer = setInterval(() => (today = day_key()), 60_000);
       return () => clearInterval(timer);

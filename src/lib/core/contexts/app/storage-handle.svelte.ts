@@ -1,4 +1,5 @@
 import type { AppId } from "$lib/core/api";
+import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import type { ZodType } from "zod";
 import { app_data_path, json_file } from "./json-file.svelte";
 import type { StorageHandle } from "./type";
@@ -18,7 +19,7 @@ class PersistedCell<T> {
     // Values are JSON-persisted, so structuredClone is safe; the copy keeps edits to the live value out of the reset target.
     this.initial = structuredClone(initial);
     this.value = stored ?? initial;
-    this.dispose = $effect.root(() => {
+    this.dispose = detached_root(() => {
       $effect(() => {
         const snapshot = $state.snapshot(this.value) as T;
         if (this.skip_save) {

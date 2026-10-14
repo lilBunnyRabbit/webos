@@ -1,3 +1,4 @@
+import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import { untrack } from "svelte";
 import kernel, { type NotificationId, type NotificationsService } from "$lib/core/api";
 import { app_data_path, json_file } from "$lib/core/contexts/app";
@@ -19,7 +20,7 @@ class PomodoroTimer {
   private dispose_root: () => void;
 
   constructor() {
-    this.dispose_root = $effect.root(() => {
+    this.dispose_root = detached_root(() => {
       $effect(() => {
         if (!this.ready) return;
         const { status, ends_at } = this.file.value.run;

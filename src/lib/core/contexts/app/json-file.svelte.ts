@@ -1,6 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { LatestWriter } from "$lib/core/api/services/files/latest-writer";
 import { join_path, split_path } from "$lib/core/api/services/files/path";
+import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import { untrack } from "svelte";
 import type { ZodType } from "zod";
 
@@ -52,7 +53,7 @@ class JsonFileCell<T> {
     this.writer = new LatestWriter(files, path, path);
     const directory = join_path(split_path(path).slice(0, -1));
 
-    this.dispose_root = $effect.root(() => {
+    this.dispose_root = detached_root(() => {
       $effect(() => {
         files().revision(directory);
         untrack(() => void this.load());

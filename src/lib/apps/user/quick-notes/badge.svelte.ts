@@ -1,3 +1,4 @@
+import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import kernel, { type FilesService } from "$lib/core/api";
 import { createSubscriber } from "svelte/reactivity";
 import { NOTES_DIR, parse_todos } from "./notes";
@@ -7,7 +8,7 @@ let open = $state<number | null>(null);
 
 /** Starts when the first icon reads the badge and stops with the last one, so nothing runs while no icon is on screen. */
 const subscribe = createSubscriber(() =>
-  $effect.root(() => {
+  detached_root(() => {
     $effect(() => {
       const files = kernel.service<FilesService>("files");
       files.revision(NOTES_DIR);
