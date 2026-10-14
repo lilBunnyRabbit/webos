@@ -30,8 +30,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { token_highlight, token_theme } from "./editor";
-  import { Language, language_for, load_language } from "./language";
+  import { Language, language_for, load_language, token_highlight, token_theme } from "$lib/core/components/code";
   import { preview_document, render_markdown, SCROLL_MESSAGE } from "./markdown-preview";
   import manifest from "./index";
 

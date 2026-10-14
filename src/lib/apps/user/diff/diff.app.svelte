@@ -5,8 +5,7 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { error_message, parent_folder } from "$lib/core/utils/image";
-  import { token_highlight, token_theme } from "$lib/apps/system/text-editor/editor";
-  import { load_language, type Language } from "$lib/apps/system/text-editor/language";
+  import { load_language, token_highlight, token_theme, type Language } from "$lib/core/components/code";
   import { indentWithTab } from "@codemirror/commands";
   import type { LanguageSupport } from "@codemirror/language";
   import {
