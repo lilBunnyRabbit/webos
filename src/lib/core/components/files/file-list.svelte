@@ -29,6 +29,9 @@
     show_properties,
     upload,
     open_terminal,
+    compress_items,
+    extract_here,
+    is_zip,
   } from "./file-actions";
   import { cn } from "$lib/core/utils";
   import { accepts, type PickerMode } from "./picker";
@@ -37,6 +40,8 @@
     ArrowSquareOut as ArrowSquareOutIcon,
     ClipboardText as ClipboardTextIcon,
     Copy as CopyIcon,
+    FileZip as FileZipIcon,
+    ArrowLineDown as ArrowLineDownIcon,
     Scissors as ScissorsIcon,
     AppWindow as AppWindowIcon,
     Info as InfoIcon,
@@ -252,6 +257,8 @@
           ]
         : []),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
+      { id: "compress", label: "Compress", icon: FileZipIcon, disabled: read_only },
+      ...(single && is_zip(item) ? [{ id: "extract", label: "Extract here", icon: ArrowLineDownIcon, disabled: read_only }] : []),
       { separator: true },
       { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true, disabled: fixed },
       ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
@@ -266,6 +273,8 @@
     else if (choice === "properties") show_properties(handler, window, item);
     else if (choice === "save_to_disk") save_to_disk(join_path(handler.segments, item.name));
     else if (choice === "wallpaper") set_wallpaper(join_path(handler.segments, item.name));
+    else if (choice === "compress") compress_items(handler, entries);
+    else if (choice === "extract") extract_here(handler, item);
     else if (choice?.startsWith("open_with:")) open_with(handler, item, choice.slice("open_with:".length));
   }
 
