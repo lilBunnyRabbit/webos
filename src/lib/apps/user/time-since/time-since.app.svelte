@@ -30,7 +30,6 @@
     sort_counters,
     start,
     stop,
-    tick_interval,
     to_datetime_local,
     update_counter,
     type Counter,
@@ -53,7 +52,7 @@
 
   const clock = new Ticker(
     () => win.is_visible,
-    () => tick_interval(running.map((counter) => elapsed_of(counter, Date.now())))
+    () => 1000
   );
 
   const can_pin = kernel.platform !== Platform.MOBILE;

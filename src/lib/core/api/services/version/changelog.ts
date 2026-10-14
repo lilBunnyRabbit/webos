@@ -21,6 +21,7 @@ export const CHANGELOG: Release[] = [
       { kind: IMPROVED, text: "Every window can copy a link to itself now, including apps that open files; the link opens the app without the file, which stays on your device." },
       { kind: IMPROVED, text: "App search matches every word you type, forgives a typo, and knows many more words for each app, so puzzle finds Word Search." },
       { kind: IMPROVED, text: "Live clocks across apps and widgets tick together, on the second." },
+      { kind: IMPROVED, text: "Time Since always shows the seconds ticking, down from years and days, in the app, its widgets and the Terminal." },
       { kind: IMPROVED, text: "PDF Tools and the fonts now work fully offline once WebOS has loaded." },
       { kind: IMPROVED, text: "Cancelling an extraction offers to discard the files already written." },
       { kind: FIXED, text: "Widgets no longer blink when you open an app or move something on the desktop." },

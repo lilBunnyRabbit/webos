@@ -4,6 +4,7 @@ import {
   CountersFileSchema,
   create_counter,
   duration_parts,
+  live_parts,
   elapsed_of,
   format_duration,
   from_datetime_local,
@@ -18,7 +19,6 @@ import {
   start,
   stats_of,
   stop,
-  tick_interval,
   to_datetime_local,
   update_counter,
   type Counter,
@@ -58,12 +58,6 @@ describe("duration_parts", () => {
       { value: "05", unit: "m" },
     ]);
   });
-});
-
-describe("tick_interval", () => {
-  test("seconds while anything is under an hour", () => expect(tick_interval([2 * D, 30 * M])).toBe(S));
-  test("minutes otherwise", () => expect(tick_interval([2 * D, 3 * H])).toBe(M));
-  test("minutes with nothing running", () => expect(tick_interval([])).toBe(M));
 });
 
 describe("runs", () => {
@@ -213,5 +207,15 @@ describe("resolve_counter", () => {
     expect(resolve_counter(counters, "ab")).toBe('"ab" matches Last coffee, Last cigarette');
     expect(resolve_counter(counters, "last")).toBe('"last" matches Last coffee, Last cigarette');
     expect(resolve_counter(counters, "tea")).toBe('no counter "tea"');
+  });
+});
+
+describe("live_parts", () => {
+  test("shows every unit down to seconds, padding all but the first", () => {
+    const parts = (ms: number) => live_parts(ms).map((part) => part.value + part.unit).join(" ");
+    expect(parts(3 * D + 4 * H + 5 * 60_000 + 6_000)).toBe("3d 04h 05m 06s");
+    expect(parts(3 * D)).toBe("3d 00h 00m 00s");
+    expect(parts(42_000)).toBe("42s");
+    expect(parts(0)).toBe("0s");
   });
 });

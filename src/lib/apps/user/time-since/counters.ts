@@ -165,14 +165,35 @@ export function duration_parts(ms: number): DurationPart[] {
   return [part(seconds, "s")];
 }
 
-export function format_duration(ms: number): string {
-  return duration_parts(ms)
+/** A live counter: every unit from the largest one in use down to seconds, so it visibly ticks (owner, 2026-10-15). */
+export function live_parts(ms: number): DurationPart[] {
+  const total = Math.max(0, Math.floor(ms / SECOND));
+  const years = Math.floor((total * SECOND) / YEAR);
+  const days = Math.floor((total * SECOND - years * YEAR) / DAY);
+  const units: [number, string][] = [
+    [years, "y"],
+    [days, "d"],
+    [Math.floor((total % (DAY / SECOND)) / 3600), "h"],
+    [Math.floor((total % 3600) / 60), "m"],
+    [total % 60, "s"],
+  ];
+  const first = units.findIndex(([value]) => value > 0);
+  return units.slice(first === -1 ? units.length - 1 : first).map(([value, unit], index) => ({
+    value: index === 0 ? String(value) : String(value).padStart(2, "0"),
+    unit,
+  }));
+}
+
+export function format_live(ms: number): string {
+  return live_parts(ms)
     .map((part) => `${part.value} ${part.unit}`)
     .join(" ");
 }
 
-export function tick_interval(elapsed: number[]): number {
-  return elapsed.some((ms) => ms < HOUR) ? SECOND : MINUTE;
+export function format_duration(ms: number): string {
+  return duration_parts(ms)
+    .map((part) => `${part.value} ${part.unit}`)
+    .join(" ");
 }
 
 export function heatmap_of(runs: Run[]): number[][] {

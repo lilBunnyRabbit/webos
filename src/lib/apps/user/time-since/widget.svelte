@@ -7,7 +7,7 @@
   import { ArrowCounterClockwise, Play } from "phosphor-svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import Duration from "./duration.svelte";
-  import { APP_ID, COUNTERS_FILE, CountersFileSchema, EMPTY_FILE, elapsed_of, format_duration, reset, start, tick_interval, update_counter } from "./counters";
+  import { APP_ID, COUNTERS_FILE, CountersFileSchema, EMPTY_FILE, elapsed_of, format_duration, reset, live_parts, start, update_counter } from "./counters";
 
   let { props, size }: WidgetProps = $props();
 
@@ -20,7 +20,7 @@
   const counter = $derived(file.value.counters.find((counter) => counter.id === props.counter) ?? null);
   const clock = new Ticker(
     () => !windows.page_hidden,
-    () => tick_interval(counter ? [elapsed_of(counter, Date.now())] : [])
+    () => 1000
   );
 
   async function press() {
@@ -42,8 +42,8 @@
 {#if counter}
   {@const compact = size.h < 2}
   {@const value = cn("leading-tight", compact ? "text-xl" : "text-[clamp(1.5rem,12cqi,3.5rem)]")}
-  <div class="@container flex h-full items-center gap-2 px-3">
-    <div class="grid min-w-0 flex-1">
+  <div class="flex h-full items-center gap-2 px-3">
+    <div class="@container grid min-w-0 flex-1">
       <span class="truncate text-2xs font-medium text-foreground/65">{counter.name}</span>
       {#if counter.current_start === null}
         <span class={cn("truncate font-mono text-foreground/45 tabular-nums", value)}>Stopped</span>
@@ -51,7 +51,11 @@
           <span class="mt-0.5 truncate text-2xs text-foreground/65">{counter.runs.length} {counter.runs.length === 1 ? "run" : "runs"}</span>
         {/if}
       {:else}
-        <Duration ms={clock.now - counter.current_start} class={cn("text-primary", value)} />
+        {@const elapsed = clock.now - counter.current_start}
+        <!-- Every unit down to seconds is shown, so the size follows how many there are: each takes about 1.9em. -->
+        <span class="leading-tight" style:font-size="min({compact ? 1.25 : 3.5}rem, calc(100cqi / {live_parts(elapsed).length * 1.9}))">
+          <Duration ms={elapsed} class="text-primary" />
+        </span>
         {#if !compact}
           <span class="mt-0.5 truncate font-mono text-2xs text-foreground/65 tabular-nums">since {format_datetime(counter.current_start)}</span>
         {/if}

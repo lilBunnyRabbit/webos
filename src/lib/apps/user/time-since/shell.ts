@@ -10,7 +10,7 @@ import {
   create_counter,
   EMPTY_FILE,
   elapsed_of,
-  format_duration,
+  format_live,
   reset,
   resolve_counter,
   sort_counters,
@@ -43,7 +43,7 @@ export function counter_value(counter: Counter, now: number): Tagged {
     $type: "counter",
     id: counter.id.slice(0, ID_LENGTH),
     name: counter.name,
-    elapsed: running ? format_duration(elapsed_of(counter, now)) : "stopped",
+    elapsed: running ? format_live(elapsed_of(counter, now)) : "stopped",
     since: running ? format_datetime(counter.current_start ?? now) : "",
     runs: counter.runs.length,
   };
