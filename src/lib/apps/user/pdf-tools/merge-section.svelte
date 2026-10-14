@@ -2,7 +2,7 @@
   import kernel, { type AppsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, format_bytes } from "$lib/core/utils";
+  import { cn, format_bytes, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowDown as ArrowDownIcon,
@@ -19,10 +19,11 @@
   import { untrack, type Snippet } from "svelte";
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
-  import { merged_name, parent_path } from "./naming";
+  import { merged_name } from "./naming";
   import { merge_pdfs, page_count } from "./pdf";
-  import { PDF_ACCEPT, device_source, error_message, is_pdf, read_bytes, source_at, write_at, type SourceFile } from "./pdf-files";
+  import { PDF_ACCEPT, device_source, is_pdf, read_bytes, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
   const { app_id, window: win } = get_app_context();

@@ -1,3 +1,4 @@
+import { pad2 } from "$lib/core/utils";
 export interface WallTime {
   year: number;
   month: number;
@@ -47,8 +48,16 @@ export function is_zone(zone: string): boolean {
 
 export function wall_time(at: number, zone: string): WallTime {
   const parts: Record<string, number> = {};
-  for (const part of formatter(zone).formatToParts(at)) if (part.type !== "literal") parts[part.type] = Number(part.value);
-  return { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour, minute: parts.minute, second: parts.second };
+  for (const part of formatter(zone).formatToParts(at))
+    if (part.type !== "literal") parts[part.type] = Number(part.value);
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: parts.hour,
+    minute: parts.minute,
+    second: parts.second,
+  };
 }
 
 export function zone_offset(at: number, zone: string): number {
@@ -87,10 +96,6 @@ export function day_label(shift: number): string {
 
 export function is_daytime(hour: number): boolean {
   return hour >= 6 && hour < 18;
-}
-
-export function pad2(value: number): string {
-  return String(value).padStart(2, "0");
 }
 
 export function format_wall(wall: WallTime, seconds = false): string {

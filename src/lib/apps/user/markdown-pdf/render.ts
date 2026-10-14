@@ -1,4 +1,5 @@
 import { Marked, type Tokens } from "marked";
+import { escape_html } from "$lib/core/utils";
 
 export interface Heading {
   depth: number;
@@ -11,10 +12,6 @@ export interface Rendered {
   headings: Heading[];
   title: string | null;
   words: number;
-}
-
-export function escape_html(text: string): string {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
 function plain_text(html: string): string {

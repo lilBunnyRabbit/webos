@@ -110,3 +110,8 @@ export function local_storage_usage(): LocalStorageGroup[] {
 export function format_ms(ms: number): string {
   return `${Math.round(ms)} ms`;
 }
+
+/** DOM mutations per second: one decimal below 10. */
+export function format_rate(rate: number): string {
+  return rate < 10 ? rate.toFixed(1) : Math.round(rate).toString();
+}

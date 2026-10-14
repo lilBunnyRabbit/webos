@@ -7,6 +7,7 @@ import {
   type PressureState,
 } from "./browser";
 import { Series } from "./series.svelte";
+import { error_message } from "$lib/core/utils";
 
 const MAX_FRAMES = 50;
 
@@ -58,8 +59,7 @@ export class PerformanceMonitor {
           if (active && this.pressure.kind === "pending") this.pressure = { kind: "ok", state: null };
         },
         (error: unknown) => {
-          if (active)
-            this.pressure = { kind: "error", message: error instanceof Error ? error.message : String(error) };
+          if (active) this.pressure = { kind: "error", message: error_message(error) };
         }
       );
       cleanups.push(() => {

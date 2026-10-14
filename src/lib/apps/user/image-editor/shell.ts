@@ -1,9 +1,9 @@
 import kernel, { type AppsService, type FilesService } from "$lib/core/api";
 import { available_name } from "$lib/core/api/services/files/opfs";
-import { resolve_path } from "$lib/core/api/services/files/path";
+import { resolve_path, base_name, parent_path } from "$lib/core/api/services/files/path";
 import { file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ShellError, type CommandContext } from "$lib/core/api/services/shell/type";
-import { extension_for, format_of, ImageFormat, parent_folder, write_image } from "$lib/core/utils/image";
+import { extension_for, format_of, ImageFormat, write_image } from "$lib/core/utils/image";
 import { DEFAULT_ADJUSTMENTS, name_for_format, OperationType, resize_size, type Operation, type Size } from "./edit";
 import { render_final } from "./render";
 
@@ -14,7 +14,6 @@ export const FORMATS = { png: ImageFormat.PNG, jpeg: ImageFormat.JPEG, webp: Ima
 export type FormatName = keyof typeof FORMATS;
 
 const files = () => kernel.service<FilesService>("files");
-const name_of = (path: string) => path.slice(path.lastIndexOf("/") + 1);
 
 async function decode(path: string): Promise<ImageBitmap> {
   const file = await files().get_file(path);
@@ -30,15 +29,24 @@ async function save_canvas(path: string, canvas: OffscreenCanvas, format: ImageF
   await write_image(path, canvas, { format, quality });
 }
 
-async function write_beside(path: string, operations: (size: Size) => Operation[], format: ImageFormat, quality = DEFAULT_QUALITY): Promise<FileValue> {
+async function write_beside(
+  path: string,
+  operations: (size: Size) => Operation[],
+  format: ImageFormat,
+  quality = DEFAULT_QUALITY
+): Promise<FileValue> {
   const bitmap = await decode(path);
   try {
-    const folder = parent_folder(path);
+    const folder = parent_path(path);
     const directory = await files().get_directory(folder);
     if (!directory) throw new ShellError(`${folder}: no such folder`);
-    const name = await available_name(directory, name_for_format(name_of(path), format, extension_for(format)));
+    const name = await available_name(directory, name_for_format(base_name(path), format, extension_for(format)));
     const target = `${folder === "/" ? "" : folder}/${name}`;
-    const canvas = render_final(bitmap, operations({ width: bitmap.width, height: bitmap.height }), DEFAULT_ADJUSTMENTS);
+    const canvas = render_final(
+      bitmap,
+      operations({ width: bitmap.width, height: bitmap.height }),
+      DEFAULT_ADJUSTMENTS
+    );
     await save_canvas(target, canvas, format, quality / 100);
     const written = await files().get_file(target);
     return file_value(target, "file", written?.size ?? null, written?.lastModified ?? null);
@@ -47,7 +55,7 @@ async function write_beside(path: string, operations: (size: Size) => Operation[
   }
 }
 
-const own_format = (path: string) => format_of(name_of(path)) ?? ImageFormat.PNG;
+const own_format = (path: string) => format_of(base_name(path)) ?? ImageFormat.PNG;
 
 export async function edit({ args, session }: CommandContext<{ path: string }>): Promise<void> {
   const path = resolve_path(session.cwd, args.path);
@@ -55,13 +63,23 @@ export async function edit({ args, session }: CommandContext<{ path: string }>):
   kernel.service<AppsService>("apps").launch(APP_ID, { path });
 }
 
-export function convert({ args, session }: CommandContext<{ path: string; format: FormatName; quality: number }>): Promise<FileValue> {
+export function convert({
+  args,
+  session,
+}: CommandContext<{ path: string; format: FormatName; quality: number }>): Promise<FileValue> {
   return write_beside(resolve_path(session.cwd, args.path), () => [], FORMATS[args.format], args.quality);
 }
 
-export function resize({ args, session }: CommandContext<{ path: string; width: number; height?: number }>): Promise<FileValue> {
+export function resize({
+  args,
+  session,
+}: CommandContext<{ path: string; width: number; height?: number }>): Promise<FileValue> {
   const path = resolve_path(session.cwd, args.path);
-  return write_beside(path, (size) => [{ type: OperationType.RESIZE, ...resize_size(size, args.width, args.height) }], own_format(path));
+  return write_beside(
+    path,
+    (size) => [{ type: OperationType.RESIZE, ...resize_size(size, args.width, args.height) }],
+    own_format(path)
+  );
 }
 
 export function rotate({ args, session }: CommandContext<{ path: string; degrees: number }>): Promise<FileValue> {

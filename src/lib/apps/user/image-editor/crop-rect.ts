@@ -1,4 +1,5 @@
 import type { Rect, Size } from "./edit";
+import { clamp } from "$lib/core/utils";
 
 export const Handle = {
   MOVE: "move",
@@ -16,10 +17,6 @@ export type Handle = (typeof Handle)[keyof typeof Handle];
 export const RESIZE_HANDLES: Exclude<Handle, "move">[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 export const MIN_CROP = 1;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 export function fit_aspect(bounds: Size, aspect: number | null): Rect {
   if (!aspect) return { x: 0, y: 0, width: bounds.width, height: bounds.height };
@@ -92,7 +89,13 @@ function locked(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size
     const anchor_x = east ? rect.x : right;
     const center_y = rect.y + rect.height / 2;
     const width = east ? rect.width + dx : rect.width - dx;
-    const size = at_aspect(width, 0, aspect, east ? bounds.width - anchor_x : anchor_x, 2 * Math.min(center_y, bounds.height - center_y));
+    const size = at_aspect(
+      width,
+      0,
+      aspect,
+      east ? bounds.width - anchor_x : anchor_x,
+      2 * Math.min(center_y, bounds.height - center_y)
+    );
     return { x: east ? anchor_x : anchor_x - size.width, y: center_y - size.height / 2, ...size };
   }
 
@@ -100,7 +103,13 @@ function locked(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size
   const anchor_y = south ? rect.y : bottom;
   const center_x = rect.x + rect.width / 2;
   const height = south ? rect.height + dy : rect.height - dy;
-  const size = at_aspect(0, height, aspect, 2 * Math.min(center_x, bounds.width - center_x), south ? bounds.height - anchor_y : anchor_y);
+  const size = at_aspect(
+    0,
+    height,
+    aspect,
+    2 * Math.min(center_x, bounds.width - center_x),
+    south ? bounds.height - anchor_y : anchor_y
+  );
   return { x: center_x - size.width / 2, y: south ? anchor_y : anchor_y - size.height, ...size };
 }
 
@@ -108,7 +117,14 @@ function locked(rect: Rect, handle: Handle, dx: number, dy: number, bounds: Size
  * The crop after dragging `handle` by (dx, dy) image pixels from `start`. Stays inside `bounds`; with `aspect`
  * (width / height) the ratio holds and edge handles grow around the opposite edge's centre.
  */
-export function drag_rect(start: Rect, handle: Handle, dx: number, dy: number, bounds: Size, aspect: number | null): Rect {
+export function drag_rect(
+  start: Rect,
+  handle: Handle,
+  dx: number,
+  dy: number,
+  bounds: Size,
+  aspect: number | null
+): Rect {
   if (handle === Handle.MOVE) return move(start, dx, dy, bounds);
   return aspect ? locked(start, handle, dx, dy, bounds, aspect) : free(start, handle, dx, dy, bounds);
 }

@@ -13,6 +13,7 @@
     Rectangle as RectangleIcon,
     SpeakerHigh as SpeakerHighIcon,
   } from "phosphor-svelte";
+  import { format_rate } from "../browser";
   import Sparkline from "../sparkline.svelte";
   import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
 
@@ -54,10 +55,6 @@
 
   function toggle_sort(key: SortKey) {
     sort = sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== "name" };
-  }
-
-  function format_rate(rate: number): string {
-    return rate < 10 ? rate.toFixed(1) : Math.round(rate).toString();
   }
 
   // Breakpoints measure the table (its own @container), not the window: the section is capped at max-w-3xl.

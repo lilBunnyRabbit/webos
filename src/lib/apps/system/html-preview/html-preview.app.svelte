@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     Code as CodeIcon,
@@ -15,6 +15,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import manifest from "./index";
+  import { base_name } from "$lib/core/api/services/files/path";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -43,7 +44,7 @@
     if (!source) return null;
     return (source instanceof File ? Promise.resolve(source) : files.get_file(source)).then(async (file) => (file ? { file, text: await file.text() } : null));
   });
-  const name = $derived(source instanceof File ? source.name : (source?.split("/").at(-1) ?? ""));
+  const name = $derived(source instanceof File ? source.name : (source ? base_name(source) : ""));
 </script>
 
 {#if !loading}
@@ -90,6 +91,6 @@
       </div>
     {/if}
   {:catch error}
-    <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error instanceof Error ? error.message : String(error)} />
+    <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error_message(error)} />
   {/await}
 {/if}

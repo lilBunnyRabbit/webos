@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { file_stem, file_extension } from "$lib/core/api/services/files/path";
 
 export const PadColor = {
   PRIMARY: "primary",
@@ -52,14 +53,11 @@ const AUDIO_EXTENSIONS = ["mp3", "wav", "ogg", "oga", "opus", "m4a", "aac", "fla
 export function is_audio(name: string, type = ""): boolean {
   if (type.startsWith("audio/")) return true;
   if (type && type !== "application/octet-stream" && type !== "video/webm") return false;
-  const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
-  return name.includes(".") && AUDIO_EXTENSIONS.includes(extension);
+  return name.includes(".") && AUDIO_EXTENSIONS.includes(file_extension(name).slice(1));
 }
 
 export function label_from_file(name: string): string {
-  const dot = name.lastIndexOf(".");
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const label = stem.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  const label = file_stem(name).replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
   return (label || "Sound").slice(0, 40);
 }
 
@@ -82,7 +80,15 @@ export function next_color(pads: readonly Pad[]): PadColor {
 }
 
 export function create_pad(pads: readonly Pad[], sound: string, file_name: string, id: string): Pad {
-  return { id, label: label_from_file(file_name), sound, color: next_color(pads), volume: 1, key: next_key(pads), loop: false };
+  return {
+    id,
+    label: label_from_file(file_name),
+    sound,
+    color: next_color(pads),
+    volume: 1,
+    key: next_key(pads),
+    loop: false,
+  };
 }
 
 export function move_pad(pads: readonly Pad[], id: string, index: number): Pad[] {
@@ -100,7 +106,9 @@ export function sound_in_use(file: BoardFile, sound: string, except?: string): b
 export function sounds_freed_by_board(file: BoardFile, board_id: string): string[] {
   const board = file.boards.find((entry) => entry.id === board_id);
   if (!board) return [];
-  const elsewhere = new Set(file.boards.filter((entry) => entry.id !== board_id).flatMap((entry) => entry.pads.map((pad) => pad.sound)));
+  const elsewhere = new Set(
+    file.boards.filter((entry) => entry.id !== board_id).flatMap((entry) => entry.pads.map((pad) => pad.sound))
+  );
   return [...new Set(board.pads.map((pad) => pad.sound))].filter((sound) => !elsewhere.has(sound));
 }
 
@@ -137,7 +145,11 @@ export interface PadMatch {
 
 export function find_board(file: BoardFile, query: string): Board | null {
   const lower = query.toLowerCase();
-  return file.boards.find((board) => board.id === query) ?? file.boards.find((board) => board.name.toLowerCase() === lower) ?? null;
+  return (
+    file.boards.find((board) => board.id === query) ??
+    file.boards.find((board) => board.name.toLowerCase() === lower) ??
+    null
+  );
 }
 
 export function resolve_pad(boards: readonly Board[], query: string): PadMatch | string {

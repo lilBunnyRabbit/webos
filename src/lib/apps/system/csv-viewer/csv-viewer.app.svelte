@@ -3,11 +3,12 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import { Devices as DevicesIcon, FileCsv as FileCsvIcon, FolderOpen as FolderOpenIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { column_label, delimiter_for, parse_csv } from "./csv";
   import manifest from "./index";
+  import { base_name } from "$lib/core/api/services/files/path";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -42,7 +43,7 @@
         })
       : null
   );
-  const name = $derived(source instanceof File ? source.name : (source?.split("/").at(-1) ?? ""));
+  const name = $derived(source instanceof File ? source.name : (source ? base_name(source) : ""));
 
   $effect(() => {
     void source;
@@ -133,6 +134,6 @@
       </div>
     {/if}
   {:catch error}
-    <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error instanceof Error ? error.message : String(error)} />
+    <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error_message(error)} />
   {/await}
 {/if}

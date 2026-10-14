@@ -5,6 +5,7 @@ import { z } from "zod";
 import kernel from "$lib/core/api";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { app_data_path, json_file } from "./json-file.svelte";
+import { base_name } from "$lib/core/api/services/files/path";
 
 const Schema = z.object({ count: z.number() });
 let files: FilesService;
@@ -25,8 +26,9 @@ async function read(path: string): Promise<string | null> {
 
 async function write(path: string, text: string): Promise<void> {
   let directory = await files.get_root();
-  for (const segment of path.split("/").filter(Boolean).slice(0, -1)) directory = await directory.getDirectoryHandle(segment, { create: true });
-  await files.create_file(directory, path.slice(path.lastIndexOf("/") + 1), { content: text, overwrite: true });
+  for (const segment of path.split("/").filter(Boolean).slice(0, -1))
+    directory = await directory.getDirectoryHandle(segment, { create: true });
+  await files.create_file(directory, base_name(path), { content: text, overwrite: true });
 }
 
 describe("json_file", () => {

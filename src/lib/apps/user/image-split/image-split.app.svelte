@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import {
     Columns as ColumnsIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -15,7 +15,8 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { clamp_count, compute_layout, draw_preview, MAX_COUNT, render_tiles, SplitDirection } from "./image-split";
-  import { file_stem, has_files, image_files, load_image, parent_folder, type SourceImage } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image, type SourceImage } from "$lib/core/utils/image";
+  import { parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   const { path }: { path?: string } = $props();
 
@@ -39,7 +40,7 @@
 
   function report(title: string, error: unknown, type: NotificationType = NotificationType.ERROR) {
     console.error(`[ImageSplit] ${title}`, error);
-    notifications.notify(app_id, { type, title, message: error instanceof Error ? error.message : String(error) });
+    notifications.notify(app_id, { type, title, message: error_message(error) });
   }
 
   async function open_file(file: File, file_path: string | null) {
@@ -53,7 +54,7 @@
     } catch (error) {
       if (id !== load_id) return;
       if (source) report("Couldn't open the image", error);
-      else load_error = { title: "Couldn't open the image", description: error instanceof Error ? error.message : String(error) };
+      else load_error = { title: "Couldn't open the image", description: error_message(error) };
     } finally {
       if (id === load_id) loading = false;
     }
@@ -67,12 +68,12 @@
       else load_error = { title: "File not found", description: file_path };
     } catch (error) {
       if (source) report("Couldn't read the file", error);
-      else load_error = { title: "Couldn't read the file", description: error instanceof Error ? error.message : String(error) };
+      else load_error = { title: "Couldn't read the file", description: error_message(error) };
     }
   }
 
   async function pick() {
-    const start_path = source?.path ? parent_folder(source.path) : undefined;
+    const start_path = source?.path ? parent_path(source.path) : undefined;
     const chosen = await win.pick_file({ accept: ["image/*"], title: "Open in Image Split", start_path });
     if (chosen) open_path(chosen);
   }
@@ -90,7 +91,7 @@
     const plan = layout;
     const stem = file_stem(name);
 
-    const folder = await win.pick_directory({ title: "Save tiles to…", start_path: source_path ? parent_folder(source_path) : undefined });
+    const folder = await win.pick_directory({ title: "Save tiles to…", start_path: source_path ? parent_path(source_path) : undefined });
     if (!folder) return;
 
     const total = plan.columns * plan.rows;

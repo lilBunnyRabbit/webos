@@ -14,6 +14,7 @@ import {
   type Clock,
   type PhotoFormat,
 } from "./media";
+import { error_message } from "$lib/core/utils";
 
 export const Phase = {
   IDLE: "idle",
@@ -67,7 +68,12 @@ export class RecorderSession {
   private disposed = false;
 
   get busy(): boolean {
-    return this.phase === Phase.STARTING || this.phase === Phase.RECORDING || this.phase === Phase.PAUSED || this.phase === Phase.STOPPING;
+    return (
+      this.phase === Phase.STARTING ||
+      this.phase === Phase.RECORDING ||
+      this.phase === Phase.PAUSED ||
+      this.phase === Phase.STOPPING
+    );
   }
 
   get unsaved(): boolean {
@@ -162,7 +168,8 @@ export class RecorderSession {
     const take = this.take;
     if (!take) return null;
     const directory =
-      (await files.get_directory(RECORDINGS_DIR)) ?? (await files.create_directory(await files.get_directory("/home"), "Recordings"));
+      (await files.get_directory(RECORDINGS_DIR)) ??
+      (await files.create_directory(await files.get_directory("/home"), "Recordings"));
     const handle = await files.create_file(directory, take.name, { content: take.blob });
     if (this.take === take) this.discard();
     return `${RECORDINGS_DIR}/${handle.name}`;
@@ -199,7 +206,9 @@ export class RecorderSession {
   }
 
   private async acquire_camera(): Promise<MediaStream> {
-    const video: MediaTrackConstraints = this.camera_id ? { deviceId: { exact: this.camera_id } } : { facingMode: "user" };
+    const video: MediaTrackConstraints = this.camera_id
+      ? { deviceId: { exact: this.camera_id } }
+      : { facingMode: "user" };
     const stream = await navigator.mediaDevices.getUserMedia({ video });
     if (this.disposed) {
       stop_tracks(stream);
@@ -222,7 +231,8 @@ export class RecorderSession {
   }
 
   private async capture(source: Source, mic_mix: boolean): Promise<MediaStream> {
-    if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") throw Object.assign(new Error("No MediaRecorder"), { name: "NotSupportedError" });
+    if (!navigator.mediaDevices || typeof MediaRecorder === "undefined")
+      throw Object.assign(new Error("No MediaRecorder"), { name: "NotSupportedError" });
 
     if (source === Source.MIC) {
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -300,7 +310,9 @@ export class RecorderSession {
   }
 
   private finish(recorder: MediaRecorder, kind: TakeKind): void {
-    const blob = new Blob(this.chunks, { type: recorder.mimeType.split(";")[0] || (kind === TakeKind.AUDIO ? "audio/webm" : "video/webm") });
+    const blob = new Blob(this.chunks, {
+      type: recorder.mimeType.split(";")[0] || (kind === TakeKind.AUDIO ? "audio/webm" : "video/webm"),
+    });
     this.chunks = [];
     this.recorder = null;
     this.release();
@@ -310,14 +322,21 @@ export class RecorderSession {
   }
 
   private set_take(blob: Blob, kind: TakeKind, source: Source, duration: number): void {
-    this.take = { blob, url: URL.createObjectURL(blob), kind, source, duration, name: take_name(source, kind, blob.type, new Date()) };
+    this.take = {
+      blob,
+      url: URL.createObjectURL(blob),
+      kind,
+      source,
+      duration,
+      name: take_name(source, kind, blob.type, new Date()),
+    };
     this.phase = Phase.REVIEW;
   }
 
   private fail(source: Source, reason: unknown): void {
     const kind = classify_error(reason);
     if (kind === CaptureError.OTHER) console.error("[Recorder] capture failed", reason);
-    this.error = { kind, source, message: reason instanceof Error ? reason.message : String(reason) };
+    this.error = { kind, source, message: error_message(reason) };
     this.phase = Phase.ERROR;
   }
 

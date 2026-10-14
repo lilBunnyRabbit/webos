@@ -1,6 +1,6 @@
 import kernel, { NotificationType, type NotificationAction, type NotificationsService } from "$lib/core/api";
 import type { AppId } from "$lib/core/api/services/apps/type";
-import { error_message } from "./pdf-files";
+import { error_message } from "$lib/core/utils";
 
 export interface JobReport {
   title: string;
@@ -14,7 +14,12 @@ export interface JobStep {
 
 const SLICE_MS = 16;
 
-export async function run_job(app_id: AppId, title: string, total: number, work: (step: JobStep) => Promise<JobReport>): Promise<boolean> {
+export async function run_job(
+  app_id: AppId,
+  title: string,
+  total: number,
+  work: (step: JobStep) => Promise<JobReport>
+): Promise<boolean> {
   const notifications = kernel.service<NotificationsService>("notifications");
   let cancelled = false;
   let done = 0;
@@ -29,7 +34,10 @@ export async function run_job(app_id: AppId, title: string, total: number, work:
 
   const step: JobStep = async (label) => {
     done++;
-    notifications.update(id, { message: label ?? `${done} of ${total}`, progress: total ? Math.min(1, done / total) : -1 });
+    notifications.update(id, {
+      message: label ?? `${done} of ${total}`,
+      progress: total ? Math.min(1, done / total) : -1,
+    });
     if (performance.now() - slice > SLICE_MS) {
       await new Promise((resolve) => setTimeout(resolve));
       slice = performance.now();
@@ -39,14 +47,32 @@ export async function run_job(app_id: AppId, title: string, total: number, work:
 
   try {
     const report = await work(step);
-    notifications.update(id, { type: NotificationType.INFO, progress: null, message: undefined, actions: [], ...report });
+    notifications.update(id, {
+      type: NotificationType.INFO,
+      progress: null,
+      message: undefined,
+      actions: [],
+      ...report,
+    });
     return true;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      notifications.update(id, { type: NotificationType.WARNING, title: "Stopped", message: `${done} of ${total} done`, progress: null, actions: [] });
+      notifications.update(id, {
+        type: NotificationType.WARNING,
+        title: "Stopped",
+        message: `${done} of ${total} done`,
+        progress: null,
+        actions: [],
+      });
     } else {
       console.error(`[${app_id}] ${title}`, error);
-      notifications.update(id, { type: NotificationType.ERROR, title: `${title} failed`, message: error_message(error), progress: null, actions: [] });
+      notifications.update(id, {
+        type: NotificationType.ERROR,
+        title: `${title} failed`,
+        message: error_message(error),
+        progress: null,
+        actions: [],
+      });
     }
     return false;
   }

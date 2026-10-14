@@ -8,12 +8,13 @@
   import { z } from "zod";
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
-  import { parent_path, part_name } from "./naming";
+  import { part_name } from "./naming";
   import { split_pdf } from "./pdf";
   import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import { chunks, every_page, flatten_groups, parse_ranges } from "./ranges";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
   const { app_id, window: win, storage } = get_app_context();

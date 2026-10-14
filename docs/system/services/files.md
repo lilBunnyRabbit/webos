@@ -21,7 +21,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 |------|----------|
 | `type.ts` | `FilesService` interface, `FileSystemItem` union, option types |
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
-| `path.ts` | `split_path`, `join_path` |
+| `path.ts` | `split_path`, `join_path`, `resolve_path`, `tilde_path`, `base_name`, `parent_path`, `file_stem`, `file_extension` |
 | `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
 | `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) and `json_file`. `busy` and `idle()` tell whether a write is still on its way |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
@@ -40,6 +40,10 @@ Handles are what OPFS operates on. Paths exist for identity, display, and anythi
 |--------|-----------|-------|
 | `split_path` | `(path: string) => string[]` | Drops empty segments: `"//docs/"` → `["docs"]` |
 | `join_path` | `(segments: string[], name?: string) => string` | `(["docs"], "a.txt")` → `"/docs/a.txt"`, `([])` → `"/"` |
+| `base_name` | `(path: string) => string` | Last segment: `"/docs/a.txt"` → `"a.txt"`, `"/"` → `""` |
+| `parent_path` | `(path: string) => string` | `"/docs/a.txt"` → `"/docs"`; anything directly under the root, and the root, → `"/"` |
+| `file_stem` | `(name: string) => string` | Drops the last extension: `"a.tar.gz"` → `"a.tar"`. A dotfile is all stem: `".env"` → `".env"` |
+| `file_extension` | `(name: string) => string` | Lowercase, with the dot: `"Notes.TXT"` → `".txt"`. A dotfile is its own extension (`".env"`), no dot → `""`. Re-exported from `$lib/core/api` (associations use it, ADR-018) |
 
 Only `get_file(path)`, `get_directory(path)` and `revision(path)` take a path. Every other method takes handles.
 

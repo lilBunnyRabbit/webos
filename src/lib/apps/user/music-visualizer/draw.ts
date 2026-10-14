@@ -1,4 +1,5 @@
-import { clamp, wave_sample } from "./spectrum";
+import { wave_sample } from "./spectrum";
+import { clamp } from "$lib/core/utils";
 
 export interface Palette {
   primary: string;

@@ -2,8 +2,7 @@
   import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Badge, Button, IconButton, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
-  import { error_message, parent_folder } from "$lib/core/utils/image";
+  import { cn, error_message } from "$lib/core/utils";
   import {
     ArrowLeft as ArrowLeftIcon,
     ArrowUUpLeft as UndoIcon,
@@ -20,6 +19,7 @@
   import { analyze, BW_PALETTE, differences, from_solution, INKS, MAX_COLORS, Verdict } from "./puzzle";
   import { resize, sides_for, to_editor } from "./drawing";
   import Swatches from "./swatches.svelte";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
   interface Props {
     drawing: Drawing;
@@ -56,7 +56,7 @@
   const text = $derived(serialize_nonogram(current));
   let saved_text = $state(serialize_nonogram(start));
   const dirty = $derived(text !== saved_text);
-  const name = $derived(path ? path.slice(path.lastIndexOf("/") + 1) : "Untitled puzzle");
+  const name = $derived(path ? base_name(path) : "Untitled puzzle");
   const clues = $derived(from_solution(0, width, height, INKS, cells));
   const used = $derived(new Set(cells.filter((cell) => cell > 0)));
   const empty = $derived(used.size === 0);
@@ -201,7 +201,7 @@
 
   async function open() {
     if (!(await discard_ok())) return;
-    const chosen = await win.pick_file({ accept: [NONOGRAM_EXTENSION], start_path: path ? parent_folder(path) : undefined, title: "Open puzzle" });
+    const chosen = await win.pick_file({ accept: [NONOGRAM_EXTENSION], start_path: path ? parent_path(path) : undefined, title: "Open puzzle" });
     if (!chosen) return;
     try {
       const file = await files.get_file(chosen);
@@ -216,10 +216,10 @@
 
   async function write(target: string): Promise<boolean> {
     try {
-      const directory = await files.get_directory(parent_folder(target));
-      if (!directory) throw new Error(`Folder not found: ${parent_folder(target)}`);
+      const directory = await files.get_directory(parent_path(target));
+      if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
       const content = text;
-      await files.create_file(directory, target.slice(target.lastIndexOf("/") + 1), { content, overwrite: true });
+      await files.create_file(directory, base_name(target), { content, overwrite: true });
       saved_text = content;
       path = target;
       return true;
@@ -233,7 +233,7 @@
     const chosen = await win.pick_save({
       name: path ? name : `Puzzle${NONOGRAM_EXTENSION}`,
       accept: [NONOGRAM_EXTENSION],
-      start_path: path ? parent_folder(path) : "/home",
+      start_path: path ? parent_path(path) : "/home",
       title: "Save puzzle",
     });
     if (!chosen) return false;

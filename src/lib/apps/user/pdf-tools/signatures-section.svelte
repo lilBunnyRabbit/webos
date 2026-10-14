@@ -11,12 +11,14 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { signature_file_name, stem } from "./naming";
-  import { SIGNATURES_DIR, delete_signature, error_message, rename_signature, save_signature } from "./pdf-files";
+  import { signature_file_name } from "./naming";
+  import { SIGNATURES_DIR, delete_signature, rename_signature, save_signature } from "./pdf-files";
   import SignaturePad from "./signature-pad.svelte";
   import SignaturePreview from "./signature-preview.svelte";
   import { watch_signatures } from "./signatures.svelte";
   import { build_signature, type StrokePoint } from "./stroke";
+  import { file_stem } from "$lib/core/api/services/files/path";
+  import { error_message } from "$lib/core/utils";
 
   const { picker, on_use }: { picker: Snippet; on_use: (name: string) => void } = $props();
   const { app_id, window: win } = get_app_context();
@@ -57,7 +59,7 @@
   }
 
   async function rename(name: string) {
-    const next = await win.prompt(`Rename “${stem(name)}”`, {
+    const next = await win.prompt(`Rename “${file_stem(name)}”`, {
       initial: name,
       select_stem: true,
       confirm_label: "Rename",
@@ -75,7 +77,7 @@
   }
 
   async function remove(name: string) {
-    const ok = await win.confirm(`Delete “${stem(name)}”?`, { detail: `The file ${name} is removed from ${SIGNATURES_DIR}.`, confirm_label: "Delete", danger: true });
+    const ok = await win.confirm(`Delete “${file_stem(name)}”?`, { detail: `The file ${name} is removed from ${SIGNATURES_DIR}.`, confirm_label: "Delete", danger: true });
     if (!ok) return;
     try {
       await delete_signature(name);
@@ -121,8 +123,8 @@
                 <div class="grid h-12 w-24 shrink-0 place-items-center rounded-md bg-background-darker p-1.5">
                   <SignaturePreview signature={item.signature} class="max-h-full max-w-full" />
                 </div>
-                <span class="min-w-0 flex-1 truncate text-ui" title={item.path}>{stem(item.name)}</span>
-                <IconButton label="Sign a PDF with “{stem(item.name)}”" size="sm" onclick={() => on_use(item.name)}><PenNibIcon weight="bold" /></IconButton>
+                <span class="min-w-0 flex-1 truncate text-ui" title={item.path}>{file_stem(item.name)}</span>
+                <IconButton label="Sign a PDF with “{file_stem(item.name)}”" size="sm" onclick={() => on_use(item.name)}><PenNibIcon weight="bold" /></IconButton>
                 <IconButton label="Rename" size="sm" onclick={() => rename(item.name)}><PencilSimpleIcon weight="bold" /></IconButton>
                 <IconButton label="Delete" size="sm" onclick={() => remove(item.name)}><TrashIcon weight="bold" /></IconButton>
               </li>

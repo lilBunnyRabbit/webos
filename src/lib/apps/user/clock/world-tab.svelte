@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Input } from "$lib/core/components/ui";
-  import { cn, format_date } from "$lib/core/utils";
+  import { cn, format_date, pad2 } from "$lib/core/utils";
   import { GlobeHemisphereWest, MagnifyingGlass, Moon, Sun, X } from "phosphor-svelte";
   import { tick } from "svelte";
   import type { ClockFile } from "./ringer.svelte";
@@ -14,7 +14,6 @@
     is_daytime,
     is_zone,
     local_zone,
-    pad2,
     search_zones,
     wall_time,
     zone_city,

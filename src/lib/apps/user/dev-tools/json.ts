@@ -1,3 +1,4 @@
+import { error_message } from "$lib/core/utils";
 export const JsonIndent = { TWO: "2", FOUR: "4", TAB: "tab" } as const;
 export type JsonIndent = (typeof JsonIndent)[keyof typeof JsonIndent];
 
@@ -28,7 +29,7 @@ function parse(text: string): Parsed {
   try {
     return { ok: true, data: JSON.parse(text) };
   } catch (reason) {
-    const message = reason instanceof Error ? reason.message : String(reason);
+    const message = error_message(reason);
     return {
       ok: false,
       error: message.replace(/\s*\(line \d+ column \d+\)$/, ""),

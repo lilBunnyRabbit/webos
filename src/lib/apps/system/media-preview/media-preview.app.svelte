@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { Platform, type FilesService } from "$lib/core/api";
-  import { cn, format_bytes, format_datetime } from "$lib/core/utils";
+  import { cn, format_bytes, format_datetime, error_message, clamp } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     CornersOut as CornersOutIcon,
@@ -20,7 +20,7 @@
   import { save_to_disk, set_wallpaper } from "$lib/core/components/files/file-actions";
   import { flushSync, untrack } from "svelte";
   import manifest from "./index";
-  import { clamp, distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
+  import { distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
@@ -95,7 +95,7 @@
         if (!cancelled) file = result;
       })
       .catch((reason) => {
-        if (!cancelled) error = reason instanceof Error ? reason.message : String(reason);
+        if (!cancelled) error = error_message(reason);
       });
     return () => {
       cancelled = true;

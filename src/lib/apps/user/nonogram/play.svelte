@@ -58,6 +58,7 @@
   } from "./game";
   import { col_of, is_color, row_of } from "./puzzle";
   import Swatches from "./swatches.svelte";
+  import { base_name } from "$lib/core/api/services/files/path";
 
   interface Props {
     source: Source;
@@ -149,7 +150,7 @@
   const stats = $derived(mode === Mode.COLOR ? stats_color : stats_bw);
   const best = $derived(tracks_stats ? stats.value[size].best : null);
   const started = $derived(clock.running || game.marks.some((mark) => mark !== Mark.EMPTY));
-  const file_name = $derived(source.kind === "file" ? source.path.slice(source.path.lastIndexOf("/") + 1) : null);
+  const file_name = $derived(source.kind === "file" ? base_name(source.path) : null);
   const label = $derived.by(() => {
     if (source.kind === "daily") return `Daily · ${source.day}`;
     if (source.kind === "file") return source.drawing.title ?? file_name!.replace(/\.nonogram$/, "");

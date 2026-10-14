@@ -3,8 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
-  import { error_message, parent_folder } from "$lib/core/utils/image";
+  import { cn, error_message } from "$lib/core/utils";
   import { load_language, token_highlight, token_theme, type Language } from "$lib/core/components/code";
   import { indentWithTab } from "@codemirror/commands";
   import type { LanguageSupport } from "@codemirror/language";
@@ -43,6 +42,7 @@
   import { DIFF_ACCEPT } from "./index";
   import { DiffSide } from "./side.svelte";
   import { merge_theme } from "./theme";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const { left: left_prop, right: right_prop, path: path_prop }: { left?: string; right?: string; path?: string } = $props();
 
@@ -230,7 +230,7 @@
     if (!(await replace_ok(side))) return;
     const chosen = await win.pick_file({
       accept: DIFF_ACCEPT,
-      start_path: side.path ? parent_folder(side.path) : undefined,
+      start_path: side.path ? parent_path(side.path) : undefined,
       title: `Open the ${role.toLowerCase()} file`,
     });
     if (chosen) await load_into(side, chosen);
@@ -312,7 +312,7 @@
   function watch(side: DiffSide) {
     const path = side.path;
     if (!path) return;
-    files.revision(parent_folder(path));
+    files.revision(parent_path(path));
     untrack(() => void side.refresh().then((changed) => changed && revision++));
   }
 

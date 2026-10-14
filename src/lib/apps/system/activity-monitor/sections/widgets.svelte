@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState, IconButton, Section } from "$lib/core/components/ui";
   import ShortcutIcon from "$lib/core/components/files/shortcut-icon.svelte";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
     CaretDown as CaretDownIcon,
@@ -11,6 +11,7 @@
     SquaresFour as SquaresFourIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
+  import { format_rate } from "../browser";
   import Sparkline from "../sparkline.svelte";
   import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
   import { summarize_props } from "../widget-props";
@@ -53,10 +54,6 @@
     sort = sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== "name" };
   }
 
-  function format_rate(rate: number): string {
-    return rate < 10 ? rate.toFixed(1) : Math.round(rate).toString();
-  }
-
   async function remove(item: Widget) {
     const confirmed = await win.confirm(`Remove the “${item.label}” widget?`, {
       detail: "Only the widget goes; the app and what it shows stay.",
@@ -70,7 +67,7 @@
       notifications.notify("activity-monitor", {
         type: NotificationType.ERROR,
         title: `Could not remove “${item.label}”`,
-        message: error instanceof Error ? error.message : String(error),
+        message: error_message(error),
       });
     }
   }

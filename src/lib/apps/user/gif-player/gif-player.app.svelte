@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import {
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
@@ -103,7 +103,7 @@
       if (token !== load_token) return;
       console.error("[GifPlayer] load failed", reason);
       media = null;
-      error = reason instanceof Error ? reason.message : String(reason);
+      error = error_message(reason);
     } finally {
       if (token === load_token) loading = false;
     }
@@ -122,7 +122,7 @@
       error = `File not found: ${target}`;
     } catch (reason) {
       media = null;
-      error = reason instanceof Error ? reason.message : String(reason);
+      error = error_message(reason);
     }
   }
 

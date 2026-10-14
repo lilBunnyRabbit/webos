@@ -2,7 +2,7 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
     Eraser as EraserIcon,
@@ -18,18 +18,16 @@
   import {
     FORMAT_OPTIONS,
     ImageFormat,
-    error_message,
     extension_for,
-    file_stem,
     has_files,
     image_files,
     load_image,
     load_image_at,
     paint,
-    parent_folder,
     save_image,
     type SourceImage,
   } from "$lib/core/utils/image";
+  import { parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   // JPEG has no alpha channel, so the removed pixels would come back black.
   const FORMATS = FORMAT_OPTIONS.filter((option) => option.value !== ImageFormat.JPEG);
@@ -70,7 +68,7 @@
   if (initial) load(() => load_image_at(initial));
 
   async function pick() {
-    const start_path = source?.path ? parent_folder(source.path) : undefined;
+    const start_path = source?.path ? parent_path(source.path) : undefined;
     const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Open in Background Remove" });
     if (chosen) load(() => load_image_at(chosen));
   }
@@ -117,7 +115,7 @@
       canvas: result,
       name: `${file_stem(source.name)}-transparent${extension_for(format)}`,
       format,
-      start_path: source.path ? parent_folder(source.path) : null,
+      start_path: source.path ? parent_path(source.path) : null,
     });
   }
 </script>

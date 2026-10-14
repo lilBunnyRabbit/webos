@@ -12,6 +12,7 @@
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { untrack } from "svelte";
   import manifest from "./index";
+  import { error_message } from "$lib/core/utils";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -54,7 +55,7 @@
         if (!cancelled) file = result;
       })
       .catch((reason) => {
-        if (!cancelled) error = reason instanceof Error ? reason.message : String(reason);
+        if (!cancelled) error = error_message(reason);
       });
     return () => {
       cancelled = true;

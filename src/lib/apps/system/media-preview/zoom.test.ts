@@ -1,13 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { clamp, distance, fit_scale, midpoint, rotated_size } from "./zoom";
+import { distance, fit_scale, midpoint, rotated_size } from "./zoom";
 
 describe("zoom helpers", () => {
-  test("clamp keeps a value inside the range", () => {
-    expect(clamp(7, 0.25, 5)).toBe(5);
-    expect(clamp(0.1, 0.25, 5)).toBe(0.25);
-    expect(clamp(2, 0.25, 5)).toBe(2);
-  });
-
   test("distance and midpoint of two pointers", () => {
     expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
     expect(midpoint({ x: 0, y: 10 }, { x: 4, y: 20 })).toEqual({ x: 2, y: 15 });

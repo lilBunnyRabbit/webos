@@ -2,7 +2,7 @@
   import kernel, { NotificationType, type AppsService, type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, format_date } from "$lib/core/utils";
+  import { cn, format_date, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -21,9 +21,9 @@
   import { z } from "zod";
   import DropZone from "./drop-zone.svelte";
   import { clamp_placement, type Placement } from "./geometry";
-  import { parent_path, signed_name, signature_file_name } from "./naming";
+  import { signed_name, signature_file_name } from "./naming";
   import { DATE_SCALE, Ink, ink_css, sign_pdf } from "./pdf";
-  import { PDF_ACCEPT, device_source, error_message, save_signature, write_at } from "./pdf-files";
+  import { PDF_ACCEPT, device_source, save_signature, write_at } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import { page_info, render_width, type PageInfo } from "./render";
@@ -31,6 +31,7 @@
   import SignaturePreview from "./signature-preview.svelte";
   import { watch_signatures } from "./signatures.svelte";
   import { build_signature, type Signature, type StrokePoint } from "./stroke";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
   let {
     picker,
@@ -239,7 +240,7 @@
     if (name === null) return;
     try {
       const path = await save_signature(signature_file_name(name), result);
-      signature_name = path.slice(path.lastIndexOf("/") + 1);
+      signature_name = base_name(path);
       drawn = null;
       drawing = false;
       pad_strokes = [];

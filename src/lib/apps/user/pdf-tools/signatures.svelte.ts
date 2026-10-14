@@ -1,7 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { untrack } from "svelte";
-import { parent_path } from "./naming";
 import { SIGNATURES_DIR, list_signatures, type SavedSignature } from "./pdf-files";
+import { parent_path } from "$lib/core/api/services/files/path";
 
 export interface SignatureList {
   readonly items: SavedSignature[];

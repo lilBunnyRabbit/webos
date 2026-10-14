@@ -1,7 +1,7 @@
 import type { FilesService } from "$lib/core/api";
 import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-import { parent_folder } from "$lib/core/utils/image";
 import { language_for } from "$lib/core/components/code";
+import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
 export class DiffSide {
   text = $state.raw("");
@@ -12,7 +12,7 @@ export class DiffSide {
   base_modified = 0;
   saving = false;
 
-  readonly name = $derived(this.path ? this.path.slice(this.path.lastIndexOf("/") + 1) : this.label);
+  readonly name = $derived(this.path ? base_name(this.path) : this.label);
   readonly dirty = $derived(this.path !== null && this.text !== this.saved);
   /** OS files (/etc, /var, /tmp) are compared, never written. */
   readonly read_only = $derived(this.path !== null && is_system_path(this.path));
@@ -62,10 +62,10 @@ export class DiffSide {
       if (disk && disk.lastModified > this.base_modified && (await disk.text()) !== this.text) {
         if (!(await confirm_overwrite())) return false;
       }
-      const directory = await this.files().get_directory(parent_folder(target));
-      if (!directory) throw new Error(`Folder not found: ${parent_folder(target)}`);
+      const directory = await this.files().get_directory(parent_path(target));
+      if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
       const content = this.text;
-      await this.files().create_file(directory, target.slice(target.lastIndexOf("/") + 1), { content, overwrite: true });
+      await this.files().create_file(directory, base_name(target), { content, overwrite: true });
       this.base_modified = (await this.files().get_file(target))?.lastModified ?? Date.now();
       this.saved = content;
       return true;

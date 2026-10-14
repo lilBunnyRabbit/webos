@@ -52,3 +52,25 @@ export function format_date(date: Date | number): string {
 export function format_datetime(date: Date | number): string {
   return new Date(date).toLocaleString([], { dateStyle: "medium", timeStyle: "short", hourCycle: "h23" });
 }
+
+export function error_message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Safe in text and in quoted attribute values. */
+export function escape_html(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}

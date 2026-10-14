@@ -1,11 +1,26 @@
-import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
+import kernel, {
+  NotificationType,
+  type AppsService,
+  type FilesService,
+  type NotificationsService,
+} from "$lib/core/api";
 import { is_file_value } from "$lib/core/api/services/files/shell";
 import { resolve_path } from "$lib/core/api/services/files/path";
 import { ShellError, type CommandContext, type Completion, type Tagged } from "$lib/core/api/services/shell/type";
-import { create_pad, find_board, is_audio, resolve_pad, type Board, type BoardFile, type Pad, type PadMatch } from "./board";
+import {
+  create_pad,
+  find_board,
+  is_audio,
+  resolve_pad,
+  type Board,
+  type BoardFile,
+  type Pad,
+  type PadMatch,
+} from "./board";
 import { with_board } from "./board-file.svelte";
 import { sound_player, stop_everything } from "./player.svelte";
 import { APP_ID, import_sound } from "./store";
+import { error_message } from "$lib/core/utils";
 
 const files = () => kernel.service<FilesService>("files");
 
@@ -33,7 +48,9 @@ export function open_app(): void {
 }
 
 export async function* list({ args }: CommandContext<{ board?: string }>): AsyncGenerator<Tagged> {
-  const values = await with_board(({ value }) => boards_of(value, args.board).flatMap((board) => board.pads.map((pad) => pad_value(board, pad))));
+  const values = await with_board(({ value }) =>
+    boards_of(value, args.board).flatMap((board) => board.pads.map((pad) => pad_value(board, pad)))
+  );
   yield* values;
 }
 
@@ -44,7 +61,7 @@ async function play_pad(pad: Pad): Promise<string> {
     if (!stopping) await player.unlock();
     await player.trigger(pad);
   } catch (reason) {
-    throw new ShellError(`couldn't play “${pad.label}”: ${reason instanceof Error ? reason.message : String(reason)}`);
+    throw new ShellError(`couldn't play “${pad.label}”: ${error_message(reason)}`);
   }
   return `${stopping ? "stopped" : "playing"} “${pad.label}”`;
 }
@@ -60,7 +77,7 @@ export async function open_pad(id: string): Promise<void> {
     kernel.service<NotificationsService>("notifications").notify(APP_ID, {
       type: NotificationType.ERROR,
       title: "Couldn't play the sound",
-      message: reason instanceof Error ? reason.message : String(reason),
+      message: error_message(reason),
     });
   }
 }
@@ -124,6 +141,8 @@ export async function complete_pads(partial: string): Promise<Completion[]> {
 export async function complete_boards(partial: string): Promise<Completion[]> {
   const query = partial.toLowerCase();
   return with_board(({ value }) =>
-    value.boards.filter((board) => board.name.toLowerCase().includes(query)).map((board) => ({ value: board.name, detail: `${board.pads.length} pads` }))
+    value.boards
+      .filter((board) => board.name.toLowerCase().includes(query))
+      .map((board) => ({ value: board.name, detail: `${board.pads.length} pads` }))
   );
 }
