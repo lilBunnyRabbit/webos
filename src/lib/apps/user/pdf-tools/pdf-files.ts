@@ -1,0 +1,143 @@
+import kernel, { type FilesService } from "$lib/core/api";
+import { has_drag_paths, has_os_files, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
+import { load_image } from "$lib/core/utils/image";
+import { base_name, join_path, parent_path } from "./naming";
+import type { PdfImage } from "./pdf";
+import { parse_signature_svg, signature_svg, type Signature } from "./stroke";
+
+export const SIGNATURES_DIR = "/home/Signatures";
+export const PDF_ACCEPT = [".pdf", "application/pdf"];
+export const IMAGE_ACCEPT = ["image/*"];
+
+export interface SourceFile {
+  name: string;
+  path: string | null;
+  file: File;
+}
+
+function files(): FilesService {
+  return kernel.service<FilesService>("files");
+}
+
+export function error_message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export async function source_at(path: string): Promise<SourceFile> {
+  const file = await files().get_file(path);
+  if (!file) throw new Error(`${path} no longer exists.`);
+  return { name: base_name(path), path, file };
+}
+
+export function device_source(file: File): SourceFile {
+  return { name: file.name, path: null, file };
+}
+
+export async function read_bytes(source: SourceFile): Promise<Uint8Array> {
+  return new Uint8Array(await source.file.arrayBuffer());
+}
+
+export async function write_at(path: string, data: Uint8Array | Blob | string): Promise<void> {
+  const folder = parent_path(path);
+  const directory = await files().get_directory(folder);
+  if (!directory) throw new Error(`The folder ${folder} no longer exists.`);
+  await files().create_file(directory, base_name(path), { content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data, overwrite: true });
+}
+
+export async function write_into(folder: string, name: string, data: Uint8Array | Blob | string): Promise<string> {
+  const directory = await files().get_directory(folder);
+  if (!directory) throw new Error(`The folder ${folder} no longer exists.`);
+  const handle = await files().create_file(directory, name, { content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data });
+  return join_path(folder, handle.name);
+}
+
+export function accepts_drop(event: DragEvent): boolean {
+  return has_drag_paths(event) || has_os_files(event);
+}
+
+// Must run inside the drop handler, before any await: the items are only readable while the event dispatches.
+export function read_drop(event: DragEvent): Promise<SourceFile[]> {
+  if (has_drag_paths(event)) {
+    const paths = read_drag_paths(event);
+    return Promise.all(paths.map((path) => source_at(path).catch(() => null))).then((list) => list.filter((item) => item !== null));
+  }
+  return read_os_entries(event).then(async (entries) => {
+    const out: SourceFile[] = [];
+    for (const entry of entries) {
+      if (entry instanceof File) out.push(device_source(entry));
+      else if (entry.kind === "file") out.push(device_source(await (entry as FileSystemFileHandle).getFile()));
+    }
+    return out;
+  });
+}
+
+export function is_pdf(source: SourceFile): boolean {
+  return source.file.type === "application/pdf" || source.name.toLowerCase().endsWith(".pdf");
+}
+
+export function is_image(source: SourceFile): boolean {
+  return source.file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(source.name);
+}
+
+// PNG and JPEG go in as they are; anything else the browser can decode is redrawn to PNG first.
+export async function prepare_image(source: SourceFile): Promise<PdfImage> {
+  const typed = source.file.type ? source.file : new File([source.file], source.name, { type: guess_type(source.name) });
+  const image = await load_image(typed, source.path);
+  const { width, height } = image.bitmap;
+  try {
+    if (typed.type === "image/png" || typed.type === "image/jpeg") {
+      return { bytes: new Uint8Array(await typed.arrayBuffer()), kind: typed.type === "image/png" ? "png" : "jpg", width, height };
+    }
+    const canvas = new OffscreenCanvas(width, height);
+    canvas.getContext("2d")!.drawImage(image.bitmap, 0, 0);
+    const blob = await canvas.convertToBlob({ type: "image/png" });
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), kind: "png", width, height };
+  } finally {
+    image.bitmap.close();
+  }
+}
+
+function guess_type(name: string): string {
+  const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+  return extension === "jpg" ? "image/jpeg" : extension === "svg" ? "image/svg+xml" : `image/${extension}`;
+}
+
+export interface SavedSignature {
+  name: string;
+  path: string;
+  signature: Signature;
+}
+
+export async function signatures_dir(create: boolean): Promise<FileSystemDirectoryHandle | null> {
+  const existing = await files().get_directory(SIGNATURES_DIR);
+  if (existing || !create) return existing;
+  const home = await files().get_directory(parent_path(SIGNATURES_DIR));
+  if (!home) throw new Error("The home folder is missing.");
+  await files().create_directory(home, base_name(SIGNATURES_DIR));
+  return files().get_directory(SIGNATURES_DIR);
+}
+
+export async function list_signatures(): Promise<SavedSignature[]> {
+  const directory = await signatures_dir(false);
+  if (!directory) return [];
+  const out: SavedSignature[] = [];
+  for (const item of await files().list(directory)) {
+    if (item.kind !== "file" || !item.name.toLowerCase().endsWith(".svg")) continue;
+    const signature = parse_signature_svg(await (await item.handle.getFile()).text());
+    if (signature) out.push({ name: item.name, path: join_path(SIGNATURES_DIR, item.name), signature });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function save_signature(name: string, signature: Signature): Promise<string> {
+  await signatures_dir(true);
+  return write_into(SIGNATURES_DIR, name, signature_svg(signature));
+}
+
+export async function rename_signature(name: string, new_name: string): Promise<void> {
+  await files().rename_entry(await signatures_dir(false), name, new_name);
+}
+
+export async function delete_signature(name: string): Promise<void> {
+  await files().delete_entry(await signatures_dir(false), name);
+}
