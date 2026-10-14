@@ -3,6 +3,15 @@
 **Date:** 2026-02-01
 **Status:** Accepted
 
+### Revision 2026-10-14: app triage
+
+The owner triaged every remaining candidate ([brainstorm](../brainstorm/2026-10-14_app-triage.md)). That log is now the live list; this catalogue keeps the original feature ideas.
+
+- **Yes:** Markdown → PDF, Work Hours, Pomodoro, Clock, Time Since, Habit Tracker (not now), Kanban (a personal "life" board), Calendar, Game Hub, Solitaire, Nonogram colour mode and editor, Daily puzzle, Image Editor, Voice Recorder, Screen Recorder, Camera, Soundboard, Color Tools (after chromatics is on npm), Archive / Compression, Diff, and a new **PDF Tools** app (merge, split, sign, client-side).
+- **Maybe / later:** Spreadsheet, Chess, Sokoban, Blocks, Video Tools, Video → GIF, Hex Viewer, Font Viewer, Web app wrapper.
+- **Dropped:** Series Tracker, Weather, News.
+- Quick Notes shipped without AppDataHandle: notes are files in `/home/Notes` (ADR-034). P2P Transfer shipped without a signaling server: the offer and answer travel by QR code (ADR-032).
+
 ## Context
 
 WebOS needs a rich app ecosystem to demonstrate platform capabilities and provide genuine utility. The legacy React version planned 15+ apps across categories: games, productivity, media, utilities, and developer tools. This ADR catalogues all planned apps so nothing is forgotten during the Svelte migration.
@@ -81,7 +90,7 @@ Fast, unorganized note-taking.
 - Tag system for basic organization
 - Search across notes
 - Export notes as markdown/text
-- Stored in OPFS via AppDataHandle
+- Stored in OPFS via AppDataHandle (shipped as `.md` files in `/home/Notes`, ADR-034)
 
 #### Speed Reader
 RSVP (Rapid Serial Visual Presentation) reader.
@@ -111,7 +120,7 @@ RSVP (Rapid Serial Visual Presentation) reader.
 
 ### Media & Entertainment
 
-#### Series Tracker
+#### Series Tracker (dropped 2026-10-14)
 TV show tracking with external API.
 - Search shows via TMDB API (or TVMaze fallback)
 - Track watched episodes per show
@@ -191,7 +200,7 @@ Peer-to-peer file sharing.
 - QR code for easy mobile sharing
 - Progress tracking via Tasks Service
 - Multiple simultaneous transfers
-- Requires signaling server (minimal WebSocket server)
+- Requires signaling server (minimal WebSocket server) (shipped without one: QR-code signaling, ADR-032)
 
 #### QR Code Scanner
 - Camera-based QR/barcode scanning
@@ -234,8 +243,8 @@ Individual apps ported from the `static-utils` project:
 
 - **Text Editor** — full-featured editor with syntax highlighting (tests file ops + persistence)
 - **Chat App** — WebRTC/WebSocket based messaging
-- **Weather Widget** — desktop widget showing weather via API
-- **News Reader** — RSS/API-based news aggregator
+- ~~**Weather Widget**~~ — dropped 2026-10-14
+- ~~**News Reader**~~ — dropped 2026-10-14
 
 ---
 

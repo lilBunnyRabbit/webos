@@ -180,7 +180,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] `sudo` (system dialog) for writes to system folders
 - [x] Service commands: files, windows, apps, settings, notifications, clipboard, version, router, kernel
 - [ ] Background jobs (`&`, `jobs`, `kill`), likely with Tasks (ADR-013): waiting on a use case
-- [ ] App-registered commands: global ones via `define_app({ shell })` (ADR-034, Quick Notes first); window-scoped via app context later, then app shortcuts become commands too
+- [-] App-registered commands: global ones via `define_app({ shell })` (ADR-034, Quick Notes first); window-scoped via app context later, then app shortcuts become commands too
 - [ ] `where` expression language (OR, grouping)
 - [ ] Language beyond pipes (variables, globs, chaining, scripts): waiting on a use case
 
@@ -200,14 +200,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] OS shortcuts run commands (KeyShortcut `command` or `run`)
 
 ### Shortcuts Service
-- **ADR:** [ADR-012](adrs/012-shortcuts-service.md)
-- **Status:** Not started
-- [ ] Global / app / window scoped shortcuts
-- [ ] Default OS-like shortcuts (Alt+F4, Alt+Tab, Ctrl+K, etc.)
-- [ ] Conflict detection
+- **ADR:** [ADR-012](adrs/012-shortcuts-service.md), [ADR-017](adrs/017-keyboard-shortcuts-strategy.md)
+- **Status:** Done (2026-10-12, Order block 2)
+- [x] Global and window-scoped shortcuts (no separate app scope)
+- [x] Default OS shortcuts: Alt+Shift window keys, Mod+K, Mod+/
+- [ ] Conflict detection (only a console warning; newer wins)
 - [ ] Customizable shortcuts in Settings
-- [ ] Shortcut cheat sheet (Ctrl+/)
-- [ ] OS detection (Windows vs Mac modifier display)
+- [x] Shortcut cheat sheet (Mod+/)
+- [x] OS detection (Windows vs Mac modifier display)
 
 ### Tasks Service & Task Manager
 - **ADR:** [ADR-013](adrs/013-tasks-service.md)
@@ -257,6 +257,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Brainstorm:** [2026-10-12 App candidates](brainstorm/2026-10-12_app-candidates.md): every candidate rated build now / after a gate / skip, and the rules for building apps in parallel
 - [x] Categories + launcher sections + ranked search (ADR-001 revision, 2026-10-12)
 - [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
+- **Triage:** [2026-10-14 App triage](brainstorm/2026-10-14_app-triage.md): yes / maybe / no for every remaining app, and the core work each yes app waits on
+- Remove the `example` app: left for now (owner, 2026-10-14); `ui`, `session` and `router` browser tests launch it
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
@@ -272,6 +274,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Game Hub (library browser, play time tracking, categories, saves)
 - [-] Nonogram: black and white, generated puzzles, hints, zoom on phones (2026-10-13). Colour, editor and packs not done
+- [ ] Solitaire (Klondike)
+- [ ] Daily puzzle (seeded, one per day)
+- Later: Chess, Sokoban, Blocks
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
@@ -287,24 +292,34 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
 - [ ] Markdown-to-PDF converter — live preview, templates, TOC
 - [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
+- [ ] Pomodoro and Clock (one app or two: open)
+- [ ] Time Since
+- [ ] Kanban (personal "life" board)
+- [ ] Calendar
+- [ ] Habit Tracker (yes, not now)
+- Later: Spreadsheet
 
 ### Media & Entertainment
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Series Tracker — TMDB API, episode tracking, watchlist
+- ~~Series Tracker~~ dropped in the 2026-10-14 triage
 - [x] Paint (2026-10-12)
 - [x] Music Visualizer (2026-10-12)
 - [ ] Image Editor — crop, resize, rotate, filters
-- [ ] Video Tools — trimmer, merger, audio extraction (ffmpeg.wasm)
-- [ ] Gifski — video-to-GIF via WASM
+- [ ] Voice Recorder, Screen Recorder, Camera
+- [ ] Soundboard (user-loaded sounds)
+- Later: Video Tools (trim, merge, audio extraction), Video → GIF
 
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim
+- [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim. Waits on chromatics as an npm package
 - [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
-- [ ] Compression Tools — DEFLATE, LZ77, Huffman + WASM
+- [ ] Archive / Compression — zip, DEFLATE, LZ77, Huffman; first Tasks + Workers consumer
+- [ ] PDF Tools — merge, split, reorder, sign, all client-side (library choice open)
+- [ ] Diff
+- Maybe: Hex Viewer, Font Viewer, Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
 
 ### static-utils Ports
