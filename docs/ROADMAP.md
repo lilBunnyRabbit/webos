@@ -260,7 +260,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
 - **Triage:** [2026-10-14 App triage](brainstorm/2026-10-14_app-triage.md): yes / maybe / no for every remaining app, and the core work each yes app waits on
 - Remove the `example` app: left for now (owner, 2026-10-14); `ui`, `session` and `router` browser tests launch it
-- [ ] Wave 2 follow-ups (agents' reports, [triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)): shell commands for every new app (owner approval), File Explorer Compress / Extract here, shared CodeMirror module (Diff and Markdown to PDF import Text Editor's), core `write_image(path, canvas, { format, quality })`, kit: colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`, a shared ticking clock; `print_html` should wait for fonts
+- [-] Wave 2 follow-ups ([triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)). Done 2026-10-15: shell commands for every new app, File Explorer Compress / Extract here, shared CodeMirror module (`$lib/core/components/code`), core `write_image`, shared `Ticker` (one wall-clock-aligned clock per interval), widget resizing (`widget_size`), App Library, PWA install, word + typo app search, keyword pass. Left: kit additions (colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`), `print_html` waiting for fonts, core → user-app import (Explorer uses Archive's extraction), PDF Tools commands (proposed)
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
 
 ### New System Apps
@@ -322,7 +322,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
 - [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Moves onto Tasks once built
-- [ ] PDF Tools — merge, split, reorder, sign, all client-side (library choice open)
+- [x] PDF Tools — merge, organize, split, sign (vector signatures from a signature pad), images ↔ PDF; pdf-lib + pdf.js, lazy (2026-10-15). pdf.js worker not precached yet
 - [x] Diff on `@codemirror/merge` (2026-10-14)
 - Maybe: Hex Viewer, Font Viewer, Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))

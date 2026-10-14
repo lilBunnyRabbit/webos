@@ -22,6 +22,11 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
+      workbox: {
+        // mjs: the pdf.js worker (PDF Tools), so rendering pages works offline too (owner, 2026-10-15).
+        globPatterns: ["**/*.{js,mjs,css,html}"],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
       manifest: {
         name: "WebOS",
         short_name: "WebOS",

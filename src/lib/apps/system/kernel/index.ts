@@ -8,6 +8,7 @@ export default define_app({
   icon: BrainIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
+  description: "Inspect the system services that run WebOS and their live state.",
   keywords: ["services", "system", "debug", "inspector", "internals", "registry"],
   component: () => import("./kernel.app.svelte"),
 });

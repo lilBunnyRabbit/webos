@@ -39,7 +39,8 @@ export default define_app({
     values: {
       card: {
         columns: ["board", "column", "title", "due", "labels"],
-        text: (card) => `${card.id}  ${String(card.column).padEnd(8)} ${card.title}${card.due ? `  due ${card.due}` : ""}`,
+        text: (card) =>
+          `${card.id}  ${String(card.column).padEnd(8)} ${card.title}${card.due ? `  due ${card.due}` : ""}`,
         open: (card) => void logic().then((m) => m.open_card(String(card.board_id), String(card.id))),
       },
     },
@@ -53,7 +54,8 @@ export default define_app({
       }),
       define_command({
         id: "kanban ls",
-        description: "Cards on every board, or -b <board>; --due: cards with a due date that aren't done, soonest first",
+        description:
+          "Cards on every board, or -b <board>; --due: cards with a due date that aren't done, soonest first",
         args: z.object({
           board: z.string().optional().describe("Only this board"),
           due: z.boolean().default(false).describe("Only open cards with a due date"),

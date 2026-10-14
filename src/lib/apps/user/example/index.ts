@@ -19,6 +19,7 @@ export default define_app({
     },
     flags: [WindowFlag.DEBUG],
   },
+  description: "A starter app showing the app context, saved state and props.",
   props: z.object({ count: z.number() }),
   component: () => import("./example.app.svelte"),
 });

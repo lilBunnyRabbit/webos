@@ -10,6 +10,7 @@ export default define_app({
   icon: FilePdfIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
+  description: "Reads PDF documents with the browser's built-in viewer.",
   keywords: ["pdf", "document", "reader", "viewer"],
   associations: ["application/pdf", ".pdf"],
   props: FILE_PROPS,

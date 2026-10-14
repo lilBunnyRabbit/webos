@@ -10,6 +10,7 @@ export default define_app({
   icon: FilmStripIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
+  description: "Plays animated GIFs with pause, frame-by-frame stepping and speed control.",
   keywords: ["gif", "animation", "frames", "player", "image", "animated"],
   tools: ["image/gif", ".gif", "video/*"],
   props: FILE_PROPS,

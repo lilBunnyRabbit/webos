@@ -10,6 +10,7 @@ export default define_app({
   icon: FileImageIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
+  description: "Views images and plays video and audio files.",
   keywords: ["image", "photo", "picture", "video", "audio", "music", "player", "viewer", "gallery"],
   associations: ["image/*", "video/*", "audio/*"],
   props: FILE_PROPS,

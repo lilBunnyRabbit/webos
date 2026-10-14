@@ -138,6 +138,14 @@
     </ul>
   {:else}
     <ul class="flex flex-col">
+      <li aria-hidden="true" class="flex h-7 items-center gap-2.5 px-2 text-2xs text-foreground/55">
+        <span class="ml-auto flex shrink-0 items-center gap-1.5">
+          {#each FILTERS.slice(0, 3) as filter (filter.id)}
+            <span title={filter.label}><filter.icon class="size-3.5" weight="bold" /></span>
+          {/each}
+          <span class="hidden w-20 text-right @md:block">Category</span>
+        </span>
+      </li>
       {#each list as manifest (manifest.id)}
         <li>
           <button
@@ -154,7 +162,9 @@
             <span class="hidden min-w-0 flex-1 truncate text-ui text-foreground/65 @lg:block">{manifest.description ?? ""}</span>
             <span class="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/65">
               {#each FILTERS.slice(0, 3) as filter (filter.id)}
-                <filter.icon class={cn("size-3.5", !has_filter(manifest, filter.id, used) && "invisible")} aria-label={has_filter(manifest, filter.id, used) ? filter.label : undefined} />
+                <span title={has_filter(manifest, filter.id, used) ? filter.label : undefined}>
+                  <filter.icon class={cn("size-3.5", !has_filter(manifest, filter.id, used) && "invisible")} aria-label={has_filter(manifest, filter.id, used) ? filter.label : undefined} />
+                </span>
               {/each}
               <span class="hidden w-20 truncate text-right text-2xs @md:block">{category_label(manifest)}</span>
             </span>

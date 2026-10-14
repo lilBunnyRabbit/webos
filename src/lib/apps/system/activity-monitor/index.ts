@@ -8,6 +8,7 @@ export default define_app({
   icon: PulseIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
+  description: "What's running and how hard it works: windows, widgets, frame rate, network and storage.",
   keywords: [
     "task manager",
     "processes",
