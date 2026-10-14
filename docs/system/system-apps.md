@@ -245,11 +245,11 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Associations.** `application/pdf` (tier 2) and `.pdf` (tier 3), so it wins on extension even when the MIME type is empty.
 
-**Behaviour.** The same load pattern as Media Preview. It then wraps the file in `new Blob([file], { type: "application/pdf" })` before `createObjectURL`. Chrome only hands a blob to its PDF viewer when the blob's type says PDF, and would otherwise download it. The result is a full-size borderless `<iframe src={blob url}>` on `background-darker`, titled with the file name. Other states use the kit: "No PDF open" and error empty states, a `Spinner` ("Loading PDF") while loading.
+**Behaviour.** The same load pattern as Media Preview. It then wraps the file in `new Blob([file], { type: "application/pdf" })` before `createObjectURL`. Chrome only hands a blob to its PDF viewer when the blob's type says PDF, and would otherwise download it. The result is a full-size borderless `<iframe src={blob url}>` on `background-darker`, titled with the file name, under a `Toolbar`: Open…, Open from device…, the file name, and **Edit in PDF Tools** (`PencilSimple`), which runs `apps.launch("pdf-tools", { path })` and so lands on Organize. That button shows only for a file with a path (not one from the device) and while `pdf-tools` is registered. Other states use the kit: "No PDF open" and error empty states, a `Spinner` ("Loading PDF") while loading.
 
-**Interactions.** Whatever the native viewer offers: zoom, page navigation, search, print, download. The app adds no UI of its own.
+**Interactions.** Whatever the native viewer offers: zoom, page navigation, search, print, download. The app adds only its toolbar.
 
-**Known gaps.** It depends entirely on the browser's PDF viewer: no viewer means a blank or downloading iframe. There's no app-level toolbar or file info.
+**Known gaps.** It depends entirely on the browser's PDF viewer: no viewer means a blank or downloading iframe. There's no file info.
 
 ---
 
