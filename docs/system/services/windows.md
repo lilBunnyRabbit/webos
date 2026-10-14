@@ -171,7 +171,7 @@ ADR-014's 2026-10-12 revision records the code: remembered frames instead of pla
 
 ## Shell
 
-Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`). Both implementations call the same `windows_shell(this)`; the shape decides. See [shell](shell.md#contributions).
+Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides. See [shell](shell.md#contributions).
 
 ## Known gaps
 
