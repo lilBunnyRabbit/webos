@@ -180,7 +180,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] `sudo` (system dialog) for writes to system folders
 - [x] Service commands: files, windows, apps, settings, notifications, clipboard, version, router, kernel
 - [ ] Background jobs (`&`, `jobs`, `kill`), likely with Tasks (ADR-013): waiting on a use case
-- [ ] App-registered commands (window-scoped via app context); app shortcuts then become commands too
+- [ ] App-registered commands: global ones via `define_app({ shell })` (ADR-034, Quick Notes first); window-scoped via app context later, then app shortcuts become commands too
 - [ ] `where` expression language (OR, grouping)
 - [ ] Language beyond pipes (variables, globs, chaining, scripts): waiting on a use case
 
@@ -278,7 +278,12 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Quick Notes (quno) — chronological notes, markdown, tags, search
+- [ ] Quick Notes (ADR-034, [brainstorm](brainstorm/2026-10-14_quick-notes.md)), quno-inspired
+  - [ ] App commands (`define_app({ shell })`)
+  - [ ] Core: `/home/Notes`, ids, Todo | Notes | Inbox tabs, `note`/`notes`/`todo` commands and values, capture dialog with context stamp, Alt+Shift+Q
+  - [ ] Manifest badge (open todos), shown where the icon shows
+  - [ ] Desktop widgets (`.widget` files, multi-cell), stickies
+  - [ ] Wikilinks and backlinks
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
 - [ ] Markdown-to-PDF converter — live preview, templates, TOC
 - [ ] Work Hours Tracker — time in/out, monthly reports, PDF export
