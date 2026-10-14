@@ -14,7 +14,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
-| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps | window: `section` |
+| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps, desktop, notifications | window: `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell, files (path display) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
@@ -313,14 +313,14 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 `activity-monitor` · `Pulse` icon · source `system/activity-monitor/`
 
-**Purpose.** A task manager for the web OS: activity per window, page-wide performance, network requests and storage use. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+**Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests and storage use. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
-**Services.** `windows` (`list`, `get` for manifests, `close`), `files` (`get_directory`, `get_directory_size`), `apps` (names for app storage).
+**Services.** `windows` (`list`, `get` for manifests, `force_close`), `files` (`get_directory`, `get_directory_size`), `apps` (names for app storage and widgets), `desktop` (`items`, `open`, `remove_item` for widgets), `notifications` (a failed widget removal).
 
-**Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `WindowMonitor`, `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
+**Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `DomMonitor` (two instances: windows and widgets), `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
 - `observe()`: the event-driven observers (long animation frames, CPU pressure, resource timing, the connection `change` listener). They run for the window's lifetime.
-- `sample()`: the 1 s ticks, the rAF frame counter and the per-window MutationObservers. They run only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035).
+- `sample()`: the 1 s ticks, the rAF frame counter and the per-window and per-widget MutationObservers. They run only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035).
 
 Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start calls so a window opening doesn't restart the samplers.
 
@@ -332,7 +332,14 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
   - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not. The long-frames table drops its Blocking column there.
-  - **End:** calls `windows.close(id)`, the same as ×.
+  - **End:** calls `windows.force_close(id)`, skipping unsaved-changes prompts.
+- **Widgets:** its own section, after Windows, because widgets aren't windows: they have no id, no z-order and no End.
+  - One row per `desktop.items()` entry with `kind === "widget"`: the app's icon (`ShortcutIcon`, no badge), the widget's label (its file name without `.widget`), and the app name next to it when the label differs (from `@md`). The tooltip has label, app and file name.
+  - **Columns:** Size in cells (`w×h`, from `@md`), Props as one line (`summarize_props` in `widget-props.ts`: `key: value` pairs, absolute paths cut to their last segment, long strings truncated, `—` for none; from `@xl`), a 60 s sparkline (from `@2xl`), mutations per second, and DOM nodes (from `@xl`). Sortable by name, rate and nodes.
+  - **Mutations:** `DomMonitor` keyed by the widget's file name. It finds the frame through its title strip, `[data-desktop-name="{name}"]`, and observes the frame's `[data-widget-body]`, so dragging or selecting the frame doesn't count. A widget pushed off the visible grid has no element and shows `—`.
+  - **Actions:** Open (`desktop.open(item)`, which launches the widget's app) and Remove from desktop (a window `confirm`, then `desktop.remove_item(name)`; the same wording as the desktop's Remove). Rows follow the Desktop folder, so a removal drops the row and its observer on the next tick.
+  - **Summary:** widget count and total mutations per second.
+  - **Mobile:** the phone home doesn't render widgets (ADR-016), so the section shows an empty state saying so instead of a list.
 - **Performance:**
   - Frame rate (rAF), event-loop lag (drift of a chained 1 s `setTimeout`) and JS heap (`performance.memory`, copied field by field because its fields are prototype getters), each with a sparkline.
   - CPU pressure (`PressureObserver`, `"cpu"`, 1 s) as a badge. "Not allowed here" if `observe()` is rejected.
@@ -357,6 +364,8 @@ An API the browser doesn't have shows "Not available in this browser". There are
 - No Workers tab: no browser API lists workers, and no app spawns one yet. A Workers Service comes with its first consumer. TasksService jobs (ADR-013) become a tab once that service lands.
 - Windows have no titles, so rows show the app name and a short id.
 - Its own row counts the mutations from re-rendering its own table.
+- Widgets can't be highlighted on the desktop from their row: the desktop's selection is local to the desktop component.
+- Shared clocks (`utils/ticker.svelte.ts`) and shared app-data cells (`json_file`) aren't listed: their registries are module-private, and a count would need a new core export.
 - Monitors keep running while another section is shown; minimizing or hiding the tab pauses sampling.
 - Cross-origin resources without `Timing-Allow-Origin` report 0 bytes.
 
