@@ -220,3 +220,7 @@ Also added to the roadmap: Wordle and its variants.
 - Signing needs a signature generator: like Paint, but it produces a single-colour SVG (strokes become one filled outline path), saved to `/home/Signatures/` and stamped into PDFs as a vector with `drawSvgPath`. No cryptographic signing.
 - Search: every query word must match, and long words forgive one typo (owner picked this over keywords only).
 - Soundboard: two modes, Restart (default, a pressed pad starts over) and Overlap (today's stacking).
+
+## Widget resizing (owner, 2026-10-15)
+
+Time Since's widget was too big; the owner asked for 3×1 and for resizing in general. Decided: **drag the bottom-right corner**, snapping to cells, within per-app limits from a new manifest field `widget_size: { min, max, default }`; the size is written back into the `.widget` file. Each widget adapts its layout to `size`. Time Since defaults to 3×1. Rejected: preset sizes in the context menu (less direct); fixing defaults only.
