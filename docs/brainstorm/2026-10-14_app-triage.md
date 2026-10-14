@@ -187,3 +187,28 @@ Colour swatch picker (Soundboard, Nonogram), stat tile (Game Hub), tree list (Ar
 ## Game Hub as a default widget (owner, after the push)
 
 The owner pictured Game Hub as a widget, on by default. Decided: seed the widget and keep the app. The widget became a mini launcher (streak, today's puzzles as icon chips, every game as a tile, 4×4; reworked the same day to 4×2: at most three puzzles of the day beside a stats panel (streak, solved today, play time) with an Open hub button). `DEFAULT_WIDGETS` in the desktop service places it on first boot and once on existing desktops, recorded in `/var/lib/desktop/additions.json` so removing it sticks. Rejected: widget only (mobile would lose Game Hub, widgets are desktop only); new devices only.
+
+## Owner's answers to the wave 2 questions
+
+| # | Topic | Decision |
+|---|-------|----------|
+| 1 | Proposed shell commands | All approved |
+| 2 | `sb play` with no window | Yes: a headless player |
+| 3 | Shared CodeMirror module | Move into core |
+| 4 | Core `write_image` | Yes |
+| 5 | Shared ticking clock | Yes, in core |
+| 6 | Kit gaps (swatch picker, stat tile, tree list, `Segmented` modes, `format_date` without year, `NotificationType.SUCCESS`) | All |
+| 7 | Background scheduler | Roadmap |
+| 8 | Archive cancelled extract | Warn and offer to discard, which cleans up the partial files |
+| 9 | Soundboard plays when hidden | Fine |
+| 10 | Pomodoro settings in its data file | Yes |
+| 11 | Kanban `{ board, card }`, Calendar `{ view, day }` props | Yes |
+| 12 | Daily puzzle choices | Fine |
+| 13 | Calendar choices | Fine for now |
+| 14 | Print styling (Brand Light, plain greys) | Good |
+| 15 | Explorer Compress / Extract here | Yes |
+| 16 | PDF Tools dependencies | Open: asked whether they're needed |
+| 17 | Backup system | Roadmap brainstorm (already listed) |
+| 18 | Recorder real mic | Probably works |
+
+Also added to the roadmap: Wordle and its variants.

@@ -280,6 +280,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Daily puzzles: `daily` prop in 8 games, Game Hub Today tab (2026-10-14)
 - [x] Games on the kit: Stopwatch pauses when unseen, play time, Sudoku timer fix (2026-10-14)
 - Later: Chess, Sokoban, Blocks
+- [ ] Wordle and variants (owner, 2026-10-14): classic, longer words, multi-board (Quordle-style), daily via the `daily` prop. Needs a word list decision (bundled size vs language)
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
@@ -462,6 +463,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
+- [ ] **Background scheduler** (owner, 2026-10-14). Alarms, timers, Pomodoro phases and Calendar reminders only fire while that app's window or widget is alive. An OS-level scheduler (service) that holds due times and fires `notify({ system })` with no app open. Open: who owns the schedule (apps register `{ at, title, action }`?), persistence in `/var/lib`, dedupe across tabs, how the app is told on click.
 - [ ] **Backup system** (owner, 2026-10-14). Back up and restore WebOS data: `/home`, `/etc`, `/var/lib` (app data in `/var/lib/apps`, game stats, session, desktop layout) and app `localStorage` keys. Open questions: one archive file (zip, via Archive's codec) or a folder export; what to include or exclude per area; restore as merge vs replace; versioning/migration of old backups; manual only or scheduled (File System Access handle to a real folder); does it cover the shared-origin risk (other sites can `localStorage.clear()`)?
 - [x] **Release notifications.** Done as [ADR-026](adrs/026-release-notes-intro.md): typed changelog, "Updated" and "update available" toasts, Settings › What's new, full-screen first-boot introduction. Originally: after an update, users get a popup they can open to see what changed or was added. The same notes are viewable in Settings. Builds on ADR-004, which planned a hand-written `CHANGELOG.md` rendered in Settings (not built; the file doesn't exist yet) and an "update available" toast. Open questions:
   - What shows before vs after reloading into the new version?
