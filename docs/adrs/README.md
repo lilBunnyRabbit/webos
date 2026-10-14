@@ -69,6 +69,7 @@ What are the implications of this decision?
 | [033](./033-shell.md) | Shell, Terminal and Command Palette | 2026-10-14 | Implemented (jobs, app commands, bigger language deferred) |
 | [034](./034-app-extension-points.md) | App Extension Points: Commands, Badge, Widgets | 2026-10-14 | Implemented (widgets hidden on mobile) |
 | [035](./035-app-platform-wave-2.md) | App Platform for the Second App Wave | 2026-10-14 | Implemented |
+| [036](./036-boot-loading-screen.md) | Boot Loading Screen and Boot Weight | 2026-10-15 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
