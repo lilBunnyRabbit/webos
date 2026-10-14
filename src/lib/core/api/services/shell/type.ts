@@ -64,6 +64,8 @@ export interface Command<A extends z.ZodObject = z.ZodObject> {
   yields?: string;
   /** Completion for one arg, ahead of its kind's completer. `undefined` falls back to the kind. */
   complete?(field: string, partial: string, context: { session: ShellSession }): Completion[] | Promise<Completion[]> | undefined;
+  /** Set by AppsService on commands an app contributes (ADR-034): a service command with the same id wins. */
+  app?: string;
   /** `false` hides it from the palette and makes running it an error. */
   available?: () => boolean;
   run(context: CommandContext<z.infer<A>>): Output;

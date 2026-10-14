@@ -144,7 +144,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Shell
 
-Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). See [shell](shell.md#contributions).
+Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
 
 ## Known gaps
 

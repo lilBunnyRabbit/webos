@@ -1,6 +1,6 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
@@ -36,6 +36,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `associations` | `string[]` | no | File types this app opens ([file-associations.md](file-associations.md)) |
 | `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
+| `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
@@ -66,6 +67,15 @@ The initial size is always 600×400 (capped to the container) in a cascade, what
 A zod schema that must describe an object (`AppProps = Record<string, unknown>`). Validated at every `launch()` and `create_instance()` (session restore); the full rules are in [services/apps.md](../services/apps.md#props-validation-adr-008). The component type is `Component<Partial<TProps>>`, so a component with a required prop fails to compile: an app launched from the start menu or desktop gets no props.
 
 File-opening apps use `FILE_PROPS` (`z.object({ path: z.string() })`) or extend it.
+
+### `shell` (ADR-034)
+
+The same `ShellContribution` a service returns from `shell()`. AppsService merges every app's into its own contribution and tags each command with `app: <id>`. It's read eagerly, so ids, args and descriptions show in the palette and in `help`. Keep `run()` light and dynamic-import the logic.
+
+- Ids are free (`note`, not `quick-notes note`).
+- **A service wins an id clash.** The app command is dropped with a warning. When two apps clash, the later one discovered wins, again with a warning.
+- Commands run with no window. Window-scoped app commands don't exist yet: in-app shortcuts still register with `run` (ADR-030).
+- App value types merge under AppsService's, so an app can't replace `app` or `file.open`.
 
 ### `component`
 

@@ -39,11 +39,24 @@ export class ShellService implements IShellService {
     const parts = new Map<string, Partial<ValueType>>();
     for (const { key, contribution } of this.contributions) {
       for (const command of contribution.commands ?? []) {
+        if (command.app) continue;
         if (commands.has(command.id)) console.warn(`[ShellService] "${command.id}" from ${key} replaces an earlier one`);
         commands.set(command.id, command);
       }
       for (const [kind, completer] of Object.entries(contribution.completers ?? {})) completers.set(kind, completer);
       for (const [type, value] of Object.entries(contribution.values ?? {})) parts.set(type, { ...parts.get(type), ...value });
+    }
+    for (const { contribution } of this.contributions) {
+      for (const command of contribution.commands ?? []) {
+        if (!command.app) continue;
+        const taken = commands.get(command.id);
+        if (taken && !taken.app) {
+          console.warn(`[ShellService] "${command.id}" from app ${command.app} ignored, a service owns it`);
+          continue;
+        }
+        if (taken) console.warn(`[ShellService] "${command.id}" from app ${command.app} replaces app ${taken.app}'s`);
+        commands.set(command.id, command);
+      }
     }
     const values = new Map<string, ValueType>();
     for (const [type, value] of parts) {

@@ -116,7 +116,7 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 |---------|----------|------------|-------------|
 | shell | `help clear history echo sudo where sort select first last count get kernel services` | | `command`, `history`, `service` |
 | files | `ls cd pwd cat cp mv rm mkdir touch du df` | `path` | `file`, `storage` |
-| apps | `app list`, `app info`, `app launch`, `open` | `app` | `app`, `file.open` |
+| apps | `app list`, `app info`, `app launch`, `open`, plus every app's `shell` (ADR-034) | `app` | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | session | `win reopen` | | |
 | settings | `theme get`, `theme list`, `theme set` | `theme` | `theme` |
@@ -126,6 +126,8 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 | router | `link [id] [-c]` | | |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
+
+App commands come in through AppsService and carry `app: <id>`. The registry adds them after every service command, so **a service command wins an id clash** and the app's is dropped with a warning. See [manifest](../apps/manifest.md#shell-adr-034).
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
@@ -159,4 +161,5 @@ Files:
 
 - Callers: the shortcuts, the [Terminal](../system-apps.md#terminal) and the launcher's command mode ([taskbar](../shell/taskbar.md#start-menu)).
 - No background jobs, variables, globs or chaining (ADR-033, deferred).
+- App commands are global only; window-scoped ones (in-app shortcuts as commands) are deferred (ADR-034).
 - `touch` on an existing file doesn't update its modified time.

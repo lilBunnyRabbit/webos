@@ -43,6 +43,21 @@ describe("ShellService", () => {
     for (const id of ["help", "where", "ls", "cp", "notify"]) expect(shell.find(id), id).toBeDefined();
   });
 
+  test("app commands lose an id clash to a service and still register their own", async () => {
+    const app_command = (id: string) => ({ id, description: "", app: "jot", run: () => `app ${id}` });
+    const booted = await boot_test_kernel({
+      files: FilesService,
+      notifications: NotificationsService,
+      dialogs: stub_service("dialogs", {}),
+      apps: stub_service("apps", { shell: () => ({ commands: [app_command("ls"), app_command("jot")] }) }),
+      shell: ShellService,
+    });
+    shutdown = booted.shutdown;
+    const shell = booted.kernel.service<ShellService>("shell");
+    expect(shell.find("ls")?.app).toBeUndefined();
+    expect(shell.find("jot")?.app).toBe("jot");
+  });
+
   test("files: mkdir, touch, ls through where and sort, cd and pwd", async () => {
     const kernel = await boot();
     const session = kernel.service<ShellService>("shell").session();

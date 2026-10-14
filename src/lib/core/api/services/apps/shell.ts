@@ -33,11 +33,15 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
     else await apps.open(path);
   }
 
+  const contributions = [...apps.list()].flatMap(([id, manifest]) => (manifest.shell ? [{ id, shell: manifest.shell }] : []));
+
   return {
     completers: {
+      ...Object.assign({}, ...contributions.map(({ shell }) => shell.completers)),
       [ArgKind.APP]: () => [...apps.list()].map(([id, manifest]) => ({ value: id, detail: manifest.name })),
     },
     values: {
+      ...Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
       app: {
         columns: ["id", "name", "category"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
@@ -48,6 +52,7 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
       },
     },
     commands: [
+      ...contributions.flatMap(({ id, shell }) => (shell.commands ?? []).map((command) => ({ ...command, app: id }))),
       define_command({
         id: "app list",
         description: "Installed apps",

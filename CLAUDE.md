@@ -80,10 +80,10 @@ Ask about each of these that applies, with a concrete proposal per option:
 - **Values.** Whether its data should flow as a tagged value type (`columns`, `text`, `cell`, `open`), so `ls`-style output, `where`, `sort` and clicking all work. It can also extend another service's type, like apps adding `open` to `file`.
 - **Completion.** Whether a new arg kind needs a completer (`path`, `app`, `window` and `theme` exist).
 - **Shortcuts.** A new OS action gets its logic as a command, and its key binding goes in `shortcuts/defaults.ts` as `command: "…"`, never a new `run`.
-- **Apps.** Apps can't register commands yet. That's a deferred roadmap item, and app shortcuts still use `run`. For a new app, ask:
+- **Apps.** Apps contribute global commands through `define_app({ shell })` (ADR-034); a service wins an id clash. Window-scoped app commands are deferred, so in-app shortcuts still use `run`. For a new app, ask:
   - whether a service command covers it (like `app launch x`, or `open` with its file type);
   - whether it should take a prop the Terminal or palette can pass;
-  - whether it's the use case that finally justifies app commands.
+  - which commands it adds through its manifest `shell`.
 - **Ways in.** Whether it needs a link with the Terminal, like Explorer's "Open in Terminal" (`open_terminal(cwd)` in `components/files/file-actions.ts`).
 
 The default answer may be "nothing"; that's still the owner's call. Record what was decided in the brainstorm log, and list new commands in the service's `## Shell` section and in the contributions table of `docs/system/services/shell.md`.

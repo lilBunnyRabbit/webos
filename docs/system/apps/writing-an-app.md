@@ -93,7 +93,7 @@ What this shows:
 
 ## Things to know
 
-- **Shell.** Apps can't register commands yet (ADR-033, deferred). Before building one, ask the owner how it should reach the terminal and palette: a service command (`app launch`, `open` by file type), a prop the Terminal can pass, or whether it's the use case for app commands. See CLAUDE.md, "Shell integration".
+- **Shell.** Apps add global commands, completers and value types through the manifest's `shell` field ([manifest](manifest.md#shell-adr-034), ADR-034). Before building one, ask the owner how it should reach the terminal and palette: its own commands, a service command (`app launch`, `open` by file type), or a prop the Terminal can pass. See CLAUDE.md, "Shell integration".
 
 
 | Situation | What happens |
