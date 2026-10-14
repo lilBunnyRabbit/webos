@@ -1,7 +1,6 @@
 <script lang="ts">
   import kernel, {
     UiOverlay,
-    type DialogsService,
     type MobileWindowsService,
     type NotificationsService,
     type SettingsService,
@@ -19,7 +18,6 @@
   import { view_transition } from "$lib/core/utils/view-transition";
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const focused = $derived(windows.get_focused());
   const running = $derived(windows.list().length);
 
@@ -35,19 +33,6 @@
   $effect(() => {
     if (focused) ui.close();
   });
-
-  /** Shell layer, then the app's own navigation, then its top sheet, then home (ADR-016 apps pass). */
-  function back() {
-    if (layer) return view_transition(() => ui.close());
-    if (!focused) return;
-    if (windows.back(focused)) return;
-
-    const sheet = dialogs.for_window(focused).at(-1);
-    if (sheet?.dismissible) return sheet.resolve(null);
-    if (sheet) return;
-
-    view_transition(() => windows.go_home());
-  }
 
   function home() {
     view_transition(() => {
@@ -70,7 +55,7 @@
 
 <svelte:window
   onkeydown={(event) => {
-    if (event.key === "Escape" && layer && !event.defaultPrevented) back();
+    if (event.key === "Escape" && layer && !event.defaultPrevented) ui.back();
   }}
 />
 
@@ -94,7 +79,7 @@
     <ToastArea from="top" class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
   </main>
 
-  <NavBar {running} {unread} {switcher} onback={back} onhome={home} onrecents={recents} />
+  <NavBar {running} {unread} {switcher} onback={() => ui.back()} onhome={home} onrecents={recents} />
 </div>
 
 <DialogsHost anchored="sheet" />

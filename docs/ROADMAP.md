@@ -20,7 +20,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 5. [ ] **Shell + Terminal + Command palette** (ADR-007): on hold 2026-10-12, owner: "needs more thinking". Open before resuming: Mod+K already opens the launcher; commands vs the shortcuts registry; who registers commands; how `cd`/`clear` reach the terminal
 6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015: radius, shadows, motion speed, export/import) deferred by the owner on 2026-10-13
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
-8. [-] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture left
+8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
 
 **Parked** (no consumer or nothing breaks without it; revisit only on demand): Tasks service (ADR-013, until its first consumer), single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, AppDataHandle, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
 
@@ -404,7 +404,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Mobile shell components (fullscreen apps, live-card switcher, paged home, dock, app drawer, long-press menu; drag removed 2026-10-13)
 - [x] Navigation: three-button bar (gestures rejected: device edges)
 - [x] Back: apps claim it with `window.on_back` ([brainstorm](brainstorm/2026-10-12_mobile-apps-pass.md))
-- [ ] OS back gesture through history (brainstorm first, with ADR-010)
+- [x] OS back gesture through history (2026-10-14, `ui.back()` + guard)
 - [ ] Revisit home icon drag: the hold fired on Samsung Internet but the icon never moved, cause unknown
 - [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
 - [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes

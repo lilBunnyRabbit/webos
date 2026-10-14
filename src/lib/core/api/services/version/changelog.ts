@@ -5,10 +5,11 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "0.29.1",
+    version: "0.30.0",
     date: "2026-10-14",
-    title: "System folders stay put",
+    title: "Back stays home",
     changes: [
+      { kind: NEW, text: "Your phone's back gesture now works like WebOS's Back button: it closes menus and sheets, steps back in apps and goes home, instead of leaving WebOS. The browser's Back on a computer closes menus and dialogs." },
       { kind: FIXED, text: "File Explorer no longer renames, deletes, moves or adds files inside system folders, or touches Home, Desktop, Documents and Downloads themselves." },
     ],
   },

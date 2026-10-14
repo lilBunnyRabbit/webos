@@ -35,7 +35,7 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 
 | Button | Does |
 |--------|------|
-| Back | In order: closes the drawer or switcher; asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); dismisses the app's top sheet when it's dismissible (a required one stays); sends the app home (it keeps running). Nothing on home. The OS back gesture keeps its browser meaning |
+| Back | `ui.back()` ([ui](../services/ui.md#back)): closes the drawer or switcher; dismisses the top system dialog or menu, then the app's top sheet, when dismissible (a required one swallows back); asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); sends the app home (it keeps running). Nothing on home. The device's back gesture runs the same chain through the history guard |
 | Home | Closes any layer and goes home |
 | Running apps | Opens the switcher, or closes it (or the notification view of it). A `primary` badge shows the count of running apps; a `primary` dot (ringed in the bar colour) on the other corner means unread notifications |
 
@@ -79,7 +79,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 ## Known gaps
 
 - Apps aren't adjusted for phone widths yet (second pass). Most assume a desktop-sized window.
-- No app-level back (File Explorer up a folder) and no OS back gesture wiring: separate brainstorm.
+- Two device backs with no tap between them leave WebOS: Chrome skips a history entry pushed without a gesture, so the guard re-arms only on the next tap ([ui](../services/ui.md#back)).
 - No virtual keyboard handling beyond what `h-dvh` gives.
 - Centred system dialogs use their desktop sizes (capped to the screen); context menus and Open with are bottom sheets.
 - Home icons can't be reordered, and dock order is the order items were docked in. Drag is to be revisited.

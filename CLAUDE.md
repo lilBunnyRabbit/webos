@@ -40,7 +40,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022). `MobileDesktopService` (pages + dock) on mobile (ADR-016) | files, apps |
 | `session` | SessionService | Saves open windows and window frames to `/var/lib/session/session.json`, restore dialog at boot, reopen closed windows (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
-| `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center (ADR-028) | none |
+| `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center; `back()` for the nav bar and the browser's back via a history guard (ADR-028) | windows, dialogs |
 | `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui, session |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for windows whose app takes no `path` (ADR-010) | windows, apps, session, clipboard, notifications |
 

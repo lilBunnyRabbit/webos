@@ -7,4 +7,5 @@
 
 <InspectorStats>
   <InspectorStat label="Open" value={service.overlay ?? "nothing"} />
+  <InspectorStat label="Back guard" value={service.armed ? "armed" : "not armed"} />
 </InspectorStats>

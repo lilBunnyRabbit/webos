@@ -64,7 +64,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `desktop` | `DesktopService` | `files`, `apps` |
 | `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
 | `clipboard` | `ClipboardService` | `files` |
-| `ui` | `UiService` | none |
+| `ui` | `UiService` | `windows`, `dialogs` |
 | `shortcuts` | `ShortcutsService` | `windows`, `apps`, `dialogs`, `ui`, `session` |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 
@@ -118,6 +118,7 @@ Which services implement which hooks today:
 | desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
 | session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
 | router | listen to `hashchange`; an effect opens the hash's link once the session status leaves `pending` ([router](services/router.md#lifecycle)) | remove the listener, dispose the effect |
+| ui | `pointerup` / `keydown` (capture) listeners that arm the back guard, and a `popstate` listener ([ui](services/ui.md#back)) | remove them |
 | windows, apps | none | none |
 
 ### Failed init

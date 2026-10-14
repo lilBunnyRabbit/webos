@@ -68,7 +68,7 @@ export function register_default_services(kernel: Kernel) {
 
   kernel.register("ui", {
     instance: UiService,
-    dependencies: [],
+    dependencies: ["windows", "dialogs"],
   });
 
   kernel.register("shortcuts", {
