@@ -62,7 +62,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [apps/app-context.md](apps/app-context.md) | `get_app_context()`: window and storage handles |
 | [apps/file-associations.md](apps/file-associations.md) | How `open(path)` picks an app |
 | [apps/writing-an-app.md](apps/writing-an-app.md) | Building a new app, step by step |
-| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Editor, Media Preview, PDF Viewer, HTML Preview, CSV Viewer, Activity Monitor, Style Guide, Calculator, Terminal |
+| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Editor, Media Preview, PDF Viewer, HTML Preview, CSV Viewer, Activity Monitor, Style Guide, Calculator, App Library, Terminal |
 
 ## Page shape
 

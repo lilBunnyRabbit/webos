@@ -7,6 +7,7 @@
     value: T;
     label: string;
     icon: IconComponent;
+    count?: number;
   }
 
   /**
@@ -46,6 +47,9 @@
     >
       <item.icon class={cn("size-4", active && "text-primary")} weight={active ? "fill" : "regular"} />
       {item.label}
+      {#if item.count !== undefined}
+        <span class={cn("ml-auto pl-1 font-mono text-2xs tabular-nums", active ? "text-foreground/80" : "text-foreground/65")}>{item.count}</span>
+      {/if}
     </button>
   {/each}
 

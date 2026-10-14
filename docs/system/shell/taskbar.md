@@ -63,7 +63,7 @@ ADR-006 revision, [brainstorm](../../brainstorm/2026-10-12_notification-center.m
 
 Contents (`start-menu-popover.svelte`):
 
-1. A large `Input` ("Search apps, or > for commands"), focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): every query word must match name, id, keywords, description or category label, ranked, with one-typo tolerance for long words.
+1. A large `Input` ("Search apps, or > for commands") with an **All apps** button (`quiet`, `lg`, `SquaresFour` icon) at the end of the row. It launches [App Library](../system-apps.md#app-library) and closes the menu. The field is focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): every query word must match name, id, keywords, description or category label, ranked, with one-typo tolerance for long words.
 2. With no query, one section per `group_apps()` entry (Productivity … Games, then System), each an overline and a grid. While searching, one "Results" overline and grid in rank order. Grids are 4 columns of app tiles: a 44px icon tile (`bg-background`, `shadow-raised`, duotone glyph) over a one-line `text-2xs` name. No matches shows an `EmptyState` ("No apps match").
 3. A pin `IconButton` in each tile's top-right corner, invisible until the tile is hovered or the pin has keyboard focus.
 4. **Command mode** (ADR-033). A query starting with `>` swaps the grids for `command-mode.svelte`. It keeps one [shell](../services/shell.md) session while the menu is open, and the field forwards its keys to the component:
@@ -87,6 +87,7 @@ Contents (`start-menu-popover.svelte`):
 | Type | Search field | Filter the tiles |
 | Enter | Search field | With a non-empty query, launch the first match (`apps.launch(id)`) and close the menu. Nothing with an empty query |
 | Click | App tile | `apps.launch(id)` with no props, then `hidePopover()` |
+| Click | All apps | `apps.launch("app-library")`, then `hidePopover()` |
 | Click | Pin button ("Pin {name} to desktop") | `desktop.pin(id)`: writes `{App name}.desktop` into `/home/Desktop`, which appears on the desktop in the first free cell. Errors go to `console.error`. The menu stays open. |
 | Escape / outside click | Open menu | Close it (native light dismiss) |
 | Keyboard | Bar | Native button Tab/Enter. Mod+K start menu, Alt+Shift+N notification center ([shortcuts](../services/shortcuts.md)). No arrow-key movement in the tile grid. |

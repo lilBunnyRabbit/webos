@@ -18,6 +18,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell, files (path display) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
+| `app-library` | App Library | none | none | min 340×360 | apps, windows, session, desktop, notifications | window: `category`, `filters`, `sort`, `view`, `selected` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
 
@@ -439,6 +440,41 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 - No memory keys, powers, roots or scientific functions; no locale number formatting (always `.` decimals, no grouping).
 - Keyboard shortcuts don't go through ShortcutsService, so they aren't in the Mod+/ cheat sheet.
 - The expression can't be edited in the middle; Backspace works from the end only.
+
+## App Library
+
+`app-library` · `SquaresFour` icon · source `system/app-library/`
+
+**Purpose.** Every installed app in one browsable window: categories with counts, search, filters, a grid or list, and a details panel per app. The start menu's and the app drawer's "All apps" button opens it. Category Utilities. The id is `app-library`, not `apps`, so it can't be mistaken for the `apps` service or the `app list` command.
+
+**Files.**
+
+| File | Contents |
+|------|----------|
+| `library.ts` | Pure: `LibraryCategory` (All, the five categories, System), `LibraryFilter`, `LibrarySort`, `category_of`, `has_filter`, `category_counts`, `library_sections`, `app_commands`, `app_file_types`, `category_label`. Unit tests in `library.test.ts` |
+| `app-library.app.svelte` | Toolbar, category nav, filter chips, grid or list, details pane, status bar |
+| `app-details.svelte` | The details of one app and its actions |
+
+**Layout.** Container queries only.
+
+- **Toolbar:** a search `Input` (the launcher's `search_apps`: every word must match name, id, keywords, description or category, with one-typo tolerance from five letters), a sort `Select` (A–Z, By category) and Grid / List as a pair of `pressed` `IconButton`s. Enter in the search launches the first app shown.
+- **Categories:** the kit `SideNav` with a `count` per item: All, Productivity, Media, Utilities, Developer, Games, System. Counts follow the search and the filters, so they say where the matches are. A sidebar from `@2xl`, a tab row below.
+- **Filter chips:** `quiet` `sm` `Button`s with `pressed`, ANDed: **Has widget** (manifest `widget`), **Opens files** (non-empty `associations` or `tools`), **Has commands** (manifest `shell.commands`), **Used before**. There is no usage log, so Used before is what the OS already holds: apps with an open window, the session's recently closed windows (`session.closed`, memory only) and the apps with a remembered window frame (`windows.frames` keys, persisted in the session file, recorded when a desktop window closes). It's a set, not an order, and a phone that never opened a desktop window only knows this visit's windows.
+- **Apps:** the search only narrows; the order comes from the sort. A–Z is one grid; By category is one overline section per `group_apps()` entry, like the start menu. Grid tiles are the start menu's (44px icon tile over the name, 56px on touch); list rows show a small tile, the name, the description from `@lg`, three fixed-slot icons (widget, files, commands) and the category from `@md`. Click or tap selects (`primary/14`); double-click launches. No match shows an `EmptyState` with "Clear search and filters".
+- **Details:** a side pane (`w-80`, hairline left) from `@4xl`, with a "Pick an app" empty state when nothing is selected. Below `@4xl` a selection swaps the whole browser for the details as a second view, with a back arrow; the browser stays mounted underneath, so its scroll and search survive. The category nav remounts when the details close, so a narrow tab row scrolls the active category back into view. On phones the app is fullscreen like any other and Back closes the details first (`window.on_back`).
+- **Status bar:** `{shown} of {total} apps`, the number of active filters, the selected app's id.
+
+**Details pane.** The icon tile with the app's badge, name, category label (System for system apps) and version; Launch (`apps.launch`, the library stays open), Pin to desktop (`desktop.pin`; "Add to home screen" on mobile) and, for an app with a widget on desktop, Add widget (`desktop.pin_widget(id, { label: name })`). Each action toasts its result. Then the description, keywords as `Badge`s, **Opens** (`associations`) and **Works on, from Open with** (`tools`) as mono badges with extensions first, **Commands** (ids from the manifest `shell` declarations, sorted, with their descriptions), **Widget** (the default and range of `widget_size` in cells, or the 2×2 fixed fallback; "desktop only" on mobile) and **Shell**, the `app launch {id}` line.
+
+**Shell.** No commands of its own: `app launch app-library` opens it, and `app list` / `app info` already give the same data as values.
+
+**Persistence.** Category, filters, sort, view and the selected app are `storage.window()` state, restored with the session. The search is not kept.
+
+**Known gaps.**
+
+- No arrow-key movement between tiles; Tab and Enter (select) work, launching is the details' button or double-click.
+- "All apps" always opens a new window, like any launch; it doesn't focus an open library.
+- Used before has no order and no "recently": nothing records when an app was last used.
 
 ## Terminal
 

@@ -16,7 +16,7 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Segmented` | Pick one of 2–4 short options | A real radio group (shared `name`): one Tab stop, arrow keys move the choice. Takes `id` / `aria-describedby` from a `SettingRow`. `size`: `md` (default, 32px, matches `md` controls) or `sm` (28px, 36px on touch) in a toolbar next to `sm` buttons |
 | `Section` | A titled group on a page | Title, description, `actions` snippet; content sits in a `rounded-xl` card with dividers, or `flush` for none |
 | `SettingRow` | Label, description and a control | Stacks below `@md`. Its `children` snippet receives `{ id, describedby }`; put them on the control so it gets its name and description: `{#snippet children({ id, describedby })}<Switch {id} aria-describedby={describedby} />{/snippet}` |
-| `SideNav` | An app's section navigation | Sidebar at `@2xl`, tab row below. Active item is `foreground/10` with a filled primary icon |
+| `SideNav` | An app's section navigation | Sidebar at `@2xl`, tab row below. Active item is `foreground/10` with a filled primary icon. An optional `count` per item sits at the end in mono `text-2xs` (App Library's categories) |
 | `Toolbar` | An app's top bar | At least 44px, `bg-background-light`, hairline below. `role="toolbar"`. Wraps onto more rows when a phone is too narrow: give the part that should stretch `flex-1` and a `min-w-*` |
 | `StatusBar` | Footer metadata | 28px, mono `text-2xs`, muted. No important actions |
 | `Badge` | A short label or status | `tone`: neutral, primary, success, warning, error, info (tinted fill + ink) |
