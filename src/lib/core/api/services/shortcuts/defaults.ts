@@ -16,6 +16,7 @@ export const DEFAULT_SHORTCUTS: CommandShortcut[] = [
   { id: "window.reopen", keys: "alt+shift+t", category: ShortcutCategory.WINDOW, command: "win reopen" },
   { id: "desktop.show", keys: "alt+shift+d", category: ShortcutCategory.WINDOW, command: "win desktop" },
   { id: "apps.launcher", keys: "mod+k", category: ShortcutCategory.APPS, command: "ui launcher", label: "Search apps and commands" },
+  { id: "apps.terminal", keys: "alt+shift+enter", category: ShortcutCategory.APPS, command: "app launch terminal", label: "Open Terminal" },
   { id: "apps.settings", keys: "mod+,", category: ShortcutCategory.APPS, command: "app launch settings", label: "Open Settings" },
   { id: "system.notifications", keys: "alt+shift+n", category: ShortcutCategory.SYSTEM, command: "ui notifications", label: "Notifications" },
   { id: "system.shortcuts", keys: "mod+/", category: ShortcutCategory.SYSTEM, command: "shortcuts sheet", label: "Keyboard shortcuts" },

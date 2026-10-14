@@ -6,6 +6,7 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 |------|------|
 | `taskbar.svelte` | The floating dock, laid out per `settings.taskbar.position`: start button, separator, window items, tray |
 | `taskbar-item.svelte` | One button per open window, with a running indicator |
+| `terminal-button.svelte` | The Terminal button, just before the tray |
 | `taskbar-tray.svelte` | The tray button (bell, unread badge, clock) and the notification center popover |
 | `taskbar-clock.svelte` | Time and short date, rendered inside the tray button |
 | `start-menu.svelte` | Start button + anchored `popover` element |
@@ -16,7 +17,8 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 - Show a start button, one item per window and the tray.
 - Lay itself out for the taskbar position. `os.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
 - Styling: a floating dock. The outer strip is transparent and pads only its screen-edge sides by 8px (bottom bar: `px-2 pb-2`, and so on). The side facing the windows gets its 8px from the window area's own snap inset, so every gap (screen edge, between snapped windows, window to dock) is 8px. Inside the strip, `<nav aria-label="Taskbar" class="taskbar-dock">` (`anchor-name: --taskbar-dock`) is a `rounded-2xl bg-background-light/90 backdrop-blur-xl shadow-popover` bar, `h-13` (horizontal) or `w-13` (vertical), with a `p-1.5` inset and `gap-1`.
-- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the tray at the far end.
+- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tray at the far end.
+- **Terminal button**: 40px `rounded-xl` like the start button, `TerminalWindow` icon (`fill` while a Terminal runs, `bold` otherwise), `bg-foreground/10` while one is focused. A click toggles like a window item on the newest Terminal: focused or minimized → `toggle_minimize` in a view transition; open behind → `focus`; none → `apps.launch("terminal")`. Desktop only: the phone has no taskbar.
 
 The position comes from [settings](../services/settings.md) (`taskbar.position`: `top | bottom | left | right`, persisted there). The bar re-renders when it changes, and the [window manager](window-manager.md) re-measures its container.
 

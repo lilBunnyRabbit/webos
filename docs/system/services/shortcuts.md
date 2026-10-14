@@ -80,6 +80,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `window.gather` | Alt+Shift+G | `win gather` | ✓ | — |
 | `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | `win snap left` / `win snap right`; the same zone again unsnaps | ✓ | — |
 | `apps.launcher` | Mod+K | `ui launcher` | ✓ | ✓ |
+| `apps.terminal` | Alt+Shift+↵ | `app launch terminal`: always a new window | ✓ | ✓ |
 | `apps.settings` | Mod+, | `app launch settings` | ✓ | ✓ |
 | `system.notifications` | Alt+Shift+N | `ui notifications` | ✓ | ✓ |
 | `system.shortcuts` | Mod+/ | `shortcuts sheet` | ✓ | ✓ |

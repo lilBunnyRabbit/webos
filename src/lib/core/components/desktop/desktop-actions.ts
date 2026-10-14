@@ -28,6 +28,7 @@ import {
   Palette as PaletteIcon,
   ArrowsIn as ArrowsInIcon,
   SortAscending as SortAscendingIcon,
+  TerminalWindow as TerminalWindowIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
@@ -236,6 +237,7 @@ export async function background_menu(anchor: Position): Promise<void> {
             },
           ]
         : []),
+      { id: "terminal", label: "Open Terminal here", icon: TerminalWindowIcon, shortcut: "Alt+Shift+↵" },
       { id: "appearance", label: "Change wallpaper or theme", icon: PaletteIcon },
     ],
     { anchor }
@@ -244,6 +246,7 @@ export async function background_menu(anchor: Position): Promise<void> {
   else if (choice === "paste") paste();
   else if (choice === "gather") view_transition(() => gather?.gather());
   else if (choice === "appearance") apps().launch("settings");
+  else if (choice === "terminal") apps().launch("terminal", { cwd: PATHS.desktop });
   else if (choice === "sort_name") sort_items(DesktopSort.NAME);
   else if (choice === "sort_kind") sort_items(DesktopSort.KIND);
   else if (choice === "sort_date") sort_items(DesktopSort.DATE);

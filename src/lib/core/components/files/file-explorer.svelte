@@ -104,7 +104,7 @@
   {#if handler}
     <!-- minmax(0,1fr): the implicit auto column would grow to the toolbar's min-content and push the footer out of a phone-wide sheet. -->
     <div class="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden">
-      <FileExplorerNavigation {handler} {can_go_back} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
+      <FileExplorerNavigation {handler} {can_go_back} terminal={!picker} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
 
       <div class="flex min-h-0">
         <FileExplorerPlaces current={handler.path} onnavigatepath={navigate_path} />

@@ -5,6 +5,7 @@
   import TaskbarItem from "./taskbar-item.svelte";
   import StartMenu from "./start-menu.svelte";
   import TaskbarTray from "./taskbar-tray.svelte";
+  import TerminalButton from "./terminal-button.svelte";
 
   let { class: class_name, ...rest_props }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
@@ -44,6 +45,7 @@
       {/each}
     </div>
 
+    <TerminalButton />
     <TaskbarTray {vertical} />
   </nav>
 </div>

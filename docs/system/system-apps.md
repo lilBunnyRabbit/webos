@@ -23,7 +23,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 
 **Phones and tablets** (ADR-016 apps pass). Every app runs fullscreen in the [mobile shell](shell/mobile.md). Layout adapts through container queries and the kit's `pointer-coarse:` sizes; File Explorer reads `kernel.platform` to open on tap and uses long press for menus, and claims the Back button with `window.on_back`.
 
-On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DEFAULT_SHORTCUTS` in `services/desktop/folder.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
+On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `terminal` (`DEFAULT_SHORTCUTS` in `services/desktop/folder.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
 
 ---
 
@@ -39,7 +39,7 @@ On first boot the desktop seeds shortcuts to `settings` and `file-explorer` (`DE
 
 **Features.** A document-style frame: toolbar, list, status bar.
 
-- **Toolbar:** Back (history only), Reload, a breadcrumb of the real path (`/ home › Desktop`, every segment clickable), a filter field (always shown, wider from `@lg`), New folder (`prompt()`) and Upload.
+- **Toolbar:** Back (history only), Reload, a breadcrumb of the real path (`/ home › Desktop`, every segment clickable), a filter field (always shown, wider from `@lg`), New folder (`prompt()`), Upload and Open in Terminal (the Terminal starting in this folder; hidden in the picker). The folder's own right-click menu ends with Open in Terminal too.
 - **Places sidebar** (from `@3xl`): Home, Desktop, Documents, Downloads, and the System folders `/etc`, `/var`, `/tmp`, with the current one highlighted (clicking it is a no-op).
 - **List:** a grid with sticky overline headers (Name, Size, Modified; Modified from `@md`), 32px rows, folders first in `primary`, files as duotone icons, `.desktop` rows drawn as `ShortcutIcon` with the target app's icon, and a "system" badge on `/etc`, `/var`, `/tmp` and below. Skeleton rows while loading, empty states for an empty folder and for a filter with no matches.
 - **Actions:** open a file in its associated app (double-click or Enter; a tap on mobile, through `apps.open`; a `.desktop` shortcut launches its target), enter a folder, delete (Delete or Cmd+Backspace, `confirm()`; folders recursive).
@@ -475,6 +475,8 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 - Restored output is plain text. An entry restored mid-run shows as aborted.
 - `run` executes only on the first mount (`started`), so a restore doesn't rerun it.
 - Closing the window aborts the running line.
+
+**Ways in.** The launcher and the `>` palette (Open in Terminal), the desktop and phone-home icon (new devices only: the seed runs once), the taskbar button, Alt+Shift+↵, File Explorer (toolbar and folder menu) and the desktop menu (Open Terminal here, in `~/Desktop`).
 
 **Known gaps.** iOS Safari ignores `interactive-widget`, so the keyboard can cover the key row there. The popup sits at the start of the prompt row, not at the completed word. Long lines scroll the field and hide the ghost text.
 

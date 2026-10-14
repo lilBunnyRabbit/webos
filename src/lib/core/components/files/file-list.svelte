@@ -28,6 +28,7 @@
     rename_item,
     show_properties,
     upload,
+    open_terminal,
   } from "./file-actions";
   import { cn } from "$lib/core/utils";
   import { accepts, type PickerMode } from "./picker";
@@ -46,6 +47,7 @@
     FolderPlus as FolderPlusIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     Trash as TrashIcon,
+    TerminalWindow as TerminalWindowIcon,
     UploadSimple as UploadSimpleIcon,
   } from "phosphor-svelte";
 
@@ -284,6 +286,7 @@
         { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: read_only || !clipboard.content },
         { separator: true },
         { id: "reload", label: "Reload", icon: ArrowClockwiseIcon },
+        ...(picker ? [] : [{ id: "terminal", label: "Open in Terminal", icon: TerminalWindowIcon }]),
       ],
       { anchor }
     );
@@ -291,6 +294,7 @@
     else if (choice === "upload") upload(handler);
     else if (choice === "paste") paste(handler, window);
     else if (choice === "reload") handler.reload();
+    else if (choice === "terminal") open_terminal(handler.path);
   }
 </script>
 

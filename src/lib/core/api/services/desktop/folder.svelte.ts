@@ -7,7 +7,7 @@ import { join_path, split_path } from "../files/path";
 import type { DesktopItem } from "./type";
 
 /** Shortcuts written into an empty desktop on first boot. */
-export const DEFAULT_SHORTCUTS: AppId[] = ["settings", "file-explorer"];
+export const DEFAULT_SHORTCUTS: AppId[] = ["settings", "file-explorer", "terminal"];
 
 interface DesktopFolderOptions {
   files: () => FilesService;

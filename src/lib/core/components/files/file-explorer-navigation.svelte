@@ -7,13 +7,14 @@
     CaretRight as CaretRightIcon,
     FolderPlus as FolderPlusIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
+    TerminalWindow as TerminalWindowIcon,
     X as XIcon,
   } from "phosphor-svelte";
   import { IconButton, Input, Separator, Toolbar } from "../ui";
   import FileUploadButton from "./file-upload-button.svelte";
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { create_folder } from "./file-actions";
+  import { create_folder, open_terminal } from "./file-actions";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
 
   interface Props {
@@ -22,9 +23,11 @@
     onback: () => void;
     onnavigatepath: (segments: string[]) => void;
     search: string;
+    /** The picker shows the same toolbar; a Terminal button makes no sense there. */
+    terminal?: boolean;
   }
 
-  let { handler, can_go_back, onback, onnavigatepath, search = $bindable() }: Props = $props();
+  let { handler, can_go_back, onback, onnavigatepath, search = $bindable(), terminal = true }: Props = $props();
 
   let creating_folder = $state(false);
   const read_only = $derived(is_system_path(handler.path));
@@ -85,5 +88,10 @@
       <FolderPlusIcon weight="bold" />
     </IconButton>
     <FileUploadButton {handler} disabled={read_only} />
+    {#if terminal}
+      <IconButton label="Open in Terminal" size="sm" onclick={() => open_terminal(handler.path)}>
+        <TerminalWindowIcon weight="bold" />
+      </IconButton>
+    {/if}
   </div>
 </Toolbar>

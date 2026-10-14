@@ -105,6 +105,11 @@ export function open_with(handler: DirectoryHandler, item: FileSystemItem, app_i
   kernel.service<AppsService>("apps").launch(app_id, { path: join_path(handler.segments, item.name) });
 }
 
+/** A Terminal window starting in `cwd` (ADR-033). */
+export function open_terminal(cwd: string): void {
+  kernel.service<AppsService>("apps").launch("terminal", { cwd });
+}
+
 const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
 export function copy_items(handler: DirectoryHandler, items: FileSystemItem[]): void {

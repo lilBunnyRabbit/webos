@@ -70,6 +70,24 @@ Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using 
 - No backend. GitHub Pages is the host.
 - Use the latest web platform features (anchor positioning, popover, `@container`, View Transitions, and so on). The target is the owner's current browser: no polyfills, fallbacks or support checks for older ones. If it works on the owner's machine, it ships. Before building UI or browser behaviour by hand (dismissal, focus, positioning, stacking, animation), check whether a newer platform API does it natively, and bring it up.
 
+## Shell integration: ask every time
+
+The terminal, the Mod+K `>` palette and the OS shortcuts all run on one command system (ADR-033, [shell](docs/system/services/shell.md)). The owner wants new things reachable from it. **When building a new core feature, a new or changed service, or a new app, put the shell question into the grill (AskUserQuestion) before implementing.** Don't decide it silently, and don't skip it because it looks optional.
+
+Ask about each of these that applies, with a concrete proposal per option:
+
+- **Commands.** Which commands the service contributes in its `shell.ts` through `IService.shell()`: names (Unix verb for files, `noun verb` group for a domain), args (zod and `arg.*` kinds), what they yield, and `available()`.
+- **Values.** Whether its data should flow as a tagged value type (`columns`, `text`, `cell`, `open`), so `ls`-style output, `where`, `sort` and clicking all work. It can also extend another service's type, like apps adding `open` to `file`.
+- **Completion.** Whether a new arg kind needs a completer (`path`, `app`, `window` and `theme` exist).
+- **Shortcuts.** A new OS action gets its logic as a command, and its key binding goes in `shortcuts/defaults.ts` as `command: "…"`, never a new `run`.
+- **Apps.** Apps can't register commands yet. That's a deferred roadmap item, and app shortcuts still use `run`. For a new app, ask:
+  - whether a service command covers it (like `app launch x`, or `open` with its file type);
+  - whether it should take a prop the Terminal or palette can pass;
+  - whether it's the use case that finally justifies app commands.
+- **Ways in.** Whether it needs a link with the Terminal, like Explorer's "Open in Terminal" (`open_terminal(cwd)` in `components/files/file-actions.ts`).
+
+The default answer may be "nothing"; that's still the owner's call. Record what was decided in the brainstorm log, and list new commands in the service's `## Shell` section and in the contributions table of `docs/system/services/shell.md`.
+
 ## Architecture is the owner's call, always
 
 **Never make an architectural decision yourself.** That's the most important rule in this repo. The decisions are the point of the project. An agent that decides one for the owner has taken the part they care about most.

@@ -54,6 +54,14 @@ Owner mid-round: "also i want tab completion!"
 - **KeyShortcut:** `command` or `run`. Global OS shortcuts name a command; window-scoped app shortcuts (Paint, Text Editor, six puzzles) keep `run` until app commands exist. `when` moves onto the command as `available()`, which the palette also uses to hide entries.
 - **Order:** the shell collects reactively. Contributions are a `$derived` over `kernel.services` (a SvelteMap), so a service initialised later still shows up and shortcuts can depend on `shell` normally. Accepted risk: a service's commands exist only after its init.
 
+### Round 7: highlighting the Terminal
+
+Owner: "i want to highlight the terminal app a bit more. where else can we place it to open it".
+
+- **Entry points:** File Explorer (toolbar + folder menu, cwd = that folder), desktop menu "Open Terminal here" (`~/Desktop`), global shortcut Alt+Shift+Enter (`app launch terminal`; Ctrl+Alt+T collides with AltGr), desktop / phone-home seed.
+- **Existing devices:** new devices only. The seed runs once per device; a "seeded" list in the layout (schema v2) or a release-bound upgrade step were rejected.
+- **Next to the notification center:** a Terminal button just before the tray that toggles the newest Terminal like a window item. A quick drop-down terminal and a general quick-launch area were rejected for now (palette covers one-offs; quick launch stays a roadmap item).
+
 ## Key takeaways
 
 - ADR-007's dispatcher becomes a structured-value shell: services contribute commands, completers and value types through one `shell()` hook; values flow through pipes and render richly.

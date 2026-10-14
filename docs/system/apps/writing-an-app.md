@@ -93,6 +93,9 @@ What this shows:
 
 ## Things to know
 
+- **Shell.** Apps can't register commands yet (ADR-033, deferred). Before building one, ask the owner how it should reach the terminal and palette: a service command (`app launch`, `open` by file type), a prop the Terminal can pass, or whether it's the use case for app commands. See CLAUDE.md, "Shell integration".
+
+
 | Situation | What happens |
 |-----------|--------------|
 | Launched with props that fail the schema | Window opens with no props, warning toast, zod issues in the console |
