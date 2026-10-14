@@ -10,7 +10,6 @@ export const Phase = {
 } as const;
 export type Phase = (typeof Phase)[keyof typeof Phase];
 
-export const WIDGET_SIZE = { w: 2, h: 2 };
 
 export const PHASES = [Phase.FOCUS, Phase.SHORT, Phase.LONG] as const;
 

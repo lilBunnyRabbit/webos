@@ -73,5 +73,6 @@ export default define_app({
     ],
   },
   widget: () => import("./widget.svelte"),
+  widget_size: { min: { w: 2, h: 2 }, max: { w: 5, h: 5 }, default: { w: 3, h: 3 } },
   component: () => import("./calendar.app.svelte"),
 });

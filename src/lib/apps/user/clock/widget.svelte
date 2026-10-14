@@ -39,11 +39,11 @@
       <AnalogFace now={ticker.now} class="h-full max-h-full max-w-full" />
     </div>
   {:else}
-    <div class="grid min-h-0 content-center justify-items-center gap-0.5 px-3">
-      <p class="font-mono text-5xl leading-none font-bold tabular-nums">
-        {pad2(date.getHours())}:{pad2(date.getMinutes())}<span class="text-xl font-normal text-foreground/55">:{pad2(date.getSeconds())}</span>
+    <div class="grid min-h-0 content-center justify-items-center gap-[2cqh] px-3 [container-type:size]">
+      <p class="font-mono text-[min(19cqw,42cqh)] leading-none font-bold tabular-nums">
+        {pad2(date.getHours())}:{pad2(date.getMinutes())}<span class="text-[0.4em] font-normal text-foreground/55">:{pad2(date.getSeconds())}</span>
       </p>
-      <p class="truncate text-ui text-foreground/65">{weekday}, {format_date(date)}</p>
+      <p class="max-w-full truncate text-[clamp(0.6875rem,min(5.5cqw,12cqh),1.125rem)] text-foreground/65">{weekday}, {format_date(date)}</p>
     </div>
   {/if}
 

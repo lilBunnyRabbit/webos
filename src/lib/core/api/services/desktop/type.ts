@@ -1,9 +1,10 @@
 import type { IService } from "../../type";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, OpenOptions } from "..";
-import type { DesktopMove } from "./helper";
+import type { WidgetSize } from "../apps/type";
+import type { DesktopMove, ResizeTarget } from "./helper";
 
-export type { DesktopMove };
+export type { DesktopMove, ResizeTarget };
 
 /**
  * The `/home/Desktop` folder as items, addressed by entry name (ADR-022). Platform-neutral (ADR-016): the desktop grid
@@ -29,10 +30,11 @@ export interface DesktopService extends IService {
   pin(app_id: AppId, props?: AppProps): Promise<string | null>;
 
   /**
-   * Writes `{label}.widget` into `/home/Desktop` (ADR-034). Returns the file name, or `null` for an app without a
-   * widget. The mobile home doesn't show widgets yet, but the file is the same.
+   * Writes `{label}.widget` into `/home/Desktop` (ADR-034). `size` defaults to the manifest's `widget_size.default` and
+   * is clamped into its range. Returns the file name, or `null` for an app without a widget. The mobile home doesn't
+   * show widgets yet, but the file is the same.
    */
-  pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null>;
+  pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null>;
 
   /** Shortcut, widget or file → `apps.open` (a shortcut or widget launches its app), folder → File Explorer there. */
   open(item: DesktopItem, options?: OpenOptions): void;
@@ -66,6 +68,12 @@ export interface GridDesktopService extends DesktopService {
    * grid becomes the nearest free cell (`DesktopHelper.resolve_moves`).
    */
   move_items(moves: DesktopMove[]): void;
+
+  /** Where resizing the widget `name` to `size` would land; `null` when it isn't a resizable widget on the grid. */
+  resize_target(name: string, size: WidgetSize): ResizeTarget | null;
+
+  /** Writes a valid `resize_target` into the `.widget` file. Resolves `false` when the size was refused. */
+  resize_widget(name: string, size: WidgetSize): Promise<boolean>;
 }
 
 /** The mobile home (ADR-016): an ordered flow of entries, paged by capacity, plus a dock. */
@@ -93,6 +101,6 @@ export type DesktopGrid = Array<Array<DesktopItem | undefined>>;
 
 export type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
-  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: { w: number; h: number } }
+  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: WidgetSize }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };

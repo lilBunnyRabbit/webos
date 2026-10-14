@@ -210,7 +210,7 @@
   async function toggle_widget() {
     try {
       if (widget) await desktop.remove_item(widget.name);
-      else await desktop.pin_widget(app_id, { label: "Work Hours", size: { w: 2, h: 2 } });
+      else await desktop.pin_widget(app_id, { label: "Work Hours" });
     } catch (error) {
       report(error, "Couldn't change the desktop");
     }

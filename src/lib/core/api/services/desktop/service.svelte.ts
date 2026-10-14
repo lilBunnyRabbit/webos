@@ -1,7 +1,8 @@
 import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
-import { DesktopHelper, grid_items, type DesktopMove } from "./helper";
+import { DesktopHelper, grid_items, type DesktopMove, type ResizeTarget } from "./helper";
+import type { WidgetSize } from "../apps/type";
 import { ADDITIONS_FILE, ADDITIONS_PATH, DEFAULT_WIDGETS, parse_additions, pending_widgets, serialize_additions } from "./additions";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
@@ -86,7 +87,7 @@ export class DesktopService implements GridDesktopService {
 
     for (const widget of pending) {
       const present = this.folder.entries.some((entry) => entry.kind === "widget" && entry.app_id === widget.app_id);
-      if (!present) await this.folder.write_widget(widget.app_id, { label: widget.label, size: widget.size });
+      if (!present) await this.folder.write_widget(widget.app_id, { label: widget.label });
     }
     await write_var_lib(this.files_service, LAYOUT_DIRECTORY_NAME, ADDITIONS_FILE, serialize_additions([...applied, ...DEFAULT_WIDGETS.map((widget) => widget.id)]));
   }
@@ -180,16 +181,34 @@ export class DesktopService implements GridDesktopService {
   public move_items(moves: DesktopMove[]): void {
     const resolved = DesktopHelper.resolve_moves(this.grid, this.container.grid, moves);
     if (resolved.size === 0) return;
+    this.pin_shown(resolved);
+  }
 
+  private pin_shown(moved: Map<string, Position> = new Map()): void {
     // Positions of entries that no longer exist are dropped here.
     const names = new Set(this.folder.names());
     const positions: Positions = Object.fromEntries(Object.entries(this.positions).filter(([name]) => names.has(name)));
     // Pin every visible item to where it's shown, so relocated items don't jump once this cell changes hands.
     for (const { item, x, y } of grid_items(this.grid)) positions[item.name] = { x, y };
-    for (const [name, position] of resolved) positions[name] = position;
+    for (const [name, position] of moved) positions[name] = position;
     this.positions = positions;
 
     this.save_positions(positions).catch((error) => console.error("[DesktopService] Failed to save the layout", error));
+  }
+
+  public resize_target(name: string, size: WidgetSize): ResizeTarget | null {
+    const item = this.folder.get(name);
+    const limits = item?.kind === "widget" ? this.apps_service.get(item.app_id)?.widget_size : undefined;
+    return limits ? DesktopHelper.resize_target(this.grid, this.container.grid, name, size, limits) : null;
+  }
+
+  public async resize_widget(name: string, size: WidgetSize): Promise<boolean> {
+    const target = this.resize_target(name, size);
+    if (!target?.valid) return false;
+    // An unplaced widget's cell is recomputed on every fit; pinning it keeps the new span growing from where it's shown.
+    this.pin_shown();
+    await this.folder.write_widget_size(name, target.size);
+    return true;
   }
 
   public items(): DesktopItem[] {
@@ -223,7 +242,7 @@ export class DesktopService implements GridDesktopService {
     return this.folder.write_shortcut(app_id, props);
   }
 
-  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
+  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null> {
     return this.folder.write_widget(app_id, options);
   }
 

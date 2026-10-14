@@ -73,15 +73,31 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   badge?: () => number | null;
   /** What the app renders on the desktop for its `.widget` files (ADR-034). Props are validated against `props`. */
   widget?: () => Promise<{ default: Component<WidgetProps> }>;
+  /**
+   * The widget's size range in cells, and the size `pin_widget` uses when none is given. Without it the widget keeps
+   * its file's size and can't be resized.
+   */
+  widget_size?: WidgetSizeLimits;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
+}
+
+export interface WidgetSize {
+  w: number;
+  h: number;
+}
+
+export interface WidgetSizeLimits {
+  min: WidgetSize;
+  max: WidgetSize;
+  default: WidgetSize;
 }
 
 export interface WidgetProps {
   /** The widget file's props, already validated against the manifest's `props`. */
   props: AppProps;
-  /** In grid cells. */
-  size: { w: number; h: number };
+  /** In grid cells, within the manifest's `widget_size`. */
+  size: WidgetSize;
   /** The `.widget` file's name in `/home/Desktop`. */
   name: string;
 }

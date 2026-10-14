@@ -6,7 +6,9 @@
   import { drop_paths, has_drag_paths, has_os_files, import_dropped, read_drag_paths, read_os_entries, set_drag_paths } from "../files/drag";
   import DesktopItem from "./desktop-item.svelte";
   import DesktopWidget from "./desktop-widget.svelte";
-  import { grid_items, item_span } from "$lib/core/api/services/desktop/helper";
+  import { grid_items, item_span, snap_cells, type ResizeTarget } from "$lib/core/api/services/desktop/helper";
+  import type { WidgetSize } from "$lib/core/api/services/apps/type";
+  import { cn } from "$lib/core/utils";
   import Wallpaper from "./wallpaper.svelte";
   import {
     background_menu,
@@ -82,7 +84,56 @@
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   }
 
+  let resizing = $state<{ name: string; pointer: number; start: Position; from: WidgetSize; target: ResizeTarget } | null>(null);
+  // A refused keyboard resize flashes its outline, so Shift+arrow against a neighbour isn't silent.
+  let refused = $state<{ name: string; target: ResizeTarget } | null>(null);
+  let refused_timer: ReturnType<typeof setTimeout> | undefined;
+  const resize_preview = $derived(resizing ?? refused);
+
+  function on_resize_start(event: PointerEvent, item: Extract<Item, { kind: "widget" }>) {
+    if (event.button !== 0) return;
+    const target = desktop.resize_target(item.name, item.size);
+    if (!target) return;
+    event.preventDefault();
+    surface?.focus({ preventScroll: true });
+    chosen = new Set([item.name]);
+    anchor = item.name;
+    resizing = { name: item.name, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, from: item.size, target };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+
+  function finish_resize(event: PointerEvent) {
+    if (!resizing || event.pointerId !== resizing.pointer) return;
+    const { name, from, target } = resizing;
+    resizing = null;
+    if (target.valid && (target.size.w !== from.w || target.size.h !== from.h)) void desktop.resize_widget(name, target.size);
+  }
+
+  function resize_by(item: Extract<Item, { kind: "widget" }>, dw: number, dh: number): boolean {
+    const target = desktop.resize_target(item.name, { w: item.size.w + dw, h: item.size.h + dh });
+    if (!target) return false;
+    if (target.valid) {
+      if (target.size.w !== item.size.w || target.size.h !== item.size.h) void desktop.resize_widget(item.name, target.size);
+      return true;
+    }
+    clearTimeout(refused_timer);
+    refused = { name: item.name, target };
+    refused_timer = setTimeout(() => (refused = null), 600);
+    return true;
+  }
+
+  const RESIZE_KEYS: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
+
   function on_pointer_move(event: PointerEvent) {
+    if (resizing && event.pointerId === resizing.pointer) {
+      const { cell } = desktop.container;
+      const size = {
+        w: resizing.from.w + snap_cells(event.clientX - resizing.start.x, cell.width),
+        h: resizing.from.h + snap_cells(event.clientY - resizing.start.y, cell.height),
+      };
+      resizing.target = desktop.resize_target(resizing.name, size) ?? resizing.target;
+      return;
+    }
     if (!marquee || event.pointerId !== marquee.pointer) return;
     marquee.current = { x: event.clientX, y: event.clientY };
     const rect = rect_from_points(marquee.start, marquee.current);
@@ -175,6 +226,8 @@
     const key = event.key.toLowerCase();
     if (is_mod(event) && key === "a") {
       chosen = new Set(order);
+    } else if (event.key === "Escape" && resizing) {
+      resizing = null;
     } else if (event.key === "Escape" && selection.size > 0) {
       chosen = new Set();
     } else if (is_mod(event) && key === "v") {
@@ -192,7 +245,10 @@
       else if (is_mod(event) && key === "x") cut_items(items);
       else if (event.key === "Delete" || (event.key === "Backspace" && event.metaKey)) remove_items(items);
       else if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) item_menu(items, point);
-      else return;
+      else if (event.shiftKey && !is_mod(event) && !event.altKey && event.key in RESIZE_KEYS && item.kind === "widget") {
+        const [dw, dh] = RESIZE_KEYS[event.key];
+        if (!resize_by(item, dw, dh)) return;
+      } else return;
     }
     event.preventDefault();
   }
@@ -213,7 +269,10 @@
   onkeydown={on_key_down}
   onpointerdown={on_pointer_down}
   onpointermove={on_pointer_move}
-  onlostpointercapture={() => (marquee = null)}
+  onlostpointercapture={(event) => {
+    marquee = null;
+    finish_resize(event);
+  }}
   ondragover={on_drag_over}
   ondragleave={(event) => {
     if (!surface?.contains(event.relatedTarget as Node | null)) hover = null;
@@ -266,6 +325,8 @@
             drag = null;
             hover = null;
           }}
+          resizing={resizing?.name === item.name}
+          onresizestart={(event) => on_resize_start(event, item)}
         />
       {:else}
       <DesktopItem
@@ -289,6 +350,28 @@
       />
       {/if}
     {/each}
+
+    {#if resize_preview}
+      {@const at = cell_of.get(resize_preview.name)}
+      {@const { size, valid } = resize_preview.target}
+      {#if at}
+        <div
+          class={cn(
+            "pointer-events-none relative z-10 m-1 self-stretch justify-self-stretch rounded-xl ring-2 ring-inset",
+            valid ? "bg-foreground/6 ring-foreground/30" : "bg-error/10 ring-error/60"
+          )}
+          style:grid-column="{at.x + 1} / span {size.w}"
+          style:grid-row="{at.y + 1} / span {size.h}"
+        >
+          <span
+            class={cn(
+              "absolute right-2 bottom-2 rounded-md px-1.5 py-0.5 font-mono text-2xs font-medium tabular-nums shadow-raised",
+              valid ? "bg-background-light text-foreground/85" : "bg-error text-background"
+            )}>{size.w} × {size.h}</span
+          >
+        </div>
+      {/if}
+    {/if}
   {/if}
 
   {#if marquee_rect && surface}

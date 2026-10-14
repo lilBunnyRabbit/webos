@@ -149,18 +149,16 @@ export async function complete_notes(partial: string) {
     .map((note) => ({ value: note.id, detail: title_of(note.body) }));
 }
 
-export const STICKY_SIZE = { w: 3, h: 2 };
-export const TODO_WIDGET_SIZE = { w: 3, h: 3 };
 
 export async function pin_note(note: Note): Promise<string> {
   const desktop = kernel.service<DesktopService>("desktop");
-  const name = await desktop.pin_widget(APP_ID, { label: title_of(note.body).replace(/(^|\s)#[\p{L}\p{N}_-]+/gu, "").trim().slice(0, 40) || "Note", props: { note: note.id }, size: STICKY_SIZE });
+  const name = await desktop.pin_widget(APP_ID, { label: title_of(note.body).replace(/(^|\s)#[\p{L}\p{N}_-]+/gu, "").trim().slice(0, 40) || "Note", props: { note: note.id } });
   if (!name) throw new ShellError("couldn't pin the note");
   return name;
 }
 
 export async function pin_todos(): Promise<string> {
-  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Todo", size: TODO_WIDGET_SIZE });
+  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Todo" });
   if (!name) throw new ShellError("couldn't pin the todo list");
   return name;
 }

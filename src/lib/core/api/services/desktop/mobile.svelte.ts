@@ -13,6 +13,7 @@ import {
 } from "./home-layout";
 import { LAYOUT_DIRECTORY_NAME, LAYOUT_PATH } from "./layout";
 import type { DesktopItem, MobileDesktopService as IMobileDesktopService } from "./type";
+import type { WidgetSize } from "../apps/type";
 
 export class MobileDesktopService implements IMobileDesktopService {
   name = "MobileDesktopService";
@@ -152,7 +153,7 @@ export class MobileDesktopService implements IMobileDesktopService {
     return this.folder.write_shortcut(app_id, props);
   }
 
-  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size: { w: number; h: number } }): Promise<string | null> {
+  public async pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null> {
     return this.folder.write_widget(app_id, options);
   }
 

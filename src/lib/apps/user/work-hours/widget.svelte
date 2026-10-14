@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type AppsService, type NotificationsService, type WidgetProps, type WindowsService } from "$lib/core/api";
-  import { Button } from "$lib/core/components/ui";
+  import { Button, IconButton } from "$lib/core/components/ui";
+  import { cn } from "$lib/core/utils";
   import type { JsonFile } from "$lib/core/contexts/app";
   import { format_time } from "$lib/core/games";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
@@ -8,7 +9,7 @@
   import { clock_time, day_key, day_minutes, format_hours, month_key, running_minutes, WORK_HOURS_APP_ID, type MonthFile } from "./data";
   import { clock_in, clock_out, open_month, open_state } from "./store";
 
-  let {}: WidgetProps = $props();
+  let { size }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -47,19 +48,31 @@
   }
 </script>
 
-<div class="flex h-full flex-col justify-between gap-2 p-3">
-  <button type="button" class="min-w-0 text-left" onclick={() => apps.launch(WORK_HOURS_APP_ID)} title="Open Work Hours">
-    <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Today</p>
-    <p class="font-mono text-2xl font-medium tabular-nums">{format_hours(booked + running_today)}</p>
-    <p class="truncate font-mono text-2xs tabular-nums text-foreground/65">
-      {#if running}
-        <span class="text-primary">{format_time(now.getTime() - new Date(running.start).getTime())}</span> since {clock_time(new Date(running.start))}
-      {:else}
-        Clocked out
-      {/if}
-    </p>
-  </button>
-  <Button variant={running ? "secondary" : "primary"} size="sm" class="w-full" disabled={!state_file.ready} onclick={toggle}>
-    {#if running}<Stop weight="fill" />Clock out{:else}<Play weight="fill" />Clock in{/if}
-  </Button>
-</div>
+{#if size.h < 2}
+  <div class="flex h-full items-center gap-2 px-3">
+    <button type="button" class="min-w-0 flex-1 text-left" onclick={() => apps.launch(WORK_HOURS_APP_ID)} title="Open Work Hours">
+      <p class="truncate text-2xs font-medium tracking-wide text-foreground/65 uppercase">{running ? "Clocked in" : "Today"}</p>
+      <p class={cn("font-mono text-xl leading-tight font-medium tabular-nums", running && "text-primary")}>{format_hours(booked + running_today)}</p>
+    </button>
+    <IconButton label={running ? "Clock out" : "Clock in"} variant={running ? "secondary" : "primary"} disabled={!state_file.ready} onclick={toggle}>
+      {#if running}<Stop weight="fill" />{:else}<Play weight="fill" />{/if}
+    </IconButton>
+  </div>
+{:else}
+  <div class="@container flex h-full flex-col justify-between gap-2 p-3">
+    <button type="button" class="min-w-0 text-left" onclick={() => apps.launch(WORK_HOURS_APP_ID)} title="Open Work Hours">
+      <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Today</p>
+      <p class="font-mono text-[clamp(1.5rem,14cqi,3rem)] leading-tight font-medium tabular-nums">{format_hours(booked + running_today)}</p>
+      <p class="truncate font-mono text-2xs tabular-nums text-foreground/65">
+        {#if running}
+          <span class="text-primary">{format_time(now.getTime() - new Date(running.start).getTime())}</span> since {clock_time(new Date(running.start))}
+        {:else}
+          Clocked out
+        {/if}
+      </p>
+    </button>
+    <Button variant={running ? "secondary" : "primary"} size="sm" class="w-full" disabled={!state_file.ready} onclick={toggle}>
+      {#if running}<Stop weight="fill" />Clock out{:else}<Play weight="fill" />Clock in{/if}
+    </Button>
+  </div>
+{/if}

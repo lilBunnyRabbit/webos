@@ -39,6 +39,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
+| `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
@@ -97,9 +98,27 @@ Quick Notes counts open todos (`badge.svelte.ts`).
 
 ### `widget` (ADR-034)
 
-A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells) and `name` (the file). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size })`. See [desktop](../services/desktop.md#behaviour--invariants).
+A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells) and `name` (the file). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size? })`. See [desktop](../services/desktop.md#behaviour--invariants).
 
-Quick Notes: a sticky for one note (`{ note: id }`, 3×2, editable in place) or the todo list (no props, 3×3). Added from the app (a note's right-click menu, or the "Add to desktop" toggle, which reads "On desktop" while the widget exists and removes it on a second click) or with `quno pin <note>` / `quno t pin`.
+### `widget_size` (ADR-034 revision 2026-10-15)
+
+```ts
+widget_size: { min: { w: 2, h: 1 }, max: { w: 5, h: 3 }, default: { w: 3, h: 1 } },
+```
+
+Cells, each span 1–8, `min ≤ default ≤ max` on both axes; `define_app` throws otherwise (`widget_size_schema` in `apps/widget.ts`). `pin_widget` without `size` writes `default`; a given `size` is clamped into the range. The desktop clamps a file's stored size into the range when it reads it (the file isn't rewritten) and lets the user resize within it. The widget gets the current `size` prop and should lay out for every size in the range: `size` for what to show, container queries for scale.
+
+| App | min | default | max | What changes with size |
+|-----|-----|---------|-----|------------------------|
+| Quick Notes | 2×2 | 3×2 | 6×5 | Sticky text grows from 4×3; the todo list shows more rows |
+| Game Hub | 3×1 | 4×2 | 6×4 | 1 row: stats only. Taller or wider: one row of daily games per extra cell row, `max(4, w)` per row |
+| Pomodoro | 2×2 | 2×2 | 4×4 | The ring fits the smaller side and its text scales with it |
+| Clock | 2×2 | 3×2 | 6×4 | Analog face fills the height; digital time and date scale to the body |
+| Time Since | 2×1 | 3×1 | 5×3 | 1 row: name, live time, reset. 2+ rows: adds the start date (or run count) and the time scales up |
+| Work Hours | 2×1 | 2×2 | 4×3 | 1 row: today's total and a clock in/out icon button. 2+ rows: label, total, session line, full button; the total scales |
+| Calendar | 2×2 | 3×3 | 5×5 | 4+ rows: the next 7 days, grouped under day headers, instead of today only |
+
+Quick Notes: a sticky for one note (`{ note: id }`, editable in place) or the todo list (no props), both 3×2 when added. Added from the app (a note's right-click menu, or the "Add to desktop" toggle, which reads "On desktop" while the widget exists and removes it on a second click) or with `quno pin <note>` / `quno t pin`.
 
 ### `component`
 

@@ -236,11 +236,6 @@ export function format_stopwatch(ms: number): string {
 
 export { CLOCK_PROPS, ClockFace, ClockTab };
 
-export const WIDGET_SIZES: Record<ClockFace, { w: number; h: number }> = {
-  [ClockFace.ANALOG]: { w: 3, h: 3 },
-  [ClockFace.DIGITAL]: { w: 3, h: 2 },
-};
-
 const UNITS: Record<string, number> = { h: 3_600_000, m: MINUTE, s: 1000 };
 
 /** `5m`, `1h30m`, `90s`; a bare number is minutes. Null when it isn't one, or is zero. */

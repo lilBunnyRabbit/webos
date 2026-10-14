@@ -94,5 +94,6 @@ export default define_app({
     ],
   },
   widget: () => import("./widget.svelte"),
+  widget_size: { min: { w: 2, h: 1 }, max: { w: 5, h: 3 }, default: { w: 3, h: 1 } },
   component: () => import("./time-since.app.svelte"),
 });

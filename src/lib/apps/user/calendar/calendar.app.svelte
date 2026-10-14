@@ -191,7 +191,7 @@
         notifications.notify(app_id, { title: "Removed from the desktop", message: existing.label });
         return;
       }
-      const name = await desktop.pin_widget(app_id, { label: "Today", size: { w: 3, h: 3 } });
+      const name = await desktop.pin_widget(app_id, { label: "Today" });
       if (!name) throw new Error("The desktop is full");
       void notifications.request_system();
       notifications.notify(app_id, { title: "Calendar added to the desktop", message: "It shows today and keeps reminders coming with this window closed." });

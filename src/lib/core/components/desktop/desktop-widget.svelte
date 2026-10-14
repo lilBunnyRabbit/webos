@@ -26,6 +26,8 @@
     onmenu,
     ondragstart,
     ondragend,
+    resizing,
+    onresizestart,
   }: {
     item: Widget;
     x: number;
@@ -37,6 +39,8 @@
     onmenu: (event: MouseEvent) => void;
     ondragstart: (event: DragEvent) => void;
     ondragend: () => void;
+    resizing: boolean;
+    onresizestart: (event: PointerEvent) => void;
   } = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -46,6 +50,7 @@
     const result = manifest.props.safeParse(item.props ?? {});
     return result.success ? result.data : null;
   });
+  const resizable = $derived(manifest?.widget_size !== undefined);
   const component = $derived.by(() => {
     if (!manifest?.widget || !widget_props) return null;
     const app_id = item.app_id;
@@ -56,7 +61,7 @@
 <!-- The title strip is the widget's handle: select, drag, open and menu go through it; the body belongs to the app. -->
 <div
   class={cn(
-    "m-1 flex min-h-0 min-w-0 flex-col self-stretch justify-self-stretch overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-opacity duration-150",
+    "group/widget relative m-1 flex min-h-0 min-w-0 flex-col self-stretch justify-self-stretch overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-opacity duration-150",
     selected && "ring-primary/40 ring-2",
     dimmed && "opacity-40"
   )}
@@ -66,6 +71,7 @@
   <button
     data-desktop-name={item.name}
     aria-pressed={selected}
+    aria-keyshortcuts={resizable ? "Shift+ArrowRight Shift+ArrowLeft Shift+ArrowDown Shift+ArrowUp" : undefined}
     draggable="true"
     class={cn(
       "flex h-6 shrink-0 cursor-grab items-center gap-1.5 border-b border-foreground/8 px-2 text-left text-2xs font-medium text-foreground/65 select-none",
@@ -102,4 +108,24 @@
       <p class="p-3 text-ui text-foreground/65">{manifest ? (widget_props ? `${manifest.name} has no widget.` : "This widget's file is broken.") : "The app for this widget isn't installed."}</p>
     {/if}
   </div>
+
+  {#if resizable}
+    <!-- Pointer only: the keyboard resizes with Shift+arrows on the title strip, so the grip stays out of the tab order. -->
+    <button
+      type="button"
+      tabindex="-1"
+      aria-label="Resize {item.label}"
+      title="Drag to resize · Shift+arrows"
+      class={cn(
+        "absolute right-0 bottom-0 grid size-6 cursor-nwse-resize place-items-end p-1 text-foreground/40 opacity-0 transition-opacity duration-150 hover:text-foreground/80",
+        "group-focus-within/widget:opacity-100 group-hover/widget:opacity-100",
+        (selected || resizing) && "opacity-100",
+        resizing && "text-primary hover:text-primary"
+      )}
+      style:touch-action="none"
+      onpointerdown={onresizestart}
+    >
+      <svg viewBox="0 0 10 10" class="size-2.5" aria-hidden="true"><path d="M10 1.5V8a2 2 0 0 1-2 2H1.5Z" fill="currentColor" /></svg>
+    </button>
+  {/if}
 </div>

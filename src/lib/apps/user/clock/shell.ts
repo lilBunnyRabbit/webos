@@ -18,7 +18,6 @@ import {
   start_timer,
   timer_remaining,
   timer_state,
-  WIDGET_SIZES,
   type Alarm,
   type ClockData,
   type Timer,
@@ -153,7 +152,7 @@ export function timer_stop({ args }: CommandContext<{ timer: string }>): Promise
 }
 
 export async function pin({ args }: CommandContext<{ face: ClockFace }>): Promise<string> {
-  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Clock", props: { face: args.face }, size: WIDGET_SIZES[args.face] });
+  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Clock", props: { face: args.face } });
   if (!name) throw new ShellError("clock pin: couldn't pin the clock");
   return `pinned ${name} to the desktop`;
 }

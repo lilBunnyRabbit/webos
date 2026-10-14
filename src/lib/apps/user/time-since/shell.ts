@@ -23,7 +23,6 @@ import {
 
 const READY_TIMEOUT = 5000;
 const ID_LENGTH = 8;
-const WIDGET_SIZE = { w: 3, h: 2 };
 
 async function with_file<T>(action: (file: { value: CountersFile }) => T): Promise<T> {
   const file = json_file(app_data_path(APP_ID, COUNTERS_FILE), EMPTY_FILE, CountersFileSchema);
@@ -105,7 +104,7 @@ export async function remove({ args }: CommandContext<{ counter: string }>): Pro
 export async function pin({ args }: CommandContext<{ counter: string }>): Promise<string> {
   const counter = await with_file((file) => find(file.value.counters, args.counter));
   if (widget_for(counter.id)) return `${counter.name} is already on the desktop`;
-  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: counter.name, props: { counter: counter.id }, size: WIDGET_SIZE });
+  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: counter.name, props: { counter: counter.id } });
   if (!name) throw new ShellError("since pin: couldn't pin the counter");
   return `pinned ${name} to the desktop`;
 }
