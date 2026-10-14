@@ -136,6 +136,10 @@ If the browser already installed the new worker before the click, `installing` a
 - ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above.
 - ADR-004 calls for a `CHANGELOG.md` fetched at runtime. ADR-026 replaced it with the bundled, typed `changelog.ts` (ADR-004 revision note).
 
+## Shell
+
+Contributes `version`, `changelog` and the `release` value type (`version/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - With two tabs open, the first to boot writes the seen marker; the other shows no toast.

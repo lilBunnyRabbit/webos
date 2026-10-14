@@ -100,6 +100,10 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 
 Covered by ADR-006's revision notes: `SystemNotification` name, separate `toasts`/`hide_toast`, `duration` applies only to the toast; the history cap; toast position follows the tray instead of a setting.
 
+## Shell
+
+Contributes `notify`, `notifications` and the `notification` value type (`notifications/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - `mark_read(id)` and `update()` have no caller.

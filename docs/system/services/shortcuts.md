@@ -1,16 +1,17 @@
 # ShortcutsService
 
-Key `shortcuts` · Depends on: `windows`, `apps`, `dialogs`, `ui`, `session` · ADR: [ADR-012](../../adrs/012-shortcuts-service.md), [ADR-017](../../adrs/017-keyboard-shortcuts-strategy.md) (both revised 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_shortcuts.md)) · Source: `src/lib/core/api/services/shortcuts/` · Inspector: `inspector.svelte` (ADR-020)
+Key `shortcuts` · Depends on: `windows`, `dialogs`, `shell` · ADR: [ADR-012](../../adrs/012-shortcuts-service.md), [ADR-017](../../adrs/017-keyboard-shortcuts-strategy.md) (both revised 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_shortcuts.md)), [ADR-033](../../adrs/033-shell.md) (OS shortcuts run commands) · Source: `src/lib/core/api/services/shortcuts/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-Keyboard shortcuts as data: a registry and one `keydown` listener on `window`. It owns the OS shortcuts (registered in `init()`) and takes window-scoped ones from apps. Keys that act on a focused element (an Explorer row's F2, a desktop icon's Enter, a menu's arrows) are not here: they stay on that element and run first.
+Keyboard shortcuts as data: a registry and one `keydown` listener on `window`. It owns the OS shortcuts (registered in `init()`), which are key bindings for [shell](shell.md) commands, and takes window-scoped ones from apps. Keys that act on a focused element (an Explorer row's F2, a desktop icon's Enter, a menu's arrows) are not here: they stay on that element and run first.
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `ShortcutsService`, `KeyShortcut`, `ShortcutCategory` |
+| `type.ts` | `ShortcutsService`, `KeyShortcut` (`CommandShortcut \| RunShortcut`), `ListedShortcut`, `ShortcutCategory` |
 | `keys.ts` | Pure: `normalize`, `code_key`, `event_keys`, `has_command_modifier`, `format_keys`, `is_mac`. Unit-tested |
-| `defaults.ts` | `default_shortcuts(services)`: the OS set |
+| `defaults.ts` | `DEFAULT_SHORTCUTS`: the OS set, keys to command lines |
+| `shell.ts` | Its shell contribution: `shortcuts`, `shortcuts sheet` |
 | `service.svelte.ts` | Registry and dispatcher |
 
 The name is `KeyShortcut` because `Shortcut` is the `.desktop` file type in `services/apps`.
@@ -18,21 +19,26 @@ The name is `KeyShortcut` because `Shortcut` is the `.desktop` file type in `ser
 ## Public API
 
 ```ts
-interface KeyShortcut {
-  id: string;            // "window.close"
-  keys: string;          // "alt+shift+w", "mod+k"
-  label: string;
+type KeyShortcut = CommandShortcut | RunShortcut;
+interface CommandShortcut {   // the OS set
+  id: string;                 // "window.close"
+  keys: string;               // "alt+shift+w", "mod+k"
   category: "window" | "apps" | "system" | "app";
-  window?: WindowId;     // live only while that window is focused; absent = global
+  command: string;            // "win close": live only while shell.available(command)
+  label?: string;             // the command's description when absent
+}
+interface RunShortcut {       // apps, until they can register commands
+  id: string; keys: string; category: …; label: string;
+  window?: WindowId;          // live only while that window is focused; absent = global
   run: () => void;
-  when?: () => boolean;  // checked at key time; false lets the key through
+  when?: () => boolean;       // checked at key time; false lets the key through
 }
 ```
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `register` | `(shortcut) => () => void` | Normalizes `keys`, appends, returns the disposer (made for `$effect`). Both run untracked, so an effect that registers doesn't subscribe to the list it writes (that looped forever: Paint, 0.19.0). Same keys in the same scope: `console.warn` and the newer one wins |
-| `list` | `() => KeyShortcut[]` | Everything registered, for the cheat sheet and the inspector |
+| `list` | `() => ListedShortcut[]` | Everything registered whose command exists, labels resolved, for the cheat sheet and the inspector. A command the platform lacks (`win snap` on mobile) drops out |
 | `mac` | `readonly boolean` | `is_mac()` once: `userAgentData.platform` (else `navigator.platform`) matching mac, iOS, iPhone or iPad. Decides what `mod` means and how keys display |
 
 ### Keys
@@ -45,7 +51,7 @@ interface KeyShortcut {
 
 ## Lifecycle
 
-`init()`: registers `default_shortcuts(...)` (keeping their disposers) and adds the `keydown` listener. `destroy()`: removes the listener and disposes the defaults.
+`init()`: registers `DEFAULT_SHORTCUTS` (keeping their disposers) and adds the `keydown` listener. `destroy()`: removes the listener and disposes the defaults.
 
 ## Dispatch
 
@@ -55,30 +61,30 @@ On every `keydown`, in order:
 2. Skip if a system dialog is open (`dialogs.system.length > 0`): it's modal.
 3. `event_keys(event, mac)`; skip a lone modifier.
 4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten.
-5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one; `when()` must pass.
-6. `preventDefault()` and `run()`.
+5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one. A command shortcut must have `shell.available(command)`, a run shortcut `when()`.
+6. `preventDefault()` synchronously, then `run()` or `shell.execute(command)` (async; a failure becomes an error toast).
 
 ## Default shortcuts
 
-`default_shortcuts` decides by the registered windows service's **shape**, not the platform: snap and maximize only when it has `snap` (desktop), "Go home" labels when it has `go_home` (mobile).
+Each is a command line; what it does, and whether it exists on this platform, is the command's business ([shell](shell.md#contributions)). Labels default to the command's description, so mobile shows "Go home" where the windows service says so.
 
-| Id | Keys | Does | Desktop | Mobile |
-|----|------|------|---------|--------|
-| `window.close` | Alt+Shift+W | Close the focused window | ✓ | ✓ |
-| `window.minimize` | Alt+Shift+↓ | `toggle_minimize(focused)` | Minimize | Go home |
-| `window.previous` | Alt+\` | The most recent other window (from home: the newest), un-minimizing it | ✓ | ✓ |
-| `window.cycle` | Alt+Shift+\` | The least recently used window, so repeated presses walk all of them | ✓ | ✓ |
-| `window.reopen` | Alt+Shift+T | `session.reopen_closed()`; only while `session.closed` isn't empty (Ctrl+Shift+T is the browser's) | ✓ | ✓ |
-| `desktop.show` | Alt+Shift+D | Minimize every visible window / `go_home()` | Show desktop | Go home |
-| `window.maximize` | Alt+Shift+↑ | `toggle_maximize(focused)` | ✓ | — |
-| `window.gather` | Alt+Shift+G | `gather()`: every visible window fully on screen | ✓ | — |
-| `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | Leave maximize, snap to the half; the same key again unsnaps | ✓ | — |
-| `apps.launcher` | Mod+K | `ui.toggle("launcher")`: the start menu / the app drawer | ✓ | ✓ |
-| `apps.settings` | Mod+, | `apps.launch("settings")` | ✓ | ✓ |
-| `system.notifications` | Alt+Shift+N | `ui.toggle("notifications")`: the tray panel / the switcher with its list | ✓ | ✓ |
-| `system.shortcuts` | Mod+/ | The cheat sheet (`ShortcutsDialog`, system dialog) | ✓ | ✓ |
+| Id | Keys | Command | Desktop | Mobile |
+|----|------|---------|---------|--------|
+| `window.close` | Alt+Shift+W | `win close` | ✓ | ✓ |
+| `window.minimize` | Alt+Shift+↓ | `win minimize` | Minimize | Go home |
+| `window.previous` | Alt+\` | `win previous`: the most recent other window (from home: the newest), un-minimizing it | ✓ | ✓ |
+| `window.cycle` | Alt+Shift+\` | `win cycle`: the least recently used window | ✓ | ✓ |
+| `window.reopen` | Alt+Shift+T | `win reopen` (session); available while something was closed | ✓ | ✓ |
+| `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop | Go home |
+| `window.maximize` | Alt+Shift+↑ | `win maximize` | ✓ | — |
+| `window.gather` | Alt+Shift+G | `win gather` | ✓ | — |
+| `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | `win snap left` / `win snap right`; the same zone again unsnaps | ✓ | — |
+| `apps.launcher` | Mod+K | `ui launcher` | ✓ | ✓ |
+| `apps.settings` | Mod+, | `app launch settings` | ✓ | ✓ |
+| `system.notifications` | Alt+Shift+N | `ui notifications` | ✓ | ✓ |
+| `system.shortcuts` | Mod+/ | `shortcuts sheet` | ✓ | ✓ |
 
-Close, minimize, maximize and snap have `when: focused !== null`, so with nothing focused the key falls through. Minimize, maximize, snap, show desktop and un-minimizing through previous/cycle run inside `view_transition()` (`$lib/core/utils/view-transition`), so they morph like the buttons do ([window](../shell/window.md#motion)).
+The window commands are `available()` only while a window is open, so with nothing open the key falls through. Without ids they act on the focused window and fail ("no window is focused") when there is none. Minimize, maximize, snap, show desktop and un-minimizing run inside `view_transition()`.
 
 ## Cheat sheet
 

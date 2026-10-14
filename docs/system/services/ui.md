@@ -52,6 +52,10 @@ Sheets come before the app's own back, so an app can't navigate behind its sheet
 | ShortcutsService | Mod+K toggles `launcher`, Alt+Shift+N toggles `notifications` |
 | `mobile/nav-bar.svelte` via `mobile-shell.svelte` | Back calls `back()`; Esc with an overlay open too |
 
+## Shell
+
+Contributes `ui launcher`, `ui notifications`, and `ui switcher` on mobile (`ui/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Desktop has no switcher; `"switcher"` does nothing there.

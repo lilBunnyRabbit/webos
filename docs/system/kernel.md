@@ -16,6 +16,7 @@ interface IService {
   destroy?(): void;       // sync on purpose: pagehide never awaits
   to_string(): string;    // debug text; the Kernel app's fallback when there's no inspector
   inspector?: () => Promise<{ default: Component<InspectorProps<never>> }>;  // ADR-020
+  shell?(): ShellContribution;  // commands, completers, value types (ADR-033)
 }
 
 interface InspectorProps<T extends IService = IService> {
@@ -65,7 +66,8 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `session` | `SessionService` | `windows`, `apps`, `files`, `dialogs`, `notifications` |
 | `clipboard` | `ClipboardService` | `files` |
 | `ui` | `UiService` | `windows`, `dialogs` |
-| `shortcuts` | `ShortcutsService` | `windows`, `apps`, `dialogs`, `ui`, `session` |
+| `shell` | `ShellService` | `files`, `dialogs`, `notifications` |
+| `shortcuts` | `ShortcutsService` | `windows`, `dialogs`, `shell` |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 
 ### Dependency graph
@@ -76,6 +78,8 @@ windows ────────────────────────
 windows, notifications, files, settings, dialogs ───► apps
 files, apps ────────────────────────────────────────► desktop
 windows, apps, files, dialogs, notifications ───────► session
+files, dialogs, notifications ──────────────────────► shell
+windows, dialogs, shell ────────────────────────────► shortcuts
 windows, apps, session, clipboard, notifications ───► router
 files, notifications, dialogs, apps ────────────────► version
 ```
@@ -85,10 +89,10 @@ files, notifications, dialogs, apps ──────────────�
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shortcuts → router → version
+files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shell → shortcuts → router → version
 ```
 
-Shutdown runs the reverse: `version → router → shortcuts → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+Shutdown runs the reverse: `version → router → shortcuts → shell → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
@@ -118,8 +122,13 @@ Which services implement which hooks today:
 | desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
 | session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
 | router | listen to `hashchange`; an effect opens the hash's link once the session status leaves `pending` ([router](services/router.md#lifecycle)) | remove the listener, dispose the effect |
+| shell | read the shared history from `/var/lib/shell/history` ([shell](services/shell.md#lifecycle)) | none |
 | ui | `pointerup` / `keydown` (capture) listeners that arm the back guard, and a `popstate` listener ([ui](services/ui.md#back)) | remove them |
 | windows, apps | none | none |
+
+### Shell hook
+
+`IService.shell?(): ShellContribution` is optional. A service that has it adds commands, completers and value types to the shell. ShellService reads it from every service in `services` through a `$derived`, so it doesn't matter which one initialises first ([shell](services/shell.md#contributions), ADR-033).
 
 ### Failed init
 

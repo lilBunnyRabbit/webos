@@ -112,6 +112,10 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 
 - ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018) and `wallpaper` (ADR-011 revision) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
 
+## Shell
+
+Contributes `theme get|list|set`, the `theme` completer and value type (`settings/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - ADR-015's non-colour settings (radius, shadow, animation, font, icons, sound, export/import) aren't built; deferred by the owner on 2026-10-13. Radius, shadows and easing are constants in `app.css`.

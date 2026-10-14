@@ -8,6 +8,7 @@ import type {
   SystemNotification,
 } from "./type";
 import { NotificationType } from "./type";
+import { notifications_shell } from "./shell";
 
 const DEFAULT_DURATION = 5000;
 const MAX_HISTORY = 50;
@@ -16,6 +17,7 @@ export class NotificationsService implements INotificationsService {
   name = "NotificationsService";
   description = "Toasts and notification history";
   inspector = () => import("./inspector.svelte");
+  shell = () => notifications_shell(this);
 
   to_string(): string {
     return `NotificationsService: ${this.all.length} notifications, ${this.unread_count} unread, ${this.toasts.length} toasts`;

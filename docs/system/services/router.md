@@ -57,6 +57,10 @@ Toasts come from the `router` sender, shown as "System".
 |-------|-----|
 | `window/window-titlebar.svelte` | Copy link button, shown when `link_for(id)` isn't `null` ([window](../shell/window.md#titlebar)) |
 
+## Shell
+
+Contributes `link [id] [-c]` (`router/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Nothing to share from on mobile: there's no titlebar.

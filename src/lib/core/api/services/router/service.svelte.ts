@@ -3,11 +3,13 @@ import type { AppsService, ClipboardService, Kernel, NotificationsService, Sessi
 import { SessionStatus } from "../session/type";
 import { is_shareable, parse_hash, serialize_route, type Route } from "./route";
 import { LinkOutcome, type RouterService as IRouterService } from "./type";
+import { router_shell } from "./shell";
 
 export class RouterService implements IRouterService {
   name = "RouterService";
   description = "Opens app links from the URL and copies links to windows";
   inspector = () => import("./inspector.svelte");
+  shell = () => router_shell(this, () => this.windows_service);
 
   to_string(): string {
     return `RouterService: ${this.last_link ? `${this.last_link.hash} (${this.last_link.outcome})` : "no link handled"}`;

@@ -15,11 +15,13 @@ import {
   WALLPAPER_DIRECTORY,
   WALLPAPER_DIRECTORY_NAME,
 } from "./persistence";
+import { settings_shell } from "./shell";
 
 export class SettingsService implements ISettingsService {
   name = "SettingsService";
   description = "Theme, taskbar and file defaults (persisted)";
   inspector = () => import("./inspector.svelte");
+  shell = () => settings_shell(this);
 
   to_string(): string {
     return `SettingsService: taskbar ${this.taskbar.position}, theme ${JSON.stringify(this.theme)}`;

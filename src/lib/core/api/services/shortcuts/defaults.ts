@@ -1,186 +1,22 @@
-import type {
-  AppsService,
-  DesktopWindowsService,
-  DialogsService,
-  MobileWindowsService,
-  KeyShortcut,
-  SessionService,
-  UiService,
-  WindowId,
-  WindowsService,
-} from "$lib/core/api";
-import ShortcutsDialog from "$lib/core/components/dialogs/shortcuts-dialog.svelte";
-import { WindowFlag } from "../windows/type";
-import { ShortcutCategory } from "./type";
-import { UiOverlay } from "../ui/type";
-import { view_transition } from "$lib/core/utils/view-transition";
+import { ShortcutCategory, type CommandShortcut } from "./type";
 
-interface Services {
-  windows: () => WindowsService;
-  apps: () => AppsService;
-  dialogs: () => DialogsService;
-  ui: () => UiService;
-  session: () => SessionService;
-}
-
-// Shape checks, not platform checks: the registered windows service decides what makes sense (ADR-016).
-const is_desktop = (windows: WindowsService): windows is DesktopWindowsService => "snap" in windows;
-const is_mobile = (windows: WindowsService): windows is MobileWindowsService => "go_home" in windows;
-
-/** The OS shortcuts (ADR-017 revision). Registered by the service's `init()`. */
-export function default_shortcuts({ windows, apps, dialogs, ui, session }: Services): KeyShortcut[] {
-  const focused = () => windows().get_focused();
-  const with_focused = (action: (id: WindowId) => void) => () => {
-    const id = focused();
-    if (id) action(id);
-  };
-
-  /** Windows newest first, minimized ones included: they're still running. */
-  const recent = () =>
-    windows()
-      .sorted_list(([, a], [, b]) => b.order - a.order)
-      .map(([id]) => id);
-
-  function bring(id: WindowId | undefined) {
-    if (!id) return;
-    const service = windows();
-    if (service.get(id)?.flags.has(WindowFlag.MINIMIZED)) view_transition(() => service.toggle_minimize(id));
-    else service.focus(id);
-  }
-
-  const shortcuts: KeyShortcut[] = [
-    {
-      id: "window.close",
-      keys: "alt+shift+w",
-      label: "Close window",
-      category: ShortcutCategory.WINDOW,
-      when: () => focused() !== null,
-      run: with_focused((id) => void windows().close(id)),
-    },
-    {
-      id: "window.minimize",
-      keys: "alt+shift+down",
-      label: is_mobile(windows()) ? "Go home" : "Minimize window",
-      category: ShortcutCategory.WINDOW,
-      when: () => focused() !== null,
-      run: with_focused((id) => view_transition(() => windows().toggle_minimize(id))),
-    },
-    {
-      id: "window.previous",
-      keys: "alt+`",
-      label: "Switch to the previous window",
-      category: ShortcutCategory.WINDOW,
-      when: () => windows().list().length > 1 || (focused() === null && windows().list().length > 0),
-      // From home nothing is focused, so the newest window is the one to bring back.
-      run: () => bring(focused() ? recent()[1] : recent()[0]),
-    },
-    {
-      id: "window.cycle",
-      keys: "alt+shift+`",
-      label: "Cycle through windows",
-      category: ShortcutCategory.WINDOW,
-      when: () => windows().list().length > 1,
-      run: () => bring(recent().at(-1)),
-    },
-    {
-      id: "window.reopen",
-      keys: "alt+shift+t",
-      label: "Reopen closed window",
-      category: ShortcutCategory.WINDOW,
-      when: () => session().closed.length > 0,
-      run: () => void session().reopen_closed(),
-    },
-    {
-      id: "desktop.show",
-      keys: "alt+shift+d",
-      label: is_mobile(windows()) ? "Go home" : "Show desktop",
-      category: ShortcutCategory.WINDOW,
-      run: () =>
-        view_transition(() => {
-          const service = windows();
-          if (is_mobile(service)) return service.go_home();
-          for (const id of service.list()) {
-            if (!service.get(id)?.flags.has(WindowFlag.MINIMIZED)) service.toggle_minimize(id);
-          }
-        }),
-    },
-    {
-      id: "apps.launcher",
-      keys: "mod+k",
-      label: "Search apps",
-      category: ShortcutCategory.APPS,
-      run: () => ui().toggle(UiOverlay.LAUNCHER),
-    },
-    {
-      id: "apps.settings",
-      keys: "mod+,",
-      label: "Open Settings",
-      category: ShortcutCategory.APPS,
-      run: () => apps().launch("settings"),
-    },
-    {
-      id: "system.notifications",
-      keys: "alt+shift+n",
-      label: "Notifications",
-      category: ShortcutCategory.SYSTEM,
-      run: () => ui().toggle(UiOverlay.NOTIFICATIONS),
-    },
-    {
-      id: "system.shortcuts",
-      keys: "mod+/",
-      label: "Keyboard shortcuts",
-      category: ShortcutCategory.SYSTEM,
-      run: () => void dialogs().show(ShortcutsDialog, {}),
-    },
-  ];
-
-  if (is_desktop(windows())) {
-    const desktop = () => windows() as DesktopWindowsService;
-    const snap = (zone: "left" | "right") =>
-      with_focused((id) =>
-        view_transition(() => {
-          const instance = desktop().get(id);
-          // Maximize wins when rendering, so a snap from maximized has to leave it first.
-          if (instance?.flags.has(WindowFlag.MAXIMIZED)) desktop().toggle_maximize(id);
-          desktop().snap(id, instance?.snap_zone === zone ? null : zone);
-        })
-      );
-
-    shortcuts.push(
-      {
-        id: "window.maximize",
-        keys: "alt+shift+up",
-        label: "Maximize or restore window",
-        category: ShortcutCategory.WINDOW,
-        when: () => focused() !== null,
-        run: with_focused((id) => view_transition(() => desktop().toggle_maximize(id))),
-      },
-      {
-        id: "window.snap_left",
-        keys: "alt+shift+left",
-        label: "Snap window left",
-        category: ShortcutCategory.WINDOW,
-        when: () => focused() !== null,
-        run: snap("left"),
-      },
-      {
-        id: "window.gather",
-        keys: "alt+shift+g",
-        label: "Gather windows on screen",
-        category: ShortcutCategory.WINDOW,
-        when: () => desktop().list().length > 0,
-        run: () => view_transition(() => desktop().gather()),
-      },
-      {
-        id: "window.snap_right",
-        keys: "alt+shift+right",
-        label: "Snap window right",
-        category: ShortcutCategory.WINDOW,
-        when: () => focused() !== null,
-        run: snap("right"),
-      }
-    );
-  }
-
-  return shortcuts;
-}
+/**
+ * The OS shortcuts (ADR-017 revision): key bindings only, the actions are shell commands (ADR-033). A command the
+ * platform doesn't have (`win snap` on mobile) leaves its key to the browser.
+ */
+export const DEFAULT_SHORTCUTS: CommandShortcut[] = [
+  { id: "window.close", keys: "alt+shift+w", category: ShortcutCategory.WINDOW, command: "win close", label: "Close window" },
+  { id: "window.minimize", keys: "alt+shift+down", category: ShortcutCategory.WINDOW, command: "win minimize" },
+  { id: "window.maximize", keys: "alt+shift+up", category: ShortcutCategory.WINDOW, command: "win maximize", label: "Maximize or restore window" },
+  { id: "window.snap_left", keys: "alt+shift+left", category: ShortcutCategory.WINDOW, command: "win snap left", label: "Snap window left" },
+  { id: "window.snap_right", keys: "alt+shift+right", category: ShortcutCategory.WINDOW, command: "win snap right", label: "Snap window right" },
+  { id: "window.gather", keys: "alt+shift+g", category: ShortcutCategory.WINDOW, command: "win gather" },
+  { id: "window.previous", keys: "alt+`", category: ShortcutCategory.WINDOW, command: "win previous" },
+  { id: "window.cycle", keys: "alt+shift+`", category: ShortcutCategory.WINDOW, command: "win cycle" },
+  { id: "window.reopen", keys: "alt+shift+t", category: ShortcutCategory.WINDOW, command: "win reopen" },
+  { id: "desktop.show", keys: "alt+shift+d", category: ShortcutCategory.WINDOW, command: "win desktop" },
+  { id: "apps.launcher", keys: "mod+k", category: ShortcutCategory.APPS, command: "ui launcher", label: "Search apps" },
+  { id: "apps.settings", keys: "mod+,", category: ShortcutCategory.APPS, command: "app launch settings", label: "Open Settings" },
+  { id: "system.notifications", keys: "alt+shift+n", category: ShortcutCategory.SYSTEM, command: "ui notifications", label: "Notifications" },
+  { id: "system.shortcuts", keys: "mod+/", category: ShortcutCategory.SYSTEM, command: "shortcuts sheet", label: "Keyboard shortcuts" },
+];

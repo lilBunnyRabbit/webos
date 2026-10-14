@@ -6,6 +6,7 @@ import { UiService } from "../ui/service.svelte";
 import { UiOverlay } from "../ui/type";
 import { run_in_effect } from "./effect-fixture.svelte";
 import { ShortcutsService } from "./service.svelte";
+import { ShellService } from "../shell/service.svelte";
 import { ShortcutCategory } from "./type";
 
 const app = (id: string) =>
@@ -28,11 +29,12 @@ const dialogs_stub: IService & Pick<DialogsService, "system" | "show"> = {
 async function boot(): Promise<Kernel> {
   system_dialogs = [];
   const booted = await boot_test_kernel({
+    files: stub_service("files", { get_file: async () => null }),
+    notifications: stub_service("notifications", { notify: vi.fn() }),
     windows: WindowsService,
-    apps: stub_service("apps", { launch: vi.fn() }),
     dialogs: dialogs_stub,
     ui: UiService,
-    session: stub_service("session", { closed: [], reopen_closed: vi.fn(() => null) }),
+    shell: ShellService,
     shortcuts: ShortcutsService,
   });
   shutdown = booted.shutdown;
@@ -58,8 +60,14 @@ describe("ShortcutsService", () => {
     const event = press("KeyW", { altKey: true, shiftKey: true });
 
     expect(event.defaultPrevented).toBe(true);
-    expect(windows.exists(b)).toBe(false);
+    await vi.waitFor(() => expect(windows.exists(b)).toBe(false));
     expect(windows.list()).toHaveLength(1);
+  });
+
+  test("a command shortcut leaves its key alone while the command isn't available", async () => {
+    await boot();
+    const event = press("KeyW", { altKey: true, shiftKey: true });
+    expect(event.defaultPrevented).toBe(false);
   });
 
   test("Mod+K toggles the launcher", async () => {
@@ -68,9 +76,9 @@ describe("ShortcutsService", () => {
     const mod = kernel.service<ShortcutsService>("shortcuts").mac ? { metaKey: true } : { ctrlKey: true };
 
     press("KeyK", mod);
-    expect(ui.overlay).toBe(UiOverlay.LAUNCHER);
+    await vi.waitFor(() => expect(ui.overlay).toBe(UiOverlay.LAUNCHER));
     press("KeyK", mod);
-    expect(ui.overlay).toBeNull();
+    await vi.waitFor(() => expect(ui.overlay).toBeNull());
   });
 
   test("a window's own shortcut wins over a global one, only while it's focused", async () => {

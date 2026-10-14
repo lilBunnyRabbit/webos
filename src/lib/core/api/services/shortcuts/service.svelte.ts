@@ -1,13 +1,15 @@
 import { untrack } from "svelte";
-import type { AppsService, DialogsService, Kernel, SessionService, UiService, WindowsService } from "$lib/core/api";
-import { default_shortcuts } from "./defaults";
+import type { DialogsService, Kernel, ShellService, WindowsService } from "$lib/core/api";
+import { DEFAULT_SHORTCUTS } from "./defaults";
 import { event_keys, has_command_modifier, is_mac, normalize } from "./keys";
-import type { KeyShortcut, ShortcutsService as IShortcutsService } from "./type";
+import { shortcuts_shell } from "./shell";
+import type { KeyShortcut, ListedShortcut, ShortcutsService as IShortcutsService } from "./type";
 
 export class ShortcutsService implements IShortcutsService {
   name = "ShortcutsService";
   description = "Keyboard shortcuts: registry and one keydown dispatcher";
   inspector = () => import("./inspector.svelte");
+  shell = () => shortcuts_shell(this, () => this.dialogs_service);
 
   to_string(): string {
     return `ShortcutsService: ${this.shortcuts.length} shortcuts`;
@@ -20,22 +22,17 @@ export class ShortcutsService implements IShortcutsService {
 
   private windows_service!: WindowsService;
   private dialogs_service!: DialogsService;
+  private shell_service!: ShellService;
   private dispose_defaults: Array<() => void> = [];
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
     this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
+    this.shell_service = $derived(this.kernel.service<ShellService>("shell"));
   }
 
   init(): void {
-    const services = {
-      windows: () => this.windows_service,
-      apps: () => this.kernel.service<AppsService>("apps"),
-      dialogs: () => this.dialogs_service,
-      ui: () => this.kernel.service<UiService>("ui"),
-      session: () => this.kernel.service<SessionService>("session"),
-    };
-    this.dispose_defaults = default_shortcuts(services).map((shortcut) => this.register(shortcut));
+    this.dispose_defaults = DEFAULT_SHORTCUTS.map((shortcut) => this.register(shortcut));
     window.addEventListener("keydown", this.on_keydown);
   }
 
@@ -51,7 +48,7 @@ export class ShortcutsService implements IShortcutsService {
   public register(shortcut: KeyShortcut): () => void {
     const entry = { ...shortcut, keys: normalize(shortcut.keys) };
     untrack(() => {
-      const clash = this.shortcuts.find((other) => other.keys === entry.keys && other.window === entry.window);
+      const clash = this.shortcuts.find((other) => other.keys === entry.keys && scope(other) === scope(entry));
       if (clash) console.warn(`[ShortcutsService] "${entry.id}" takes ${entry.keys} from "${clash.id}"`);
       this.shortcuts = [...this.shortcuts, entry];
     });
@@ -61,8 +58,23 @@ export class ShortcutsService implements IShortcutsService {
       });
   }
 
-  public list(): KeyShortcut[] {
-    return this.shortcuts;
+  public list(): ListedShortcut[] {
+    const listed: ListedShortcut[] = [];
+    for (const shortcut of this.shortcuts) {
+      if (!("command" in shortcut)) {
+        listed.push(shortcut);
+        continue;
+      }
+      const words = shortcut.command.split(" ");
+      const command = words.map((_, index) => this.shell_service.find(words.slice(0, words.length - index).join(" "))).find(Boolean);
+      if (command) listed.push({ ...shortcut, label: shortcut.label ?? command.description });
+    }
+    return listed;
+  }
+
+  private live(shortcut: KeyShortcut): boolean {
+    if ("command" in shortcut) return this.shell_service.available(shortcut.command);
+    return shortcut.when?.() ?? true;
   }
 
   /** Arrow function: it's the listener itself. */
@@ -80,13 +92,18 @@ export class ShortcutsService implements IShortcutsService {
     // Newest first, window scope ahead of global: the most specific, latest registration wins.
     const candidates = this.shortcuts.filter((shortcut) => shortcut.keys === keys).reverse();
     const match =
-      candidates.find((shortcut) => focused !== null && shortcut.window === focused && (shortcut.when?.() ?? true)) ??
-      candidates.find((shortcut) => shortcut.window === undefined && (shortcut.when?.() ?? true));
+      candidates.find((shortcut) => focused !== null && scope(shortcut) === focused && this.live(shortcut)) ??
+      candidates.find((shortcut) => scope(shortcut) === undefined && this.live(shortcut));
     if (!match) return;
 
     event.preventDefault();
-    match.run();
+    if ("command" in match) void this.shell_service.execute(match.command);
+    else match.run();
   };
+}
+
+function scope(shortcut: KeyShortcut) {
+  return "window" in shortcut ? shortcut.window : undefined;
 }
 
 function is_editable(target: EventTarget | null): boolean {

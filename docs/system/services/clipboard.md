@@ -40,6 +40,10 @@ No `init` or `destroy`.
 
 None. A reload empties the clipboard, as on a real OS.
 
+## Shell
+
+Contributes `copy` (text, or piped files onto the file clipboard) and `paste` (`clipboard/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Multi-select copies and cuts many paths, but conflicts are asked one name at a time: no "apply to all".

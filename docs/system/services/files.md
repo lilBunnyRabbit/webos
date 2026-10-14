@@ -372,6 +372,10 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - ADR-021 §4 says a revision is `0` "until something under `path` changes". The code bumps only the directory a mutation touched, not its ancestors, so it's "in `path`", not "under".
 - [CONVENTIONS](../../CONVENTIONS.md#services) says `index.ts` exports types only and that only `init.ts` imports service classes. `type.ts` imports `DirectoryHandler` from the implementation file, so `FilesService.directory()` returns the concrete class, and `DirectoryHandler.service` is the concrete `FilesService`, not the interface. The UI components import the type from `service.svelte` directly. Swapping the files service (ADR-016) would have to keep this exact class.
 
+## Shell
+
+Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and the `file` / `storage` value types (`files/shell.ts`). Writes into system folders need `sudo`. See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (cross-tab sync would need its own brainstorm). `FileSystemObserver` is a candidate platform API for it.

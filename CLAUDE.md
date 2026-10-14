@@ -41,12 +41,13 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `session` | SessionService | Saves open windows and window frames to `/var/lib/session/session.json`, restore dialog at boot, reopen closed windows (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 | `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center; `back()` for the nav bar and the browser's back via a history guard (ADR-028) | windows, dialogs |
-| `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults, Mod+/ cheat sheet (ADR-012, ADR-017) | windows, apps, dialogs, ui, session |
+| `shell` | ShellService | Commands contributed by services through `IService.shell()`, zod args, structured values and pipes, completion, shared history in `/var/lib/shell/history` (ADR-033) | files, dialogs, notifications |
+| `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults run shell commands, Mod+/ cheat sheet (ADR-012, ADR-017, ADR-033) | windows, dialogs, shell |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for windows whose app takes no `path` (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 
-Planned services each have an ADR: shell (007), tasks (013). Add a service only when that roadmap item is picked up.
+Planned services each have an ADR: tasks (013). Add a service only when that roadmap item is picked up.
 
 ```ts
 const windows = $derived(kernel.service<WindowsService>("windows"));

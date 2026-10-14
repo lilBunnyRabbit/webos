@@ -39,6 +39,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/session.md](services/session.md) | `session` |
 | [services/clipboard.md](services/clipboard.md) | `clipboard` |
 | [services/ui.md](services/ui.md) | `ui` |
+| [services/shell.md](services/shell.md) | `shell` |
 | [services/shortcuts.md](services/shortcuts.md) | `shortcuts` |
 | [services/router.md](services/router.md) | `router` |
 

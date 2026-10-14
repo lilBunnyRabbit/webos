@@ -7,6 +7,7 @@ import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
 import { scope_caches, strip_update_param, with_update_param } from "./update";
 import { ChangeKind, UpdateStage, type Release, type VersionInfo, type VersionService as IVersionService } from "./type";
+import { version_shell } from "./shell";
 
 declare const __VERSION_INFO__: VersionInfo;
 
@@ -21,6 +22,7 @@ export class VersionService implements IVersionService {
   name = "VersionService";
   description = "Build info, update detection, release notes and the introduction";
   inspector = () => import("./inspector.svelte");
+  shell = () => version_shell(this);
 
   public info = $state<VersionInfo>(__VERSION_INFO__);
   public update_available = $state<VersionInfo | null>(null);

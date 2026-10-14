@@ -101,6 +101,10 @@ The first run writes immediately, so after Start fresh with no windows open the 
 
 The 2026-10-12 revision covers v2 (`frames`) and the closed stack. ADR-023's body says `/var/session.json`, `RestoreResult.skipped` as a count, and is silent on dismissal and the inspector. The 2026-10-11 revision note records the code: `/var/lib/session/session.json`, `skipped` as the snapshot list, dismiss = Start fresh (since changed: the dialog is now non-dismissible, which the note doesn't cover yet), the shared `LatestWriter`, `clamp_bounds` skipping an unmeasured container, `focus_next()` after restore, the inspector and `status`.
 
+## Shell
+
+Contributes `win reopen` (`session/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - On mobile, `windows.restore` ignores the saved geometry and lands on the home screen with the restored apps in the switcher ([windows.md](windows.md#mobile)). Both platforms share the file, so a session saved on mobile restores on desktop with fullscreen-sized windows.

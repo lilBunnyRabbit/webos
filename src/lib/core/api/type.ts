@@ -1,5 +1,6 @@
 import type { Component } from "svelte";
 import type { Kernel } from "./kernel/kernel.svelte";
+import type { ShellContribution } from "./services/shell/type";
 // TODO: kernel to interface
 
 export interface IService {
@@ -14,6 +15,8 @@ export interface IService {
    * `never` lets a component typed for one concrete service fit here; the Kernel app supplies the matching service.
    */
   inspector?: () => Promise<{ default: Component<InspectorProps<never>> }>;
+  /** Commands, completers and value types this service adds to the shell (ADR-033). Read whenever services change. */
+  shell?(): ShellContribution;
 }
 
 export interface InspectorProps<T extends IService = IService> {

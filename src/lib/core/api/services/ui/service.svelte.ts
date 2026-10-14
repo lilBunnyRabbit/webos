@@ -3,6 +3,7 @@ import type { DialogsService, Kernel, MobileWindowsService, WindowsService } fro
 import { Platform } from "../../kernel/platform";
 import { view_transition } from "$lib/core/utils/view-transition";
 import type { UiOverlay, UiService as IUiService } from "./type";
+import { ui_shell } from "./shell";
 
 const GUARD = { webos: "back-guard" };
 
@@ -10,6 +11,7 @@ export class UiService implements IUiService {
   name = "UiService";
   description = "Shell overlay state and back: launcher, switcher, notification center, the browser's back";
   inspector = () => import("./inspector.svelte");
+  shell = () => ui_shell(this, this.kernel.platform === Platform.MOBILE);
 
   to_string(): string {
     return `UiService: ${this.overlay ?? "nothing"} open, back guard ${this.armed ? "armed" : "not armed"}`;

@@ -1,10 +1,12 @@
 import type { FilesService, Kernel } from "$lib/core/api";
 import type { ClipboardMode, ClipboardService as IClipboardService, ConflictChoice, FilesClipboard } from "./type";
+import { clipboard_shell } from "./shell";
 
 export class ClipboardService implements IClipboardService {
   name = "ClipboardService";
   description = "Copy, cut and paste for files; text to the system clipboard";
   inspector = () => import("./inspector.svelte");
+  shell = () => clipboard_shell(this);
 
   to_string(): string {
     return `ClipboardService: ${this.content ? `${this.content.mode} ${this.content.paths.length}` : "empty"}`;

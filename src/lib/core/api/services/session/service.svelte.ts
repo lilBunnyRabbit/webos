@@ -14,6 +14,7 @@ import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-d
 import { LatestWriter } from "../files/latest-writer";
 import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
+import { session_shell } from "./shell";
 
 const MAX_CLOSED = 10;
 
@@ -21,6 +22,7 @@ export class SessionService implements ISessionService {
   name = "SessionService";
   description = "Saves open windows and offers to restore them at boot";
   inspector = () => import("./inspector.svelte");
+  shell = () => session_shell(this);
 
   to_string(): string {
     return `SessionService: ${this.status}, ${this.saved_count} saved windows`;

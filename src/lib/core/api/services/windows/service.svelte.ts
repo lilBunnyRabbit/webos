@@ -14,11 +14,13 @@ import type {
 import { WindowFlag } from "./type";
 import type { AppInstance } from "../apps/type";
 import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
+import { windows_shell } from "./shell";
 
 export class WindowsService implements DesktopWindowsService {
   name = "WindowsService";
   description = "Window lifecycle, geometry and z-order";
   inspector = () => import("./inspector.svelte");
+  shell = () => windows_shell(this);
 
   to_string(): string {
     return Object.entries(this.index)
@@ -113,7 +115,6 @@ export class WindowsService implements DesktopWindowsService {
   destroy(): void {
     window.removeEventListener("beforeunload", this.on_before_unload);
   }
-
 
   public set_container(element?: HTMLElement | null): Bounds {
     if (!element) {

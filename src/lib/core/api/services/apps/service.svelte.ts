@@ -5,11 +5,13 @@ import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
+import { apps_shell } from "./shell";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
   description = "App registry, launching and file associations";
   inspector = () => import("./inspector.svelte");
+  shell = () => apps_shell(this, () => this.files_service);
 
   to_string(): string {
     return `AppsService: ${this.registry.size} apps registered`;

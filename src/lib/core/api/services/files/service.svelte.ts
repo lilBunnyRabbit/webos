@@ -11,11 +11,13 @@ import { SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
 import { ensure_hierarchy } from "./hierarchy";
 import { join_path, split_path } from "./path";
+import { files_shell } from "./shell";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
   description = "OPFS file system";
   inspector = () => import("./inspector.svelte");
+  shell = () => files_shell(this);
 
   to_string(): string {
     return "FilesService";

@@ -142,6 +142,10 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 - ADR-001's glob is `./**/index.ts`. The code globs `./system/*/index.ts` and `./user/*/index.ts`, one level deep.
 - ADR-018's resolution matches the code. The `open()` JSDoc says it resolves `null` "when the file is missing or no app matches (both notify)"; it also resolves `null`, silently, when the chooser is dismissed.
 
+## Shell
+
+Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.

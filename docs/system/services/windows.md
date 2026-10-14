@@ -167,6 +167,10 @@ Then `focus_next()`: the topmost non-minimized window gets the highest order, so
 
 ADR-014's 2026-10-12 revision records the code: remembered frames instead of plain cascading, 28px from the app's frontmost window, the closed stack in SessionService. Single-instance and taskbar grouping are parked. Its session-persistence section is superseded by ADR-023.
 
+## Shell
+
+Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`). Both implementations call the same `windows_shell(this)`; the shape decides. See [shell](shell.md#contributions).
+
 ## Known gaps
 
 - Resizing keeps only a titlebar strip on screen, not the whole window; "Gather windows" is the full fix, on demand.

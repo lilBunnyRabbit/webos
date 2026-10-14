@@ -16,6 +16,7 @@ import { DialogsService } from "../services/dialogs/service.svelte";
 import { UiService } from "../services/ui/service.svelte";
 import { ShortcutsService } from "../services/shortcuts/service.svelte";
 import { RouterService } from "../services/router/service.svelte";
+import { ShellService } from "../services/shell/service.svelte";
 
 export function register_default_services(kernel: Kernel) {
   // Phones and tablets get their own windows and desktop; every other service is shared (ADR-016).
@@ -71,9 +72,14 @@ export function register_default_services(kernel: Kernel) {
     dependencies: ["windows", "dialogs"],
   });
 
+  kernel.register("shell", {
+    instance: ShellService,
+    dependencies: ["files", "dialogs", "notifications"],
+  });
+
   kernel.register("shortcuts", {
     instance: ShortcutsService,
-    dependencies: ["windows", "apps", "dialogs", "ui", "session"],
+    dependencies: ["windows", "dialogs", "shell"],
   });
 
   kernel.register("router", {

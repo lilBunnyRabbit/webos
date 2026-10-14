@@ -12,6 +12,7 @@ import type {
 } from "./type";
 import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
 import { WindowFlag } from "./type";
+import { windows_shell } from "./shell";
 
 /** Flags that mean nothing on mobile: every window is fullscreen, and background windows are simply not focused. */
 const IGNORED_FLAGS: WindowFlag[] = [WindowFlag.MINIMIZED, WindowFlag.MAXIMIZED];
@@ -20,6 +21,7 @@ export class MobileWindowsService implements IMobileWindowsService {
   name = "MobileWindowsService";
   description = "Fullscreen apps, one on screen at a time, the rest running in the background";
   inspector = () => import("./mobile-inspector.svelte");
+  shell = () => windows_shell(this);
 
   to_string(): string {
     return Object.entries(this.index)
@@ -94,7 +96,6 @@ export class MobileWindowsService implements IMobileWindowsService {
   destroy(): void {
     window.removeEventListener("beforeunload", this.on_before_unload);
   }
-
 
   public set_container(element?: HTMLElement | null): void {
     this.container = { element: element ?? null };
