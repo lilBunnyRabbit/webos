@@ -95,13 +95,13 @@ describe("RouterService", () => {
     expect(open_apps(kernel)).toEqual([]);
   });
 
-  test("links only for apps that don't open a path", async () => {
+  test("links every window, leaving out the file it has open", async () => {
     const kernel = await boot();
     const apps = kernel.service<AppsService>("apps");
 
     const example = apps.launch("example", { count: 2 });
     const viewer = apps.launch("text-editor", { path: "/home/a.txt" });
     expect(router(kernel).link_for(example)).toBe(`${location.origin}${location.pathname}#/app/example?count=2`);
-    expect(router(kernel).link_for(viewer)).toBeNull();
+    expect(router(kernel).link_for(viewer)).toBe(`${location.origin}${location.pathname}#/app/text-editor`);
   });
 });

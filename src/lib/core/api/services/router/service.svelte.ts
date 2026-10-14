@@ -1,7 +1,7 @@
 import { untrack } from "svelte";
 import type { AppsService, ClipboardService, Kernel, NotificationsService, SessionService, WindowId, WindowsService } from "$lib/core/api";
 import { SessionStatus } from "../session/type";
-import { is_shareable, parse_hash, serialize_route, type Route } from "./route";
+import { parse_hash, serialize_route, shareable_props, type Route } from "./route";
 import { LinkOutcome, type RouterService as IRouterService } from "./type";
 import { router_shell } from "./shell";
 
@@ -50,9 +50,9 @@ export class RouterService implements IRouterService {
 
   public link_for(id: WindowId): string | null {
     const instance = this.windows_service.get(id);
-    if (!instance || !is_shareable(instance.app.manifest)) return null;
+    if (!instance) return null;
 
-    const hash = serialize_route({ kind: "app", id: instance.app.id, props: instance.app.props });
+    const hash = serialize_route({ kind: "app", id: instance.app.id, props: shareable_props(instance.app.props).props });
     return `${location.origin}${location.pathname}${hash}`;
   }
 
@@ -62,7 +62,8 @@ export class RouterService implements IRouterService {
 
     try {
       await this.clipboard_service.copy_text(link);
-      this.notifications_service.notify("router", { type: "info", title: "Link copied", message: link });
+      const dropped = shareable_props(this.windows_service.get(id)?.app.props).dropped;
+      this.notifications_service.notify("router", { type: "info", title: dropped ? "Link copied · the open file isn't included" : "Link copied", message: link });
     } catch (error) {
       console.error("[RouterService] Copy failed:", error);
       this.notifications_service.notify("router", { type: "error", title: "Couldn't copy the link" });

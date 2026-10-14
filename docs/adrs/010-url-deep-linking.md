@@ -25,6 +25,10 @@ For a portfolio project, shareable links are a killer feature — interviewers a
 - **ADR-003** (App Context) — URL-opened apps receive props
 - **ADR-008** (App Props Validation) — URL-sourced props are validated via zod
 
+### Revision 2026-10-15
+
+Copy link no longer skips apps that take a `path`. Every window gets the button; the link carries the launch props minus device paths (`shareable_props` in `router/route.ts`), and the toast says when the open file was left out. Owner's call: PDF Tools on a section, or an empty Text Editor, is worth sharing.
+
 ## Decision
 
 ### Hash-Based Routing

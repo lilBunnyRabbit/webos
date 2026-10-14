@@ -40,9 +40,20 @@ export function serialize_route(route: Route): string {
   return `${APP_PREFIX}${encodeURIComponent(route.id)}${query}`;
 }
 
-/** A path prop names a file in the sender's OPFS, which the receiving machine doesn't have. */
-export function is_shareable(manifest: Pick<AppManifest, "props">): boolean {
-  return !(manifest.props instanceof z.ZodObject && "path" in manifest.props.shape);
+const DEVICE_PROPS = new Set(["path", "paths", "left", "right"]);
+
+const is_device_path = (value: unknown): boolean =>
+  (typeof value === "string" && value.startsWith("/")) || (Array.isArray(value) && value.length > 0 && value.every(is_device_path));
+
+/**
+ * The props a link can carry. Paths name files in the sender's OPFS, which the receiving machine doesn't have, so they
+ * are left out (owner, 2026-10-15: every window gets Copy link; a file window links to its app without the file).
+ */
+export function shareable_props(props: AppProps | undefined): { props: AppProps | undefined; dropped: boolean } {
+  if (!props) return { props, dropped: false };
+  const kept = Object.fromEntries(Object.entries(props).filter(([key, value]) => !DEVICE_PROPS.has(key) && !is_device_path(value)));
+  const dropped = Object.keys(kept).length !== Object.keys(props).length;
+  return { props: Object.keys(kept).length ? kept : undefined, dropped };
 }
 
 // Strings stay raw so `?section=about` reads naturally; the cost is that a string like "3" comes back as a number.

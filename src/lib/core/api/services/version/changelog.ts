@@ -18,6 +18,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "File Explorer can Compress a selection into a zip and Extract here." },
       { kind: NEW, text: "Soundboard pads restart when pressed again; switch to Overlap to stack them like before." },
       { kind: NEW, text: "Activity Monitor shows your desktop widgets and how busy each one is." },
+      { kind: IMPROVED, text: "Every window can copy a link to itself now, including apps that open files; the link opens the app without the file, which stays on your device." },
       { kind: IMPROVED, text: "App search matches every word you type, forgives a typo, and knows many more words for each app, so puzzle finds Word Search." },
       { kind: IMPROVED, text: "Live clocks across apps and widgets tick together, on the second." },
       { kind: IMPROVED, text: "PDF Tools and the fonts now work fully offline once WebOS has loaded." },

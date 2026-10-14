@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { is_shareable, parse_hash, serialize_route } from "./route";
+import { parse_hash, serialize_route, shareable_props } from "./route";
 
 describe("parse_hash", () => {
   test("app without props", () => {
@@ -38,10 +38,12 @@ describe("serialize_route", () => {
   });
 });
 
-describe("is_shareable", () => {
-  test("apps whose props are an OPFS path aren't", () => {
-    expect(is_shareable({ props: z.object({ path: z.string() }) })).toBe(false);
-    expect(is_shareable({ props: z.object({ section: z.string() }) })).toBe(true);
-    expect(is_shareable({ props: undefined })).toBe(true);
+describe("shareable_props", () => {
+  test("leaves out device paths and keeps the rest", () => {
+    expect(shareable_props({ path: "/home/a.pdf", section: "sign" })).toEqual({ props: { section: "sign" }, dropped: true });
+    expect(shareable_props({ paths: ["/home/a", "/home/b"], left: "/x", right: "/y" })).toEqual({ props: undefined, dropped: true });
+    expect(shareable_props({ cover: "/home/c.png" })).toEqual({ props: undefined, dropped: true });
+    expect(shareable_props({ section: "about", count: 3 })).toEqual({ props: { section: "about", count: 3 }, dropped: false });
+    expect(shareable_props(undefined)).toEqual({ props: undefined, dropped: false });
   });
 });

@@ -14,7 +14,7 @@ Deep links. A URL like `/webos/#/app/settings?section=about` opens that app with
 |----------|------|
 | `parse_hash(hash)` | `Route \| null`. `null` for anything that isn't `#/app/{id}` (empty, other prefixes, a `/` in the id, bad percent-encoding). Each query value is `JSON.parse`d and falls back to the raw string, so `count=3` is `3` and `section=about` is `"about"`. A string that looks like JSON (`"3"`, `"true"`) can't be expressed. No query means `props: undefined` |
 | `serialize_route(route)` | The inverse: strings raw, everything else `JSON.stringify`, `URLSearchParams` encoding, no `?` without props |
-| `is_shareable(manifest)` | `false` when the props schema is a `z.object` with a `path` key (`FILE_PROPS` and anything like it) |
+| `shareable_props(props)` | `{ props, dropped }`: the launch props without device paths (`path`, `paths`, `left`, `right`, or any string or string array starting with `/`). Owner, 2026-10-15: every window gets Copy link; a file window links to its app without the file |
 
 Props aren't validated here; the app's schema decides in the service.
 
@@ -23,8 +23,8 @@ Props aren't validated here; the app's schema decides in the service.
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `last_link` | `readonly { hash, outcome } \| null` | The last `#/…` hash handled in this tab. `outcome`: `opened`, `not a link`, `unknown app`, `invalid props` |
-| `link_for` | `(id: WindowId) => string \| null` | `origin + pathname + #/app/{id}?{props}` from the window's **launch props** (not its current state: Settings opened on About and moved to Appearance still links About). `null` for an unknown window or an app that isn't shareable. Drops `location.search`, so `?platform=` isn't shared |
-| `copy_link` | `(id: WindowId) => Promise<void>` | `clipboard.copy_text(link)` then an `info` toast "Link copied" with the URL. A failed write toasts an error. No-op when `link_for` is `null` |
+| `link_for` | `(id: WindowId) => string \| null` | `origin + pathname + #/app/{id}?{props}` from the window's **launch props** (not its current state: Settings opened on About and moved to Appearance still links About). Props go through `shareable_props`, so a file window links to its app without the file (PDF Tools on Sign: `#/app/pdf-tools?section=sign`). `null` only for an unknown window. Drops `location.search`, so `?platform=` isn't shared |
+| `copy_link` | `(id: WindowId) => Promise<void>` | `clipboard.copy_text(link)` then an `info` toast "Link copied" with the URL, titled "Link copied · the open file isn't included" when props were left out. A failed write toasts an error. No-op when `link_for` is `null` |
 
 ## Handling a link
 
