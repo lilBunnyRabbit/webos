@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.35.2",
+    date: "2026-10-14",
+    title: "Time Since counts again",
+    changes: [
+      { kind: FIXED, text: "A new or reset Time Since counter now counts up every second right away, instead of sitting still for up to a minute." },
+    ],
+  },
+  {
     version: "0.35.1",
     date: "2026-10-14",
     title: "A smaller Game Hub widget",
