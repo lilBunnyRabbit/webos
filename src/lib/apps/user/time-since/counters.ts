@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pad2 } from "$lib/core/utils";
 
 export const APP_ID = "time-since";
 export const COUNTERS_FILE = "counters.json";
@@ -207,8 +208,7 @@ export function heatmap_of(runs: Run[]): number[][] {
 
 export function to_datetime_local(timestamp: number): string {
   const d = new Date(timestamp);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 export function from_datetime_local(value: string): number {

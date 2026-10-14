@@ -1,6 +1,8 @@
 import kernel, { NotificationType, type AppId, type FilesService, type NotificationsService } from "$lib/core/api";
 import type { WindowHandle } from "$lib/core/contexts/app";
 import { DEFAULT_QUALITY, format_for_name, needs_backdrop, type ImageFormat } from "./image-format";
+import { base_name, parent_path } from "$lib/core/api/services/files/path";
+import { error_message } from "./utils";
 
 export * from "./image-format";
 
@@ -74,20 +76,6 @@ export function canvas_to_blob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-export function parent_folder(path: string): string {
-  const index = path.lastIndexOf("/");
-  return index <= 0 ? "/" : path.slice(0, index);
-}
-
-export function file_stem(name: string): string {
-  const dot = name.lastIndexOf(".");
-  return dot > 0 ? name.slice(0, dot) : name;
-}
-
-export function error_message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export interface WriteImageOptions {
   /** Defaults to the path's extension, then PNG. */
   format?: ImageFormat;
@@ -121,11 +109,12 @@ export async function write_image(
   { format, quality }: WriteImageOptions = {}
 ): Promise<void> {
   const files = kernel.service<FilesService>("files");
-  const folder = parent_folder(path);
+  const folder = parent_path(path);
   const directory = await files.get_directory(folder);
   if (!directory) throw new Error(`Folder not found: ${folder}`);
-  const name = path.slice(path.lastIndexOf("/") + 1);
-  const content = source instanceof Blob ? source : await encode_image(source, format ?? format_for_name(name), quality);
+  const name = base_name(path);
+  const content =
+    source instanceof Blob ? source : await encode_image(source, format ?? format_for_name(name), quality);
   await files.create_file(directory, name, { content, overwrite: true });
 }
 
@@ -151,7 +140,7 @@ export async function save_image({
   if (!path) return;
 
   const notifications = kernel.service<NotificationsService>("notifications");
-  const file_name = path.slice(path.lastIndexOf("/") + 1);
+  const file_name = base_name(path);
 
   try {
     await write_image(path, canvas, { format: format_for_name(file_name, format) });

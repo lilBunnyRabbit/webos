@@ -13,7 +13,6 @@
     calendar_weeks,
     clock_time,
     date_of,
-    day_key,
     day_minutes,
     DayKeySchema,
     entry_minutes,
@@ -44,6 +43,7 @@
   import { month_label, month_report_html } from "./report";
   import { clock_in, clock_out, edit_month, open_month, open_state, set_running_description } from "./store";
   import { TextDraft } from "./draft.svelte";
+  import { day_key } from "$lib/core/utils/date";
 
   const { month: initial_month, day: initial_day }: { month?: string; day?: string } = $props();
 

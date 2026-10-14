@@ -20,10 +20,11 @@
   import DropZone from "./drop-zone.svelte";
   import { PageSize } from "./geometry";
   import { run_job } from "./job";
-  import { images_pdf_name, parent_path } from "./naming";
+  import { images_pdf_name } from "./naming";
   import { images_to_pdf, type PdfImage } from "./pdf";
   import { IMAGE_ACCEPT, device_source, is_image, prepare_image, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
   const { app_id, window: win, storage } = get_app_context();

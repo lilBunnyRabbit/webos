@@ -1,3 +1,4 @@
+import { error_message } from "$lib/core/utils";
 import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
 
 export function report_file_error(title: string, error: unknown): void {
@@ -6,6 +7,6 @@ export function report_file_error(title: string, error: unknown): void {
   kernel.service<NotificationsService>("notifications").notify("file-explorer", {
     type: NotificationType.ERROR,
     title,
-    message: error instanceof Error ? error.message : String(error),
+    message: error_message(error),
   });
 }

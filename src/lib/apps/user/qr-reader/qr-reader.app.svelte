@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Section, Toolbar, button } from "$lib/core/components/ui";
-  import { cn, format_datetime } from "$lib/core/utils";
+  import { cn, format_datetime, error_message } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
     Camera as CameraIcon,
@@ -29,7 +29,7 @@
   let detector_error = $state<string | null>(null);
   detector_ready.then(
     (result) => (detector = result),
-    (reason) => (detector_error = reason instanceof Error ? reason.message : String(reason))
+    (reason) => (detector_error = error_message(reason))
   );
   const entries = storage.persisted<QrEntry[]>("entries", [], QrEntries);
 
@@ -45,7 +45,7 @@
 
   function report(title: string, reason?: unknown, type: NotificationType = NotificationType.ERROR) {
     if (reason instanceof Error) console.error(`[QrReader] ${title}`, reason);
-    const message = reason === undefined ? undefined : reason instanceof Error ? reason.message : String(reason);
+    const message = reason === undefined ? undefined : error_message(reason);
     notifications.notify(app_id, { type, title, message });
   }
 

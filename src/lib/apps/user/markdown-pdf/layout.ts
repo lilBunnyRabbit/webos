@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
 import { PageSize, Template, type MarkdownPdfProps } from "./props";
-import { escape_html } from "./render";
+import { escape_html } from "$lib/core/utils";
 
 export { PageSize, Template };
 
@@ -64,7 +64,9 @@ export function with_launch_settings(settings: PdfSettings, props: Omit<Markdown
     ...settings,
     ...(props.template ? { template: props.template } : {}),
     ...(props.size ? { page_size: props.size } : {}),
-    ...(props.landscape === undefined ? {} : { orientation: props.landscape ? Orientation.LANDSCAPE : Orientation.PORTRAIT }),
+    ...(props.landscape === undefined
+      ? {}
+      : { orientation: props.landscape ? Orientation.LANDSCAPE : Orientation.PORTRAIT }),
     ...(props.toc === undefined ? {} : { toc: props.toc }),
   };
 }
@@ -72,7 +74,12 @@ export function with_launch_settings(settings: PdfSettings, props: Omit<Markdown
 export const TEMPLATE_LABELS: Record<Template, string> = { clean: "Clean", report: "Report", notes: "Notes" };
 export const PAGE_SIZE_LABELS: Record<PageSize, string> = { a4: "A4", letter: "Letter" };
 export const MARGIN_LABELS: Record<Margins, string> = { narrow: "Narrow", normal: "Normal", wide: "Wide" };
-export const FONT_LABELS: Record<Font, string> = { inter: "Inter", serif: "Serif", system: "System", mono: "Hack (mono)" };
+export const FONT_LABELS: Record<Font, string> = {
+  inter: "Inter",
+  serif: "Serif",
+  system: "System",
+  mono: "Hack (mono)",
+};
 
 const PAGE_MM: Record<PageSize, { width: number; height: number }> = {
   a4: { width: 210, height: 297 },
@@ -109,7 +116,10 @@ export function count_pages(flow_height: number, box: PageBox): number {
 }
 
 export function css_string(text: string): string {
-  return `"${text.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replace(/[\r\n]+/g, " ")}"`;
+  return `"${text
+    .replaceAll("\\", "\\\\")
+    .replaceAll('"', '\\"')
+    .replace(/[\r\n]+/g, " ")}"`;
 }
 
 export interface DocumentMeta {

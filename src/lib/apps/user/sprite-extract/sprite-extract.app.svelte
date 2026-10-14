@@ -16,7 +16,7 @@
     StatusBar,
     Toolbar,
   } from "$lib/core/components/ui";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowsDownUp as ArrowsDownUpIcon,
@@ -38,7 +38,7 @@
     Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { file_stem, has_files, image_files, load_image, parent_folder } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image } from "$lib/core/utils/image";
   import { ANCHORS, frame_file_name, frames_metadata, render_frames, render_sheet, type ExportOptions } from "./sprite-export";
   import { SpriteExtractState } from "./sprite-extract.svelte";
   import { count_overrides, DEFAULT_SETTINGS, format_sequence, GridMode, parse_sequence, SETTINGS_SCHEMA } from "./sprite-model";
@@ -46,6 +46,7 @@
   import SpriteNumberField from "./sprite-number-field.svelte";
   import SpritePreview from "./sprite-preview.svelte";
   import SpriteSheet from "./sprite-sheet.svelte";
+  import { base_name, parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   const ZOOM_STEP = 1.25;
 
@@ -82,11 +83,11 @@
   const has_line_overrides = $derived(Object.keys(sprite.overrides.columns).length + Object.keys(sprite.overrides.rows).length > 0);
   const sequence_text = $derived(sequence_draft ?? format_sequence(sprite.sequence));
   const sequence_valid = $derived(sequence_draft === null || parse_sequence(sequence_draft, grid.frames.length) !== null);
-  const start_path = $derived(source?.path ? parent_folder(source.path) : undefined);
+  const start_path = $derived(source?.path ? parent_path(source.path) : undefined);
 
   function report(title: string, error: unknown, type: NotificationType = NotificationType.ERROR) {
     if (type === NotificationType.ERROR) console.error(`[SpriteExtract] ${title}`, error);
-    notifications.notify(app_id, { type, title, message: error instanceof Error ? error.message : String(error) });
+    notifications.notify(app_id, { type, title, message: error_message(error) });
   }
 
   function show_folder_action(folder_path: string) {
@@ -105,7 +106,7 @@
     } catch (error) {
       if (id !== load_id) return;
       if (source) report("Couldn't open the image", error);
-      else load_error = { title: "Couldn't open the image", description: error instanceof Error ? error.message : String(error) };
+      else load_error = { title: "Couldn't open the image", description: error_message(error) };
     } finally {
       if (id === load_id) loading = false;
     }
@@ -119,7 +120,7 @@
       else load_error = { title: "File not found", description: file_path };
     } catch (error) {
       if (source) report("Couldn't read the file", error);
-      else load_error = { title: "Couldn't read the file", description: error instanceof Error ? error.message : String(error) };
+      else load_error = { title: "Couldn't read the file", description: error_message(error) };
     }
   }
 
@@ -197,8 +198,8 @@
 
     exporting = { done: 0, total: 1 };
     try {
-      const folder = parent_folder(chosen);
-      const file_name = chosen.slice(chosen.lastIndexOf("/") + 1);
+      const folder = parent_path(chosen);
+      const file_name = base_name(chosen);
       const directory = await files.get_directory(folder);
       if (!directory) throw new Error(`${folder} no longer exists`);
       const { png, json } = await render_sheet(bitmap, frames, sequence, options);

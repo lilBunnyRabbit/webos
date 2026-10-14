@@ -174,7 +174,7 @@ describe("report", () => {
     expect(html).toContain("16:00");
     expect(html).toContain("Planning; Review");
     expect(html).toContain("Release day");
-    expect(html).toContain("&#60;b&#62;offsite&#60;/b&#62;");
+    expect(html).toContain("&lt;b&gt;offsite&lt;/b&gt;");
     expect(html).not.toContain("<b>offsite");
     expect(html).toContain("(10%)");
   });

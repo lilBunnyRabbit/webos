@@ -2,12 +2,11 @@
   import kernel, { NotificationType, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     FORMAT_OPTIONS,
     ImageFormat,
-    error_message,
     extension_for,
     format_of,
     has_files,
@@ -16,7 +15,6 @@
     load_image,
     load_image_at,
     paint,
-    parent_folder,
     type SourceImage,
     write_image,
   } from "$lib/core/utils/image";
@@ -61,8 +59,10 @@
     type Rect,
     type Size,
   } from "./edit";
-  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
+  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
   import { render_final, render_operations } from "./render";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { error_message } from "$lib/core/utils";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -290,19 +290,14 @@
   }
 
   async function discard_ok(): Promise<boolean> {
-    if (!dirty) return true;
-    return win.confirm(`Discard changes to “${file_name}”?`, {
-      detail: "Your unsaved changes will be lost.",
-      confirm_label: "Discard",
-      danger: true,
-    });
+    return !dirty || confirm_discard(win, file_name);
   }
 
   async function open() {
     if (!(await discard_ok())) return;
     const chosen = await win.pick_file({
       accept: ["image/*"],
-      start_path: file_path ? parent_folder(file_path) : undefined,
+      start_path: file_path ? parent_path(file_path) : undefined,
       title: "Open in Image Editor",
     });
     if (chosen) await open_image(() => load_image_at(chosen));
@@ -328,7 +323,7 @@
     try {
       await write_image(path, render_final(source.bitmap, state.operations, state.adjustments), { format, quality: quality.value / 100 });
       file_path = path;
-      file_name = path.slice(path.lastIndexOf("/") + 1);
+      file_name = base_name(path);
       saved = state;
       notifications.notify(app_id, { title: "Image saved", message: path });
       return true;
@@ -342,7 +337,7 @@
     const picked = await win.pick_save({
       name: name_for_format(file_name, format, extension_for(format)),
       accept: ["image/*"],
-      start_path: file_path && !read_only ? parent_folder(file_path) : "/home",
+      start_path: file_path && !read_only ? parent_path(file_path) : "/home",
     });
     if (!picked) return false;
     const named = format_of(picked);

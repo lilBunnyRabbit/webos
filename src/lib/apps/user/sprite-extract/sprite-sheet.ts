@@ -1,4 +1,5 @@
 import type { LineAxis, LineEdge, PaddingSide, Rect, SpriteGrid, SpriteOverrides } from "./sprite-model";
+import { resolve_token } from "$lib/core/utils";
 
 export const HIT_TOLERANCE = 6;
 export const HANDLE_SIZE = 7;
@@ -82,7 +83,13 @@ export function grid_lines(grid: SpriteGrid): LineRef[] {
   const last_row = grid.rows.length - 1;
   grid.columns.forEach((c, i) => {
     lines.push({ axis: "column", index: i, edge: "start", position: c.start, outer: i === 0 ? "left" : undefined });
-    lines.push({ axis: "column", index: i, edge: "end", position: c.end, outer: i === last_column ? "right" : undefined });
+    lines.push({
+      axis: "column",
+      index: i,
+      edge: "end",
+      position: c.end,
+      outer: i === last_column ? "right" : undefined,
+    });
   });
   grid.rows.forEach((r, i) => {
     lines.push({ axis: "row", index: i, edge: "start", position: r.start, outer: i === 0 ? "top" : undefined });
@@ -209,12 +216,8 @@ export interface Palette {
   check_b: string;
 }
 
-/** Resolved through `probe`'s computed colour, since a token may itself be written with `var()` or relative colour syntax. */
 export function read_palette(probe: HTMLElement): Palette {
-  const token = (name: string) => {
-    probe.style.color = `var(--${name})`;
-    return getComputedStyle(probe).color;
-  };
+  const token = (name: string) => resolve_token(probe, `var(--${name})`);
   const palette = {
     line: token("primary"),
     line_override: token("secondary"),
@@ -226,7 +229,6 @@ export function read_palette(probe: HTMLElement): Palette {
     check_a: token("background-dark"),
     check_b: token("background-light"),
   };
-  probe.style.color = "";
   return palette;
 }
 
@@ -267,7 +269,21 @@ function with_alpha(ctx: CanvasRenderingContext2D, alpha: number, draw: () => vo
 
 /** The whole sheet view: image, padding and gaps, excluded frames, labels, grid lines and the selection. */
 export function draw_sheet(ctx: CanvasRenderingContext2D, cw: number, ch: number, dpr: number, scene: Scene): void {
-  const { image, width, height, grid, lines, overrides, selected, sequence, show_labels, view, hover, palette, handle_size } = scene;
+  const {
+    image,
+    width,
+    height,
+    grid,
+    lines,
+    overrides,
+    selected,
+    sequence,
+    show_labels,
+    view,
+    hover,
+    palette,
+    handle_size,
+  } = scene;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cw, ch);
 

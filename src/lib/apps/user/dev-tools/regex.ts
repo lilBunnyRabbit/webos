@@ -1,3 +1,4 @@
+import { error_message } from "$lib/core/utils";
 export interface RegexGroup {
   name: string;
   value: string | undefined;
@@ -30,7 +31,7 @@ export function find_matches(pattern: string, flags: string, text: string): Rege
   try {
     regex = new RegExp(pattern, flags);
   } catch (reason) {
-    return { ok: false, error: reason instanceof Error ? reason.message : String(reason) };
+    return { ok: false, error: error_message(reason) };
   }
 
   if (!regex.global) {

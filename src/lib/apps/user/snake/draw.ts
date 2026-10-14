@@ -1,4 +1,5 @@
 import type { GameState } from "./game";
+import { resolve_token } from "$lib/core/utils";
 
 export interface Palette {
   board: string;
@@ -8,12 +9,8 @@ export interface Palette {
   food: string;
 }
 
-/** Resolved through `probe`'s computed colour, since a token may itself be written with `var()` or relative colour syntax. */
 export function read_palette(probe: HTMLElement): Palette {
-  const token = (value: string) => {
-    probe.style.color = value;
-    return getComputedStyle(probe).color;
-  };
+  const token = (value: string) => resolve_token(probe, value);
   const palette = {
     board: token("light-dark(var(--background-lightest), var(--background-darker))"),
     grid: token("color-mix(in oklch, var(--foreground) 5%, transparent)"),
@@ -21,11 +18,16 @@ export function read_palette(probe: HTMLElement): Palette {
     head: token("var(--primary)"),
     food: token("var(--accent)"),
   };
-  probe.style.color = "";
   return palette;
 }
 
-export function draw_board(ctx: CanvasRenderingContext2D, game: GameState, size: number, dpr: number, palette: Palette) {
+export function draw_board(
+  ctx: CanvasRenderingContext2D,
+  game: GameState,
+  size: number,
+  dpr: number,
+  palette: Palette
+) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, size, size);
 

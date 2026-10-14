@@ -1,6 +1,7 @@
 import { close_loaded, load_source, type LoadedPdf } from "./loaded";
 import { EncryptedPdfError } from "./pdf";
-import { error_message, is_pdf, source_at, type SourceFile } from "./pdf-files";
+import { is_pdf, source_at, type SourceFile } from "./pdf-files";
+import { error_message } from "$lib/core/utils";
 
 export interface SlotError {
   title: string;
@@ -32,7 +33,11 @@ export class PdfSlot {
     } catch (error) {
       if (token !== this.token) return false;
       const locked = error instanceof EncryptedPdfError;
-      this.error = { title: locked ? "This PDF is locked" : "Couldn't open the PDF", message: error_message(error), locked };
+      this.error = {
+        title: locked ? "This PDF is locked" : "Couldn't open the PDF",
+        message: error_message(error),
+        locked,
+      };
       return false;
     } finally {
       if (token === this.token) this.loading = false;

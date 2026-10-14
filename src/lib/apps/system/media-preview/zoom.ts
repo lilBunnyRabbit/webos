@@ -8,10 +8,6 @@ export interface Size {
   height: number;
 }
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }

@@ -3,8 +3,8 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { format_bytes } from "$lib/core/utils";
-  import { has_files, parent_folder } from "$lib/core/utils/image";
+  import { format_bytes, error_message } from "$lib/core/utils";
+  import { has_files } from "$lib/core/utils/image";
   import {
     ChartBar as ChartBarIcon,
     Circle as CircleIcon,
@@ -27,6 +27,7 @@
   import { AudioGraph } from "./audio-graph";
   import { format_time, VisualizerMode } from "./spectrum";
   import Visualizer from "./visualizer.svelte";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const ACCEPT = ["audio/*"];
   const MODE_OPTIONS = [
@@ -88,7 +89,7 @@
 
   function report(heading: string, reason: unknown) {
     console.error(`[MusicVisualizer] ${heading}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title: heading, message: reason instanceof Error ? reason.message : String(reason) });
+    notifications.notify(app_id, { type: NotificationType.ERROR, title: heading, message: error_message(reason) });
   }
 
   // Built on first play: an AudioContext made without a user gesture starts suspended.
@@ -148,7 +149,7 @@
       await tick();
       void play();
     } catch (reason) {
-      if (id === request) error = reason instanceof Error ? reason.message : String(reason);
+      if (id === request) error = error_message(reason);
     } finally {
       if (id === request) loading = false;
     }
@@ -166,7 +167,7 @@
   if (initial) void open_path(initial);
 
   async function pick() {
-    const chosen = await win.pick_file({ accept: ACCEPT, start_path: path ? parent_folder(path) : undefined, title: "Open in Music Visualizer" });
+    const chosen = await win.pick_file({ accept: ACCEPT, start_path: path ? parent_path(path) : undefined, title: "Open in Music Visualizer" });
     if (chosen) await open_path(chosen);
   }
 

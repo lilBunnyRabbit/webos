@@ -1,11 +1,6 @@
 import { pick_device_files } from "$lib/core/utils/device-file";
-import type {
-  FileSystemItem,
-  FileSystemFileItem,
-  ListOptions,
-  CreateFileOptions,
-  UploadOptions,
-} from "./type";
+import type { FileSystemItem, FileSystemFileItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
+import { file_stem } from "./path";
 
 export async function get_root(): Promise<FileSystemDirectoryHandle> {
   return await navigator.storage.getDirectory();
@@ -81,7 +76,8 @@ export async function get_file_at(root: FileSystemDirectoryHandle, segments: str
     }
     return await (await dir.getFileHandle(name)).getFile();
   } catch (error) {
-    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError")) return null;
+    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError"))
+      return null;
     if (error instanceof TypeError) return null;
     throw error;
   }
@@ -98,7 +94,8 @@ export async function get_directory_at(
     }
     return dir;
   } catch (error) {
-    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError")) return null;
+    if (error instanceof DOMException && (error.name === "NotFoundError" || error.name === "TypeMismatchError"))
+      return null;
     if (error instanceof TypeError) return null;
     throw error;
   }
@@ -128,10 +125,7 @@ export async function create_file(
   return file_handle;
 }
 
-export async function write_file(
-  handle: FileSystemFileHandle,
-  content: string | Blob | BufferSource
-): Promise<void> {
+export async function write_file(handle: FileSystemFileHandle, content: string | Blob | BufferSource): Promise<void> {
   const writable = await handle.createWritable();
   try {
     await writable.write(content);
@@ -281,8 +275,8 @@ export async function move_directory(
 export async function available_name(dir: FileSystemDirectoryHandle, name: string): Promise<string> {
   if (!(await exists(dir, name))) return name;
 
-  const dot = name.lastIndexOf(".");
-  const [stem, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
+  const stem = file_stem(name);
+  const ext = name.slice(stem.length);
 
   for (let n = 1; ; n++) {
     const candidate = `${stem} (${n})${ext}`;
@@ -314,7 +308,10 @@ type WellKnownDirectory = "desktop" | "documents" | "downloads" | "music" | "pic
 // File System Access pickers; TypeScript's DOM lib doesn't declare them yet.
 interface DiskPickers {
   showSaveFilePicker(options?: { suggestedName?: string; startIn?: WellKnownDirectory }): Promise<FileSystemFileHandle>;
-  showDirectoryPicker(options?: { mode?: "read" | "readwrite"; startIn?: WellKnownDirectory }): Promise<FileSystemDirectoryHandle>;
+  showDirectoryPicker(options?: {
+    mode?: "read" | "readwrite";
+    startIn?: WellKnownDirectory;
+  }): Promise<FileSystemDirectoryHandle>;
 }
 
 const disk = () => window as unknown as Window & DiskPickers;

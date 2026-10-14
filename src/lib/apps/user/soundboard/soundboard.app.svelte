@@ -48,6 +48,7 @@
   import PadTile from "./pad-tile.svelte";
   import { acquire_player } from "./player.svelte";
   import { delete_sound, import_sound } from "./store";
+  import { error_message } from "$lib/core/utils";
 
   const ACCEPT = ["audio/*"];
   const MODE_OPTIONS = [
@@ -89,7 +90,7 @@
 
   function report(title: string, reason: unknown) {
     console.error(`[Soundboard] ${title}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: reason instanceof Error ? reason.message : String(reason) });
+    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
   }
 
   async function play(pad: Pad) {

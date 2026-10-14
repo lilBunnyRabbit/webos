@@ -4,6 +4,7 @@
   import { Check as CheckIcon, Copy as CopyIcon } from "phosphor-svelte";
   import IconButton from "./icon-button.svelte";
   import type { ButtonVariants } from "./variants";
+  import { error_message } from "$lib/core/utils";
 
   // Needs an app window around it: a failed copy is reported as that app.
   let {
@@ -27,7 +28,7 @@
     try {
       await clipboard.copy_text(text);
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : String(reason);
+      const message = error_message(reason);
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy to the clipboard", message });
       return;
     }

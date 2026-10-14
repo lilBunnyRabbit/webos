@@ -1,7 +1,6 @@
-import { json_file, type JsonFile } from "$lib/core/contexts/app/json-file.svelte";
 import { ShellError } from "$lib/core/api/services/shell/type";
 import type { ZodType } from "zod";
-import { BOARDS_PATH, default_file, KanbanFileSchema, type KanbanFile } from "./data";
+import { json_file, type JsonFile } from "./json-file.svelte";
 
 // Held a while after use: the save runs in an effect, and a cell dropped at once could let the next command read the
 // file before that write lands.
@@ -46,5 +45,3 @@ export function live_file<T>(path: string, initial: T, schema: ZodType<T>): Live
       }),
   };
 }
-
-export const boards: LiveFile<KanbanFile> = live_file(BOARDS_PATH, default_file(), KanbanFileSchema);

@@ -1,31 +1,19 @@
 import { describe, expect, test } from "vitest";
 import {
-  base_name,
   describe_pages,
   images_pdf_name,
-  join_path,
   merged_name,
   page_image_name,
-  parent_path,
   part_name,
   signature_file_name,
   signed_name,
-  stem,
+  child_path,
 } from "./naming";
 
 describe("naming", () => {
-  test("paths", () => {
-    expect(base_name("/home/a/b.pdf")).toBe("b.pdf");
-    expect(parent_path("/home/a/b.pdf")).toBe("/home/a");
-    expect(parent_path("/b.pdf")).toBe("/");
-    expect(join_path("/", "x.pdf")).toBe("/x.pdf");
-    expect(join_path("/home", "x.pdf")).toBe("/home/x.pdf");
-  });
-
-  test("stem keeps inner dots and dotfiles", () => {
-    expect(stem("report.final.pdf")).toBe("report.final");
-    expect(stem(".hidden")).toBe(".hidden");
-    expect(stem("plain")).toBe("plain");
+  test("child_path joins a folder and a name", () => {
+    expect(child_path("/", "x.pdf")).toBe("/x.pdf");
+    expect(child_path("/home", "x.pdf")).toBe("/home/x.pdf");
   });
 
   test("output names", () => {

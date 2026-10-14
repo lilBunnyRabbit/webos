@@ -3,6 +3,7 @@
   import Viewfinder from "./viewfinder.svelte";
   import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
   import { Aperture as ApertureIcon, Camera as CameraIcon, CameraSlash as CameraSlashIcon, PlugsConnected as PlugsConnectedIcon } from "phosphor-svelte";
+  import { error_message } from "$lib/core/utils";
 
   /** `onscan` throws when the code is wrong; the scanner shows why and keeps looking. */
   let { onscan }: { onscan: (code: string) => Promise<void> } = $props();
@@ -31,7 +32,7 @@
       stream = null;
     } catch (reason) {
       rejected = code;
-      error = reason instanceof Error ? reason.message : String(reason);
+      error = error_message(reason);
     } finally {
       busy = false;
     }
@@ -57,7 +58,7 @@
       if (destroyed) media.getTracks().forEach((track) => track.stop());
       else stream = media;
     } catch (reason) {
-      error = `Couldn't start the camera: ${reason instanceof Error ? reason.message : String(reason)}`;
+      error = `Couldn't start the camera: ${error_message(reason)}`;
     } finally {
       starting = false;
     }
@@ -80,7 +81,7 @@
         await submit(content);
       }
     } catch (reason) {
-      error = `Couldn't read the photo: ${reason instanceof Error ? reason.message : String(reason)}`;
+      error = `Couldn't read the photo: ${error_message(reason)}`;
     } finally {
       bitmap?.close();
     }

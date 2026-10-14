@@ -1,3 +1,4 @@
+import { clamp } from "$lib/core/utils";
 export const VisualizerMode = {
   BARS: "bars",
   WAVE: "wave",
@@ -17,10 +18,6 @@ export interface BandOptions {
   sample_rate: number;
   min_hz?: number;
   max_hz?: number;
-}
-
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 // Low octaves span fewer bins than bands, so each band is pushed at least one bin past the previous one.

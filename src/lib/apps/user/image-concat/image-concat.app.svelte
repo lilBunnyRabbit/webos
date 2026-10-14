@@ -19,17 +19,17 @@
   import {
     FORMAT_OPTIONS,
     ImageFormat,
-    error_message,
     extension_for,
     has_files,
     image_files,
     load_image,
     load_image_at,
     paint,
-    parent_folder,
     save_image,
     type SourceImage,
   } from "$lib/core/utils/image";
+  import { parent_path } from "$lib/core/api/services/files/path";
+  import { error_message } from "$lib/core/utils";
 
   const MIN_ZOOM = 10;
   const MAX_ZOOM = 100;
@@ -97,7 +97,7 @@
 
   const start_path = $derived.by(() => {
     const path = images.find((image) => image.path)?.path;
-    return path ? parent_folder(path) : undefined;
+    return path ? parent_path(path) : undefined;
   });
 
   async function pick() {

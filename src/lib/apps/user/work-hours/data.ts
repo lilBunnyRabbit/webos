@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { pad2 } from "$lib/core/utils";
+import { day_key } from "$lib/core/utils/date";
 
 /**
  * Work Hours' file format. A contract: Calendar reads these files, so change it only with a new `version` and a
@@ -99,14 +101,8 @@ export function serialize(file: MonthFile | StateFile): string {
   return JSON.stringify(file, null, 2) + "\n";
 }
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
-export function day_key(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 export function month_key(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 }
 
 export function month_of(day: string): string {
@@ -129,7 +125,7 @@ export function days_in_month(month: string): number {
 }
 
 export function month_days(month: string): string[] {
-  return Array.from({ length: days_in_month(month) }, (_, i) => `${month}-${pad(i + 1)}`);
+  return Array.from({ length: days_in_month(month) }, (_, i) => `${month}-${pad2(i + 1)}`);
 }
 
 export function is_weekend(day: string): boolean {
@@ -141,7 +137,12 @@ export function iso_week(day: string): number {
   const date = date_of(day);
   const thursday = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 3 - ((date.getDay() + 6) % 7));
   const first_thursday = new Date(thursday.getFullYear(), 0, 4);
-  return 1 + Math.round(((thursday.getTime() - first_thursday.getTime()) / 86_400_000 - 3 + ((first_thursday.getDay() + 6) % 7)) / 7);
+  return (
+    1 +
+    Math.round(
+      ((thursday.getTime() - first_thursday.getTime()) / 86_400_000 - 3 + ((first_thursday.getDay() + 6) % 7)) / 7
+    )
+  );
 }
 
 export interface CalendarWeek {
@@ -168,7 +169,7 @@ export function minutes_of(time: string): number {
 }
 
 export function time_of(minutes: number): string {
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  return `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
 }
 
 /** Whole minutes, like a clock shows them, so "Clocked in at" matches the taskbar. */
@@ -207,12 +208,14 @@ export function day_span(day: Day | undefined): { start: string; end: string } |
 }
 
 export function sorted_entries(day: Day | undefined): Entry[] {
-  return [...(day?.entries ?? [])].sort((a, b) => minutes_of(a.start) - minutes_of(b.start) || minutes_of(a.end) - minutes_of(b.end));
+  return [...(day?.entries ?? [])].sort(
+    (a, b) => minutes_of(a.start) - minutes_of(b.start) || minutes_of(a.end) - minutes_of(b.end)
+  );
 }
 
 export function format_hours(minutes: number): string {
   const safe = Math.max(0, Math.floor(minutes));
-  return `${Math.floor(safe / 60)}:${pad(safe % 60)}`;
+  return `${Math.floor(safe / 60)}:${pad2(safe % 60)}`;
 }
 
 export function running_minutes(running: Running | null, now: Date): number {
@@ -233,7 +236,11 @@ export function split_session(start: Date, end: Date): Segment[] {
   while (cursor < end) {
     const midnight = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
     const until = end < midnight ? end : midnight;
-    const segment = { day: day_key(cursor), start: clock_time(cursor), end: until === midnight ? "24:00" : clock_time(until) };
+    const segment = {
+      day: day_key(cursor),
+      start: clock_time(cursor),
+      end: until === midnight ? "24:00" : clock_time(until),
+    };
     if (minutes_of(segment.end) > minutes_of(segment.start)) segments.push(segment);
     cursor = until;
   }
@@ -265,7 +272,10 @@ export function add_entry(file: MonthFile, day: string, entry: Entry): MonthFile
 export function update_entry(file: MonthFile, day: string, entry: Entry): MonthFile {
   assert_in_month(file, day);
   const current = file.days[day] ?? EMPTY_DAY;
-  return with_day(file, day, { ...current, entries: current.entries.map((item) => (item.id === entry.id ? entry : item)) });
+  return with_day(file, day, {
+    ...current,
+    entries: current.entries.map((item) => (item.id === entry.id ? entry : item)),
+  });
 }
 
 export function remove_entry(file: MonthFile, day: string, id: string): MonthFile {

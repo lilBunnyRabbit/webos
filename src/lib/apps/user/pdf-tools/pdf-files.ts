@@ -1,9 +1,10 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { has_drag_paths, has_os_files, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
 import { load_image } from "$lib/core/utils/image";
-import { base_name, join_path, parent_path } from "./naming";
 import type { PdfImage } from "./pdf";
 import { parse_signature_svg, signature_svg, type Signature } from "./stroke";
+import { child_path } from "./naming";
+import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
 export const SIGNATURES_DIR = "/home/Signatures";
 export const PDF_ACCEPT = [".pdf", "application/pdf"];
@@ -17,10 +18,6 @@ export interface SourceFile {
 
 function files(): FilesService {
   return kernel.service<FilesService>("files");
-}
-
-export function error_message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export async function source_at(path: string): Promise<SourceFile> {
@@ -41,14 +38,19 @@ export async function write_at(path: string, data: Uint8Array | Blob | string): 
   const folder = parent_path(path);
   const directory = await files().get_directory(folder);
   if (!directory) throw new Error(`The folder ${folder} no longer exists.`);
-  await files().create_file(directory, base_name(path), { content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data, overwrite: true });
+  await files().create_file(directory, base_name(path), {
+    content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data,
+    overwrite: true,
+  });
 }
 
 export async function write_into(folder: string, name: string, data: Uint8Array | Blob | string): Promise<string> {
   const directory = await files().get_directory(folder);
   if (!directory) throw new Error(`The folder ${folder} no longer exists.`);
-  const handle = await files().create_file(directory, name, { content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data });
-  return join_path(folder, handle.name);
+  const handle = await files().create_file(directory, name, {
+    content: data instanceof Uint8Array ? new Blob([data as BlobPart]) : data,
+  });
+  return child_path(folder, handle.name);
 }
 
 export function accepts_drop(event: DragEvent): boolean {
@@ -59,7 +61,9 @@ export function accepts_drop(event: DragEvent): boolean {
 export function read_drop(event: DragEvent): Promise<SourceFile[]> {
   if (has_drag_paths(event)) {
     const paths = read_drag_paths(event);
-    return Promise.all(paths.map((path) => source_at(path).catch(() => null))).then((list) => list.filter((item) => item !== null));
+    return Promise.all(paths.map((path) => source_at(path).catch(() => null))).then((list) =>
+      list.filter((item) => item !== null)
+    );
   }
   return read_os_entries(event).then(async (entries) => {
     const out: SourceFile[] = [];
@@ -81,12 +85,19 @@ export function is_image(source: SourceFile): boolean {
 
 // PNG and JPEG go in as they are; anything else the browser can decode is redrawn to PNG first.
 export async function prepare_image(source: SourceFile): Promise<PdfImage> {
-  const typed = source.file.type ? source.file : new File([source.file], source.name, { type: guess_type(source.name) });
+  const typed = source.file.type
+    ? source.file
+    : new File([source.file], source.name, { type: guess_type(source.name) });
   const image = await load_image(typed, source.path);
   const { width, height } = image.bitmap;
   try {
     if (typed.type === "image/png" || typed.type === "image/jpeg") {
-      return { bytes: new Uint8Array(await typed.arrayBuffer()), kind: typed.type === "image/png" ? "png" : "jpg", width, height };
+      return {
+        bytes: new Uint8Array(await typed.arrayBuffer()),
+        kind: typed.type === "image/png" ? "png" : "jpg",
+        width,
+        height,
+      };
     }
     const canvas = new OffscreenCanvas(width, height);
     canvas.getContext("2d")!.drawImage(image.bitmap, 0, 0);
@@ -124,7 +135,7 @@ export async function list_signatures(): Promise<SavedSignature[]> {
   for (const item of await files().list(directory)) {
     if (item.kind !== "file" || !item.name.toLowerCase().endsWith(".svg")) continue;
     const signature = parse_signature_svg(await (await item.handle.getFile()).text());
-    if (signature) out.push({ name: item.name, path: join_path(SIGNATURES_DIR, item.name), signature });
+    if (signature) out.push({ name: item.name, path: child_path(SIGNATURES_DIR, item.name), signature });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }

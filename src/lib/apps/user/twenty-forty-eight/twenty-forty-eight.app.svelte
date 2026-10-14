@@ -5,20 +5,8 @@
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon } from "phosphor-svelte";
   import { z } from "zod";
-  import {
-    can_move,
-    key_direction,
-    new_game,
-    play,
-    saved_schema,
-    shows_win,
-    SIZE,
-    swipe_direction,
-    WIN_VALUE,
-    type Direction,
-    type Game,
-    type Tile,
-  } from "./game";
+  import { can_move, new_game, play, saved_schema, shows_win, SIZE, WIN_VALUE, type Direction, type Game, type Tile } from "./game";
+  import { key_direction, swipe_direction } from "$lib/core/games/direction";
 
   const SWIPE_THRESHOLD_PX = 24;
   const CELLS = Array.from({ length: SIZE * SIZE }, (_, i) => ({ row: Math.floor(i / SIZE), col: i % SIZE }));

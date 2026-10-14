@@ -7,13 +7,12 @@
     type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { print_html } from "$lib/core/utils/print";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn, format_date } from "$lib/core/utils";
-  import { error_message, parent_folder } from "$lib/core/utils/image";
+  import { cn, format_date, error_message } from "$lib/core/utils";
   import { Language, load_language, token_highlight, token_theme } from "$lib/core/components/code";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState } from "@codemirror/state";
@@ -57,6 +56,7 @@
   import { SAMPLE } from "./sample";
   import SettingsPanel from "./settings-panel.svelte";
   import manifest from "./index";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
   const { path: initial_path, print, ...launch_settings }: Partial<MarkdownPdfProps> = $props();
 
@@ -107,7 +107,7 @@
 
   const path = $derived(doc_path.value);
   const dirty = $derived(text !== saved_text);
-  const name = $derived(path ? path.slice(path.lastIndexOf("/") + 1) : (device_name ?? "Untitled.md"));
+  const name = $derived(path ? base_name(path) : (device_name ?? "Untitled.md"));
   const stem = $derived(name.replace(/\.(md|markdown)$/i, ""));
   const ready = $derived(status === Status.READY);
 
@@ -193,12 +193,7 @@
   }
 
   async function discard_ok(): Promise<boolean> {
-    if (!dirty) return true;
-    return win.confirm(`Discard changes to “${name}”?`, {
-      detail: "Your unsaved changes will be lost.",
-      confirm_label: "Discard",
-      danger: true,
-    });
+    return !dirty || confirm_discard(win, name);
   }
 
   async function new_doc() {
@@ -213,7 +208,7 @@
     if (!(await discard_ok())) return;
     const chosen = await win.pick_file({
       accept: ACCEPT,
-      start_path: path ? parent_folder(path) : undefined,
+      start_path: path ? parent_path(path) : undefined,
       title: "Open in Markdown to PDF",
     });
     if (chosen) await load(chosen);
@@ -243,10 +238,10 @@
           if (!overwrite) return false;
         }
       }
-      const directory = await files.get_directory(parent_folder(target));
-      if (!directory) throw new Error(`Folder not found: ${parent_folder(target)}`);
+      const directory = await files.get_directory(parent_path(target));
+      if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
       const content = text;
-      await files.create_file(directory, target.slice(target.lastIndexOf("/") + 1), { content, overwrite: true });
+      await files.create_file(directory, base_name(target), { content, overwrite: true });
       base_modified = (await files.get_file(target))?.lastModified ?? Date.now();
       saved_text = content;
       doc_path.value = target;
@@ -262,7 +257,7 @@
     const target = await win.pick_save({
       name,
       accept: ACCEPT,
-      start_path: path && !is_system_path(path) ? parent_folder(path) : "/home",
+      start_path: path && !is_system_path(path) ? parent_path(path) : "/home",
     });
     return target ? write(target) : false;
   }
@@ -341,7 +336,7 @@
   // A save from anywhere (another window, Explorer) bumps the folder's revision; a clean buffer follows it.
   $effect(() => {
     if (!path || status !== Status.READY) return;
-    files.revision(parent_folder(path));
+    files.revision(parent_path(path));
     const target = path;
     untrack(() => {
       if (dirty) return;

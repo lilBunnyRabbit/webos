@@ -9,10 +9,10 @@
   } from "$lib/core/api";
   import { Button, IconButton, Input, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import { error_message, file_stem, load_image, load_image_at, parent_folder, type SourceImage, write_image } from "$lib/core/utils/image";
+  import { load_image, load_image_at, type SourceImage, write_image } from "$lib/core/utils/image";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -43,8 +43,8 @@
   import { z } from "zod";
   import { draw_shape, stamp_pencil, stroke_brush } from "./draw";
   import { flood_fill } from "./flood-fill";
-  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "./history";
-  import { base_name, css_to_hex } from "./paint-file";
+  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
+  import { css_to_hex } from "./paint-file";
   import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point } from "./shapes";
   import {
     Background,
@@ -59,6 +59,8 @@
     text_font_size,
     uses_size,
   } from "./tools";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { error_message } from "$lib/core/utils";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -227,12 +229,7 @@
   }
 
   async function discard_ok(): Promise<boolean> {
-    if (!dirty) return true;
-    return win.confirm(`Discard changes to “${file_name}”?`, {
-      detail: "Your unsaved changes will be lost.",
-      confirm_label: "Discard",
-      danger: true,
-    });
+    return !dirty || confirm_discard(win, file_name);
   }
 
   async function new_canvas() {
@@ -287,7 +284,7 @@
     if (!(await discard_ok())) return;
     const chosen = await win.pick_file({
       accept: ["image/*"],
-      start_path: file_path ? parent_folder(file_path) : undefined,
+      start_path: file_path ? parent_path(file_path) : undefined,
       title: "Open in Paint",
     });
     if (chosen) await open_image(() => load_image_at(chosen));
@@ -318,7 +315,7 @@
     const path = await win.pick_save({
       name: file_name,
       accept: ["image/*"],
-      start_path: file_path && !read_only ? parent_folder(file_path) : "/home",
+      start_path: file_path && !read_only ? parent_path(file_path) : "/home",
     });
     return path ? write(path) : false;
   }

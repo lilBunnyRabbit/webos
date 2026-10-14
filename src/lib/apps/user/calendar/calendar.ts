@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { DAY, View } from "./props";
+import { pad2 } from "$lib/core/utils";
+import { day_key } from "$lib/core/utils/date";
 
 export { CALENDAR_PROPS, View } from "./props";
 
@@ -82,12 +84,6 @@ export function parse_events(text: string): EventsFile | null {
 
 export const new_id = (): string => crypto.randomUUID().slice(0, 8);
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
-export function day_key(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 export function parts_of(day: string): [number, number, number] {
   const [year, month, date] = day.split("-").map(Number);
   return [year, month, date];
@@ -106,7 +102,7 @@ function utc_day(day: string): number {
 
 function from_utc_day(index: number): string {
   const date = new Date(index * 86_400_000);
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
 export function add_days(day: string, by: number): string {
@@ -132,12 +128,12 @@ export function month_of(day: string): string {
 export function add_months(month: string, by: number): string {
   const [year, index] = month.split("-").map(Number);
   const total = year * 12 + (index - 1) + by;
-  return `${Math.floor(total / 12)}-${pad((total % 12) + 1)}`;
+  return `${Math.floor(total / 12)}-${pad2((total % 12) + 1)}`;
 }
 
 export function clamp_day(month: string, date: number): string {
   const [year, index] = month.split("-").map(Number);
-  return `${month}-${pad(Math.min(date, days_in_month(year, index)))}`;
+  return `${month}-${pad2(Math.min(date, days_in_month(year, index)))}`;
 }
 
 export function start_of_week(day: string): string {
@@ -147,7 +143,7 @@ export function start_of_week(day: string): string {
 export function month_grid(month: string): string[][] {
   const first = `${month}-01`;
   const [year, index] = month.split("-").map(Number);
-  const last = `${month}-${pad(days_in_month(year, index))}`;
+  const last = `${month}-${pad2(days_in_month(year, index))}`;
   const weeks: string[][] = [];
   for (let start = start_of_week(first); start <= last; start = add_days(start, 7)) {
     weeks.push(Array.from({ length: 7 }, (_, i) => add_days(start, i)));
@@ -171,7 +167,7 @@ export function minutes_of(time: string): number {
 }
 
 export function time_of(minutes: number): string {
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  return `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
 }
 
 export function at(day: string, time: string): number {
@@ -206,20 +202,17 @@ export function occurrences(event: Pick<CalendarEvent, "day" | "repeat" | "skip"
       break;
     }
     case Repeat.MONTHLY:
-      for (let month = month_of(first); month <= month_of(last); month = add_months(month, 1)) push(clamp_day(month, start_date));
+      for (let month = month_of(first); month <= month_of(last); month = add_months(month, 1))
+        push(clamp_day(month, start_date));
       break;
     case Repeat.YEARLY: {
       for (let year = Number(first.slice(0, 4)); year <= Number(last.slice(0, 4)); year++) {
-        push(clamp_day(`${year}-${pad(start_month)}`, start_date));
+        push(clamp_day(`${year}-${pad2(start_month)}`, start_date));
       }
       break;
     }
   }
   return days;
-}
-
-export function occurs_on(event: Pick<CalendarEvent, "day" | "repeat" | "skip">, day: string): boolean {
-  return occurrences(event, day, day).length > 0;
 }
 
 export interface Occurrence {
@@ -245,7 +238,9 @@ export function compare_occurrences(a: Occurrence, b: Occurrence): number {
 }
 
 export function expand(events: CalendarEvent[], from: string, to: string): Occurrence[] {
-  return events.flatMap((event) => occurrences(event, from, to).map((day) => occurrence(event, day))).sort(compare_occurrences);
+  return events
+    .flatMap((event) => occurrences(event, from, to).map((day) => occurrence(event, day)))
+    .sort(compare_occurrences);
 }
 
 export function group_by_day<T extends { day: string }>(items: T[]): Map<string, T[]> {
@@ -321,16 +316,6 @@ export const REMINDER_OPTIONS: { value: string; label: string }[] = [
   { value: "10080", label: "1 week before" },
 ];
 
-export function reminder_label(minutes: number | null, all_day = false): string {
-  if (minutes === null) return "No reminder";
-  if (all_day && minutes === 0) return `At ${ALL_DAY_REMINDER_BASE} on the day`;
-  if (minutes === 0) return "At the start";
-  if (minutes % 10080 === 0) return minutes === 10080 ? "1 week before" : `${minutes / 10080} weeks before`;
-  if (minutes % 1440 === 0) return minutes === 1440 ? "1 day before" : `${minutes / 1440} days before`;
-  if (minutes % 60 === 0) return minutes === 60 ? "1 hour before" : `${minutes / 60} hours before`;
-  return `${minutes} minutes before`;
-}
-
 export function repeat_label(rule: RepeatRule | null, day: string): string {
   if (!rule) return "Does not repeat";
   const date = date_of(day);
@@ -343,7 +328,10 @@ export function repeat_label(rule: RepeatRule | null, day: string): string {
   return rule.until ? `${base}, until ${format_day(rule.until)}` : base;
 }
 
-export function format_day(day: string, options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }): string {
+export function format_day(
+  day: string,
+  options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }
+): string {
   return date_of(day).toLocaleDateString("en-US", options);
 }
 
@@ -485,7 +473,8 @@ export function draft_error(draft: EventDraft): string | null {
     if (!TIME.test(draft.start) || !TIME.test(draft.end)) return "Enter a start and an end time";
     if (minutes_of(draft.end) <= minutes_of(draft.start)) return "The end must be after the start";
   }
-  if (draft.repeat !== "none" && draft.until && (!DAY.test(draft.until) || draft.until < draft.day)) return "The repeat must end after the first day";
+  if (draft.repeat !== "none" && draft.until && (!DAY.test(draft.until) || draft.until < draft.day))
+    return "The repeat must end after the first day";
   return null;
 }
 
@@ -500,7 +489,12 @@ export function event_from_draft(draft: EventDraft, previous: CalendarEvent | nu
     start: draft.start,
     end: draft.end,
     repeat: draft.repeat === "none" ? null : { every: draft.repeat, until: draft.until || null },
-    skip: previous && previous.day === draft.day && previous.repeat?.every === (draft.repeat === "none" ? undefined : draft.repeat) ? previous.skip : [],
+    skip:
+      previous &&
+      previous.day === draft.day &&
+      previous.repeat?.every === (draft.repeat === "none" ? undefined : draft.repeat)
+        ? previous.skip
+        : [],
     notes: draft.notes,
     color: draft.color,
     reminder,

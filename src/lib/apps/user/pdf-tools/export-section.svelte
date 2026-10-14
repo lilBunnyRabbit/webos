@@ -8,7 +8,7 @@
   import { z } from "zod";
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
-  import { page_image_name, parent_path } from "./naming";
+  import { page_image_name } from "./naming";
   import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
@@ -16,6 +16,7 @@
   import { flatten_groups, parse_ranges } from "./ranges";
   import { canvas_blob, page_info, render_page } from "./render";
   import { ThumbCache } from "./thumbs.svelte";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
   const { app_id, window: win, storage } = get_app_context();

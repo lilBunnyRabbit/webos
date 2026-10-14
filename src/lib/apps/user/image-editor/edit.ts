@@ -1,4 +1,6 @@
 import { format_of, type ImageFormat } from "$lib/core/utils/image-format";
+import { file_stem } from "$lib/core/api/services/files/path";
+import { clamp } from "$lib/core/utils";
 
 export interface Size {
   width: number;
@@ -51,7 +53,7 @@ export const EMPTY_DOC: EditDoc = { operations: [], adjustments: DEFAULT_ADJUSTM
 export const MAX_SIDE = 16384;
 
 export function normalize_degrees(degrees: number): number {
-  const result = ((degrees % 360) + 540) % 360 - 180;
+  const result = (((degrees % 360) + 540) % 360) - 180;
   return result === -180 ? 180 : result;
 }
 
@@ -84,10 +86,6 @@ export function result_size(source: Size, operations: readonly Operation[]): Siz
   return operations.reduce(operation_size, source);
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export function round_rect(rect: Rect, bounds: Size): Rect {
   const x = clamp(Math.round(rect.x), 0, bounds.width - 1);
   const y = clamp(Math.round(rect.y), 0, bounds.height - 1);
@@ -109,7 +107,11 @@ export function add_operation(operations: readonly Operation[], operation: Opera
       return degrees === 0 ? rest : [...rest, { type: OperationType.ROTATE, degrees }];
     }
   }
-  if (last?.type === OperationType.FLIP && operation.type === OperationType.FLIP && last.horizontal === operation.horizontal) {
+  if (
+    last?.type === OperationType.FLIP &&
+    operation.type === OperationType.FLIP &&
+    last.horizontal === operation.horizontal
+  ) {
     return rest;
   }
   if (operation.type === OperationType.ROTATE && normalize_degrees(operation.degrees) === 0) return [...operations];
@@ -139,7 +141,8 @@ export function filter_string(adjustments: Readonly<Adjustments>, scale = 1): st
 
 export function resize_to(current: Size, changed: "width" | "height", value: number, keep: boolean): Size {
   const side = clamp(Math.round(value) || 1, 1, MAX_SIDE);
-  if (!keep) return changed === "width" ? { width: side, height: current.height } : { width: current.width, height: side };
+  if (!keep)
+    return changed === "width" ? { width: side, height: current.height } : { width: current.width, height: side };
   const ratio = current.width / current.height;
   return changed === "width"
     ? { width: side, height: clamp(Math.round(side / ratio) || 1, 1, MAX_SIDE) }
@@ -148,8 +151,7 @@ export function resize_to(current: Size, changed: "width" | "height", value: num
 
 export function name_for_format(name: string, format: ImageFormat, extension: string): string {
   if (format_of(name) === format) return name;
-  const dot = name.lastIndexOf(".");
-  return `${dot > 0 ? name.slice(0, dot) : name}${extension}`;
+  return `${file_stem(name)}${extension}`;
 }
 
 export function resize_size(current: Size, width: number, height?: number): Size {

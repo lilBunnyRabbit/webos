@@ -44,6 +44,8 @@
     position_at,
   } from "./timeline";
   import { tokenize, type ReaderToken } from "./tokens";
+  import { parent_path } from "$lib/core/api/services/files/path";
+  import { error_message } from "$lib/core/utils";
 
   interface Source {
     path: string | null;
@@ -189,7 +191,7 @@
       const text = await file.text();
       if (id === request) await show({ path, name: file.name, text, tokens: tokenize(text) });
     } catch (reason) {
-      if (id === request) error = reason instanceof Error ? reason.message : String(reason);
+      if (id === request) error = error_message(reason);
     } finally {
       if (id === request) loading = false;
     }
@@ -207,7 +209,7 @@
   if (initial) open_path(initial);
 
   async function pick() {
-    const start_path = source?.path ? source.path.slice(0, source.path.lastIndexOf("/")) || "/" : undefined;
+    const start_path = source?.path ? parent_path(source.path) : undefined;
     const chosen = await win.pick_file({ accept: manifest.tools, start_path, title: "Open in Speed Reader" });
     if (chosen) open_path(chosen);
   }

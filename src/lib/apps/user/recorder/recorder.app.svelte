@@ -5,7 +5,7 @@
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time } from "$lib/core/games";
-  import { cn, format_bytes, format_datetime } from "$lib/core/utils";
+  import { cn, format_bytes, format_datetime, error_message } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     Camera as CameraIcon,
@@ -111,7 +111,7 @@
 
   function report(title: string, reason: unknown) {
     console.error(`[Recorder] ${title}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: reason instanceof Error ? reason.message : String(reason) });
+    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
   }
 
   async function start() {

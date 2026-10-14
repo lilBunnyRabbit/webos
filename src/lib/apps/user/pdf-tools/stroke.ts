@@ -1,3 +1,4 @@
+import { clamp } from "$lib/core/utils";
 export interface Point {
   x: number;
   y: number;
@@ -39,17 +40,17 @@ function distance(a: Point, b: Point): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export function smooth_points(points: StrokePoint[], smoothing: number): StrokePoint[] {
   if (points.length < 3) return points;
   const keep = 1 - clamp(smoothing, 0, 0.95);
   const out: StrokePoint[] = [points[0]];
   let previous = points[0];
   for (const point of points.slice(1, -1)) {
-    const next = { ...point, x: previous.x + (point.x - previous.x) * keep, y: previous.y + (point.y - previous.y) * keep };
+    const next = {
+      ...point,
+      x: previous.x + (point.x - previous.x) * keep,
+      y: previous.y + (point.y - previous.y) * keep,
+    };
     if (distance(next, out[out.length - 1]) < MIN_GAP) continue;
     out.push(next);
     previous = next;
@@ -122,7 +123,12 @@ export function outline(points: WidthPoint[]): Point[] {
     });
   };
 
-  return [...left, ...cap(last, tangents[tangents.length - 1], 1), ...right.reverse(), ...cap(points[0], tangents[0], -1)];
+  return [
+    ...left,
+    ...cap(last, tangents[tangents.length - 1], 1),
+    ...right.reverse(),
+    ...cap(points[0], tangents[0], -1),
+  ];
 }
 
 export function signed_area(polygon: Point[]): number {
@@ -171,7 +177,11 @@ export function strokes_path(strokes: StrokePoint[][], options: StrokeOptions = 
 }
 
 // Moved to the origin with tight bounds plus a hairline of padding, so the viewBox is the signature.
-export function build_signature(strokes: StrokePoint[][], options: StrokeOptions = DEFAULT_STROKE, padding = 1): Signature | null {
+export function build_signature(
+  strokes: StrokePoint[][],
+  options: StrokeOptions = DEFAULT_STROKE,
+  padding = 1
+): Signature | null {
   const polygons = strokes.filter((stroke) => stroke.length).map((stroke) => stroke_polygon(stroke, options));
   const all = polygons.flat();
   if (all.length === 0) return null;
@@ -196,9 +206,21 @@ export function signature_svg(signature: Signature, color = "#000000"): string {
 
 export function parse_signature_svg(text: string): Signature | null {
   const view_box = /viewBox\s*=\s*["']([^"']+)["']/i.exec(text);
-  const numbers = view_box?.[1].trim().split(/[\s,]+/).map(Number);
-  if (!numbers || numbers.length !== 4 || numbers.some((value) => !Number.isFinite(value)) || numbers[2] <= 0 || numbers[3] <= 0) return null;
-  const paths = [...text.matchAll(/<path\b[^>]*?\sd\s*=\s*["']([^"']+)["']/gi)].map((match) => match[1].trim()).filter(Boolean);
+  const numbers = view_box?.[1]
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (
+    !numbers ||
+    numbers.length !== 4 ||
+    numbers.some((value) => !Number.isFinite(value)) ||
+    numbers[2] <= 0 ||
+    numbers[3] <= 0
+  )
+    return null;
+  const paths = [...text.matchAll(/<path\b[^>]*?\sd\s*=\s*["']([^"']+)["']/gi)]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
   if (paths.length === 0) return null;
   const [x, y, width, height] = numbers;
   return { d: paths.join(" "), x, y, width, height };

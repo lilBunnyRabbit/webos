@@ -2,7 +2,7 @@
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, CopyButton, IconButton, Section, Spinner, Textarea } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Devices as DevicesIcon, FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
   import { digest_all, type HashResult } from "../hash";
@@ -39,7 +39,7 @@
       hash(file, path);
     } catch (reason) {
       picked = null;
-      file_error = reason instanceof Error ? reason.message : String(reason);
+      file_error = error_message(reason);
     }
   }
 

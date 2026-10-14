@@ -1,6 +1,16 @@
 import kernel, { type FilesService } from "$lib/core/api";
-import { format_bytes } from "$lib/core/utils";
-import { accept_answer, accept_offer, channel_open, create_offer, create_peer, Inbox, read_link, type Endpoint, type LinkStats } from "./peer";
+import { format_bytes, error_message } from "$lib/core/utils";
+import {
+  accept_answer,
+  accept_offer,
+  channel_open,
+  create_offer,
+  create_peer,
+  Inbox,
+  read_link,
+  type Endpoint,
+  type LinkStats,
+} from "./peer";
 import { part_name, type FileEntry } from "./protocol";
 import { decode_signal } from "./signal";
 import { describe_file, receive_files, send_files } from "./transfer";
@@ -41,7 +51,7 @@ const MIN_RATE = 1;
 
 function message_of(reason: unknown): string {
   if (reason instanceof DOMException && reason.name === "InvalidStateError") return "The connection was lost";
-  return reason instanceof Error ? reason.message : String(reason);
+  return error_message(reason);
 }
 
 /** Browsers blank out LAN addresses in stats (and swap them for `.local` names in SDP), so only the port is real then. */
@@ -142,15 +152,22 @@ abstract class Session {
       this.rate = smoothed < MIN_RATE ? 0 : smoothed;
       this.samples = [...this.samples, instant].slice(-SAMPLE_COUNT);
       const stalled = this.phase === Phase.TRANSFERRING && this.done_bytes < this.total && now - moved_at > STALL_MS;
-      if (stalled && !this.stalled) this.write("Stalled: no data confirmed for 10 s. Keep both screens on with P2P Transfer in front", LogTone.ERROR);
+      if (stalled && !this.stalled)
+        this.write(
+          "Stalled: no data confirmed for 10 s. Keep both screens on with P2P Transfer in front",
+          LogTone.ERROR
+        );
       if (!stalled && this.stalled) this.write("Data moving again", LogTone.OK);
       this.stalled = stalled;
       const link = await read_link(pc).catch(() => null);
       if (link?.route && pc === this.peer) {
         if (link.route !== this.link?.route) {
           const where = link.route === "lan" ? "same network" : "across networks, addresses found via STUN";
-          this.write(`Route: direct, ${where}. ${link.protocol?.toUpperCase() ?? "UDP"} ${format_endpoint(link.local)} ⇄ ${format_endpoint(link.remote)}`);
-          if (link.cipher) this.write(`Encrypted: ${link.tls_version ? `${tls_name(link.tls_version)} ` : ""}${link.cipher}`);
+          this.write(
+            `Route: direct, ${where}. ${link.protocol?.toUpperCase() ?? "UDP"} ${format_endpoint(link.local)} ⇄ ${format_endpoint(link.remote)}`
+          );
+          if (link.cipher)
+            this.write(`Encrypted: ${link.tls_version ? `${tls_name(link.tls_version)} ` : ""}${link.cipher}`);
         }
         this.link = link;
       }
@@ -241,13 +258,15 @@ export class SendSession extends Session {
         },
         on_progress: (index, bytes) => {
           if (pc !== this.peer) return;
-          if (bytes === this.entries[index].size && this.progress[index] !== bytes) this.write(`Receiver confirmed ${this.entries[index].name}`, LogTone.OK);
+          if (bytes === this.entries[index].size && this.progress[index] !== bytes)
+            this.write(`Receiver confirmed ${this.entries[index].name}`, LogTone.OK);
           this.progress[index] = bytes;
         },
         on_queued: () => {
           if (pc !== this.peer) return;
           this.queued = true;
-          if (this.done_bytes < this.total) this.write("All data handed to the network, waiting for the receiver to confirm");
+          if (this.done_bytes < this.total)
+            this.write("All data handed to the network, waiting for the receiver to confirm");
         },
       });
       this.finish(pc, "Receiver confirmed every file");

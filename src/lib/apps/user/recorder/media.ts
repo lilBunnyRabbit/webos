@@ -1,3 +1,4 @@
+import { pad2 } from "$lib/core/utils";
 export const RECORDINGS_DIR = "/home/Recordings";
 
 export const Source = {
@@ -20,7 +21,13 @@ export const PhotoFormat = {
 } as const;
 export type PhotoFormat = (typeof PhotoFormat)[keyof typeof PhotoFormat];
 
-const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/ogg;codecs=opus"];
+const AUDIO_TYPES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/mp4;codecs=mp4a.40.2",
+  "audio/mp4",
+  "audio/ogg;codecs=opus",
+];
 const VIDEO_TYPES = [
   "video/webm;codecs=vp9,opus",
   "video/webm;codecs=vp8,opus",
@@ -52,11 +59,9 @@ const NAME_PREFIX: Record<Source, Record<TakeKind, string>> = {
   camera: { audio: "Video", video: "Video", photo: "Photo" },
 };
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
 export function take_name(source: Source, kind: TakeKind, mime: string, date: Date): string {
-  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  const time = `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+  const day = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  const time = `${pad2(date.getHours())}-${pad2(date.getMinutes())}-${pad2(date.getSeconds())}`;
   return `${NAME_PREFIX[source][kind]} ${day} ${time}${extension_for(mime, kind)}`;
 }
 
@@ -83,7 +88,8 @@ export interface Clock {
 export const clock_start = (now: number): Clock => ({ banked: 0, since: now });
 export const clock_pause = (clock: Clock, now: number): Clock =>
   clock.since === null ? clock : { banked: clock.banked + (now - clock.since), since: null };
-export const clock_resume = (clock: Clock, now: number): Clock => (clock.since === null ? { ...clock, since: now } : clock);
+export const clock_resume = (clock: Clock, now: number): Clock =>
+  clock.since === null ? { ...clock, since: now } : clock;
 export const clock_elapsed = (clock: Clock, now: number): number =>
   clock.banked + (clock.since === null ? 0 : Math.max(0, now - clock.since));
 
@@ -144,17 +150,29 @@ export function error_copy(error: CaptureError, source: Source): ErrorCopy {
   switch (error) {
     case CaptureError.DENIED:
       return source === Source.SCREEN
-        ? { title: "Screen sharing was cancelled", description: "Choose a window, tab or screen in the browser's picker to record it." }
+        ? {
+            title: "Screen sharing was cancelled",
+            description: "Choose a window, tab or screen in the browser's picker to record it.",
+          }
         : {
             title: `${device[0].toUpperCase()}${device.slice(1)} access is blocked`,
             description: `Allow the ${device} in the browser's site settings (the icon left of the address bar), then try again.`,
           };
     case CaptureError.MISSING:
-      return { title: `No ${device} found`, description: `Connect a ${device}, or check that the system hasn't turned it off, then try again.` };
+      return {
+        title: `No ${device} found`,
+        description: `Connect a ${device}, or check that the system hasn't turned it off, then try again.`,
+      };
     case CaptureError.BUSY:
-      return { title: `The ${device} is busy`, description: `Another app or tab may be using it. Close that, then try again.` };
+      return {
+        title: `The ${device} is busy`,
+        description: `Another app or tab may be using it. Close that, then try again.`,
+      };
     case CaptureError.UNSUPPORTED:
-      return { title: "Recording isn't available here", description: "This browser doesn't allow capture on this page." };
+      return {
+        title: "Recording isn't available here",
+        description: "This browser doesn't allow capture on this page.",
+      };
     default:
       return { title: `Couldn't start the ${device}`, description: "Something went wrong. Try again." };
   }

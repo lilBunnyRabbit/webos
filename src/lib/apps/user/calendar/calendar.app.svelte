@@ -11,7 +11,6 @@
   import AgendaView from "./agenda-view.svelte";
   import {
     DaySchema,
-    day_key,
     DEFAULT_SOURCES,
     draft_of,
     EMPTY_EVENTS,
@@ -43,6 +42,7 @@
   import { KanbanSource, remind_while_alive, WorkHoursSource } from "./store.svelte";
   import type { CalendarActions, DaySources } from "./view";
   import WeekView from "./week-view.svelte";
+  import { day_key } from "$lib/core/utils/date";
 
   const { day: initial_day, view: initial_view }: { day?: string; view?: View } = $props();
 

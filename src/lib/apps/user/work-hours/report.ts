@@ -10,10 +10,7 @@ import {
   worked_days,
   type MonthFile,
 } from "./data";
-
-export function escape_html(text: string): string {
-  return text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-}
+import { escape_html } from "$lib/core/utils";
 
 export function month_label(month: string): string {
   return date_of(`${month}-01`).toLocaleDateString([], { month: "long", year: "numeric" });
@@ -71,13 +68,23 @@ export function month_report_html(file: MonthFile, options: ReportOptions): stri
       const data = file.days[day];
       const span = day_span(data);
       const minutes = day_minutes(data);
-      const work = [...new Set(sorted_entries(data).map((entry) => entry.description.trim()).filter(Boolean))].join("; ");
+      const work = [
+        ...new Set(
+          sorted_entries(data)
+            .map((entry) => entry.description.trim())
+            .filter(Boolean)
+        ),
+      ].join("; ");
       const date = `<td class="day"><span>${escape_html(weekday(day))}</span>${Number(day.slice(8))}.</td>`;
-      if (!span) return `<tr class="${is_weekend(day) ? "weekend" : ""}">${date}<td class="empty">–</td><td class="empty">–</td><td class="num empty">–</td><td></td></tr>`;
+      if (!span)
+        return `<tr class="${is_weekend(day) ? "weekend" : ""}">${date}<td class="empty">–</td><td class="empty">–</td><td class="num empty">–</td><td></td></tr>`;
       return `<tr class="${is_weekend(day) ? "weekend" : ""}">${date}<td class="time">${span.start}</td><td class="time">${span.end}</td><td class="num">${format_hours(minutes)}</td><td class="work">${escape_html(work)}</td></tr>`;
     });
     const week_total = own.reduce((sum, day) => sum + day_minutes(file.days[day]), 0);
-    return [...lines, `<tr class="week"><td colspan="3">Week ${week}</td><td class="num">${format_hours(week_total)}</td><td></td></tr>`];
+    return [
+      ...lines,
+      `<tr class="week"><td colspan="3">Week ${week}</td><td class="num">${format_hours(week_total)}</td><td></td></tr>`,
+    ];
   });
 
   const notes = Object.entries(file.days)
@@ -91,7 +98,9 @@ export function month_report_html(file: MonthFile, options: ReportOptions): stri
   const target = file.target_hours;
   const summary = [
     `<dt>Total</dt><dd>${format_hours(total)}</dd>`,
-    target !== null ? `<dt>Target</dt><dd>${format_hours(target * 60)} (${target ? Math.round((total / (target * 60)) * 100) : 100}%)</dd>` : "",
+    target !== null
+      ? `<dt>Target</dt><dd>${format_hours(target * 60)} (${target ? Math.round((total / (target * 60)) * 100) : 100}%)</dd>`
+      : "",
     `<dt>Days worked</dt><dd>${worked_days(file)}</dd>`,
   ].join("");
 

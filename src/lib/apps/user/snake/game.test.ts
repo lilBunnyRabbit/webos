@@ -3,13 +3,11 @@ import {
   create_game,
   Direction,
   fixed_steps,
-  key_direction,
   same_point,
   set_status,
   spawn_food,
   Status,
   step,
-  swipe_direction,
   turn,
   type GameState,
   type Point,
@@ -74,12 +72,25 @@ describe("step", () => {
   });
 
   test("ends the game at a wall", () => {
-    const game = playing({ snake: [{ x: 9, y: 5 }, { x: 8, y: 5 }], food: { x: 0, y: 0 } });
+    const game = playing({
+      snake: [
+        { x: 9, y: 5 },
+        { x: 8, y: 5 },
+      ],
+      food: { x: 0, y: 0 },
+    });
     expect(step(game, zero).status).toBe(Status.OVER);
   });
 
   test("wraps around when walls are off", () => {
-    const game = playing({ snake: [{ x: 9, y: 5 }, { x: 8, y: 5 }], food: { x: 0, y: 0 }, wrap: true });
+    const game = playing({
+      snake: [
+        { x: 9, y: 5 },
+        { x: 8, y: 5 },
+      ],
+      food: { x: 0, y: 0 },
+      wrap: true,
+    });
     const next = step(game, zero);
     expect(next.status).toBe(Status.PLAYING);
     expect(next.snake[0]).toEqual({ x: 0, y: 5 });
@@ -211,21 +222,5 @@ describe("fixed_steps", () => {
 
   test("treats negative time as none", () => {
     expect(fixed_steps(30, -5, 100)).toEqual({ steps: 0, remainder: 30 });
-  });
-});
-
-describe("input", () => {
-  test("maps arrows and WASD by code", () => {
-    expect(key_direction("ArrowUp")).toBe(Direction.UP);
-    expect(key_direction("KeyA")).toBe(Direction.LEFT);
-    expect(key_direction("KeyQ")).toBeNull();
-  });
-
-  test("swipes by the dominant axis past the threshold", () => {
-    expect(swipe_direction(5, 3, 20)).toBeNull();
-    expect(swipe_direction(30, 10, 20)).toBe(Direction.RIGHT);
-    expect(swipe_direction(-30, 10, 20)).toBe(Direction.LEFT);
-    expect(swipe_direction(10, -30, 20)).toBe(Direction.UP);
-    expect(swipe_direction(10, 30, 20)).toBe(Direction.DOWN);
   });
 });

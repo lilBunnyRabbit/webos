@@ -3,14 +3,14 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { track_play } from "$lib/core/games";
-  import { cn } from "$lib/core/utils";
-  import { error_message } from "$lib/core/utils/image";
+  import { cn, error_message } from "$lib/core/utils";
   import { WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { blank_drawing } from "./drawing";
   import Editor from "./editor.svelte";
   import { NONOGRAM_EXTENSION, parse_nonogram, type Drawing } from "./file";
   import type { Mode, Size } from "./game";
+  import { base_name } from "$lib/core/api/services/files/path";
   import Play, { type Source } from "./play.svelte";
 
   const { path, daily, size, mode, edit }: { path?: string; daily?: string; size?: Size; mode?: Mode; edit?: boolean } = $props();
@@ -57,7 +57,7 @@
 
   $effect(() => {
     if (editing) return;
-    win.set_title(source.kind === "file" ? source.path.slice(source.path.lastIndexOf("/") + 1) : null);
+    win.set_title(source.kind === "file" ? base_name(source.path) : null);
   });
 
   $effect(() =>

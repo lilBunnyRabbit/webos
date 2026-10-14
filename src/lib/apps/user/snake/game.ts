@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { Direction } from "$lib/core/games/direction";
 
-export const Direction = { UP: "up", DOWN: "down", LEFT: "left", RIGHT: "right" } as const;
-export type Direction = (typeof Direction)[keyof typeof Direction];
+export { Direction };
 
 export const Speed = { SLOW: "slow", NORMAL: "normal", FAST: "fast" } as const;
 export type Speed = (typeof Speed)[keyof typeof Speed];
@@ -144,26 +144,4 @@ export function fixed_steps(
   const steps = Math.floor(total / step_ms);
   if (steps > max_steps) return { steps: max_steps, remainder: 0 };
   return { steps, remainder: total - steps * step_ms };
-}
-
-const KEY_DIRECTIONS: Record<string, Direction> = {
-  ArrowUp: Direction.UP,
-  ArrowDown: Direction.DOWN,
-  ArrowLeft: Direction.LEFT,
-  ArrowRight: Direction.RIGHT,
-  KeyW: Direction.UP,
-  KeyS: Direction.DOWN,
-  KeyA: Direction.LEFT,
-  KeyD: Direction.RIGHT,
-};
-
-/** By `KeyboardEvent.code`, so WASD sits in the same place on every layout. */
-export function key_direction(code: string): Direction | null {
-  return KEY_DIRECTIONS[code] ?? null;
-}
-
-export function swipe_direction(dx: number, dy: number, threshold: number): Direction | null {
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return null;
-  if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? Direction.RIGHT : Direction.LEFT;
-  return dy > 0 ? Direction.DOWN : Direction.UP;
 }

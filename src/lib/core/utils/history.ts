@@ -10,6 +10,8 @@ export interface HistoryLimits<T> {
   size_of?: (entry: T) => number;
 }
 
+export const DEFAULT_HISTORY_LIMITS: HistoryLimits<unknown> = { max_entries: 100 };
+
 export function create_history<T>(initial: T): History<T> {
   return { entries: [initial], index: 0 };
 }
@@ -26,7 +28,7 @@ export function can_redo(history: History<unknown>): boolean {
   return history.index < history.entries.length - 1;
 }
 
-export function push<T>(history: History<T>, entry: T, limits: HistoryLimits<T>): History<T> {
+export function push<T>(history: History<T>, entry: T, limits: HistoryLimits<T> = DEFAULT_HISTORY_LIMITS): History<T> {
   const entries = [...history.entries.slice(0, history.index + 1), entry];
   let drop = Math.max(0, entries.length - Math.max(1, limits.max_entries));
 

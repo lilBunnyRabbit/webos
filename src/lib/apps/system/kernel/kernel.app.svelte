@@ -2,7 +2,7 @@
   import kernel, { type InspectorProps } from "$lib/core/api";
   import LogoMark from "$lib/core/components/brand/logo-mark.svelte";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import type { Component } from "svelte";
   import { z } from "zod";
   import { Badge, Button } from "$lib/core/components/ui";
@@ -66,7 +66,7 @@
               {@const View = inspector as Component<InspectorProps>}
               <View {service} detailed={open} />
             {:catch error}
-              <p class="text-sm text-error">Inspector failed to load: {error instanceof Error ? error.message : String(error)}</p>
+              <p class="text-sm text-error">Inspector failed to load: {error_message(error)}</p>
             {/await}
           {:else}
             <pre class="overflow-x-auto font-mono text-sm text-foreground/80">{service.to_string()}</pre>

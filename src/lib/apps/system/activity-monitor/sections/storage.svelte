@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type FilesService } from "$lib/core/api";
   import { Button, Section, Spinner } from "$lib/core/components/ui";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import { local_storage_usage, type LocalStorageGroup, type StorageEstimateWithDetails } from "../browser";
 
   const FOLDERS = ["/home", "/etc", "/var", "/tmp"];
@@ -60,10 +60,6 @@
     quota = load_quota();
     worker = load_worker();
     local = local_storage_usage();
-  }
-
-  function error_message(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
   }
 </script>
 

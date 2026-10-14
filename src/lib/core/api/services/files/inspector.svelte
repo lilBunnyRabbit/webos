@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FilesService, InspectorProps } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
-  import { format_bytes } from "$lib/core/utils";
+  import { error_message, format_bytes } from "$lib/core/utils";
 
   let { service, detailed }: InspectorProps<FilesService> = $props();
 
@@ -36,6 +36,6 @@
       {/each}
     </InspectorTable>
   {:catch error}
-    <p class="text-ui text-error">Could not read root: {error instanceof Error ? error.message : String(error)}</p>
+    <p class="text-ui text-error">Could not read root: {error_message(error)}</p>
   {/await}
 {/if}

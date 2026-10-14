@@ -2,7 +2,7 @@
   import kernel, { NotificationType, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { Button, IconButton, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn } from "$lib/core/utils";
+  import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
@@ -16,16 +16,16 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { base_name, parent_path } from "./naming";
   import { initial_pages, insert_blank, is_unchanged, move_page, move_to_slot, remove_page, rotate_page, type PageItem } from "./pages";
   import { organize_pdf } from "./pdf";
-  import { PDF_ACCEPT, device_source, error_message, write_at, type SourceFile } from "./pdf-files";
+  import { PDF_ACCEPT, device_source, write_at, type SourceFile } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import PdfThumb from "./pdf-thumb.svelte";
   import DropZone from "./drop-zone.svelte";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { ThumbCache } from "./thumbs.svelte";
+  import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths, active }: { picker: Snippet; initial_paths: string[]; active: boolean } = $props();
 

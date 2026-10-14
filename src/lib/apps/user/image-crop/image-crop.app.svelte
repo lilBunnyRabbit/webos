@@ -2,7 +2,7 @@
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import { format_bytes } from "$lib/core/utils";
+  import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
     Crop as CropIcon,
@@ -16,19 +16,17 @@
   import {
     FORMAT_OPTIONS,
     ImageFormat,
-    error_message,
     extension_for,
-    file_stem,
     has_files,
     image_files,
     load_image,
     load_image_at,
     paint,
-    parent_folder,
     read_pixels,
     save_image,
     type SourceImage,
   } from "$lib/core/utils/image";
+  import { parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window: win } = get_app_context();
@@ -69,7 +67,7 @@
   if (initial) load(() => load_image_at(initial));
 
   async function pick() {
-    const start_path = source?.path ? parent_folder(source.path) : undefined;
+    const start_path = source?.path ? parent_path(source.path) : undefined;
     const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Open in Image Crop" });
     if (chosen) load(() => load_image_at(chosen));
   }
@@ -116,7 +114,7 @@
       canvas: cropped,
       name: `${file_stem(source.name)}-cropped${extension_for(format)}`,
       format,
-      start_path: source.path ? parent_folder(source.path) : null,
+      start_path: source.path ? parent_path(source.path) : null,
     });
   }
 

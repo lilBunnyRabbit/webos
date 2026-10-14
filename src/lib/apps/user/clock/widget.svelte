@@ -1,13 +1,12 @@
 <script lang="ts">
   import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
-  import { format_date } from "$lib/core/utils";
+  import { format_date, clamp, pad2 } from "$lib/core/utils";
   import { format_time } from "$lib/core/games";
   import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
   import { APP_ID, ClockFace, ClockTab, format_hm, format_until, next_alarm, timer_remaining } from "./clock";
   import { gate_clock_file, open_clock_file, ring_while_alive } from "./ringer.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { pad2 } from "./zones";
 
   // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
   let { props }: WidgetProps = $props();

@@ -1,7 +1,8 @@
 import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import kernel, { type FilesService } from "$lib/core/api";
-import { day_key } from "$lib/core/games/time";
 import { createSubscriber } from "svelte/reactivity";
+import { parent_path } from "$lib/core/api/services/files/path";
+import { day_key } from "$lib/core/utils/date";
 
 interface Logic {
   BOARDS_PATH: string;
@@ -17,7 +18,8 @@ let logic = $state.raw<Logic | null>(null);
 /** Runs only while an icon shows the badge; the minute tick moves "today" past midnight. */
 const subscribe = createSubscriber(() =>
   detached_root(() => {
-    if (!logic) void Promise.all([import("./data"), import("./store")]).then(([data, store]) => (logic = { ...data, ...store }));
+    if (!logic)
+      void Promise.all([import("./data"), import("./store")]).then(([data, store]) => (logic = { ...data, ...store }));
     $effect(() => {
       const timer = setInterval(() => (today = day_key()), 60_000);
       return () => clearInterval(timer);
@@ -27,7 +29,7 @@ const subscribe = createSubscriber(() =>
       const { BOARDS_PATH, count_due, read_boards } = logic;
       const files = kernel.service<FilesService>("files");
       const day = today;
-      files.revision(BOARDS_PATH.slice(0, BOARDS_PATH.lastIndexOf("/")));
+      files.revision(parent_path(BOARDS_PATH));
       void read_boards(files).then((file) => {
         if (file) due = count_due(file, day);
       });

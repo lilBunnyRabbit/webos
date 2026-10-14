@@ -1,10 +1,7 @@
+import { file_extension } from "../files/path";
 import type { AppManifest } from "./type";
 
-/** `"Notes.TXT"` → `".txt"`. A dotfile is its own extension (`.env` → `".env"`). Names without a dot have none. */
-export function file_extension(name: string): string {
-  const dot = name.lastIndexOf(".");
-  return dot >= 0 ? name.slice(dot).toLowerCase() : "";
-}
+export { file_extension };
 
 /** Exact extension 3, exact MIME 2, MIME wildcard 1, no match 0 (ADR-018). */
 export function association_tier(entry: string, file: { name: string; type: string }): number {
@@ -39,7 +36,10 @@ export function best_apps_for(apps: Iterable<AppManifest>, file: { name: string;
 /** Every app that can open `file`, most specific match first: the "Open with" list. */
 export function apps_for(apps: Iterable<AppManifest>, file: { name: string; type: string }): AppManifest[] {
   return [...apps]
-    .map((app) => ({ app, tier: Math.max(0, ...(app.associations ?? []).map((entry) => association_tier(entry, file))) }))
+    .map((app) => ({
+      app,
+      tier: Math.max(0, ...(app.associations ?? []).map((entry) => association_tier(entry, file))),
+    }))
     .filter(({ tier }) => tier > 0)
     .sort((a, b) => b.tier - a.tier || a.app.name.localeCompare(b.app.name))
     .map(({ app }) => app);

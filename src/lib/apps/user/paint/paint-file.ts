@@ -1,9 +1,5 @@
 import { to_hex } from "./shapes";
 
-export function base_name(path: string): string {
-  return path.slice(path.lastIndexOf("/") + 1);
-}
-
 let probe: OffscreenCanvasRenderingContext2D | null = null;
 
 // Theme tokens are OKLCH; the colour input only takes #rrggbb, so let the canvas do the gamut mapping.
