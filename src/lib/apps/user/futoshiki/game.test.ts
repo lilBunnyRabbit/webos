@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clear_notes,
   conflicts,
+  daily_game,
   digit_counts,
   empty_stats,
   fill_notes,
@@ -214,5 +215,13 @@ describe("save and restore", () => {
       expect(restore(saved)!.values[given]).toBe(game.puzzle.givens[given]);
       return;
     }
+  });
+});
+
+describe("daily", () => {
+  it("plays the same 5×5 puzzle all day, a new one the next", () => {
+    const today = daily_game("2026-10-14");
+    expect(daily_game("2026-10-14").puzzle).toEqual(today.puzzle);
+    expect(daily_game("2026-10-15").puzzle).not.toEqual(today.puzzle);
   });
 });

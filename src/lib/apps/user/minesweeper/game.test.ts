@@ -4,6 +4,7 @@ import {
   chord,
   clamp_config,
   count_mines,
+  daily_game,
   Difficulty,
   empty_stats,
   mines_left,
@@ -200,5 +201,20 @@ describe("step", () => {
     expect(step(config, 7, "ArrowRight")).toBe(7);
     expect(step(config, 5, "Home")).toBe(4);
     expect(step(config, 5, "End")).toBe(7);
+  });
+});
+
+describe("daily", () => {
+  it("lays the same intermediate board all day, a new one the next", () => {
+    const today = daily_game("2026-10-14");
+    expect(today.config).toEqual(PRESETS.intermediate);
+    expect(daily_game("2026-10-14").mines).toEqual(today.mines);
+    expect(daily_game("2026-10-15").mines).not.toEqual(today.mines);
+  });
+
+  it("starts with the middle open", () => {
+    const today = daily_game("2026-10-14");
+    expect(today.status).toBe(Status.PLAYING);
+    expect(today.cells.filter((cell) => cell === Cell.REVEALED).length).toBeGreaterThan(1);
   });
 });

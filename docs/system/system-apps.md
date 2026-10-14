@@ -320,7 +320,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 **Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `WindowMonitor`, `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
 - `observe()`: the event-driven observers (long animation frames, CPU pressure, resource timing, the connection `change` listener). They run for the window's lifetime.
-- `sample()`: the 1 s ticks, the rAF frame counter and the per-window MutationObservers. They run only while the window isn't minimized.
+- `sample()`: the 1 s ticks, the rAF frame counter and the per-window MutationObservers. They run only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035).
 
 Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start calls so a window opening doesn't restart the samplers.
 
@@ -357,7 +357,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 - No Workers tab: no browser API lists workers, and no app spawns one yet. A Workers Service comes with its first consumer. TasksService jobs (ADR-013) become a tab once that service lands.
 - Windows have no titles, so rows show the app name and a short id.
 - Its own row counts the mutations from re-rendering its own table.
-- Monitors keep running while another section is shown; only minimizing pauses sampling. A hidden browser tab gets no rAF, so FPS reads 0.
+- Monitors keep running while another section is shown; minimizing or hiding the tab pauses sampling.
 - Cross-origin resources without `Timing-Allow-Origin` report 0 bytes.
 
 ---

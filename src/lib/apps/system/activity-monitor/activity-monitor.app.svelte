@@ -41,7 +41,7 @@
   $effect(() => untrack(() => performance_monitor.observe()));
   $effect(() => untrack(() => network_monitor.observe()));
   $effect(() => {
-    if (win.is_minimized) return;
+    if (!win.is_visible) return;
     const stop_windows = untrack(() => window_monitor.sample());
     const stop_performance = untrack(() => performance_monitor.sample());
     return () => {

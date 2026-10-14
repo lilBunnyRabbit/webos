@@ -157,18 +157,18 @@ class Writer {
 }
 
 class Reader {
-  #at = 0;
+  private at = 0;
 
-  constructor(private bytes: Uint8Array) {}
+  constructor(private readonly bytes: Uint8Array) {}
 
   byte(): number {
-    if (this.#at >= this.bytes.length) throw new Error("truncated");
-    return this.bytes[this.#at++];
+    if (this.at >= this.bytes.length) throw new Error("truncated");
+    return this.bytes[this.at++];
   }
 
   raw(length: number): Uint8Array {
-    if (this.#at + length > this.bytes.length) throw new Error("truncated");
-    return this.bytes.slice(this.#at, (this.#at += length));
+    if (this.at + length > this.bytes.length) throw new Error("truncated");
+    return this.bytes.slice(this.at, (this.at += length));
   }
 
   text(length = this.byte()): string {
@@ -182,7 +182,7 @@ class Reader {
   }
 
   get done(): boolean {
-    return this.#at === this.bytes.length;
+    return this.at === this.bytes.length;
   }
 }
 

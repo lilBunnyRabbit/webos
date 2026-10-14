@@ -1,6 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { LessThan as LessThanIcon } from "phosphor-svelte";
+import { z } from "zod";
 
 export default define_app({
   id: "futoshiki",
@@ -16,5 +17,6 @@ export default define_app({
       height: { min: 460 },
     },
   },
+  props: z.object({ daily: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
   component: () => import("./futoshiki.app.svelte"),
 });

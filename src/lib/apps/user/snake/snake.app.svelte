@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import {
     ArrowDown as ArrowDownIcon,
@@ -37,7 +38,8 @@
   const SWIPE_THRESHOLD = 24;
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { window: win, storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
+  track_play(app_id, () => win.is_visible);
   const high_scores = storage.persisted<HighScores>("high_scores", {}, high_scores_schema);
 
   // Per window, so two open games don't change each other's mode; storage only remembers the last pick.
@@ -45,7 +47,6 @@
   let wrap = $state(storage.get("wrap", z.boolean()) ?? false);
   let game = $state.raw(create_game(Math.random, untrack(() => wrap)));
   let new_best = $state(false);
-  let visible = $state(!document.hidden);
   let size = $state({ width: 0, height: 0, dpr: 1 });
   let palette = $state.raw<Palette | null>(null);
   let canvas: HTMLCanvasElement | undefined = $state();
@@ -55,7 +56,7 @@
 
   const key = $derived(mode_key(speed, wrap));
   const best = $derived(high_scores.value[key] ?? 0);
-  const blocked = $derived(!win.is_focused || win.is_minimized || !visible);
+  const blocked = $derived(!win.is_focused || !win.is_visible);
   const running = $derived(game.status === Status.PLAYING && !blocked);
   const can_pause = $derived(game.status === Status.PLAYING || game.status === Status.PAUSED);
 
@@ -212,8 +213,6 @@
     if (swipe?.id === event.pointerId) swipe = null;
   }
 </script>
-
-<svelte:document onvisibilitychange={() => (visible = !document.hidden)} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>

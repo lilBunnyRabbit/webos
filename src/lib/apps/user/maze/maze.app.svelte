@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { Button, IconButton, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -11,7 +12,6 @@
     ArrowUp as ArrowUpIcon,
     FastForward as FastForwardIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
   import {
     CARVERS,
     carve_steps,
@@ -28,7 +28,6 @@
     best_ms_schema,
     CARVER_LABELS,
     DEFAULT_PREFS,
-    format_time,
     Mode,
     MODE_LABELS,
     prefs_schema,
@@ -69,7 +68,8 @@
   type Phase = (typeof Phase)[keyof typeof Phase];
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { window: win, storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
+  track_play(app_id, () => win.is_visible);
   const best = storage.persisted("best_ms", {}, best_ms_schema);
 
   // Per window, so two open mazes don't change each other; storage only remembers the last picks.
@@ -89,9 +89,7 @@
   let started = $state(false);
   let finished = $state(false);
   let record = $state(false);
-  let timer_total = $state(0);
-  let timer_since = $state<number | null>(null);
-  let now = $state(0);
+  const clock = new Stopwatch(() => win.is_visible);
 
   let canvas = $state<HTMLCanvasElement>();
   let board = $state<HTMLDivElement>();
@@ -117,15 +115,15 @@
 
   const busy = $derived(phase === Phase.CARVING || phase === Phase.SOLVING);
   const steps_per_second = $derived(SPEED_RATES[speed] * Number(built.size) ** 2);
-  const elapsed = $derived(timer_total + (timer_since === null ? 0 : Math.max(0, now - timer_since)));
+  const elapsed = $derived(clock.elapsed);
   const best_time = $derived(best.value[built.size] as number | undefined);
   const timing = $derived(mode === Mode.PLAY && started && !finished);
 
   const status = $derived.by(() => {
     if (phase === Phase.CARVING) return `Building with ${CARVER_LABELS[built.carver]}…`;
     if (mode === Mode.PLAY) {
-      if (finished) return record ? `New best: ${format_time(elapsed)}` : `Done in ${format_time(elapsed)}`;
-      return started ? format_time(elapsed) : "Find the way to the exit";
+      if (finished) return record ? `New best: ${format_time(elapsed, { tenths: true })}` : `Done in ${format_time(elapsed, { tenths: true })}`;
+      return started ? format_time(elapsed, { tenths: true }) : "Find the way to the exit";
     }
     if (phase === Phase.SOLVING) return `Searching… ${expanded} cells`;
     if (phase === Phase.SOLVED) {
@@ -148,7 +146,7 @@
   $effect(draw);
 
   $effect(() => {
-    if (!busy || win.is_minimized) return;
+    if (!busy || !win.is_visible) return;
     const rate = steps_per_second;
     let last = performance.now();
     let budget = 0;
@@ -162,20 +160,6 @@
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
-  });
-
-  $effect(() => {
-    if (timer_since === null) return;
-    const interval = setInterval(() => (now = performance.now()), 100);
-    return () => clearInterval(interval);
-  });
-
-  $effect(() => {
-    const minimized = win.is_minimized;
-    untrack(() => {
-      if (minimized) pause_timer();
-      else if (started && !finished && timer_since === null) timer_since = now = performance.now();
-    });
   });
 
   new_maze();
@@ -300,20 +284,13 @@
     started = false;
     finished = false;
     record = false;
-    timer_total = 0;
-    timer_since = null;
+    clock.reset();
   }
 
   function restart() {
     reset_play();
     draw();
     board?.focus();
-  }
-
-  function pause_timer() {
-    if (timer_since === null) return;
-    timer_total += performance.now() - timer_since;
-    timer_since = null;
   }
 
   function move(direction: Direction, far: boolean) {
@@ -324,7 +301,7 @@
     if (to === undefined || to === from) return;
     if (!started) {
       started = true;
-      timer_since = now = performance.now();
+      clock.start();
     }
     for (const cell of cells) scene.trail![cell] = 1;
     scene.player = to;
@@ -333,11 +310,11 @@
   }
 
   function finish_play() {
-    pause_timer();
+    const time = clock.pause();
     finished = true;
     const previous = best.value[built.size];
-    if (previous === undefined || timer_total < previous) {
-      best.value[built.size] = timer_total;
+    if (previous === undefined || time < previous) {
+      best.value[built.size] = time;
       record = true;
     }
   }
@@ -462,6 +439,6 @@
     <span>{size_label(built.size)}</span>
     <span>{CARVER_LABELS[built.carver]}</span>
     <span class="hidden @sm:inline">Seed {seed.toString(16).padStart(8, "0")}</span>
-    <span class="hidden @md:inline">Best {best_time === undefined ? "–" : format_time(best_time)}</span>
+    <span class="hidden @md:inline">Best {best_time === undefined ? "–" : format_time(best_time, { tenths: true })}</span>
   </StatusBar>
 </div>

@@ -1,3 +1,4 @@
+import { daily_seed } from "$lib/core/games/time";
 import { z } from "zod";
 import { Difficulty, generate, placement_cells, reverse, type Placement, type Puzzle } from "./puzzle";
 
@@ -132,8 +133,11 @@ export function restore(saved: Saved): Game | null {
   return { ...saved.found.reduce(with_found, game), hints: saved.hints };
 }
 
-export function format_time(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const minutes = Math.floor(total / 60);
-  return `${minutes}:${String(total % 60).padStart(2, "0")}`;
+export const DAILY_DIFFICULTY = Difficulty.MEDIUM;
+
+export function daily_game(day: string): Game {
+  return new_game(DAILY_DIFFICULTY, daily_seed(day, "word-search"));
 }
+
+/** A daily puzzle in progress, kept apart from the regular save. */
+export const daily_saved_schema = z.object({ day: z.string(), game: saved_schema });

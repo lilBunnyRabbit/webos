@@ -60,11 +60,10 @@
   let paused = $state(true);
   let current_time = $state(0);
   let duration = $state(0);
-  let hidden = $state(document.hidden);
   let fullscreen = $state(false);
   let dragging = $state(false);
 
-  const running = $derived((mic || !paused) && !win.is_minimized && !hidden);
+  const running = $derived((mic || !paused) && win.is_visible);
   const title = $derived(mic ? "Microphone" : (file?.name ?? ""));
 
   $effect(() => {
@@ -218,7 +217,7 @@
   }
 </script>
 
-<svelte:document onvisibilitychange={() => (hidden = document.hidden)} onfullscreenchange={() => (fullscreen = document.fullscreenElement === stage && !!stage)} />
+<svelte:document onfullscreenchange={() => (fullscreen = document.fullscreenElement === stage && !!stage)} />
 
 <!-- Outside every branch: the audio graph holds this element for the window's whole life. -->
 <audio
