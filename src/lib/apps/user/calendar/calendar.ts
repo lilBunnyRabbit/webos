@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { DAY, View } from "./props";
+
+export { CALENDAR_PROPS, View } from "./props";
 
 /**
  * Calendar's data file, `/var/lib/apps/calendar/events.json`. Days are local `YYYY-MM-DD` and times local `HH:MM`, like
@@ -24,10 +27,6 @@ export const EVENT_COLORS = Object.values(EventColor);
 export const Repeat = { DAILY: "daily", WEEKLY: "weekly", MONTHLY: "monthly", YEARLY: "yearly" } as const;
 export type Repeat = (typeof Repeat)[keyof typeof Repeat];
 
-export const View = { MONTH: "month", WEEK: "week", AGENDA: "agenda" } as const;
-export type View = (typeof View)[keyof typeof View];
-
-const DAY = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
 const TIME = /^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/;
 
 export const DaySchema = z.string().regex(DAY);
@@ -71,11 +70,6 @@ export const EMPTY_EVENTS: EventsFile = { version: CALENDAR_VERSION, events: [] 
 export const SourcesSchema = z.object({ work_hours: z.boolean(), kanban: z.boolean() });
 export type Sources = z.infer<typeof SourcesSchema>;
 export const DEFAULT_SOURCES: Sources = { work_hours: true, kanban: true };
-
-export const CALENDAR_PROPS = z.object({
-  day: DaySchema.optional(),
-  view: z.enum(View).optional(),
-});
 
 export function parse_events(text: string): EventsFile | null {
   try {

@@ -53,11 +53,15 @@ function serial<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function edit<T>(name: string, parse: (text: string) => T | null, fallback: T, change: (value: T) => T): Promise<T> {
+async function read<T>(name: string, parse: (text: string) => T | null, fallback: T): Promise<T> {
   const text = (await (await files().get_file(`${WORK_HOURS_DIR}/${name}`))?.text()) ?? null;
   const current = text === null ? fallback : parse(text);
   if (current === null) throw new Error(`${name} isn't valid Work Hours data; it was left as it is`);
-  const next = change(current);
+  return current;
+}
+
+async function edit<T>(name: string, parse: (text: string) => T | null, fallback: T, change: (value: T) => T): Promise<T> {
+  const next = change(await read(name, parse, fallback));
   await files().create_file(await data_folder(), name, { content: serialize(next as MonthFile | StateFile), overwrite: true });
   return next;
 }
@@ -70,8 +74,17 @@ export function edit_state(change: (state: StateFile) => StateFile): Promise<Sta
   return serial(() => edit(STATE_FILE, parse_state_file, EMPTY_STATE, change));
 }
 
-export async function clock_in(description = "", now = new Date()): Promise<void> {
-  await edit_state((state) => (state.running ? state : { ...state, running: { start: now.toISOString(), description } }));
+export function read_month(month: string): Promise<MonthFile> {
+  return serial(() => read(month_file_name(month), parse_month_file, empty_month(month)));
+}
+
+export function read_state(): Promise<StateFile> {
+  return serial(() => read(STATE_FILE, parse_state_file, EMPTY_STATE));
+}
+
+/** The state after; `running.start` is earlier than `now` when a session was already open. */
+export function clock_in(description = "", now = new Date()): Promise<StateFile> {
+  return edit_state((state) => (state.running ? state : { ...state, running: { start: now.toISOString(), description } }));
 }
 
 export async function set_running_description(description: string): Promise<void> {
