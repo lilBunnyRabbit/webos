@@ -14,9 +14,9 @@
     SpeakerHigh as SpeakerHighIcon,
   } from "phosphor-svelte";
   import Sparkline from "../sparkline.svelte";
-  import type { WindowMonitor, WindowStats } from "../window-monitor.svelte";
+  import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
 
-  let { monitor }: { monitor: WindowMonitor } = $props();
+  let { monitor }: { monitor: DomMonitor<WindowId> } = $props();
 
   type SortKey = "name" | "rate" | "peak" | "nodes";
 
@@ -30,7 +30,7 @@
     name: string;
     icon: Component;
     minimized: boolean;
-    stats: WindowStats | null;
+    stats: DomStats | null;
   }
 
   const rows_source = $derived(

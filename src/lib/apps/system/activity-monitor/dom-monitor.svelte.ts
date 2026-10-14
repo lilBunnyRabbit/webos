@@ -1,7 +1,6 @@
-import type { WindowId } from "$lib/core/api";
 import { Series } from "./series.svelte";
 
-export interface WindowStats {
+export interface DomStats {
   nodes: number;
   /** Mutation records per second over the last sample. */
   rate: number;
@@ -22,17 +21,21 @@ interface Tracked {
 const OBSERVE: MutationObserverInit = { subtree: true, childList: true, attributes: true, characterData: true };
 
 /**
- * DOM activity per window: a MutationObserver on each `[data-window-id]` element, read once a second. Everything it
- * starts lives inside `sample()` and stops with its cleanup, so a closed (or minimized) Activity Monitor costs nothing.
+ * DOM activity per key (a window, a desktop widget): a MutationObserver on the element `find` returns for each key,
+ * read once a second. Everything it starts lives inside `sample()` and stops with its cleanup, so a closed (or
+ * minimized) Activity Monitor costs nothing.
  */
-export class WindowMonitor {
-  stats = $state.raw(new Map<WindowId, WindowStats>());
+export class DomMonitor<K extends string> {
+  stats = $state.raw(new Map<K, DomStats>());
 
-  private tracked = new Map<WindowId, Tracked>();
-  private peaks = new Map<WindowId, number>();
-  private histories = new Map<WindowId, Series>();
+  private tracked = new Map<K, Tracked>();
+  private peaks = new Map<K, number>();
+  private histories = new Map<K, Series>();
 
-  constructor(private readonly list_windows: () => WindowId[]) {}
+  constructor(
+    private readonly list: () => K[],
+    private readonly find: (key: K) => Element | null
+  ) {}
 
   sample(): () => void {
     let last = performance.now();
@@ -54,7 +57,7 @@ export class WindowMonitor {
   }
 
   private sync() {
-    const ids = new Set(this.list_windows());
+    const ids = new Set(this.list());
 
     for (const [id, tracked] of this.tracked) {
       if (ids.has(id) && tracked.element.isConnected) continue;
@@ -69,8 +72,8 @@ export class WindowMonitor {
 
     for (const id of ids) {
       if (this.tracked.has(id)) continue;
-      // The window element can still be missing right after open; the next tick retries.
-      const element = document.querySelector(`[data-window-id="${CSS.escape(id)}"]`);
+      // The element can still be missing right after open; the next tick retries.
+      const element = this.find(id);
       if (!element) continue;
       const tracked: Tracked = {
         element,
@@ -83,7 +86,7 @@ export class WindowMonitor {
   }
 
   private read(seconds: number) {
-    const stats = new Map<WindowId, WindowStats>();
+    const stats = new Map<K, DomStats>();
 
     for (const [id, tracked] of this.tracked) {
       const rate = seconds > 0 ? tracked.count / seconds : 0;
