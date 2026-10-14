@@ -6,6 +6,7 @@
   import ThemeCard from "../theme/theme-card.svelte";
   import { Button, Kbd, Segmented } from "../ui";
   import { cn } from "$lib/core/utils";
+  import { installer } from "$lib/core/utils/install.svelte";
   import {
     AppWindow as AppWindowIcon,
     ArrowLeft as ArrowLeftIcon,
@@ -14,17 +15,20 @@
     ArrowLineRight as ArrowLineRightIcon,
     ArrowLineUp as ArrowLineUpIcon,
     ArrowRight as ArrowRightIcon,
+    CheckCircle as CheckCircleIcon,
     ClockCounterClockwise as ClockCounterClockwiseIcon,
     CursorClick as CursorClickIcon,
+    DownloadSimple as DownloadSimpleIcon,
     Flask as FlaskIcon,
     FolderSimple as FolderSimpleIcon,
     HardDrives as HardDrivesIcon,
+    Info as InfoIcon,
+    Laptop as LaptopIcon,
     List as ListIcon,
     Monitor as MonitorIcon,
     Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
     Warning as WarningIcon,
-    WifiSlash as WifiSlashIcon,
   } from "phosphor-svelte";
 
   let { resolve }: DialogProps<true> = $props();
@@ -38,13 +42,13 @@
     tone?: "warning";
   }
 
-  const PAGES = ["hello", "files", "around", "yours", "ready"] as const;
+  const PAGES = ["hello", "install", "files", "around", "yours", "ready"] as const;
   let page = $state(0);
   const last = PAGES.length - 1;
 
   const FILES: Point[] = [
     { icon: HardDrivesIcon, title: "Stored on this device", text: "Files live in your browser's private storage. Nothing is uploaded; there is no server." },
-    { icon: WifiSlashIcon, title: "Works offline", text: "Once loaded, WebOS runs without a connection. Install it from the browser to give it its own window." },
+    { icon: LaptopIcon, title: "One browser, one disk", text: "Another browser or device starts empty. Save files to disk to move them over." },
     { icon: FolderSimpleIcon, title: "Save to disk", text: "Right-click a file or folder and pick Save to disk… to keep a copy on your computer." },
     { icon: WarningIcon, title: "Clearing site data deletes them", text: "The storage belongs to this site. Clearing it in the browser removes your files and settings.", tone: "warning" },
   ];
@@ -131,11 +135,39 @@
             <div class="flex flex-col gap-2">
               <h1 class="text-3xl font-semibold">Welcome to WebOS</h1>
               <p class="mx-auto max-w-md text-sm text-pretty text-foreground/65">
-                A desktop that lives in your browser: windows, files, apps and a taskbar. No account, no install, no server.
+                A desktop that lives in your browser: windows, files, apps and a taskbar. No account, no server.
               </p>
             </div>
             <p class="text-ui text-foreground/65">A few pages on what to expect. Takes a minute.</p>
           </div>
+        {:else if PAGES[page] === "install"}
+          {@render heading("Install", "Install WebOS first", "The most important step. It takes a few seconds.")}
+          <section class="flex flex-col gap-5 rounded-2xl bg-background-light p-6 ring-2 ring-primary/40">
+            <div class="flex gap-4">
+              <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                <DownloadSimpleIcon class="size-6" weight="duotone" />
+              </span>
+              <div class="flex min-w-0 flex-col gap-1">
+                <h2 class="text-base font-semibold">Why it matters</h2>
+                <p class="text-ui text-pretty text-foreground/80">WebOS gets its own window and works offline.</p>
+                <p class="text-ui text-pretty text-foreground/80">The browser is far less likely to clear an installed app's storage, so your files stay put.</p>
+              </div>
+            </div>
+            {#if installer.installed}
+              <p class="flex items-center gap-2 text-sm font-medium text-success">
+                <CheckCircleIcon class="size-5" weight="fill" /> Installed
+              </p>
+            {:else if installer.can_install}
+              <Button variant="primary" size="lg" class="self-start" onclick={() => installer.install()}>
+                <DownloadSimpleIcon weight="bold" /> Install WebOS
+              </Button>
+            {:else}
+              <p class="flex items-start gap-2 rounded-lg bg-background p-3 text-ui text-foreground/80 ring-1 ring-foreground/8">
+                <InfoIcon class="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
+                <span>{installer.hint}</span>
+              </p>
+            {/if}
+          </section>
         {:else if PAGES[page] === "files"}
           {@render heading("Your files", "Everything stays on this device", "WebOS keeps your files in the browser, like a disk that belongs to this site.")}
           {@render points(FILES)}

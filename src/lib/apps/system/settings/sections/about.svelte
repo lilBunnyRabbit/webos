@@ -3,11 +3,13 @@
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
   import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
+  import { installer } from "$lib/core/utils/install.svelte";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
     CheckCircle as CheckCircleIcon,
+    DownloadSimple as DownloadSimpleIcon,
     Play as PlayIcon,
     Sparkle as SparkleIcon,
   } from "phosphor-svelte";
@@ -16,6 +18,7 @@
   const version = $derived(kernel.service<VersionService>("version"));
 
   const DEV = import.meta.env.DEV;
+  const INSTALL_WHY = "Its own window, works offline, and the browser is far less likely to clear its storage.";
 
   const rows = $derived([
     ["Version", version.info.version],
@@ -44,6 +47,23 @@
       <Badge>v{version.info.version}</Badge>
     </div>
   </div>
+
+  <Section title="Install">
+    <SettingRow
+      label="Install WebOS"
+      description={installer.installed || installer.can_install ? INSTALL_WHY : `${INSTALL_WHY} ${installer.hint}`}
+    >
+      {#if installer.installed}
+        <span class="flex items-center gap-1.5 text-ui font-medium text-success">
+          <CheckCircleIcon class="size-4" weight="fill" /> Installed
+        </span>
+      {:else if installer.can_install}
+        <Button variant="primary" onclick={() => installer.install()}>
+          <DownloadSimpleIcon /> Install
+        </Button>
+      {/if}
+    </SettingRow>
+  </Section>
 
   <Section title="Build">
     {#each rows as [label, value] (label)}
@@ -74,7 +94,7 @@
   </Section>
 
   <Section title="Introduction">
-    <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: files, getting around, theme and taskbar.">
+    <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: installing, files, getting around, theme and taskbar.">
       <Button onclick={() => version.show_intro()}>
         <PlayIcon /> Show again
       </Button>

@@ -122,7 +122,7 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 | settings | `theme get`, `theme list`, `theme set` | `theme` | `theme` |
 | notifications | `notify`, `notifications` | | `notification` |
 | clipboard | `copy`, `paste` | | |
-| version | `version`, `changelog [-c]` | | `release` |
+| version | `version`, `changelog [-c]`, `install` | | `release` |
 | router | `link [id] [-c]` | | |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
