@@ -78,7 +78,8 @@ export function parse_note(file: string, raw: string): Note | null {
 export function serialize_note(note: Note): string {
   const front = [`id: ${note.id}`, `status: ${note.status}`, `created: ${note.created}`];
   if (note.from) front.push(`from: ${note.from}`);
-  return `---\n${front.join("\n")}\n---\n\n${note.body.replace(/\n*$/, "\n")}`;
+  const body = note.body.replace(/\n+$/, "");
+  return `---\n${front.join("\n")}\n---\n\n${body ? `${body}\n` : ""}`;
 }
 
 /** quno's lookup: an id prefix of 3+ characters, then a unique title substring. */

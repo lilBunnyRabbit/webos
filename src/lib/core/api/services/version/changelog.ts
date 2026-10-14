@@ -7,9 +7,10 @@ export const CHANGELOG: Release[] = [
   {
     version: "0.33.0",
     date: "2026-10-14",
-    title: "Todo count",
+    title: "Quick Notes, easier",
     changes: [
       { kind: NEW, text: "Quick Notes shows how many todos are still open on its icon: on the desktop, in the taskbar, in the app list and on your phone's home screen." },
+      { kind: IMPROVED, text: "Quick Notes has a New note button that opens a blank note ready to type in, and its Inbox shows the capture shortcut for your keyboard." },
     ],
   },
   {

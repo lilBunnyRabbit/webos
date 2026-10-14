@@ -22,6 +22,11 @@ describe("notes", () => {
     expect(parse_note(original.file, serialize_note(original))).toEqual({ ...original, body: "fix dock gap #webos\n\nmore\n" });
   });
 
+  test("an empty note stays empty", () => {
+    const empty = note("a3f9c1e", "");
+    expect(parse_note(empty.file, serialize_note(empty))?.body).toBe("");
+  });
+
   test("rejects files that aren't notes", () => {
     expect(parse_note("x.md", "# just markdown")).toBeNull();
     expect(parse_note("x.md", "---\nid: nope\n---\n")).toBeNull();

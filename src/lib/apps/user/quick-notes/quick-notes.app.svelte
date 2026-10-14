@@ -1,10 +1,11 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import { format_keys } from "$lib/core/api/services/shortcuts/keys";
   import { Badge, Button, Checkbox, EmptyState, IconButton, Input, Segmented, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date, format_datetime } from "$lib/core/utils";
-  import { ArrowLeft, CheckSquare, Notepad, Trash, Tray, X } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { ArrowLeft, CheckSquare, Notepad, Plus, Trash, Tray, X } from "phosphor-svelte";
+  import { tick, untrack } from "svelte";
   import { z } from "zod";
   import {
     add_todo,
@@ -28,6 +29,11 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
+  const capture_keys = $derived.by(() => {
+    const shortcut = shortcuts.list().find((shortcut) => shortcut.id === "apps.quick_note");
+    return shortcut ? format_keys(shortcut.keys, shortcuts.mac).join(shortcuts.mac ? "" : "+") : null;
+  });
 
   const Tab = { INBOX: "inbox", NOTES: "notes", TODO: "todo" } as const;
   type Tab = (typeof Tab)[keyof typeof Tab];
@@ -40,6 +46,7 @@
   let loaded = $state(false);
   let query = $state("");
   let capture_text = $state("");
+  let editor = $state<HTMLTextAreaElement | null>(null);
 
   async function reload() {
     try {
@@ -116,18 +123,22 @@
     selected_id.value = null;
   }
 
-  async function capture(event: SubmitEvent) {
+  async function add(event: SubmitEvent) {
     event.preventDefault();
     const text = capture_text.trim();
     if (!text) return;
     capture_text = "";
-    if (tab.value === Tab.TODO) {
-      await write_todo(files, add_todo(todo_text, text));
-      return;
-    }
-    const note = await create_note(files, text, "");
+    await write_todo(files, add_todo(todo_text, text));
+  }
+
+  async function new_note() {
+    const note = await create_note(files, "", "");
     tab.value = Tab.INBOX;
+    query = "";
+    await reload();
     selected_id.value = note.id;
+    await tick();
+    editor?.focus();
   }
 
   async function update_todo(next: string | null) {
@@ -160,15 +171,14 @@
 <div class="@container grid h-full grid-rows-[auto_1fr_auto]">
   <Toolbar>
     <Segmented bind:value={tab.value} options={tabs} label="View" size="sm" />
-    <form class="flex min-w-0 flex-1 justify-end" onsubmit={capture}>
-      <Input
-        bind:value={capture_text}
-        size="sm"
-        class="w-full @lg:max-w-72"
-        placeholder={tab.value === Tab.TODO ? "Add a todo" : "New note, #tags inline"}
-        aria-label={tab.value === Tab.TODO ? "Add a todo" : "New note"}
-      />
-    </form>
+    {#if tab.value === Tab.TODO}
+      <form class="flex min-w-0 flex-1 justify-end" onsubmit={add}>
+        <Input bind:value={capture_text} size="sm" class="w-full @lg:max-w-72" placeholder="Add a todo, Enter to save" aria-label="Add a todo" />
+      </form>
+    {:else}
+      <span class="flex-1"></span>
+      <Button variant="primary" size="sm" onclick={new_note} title={capture_keys ? `Anywhere: ${capture_keys}` : undefined}><Plus weight="bold" /> New note</Button>
+    {/if}
   </Toolbar>
 
   <div class="min-h-0">
@@ -208,7 +218,7 @@
               <EmptyState
                 icon={tab.value === Tab.INBOX ? Tray : Notepad}
                 title={query ? "No matches" : tab.value === Tab.INBOX ? "Inbox zero" : `No ${filter_status.value} notes`}
-                description={tab.value === Tab.INBOX ? "New captures land here. Press Alt+Shift+Q anywhere." : undefined}
+                description={tab.value === Tab.INBOX ? `New captures land here.${capture_keys ? ` Press ${capture_keys} anywhere to jot one down.` : ""}` : undefined}
                 class="h-full"
               />
             {:else}
@@ -247,7 +257,9 @@
               <IconButton label="Delete note" size="sm" onclick={() => remove(note)}><Trash /></IconButton>
             </header>
             <Textarea
+              bind:element={editor}
               value={draft}
+              placeholder="Write it down, #tags inline"
               oninput={(event) => edit(event.currentTarget.value)}
               aria-label="Note"
               class="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3 ring-0 focus-visible:ring-0"
