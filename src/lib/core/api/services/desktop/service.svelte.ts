@@ -2,6 +2,7 @@ import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
 import { DesktopHelper, grid_items, type DesktopMove } from "./helper";
+import { ADDITIONS_FILE, ADDITIONS_PATH, DEFAULT_WIDGETS, parse_additions, pending_widgets, serialize_additions } from "./additions";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
   LAYOUT_DIRECTORY_NAME,
@@ -71,6 +72,23 @@ export class DesktopService implements GridDesktopService {
 
   async init(): Promise<void> {
     await this.folder.init();
+    await this.add_default_widgets().catch((error) => console.error("[DesktopService] Failed to add default widgets", error));
+  }
+
+  /**
+   * Places default widgets this desktop hasn't had yet (owner, 2026-10-14: existing desktops get them once too). An id
+   * is recorded once placed, so a widget the user removed stays removed; one already on the desktop counts as placed.
+   */
+  private async add_default_widgets(): Promise<void> {
+    const applied = parse_additions((await (await this.files_service.get_file(ADDITIONS_PATH))?.text()) ?? null);
+    const pending = pending_widgets(applied);
+    if (pending.length === 0) return;
+
+    for (const widget of pending) {
+      const present = this.folder.entries.some((entry) => entry.kind === "widget" && entry.app_id === widget.app_id);
+      if (!present) await this.folder.write_widget(widget.app_id, { label: widget.label, size: widget.size });
+    }
+    await write_var_lib(this.files_service, LAYOUT_DIRECTORY_NAME, ADDITIONS_FILE, serialize_additions([...applied, ...DEFAULT_WIDGETS.map((widget) => widget.id)]));
   }
 
   destroy(): void {

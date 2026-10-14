@@ -48,7 +48,7 @@
         await desktop.remove_item(widget.name);
         notifications.notify(app_id, { type: NotificationType.INFO, title: "Removed from the desktop", message: widget.label });
       } else {
-        await desktop.pin_widget(app_id, { label: "Daily puzzles", size: { w: 3, h: 3 } });
+        await desktop.pin_widget(app_id, { label: "Game Hub", size: { w: 4, h: 4 } });
       }
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });
@@ -68,12 +68,13 @@
     <span class="flex-1"></span>
     {#if tab.value === Tab.LIBRARY}
       <Select bind:value={sort.value} options={SORT_OPTIONS} size="sm" class="w-34" aria-label="Sort games" />
-    {:else if tab.value === Tab.TODAY && can_pin && (dailies.length || widget)}
+    {/if}
+    {#if can_pin}
       <Button
         variant="quiet"
         size="sm"
         pressed={widget !== undefined}
-        title={widget ? "Today's puzzles are on the desktop. Click to remove them." : "Show today's puzzles and your streak on the desktop."}
+        title={widget ? "Game Hub is on the desktop. Click to remove it." : "Put your games, today's puzzles and your streak on the desktop."}
         onclick={toggle_widget}
       >
         <Sticker />{widget ? "On desktop" : "Add to desktop"}
