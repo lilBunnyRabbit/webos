@@ -1,3 +1,12 @@
+<script lang="ts" module>
+  import type { AppId, WidgetProps } from "$lib/core/api";
+  import type { Component } from "svelte";
+
+  // Loaded once per app. Moving any desktop item hands every widget a new item object; a fresh import promise from each
+  // re-derivation showed the spinner for a frame although the module was cached.
+  const loaded = new Map<AppId, Component<WidgetProps>>();
+</script>
+
 <script lang="ts">
   import kernel, { type AppsService, type DesktopItem } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
@@ -37,7 +46,11 @@
     const result = manifest.props.safeParse(item.props ?? {});
     return result.success ? result.data : null;
   });
-  const component = $derived(manifest?.widget && widget_props ? manifest.widget().then((module) => module.default) : null);
+  const component = $derived.by(() => {
+    if (!manifest?.widget || !widget_props) return null;
+    const app_id = item.app_id;
+    return loaded.get(app_id) ?? manifest.widget().then((module) => (loaded.set(app_id, module.default), module.default));
+  });
 </script>
 
 <!-- The title strip is the widget's handle: select, drag, open and menu go through it; the body belongs to the app. -->
@@ -74,7 +87,10 @@
   </button>
 
   <div data-widget-body class="min-h-0 flex-1 overflow-hidden">
-    {#if component}
+    {#if component && !(component instanceof Promise)}
+      {@const Widget = component}
+      <Widget props={widget_props ?? {}} size={item.size} name={item.name} />
+    {:else if component}
       {#await component}
         <div class="grid h-full place-items-center"><Spinner /></div>
       {:then Widget}
