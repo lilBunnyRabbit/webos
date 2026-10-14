@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, text: "PDF Tools: merge, split, reorder, rotate and sign PDFs, turn images into a PDF or pages into images. Everything stays on your device." },
       { kind: NEW, text: "Draw your signature once in PDF Tools and place it on any PDF; it's saved as a crisp vector image in your Signatures folder." },
+      { kind: NEW, text: "PDF Tools in the Terminal (pdf merge, split, rotate, pages, images, export) and an Edit in PDF Tools button in PDF Viewer." },
       { kind: NEW, text: "App Library: every app in one place, with categories, filters and details like which files it opens and what it does in the Terminal. Open it from All apps in the start menu." },
       { kind: NEW, text: "Install WebOS as an app from the introduction or Settings › About, so it gets its own window and keeps your files safer." },
       { kind: NEW, text: "Resize desktop widgets by dragging their bottom-right corner, or with Shift and the arrow keys; each widget rearranges itself to fit." },

@@ -147,6 +147,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | archive | `zip [paths…] [--to] [--store]`, `zip list <path>`, `unzip <path> [--to]` | `file`; `zip-entry` values (open → Archive) |
 | diff | `diff <left> <right> [--stat]` | opens Diff; `diff-stat` with `--stat` |
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
+| pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
