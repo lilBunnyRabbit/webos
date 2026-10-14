@@ -89,14 +89,17 @@
     (tab.value === Tab.INBOX ? inbox : notes.filter((note) => note.status === filter_status.value)).filter(matches)
   );
 
-  // Edits save shortly after typing stops; a change made elsewhere (shell, Text Editor) replaces the draft.
-  let draft = $derived(selected?.body ?? "");
+  // Edits save shortly after typing stops. `base` is the file's text as of our last save: while the file still holds
+  // it, the local text wins (a reload racing a save would otherwise drop keystrokes); a change made elsewhere wins over it.
+  let local = $state<{ id: string; body: string; base: string } | null>(null);
+  const draft = $derived(selected && local?.id === selected.id && local.base === selected.body ? local.body : (selected?.body ?? ""));
   let save_timer: ReturnType<typeof setTimeout> | undefined;
 
   function edit(body: string) {
-    draft = body;
     const note = selected;
     if (!note) return;
+    const base = local?.id === note.id && local.base === note.body ? local.base : note.body;
+    local = { id: note.id, body, base };
     clearTimeout(save_timer);
     save_timer = setTimeout(() => void persist({ ...note, body }), 400);
   }
@@ -104,6 +107,7 @@
   async function persist(note: Note) {
     try {
       await save_note(files, note);
+      if (local?.id === note.id) local = { ...local, base: note.body };
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the note", message: String(reason) });
     }

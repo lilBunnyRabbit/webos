@@ -72,14 +72,14 @@ export function parse_note(file: string, raw: string): Note | null {
   }
   if (!/^[0-9a-f]{7}$/.test(front.id ?? "")) return null;
   const status = (NOTE_STATUSES as string[]).includes(front.status) ? (front.status as NoteStatus) : NoteStatus.RAW;
-  return { id: front.id, file, status, created: front.created ?? "", from: front.from ?? "", body: raw.slice(end + 5).replace(/^\n/, "") };
+  return { id: front.id, file, status, created: front.created ?? "", from: front.from ?? "", body: raw.slice(end + 5).replace(/^\n/, "").replace(/\n$/, "") };
 }
 
 export function serialize_note(note: Note): string {
   const front = [`id: ${note.id}`, `status: ${note.status}`, `created: ${note.created}`];
   if (note.from) front.push(`from: ${note.from}`);
-  const body = note.body.replace(/\n+$/, "");
-  return `---\n${front.join("\n")}\n---\n\n${body ? `${body}\n` : ""}`;
+  // Exactly one newline is added after the body and parse_note takes exactly one off, so the text round-trips as typed.
+  return `---\n${front.join("\n")}\n---\n\n${note.body}\n`;
 }
 
 /** quno's lookup: an id prefix of 3+ characters, then a unique title substring. */

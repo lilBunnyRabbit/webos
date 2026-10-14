@@ -19,7 +19,9 @@ const note = (id: string, body: string): Note => ({ id, file: `${id}.md`, status
 describe("notes", () => {
   test("round-trips through the file format", () => {
     const original = { ...note("a3f9c1e", "fix dock gap #webos\n\nmore"), created: "2026-10-14T12:00:00.000Z", from: "text-editor /home/x.md" };
-    expect(parse_note(original.file, serialize_note(original))).toEqual({ ...original, body: "fix dock gap #webos\n\nmore\n" });
+    expect(parse_note(original.file, serialize_note(original))).toEqual(original);
+    const trailing = { ...original, body: "line\n\n" };
+    expect(parse_note(trailing.file, serialize_note(trailing))?.body).toBe("line\n\n");
   });
 
   test("an empty note stays empty", () => {
