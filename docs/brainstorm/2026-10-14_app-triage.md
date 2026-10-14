@@ -224,3 +224,9 @@ Also added to the roadmap: Wordle and its variants.
 ## Widget resizing (owner, 2026-10-15)
 
 Time Since's widget was too big; the owner asked for 3×1 and for resizing in general. Decided: **drag the bottom-right corner**, snapping to cells, within per-app limits from a new manifest field `widget_size: { min, max, default }`; the size is written back into the `.widget` file. Each widget adapts its layout to `size`. Time Since defaults to 3×1. Rejected: preset sizes in the context menu (less direct); fixing defaults only.
+
+## App Library (owner, 2026-10-15)
+
+The start menu gets an "All apps" button that opens a bigger, structured view. Decided: **App Library, a system app** with a category list, the shared search, filter chips (has widget, opens files, has commands) and a details panel per app (description, keywords, file types, shell commands, widget sizes; Launch, Pin, Add widget). Rejected: a full-screen launchpad overlay (no details, new overlay kind); an expandable start menu (cramped on small screens).
+
+Also noted from the Files agent: File Explorer's Compress / Extract here lazily import `$lib/apps/user/archive/operations`, the first core → user-app import. To review with the shared-code questions.
