@@ -43,7 +43,7 @@ What are the implications of this decision?
 | [007](./007-shell-service.md) | Shell Service & Terminal | 2026-01-31 | Accepted |
 | [008](./008-app-props-validation.md) | App Props Validation (zod) | 2026-01-31 | Implemented |
 | [009](./009-app-ecosystem.md) | App Ecosystem | 2026-02-01 | Accepted |
-| [010](./010-url-deep-linking.md) | URL Deep Linking | 2026-02-01 | Accepted |
+| [010](./010-url-deep-linking.md) | URL Deep Linking | 2026-02-01 | Implemented (app links; file, workspace, demo, embed deferred) |
 | [011](./011-desktop-enhancements.md) | Desktop Enhancements | 2026-02-01 | Implemented (multi-select, wallpaper, Sort by; icon settings not built) |
 | [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted (parked) |

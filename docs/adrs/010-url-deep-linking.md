@@ -1,7 +1,13 @@
 # ADR-010: URL Deep Linking & Share System
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Implemented (app links only)
+
+> **Revision 2026-10-14: v1 is app links** (owner, [brainstorm](../brainstorm/2026-10-14_deep-linking.md))
+> - Only `#/app/{id}?{props}` ships. File links, workspace, demo presets and embed are deferred: almost every app's props are an OPFS path, which doesn't exist on the receiving machine.
+> - Each query value is JSON-parsed, falling back to the raw string, then validated against the app's schema. An unknown app or props that fail the schema show an error toast and **nothing opens** (replaces "invalid props are discarded").
+> - The router is **RouterService** (`router`, depends on windows, apps, session, clipboard, notifications), not an OS-level module. It waits for the session's Restore answer, launches the link, then clears the hash with `history.replaceState`. `hashchange` is handled the same way.
+> - Share is a **Copy link** button in the titlebar, shown when the app's props schema has no `path` key. It copies the launch props, not the app's current state. No QR code, no share dialog, nothing on mobile.
 
 ## Context
 
