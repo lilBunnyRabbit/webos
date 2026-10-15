@@ -506,7 +506,7 @@ ADR-033. A [shell](services/shell.md) session per window, on the field surface (
 | Key | Does |
 |-----|------|
 | Typing | Ghost text: the newest history line that continues it, else the single completion that fits. → at the end accepts it |
-| Tab | One completion: applied (a space after unless it's a folder). Several: fills the common prefix and opens a popup (top-layer popover, anchored under the prompt row, flips above). Tab / Shift+Tab / ↑ ↓ move, Enter picks, Esc closes. Picking a folder lists its contents. Typing refreshes the list |
+| Tab | One completion: applied (a space after unless it's a folder). Several: fills the common prefix and opens a popup (top-layer popover, anchored under the prompt row, flips above). Tab / Shift+Tab / ↑ ↓ move, Enter picks, Esc closes. Picking a folder lists its contents. Typing refreshes the list (the ghost-text lookup has its own request counter, so it doesn't cancel the refresh) |
 | ↑ ↓ | History (shared by all terminals), keeping the line you were typing as a draft |
 | Enter | Runs the line; ignored while one is running |
 | Ctrl+C | Aborts the run, or clears the line |
@@ -518,7 +518,7 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 **Touch.** The key row shows on `pointer-coarse`: Ctrl (sticky: the next typed letter acts as Ctrl+letter), Tab, Esc, arrows, `|`, `~`, `/`. Its buttons `preventDefault` on pointerdown, so the field keeps focus and the soft keyboard stays up. `index.html` sets `interactive-widget=resizes-content`, so on Android the layout shrinks above the keyboard and the row stays visible.
 
 **Persistence.**
-- Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached once an entry finishes) and `started`. Session restore therefore brings back the folder and the screen.
+- Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached per entry while its output is unchanged; a running entry's output is saved once a second, not per streamed batch) and `started`. Session restore therefore brings back the folder and the screen.
 - Restored output is plain text. An entry restored mid-run shows as aborted.
 - `run` executes only on the first mount (`started`), so a restore doesn't rerun it.
 - Closing the window aborts the running line.
