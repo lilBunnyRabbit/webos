@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parse_additions, pending_widgets, serialize_additions, type DefaultWidget } from "./additions";
+import type { AppManifest } from "$lib/core/api";
+import { default_widgets, parse_additions, pending_widgets, serialize_additions, type DefaultWidget } from "./additions";
 
 const widget = (id: string): DefaultWidget => ({ id, app_id: id, label: id });
 
@@ -14,5 +15,11 @@ describe("desktop additions", () => {
   });
   it("lists only defaults not placed yet", () => {
     expect(pending_widgets(["a"], [widget("a"), widget("b")]).map((item) => item.id)).toEqual(["b"]);
+  });
+  it("takes every app flagged default_widget that has a widget", () => {
+    const app = (name: string, extra: Partial<AppManifest>) => [name, { name, ...extra } as AppManifest] as [string, AppManifest];
+    const widget = async () => ({ default: (() => {}) as never });
+    const apps = [app("a", { default_widget: true, widget }), app("b", { widget }), app("c", { default_widget: true })];
+    expect(default_widgets(apps)).toEqual([{ id: "a", app_id: "a", label: "a" }]);
   });
 });

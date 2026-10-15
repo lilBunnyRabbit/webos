@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AppId } from "$lib/core/api";
+import type { AppId, AppManifest } from "$lib/core/api";
 import { LAYOUT_DIRECTORY } from "./layout";
 
 /** Widgets the desktop gets by default: on first boot, and once on desktops set up before they existed. */
@@ -10,8 +10,10 @@ export interface DefaultWidget {
   label: string;
 }
 
-/** Placed at the app's `widget_size.default`. */
-export const DEFAULT_WIDGETS: DefaultWidget[] = [{ id: "game-hub", app_id: "game-hub", label: "Game Hub" }];
+/** Every installed app with `default_widget`, so deleting the app drops its widget too. */
+export function default_widgets(apps: Iterable<[AppId, AppManifest]>): DefaultWidget[] {
+  return [...apps].filter(([, app]) => app.default_widget && app.widget).map(([id, app]) => ({ id, app_id: id, label: app.name }));
+}
 
 export const ADDITIONS_FILE = "additions.json";
 export const ADDITIONS_PATH = `${LAYOUT_DIRECTORY}/${ADDITIONS_FILE}`;
@@ -34,6 +36,6 @@ export function serialize_additions(applied: string[]): string {
 }
 
 /** Defaults not placed yet. */
-export function pending_widgets(applied: string[], defaults: DefaultWidget[] = DEFAULT_WIDGETS): DefaultWidget[] {
+export function pending_widgets(applied: string[], defaults: DefaultWidget[]): DefaultWidget[] {
   return defaults.filter((widget) => !applied.includes(widget.id));
 }

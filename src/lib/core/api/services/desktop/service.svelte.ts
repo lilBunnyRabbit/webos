@@ -3,7 +3,7 @@ import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
 import { DesktopHelper, grid_items, type DesktopMove, type ResizeTarget } from "./helper";
 import type { WidgetSize } from "../apps/type";
-import { ADDITIONS_FILE, ADDITIONS_PATH, DEFAULT_WIDGETS, parse_additions, pending_widgets, serialize_additions } from "./additions";
+import { ADDITIONS_FILE, ADDITIONS_PATH, default_widgets, parse_additions, pending_widgets, serialize_additions } from "./additions";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
   LAYOUT_DIRECTORY_NAME,
@@ -73,7 +73,8 @@ export class DesktopService implements GridDesktopService {
 
   async init(): Promise<void> {
     await this.folder.init();
-    await this.add_default_widgets().catch((error) => console.error("[DesktopService] Failed to add default widgets", error));
+    // Off the boot path: the widget shows up a moment after the desktop does.
+    void this.add_default_widgets().catch((error) => console.error("[DesktopService] Failed to add default widgets", error));
   }
 
   /**
@@ -82,14 +83,15 @@ export class DesktopService implements GridDesktopService {
    */
   private async add_default_widgets(): Promise<void> {
     const applied = parse_additions((await (await this.files_service.get_file(ADDITIONS_PATH))?.text()) ?? null);
-    const pending = pending_widgets(applied);
+    const defaults = default_widgets(this.apps_service.list());
+    const pending = pending_widgets(applied, defaults);
     if (pending.length === 0) return;
 
     for (const widget of pending) {
       const present = this.folder.entries.some((entry) => entry.kind === "widget" && entry.app_id === widget.app_id);
       if (!present) await this.folder.write_widget(widget.app_id, { label: widget.label });
     }
-    await write_var_lib(this.files_service, LAYOUT_DIRECTORY_NAME, ADDITIONS_FILE, serialize_additions([...applied, ...DEFAULT_WIDGETS.map((widget) => widget.id)]));
+    await write_var_lib(this.files_service, LAYOUT_DIRECTORY_NAME, ADDITIONS_FILE, serialize_additions([...applied, ...defaults.map((widget) => widget.id)]));
   }
 
   destroy(): void {

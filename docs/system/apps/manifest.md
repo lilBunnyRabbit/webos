@@ -40,6 +40,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
+| `default_widget` | `boolean` | no | Puts the app's widget on every desktop once, at `widget_size.default` ([desktop](../services/desktop.md)). Removing it sticks. Needs `widget` |
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.

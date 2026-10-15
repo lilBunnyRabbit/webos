@@ -78,6 +78,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * its file's size and can't be resized.
    */
   widget_size?: WidgetSizeLimits;
+  /**
+   * Placed on every desktop once, at `widget_size.default`: on first boot and on desktops set up before. Removing it
+   * sticks.
+   */
+  default_widget?: boolean;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
 }

@@ -74,5 +74,6 @@ export default define_app({
   },
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 3, h: 1 }, max: { w: 6, h: 4 }, default: { w: 4, h: 2 } },
+  default_widget: true,
   component: () => import("./game-hub.app.svelte"),
 });
