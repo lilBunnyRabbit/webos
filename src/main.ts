@@ -18,6 +18,7 @@ const STEP_LABELS: Record<string, string> = {
   ui: "Interface",
   shell: "Shell",
   shortcuts: "Shortcuts",
+  backup: "Backup",
   router: "Links",
   version: "Updates",
 };

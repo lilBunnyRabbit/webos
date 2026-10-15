@@ -6,6 +6,34 @@ export async function get_root(): Promise<FileSystemDirectoryHandle> {
   return await navigator.storage.getDirectory();
 }
 
+let held = false;
+let running = 0;
+const drained: Array<() => void> = [];
+
+// Every write in this module passes through here, so a backup restore (ADR-037) can stop the running OS from saving
+// stale in-memory state over the folders it just replaced. The restore itself writes through native handles.
+async function writing<T>(write: () => Promise<T>): Promise<T> {
+  if (held) throw new DOMException("Writes are on hold while a backup is restored", "NoModificationAllowedError");
+  running++;
+  try {
+    return await write();
+  } finally {
+    if (--running === 0) for (const resolve of drained.splice(0)) resolve();
+  }
+}
+
+/**
+ * Makes every write through this module (so through FilesService and DirectoryHandler) reject until the returned
+ * release runs. Resolves once the writes already under way have finished. For backup restore, which reloads after.
+ */
+export async function hold_writes(): Promise<() => void> {
+  held = true;
+  if (running > 0) await new Promise<void>((resolve) => drained.push(resolve));
+  return () => {
+    held = false;
+  };
+}
+
 export function default_sort(a: FileSystemItem, b: FileSystemItem): number {
   if (a.kind !== b.kind) {
     return a.kind === "directory" ? -1 : 1;
@@ -119,7 +147,7 @@ export async function create_directory(
   parent: FileSystemDirectoryHandle,
   name: string
 ): Promise<FileSystemDirectoryHandle> {
-  return await parent.getDirectoryHandle(await available_name(parent, name), { create: true });
+  return writing(async () => parent.getDirectoryHandle(await available_name(parent, name), { create: true }));
 }
 
 export async function create_file(
@@ -129,26 +157,30 @@ export async function create_file(
 ): Promise<FileSystemFileHandle> {
   const { content, overwrite = false } = options;
 
-  const target_name = overwrite ? name : await available_name(parent, name);
-  const file_handle = await parent.getFileHandle(target_name, { create: true });
+  return writing(async () => {
+    const target_name = overwrite ? name : await available_name(parent, name);
+    const file_handle = await parent.getFileHandle(target_name, { create: true });
 
-  if (content !== undefined) {
-    await write_file(file_handle, content);
-  }
+    if (content !== undefined) {
+      await write_file(file_handle, content);
+    }
 
-  return file_handle;
+    return file_handle;
+  });
 }
 
 export async function write_file(handle: FileSystemFileHandle, content: string | Blob | BufferSource): Promise<void> {
-  const writable = await handle.createWritable();
-  try {
-    await writable.write(content);
-    await writable.close();
-  } catch (err) {
-    // An unclosed writable keeps the file locked until GC; abort releases it.
-    await writable.abort().catch(() => {});
-    throw err;
-  }
+  return writing(async () => {
+    const writable = await handle.createWritable();
+    try {
+      await writable.write(content);
+      await writable.close();
+    } catch (err) {
+      // An unclosed writable keeps the file locked until GC; abort releases it.
+      await writable.abort().catch(() => {});
+      throw err;
+    }
+  });
 }
 
 export async function read_file(handle: FileSystemFileHandle): Promise<File> {
@@ -174,7 +206,7 @@ export async function delete_entry(
   name: string,
   options: { recursive?: boolean } = {}
 ): Promise<void> {
-  await parent.removeEntry(name, { recursive: options.recursive ?? false });
+  return writing(() => parent.removeEntry(name, { recursive: options.recursive ?? false }));
 }
 
 export async function exists(
@@ -206,11 +238,13 @@ export async function copy_file(
   target_dir: FileSystemDirectoryHandle,
   new_name?: string
 ): Promise<FileSystemFileHandle> {
-  const file = await source.getFile();
-  const target_name = await available_name(target_dir, new_name ?? file.name);
-  const target_handle = await target_dir.getFileHandle(target_name, { create: true });
-  await write_file(target_handle, file);
-  return target_handle;
+  return writing(async () => {
+    const file = await source.getFile();
+    const target_name = await available_name(target_dir, new_name ?? file.name);
+    const target_handle = await target_dir.getFileHandle(target_name, { create: true });
+    await write_file(target_handle, file);
+    return target_handle;
+  });
 }
 
 /** Recursively copies a folder into `target_dir` (auto-renamed on clash), returning the new folder. */
@@ -219,31 +253,35 @@ export async function copy_directory(
   target_dir: FileSystemDirectoryHandle,
   new_name?: string
 ): Promise<FileSystemDirectoryHandle> {
-  const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
-    create: true,
+  return writing(async () => {
+    const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
+      create: true,
+    });
+
+    for (const item of await list_directory(source, { include_metadata: false })) {
+      if (item.kind === "file") await copy_file(item.handle, target);
+      else await copy_directory(item.handle, target);
+    }
+
+    return target;
   });
-
-  for (const item of await list_directory(source, { include_metadata: false })) {
-    if (item.kind === "file") await copy_file(item.handle, target);
-    else await copy_directory(item.handle, target);
-  }
-
-  return target;
 }
 
 /** Renames an entry in place. Fails if `new_name` is taken: a rename never silently becomes "name (1)". */
 export async function rename_entry(parent: FileSystemDirectoryHandle, name: string, new_name: string): Promise<void> {
   if (name === new_name) return;
-  if (await exists(parent, new_name)) {
-    throw new DOMException(`"${new_name}" already exists`, "InvalidModificationError");
-  }
+  return writing(async () => {
+    if (await exists(parent, new_name)) {
+      throw new DOMException(`"${new_name}" already exists`, "InvalidModificationError");
+    }
 
-  const kind = (await exists(parent, name, "directory")) ? "directory" : "file";
-  if (kind === "file") {
-    await (await parent.getFileHandle(name)).move(parent, new_name);
-  } else {
-    await move_directory(parent, await parent.getDirectoryHandle(name), parent, new_name);
-  }
+    const kind = (await exists(parent, name, "directory")) ? "directory" : "file";
+    if (kind === "file") {
+      await (await parent.getFileHandle(name)).move(parent, new_name);
+    } else {
+      await move_directory(parent, await parent.getDirectoryHandle(name), parent, new_name);
+    }
+  });
 }
 
 export async function move_file(
@@ -257,9 +295,11 @@ export async function move_file(
     return source;
   }
 
-  // Native move keeps the handle valid, now pointing at the new location.
-  await source.move(target_dir, await available_name(target_dir, target_name));
-  return source;
+  return writing(async () => {
+    // Native move keeps the handle valid, now pointing at the new location.
+    await source.move(target_dir, await available_name(target_dir, target_name));
+    return source;
+  });
 }
 
 /** OPFS directory handles have no native `move()`, so the tree is recreated and each file moved natively. */
@@ -269,20 +309,22 @@ export async function move_directory(
   target_dir: FileSystemDirectoryHandle,
   new_name?: string
 ): Promise<FileSystemDirectoryHandle> {
-  const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
-    create: true,
-  });
+  return writing(async () => {
+    const target = await target_dir.getDirectoryHandle(await available_name(target_dir, new_name ?? source.name), {
+      create: true,
+    });
 
-  for (const item of await list_directory(source, { include_metadata: false })) {
-    if (item.kind === "file") {
-      await move_file(source, item.handle, target);
-    } else {
-      await move_directory(source, item.handle, target);
+    for (const item of await list_directory(source, { include_metadata: false })) {
+      if (item.kind === "file") {
+        await move_file(source, item.handle, target);
+      } else {
+        await move_directory(source, item.handle, target);
+      }
     }
-  }
 
-  await source_parent.removeEntry(source.name);
-  return target;
+    await source_parent.removeEntry(source.name);
+    return target;
+  });
 }
 
 /** Returns `name`, or `name (1).ext`, `name (2).ext`, … if it's taken. Dotfiles keep their leading dot. */
@@ -300,9 +342,11 @@ export async function available_name(dir: FileSystemDirectoryHandle, name: strin
 
 /** Writes a `File` from outside OPFS into `target_dir` under a free name. The one path for uploads and drops. */
 export async function store_file(target_dir: FileSystemDirectoryHandle, file: File): Promise<FileSystemFileHandle> {
-  const handle = await target_dir.getFileHandle(await available_name(target_dir, file.name), { create: true });
-  await write_file(handle, file);
-  return handle;
+  return writing(async () => {
+    const handle = await target_dir.getFileHandle(await available_name(target_dir, file.name), { create: true });
+    await write_file(handle, file);
+    return handle;
+  });
 }
 
 export async function upload_files(

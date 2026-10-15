@@ -18,7 +18,7 @@ First test run needs `bunx playwright install chromium`.
 
 ## How it's built
 
-A small kernel holds a registry of 14 services: settings, windows, files, notifications, dialogs, apps, desktop, session, clipboard, ui, shell, shortcuts, router and version. Each declares its dependencies, and `kernel.init()` builds them in that order while the splash shows progress. Components reach a service by name, so one implementation can be swapped for another: phones get their own windows and desktop services and their own shell, and each device downloads only its own shell. Apps are folders with a `define_app()` manifest. The manifest is discovered by glob and the app's component loads lazily. Everything persistent lives in the Origin Private File System under a Unix-lite tree.
+A small kernel holds a registry of 15 services: settings, windows, files, notifications, dialogs, apps, desktop, session, clipboard, ui, shell, shortcuts, backup, router and version. Each declares its dependencies, and `kernel.init()` builds them in that order while the splash shows progress. Components reach a service by name, so one implementation can be swapped for another: phones get their own windows and desktop services and their own shell, and each device downloads only its own shell. Apps are folders with a `define_app()` manifest. The manifest is discovered by glob and the app's component loads lazily. Everything persistent lives in the Origin Private File System under a Unix-lite tree.
 
 ```mermaid
 flowchart TD
@@ -42,6 +42,7 @@ flowchart TD
     ui["ui"]
     shell["shell"]
     shortcuts["shortcuts"]
+    backup["backup<br/>zip to the device"]
     router["router"]
     version["version"]
 
@@ -63,6 +64,10 @@ flowchart TD
     shell --> dialogs
     shortcuts --> shell
     shortcuts --> windows
+    backup --> files
+    backup --> dialogs
+    backup --> notifications
+    backup --> windows
     router --> session
     router --> clipboard
     version --> apps

@@ -1,4 +1,5 @@
 import {
+  Archive as ArchiveIcon,
   FileText as FileTextIcon,
   Info as InfoIcon,
   MapTrifold as MapTrifoldIcon,
@@ -11,6 +12,7 @@ export const SECTIONS = [
   { value: "appearance", label: "Appearance", icon: PaletteIcon },
   { value: "taskbar", label: "Taskbar", icon: SquareSplitVerticalIcon },
   { value: "files", label: "Default apps", icon: FileTextIcon },
+  { value: "backup", label: "Backup", icon: ArchiveIcon },
   { value: "whats-new", label: "What's new", icon: SparkleIcon },
   { value: "roadmap", label: "Roadmap", icon: MapTrifoldIcon },
   { value: "about", label: "About", icon: InfoIcon },

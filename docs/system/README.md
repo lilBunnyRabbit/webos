@@ -42,6 +42,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/shell.md](services/shell.md) | `shell` |
 | [services/shortcuts.md](services/shortcuts.md) | `shortcuts` |
 | [services/router.md](services/router.md) | `router` |
+| [services/backup.md](services/backup.md) | `backup` |
 
 ### Shell
 
