@@ -45,8 +45,8 @@
   <li>
     <div class={cn("flex h-7 items-center gap-2 text-2xs", node.status === "idle" && "opacity-55")}>
       <status.icon class={cn("size-3.5 shrink-0", status.class)} weight="bold" />
-      <span class={cn("shrink-0 text-ui", node.group && "font-medium")}>{node.name}</span>
-      <span class="min-w-0 flex-1 truncate text-foreground/55">{node.mode ?? node.note ?? ""}</span>
+      <span class={cn("min-w-0 truncate text-ui", node.group && "font-medium")} title={node.name}>{node.name}</span>
+      <span class="min-w-0 flex-1 basis-16 truncate text-foreground/55">{node.mode ?? node.note ?? ""}</span>
       {#if node.status === "in-progress" || node.status === "error"}
         <span class="h-1 w-12 shrink-0 overflow-hidden rounded-full bg-foreground/12">
           <span class={cn("block h-full rounded-full", node.status === "error" ? "bg-error" : "bg-primary")} style:width="{node.progress * 100}%"></span>

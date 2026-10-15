@@ -18,6 +18,61 @@ export interface ExtractResult {
   skipped: string[];
 }
 
+/** Writes entries into a new folder one at a time; `open` makes the folder, `add` must not overlap. */
+export class ZipExtractor {
+  private readonly folders = new Map<string, FileSystemDirectoryHandle>();
+  private count = 0;
+  private readonly skipped: string[] = [];
+  private path = "";
+
+  constructor(
+    private readonly source: Blob,
+    private readonly folder: string,
+    private readonly name: string
+  ) {}
+
+  /** Creates the target folder (renamed when taken) and resolves its path. */
+  async open(): Promise<string> {
+    const parent = await files().get_directory(this.folder);
+    if (!parent) throw new Error(`The folder ${this.folder} no longer exists.`);
+    const target = await files().create_directory(parent, this.name);
+    this.folders.set("", target);
+    this.path = join(this.folder, target.name);
+    return this.path;
+  }
+
+  /** Writes one entry. An encrypted or unsupported one is skipped and returns `false`. */
+  async add(entry: ZipEntry, options: StreamOptions = {}): Promise<boolean> {
+    if (options.signal?.aborted) throw abort_error(options.signal);
+    if (entry.directory) {
+      await this.folder_at(entry.path);
+      return true;
+    }
+    if (!readable(entry)) {
+      this.skipped.push(entry.name);
+      return false;
+    }
+    const directory = await this.folder_at(entry.path.slice(0, -1));
+    const data = await entry_blob(this.source, entry, options);
+    await files().create_file(directory, entry.path.at(-1)!, { content: data });
+    this.count++;
+    return true;
+  }
+
+  result(): ExtractResult {
+    return { path: this.path, files: this.count, skipped: [...this.skipped] };
+  }
+
+  private async folder_at(segments: string[]): Promise<FileSystemDirectoryHandle> {
+    const key = segments.join("/");
+    const known = this.folders.get(key);
+    if (known) return known;
+    const handle = await files().create_directory(await this.folder_at(segments.slice(0, -1)), segments.at(-1)!);
+    this.folders.set(key, handle);
+    return handle;
+  }
+}
+
 export async function extract_entries(
   source: Blob,
   entries: ZipEntry[],
@@ -26,39 +81,11 @@ export async function extract_entries(
   options: StreamOptions,
   on_target?: (path: string) => void
 ): Promise<ExtractResult> {
-  const parent = await files().get_directory(folder);
-  if (!parent) throw new Error(`The folder ${folder} no longer exists.`);
-  const target = await files().create_directory(parent, name);
-  on_target?.(join(folder, target.name));
-  const folders = new Map<string, FileSystemDirectoryHandle>([["", target]]);
-
-  const folder_at = async (segments: string[]): Promise<FileSystemDirectoryHandle> => {
-    const key = segments.join("/");
-    const known = folders.get(key);
-    if (known) return known;
-    const handle = await files().create_directory(await folder_at(segments.slice(0, -1)), segments.at(-1)!);
-    folders.set(key, handle);
-    return handle;
-  };
-
-  let count = 0;
-  const skipped: string[] = [];
-  for (const entry of entries) {
-    if (options.signal?.aborted) throw abort_error(options.signal);
-    if (entry.directory) {
-      await folder_at(entry.path);
-      continue;
-    }
-    if (!readable(entry)) {
-      skipped.push(entry.name);
-      continue;
-    }
-    const directory = await folder_at(entry.path.slice(0, -1));
-    const data = await entry_blob(source, entry, options);
-    await files().create_file(directory, entry.path.at(-1)!, { content: data });
-    count++;
-  }
-  return { path: join(folder, target.name), files: count, skipped };
+  const extractor = new ZipExtractor(source, folder, name);
+  const path = await extractor.open();
+  on_target?.(path);
+  for (const entry of entries) await extractor.add(entry, options);
+  return extractor.result();
 }
 
 async function walk(handle: FileSystemDirectoryHandle, prefix: string, out: ZipSource[]): Promise<void> {

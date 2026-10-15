@@ -5,14 +5,13 @@ import kernel, {
   type AppsService,
   type FilesService,
   type NotificationsService,
-  type TaskContext,
   type TaskJob,
   type TaskReport,
   type TasksService,
 } from "$lib/core/api";
 import type { AppId } from "$lib/core/api/services/apps/type";
 import { error_message, format_bytes } from "$lib/core/utils";
-import { extract_entries, item_at, join, remove_at, write_at, type ExtractResult } from "./files";
+import { item_at, join, remove_at, write_at, ZipExtractor, type ExtractResult } from "./files";
 import { add_item, archive_name, base_name, stem, unique_name, type CreateItem } from "./create";
 import { Method, type StreamOptions } from "./format";
 import { read_zip, type ZipEntry } from "./read";
@@ -36,19 +35,6 @@ const files = () => kernel.service<FilesService>("files");
 const apps = () => kernel.service<AppsService>("apps");
 const tasks = () => kernel.service<TasksService>("tasks");
 const notifications = () => kernel.service<NotificationsService>("notifications");
-
-function stream(task: { setProgress(progress: number): unknown }, context: TaskContext, total: number): StreamOptions {
-  let done = 0;
-  return {
-    signal: context.signal,
-    pace: context.pace,
-    on_bytes: (bytes) => {
-      done += bytes;
-      task.setProgress(total > 0 ? done / total : 0);
-      context.message(`${format_bytes(done)} of ${format_bytes(total)}`);
-    },
-  };
-}
 
 async function discard(app_id: AppId, leftover: Leftover): Promise<void> {
   try {
@@ -184,44 +170,91 @@ export async function compress_into(paths: string[], folder: string): Promise<st
   return zip_items(items, await free_path(folder, archive_name(items)));
 }
 
-export async function extract_blob(
-  blob: Blob,
-  name: string,
-  entries: ZipEntry[],
-  folder: string,
-  options: RunOptions = {}
-): Promise<ExtractResult | null> {
+/** The archive's top-level files and folders, in archive order, each with its entries. */
+function top_level(entries: ZipEntry[]): { name: string; directory: boolean; entries: ZipEntry[]; size: number }[] {
+  const groups = new Map<string, { name: string; directory: boolean; entries: ZipEntry[]; size: number }>();
+  for (const entry of entries) {
+    const name = entry.path[0];
+    const group = groups.get(name) ?? { name, directory: false, entries: [], size: 0 };
+    group.directory ||= entry.directory || entry.path.length > 1;
+    group.entries.push(entry);
+    group.size += entry.directory ? 0 : entry.size;
+    groups.set(name, group);
+  }
+  return [...groups.values()];
+}
+
+/** "Create folder", then one task per top-level file or folder of the archive, in order. */
+export async function extract_blob(blob: Blob, name: string, entries: ZipEntry[], folder: string, options: RunOptions = {}): Promise<ExtractResult | null> {
   const app_id = options.app_id ?? SENDER;
   const total = entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0);
   let leftover: Leftover | null = null;
-  const job = tasks().run<ExtractResult>(
+  let extractor: ZipExtractor | null = null;
+  const job = tasks().run(
     app_id,
-    (context) =>
-      createTask<void, ExtractResult>({
-        name: "Extract",
-        execute() {
+    (context) => {
+      const current = new ZipExtractor(blob, folder, stem(name));
+      extractor = current;
+      let done = 0;
+      const create = createTask<void, string>({
+        name: "Create folder",
+        async execute() {
           leftover = null;
-          return extract_entries(blob, entries, folder, stem(name), stream(this, context, total), (path) => {
-            leftover = { path, discard: () => remove_at(path) };
-          });
+          const path = await current.open();
+          leftover = { path, discard: () => remove_at(path) };
+          this.logger.info(path);
+          return path;
         },
-      })(),
+      });
+      const extract = (group: ReturnType<typeof top_level>[number]) => {
+        const files = group.entries.filter((entry) => !entry.directory).length;
+        return createTask<void, void>({
+          name: group.directory ? `${group.name}/` : group.name,
+          parse() {
+            if (group.directory) return { status: `${files} ${files === 1 ? "file" : "files"} · ${format_bytes(group.size)}` };
+            return { status: format_bytes(group.size) };
+          },
+          async execute() {
+            let mine = 0;
+            const stream: StreamOptions = {
+              signal: context.signal,
+              pace: context.pace,
+              on_bytes: (bytes) => {
+                mine += bytes;
+                done += bytes;
+                this.setProgress(group.size > 0 ? mine / group.size : 0);
+                context.message(`${format_bytes(done)} of ${format_bytes(total)}`);
+              },
+            };
+            for (const entry of group.entries) {
+              if (!(await current.add(entry, stream))) this.logger.warn(`Skipped ${entry.name} (encrypted or unsupported)`);
+            }
+            this.logger.info(`Extracted ${files} ${files === 1 ? "file" : "files"}`);
+          },
+        })();
+      };
+      return createTaskGroup({
+        name: `Extract ${name}`,
+        tasks: () => [create(), ...top_level(entries).map(extract)],
+      })();
+    },
     {
       title: `Extracting ${name}`,
       signal: options.signal,
-      done: (result) => ({
-        title: `Extracted ${result.files} ${result.files === 1 ? "file" : "files"}`,
-        message: `${result.path}${result.skipped.length ? ` · ${result.skipped.length} skipped (encrypted or unsupported)` : ""}`,
-        actions: [{ label: "Show folder", on_click: () => apps().launch("file-explorer", { path: result.path }) }],
-      }),
-      failed: failed(
-        app_id,
-        { cancelled: "Extraction cancelled", failed: "Couldn't extract the archive" },
-        () => leftover
-      ),
+      done: () => {
+        const result = extractor!.result();
+        return {
+          title: `Extracted ${result.files} ${result.files === 1 ? "file" : "files"}`,
+          message: `${result.path}${result.skipped.length ? ` · ${result.skipped.length} skipped (encrypted or unsupported)` : ""}`,
+          actions: [{ label: "Show folder", on_click: () => apps().launch("file-explorer", { path: result.path }) }],
+        };
+      },
+      failed: failed(app_id, { cancelled: "Extraction cancelled", failed: "Couldn't extract the archive" }, () => leftover),
     }
   );
-  return tracked(job, options);
+  // The root is a group, which has no result of its own.
+  await tracked(job, options);
+  return job.status === TaskJobStatus.DONE && extractor ? (extractor as ZipExtractor).result() : null;
 }
 
 export async function extract_to(
