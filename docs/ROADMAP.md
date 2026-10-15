@@ -93,6 +93,14 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Priority:** high, as soon as PR contributions come in
 - [ ] Credit an app's author (and later contributors) where the app is shown: App Library details, the new-app announcement, maybe About. Needs an ADR: where the author lives (manifest field vs changelog), what it holds (name, GitHub handle, link), and whether OS apps show the owner
 
+### Installed apps
+- [ ] Install model instead of showing every app: App Library is the store (Get / Open), the start menu, launcher, desktop and mobile drawer show installed apps only, and search covers everything (installed first, then a "Not installed" group with Get). First boot installs a starter set, maybe picked in the intro by interest. Opening a file, a deep link, `app launch` or an announcement's Open installs silently. Not gamified unlocking: gating tools reads as a bug. Needs an ADR. Open questions:
+  - existing users migrate with everything installed
+  - uninstall: hide only, or also remove data
+  - where the list persists (`/etc/apps.json` vs settings)
+  - whether shell commands of uninstalled apps still run, and whether widgets follow install
+  - whether pinned + recent + "All apps" in the start menu is enough instead (lighter, no new state)
+
 ### Design System
 - **Status:** Done (2026-10-11, ADR-024, [docs/design](design/README.md)). Follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/)
 - [x] Brand palettes (Brand Dark default, Brand Light) + extended tokens (tertiary, cottontail, states)
