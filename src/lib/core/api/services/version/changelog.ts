@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.2.0",
+    date: "2026-10-15",
+    title: "Project themes",
+    changes: [
+      { kind: NEW, text: "A While True theme: warm orange on deep navy." },
+      { kind: IMPROVED, text: "Themes from other projects, Speed Reader and While True, now sit together under Project themes in Settings › Appearance." },
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-10-15",
     title: "Show desktop",

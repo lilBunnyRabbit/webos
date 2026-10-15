@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { THEME_PRESETS, type SettingsService, type ThemeToken } from "$lib/core/api";
+  import kernel, { THEME_PRESETS, ThemeGroup, type SettingsService, type ThemeToken } from "$lib/core/api";
   import { Section } from "$lib/core/components/ui";
   import { CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { to_hex, to_oklch } from "../color";
@@ -11,6 +11,8 @@
   const active_preset = $derived(
     THEME_PRESETS.find(({ theme }) => Object.entries(theme).every(([token, value]) => settings.theme[token as ThemeToken] === value))
   );
+
+  const presets_in = (group: ThemeGroup) => THEME_PRESETS.filter((preset) => preset.group === group);
 
   const GROUPS: { title: string; tokens: ThemeToken[] }[] = [
     {
@@ -42,7 +44,15 @@
 <div class="flex flex-col gap-8">
   <Section title="Theme" description={active_preset ? `${active_preset.name} is active.` : "A customised theme is active."} flush>
     <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
-      {#each THEME_PRESETS as preset (preset.name)}
+      {#each presets_in(ThemeGroup.WEBOS) as preset (preset.name)}
+        <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />
+      {/each}
+    </div>
+  </Section>
+
+  <Section title="Project themes" description="Colours from other projects: Speed Reader and While True." flush>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
+      {#each presets_in(ThemeGroup.PROJECTS) as preset (preset.name)}
         <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />
       {/each}
     </div>

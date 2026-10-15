@@ -7,7 +7,7 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 | `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit` |
 | `service.svelte.ts` | The class |
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
-| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset` |
+| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `shell.ts` | `settings_shell()`, see [Shell](#shell) |
 
 `index.ts` exports `type.ts` and `themes.ts`. `persistence.ts` stays private to the service.
@@ -40,7 +40,7 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 | `BRAND_LIGHT` | `Theme` | All OKLCH literals, including the brand's exact surface ladder. |
 | `derive_surfaces` | `() => Record<ThemeSurfaceToken, string>` | The six ladder shades as `oklch(from var(--background) …)` at ±n·0.034 lightness, reflecting at 0 and 1 with `abs()` ([theming](../theming.md#the-surface-ladder)). Used by `derive_theme()` and for older saves. |
 | `derive_theme` | `(base: ThemeBase) => Theme` | Spreads `derive_surfaces()` and fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`. |
-| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme }`) | Brand Dark, Brand Light, then 21 `derive_theme()` presets. All base colours are OKLCH. |
+| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (from the While True style guide: `#ff9f58` on `#090919`, `#9caaff`, `#97ff58`, `#ffe9d4` text). All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
 
 Token list and semantics: [theming.md](../theming.md).

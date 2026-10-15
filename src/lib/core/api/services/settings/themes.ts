@@ -82,23 +82,29 @@ export function derive_theme(base: ThemeBase): Theme {
   };
 }
 
+export const ThemeGroup = {
+  WEBOS: "webos",
+  PROJECTS: "projects",
+} as const;
+export type ThemeGroup = (typeof ThemeGroup)[keyof typeof ThemeGroup];
+
 export interface ThemePreset {
   name: string;
   theme: Theme;
+  group: ThemeGroup;
 }
 
 function base(
   name: string,
-  [background, foreground, primary, secondary, accent]: [string, string, string, string, string]
+  [background, foreground, primary, secondary, accent]: [string, string, string, string, string],
+  group: ThemeGroup = ThemeGroup.WEBOS
 ): ThemePreset {
-  return { name, theme: derive_theme({ background, foreground, primary, secondary, accent }) };
+  return { name, theme: derive_theme({ background, foreground, primary, secondary, accent }), group };
 }
 
 export const THEME_PRESETS: ThemePreset[] = [
-  { name: "Brand Dark", theme: BRAND_DARK },
-  { name: "Brand Light", theme: BRAND_LIGHT },
-  base("Speed Reader Light", ["oklch(0.976 0.022 80.58)", "oklch(0.586 0.0467 242.26)", "oklch(0.75 0.0905 55.2)", "oklch(0.836 0.1393 129.45)", "oklch(0.679 0.1263 20.92)"]),
-  base("Speed Reader Dark", ["oklch(0.278 0.0269 229.12)", "oklch(0.775 0.0171 95.16)", "oklch(0.863 0.0575 65.19)", "oklch(0.907 0.0926 128.53)", "oklch(0.803 0.078 18.92)"]),
+  { name: "Brand Dark", theme: BRAND_DARK, group: ThemeGroup.WEBOS },
+  { name: "Brand Light", theme: BRAND_LIGHT, group: ThemeGroup.WEBOS },
   base("Light Pastel Blue", ["oklch(0.98 0.01 250)", "oklch(0.22 0.02 80)", "oklch(0.7 0.09 200)", "oklch(0.7 0.09 20)", "oklch(0.7 0.09 320)"]),
   base("Red & Black", ["oklch(0.45 0.22 29)", "oklch(0.15 0.01 0)", "oklch(0.85 0.02 29)", "oklch(0.7 0.13 80)", "oklch(0.7 0.13 340)"]),
   base("Dark Warm", ["oklch(0.15 0.03 40)", "oklch(0.85 0.02 120)", "oklch(0.65 0.1 60)", "oklch(0.65 0.1 240)", "oklch(0.65 0.1 180)"]),
@@ -118,4 +124,7 @@ export const THEME_PRESETS: ThemePreset[] = [
   base("Terminal Green", ["oklch(0.0 0 0)", "oklch(0.85 0.22 145)", "oklch(0.75 0.25 145)", "oklch(0.65 0.2 145)", "oklch(0.8 0.28 85)"]),
   base("High Visibility", ["oklch(0.98 0.005 80)", "oklch(0.15 0.01 280)", "oklch(0.45 0.35 260)", "oklch(0.5 0.3 30)", "oklch(0.4 0.32 340)"]),
   base("Black & White", ["oklch(0.0 0 0)", "oklch(1.0 0 0)", "oklch(0.6 0 0)", "oklch(0.4 0 0)", "oklch(0.8 0 0)"]),
+  base("Speed Reader Light", ["oklch(0.976 0.022 80.58)", "oklch(0.586 0.0467 242.26)", "oklch(0.75 0.0905 55.2)", "oklch(0.836 0.1393 129.45)", "oklch(0.679 0.1263 20.92)"], ThemeGroup.PROJECTS),
+  base("Speed Reader Dark", ["oklch(0.278 0.0269 229.12)", "oklch(0.775 0.0171 95.16)", "oklch(0.863 0.0575 65.19)", "oklch(0.907 0.0926 128.53)", "oklch(0.803 0.078 18.92)"], ThemeGroup.PROJECTS),
+  base("While True", ["oklch(0.15 0.0339 281.52)", "oklch(0.946 0.0368 66.05)", "oklch(0.787 0.1433 55.27)", "oklch(0.761 0.123 275.94)", "oklch(0.904 0.2226 135.81)"], ThemeGroup.PROJECTS),
 ];
