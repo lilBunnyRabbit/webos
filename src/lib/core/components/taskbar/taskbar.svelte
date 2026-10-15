@@ -5,6 +5,7 @@
   import TaskbarItem from "./taskbar-item.svelte";
   import StartMenu from "./start-menu.svelte";
   import TaskbarTray from "./taskbar-tray.svelte";
+  import TasksIndicator from "./tasks-indicator.svelte";
   import TerminalButton from "./terminal-button.svelte";
   import ShowDesktopButton from "./show-desktop-button.svelte";
 
@@ -58,6 +59,7 @@
     </div>
 
     <TerminalButton />
+    <TasksIndicator />
     <TaskbarTray {vertical} />
     <ShowDesktopButton {vertical} />
   </nav>

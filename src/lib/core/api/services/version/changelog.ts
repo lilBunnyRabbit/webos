@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.3.0",
+    date: "2026-10-16",
+    title: "Background tasks",
+    changes: [
+      { kind: NEW, text: "Compressing, extracting and PDF jobs now run as background tasks, with a spinner on the taskbar while they run." },
+      { kind: NEW, text: "Activity Monitor has a Tasks section to follow, cancel, retry and clear background tasks." },
+      { kind: NEW, text: "The Terminal can list, cancel, retry and clear background tasks with task list, task cancel, task retry and task clear." },
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-10-15",
     title: "Image Tools and project themes",

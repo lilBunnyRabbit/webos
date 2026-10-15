@@ -7,6 +7,7 @@ export const ArgKind = {
   WINDOW: "window",
   COMMAND: "command",
   THEME: "theme",
+  TASK: "task",
 } as const;
 
 /** A string arg tagged with a completion kind: `arg.path()`. */
@@ -15,4 +16,5 @@ export const arg = {
   path: () => arg.kind(ArgKind.PATH),
   app: () => arg.kind(ArgKind.APP),
   window: () => arg.kind(ArgKind.WINDOW),
+  task: () => arg.kind(ArgKind.TASK),
 };

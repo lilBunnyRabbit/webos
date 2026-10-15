@@ -1,79 +1,44 @@
-import kernel, { NotificationType, type NotificationAction, type NotificationsService } from "$lib/core/api";
+import { createTask } from "@lilbunnyrabbit/task-manager";
+import kernel, { type TaskReport, type TasksService } from "$lib/core/api";
 import type { AppId } from "$lib/core/api/services/apps/type";
-import { error_message } from "$lib/core/utils";
 
-export interface JobReport {
-  title: string;
-  message?: string;
-  actions?: NotificationAction[];
-}
+export type JobReport = TaskReport & { title: string };
 
 export interface JobStep {
   (label?: string): Promise<void>;
 }
 
-const SLICE_MS = 16;
-
+/** A counted job on TasksService: each `step` is one of `total`, and the place Cancel takes effect. */
 export async function run_job(
   app_id: AppId,
   title: string,
   total: number,
-  work: (step: JobStep) => Promise<JobReport>
+  work: (step: JobStep) => Promise<JobReport>,
+  signal?: AbortSignal
 ): Promise<boolean> {
-  const notifications = kernel.service<NotificationsService>("notifications");
-  let cancelled = false;
   let done = 0;
-  let slice = performance.now();
-  const id = notifications.notify(app_id, {
-    type: NotificationType.PROGRESS,
-    title,
-    message: `0 of ${total}`,
-    progress: 0,
-    actions: [{ label: "Cancel", on_click: () => (cancelled = true) }],
-  });
-
-  const step: JobStep = async (label) => {
-    done++;
-    notifications.update(id, {
-      message: label ?? `${done} of ${total}`,
-      progress: total ? Math.min(1, done / total) : -1,
-    });
-    if (performance.now() - slice > SLICE_MS) {
-      await new Promise((resolve) => setTimeout(resolve));
-      slice = performance.now();
+  const job = kernel.service<TasksService>("tasks").run<JobReport>(
+    app_id,
+    (context) =>
+      createTask<void, JobReport>({
+        name: title,
+        execute() {
+          done = 0;
+          return work(async (label) => {
+            done++;
+            this.setProgress(total ? done / total : 0);
+            context.message(label ?? `${done} of ${total}`);
+            await context.pace();
+            context.signal.throwIfAborted();
+          });
+        },
+      })(),
+    {
+      title,
+      signal,
+      done: (report) => report,
+      failed: (_, cancelled) => (cancelled ? { title: "Stopped", message: `${done} of ${total} done` } : {}),
     }
-    if (cancelled) throw new DOMException("Cancelled", "AbortError");
-  };
-
-  try {
-    const report = await work(step);
-    notifications.update(id, {
-      type: NotificationType.INFO,
-      progress: null,
-      message: undefined,
-      actions: [],
-      ...report,
-    });
-    return true;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      notifications.update(id, {
-        type: NotificationType.WARNING,
-        title: "Stopped",
-        message: `${done} of ${total} done`,
-        progress: null,
-        actions: [],
-      });
-    } else {
-      console.error(`[${app_id}] ${title}`, error);
-      notifications.update(id, {
-        type: NotificationType.ERROR,
-        title: `${title} failed`,
-        message: error_message(error),
-        progress: null,
-        actions: [],
-      });
-    }
-    return false;
-  }
+  );
+  return (await job.done) !== null;
 }

@@ -88,6 +88,7 @@
 >
   {#if center}
     <NotificationList
+      tasks
       class="max-h-[32cqh] shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
       item_class="bg-background-lighter shadow-raised"
     />

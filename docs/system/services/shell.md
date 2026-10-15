@@ -152,6 +152,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 | version | `version`, `changelog [-c]`, `install` | | `release` |
 | router | `link [id] [-c]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
+| tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
 

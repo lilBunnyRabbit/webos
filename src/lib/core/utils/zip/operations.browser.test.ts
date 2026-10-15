@@ -3,6 +3,7 @@ import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
+import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import { compress_into, extract_to } from "./operations";
 
 let files: FilesService;
@@ -13,6 +14,7 @@ beforeAll(() => {
   notifications = new NotificationsService();
   kernel.services.set("files", files);
   kernel.services.set("notifications", notifications);
+  kernel.services.set("tasks", new TasksService(kernel));
 });
 
 beforeEach(async () => {
@@ -24,6 +26,7 @@ afterAll(() => {
   notifications.destroy();
   kernel.services.delete("files");
   kernel.services.delete("notifications");
+  kernel.services.delete("tasks");
 });
 
 async function seed(path: string, text: string): Promise<void> {

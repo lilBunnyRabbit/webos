@@ -14,7 +14,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files, apps (Edit in PDF Tools) | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
-| `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps, desktop, notifications | window: `section` |
+| `activity-monitor` | Activity Monitor | none | `{ section? }`: opens on that section (`tasks` from the taskbar) | min 480×360 | windows, files, apps, desktop, notifications, tasks | window: `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
@@ -329,9 +329,9 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 `activity-monitor` · `Pulse` icon · source `system/activity-monitor/`
 
-**Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests and storage use. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
+**Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests, storage use and background tasks. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
-**Services.** `windows` (`list`, `get` for manifests, `force_close`), `files` (`get_directory`, `get_directory_size`), `apps` (names for app storage and widgets), `desktop` (`items`, `open`, `remove_item` for widgets), `notifications` (a failed widget removal).
+**Services.** `windows` (`list`, `get` for manifests, `force_close`), `files` (`get_directory`, `get_directory_size`), `apps` (names for app storage and widgets), `desktop` (`items`, `open`, `remove_item` for widgets), `notifications` (a failed widget removal), `tasks` (the Tasks section).
 
 **Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `DomMonitor` (two instances: windows and widgets), `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
@@ -368,6 +368,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
   - `storage.estimate()` as a meter, plus `usageDetails` and `storage.persisted()`.
   - OPFS size of `/home /etc /var /tmp`, only when Measure is clicked, because it reads every file.
   - localStorage bytes per `app.{id}.` prefix (UTF-16), plus "Other keys".
+- **Tasks:** [TasksService](services/tasks.md) jobs, newest first: title, status badge (running, done, failed, cancelled), app name, message or error, and a progress bar while running. Per row: Cancel while running, Retry when failed or cancelled, Remove when finished; Clear finished in the header. Nothing samples: it reads the service's `$state`. The taskbar's tasks indicator and the mobile "N tasks running" line launch the app with `{ section: "tasks" }`. Sections and their ids live in `sections.ts`, shared with the manifest's `props`.
   - Service worker controller and registration states.
   - Refresh is manual; this tab has no timers.
 

@@ -95,7 +95,7 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 |--------|--------|------|
 | `files/file-explorer.errors.ts` (`report_file_error`) | `"file-explorer"` | File operation failed |
 | File Explorer (`file-explorer.svelte`, `file-actions.ts`) | `"file-explorer"` | The open folder was moved or deleted (info), Save to disk finished |
-| `utils/zip/job.svelte.ts` (zip and unzip jobs) | the calling app's id | A `progress` toast with Cancel, updated through `update()` as bytes stream, then done, cancelled or failed (with Discard / Keep for a partial file) |
+| [TasksService](tasks.md) jobs (zip and unzip, PDF Tools) | the calling app's id | A `progress` toast with Cancel, updated through `update()` at most every 150 ms, then done, cancelled or failed (Archive adds Discard / Keep for a partial file) |
 | `AppsService.open()` | `"apps"` | File not found (error), broken `.desktop` shortcut or `.widget` (error), no app can open it (warning) |
 | `AppsService` props validation | the app's id | Props discarded (warning) |
 | `SessionService` restore | `"session"` | Some saved windows couldn't be restored (warning, one toast with the count) |

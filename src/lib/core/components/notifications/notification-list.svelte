@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type NotificationsService } from "$lib/core/api";
+  import kernel, { type AppsService, type NotificationsService, type TasksService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { BellSimple as BellIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -7,9 +7,13 @@
   import { Button, EmptyState } from "../ui";
   import NotificationItem from "./notification-item.svelte";
 
-  let { item_class, class: class_name }: { item_class?: string; class?: string } = $props();
+  /** `tasks`: a line for running background tasks, where there's no taskbar to show them (mobile). */
+  let { item_class, class: class_name, tasks: show_tasks = false }: { item_class?: string; class?: string; tasks?: boolean } = $props();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const tasks = $derived(kernel.service<TasksService>("tasks"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const running = $derived(show_tasks ? tasks.active_count : 0);
 
   // Mounted means looked at: everything here counts as read, and toasts would only repeat the list (ADR-006 revision).
   $effect(() => {
@@ -32,6 +36,13 @@
       <Button size="sm" variant="quiet" onclick={clear_all}>Clear all</Button>
     {/if}
   </header>
+
+  {#if running > 0}
+    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => apps.launch("activity-monitor", { section: "tasks" })}>
+      <span>{running} {running === 1 ? "task" : "tasks"} running</span>
+      <span class="text-primary">Show</span>
+    </button>
+  {/if}
 
   {#if notifications.all.length === 0}
     <EmptyState icon={BellIcon} title="No notifications" description="Messages from apps and the system show up here." />

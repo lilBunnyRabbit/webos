@@ -4,6 +4,7 @@ import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
+import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { page_count } from "./pdf";
 import { merge } from "./shell";
@@ -16,6 +17,7 @@ beforeAll(() => {
   notifications = new NotificationsService();
   kernel.services.set("files", files);
   kernel.services.set("notifications", notifications);
+  kernel.services.set("tasks", new TasksService(kernel));
 });
 
 beforeEach(async () => {
@@ -27,6 +29,7 @@ afterAll(() => {
   notifications.destroy();
   kernel.services.delete("files");
   kernel.services.delete("notifications");
+  kernel.services.delete("tasks");
 });
 
 const context = <T>(args: T) =>

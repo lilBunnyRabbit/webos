@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type FilesService } from "$lib/core/api";
+  import kernel, { type FilesService, type TaskJob } from "$lib/core/api";
   import { Button, Checkbox, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
@@ -19,7 +19,6 @@
   import { SvelteSet } from "svelte/reactivity";
   import ArchivePreview from "./archive-preview.svelte";
   import { parent_path } from "$lib/core/utils/zip/create";
-  import { ArchiveJob } from "$lib/core/utils/zip/job.svelte";
   import { extract_blob } from "$lib/core/utils/zip/operations";
   import { build_tree, entries_to_extract, folder_keys, format_ratio, is_covered, visible_rows, type TreeNode } from "./tree";
   import { read_zip, readable, type ZipArchive } from "$lib/core/utils/zip/read";
@@ -47,7 +46,7 @@
   let loading = $state(false);
   let failure = $state<string | null>(null);
   let active = $state.raw<TreeNode | null>(null);
-  let job = $state<ArchiveJob | null>(null);
+  let job = $state<TaskJob | null>(null);
   const expanded = new SvelteSet<string>();
   const checked = new SvelteSet<string>();
 
@@ -234,9 +233,9 @@
     {#if job}
       <span class="flex items-center gap-2">
         <span class="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-foreground/10">
-          <span class="block h-full rounded-full bg-primary transition-[width] duration-200" style:width="{job.fraction * 100}%"></span>
+          <span class="block h-full rounded-full bg-primary transition-[width] duration-200" style:width="{job.progress * 100}%"></span>
         </span>
-        Extracting · {job.message}
+        Extracting · {job.message ?? ""}
       </span>
     {:else if opened}
       <span>{opened.tree.files} {opened.tree.files === 1 ? "file" : "files"}{folder_count ? ` · ${folder_count} folders` : ""}</span>

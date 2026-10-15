@@ -1,7 +1,7 @@
 # ADR-013: Tasks Service & Task Manager App
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Implemented
 
 > **Revision 2026-10-15: unparked** (owner, [brainstorm](../brainstorm/2026-10-15_tasks-service.md)). It's built on task-manager **1.0.1** as is. A 2.0 adding cancel, retry and messages to the package was built and then dropped unpublished. WebOS keeps what the package lacks in its job mirror:
 > - **Cancel:** an `AbortController` per job, which `job.cancel()` aborts before calling `manager.stop()`.
@@ -15,7 +15,7 @@
 > - It shows in a Tasks tab in Activity Monitor and in a tray indicator; on mobile, in the notification center.
 > - Jobs live in memory only, capped at 50.
 > - Shell: `task list`, `task cancel`, `task retry`, `task clear`.
-> - First consumers are Archive and PDF Tools, replacing `ArchiveJob` and `run_job`.
+> - First consumers are Archive and PDF Tools. `ArchiveJob` is gone; PDF Tools keeps `run_job` as a step-counting adapter over `tasks.run`, so its four sections didn't change.
 
 > **Revision 2026-10-15: shortcut and zip.** Ctrl+Shift+Esc below is out: it's Windows' Task Manager ([ADR-017](./017-keyboard-shortcuts-strategy.md) revision). A Tasks shortcut takes an Alt+Shift binding, picked when it's built. Zip in File Explorer shipped without TasksService: Compress and Extract here run on the zip job in `core/utils/zip/job.svelte.ts` (progress toast, Cancel), which stands in until Tasks exists ([ADR-035](./035-app-platform-wave-2.md)).
 

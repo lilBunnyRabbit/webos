@@ -1,6 +1,8 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { Pulse as PulseIcon } from "phosphor-svelte";
+import { z } from "zod";
+import { SECTION_IDS } from "./sections";
 
 export default define_app({
   id: "activity-monitor",
@@ -8,7 +10,7 @@ export default define_app({
   icon: PulseIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description: "What's running and how hard it works: windows, widgets, frame rate, network and storage.",
+  description: "What's running and how hard it works: windows, widgets, frame rate, network, storage and background tasks.",
   keywords: [
     "task manager",
     "processes",
@@ -20,6 +22,8 @@ export default define_app({
     "profiler",
     "monitor",
     "widgets",
+    "tasks",
+    "background",
   ],
   defaults: {
     constraints: {
@@ -27,5 +31,7 @@ export default define_app({
       height: { min: 360 },
     },
   },
+  /** `section` opens on that section, e.g. Tasks from the taskbar. */
+  props: z.object({ section: z.enum(SECTION_IDS) }),
   component: () => import("./activity-monitor.app.svelte"),
 });

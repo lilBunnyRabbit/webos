@@ -132,16 +132,13 @@ async function job<T>(
   let failure: unknown = null;
   const ok = await run_job(APP_ID, title, total, async (step) => {
     try {
-      result = await work(async (label) => {
-        if (signal.aborted) throw new DOMException("Cancelled", "AbortError");
-        await step(label);
-      });
+      result = await work(step);
       return report(result);
     } catch (error) {
       failure = error;
       throw error;
     }
-  });
+  }, signal);
   if (!ok) throw new ShellError(is_abort(failure) ? "stopped" : error_message(failure));
   return result as T;
 }

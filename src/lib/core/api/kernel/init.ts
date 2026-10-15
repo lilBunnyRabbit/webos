@@ -17,6 +17,7 @@ import { ShortcutsService } from "../services/shortcuts/service.svelte";
 import { RouterService } from "../services/router/service.svelte";
 import { ShellService } from "../services/shell/service.svelte";
 import { BackupService } from "../services/backup/service.svelte";
+import { TasksService } from "../services/tasks/service.svelte";
 
 // Phones and tablets get their own windows and desktop (ADR-016); the other platform's code is never downloaded (ADR-036).
 async function platform_services(platform: Platform) {
@@ -96,6 +97,11 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register("shortcuts", {
     instance: ShortcutsService,
     dependencies: ["windows", "dialogs", "shell"],
+  });
+
+  kernel.register("tasks", {
+    instance: TasksService,
+    dependencies: ["notifications"],
   });
 
   kernel.register("backup", {

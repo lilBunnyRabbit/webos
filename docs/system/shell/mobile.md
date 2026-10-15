@@ -50,7 +50,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
   - tap opens it;
   - a flick up past 96px closes the app (the card follows the finger and fades);
   - sideways is the browser scrolling the row (`touch-action: pan-x`). The first clear direction decides.
-- **Notification center** (ADR-006 revision): with any notifications, the switcher opens with `NotificationList` on top (safe-area padded, at most `32cqh`, scrolling), cards on `bg-background-lighter shadow-raised`, and the cards shrink to `0.55`. The row's side padding is `(1 − scale) × 50cqw`, so a card always centres. Showing the list marks everything read and hides the toasts.
+- **Notification center** (ADR-006 revision): with any notifications, the switcher opens with `NotificationList` on top (safe-area padded, at most `32cqh`, scrolling), cards on `bg-background-lighter shadow-raised`, and the cards shrink to `0.55`. The row's side padding is `(1 − scale) × 50cqw`, so a card always centres. Showing the list marks everything read and hides the toasts. Above the list, while background tasks run, an "N tasks running · Show" line (`NotificationList` `tasks` prop) launches Activity Monitor on its Tasks section; the mobile shell has no taskbar indicator ([tasks](../services/tasks.md)).
 - "Close all" under the row; "No running apps" when empty.
 - Each card has `view-transition-name: window-{id}`, so opening and closing the switcher morphs between card and fullscreen.
 

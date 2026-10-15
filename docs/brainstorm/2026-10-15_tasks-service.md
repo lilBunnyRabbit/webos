@@ -58,4 +58,5 @@ ADR-013 (parked on [2026-10-12](2026-10-12_tasks-parked.md)) plans a `tasks` ser
 ## Action items
 - [x] Package 2.0 built and reverted, unpublished
 - [x] ADR-013 revision
-- [ ] Implement on 1.0.1
+- [x] Implement on 1.0.1. PDF Tools keeps `run_job` as an adapter over `tasks.run` (its four sections call it), `ArchiveJob` is deleted
+- [ ] Image Tools batches on a task group

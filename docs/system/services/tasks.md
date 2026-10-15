@@ -1,0 +1,79 @@
+# TasksService
+
+Key `tasks` · Depends on: `notifications` · ADR: [ADR-013](../../adrs/013-tasks-service.md) · Source: `src/lib/core/api/services/tasks/` · Inspector: `inspector.svelte` (ADR-020)
+
+## Purpose
+
+Background work with progress, Cancel and retry, on `@lilbunnyrabbit/task-manager` 1.0.1. A job outlives the window that started it and gets a progress toast, a row in Activity Monitor › Tasks, and a taskbar indicator. Archive (zip and unzip, including File Explorer's Compress and Extract here) and PDF Tools run on it.
+
+## Public API
+
+| Member | Signature | Notes |
+|--------|-----------|-------|
+| `jobs` | `TaskJob[]` | Newest first. A retried job moves to the top. Capped at 50; running jobs stay past the cap |
+| `active_count` | `number` | Running jobs |
+| `run` | `<T>(app_id, build: (context: TaskContext) => ExecutableTask, options: TaskRunOptions<T>) => TaskJob<T>` | Calls `build` and runs the task or group in a new `TaskManager` |
+| `get` | `(id) => TaskJob \| undefined` | |
+| `cancel` | `(id) => void` | Same as `job.cancel()` |
+| `retry` | `(id) => boolean` | Failed or cancelled jobs only: calls `build` again and runs it in a fresh manager under the same id. `false` otherwise |
+| `remove` | `(id) => void` | Finished jobs only |
+| `clear` | `() => void` | Drops every finished job |
+
+`TaskContext`, handed to `build`:
+
+| Member | Notes |
+|--------|-------|
+| `signal` | `AbortSignal`, aborted by Cancel. Work passes it on (streams, `throwIfAborted`) |
+| `message(text)` | The line under the title ("3 of 10", "2 MB of 8 MB") |
+| `pace()` | Yields to the browser once the current slice passes 16 ms, so tight loops keep the UI responsive |
+
+Progress is the package's own: work calls `this.setProgress()` inside `execute`, and the job reads it from the manager's `progress` event.
+
+`TaskRunOptions<T>`: `title`, `done(result) => TaskReport`, `failed(error, cancelled) => TaskReport`, and `signal` (a second way to cancel, such as the shell's Ctrl+C). A `TaskReport` is `{ title?, message?, actions? }`.
+
+`TaskJob<T>`: `id`, `app_id`, `title`, `created_at`, `finished_at`, `status` (`TaskJobStatus`: `running | done | failed | cancelled`), `progress` (0 to 1), `message`, `error`, `manager` (the package's `TaskManager`, `null` until its chunk loads), `done` (a promise of the current run's result, `null` on failure or cancel), `cancel()`.
+
+## Behaviour & invariants
+
+1. **One manager per run.** A package manager runs once, so `run` and `retry` each make a new one. `build` must return fresh tasks every time it's called.
+   **Lazy package.** The service imports `@lilbunnyrabbit/task-manager` on the first run (about 11 KB gz, kept out of the boot chunk). So the work starts a tick after `run` returns, and Cancel can land before it does: work should begin with `context.signal.throwIfAborted()` rather than only listening for `abort`. Consumers that build tasks import `createTask` themselves, in their own lazy chunks.
+2. **The result** is the root task's `result`. A root group gives `undefined`.
+3. **Cancel** aborts the job's `AbortController` and calls `manager.stop()`. Package 1.0.1 has no cancel of its own, so the work has to watch `context.signal`. A run that fails after the abort counts as `cancelled`. Work that ignores the signal and finishes counts as `done`.
+4. **Toasts.**
+   - Every run notifies a `progress` toast with Cancel. Progress and message updates reach the toast at most every 150 ms.
+   - At the end, the toast becomes one of three:
+     - **done** (`info`): the `done` report, or the title with "Done";
+     - **failed** (`error`): `<title> failed` and the error;
+     - **cancelled** (`warning`): "Cancelled" and the title.
+   - `failed(error, cancelled)` overrides the failed and cancelled toasts; Archive uses it to offer Discard or Keep for a half-written file.
+   - Retry dismisses the old toast and starts a new one.
+5. Failures that aren't cancels go to `console.error` with the app id.
+
+## Lifecycle
+
+No `init` or `destroy`. Jobs run on the page's main thread.
+
+## Persistence
+
+None. A reload ends every running job and empties the list.
+
+## Shell
+
+`tasks/shell.ts` contributes:
+- `task list`, which yields `task` values (columns `id name app status progress elapsed`).
+- `task cancel <id>` and `task retry <id>`.
+- `task clear`.
+
+Ids are the first eight characters of the job id, completed by the `task` arg kind. See [shell](shell.md#contributions).
+
+## UI
+
+- **Activity Monitor › Tasks:** a list with status, progress and message, plus Cancel, Retry and Remove per row and Clear finished. `apps.launch("activity-monitor", { section: "tasks" })` opens it.
+- **Taskbar:** a spinner before the notification bell while `active_count > 0`. It shows the count when two or more jobs run, and clicking it opens Activity Monitor › Tasks.
+- **Mobile:** the notification center in the switcher shows an "N tasks running · Show" line (`NotificationList` `tasks` prop).
+
+## Known gaps
+
+- No automatic retry or backoff; retry is manual.
+- Groups work, but no consumer uses them yet (Image Tools batches are next).
+- Cancel only lands where the work checks the signal.

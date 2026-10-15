@@ -157,7 +157,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Taskbar Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md), [ADR-015](adrs/015-customization-theming.md)
 - **Status:** In progress
-- [-] System tray area (notifications done; background tasks with ADR-013)
+- [x] System tray area (notifications; a tasks indicator before it, ADR-013)
 - [ ] Context menus for taskbar items
 - [ ] Window grouping by app (badge count, expand to list)
 - [ ] Quick launch area
@@ -212,16 +212,18 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] OS detection (Windows vs Mac modifier display)
 
 ### Tasks Service & Task Manager
-- **ADR:** [ADR-013](adrs/013-tasks-service.md)
-- **Status:** Not started
-- [ ] TasksService wrapping `@lilbunnyrabbit/task-manager`. Archive (2026-10-14) ships on native streams with a progress toast and moves onto Tasks once this exists (owner)
-- [ ] Task lifecycle (create, cancel, retry, remove)
-- [ ] Progress tracking (determinate/indeterminate)
-- [ ] Retry configuration (fixed/exponential backoff)
-- [ ] Tasks tab in Activity Monitor (filter, progress bars, actions); no separate Task Manager app (ADR-013 revision)
-- [ ] Taskbar badge for active task count
-- [ ] Notification integration on task complete/fail
-- [ ] Keyboard shortcut: an Alt+Shift key (Ctrl+Shift+Esc is the OS Task Manager, ADR-017)
+- **ADR:** [ADR-013](adrs/013-tasks-service.md) · [brainstorm](brainstorm/2026-10-15_tasks-service.md)
+- **Status:** Done (2026-10-16), on task-manager 1.0.1
+- [x] TasksService wrapping `@lilbunnyrabbit/task-manager`: one manager per run, cancel through an `AbortController` per job. Archive and PDF Tools run on it
+- [x] Task lifecycle (run, cancel, retry, remove, clear)
+- [x] Progress tracking (the package's `setProgress`, plus a message line)
+- [ ] Retry configuration (fixed/exponential backoff): manual retry only; no consumer needs backoff yet
+- [x] Tasks section in Activity Monitor (progress bars, Cancel, Retry, Remove, Clear finished); no separate Task Manager app (ADR-013 revision)
+- [x] Taskbar indicator for running tasks (count from two); on mobile a line in the notification center
+- [x] Notification integration: a progress toast with Cancel that becomes done, failed or cancelled
+- [x] Shell: `task list`, `task cancel`, `task retry`, `task clear`
+- [ ] Keyboard shortcut: owner said none for now
+- [ ] Image Tools batches as a task group
 
 ### URL Deep Linking & Share System
 - **ADR:** [ADR-010](adrs/010-url-deep-linking.md)
@@ -447,7 +449,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] App API frozen: `docs/system/app-api.md` + export pin test
 - [x] Boot budget: entry chunk <= 180 KB gz, CI gate
 - [x] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
-- [-] Tasks service (ADR-013): after 1.0, additive
+- [x] Tasks service (ADR-013): after 1.0, additive (shipped 1.3.0)
 
 ### PWA & Offline
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)

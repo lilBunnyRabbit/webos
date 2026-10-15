@@ -2,13 +2,6 @@
   import kernel, { type DesktopItem, type DesktopService, type WindowId, type WindowsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { SideNav } from "$lib/core/components/ui";
-  import {
-    AppWindow as AppWindowIcon,
-    Gauge as GaugeIcon,
-    HardDrives as HardDrivesIcon,
-    SquaresFour as SquaresFourIcon,
-    WifiHigh as WifiHighIcon,
-  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import { NetworkMonitor } from "./network-monitor.svelte";
@@ -17,20 +10,16 @@
   import Network from "./sections/network.svelte";
   import Performance from "./sections/performance.svelte";
   import Storage from "./sections/storage.svelte";
+  import Tasks from "./sections/tasks.svelte";
   import Widgets from "./sections/widgets.svelte";
   import Windows from "./sections/windows.svelte";
+  import { SECTIONS, SECTION_IDS, type Section } from "./sections";
 
-  const SECTIONS = [
-    { value: "windows", label: "Windows", icon: AppWindowIcon },
-    { value: "widgets", label: "Widgets", icon: SquaresFourIcon },
-    { value: "performance", label: "Performance", icon: GaugeIcon },
-    { value: "network", label: "Network", icon: WifiHighIcon },
-    { value: "storage", label: "Storage", icon: HardDrivesIcon },
-  ] as const;
-  type Section = (typeof SECTIONS)[number]["value"];
+  let { section: requested }: { section?: Section } = $props();
 
   const { storage, window: win } = get_app_context();
-  const section = storage.window<Section>("section", "windows", z.enum(SECTIONS.map((item) => item.value)));
+  // svelte-ignore state_referenced_locally
+  const section = storage.window<Section>("section", requested ?? "windows", z.enum(SECTION_IDS));
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
@@ -79,8 +68,10 @@
         <Performance monitor={performance_monitor} />
       {:else if section.value === "network"}
         <Network monitor={network_monitor} />
-      {:else}
+      {:else if section.value === "storage"}
         <Storage />
+      {:else}
+        <Tasks />
       {/if}
     </div>
   </main>

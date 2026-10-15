@@ -1,9 +1,8 @@
-import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import kernel, { type AppsService, type FilesService, type TaskJob } from "$lib/core/api";
 import { resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { archive_name, parent_path } from "$lib/core/utils/zip/create";
-import type { ArchiveJob } from "$lib/core/utils/zip/job.svelte";
 import { extract_to, free_path, items_at, zip_items, type RunOptions } from "$lib/core/utils/zip/operations";
 import { saved_ratio } from "./tree";
 import { APP_ID } from "./views";
@@ -22,12 +21,12 @@ async function stat_file(path: string): Promise<FileValue> {
 }
 
 function tracked(signal: AbortSignal): RunOptions & { reason: () => string } {
-  let job: ArchiveJob | null = null;
+  let job: TaskJob | null = null;
   return {
     app_id: APP_ID,
     signal,
     on_job: (next) => (job = next ?? job),
-    reason: () => (job as ArchiveJob | null)?.failure ?? "failed",
+    reason: () => (job as TaskJob | null)?.error ?? "failed",
   };
 }
 
