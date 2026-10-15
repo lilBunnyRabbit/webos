@@ -7,13 +7,13 @@
   import {
     AppWindow as AppWindowIcon,
     Browser as BrowserIcon,
-    CaretDown as CaretDownIcon,
-    CaretUp as CaretUpIcon,
     Play as PlayIcon,
     Rectangle as RectangleIcon,
     SpeakerHigh as SpeakerHighIcon,
   } from "phosphor-svelte";
   import { format_rate } from "../browser";
+  import { next_sort, type Sort } from "../sort";
+  import SortHeader from "./sort-header.svelte";
   import Sparkline from "../sparkline.svelte";
   import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
 
@@ -24,7 +24,7 @@
   const { window_id: own_id } = get_app_context();
   const windows = $derived(kernel.service<WindowsService>("windows"));
 
-  let sort = $state<{ key: SortKey; desc: boolean } | null>(null);
+  let sort = $state<Sort<SortKey> | null>(null);
 
   interface Row {
     id: WindowId;
@@ -53,30 +53,11 @@
 
   const total_rate = $derived(rows.reduce((sum, row) => sum + (row.stats?.rate ?? 0), 0));
 
-  function toggle_sort(key: SortKey) {
-    sort = sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== "name" };
-  }
+  const onsort = (key: SortKey) => (sort = next_sort(sort, key));
 
   // Breakpoints measure the table (its own @container), not the window: the section is capped at max-w-3xl.
   const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] @md:grid-cols-[minmax(0,1fr)_4rem_4rem_3.5rem] @xl:grid-cols-[minmax(0,1fr)_4rem_4rem_4rem_4.5rem_3.5rem] @2xl:grid-cols-[minmax(0,1fr)_5rem_4rem_4rem_4rem_4.5rem_3.5rem]";
 </script>
-
-{#snippet header(label: string, key: SortKey | null, class_name = "")}
-  {#if key}
-    {@const active = sort?.key === key}
-    <button
-      class={cn("flex items-center gap-1 tracking-wide uppercase hover:text-foreground", key !== "name" && "justify-end", active && "text-foreground", class_name)}
-      onclick={() => toggle_sort(key)}
-    >
-      {label}
-      {#if active}
-        {#if sort?.desc}<CaretDownIcon class="size-3" weight="bold" />{:else}<CaretUpIcon class="size-3" weight="bold" />{/if}
-      {/if}
-    </button>
-  {:else}
-    <span class={class_name}>{label}</span>
-  {/if}
-{/snippet}
 
 <Section
   title="Open windows"
@@ -87,12 +68,12 @@
   {:else}
     <div class="@container divide-y divide-foreground/8">
       <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
-        {@render header("Window", "name")}
-        {@render header("Activity", null, "hidden @2xl:block")}
-        {@render header("Mut/s", "rate")}
-        {@render header("Peak", "peak", "hidden @xl:flex")}
-        {@render header("Nodes", "nodes", "hidden @md:flex")}
-        {@render header("Media", null, "hidden text-right @xl:block")}
+        <SortHeader label="Window" key="name" {sort} {onsort} />
+        <span class="hidden @2xl:block">Activity</span>
+        <SortHeader label="Mut/s" key="rate" {sort} {onsort} />
+        <SortHeader label="Peak" key="peak" {sort} {onsort} class="hidden @xl:flex" />
+        <SortHeader label="Nodes" key="nodes" {sort} {onsort} class="hidden @md:flex" />
+        <span class="hidden text-right @xl:block">Media</span>
         <span></span>
       </div>
 

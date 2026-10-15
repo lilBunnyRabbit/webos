@@ -53,16 +53,15 @@
   // their first synchronous reads (the window list) from restarting them.
   $effect(() => untrack(() => performance_monitor.observe()));
   $effect(() => untrack(() => network_monitor.observe()));
+  // Only the shown section samples: its history starts when it's opened.
+  const samplers: Partial<Record<Section, { sample(): () => void }>> = {
+    windows: window_monitor,
+    widgets: widget_monitor,
+    performance: performance_monitor,
+  };
   $effect(() => {
-    if (!win.is_visible) return;
-    const stop_windows = untrack(() => window_monitor.sample());
-    const stop_widgets = untrack(() => widget_monitor.sample());
-    const stop_performance = untrack(() => performance_monitor.sample());
-    return () => {
-      stop_windows();
-      stop_widgets();
-      stop_performance();
-    };
+    const sampler = win.is_visible ? samplers[section.value] : undefined;
+    if (sampler) return untrack(() => sampler.sample());
   });
 </script>
 

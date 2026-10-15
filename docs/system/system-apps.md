@@ -323,9 +323,9 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 **Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `DomMonitor` (two instances: windows and widgets), `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
 - `observe()`: the event-driven observers (long animation frames, CPU pressure, resource timing, the connection `change` listener). They run for the window's lifetime.
-- `sample()`: the 1 s ticks, the rAF frame counter and the per-window and per-widget MutationObservers. They run only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035).
+- `sample()`: the 1 s ticks, the rAF frame counter and the per-window and per-widget MutationObservers. Only the monitor of the shown section samples (Windows, Widgets or Performance; Network and Storage have none), and only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035). A section's sparklines start filling when it's opened.
 
-Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start calls so a window opening doesn't restart the samplers.
+Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start call so a window opening doesn't restart the sampler.
 
 **Sections** (`SideNav`, Settings-style frame):
 
@@ -334,7 +334,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
   - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
-  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not. The long-frames table drops its Blocking column there.
+  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not; the sortable ones are `sections/sort-header.svelte`, shared with Widgets (`next_sort` in `sort.ts`). The long-frames table drops its Blocking column there.
   - **End:** calls `windows.force_close(id)`, skipping unsaved-changes prompts.
 - **Widgets:** its own section, after Windows, because widgets aren't windows: they have no id, no z-order and no End.
   - One row per `desktop.items()` entry with `kind === "widget"`: the app's icon (`ShortcutIcon`, no badge), the widget's label (its file name without `.widget`), and the app name next to it when the label differs (from `@md`). The tooltip has label, app and file name.
@@ -369,7 +369,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 - Its own row counts the mutations from re-rendering its own table.
 - Widgets can't be highlighted on the desktop from their row: the desktop's selection is local to the desktop component.
 - Shared clocks (`utils/ticker.svelte.ts`) and shared app-data cells (`json_file`) aren't listed: their registries are module-private, and a count would need a new core export.
-- Monitors keep running while another section is shown; minimizing or hiding the tab pauses sampling.
+- Sparklines have no history from before their section was opened.
 - Cross-origin resources without `Timing-Allow-Origin` report 0 bytes.
 
 ---
