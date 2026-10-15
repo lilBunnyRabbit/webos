@@ -89,8 +89,10 @@ describe("CHANGELOG app tags", () => {
   // Lazy glob: only the paths are needed, so no manifest is evaluated.
   const installed = Object.keys(import.meta.glob("../../../../apps/*/*/index.ts")).map((path) => path.split("/").at(-2));
   const known = new Set([...installed, ...RETIRED]);
+  // The fork check deletes every user app; the changelog still names them, and announcements skip missing ones.
+  const forked = !installed.some((id) => id === "example");
 
-  test("every tagged or introduced id is an app", () => {
+  test.skipIf(forked)("every tagged or introduced id is an app", () => {
     expect(installed).toContain("file-explorer");
     const ids = CHANGELOG.flatMap((release) => [...(release.introduces ?? []), ...release.changes.flatMap((change) => change.apps ?? [])]);
     expect(ids.filter((id) => !known.has(id))).toEqual([]);
