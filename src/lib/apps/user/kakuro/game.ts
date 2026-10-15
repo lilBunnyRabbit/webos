@@ -72,6 +72,58 @@ export function is_white(puzzle: Puzzle, cell: number): boolean {
   return puzzle.across_of[cell] >= 0;
 }
 
+export function first_white(puzzle: Puzzle): number {
+  return puzzle.across_of.findIndex((run) => run >= 0);
+}
+
+/** The first white cell past `from` going (`d_row`, `d_col`), jumping black ones; `from` at the edge. */
+export function step_white(puzzle: Puzzle, from: number, d_row: number, d_col: number): number {
+  const side = puzzle.size;
+  let row = Math.floor(from / side) + d_row;
+  let col = (from % side) + d_col;
+  while (row >= 0 && row < side && col >= 0 && col < side) {
+    if (is_white(puzzle, row * side + col)) return row * side + col;
+    row += d_row;
+    col += d_col;
+  }
+  return from;
+}
+
+/** Where arrow keys, Home and End take the cursor from `from`, landing only on white cells; null for other keys. */
+export function key_move(puzzle: Puzzle, key: string, from: number): number | null {
+  const side = puzzle.size;
+  const row_start = Math.floor(from / side) * side;
+  const row_end = row_start + side - 1;
+  switch (key) {
+    case "ArrowUp":
+      return step_white(puzzle, from, -1, 0);
+    case "ArrowDown":
+      return step_white(puzzle, from, 1, 0);
+    case "ArrowLeft":
+      return step_white(puzzle, from, 0, -1);
+    case "ArrowRight":
+      return step_white(puzzle, from, 0, 1);
+    case "Home":
+      return step_white(puzzle, row_start, 0, 1);
+    case "End":
+      return is_white(puzzle, row_end) ? row_end : step_white(puzzle, row_end, 0, -1);
+    default:
+      return null;
+  }
+}
+
+/** The runs each clue cell heads, by index into `puzzle.runs`. */
+export function clue_runs(puzzle: Puzzle): Map<number, { across?: number; down?: number }> {
+  const map = new Map<number, { across?: number; down?: number }>();
+  puzzle.runs.forEach((run, index) => {
+    const entry = map.get(run.clue) ?? {};
+    if (run.across) entry.across = index;
+    else entry.down = index;
+    map.set(run.clue, entry);
+  });
+  return map;
+}
+
 export function peers(puzzle: Puzzle, cell: number): number[] {
   const across = puzzle.runs[puzzle.across_of[cell]]?.cells ?? [];
   const down = puzzle.runs[puzzle.down_of[cell]]?.cells ?? [];
@@ -133,6 +185,13 @@ export function run_combos(run: Run, values: readonly number[]): string[] {
     .sort();
 }
 
+export function combos_text(run: Run, values: readonly number[], max: number): string {
+  const all = run_combos(run, values);
+  if (!all.length) return "no combination fits";
+  const shown = all.slice(0, max).join("  ");
+  return all.length > max ? `${shown}  +${all.length - max}` : shown;
+}
+
 export interface SizeRecord {
   solved: number;
   /** Fastest solve without hints, in milliseconds. */
@@ -141,10 +200,20 @@ export interface SizeRecord {
 export type Stats = Record<Size, SizeRecord>;
 
 const record_schema = z.object({ solved: z.number().int().nonnegative(), best: z.number().nonnegative().nullable() });
-export const stats_schema = z.object({ "6": record_schema, "8": record_schema, "10": record_schema, "12": record_schema });
+export const stats_schema = z.object({
+  "6": record_schema,
+  "8": record_schema,
+  "10": record_schema,
+  "12": record_schema,
+});
 
 export function empty_stats(): Stats {
-  return { "6": { solved: 0, best: null }, "8": { solved: 0, best: null }, "10": { solved: 0, best: null }, "12": { solved: 0, best: null } };
+  return {
+    "6": { solved: 0, best: null },
+    "8": { solved: 0, best: null },
+    "10": { solved: 0, best: null },
+    "12": { solved: 0, best: null },
+  };
 }
 
 export function record(stats: Stats, size: Size, time: number, hints: number): Stats {

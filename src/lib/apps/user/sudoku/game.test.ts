@@ -9,6 +9,7 @@ import {
   digit_counts,
   empty_stats,
   erase,
+  first_blank,
   hint,
   HintKind,
   is_solved,
@@ -19,6 +20,7 @@ import {
   saved_schema,
   to_saved,
   toggle_note,
+  wave_delays,
   with_board,
   type Game,
 } from "./game";
@@ -69,6 +71,24 @@ describe("rules", () => {
     expect(completed_units(before, full, cell)).toHaveLength(3);
     expect(completed_units(before, others, cell)).toHaveLength(0);
   });
+
+  it("lights finished units in a wave from the placed cell", () => {
+    const delays = wave_delays(
+      [
+        [0, 1, 2],
+        [2, 11, 20],
+      ],
+      2
+    );
+    expect(delays.get(2)).toBe(0);
+    expect(delays.get(0)).toBe(90);
+    expect(delays.get(20)).toBe(90);
+  });
+
+  it("starts the cursor on the first blank, else the centre", () => {
+    expect(first_blank([5, 0, 3])).toBe(1);
+    expect(first_blank(new Array(81).fill(1))).toBe(40);
+  });
 });
 
 describe("editing", () => {
@@ -91,7 +111,9 @@ describe("editing", () => {
     expect(board.notes[cell]).toBe(0);
     for (let c = 0; c < 81; c++) {
       if (c === cell) continue;
-      const peer = Math.floor(c / 9) === Math.floor(cell / 9) || c % 9 === cell % 9 ||
+      const peer =
+        Math.floor(c / 9) === Math.floor(cell / 9) ||
+        c % 9 === cell % 9 ||
         (Math.floor(c / 27) === Math.floor(cell / 27) && Math.floor((c % 9) / 3) === Math.floor((cell % 9) / 3));
       expect(board.notes[c]).toBe(peer ? bit(6) : bit(4) | bit(6));
     }
@@ -107,7 +129,11 @@ describe("editing", () => {
 
   it("erases the value first, then the notes", () => {
     const [cell] = blanks;
-    const board = { ...game, values: game.values.map((v, c) => (c === cell ? 2 : v)), notes: game.notes.map((n, c) => (c === cell ? bit(1) : n)) };
+    const board = {
+      ...game,
+      values: game.values.map((v, c) => (c === cell ? 2 : v)),
+      notes: game.notes.map((n, c) => (c === cell ? bit(1) : n)),
+    };
     const once = erase(board, cell);
     expect(once.values[cell]).toBe(0);
     expect(once.notes[cell]).toBe(bit(1));
@@ -140,7 +166,8 @@ describe("hint", () => {
   it("finishes any puzzle when applied repeatedly", () => {
     for (const difficulty of [Difficulty.EASY, Difficulty.EXPERT]) {
       let current = new_game(difficulty, 99);
-      for (let i = 0; i < 81 && !current.solved; i++) current = with_board(current, apply_hint(current, hint(current)!));
+      for (let i = 0; i < 81 && !current.solved; i++)
+        current = with_board(current, apply_hint(current, hint(current)!));
       expect(current.solved).toBe(true);
     }
   });

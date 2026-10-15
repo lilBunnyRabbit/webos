@@ -13,7 +13,6 @@ import {
   restore,
   saved_schema,
   Size,
-  stroke_cells,
   Tool,
   with_marks,
   type Game,
@@ -21,7 +20,9 @@ import {
 import { create_board } from "./puzzle";
 
 function solved_marks(game: Game, dots = false): Mark[] {
-  return game.puzzle.solution.map((sea, index) => (sea ? Mark.SEA : dots && !game.puzzle.clues[index] ? Mark.DOT : Mark.EMPTY));
+  return game.puzzle.solution.map((sea, index) =>
+    sea ? Mark.SEA : dots && !game.puzzle.clues[index] ? Mark.DOT : Mark.EMPTY
+  );
 }
 
 function fixture(marks: Mark[]): Pick<Game, "board" | "marks"> {
@@ -80,21 +81,36 @@ describe("rules", () => {
 
 describe("input", () => {
   it("cycles the tool's mark first and runs backwards for right-click", () => {
-    expect([Mark.EMPTY, Mark.SEA, Mark.DOT].map((mark) => cycle(mark, Tool.SEA, false))).toEqual([Mark.SEA, Mark.DOT, Mark.EMPTY]);
-    expect([Mark.EMPTY, Mark.DOT, Mark.SEA].map((mark) => cycle(mark, Tool.DOT, false))).toEqual([Mark.DOT, Mark.SEA, Mark.EMPTY]);
+    expect([Mark.EMPTY, Mark.SEA, Mark.DOT].map((mark) => cycle(mark, Tool.SEA, false))).toEqual([
+      Mark.SEA,
+      Mark.DOT,
+      Mark.EMPTY,
+    ]);
+    expect([Mark.EMPTY, Mark.DOT, Mark.SEA].map((mark) => cycle(mark, Tool.DOT, false))).toEqual([
+      Mark.DOT,
+      Mark.SEA,
+      Mark.EMPTY,
+    ]);
     expect(cycle(Mark.EMPTY, Tool.SEA, true)).toBe(Mark.DOT);
   });
 
   it("paints blanks, overrides the first cell, erases only its mark and never a number", () => {
     const clues = [0, 0, 2, 0, 0];
     const base = [Mark.DOT, Mark.EMPTY, Mark.EMPTY, Mark.DOT, Mark.SEA];
-    expect(paint(base, clues, [0, 1, 2, 3, 4], Mark.SEA, Mark.DOT)).toEqual([Mark.SEA, Mark.SEA, Mark.EMPTY, Mark.DOT, Mark.SEA]);
-    expect(paint(base, clues, [3, 4, 0], Mark.EMPTY, Mark.DOT)).toEqual([Mark.EMPTY, Mark.EMPTY, Mark.EMPTY, Mark.EMPTY, Mark.SEA]);
-  });
-
-  it("strokes along one axis", () => {
-    expect(stroke_cells(5, 6, 9, "row")).toEqual([6, 7, 8, 9]);
-    expect(stroke_cells(5, 16, 1, "col")).toEqual([16, 11, 6, 1]);
+    expect(paint(base, clues, [0, 1, 2, 3, 4], Mark.SEA, Mark.DOT)).toEqual([
+      Mark.SEA,
+      Mark.SEA,
+      Mark.EMPTY,
+      Mark.DOT,
+      Mark.SEA,
+    ]);
+    expect(paint(base, clues, [3, 4, 0], Mark.EMPTY, Mark.DOT)).toEqual([
+      Mark.EMPTY,
+      Mark.EMPTY,
+      Mark.EMPTY,
+      Mark.EMPTY,
+      Mark.SEA,
+    ]);
   });
 });
 
@@ -130,7 +146,9 @@ describe("persistence", () => {
   it("restores a saved game from its seed and marks", () => {
     const game = new_game(Size.S9, 31337);
     const marks = solved_marks(game).map((mark, index) => (index % 3 ? mark : Mark.EMPTY));
-    const saved = saved_schema.parse(JSON.parse(JSON.stringify({ size: Size.S9, seed: 31337, marks, hints: 2, elapsed: 4200 })));
+    const saved = saved_schema.parse(
+      JSON.parse(JSON.stringify({ size: Size.S9, seed: 31337, marks, hints: 2, elapsed: 4200 }))
+    );
     const back = restore(saved)!;
     expect(back.puzzle).toEqual(game.puzzle);
     expect(back.marks).toEqual(marks);

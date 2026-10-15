@@ -20,19 +20,22 @@
   import { untrack } from "svelte";
   import {
     clear,
+    clue_runs,
+    combos_text,
     conflicts,
     daily_game,
     daily_saved_schema,
     DAILY_SIZE,
     empty_stats,
+    first_white,
     hint,
     is_white,
+    key_move,
     new_game,
     peers,
     place,
     record,
     restore,
-    run_combos,
     run_states,
     RunState,
     saved_schema,
@@ -83,7 +86,7 @@
   let tool = $state<Tool>("digit");
   let undo_stack = $state.raw<Entries[]>([]);
   let redo_stack = $state.raw<Entries[]>([]);
-  let active = $state(first_white(initial_game));
+  let active = $state(first_white(initial_game.puzzle));
   let flash = $state<{ cell: number; fix: boolean } | null>(null);
   let announcement = $state("");
   let show_stats = $state(false);
@@ -100,16 +103,7 @@
   const used_by_peers = $derived(
     peers(puzzle, active).reduce((mask, cell) => (game.values[cell] ? mask | bit(game.values[cell]) : mask), 0)
   );
-  const clues = $derived.by(() => {
-    const map = new Map<number, { across?: number; down?: number }>();
-    puzzle.runs.forEach((run, index) => {
-      const entry = map.get(run.clue) ?? {};
-      if (run.across) entry.across = index;
-      else entry.down = index;
-      map.set(run.clue, entry);
-    });
-    return map;
-  });
+  const clues = $derived(clue_runs(puzzle));
   const elapsed = $derived(clock.elapsed);
   const white_count = $derived(puzzle.across_of.filter((run) => run >= 0).length);
   const filled = $derived(game.values.filter(Boolean).length);
@@ -136,10 +130,6 @@
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
-
-  function first_white(of: Game): number {
-    return of.puzzle.across_of.findIndex((run) => run >= 0);
-  }
 
   function store_game(saved: Saved) {
     if (daily) storage.set("daily", { day: daily, game: saved });
@@ -231,7 +221,7 @@
     redo_stack = [];
     flash = null;
     announcement = "";
-    active = first_white(game);
+    active = first_white(game.puzzle);
     save();
   }
 
@@ -267,31 +257,12 @@
     cell_elements[cell]?.focus();
   }
 
-  function step(from: number, d_row: number, d_col: number): number {
-    let row = Math.floor(from / side) + d_row;
-    let col = (from % side) + d_col;
-    while (row >= 0 && row < side && col >= 0 && col < side) {
-      if (is_white(puzzle, row * side + col)) return row * side + col;
-      row += d_row;
-      col += d_col;
-    }
-    return from;
-  }
-
   function on_board_keydown(event: KeyboardEvent) {
     if (event.altKey || event.metaKey || event.ctrlKey) return;
-    const row = Math.floor(active / side);
-    const moves: Record<string, () => number> = {
-      ArrowUp: () => step(active, -1, 0),
-      ArrowDown: () => step(active, 1, 0),
-      ArrowLeft: () => step(active, 0, -1),
-      ArrowRight: () => step(active, 0, 1),
-      Home: () => step(row * side, 0, 1),
-      End: () => (is_white(puzzle, row * side + side - 1) ? row * side + side - 1 : step(row * side + side - 1, 0, -1)),
-    };
-    if (event.key in moves) {
+    const next = key_move(puzzle, event.key, active);
+    if (next !== null) {
       event.preventDefault();
-      select(moves[event.key]());
+      select(next);
       return;
     }
     // `code` rather than `key`: Shift+1 types "!" on most layouts, but Shift+digit is how notes go in from the keyboard.
@@ -324,14 +295,6 @@
     if (entry.across !== undefined) parts.push(`across ${puzzle.runs[entry.across].sum} in ${puzzle.runs[entry.across].cells.length}`);
     if (entry.down !== undefined) parts.push(`down ${puzzle.runs[entry.down].sum} in ${puzzle.runs[entry.down].cells.length}`);
     return `Clue, ${parts.join(", ")}`;
-  }
-
-  function combos_text(run: (typeof puzzle.runs)[number] | undefined): string {
-    if (!run) return "";
-    const all = run_combos(run, game.values);
-    if (!all.length) return "no combination fits";
-    const shown = all.slice(0, MAX_COMBOS).join("  ");
-    return all.length > MAX_COMBOS ? `${shown}  +${all.length - MAX_COMBOS}` : shown;
   }
 
   function sum_class(state: RunState, focused: boolean): string {
@@ -463,14 +426,14 @@
             <p class="flex min-w-0 items-center gap-1.5">
               <ArrowRightIcon weight="bold" class="size-3 shrink-0 text-foreground/65" aria-label="Across" />
               <span class="shrink-0 font-semibold text-foreground">{across_run.sum} in {across_run.cells.length}</span>
-              <span class="truncate">{combos_text(across_run)}</span>
+              <span class="truncate">{across_run ? combos_text(across_run, game.values, MAX_COMBOS) : ""}</span>
             </p>
           {/if}
           {#if !game.solved && down_run}
             <p class="flex min-w-0 items-center gap-1.5">
               <ArrowDownIcon weight="bold" class="size-3 shrink-0 text-foreground/65" aria-label="Down" />
               <span class="shrink-0 font-semibold text-foreground">{down_run.sum} in {down_run.cells.length}</span>
-              <span class="truncate">{combos_text(down_run)}</span>
+              <span class="truncate">{down_run ? combos_text(down_run, game.values, MAX_COMBOS) : ""}</span>
             </p>
           {/if}
         </div>

@@ -122,6 +122,24 @@ export function completed_units(before: readonly number[], after: readonly numbe
   return units.filter((unit) => complete(after, unit) && !complete(before, unit)).map((unit) => [...unit]);
 }
 
+/** How long each cell of the finished units waits before it lights up: a wave spreading out from `origin`. */
+export function wave_delays(units: readonly (readonly number[])[], origin: number, step_ms = 45): Map<number, number> {
+  const delays = new Map<number, number>();
+  for (const unit of units) {
+    for (const cell of unit) {
+      const distance = Math.abs(row_of(cell) - row_of(origin)) + Math.abs(col_of(cell) - col_of(origin));
+      delays.set(cell, Math.min(delays.get(cell) ?? Infinity, distance * step_ms));
+    }
+  }
+  return delays;
+}
+
+/** Where the cursor starts: the first blank cell, else the centre. */
+export function first_blank(values: readonly number[]): number {
+  const index = values.findIndex((value) => !value);
+  return index < 0 ? 40 : index;
+}
+
 export const HintKind = { FIX: "fix", DEDUCE: "deduce", REVEAL: "reveal" } as const;
 export type HintKind = (typeof HintKind)[keyof typeof HintKind];
 
@@ -142,7 +160,8 @@ export function hint(game: Game): Hint | null {
   const wrong = game.values.findIndex((value, cell) => value !== 0 && value !== solution[cell]);
   if (wrong >= 0) return { cell: wrong, digit: solution[wrong], kind: HintKind.FIX };
   const deduction = next_deduction(game.values);
-  if (deduction) return { cell: deduction.cell, digit: deduction.digit, kind: HintKind.DEDUCE, technique: deduction.technique };
+  if (deduction)
+    return { cell: deduction.cell, digit: deduction.digit, kind: HintKind.DEDUCE, technique: deduction.technique };
   const cands = candidates(game.values);
   let best = -1;
   for (let cell = 0; cell < 81; cell++) {

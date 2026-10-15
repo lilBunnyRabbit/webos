@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, grid_key_move, Stopwatch, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
@@ -31,6 +31,7 @@
     digit_counts,
     empty_stats,
     erase,
+    first_blank,
     hint,
     HintKind,
     is_given,
@@ -43,6 +44,7 @@
     stats_schema,
     to_saved,
     toggle_note,
+    wave_delays,
     with_board,
     type Board,
     type Game,
@@ -79,7 +81,7 @@
   let notes_mode = $state(false);
   let undo_stack = $state.raw<Board[]>([]);
   let redo_stack = $state.raw<Board[]>([]);
-  let selected = $state(first_blank(initial_game));
+  let selected = $state(first_blank(initial_game.values));
   let flash = $state<{ cell: number; fix: boolean } | null>(null);
   let wave = $state.raw<Map<number, number>>(new Map());
   let message = $state<string | null>(null);
@@ -130,11 +132,6 @@
     return () => disposers.forEach((dispose) => dispose());
   });
 
-  function first_blank(of: Game): number {
-    const index = of.values.findIndex((value) => !value);
-    return index < 0 ? 40 : index;
-  }
-
   function save() {
     if (daily) storage.set("daily", { day: daily, game: to_saved(game, clock.read()) });
     else storage.set("game", to_saved(game, clock.read()));
@@ -183,14 +180,7 @@
   function celebrate(before: readonly number[], cell: number) {
     const units = completed_units(before, game.values, cell);
     if (!units.length || game.solved) return;
-    const delays = new Map<number, number>();
-    for (const unit of units) {
-      for (const c of unit) {
-        const distance = Math.abs(row_of(c) - row_of(cell)) + Math.abs(col_of(c) - col_of(cell));
-        delays.set(c, Math.min(delays.get(c) ?? Infinity, distance * 45));
-      }
-    }
-    wave = delays;
+    wave = wave_delays(units, cell);
   }
 
   function input(digit: number, as_note = notes_mode) {
@@ -263,7 +253,7 @@
     flash = null;
     wave = new Map();
     message = null;
-    selected = first_blank(game);
+    selected = first_blank(game.values);
     save();
   }
 
@@ -298,19 +288,10 @@
       clear();
       return;
     }
-    const row = row_of(selected);
-    const col = col_of(selected);
-    const moves: Record<string, number> = {
-      ArrowUp: Math.max(0, row - 1) * 9 + col,
-      ArrowDown: Math.min(8, row + 1) * 9 + col,
-      ArrowLeft: row * 9 + Math.max(0, col - 1),
-      ArrowRight: row * 9 + Math.min(8, col + 1),
-      Home: row * 9,
-      End: row * 9 + 8,
-    };
-    if (event.key in moves && !event.shiftKey) {
+    const next = grid_key_move(event.key, selected, 9, 9);
+    if (next !== null && !event.shiftKey) {
       event.preventDefault();
-      select(moves[event.key]);
+      select(next);
     }
   }
 

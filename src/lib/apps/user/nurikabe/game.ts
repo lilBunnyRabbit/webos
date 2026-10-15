@@ -87,14 +87,16 @@ export function feedback(game: Pick<Game, "board" | "marks">): Feedback {
   };
 
   regions(land, (cells, clues) => {
-    if (clues.length > 1 || (clues.length === 1 && cells.length > clues[0])) cells.forEach((index) => (errors[index] = true));
+    if (clues.length > 1 || (clues.length === 1 && cells.length > clues[0]))
+      cells.forEach((index) => (errors[index] = true));
   });
   // Everything not shaded is one region per pocket the sea has walled off, so a pocket's size is final.
   regions(
     (index) => marks[index] !== Mark.SEA,
     (cells, clues) => {
       if (clues.length === 1 && cells.length === clues[0]) cells.forEach((index) => (complete[index] = true));
-      else if (clues.length === 1 && cells.length < clues[0]) cells.forEach((index) => land(index) && (errors[index] = true));
+      else if (clues.length === 1 && cells.length < clues[0])
+        cells.forEach((index) => land(index) && (errors[index] = true));
       else if (!clues.length) cells.forEach((index) => marks[index] === Mark.DOT && (errors[index] = true));
     }
   );
@@ -136,26 +138,17 @@ export function hint(game: Game): Hint | null {
   return index >= 0 ? { index, mark: Mark.SEA, fix: false } : null;
 }
 
-export function stroke_cells(width: number, from: number, to: number, axis: "row" | "col" | null): number[] {
-  const [r0, c0] = [Math.floor(from / width), from % width];
-  const [r1, c1] = [Math.floor(to / width), to % width];
-  const along_row = axis ? axis === "row" : Math.abs(c1 - c0) >= Math.abs(r1 - r0);
-  const cells: number[] = [];
-  if (along_row) {
-    const step = Math.sign(c1 - c0) || 1;
-    for (let c = c0; c !== c1 + step; c += step) cells.push(r0 * width + c);
-  } else {
-    const step = Math.sign(r1 - r0) || 1;
-    for (let r = r0; r !== r1 + step; r += step) cells.push(r * width + c0);
-  }
-  return cells;
-}
-
 /**
  * A stroke sets its first cell to `mark` whatever it held, then paints `mark` onto the blank cells it crosses, or,
  * when `mark` is blank, erases the mark the first cell had. Numbers are never touched.
  */
-export function paint(base: readonly Mark[], clues: readonly number[], cells: readonly number[], mark: Mark, erased: Mark): Mark[] {
+export function paint(
+  base: readonly Mark[],
+  clues: readonly number[],
+  cells: readonly number[],
+  mark: Mark,
+  erased: Mark
+): Mark[] {
   const next = [...base];
   cells.forEach((index, position) => {
     if (clues[index]) return;
@@ -173,10 +166,20 @@ export interface SizeRecord {
 export type Stats = Record<Size, SizeRecord>;
 
 const record_schema = z.object({ solved: z.number().int().nonnegative(), best: z.number().nonnegative().nullable() });
-export const stats_schema = z.object({ "5": record_schema, "7": record_schema, "9": record_schema, "12": record_schema });
+export const stats_schema = z.object({
+  "5": record_schema,
+  "7": record_schema,
+  "9": record_schema,
+  "12": record_schema,
+});
 
 export function empty_stats(): Stats {
-  return { "5": { solved: 0, best: null }, "7": { solved: 0, best: null }, "9": { solved: 0, best: null }, "12": { solved: 0, best: null } };
+  return {
+    "5": { solved: 0, best: null },
+    "7": { solved: 0, best: null },
+    "9": { solved: 0, best: null },
+    "12": { solved: 0, best: null },
+  };
 }
 
 export function record(stats: Stats, size: Size, time: number, hints: number): Stats {
