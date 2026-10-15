@@ -163,6 +163,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Quick launch area
 - [ ] Taskbar auto-hide
 - [ ] Taskbar size options (small/medium/large)
+- [ ] Show desktop: a button at the far end of the taskbar plus a shortcut (shell command + `shortcuts/defaults.ts` binding) that minimizes every window, and a second press restores them (Windows Win+D)
 
 ---
 
