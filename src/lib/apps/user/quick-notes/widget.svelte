@@ -5,7 +5,7 @@
   import { untrack } from "svelte";
   import { NoteDraft } from "./draft.svelte";
   import { add_todo, NOTES_DIR, parse_todos, set_todo, title_of, type Note } from "./notes";
-  import { list_notes, read_todo, save_note, write_todo } from "./store";
+  import { NotesReader, read_todo, save_note, write_todo } from "./store";
 
   /** A sticky for one note (`props.note`), or the todo list without one (ADR-034). */
   let { props, size }: WidgetProps = $props();
@@ -13,23 +13,32 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const note_id = $derived(typeof props.note === "string" ? props.note : null);
 
-  let notes = $state.raw<Note[]>([]);
+  let note = $state.raw<Note | null>(null);
   let todo_text = $state("");
   let loaded = $state(false);
   let adding = $state("");
 
+  const reader = new NotesReader(() => files);
+  let reload_id = 0;
+
   async function reload() {
-    if (note_id) notes = await list_notes(files);
-    else todo_text = await read_todo(files);
-    loaded = true;
+    const id = ++reload_id;
+    if (note_id) {
+      const next = await reader.find(note_id);
+      if (id === reload_id) note = next;
+    } else {
+      const next = await read_todo(files);
+      if (id === reload_id) todo_text = next;
+    }
+    if (id === reload_id) loaded = true;
   }
 
   $effect(() => {
     files.revision(NOTES_DIR);
+    void note_id;
     untrack(reload);
   });
 
-  const note = $derived(note_id ? (notes.find((note) => note.id.startsWith(note_id)) ?? null) : null);
   const draft = new NoteDraft(
     () => note,
     async (next) => {

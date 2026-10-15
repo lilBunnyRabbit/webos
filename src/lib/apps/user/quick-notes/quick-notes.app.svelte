@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { format_keys } from "$lib/core/api/services/shortcuts/keys";
-  import { Badge, Button, Checkbox, EmptyState, IconButton, Input, Segmented, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
+  import { Badge, Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date, format_datetime } from "$lib/core/utils";
   import { ArrowLeft, ArrowSquareOut, Check, CheckSquare, Notepad, Plus, Sticker, Trash, Tray, X, XCircle } from "phosphor-svelte";
@@ -25,7 +25,7 @@
     resolve_link,
     type Note,
   } from "./notes";
-  import { create_note, delete_note, list_notes, read_todo, save_note, write_todo } from "./store";
+  import { create_note, delete_note, NotesReader, read_todo, save_note, write_todo } from "./store";
   import { NoteDraft } from "./draft.svelte";
 
   const { note: initial_note, tab: initial_tab }: { note?: string; tab?: "inbox" | "notes" | "todo" } = $props();
@@ -53,15 +53,20 @@
   let capture_text = $state("");
   let editor = $state<HTMLTextAreaElement | null>(null);
 
+  const reader = new NotesReader(() => files);
+  let reload_id = 0;
+
   async function reload() {
+    const id = ++reload_id;
     try {
-      const [next_notes, next_todo] = await Promise.all([list_notes(files), read_todo(files)]);
+      const [next_notes, next_todo] = await Promise.all([reader.list(), read_todo(files)]);
+      if (id !== reload_id) return;
       notes = next_notes.sort(newest_first);
       todo_text = next_todo;
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read your notes", message: String(reason) });
     } finally {
-      loaded = true;
+      if (id === reload_id) loaded = true;
     }
   }
 
@@ -298,11 +303,7 @@
           <div class="flex items-center gap-2 border-b border-foreground/8 p-2">
             <Input bind:value={query} size="sm" class="min-w-0 flex-1" placeholder="Filter, or #tag" aria-label="Filter notes" />
             {#if tab.value === Tab.NOTES}
-              <select bind:value={filter_status.value} aria-label="Status" class="h-7 rounded-md bg-transparent px-1 text-ui text-foreground/80">
-                {#each status_options.filter((option) => option.value !== NoteStatus.RAW) as option (option.value)}
-                  <option value={option.value}>{option.label}</option>
-                {/each}
-              </select>
+              <Select size="sm" bind:value={filter_status.value} aria-label="Status" class="w-auto" options={status_options.filter((option) => option.value !== NoteStatus.RAW)} />
             {/if}
           </div>
           <div class="min-h-0 flex-1 overflow-auto p-1.5">
