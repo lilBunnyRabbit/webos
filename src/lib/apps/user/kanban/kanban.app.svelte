@@ -63,6 +63,7 @@
   } from "./data";
   import { DragKind, BoardDrag } from "./drag.svelte";
   import KanbanColumn from "./kanban-column.svelte";
+  import { first_open_column } from "./lookup";
   import { day_key } from "$lib/core/utils/date";
 
   const { board: initial_board, card: initial_card }: { board?: string; card?: string } = $props();
@@ -149,10 +150,6 @@
   function open(id: string) {
     archive_open.value = false;
     open_card.value = id;
-  }
-
-  function first_open_column(): Column | undefined {
-    return board.columns.find((column) => !column.done) ?? board.columns[0];
   }
 
   async function compose(column_id: string | null) {
@@ -352,7 +349,7 @@
       <Archive /><span class="hidden @md:inline">Archive</span>
       {#if board.archive.length > 0}<span class="font-mono text-2xs tabular-nums">{board.archive.length}</span>{/if}
     </Button>
-    <Button variant="primary" size="sm" disabled={!data.ready || board.columns.length === 0} onclick={() => compose(first_open_column()?.id ?? null)}>
+    <Button variant="primary" size="sm" disabled={!data.ready || board.columns.length === 0} onclick={() => compose(first_open_column(board)?.id ?? null)}>
       <Plus weight="bold" /><span class="hidden @sm:inline">Add card</span>
     </Button>
   </Toolbar>
