@@ -36,7 +36,12 @@ export async function page_info(document: PdfDocument, index: number): Promise<P
   return { width: viewport.width, height: viewport.height, rotation: page.rotate };
 }
 
-export async function render_page(document: PdfDocument, index: number, scale: number, extra = 0): Promise<HTMLCanvasElement> {
+export async function render_page(
+  document: PdfDocument,
+  index: number,
+  scale: number,
+  extra = 0
+): Promise<HTMLCanvasElement> {
   const page = await document.getPage(index + 1);
   const viewport = page.getViewport({ scale, rotation: (page.rotate + extra) % 360 });
   const canvas = window.document.createElement("canvas");
@@ -47,12 +52,25 @@ export async function render_page(document: PdfDocument, index: number, scale: n
   return canvas;
 }
 
-export async function render_width(document: PdfDocument, index: number, width: number, extra = 0): Promise<HTMLCanvasElement> {
+export async function render_width(
+  document: PdfDocument,
+  index: number,
+  width: number,
+  extra = 0
+): Promise<HTMLCanvasElement> {
   const page = await document.getPage(index + 1);
   const base = page.getViewport({ scale: 1, rotation: (page.rotate + extra) % 360 });
   return render_page(document, index, width / base.width, extra);
 }
 
+/** A canvas's pixels stay allocated until it's collected; zero size frees them as soon as the image is encoded. */
+export function release_canvas(canvas: HTMLCanvasElement): void {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
 export function canvas_blob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the image."))), type, quality));
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't encode the image."))), type, quality)
+  );
 }
