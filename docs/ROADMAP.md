@@ -443,7 +443,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Activity Monitor's Windows section shows "—" on mobile
 - [ ] `state_proxy_equality_mismatch` warning in Terminal and some games
 
-### 1.0 release
+### 1.0 release (shipped 2026-10-15)
 - **Brainstorm:** [1.0 release](brainstorm/2026-10-15_v1-release.md)
 - [x] Fork test in CI (delete `src/lib/apps/user`, check + build + unit tests)
 - [x] App API frozen: `docs/system/app-api.md` + export pin test

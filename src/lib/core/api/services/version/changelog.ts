@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.0.0",
+    date: "2026-10-15",
+    title: "WebOS 1.0",
+    changes: [
+      { kind: NEW, text: "Back up your files, settings and app data to a zip on your device, and restore it later from Settings › Backup." },
+      { kind: NEW, text: "Pick what goes into a backup: files, settings, app data, or any mix of them." },
+      { kind: NEW, text: "The Terminal can make and restore backups too, with backup create and backup restore." },
+      { kind: IMPROVED, text: "WebOS is now 1.0: the way apps are built is settled, so apps made for it keep working through every 1.x release." },
+    ],
+  },
+  {
     version: "0.37.0",
     date: "2026-10-15",
     title: "Faster boot, lighter apps",
