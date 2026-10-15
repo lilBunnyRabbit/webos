@@ -13,7 +13,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
-   - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was:: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
+   - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping. Reopen closed window landed in block 3 as Alt+Shift+T
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
 4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
@@ -22,7 +22,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
 
-**Parked** (no consumer or nothing breaks without it; revisit only on demand): Tasks service (ADR-013, until its first consumer), single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, AppDataHandle, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
+**Parked** (no consumer or nothing breaks without it; revisit only on demand): Tasks service (ADR-013, until its first consumer), single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
 
 ---
 
@@ -112,9 +112,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Window API Expansion
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)
 - **Status:** Overlays done (ADR-025)
-- [ ] Expanded WindowHandle (set_title, set_icon, request_attention, set_badge)
+- [-] Expanded WindowHandle (`set_title` done; set_icon, request_attention, set_badge open; the manifest `badge` may cover set_badge)
 - [x] Window overlays: file picker, confirm, prompt (promise-based; window sheets, ADR-025)
-- [ ] Window status bar (left/right text, progress indicator)
+- Window status bar: parked, the kit `StatusBar` covers it (see Parked)
 
 ### Session Persistence
 - **ADRs:** [ADR-021](adrs/021-file-system-hierarchy.md) (hierarchy), [ADR-022](adrs/022-desktop-folder.md) (desktop folder), [ADR-023](adrs/023-session-persistence.md) (session; supersedes ADR-014 §Session Persistence)
@@ -156,7 +156,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Taskbar Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md), [ADR-015](adrs/015-customization-theming.md)
-- **Status:** Not started
+- **Status:** In progress
 - [-] System tray area (notifications done; background tasks with ADR-013)
 - [ ] Context menus for taskbar items
 - [ ] Window grouping by app (badge count, expand to list)
@@ -220,7 +220,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Tasks tab in Activity Monitor (filter, progress bars, actions); no separate Task Manager app (ADR-013 revision)
 - [ ] Taskbar badge for active task count
 - [ ] Notification integration on task complete/fail
-- [ ] Keyboard shortcut: Ctrl+Shift+Esc
+- [ ] Keyboard shortcut: an Alt+Shift key (Ctrl+Shift+Esc is the OS Task Manager, ADR-017)
 
 ### URL Deep Linking & Share System
 - **ADR:** [ADR-010](adrs/010-url-deep-linking.md)
@@ -260,7 +260,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Batch 1 (2026-10-12): Calculator, Minesweeper, 2048, Snake, Maze, RNG Tools, Dev Tools, Unit Converter, Speed Reader, Music Visualizer, Paint. Built in parallel worktrees; never run by hand yet
 - **Triage:** [2026-10-14 App triage](brainstorm/2026-10-14_app-triage.md): yes / maybe / no for every remaining app, and the core work each yes app waits on
 - Remove the `example` app: left for now (owner, 2026-10-14); `ui`, `session` and `router` browser tests launch it
-- [-] Wave 2 follow-ups ([triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)). Done 2026-10-15: shell commands for every new app, File Explorer Compress / Extract here, shared CodeMirror module (`$lib/core/components/code`), core `write_image`, shared `Ticker` (one wall-clock-aligned clock per interval), widget resizing (`widget_size`), App Library, PWA install, word + typo app search, keyword pass. Left: kit additions (colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`), `print_html` waiting for fonts, core → user-app import (Explorer uses Archive's extraction), PDF Tools commands (proposed)
+- [-] Wave 2 follow-ups ([triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)). Done 2026-10-15: shell commands for every new app, File Explorer Compress / Extract here, shared CodeMirror module (`$lib/core/components/code`), core `write_image`, shared `Ticker` (one wall-clock-aligned clock per interval), widget resizing (`widget_size`), App Library, PWA install, word + typo app search, keyword pass. Left: kit additions (colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`), `print_html` waiting for fonts
 - [ ] Wave 3 follow-ups (agents' reports, 2026-10-15):
   - [ ] Kit: colour swatch picker (Soundboard, Nonogram), stat tile (Game Hub), tree list (Archive), pointer reorder for lists and grids (Kanban, PDF Tools, Soundboard), `Segmented` disabled / icon-only / controlled, `format_date` without the year, `NotificationType.SUCCESS`, `EmptyState` actions wrapping; Style Guide demo for `SideNav` counts
   - [ ] Core: a `live_file` helper next to `json_file` for shell commands (today in Kanban, used by Calendar); shared day/time/duration parsers (today in `calendar/parse.ts`, imported by Work Hours and Kanban); `FilesService.ensure_directory(path)`; a progress-toast job helper (Archive and PDF Tools each have one)
@@ -344,7 +344,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### static-utils Ports
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- **Brainstorm:** [2026-10-11 App ports](brainstorm/2026-10-11_app-ports.md). Outputs saved into OPFS (`pick_save`, folders for multi-file), native APIs instead of jsqr/gifuct-js/jszip
+- **Brainstorm:** [2026-10-11 App ports](brainstorm/2026-10-11_app-ports.md). Outputs saved into OPFS (`pick_save`, folders for multi-file), native APIs instead of gifuct-js/jszip; QR uses `BarcodeDetector` with a lazy jsqr fallback
 - [x] Image Crop
 - [x] Background Remove
 - [x] Image Concat
@@ -453,7 +453,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)
 - [ ] Cache strategies (cache-first for assets, network-first for version check)
 - [ ] Background sync for queued operations
-- [ ] Install prompt customization
+- [x] Install prompt customization (`install.svelte.ts`, introduction and Settings › About)
 
 ### Workers Service
 - Deferred until an app needs a worker; then it also feeds a Workers tab in Activity Monitor ([brainstorm](brainstorm/2026-10-11_app-ports.md))
@@ -493,7 +493,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Demo mode preview images
 
 ### CI/CD
-- [ ] GitHub Actions build pipeline
+- [-] GitHub Actions build pipeline (check, unit tests, build on push to master; no PR trigger)
 - [ ] Automated testing on PR
 - [x] Automated deployment to GitHub Pages (`deploy.yml`: check, build, deploy on push to `master`)
 - [ ] Version tagging
@@ -532,7 +532,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [x] Kernel + service registry
 - [x] WindowsService (lifecycle, geometry, z-ordering, snapping)
 - [x] AppsService (registry, launching, define_app)
-- [x] SettingsService (theme, taskbar position, localStorage)
+- [x] SettingsService (theme, taskbar position, localStorage, now `/etc/settings.json`)
 - [x] DesktopService (grid layout)
 - [x] FilesService (basic OPFS read/list/upload/delete)
 - [x] VersionService (ADR-004, polling + visibilitychange)
