@@ -11,12 +11,12 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `kernel` | Kernel | none | none | none | the kernel itself | window: `expanded` |
 | `text-editor` | Text Editor | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files, notifications, shortcuts, settings | window: `wrap`, `markdown` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
-| `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files | none |
+| `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files, apps (Edit in PDF Tools) | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
 | `activity-monitor` | Activity Monitor | none | none | min 480×360 | windows, files, apps, desktop, notifications | window: `section` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
-| `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell, files (path display) | window: `cwd`, `scrollback`, `started` |
+| `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
 | `app-library` | App Library | none | none | min 340×360 | apps, windows, session, desktop, notifications | window: `category`, `filters`, `sort`, `view`, `selected` |
 
@@ -77,6 +77,8 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | `sections/whats-new.svelte` | The changelog (ADR-026) |
 | `sections.ts` | `SECTIONS` (id, label, icon) and `SECTION_IDS`, shared by the manifest's props schema and the app |
 | `sections/about.svelte` | Install, build info, updates, introduction replay, reset, source link |
+| `sections/roadmap.svelte` | The Roadmap page: loads `docs/ROADMAP.md?raw` lazily, the filter and the section cards |
+| `roadmap.ts` | `parse_roadmap`, `count_status`, `plain` (inline markdown to text), `ItemStatus`. Unit tests in `roadmap.test.ts` |
 | `color.ts` | `to_hex()` (a batch of colours) and `to_oklch()` for the colour picker, through probe elements and relative colour syntax. A batch appends every probe before reading any, so it costs one style recalc |
 
 **Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new, Roadmap and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
@@ -136,7 +138,14 @@ Every write goes straight to service state. Persistence is the settings service'
 | dialogs | open count | stack: id, component name, point, anchored or centered |
 | apps | registered, system / user, association count | registry table: icon, id, name, version, props schema, associations |
 | session | status (`none`/`pending`/`restored`/`declined`), saved windows, last save time | file path |
+| clipboard | entries held, mode (`copy`/`cut`) | path table; "The clipboard is empty." |
+| ui | open overlay, back guard armed | none |
+| shell | command count, history length | command table: name, description |
+| shortcuts | registered, window-scoped count, key style (macOS / PC) | table of keys, id, scope (global or window) |
+| router | last link hash, its outcome | none |
 | desktop | grid size, icon count, cell size | occupancy map of the grid; table of cell, entry name, kind (`shortcut`/`file`/`directory`) and target (the shortcut's app name, `{id} (missing)` for an unregistered app, `—` otherwise); empty text "Desktop folder is empty." |
+
+On mobile the `windows` and `desktop` keys hold the mobile classes, which ship their own `mobile-inspector.svelte`: windows shows running count and the app on screen, detailed a table of recent order, app, id and flags; desktop shows home and dock counts, detailed a table of place, entry and kind.
 
 Inspector building blocks (`components/inspector/`) follow the kit's type scale: `text-ui` values, `text-2xs` labels at 80%, and tables in a `rounded-lg` hairline ring with overline-style headers.
 
@@ -196,12 +205,13 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 2. `$effect` on `file`: creates an object URL, and revokes it on cleanup.
 3. `kind` comes from `file.type`: `image` / `video` / `audio` / `unsupported`.
 
-States before the frame: no path ("Nothing to preview"), error ("Couldn't read the file"), loading (`Spinner`), not found. Then the document frame: a `Toolbar` with the file name and controls, a stage on `background-darker` (a scoped `.stage` style), and a `StatusBar` with type, size and last-modified time (`format_datetime`).
+States before the frame: no path ("Nothing to preview", with Open a file… and From device…), error ("Couldn't read the file"), loading (`Spinner`), not found. Then the document frame: a `Toolbar` with the file name and controls, a stage on `background-darker` (a scoped `.stage` style), and a `StatusBar` with type, size and last-modified time (`format_datetime`).
 
 Below the `@lg` container width the name takes the toolbar's first row (`order-first basis-full`) and the controls wrap onto the next, with Save to disk… pushed right; from `@lg` up it's one row with the name truncating in between.
 
 | Kind | Rendering | Controls |
 |------|-----------|----------|
+| (every kind) | | Open… and Open from device… at the start of the toolbar ([Open…](#open-in-the-viewers-adr-025-adr-031)) |
 | image | A box sized in layout to the rotated image times the scale, centred in a `min-w-full min-h-full w-max` grid with padding (24px desktop, 8px mobile). The `<img>` inside is absolutely centred at its natural size times the scale and rotated by `transform`. Fit's scale is `fit_scale()` of the rotated size into the stage (`bind:clientWidth/Height`) minus padding, so small images scale up and a 90° turn still fits | Zoom out / level / zoom in (step 0.25 within 0.25 to 5, the limits widened to include the fit scale; zooming leaves fit mode starting from the fit scale; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Save to disk… |
 | video | `<video controls>`, `max-h-full max-w-full` | Save to disk… |
 | audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
@@ -263,7 +273,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Behaviour.** `path` is local state seeded from the prop (`untrack`), and "Open…" swaps it. A `$derived.by` turns `path` into a `files.get_file(path)` + `file.text()` promise and also reads a `revision` counter. Reload bumps the counter, which re-reads the file and remounts the iframe. The states are: no path ("No file open" with "Open a file…"), loading (`Spinner`), not found and read error (error empty states), then the document frame:
 
-- **Toolbar:** Open…, Reload, the full path in mono (truncated, `title` = path), and a `sm` `Segmented` Preview / Source switch.
+- **Toolbar:** Open…, Open from device…, Reload, the full path in mono (truncated, `title` = path), and a `sm` `Segmented` Preview / Source switch.
 - **Preview:** a borderless full-size `<iframe srcdoc={text} sandbox="allow-scripts">`. There is no `allow-same-origin`, so the page runs in an opaque origin. Its scripts run, but they can't reach the OS, localStorage or OPFS. The document paints its own background.
 - **Source:** the text in a read-only `<pre>`, mono `text-ui`, `whitespace-pre-wrap wrap-anywhere`.
 - **Status bar:** file name, line count, size, MIME type (`text/html` when empty).
@@ -330,7 +340,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
 **Sections** (`SideNav`, Settings-style frame):
 
 - **Windows:**
-  - One row per window from `windows.list()`: manifest icon and name (the full name and window id in its tooltip), and badges "this" and "minimized".
+  - One row per window from `windows.list()`: manifest icon and the window's title, else the app name (the full name and window id in its tooltip), and badges "this" and "minimized".
   - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
@@ -360,12 +370,11 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
 
 An API the browser doesn't have shows "Not available in this browser". There are no polyfills.
 
-**Persistence.** App storage `section`. Samples are never stored.
+**Persistence.** `storage.window("section")`: per window, restored with the session. Samples are never stored.
 
 **Known gaps.**
 
 - No Workers tab: no browser API lists workers, and no app spawns one yet. A Workers Service comes with its first consumer. TasksService jobs (ADR-013) become a tab once that service lands.
-- Windows have no titles, so rows show the app name and a short id.
 - Its own row counts the mutations from re-rendering its own table.
 - Widgets can't be highlighted on the desktop from their row: the desktop's selection is local to the desktop component.
 - Shared clocks (`utils/ticker.svelte.ts`) and shared app-data cells (`json_file`) aren't listed: their registries are module-private, and a count would need a new core export.
@@ -380,7 +389,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 
 **Purpose.** Render every design token and UI kit component live in the current theme, as the in-OS companion to [docs/design](../design/README.md). Change the theme in Settings and the Style Guide follows. Its manifest sets `description` and `keywords` (`design`, `components`, `tokens`), so the start menu search finds it by those words.
 
-**Layout.** The settings-style frame: `SideNav` + a `max-w-3xl` page with a header ("Live in the current theme…"). The open section is `storage.persisted("section", "colour", z.enum([...]))` → `app.style-guide.section`.
+**Layout.** The settings-style frame: `SideNav` + a `max-w-3xl` page with a header ("Live in the current theme…"). The open section is `storage.window("section", "colour", z.enum([...]))`: per window, restored with the session.
 
 | Section | Shows |
 |---------|-------|
@@ -479,7 +488,9 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## Terminal
 
-ADR-033. A [shell](services/shell.md) session per window, on the field surface (`light-dark(background-lightest, background-darker)`) in `font-mono text-ui`.
+`terminal` · `TerminalWindow` icon · source `system/terminal/` · [ADR-033](../adrs/033-shell.md)
+
+A [shell](services/shell.md) session per window, on the field surface (`light-dark(background-lightest, background-darker)`) in `font-mono text-ui`.
 
 | File | Contents |
 |------|----------|

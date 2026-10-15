@@ -13,12 +13,13 @@ This page covers the CURRENT code. For intent and history, see [ADRs](../adrs/RE
 │                 get_app_context() → window handle, storage handle │
 ├──────────────────────────────────────────────────────────────────┤
 │ Shell           src/lib/core/components/                         │
-│                 os.svelte → desktop, window-manager, toasts,      │
-│                 taskbar, dialogs-host                             │
+│                 os.svelte → platform shell (desktop or mobile),   │
+│                 update overlay                                    │
 ├──────────────────────────────────────────────────────────────────┤
 │ Services        src/lib/core/api/services/{name}/                │
 │                 settings windows files version notifications      │
-│                 dialogs apps desktop session                      │
+│                 dialogs apps desktop session clipboard ui shell   │
+│                 shortcuts router                                  │
 ├──────────────────────────────────────────────────────────────────┤
 │ Kernel          src/lib/core/api/kernel/                         │
 │                 registry, dependency order, init / shutdown       │
@@ -26,7 +27,7 @@ This page covers the CURRENT code. For intent and history, see [ADRs](../adrs/RE
         browser: localStorage · OPFS · Cache Storage / service worker
 ```
 
-Each layer only reaches down. Shell components and apps get services with `kernel.service<T>("key")` inside `$derived` (see [kernel.md](kernel.md#consumer-rules)). Services get their dependencies the same way. The two exceptions to "only reaches down" are both in AppsService. It imports the app glob (`$lib/apps`), and it lazily imports `open-with-dialog.svelte` from the shell to pass to DialogsService. DialogsService (`save-changes-dialog.svelte`) and VersionService (`intro-dialog.svelte`) import theirs the same way; SessionService's Restore dialog stays eager because boot shows it.
+Each layer only reaches down. Shell components and apps get services with `kernel.service<T>("key")` inside `$derived` (see [kernel.md](kernel.md#consumer-rules)). Services get their dependencies the same way. The exceptions to "only reaches down" are services importing what they hand to DialogsService. AppsService imports the app glob (`$lib/apps`) and lazily imports `open-with-dialog.svelte`. DialogsService (`save-changes-dialog.svelte`) and VersionService (`intro-dialog.svelte`) lazy-import theirs the same way. A few stay eager: SessionService's Restore dialog (boot shows it), DialogsService's `context-menu.svelte`, ShellService's `confirm-dialog.svelte` and the shortcuts command's `shortcuts-dialog.svelte` (`shortcuts/shell-run.ts`).
 
 ## Boot sequence
 
@@ -48,8 +49,11 @@ App.svelte
 └─ web-os.svelte
    └─ os.svelte                       renders the platform shell main.ts loaded (ADR-016, ADR-036)
       ├─ mobile/mobile-shell.svelte   phones and tablets, see shell/mobile.md
+      │  └─ … + its own dialogs/dialogs-host.svelte (anchored="sheet")
       ├─ desktop-shell.svelte         grid; layout follows settings.taskbar.position
       │  ├─ desktop/desktop.svelte
+      │  │  ├─ wallpaper.svelte
+      │  │  ├─ desktop-widget.svelte  (per widget item)
       │  │  └─ desktop-item.svelte  (per grid cell) → desktop-item-face.svelte
       │  ├─ window-manager/window-manager.svelte
       │  │  └─ window/window.svelte  (per open window)
@@ -57,13 +61,17 @@ App.svelte
       │  │     ├─ window-content.svelte  → lazy app component
       │  │     └─ window-sheets.svelte   → this window's dialog sheets (ADR-025)
       │  ├─ notifications/toast-area.svelte → notification-item.svelte
-      │  └─ taskbar/taskbar.svelte
-      │     ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte
-      │     ├─ taskbar-item.svelte  (per window)
-      │     └─ taskbar-tray.svelte → taskbar-clock.svelte, notifications/notification-list.svelte
-      └─ dialogs/dialogs-host.svelte  (sibling of either shell; native <dialog>)
-         └─ (component from DialogsService.stack: open-with-dialog.svelte, restore-session-dialog.svelte)
+      │  ├─ taskbar/taskbar.svelte
+      │  │  ├─ start-menu.svelte → start-menu-popover.svelte → brand/logo-lockup.svelte, command-mode.svelte
+      │  │  ├─ taskbar-item.svelte  (per window)
+      │  │  ├─ terminal-button.svelte
+      │  │  └─ taskbar-tray.svelte → taskbar-clock.svelte, notifications/notification-list.svelte
+      │  └─ dialogs/dialogs-host.svelte  (after the grid; native <dialog>)
+      │     └─ (component from DialogsService: open-with-dialog.svelte, restore-session-dialog.svelte, ...)
+      └─ update/update-overlay.svelte
 ```
+
+`os.svelte` gets the shell as a prop: `main.ts` awaits `load_shell(kernel.platform)` (`components/platform-shell.ts`, the one platform branch) alongside `kernel.init()`, so only this device's shell chunk downloads.
 
 The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `desktop-shell.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
 
@@ -72,7 +80,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | Path | What lives there |
 |------|------------------|
 | `index.html` | Splash, favicon/PWA links, `#app` mount point |
-| `src/main.ts` | Boot: `kernel.init()`, mount, splash removal, boot error on the splash, pagehide/HMR shutdown |
+| `src/main.ts` | Boot: `kernel.init(on_step)` with the splash progress and chunk warming, `load_shell()`, mount, splash removal, boot error on the splash, pagehide/HMR shutdown |
 | `src/App.svelte` | Renders `web-os.svelte` |
 | `src/app.css` | Tailwind, fonts, `@theme inline` tokens (colours, type, radius, shadows, easing, `pop-in`), base layer ([theming.md](theming.md)) |
 | `src/assets/fonts/` | Self-hosted Inter and Hack with licences |
@@ -82,14 +90,14 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 | `src/lib/core/api/kernel/` | `Kernel` class and `init.ts` (service registration) |
 | `src/lib/core/api/services/{name}/` | One folder per service: `type.ts` (public interface), `service.svelte.ts` (class), pure helpers |
 | `src/lib/core/contexts/app/` | `get_app_context()`, window handle, storage handle (ADR-003) |
-| `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, desktop, window, window-manager, taskbar, files, dialogs, notifications, brand, inspector (building blocks for service inspectors), code (CodeMirror setup shared by Text Editor, Diff and Markdown to PDF: `token_theme`, `token_highlight`, `Language`, `language_for`, `load_language`) |
+| `src/lib/core/components/{feature}/` | Shell UI: `os.svelte`, `desktop-shell.svelte`, `platform-shell.ts` (`load_shell`), desktop, window, window-manager, taskbar, mobile, files, dialogs, notifications, update (update overlay), intro (first-boot introduction), apps (`app-badge.svelte`), theme (`theme-card.svelte`), brand, inspector (building blocks for service inspectors), code (CodeMirror setup shared by Text Editor, Diff and Markdown to PDF: `token_theme`, `token_highlight`, `Language`, `language_for`, `load_language`) |
 | `src/lib/core/components/ui/` | The UI kit (ADR-024): Button, IconButton (both with a `pressed` toggle state), CopyButton, Input, Textarea, Select, Slider, Switch, Checkbox, Segmented (`sm` / `md`), Section, SettingRow, SideNav, Toolbar, StatusBar, Badge, EmptyState, BoardOverlay, Spinner, Kbd, Separator, plus `variants.ts` (`button`, `field`, `badge` recipes) and `types.ts` (`IconComponent`). Imported from `$lib/core/components/ui`. Documented in [docs/design/components.md](../design/components.md) |
-| `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `format_date`, `format_datetime`, `error_message` (an `Error`'s message, anything else stringified), `clamp`, `pad2`, `escape_html` (`&`, `<`, `>`, `"`, `'`), `Flags<T>`, `Order<T>`, geometry types; `date.ts`: `day_key`, `resolve_day`, `parse_time`; `resolve_token` (canvas colour from a token, in `utils.ts`); `history.ts`: immutable undo history (`create_history`, `push` with entry and optional byte limits, default 100 entries, `undo`, `redo`, `current`, `can_undo`, `can_redo`), held in `$state.raw` (Paint, Image Editor); `image.ts`: image load, drop/paste, canvas helpers, `write_image` and `save_image`, shared by the image user apps (imported directly, not through the barrel); `image-format.ts`: the kernel-free part (formats, extension map, `format_of`), re-exported by `image.ts`; `ticker.svelte.ts`: `Ticker`, a visibility-gated reactive `now` for live clock displays; `qr.ts`: QR encode (`qr_path`) and detect (`create_qr_detector`, native `BarcodeDetector` or lazy jsQR); `qr-scan.svelte.ts`: `CameraScan`, a live camera QR scan that releases the camera while its window isn't visible (QR Reader, P2P Transfer); `install.svelte.ts`: `installer`, the PWA install prompt and state ([version](services/version.md#install)); `zip/`: the zip engine (read, write, streaming deflate, OPFS extract and `compress_into` / `extract_to` with a progress toast via `ArchiveJob`), used by File Explorer's Compress and Extract here and by the Archive app |
+| `src/lib/core/utils/` | `cn` (tailwind-merge extended with the custom tokens), `tv` (tailwind-variants with the same merge config), `ov`, `format_bytes`, `format_date`, `format_datetime`, `error_message` (an `Error`'s message, anything else stringified), `clamp`, `pad2`, `escape_html` (`&`, `<`, `>`, `"`, `'`), `Flags<T>`, `Order<T>`, geometry types; `date.ts`: `day_key`, `resolve_day`, `parse_time`; `resolve_token` (canvas colour from a token, in `utils.ts`); `history.ts`: immutable undo history (`create_history`, `push` with entry and optional byte limits, default 100 entries, `undo`, `redo`, `current`, `can_undo`, `can_redo`), held in `$state.raw` (Paint, Image Editor); `image.ts`: image load, drop/paste, canvas helpers, `write_image` and `save_image`, shared by the image user apps (imported directly, not through the barrel); `image-format.ts`: the kernel-free part (formats, extension map, `format_of`), re-exported by `image.ts`; `ticker.svelte.ts`: `Ticker`, a visibility-gated reactive `now` for live clock displays; `qr.ts`: QR encode (`qr_path`) and detect (`create_qr_detector`, native `BarcodeDetector` or lazy jsQR); `qr-scan.svelte.ts`: `CameraScan`, a live camera QR scan that releases the camera while its window isn't visible (QR Reader, P2P Transfer); `install.svelte.ts`: `installer`, the PWA install prompt and state ([version](services/version.md#install)); `zip/`: the zip engine (read, write, streaming deflate, OPFS extract and `compress_into` / `extract_to` with a progress toast via `ArchiveJob`), used by File Explorer's Compress and Extract here and by the Archive app; also `selection.ts` (multi-select rules shared by the desktop and File Explorer), `view-transition.ts`, `long-press.ts`, `device-file.ts` (`pick_device_files`), `print.ts`, `random.ts` (seeded RNG) and `detached-root.svelte.ts` |
 | `src/lib/apps/index.ts` | Eager glob of `./system/*/index.ts` and `./user/*/index.ts` → `apps: AppManifest[]` |
-| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-editor, media-preview, pdf-viewer, html-preview, csv-viewer, activity-monitor, style-guide ([system-apps.md](system-apps.md)) |
+| `src/lib/apps/system/` | OS apps: settings, file-explorer, kernel, text-editor, media-preview, pdf-viewer, html-preview, csv-viewer, activity-monitor, style-guide, calculator, app-library, terminal ([system-apps.md](system-apps.md)) |
 | `src/lib/apps/user/` | Non-OS apps (out of scope for these docs) |
 | `vite-plugin-version.ts` | `__VERSION_INFO__` define and `version.json` ([services/version.md](services/version.md)) |
-| `public/` | Static assets: logo, PWA icons, `files/` sample media (static only, not seeded into OPFS) |
+| `public/` | Static assets: logo, favicons, PWA icons, `robots.txt` |
 | `docs/design/` | How the OS should look: foundations, components, patterns, shell. The Style Guide app renders it live |
 
 ## The barrel and the circular-import rule
@@ -119,7 +127,7 @@ Boot logs nothing on success. The Kernel system app lists `kernel.services` in t
 ## Build & deploy
 
 - `vite.config.ts` sets `base: "/webos/"`: the site is the GitHub Pages project site `lilbunnyrabbit.github.io/webos/`. Dev serves under the same path (`localhost:5173/webos/`). Vite rewrites `index.html` asset URLs, the PWA manifest gets `scope` and `start_url` `/webos/`, and the SW registers at `/webos/sw.js`. Runtime URLs go through `import.meta.env.BASE_URL` (only `version.json` today).
-- `.github/workflows/deploy.yml` runs on every push to `master` (and manually): Bun install → `bun run check` → `bun run build` → upload `dist/` → `actions/deploy-pages`. A type error blocks the deploy.
+- `.github/workflows/deploy.yml` runs on every push to `master` (and manually): Bun install → `bun run check` → `bun run test:unit` → `bun run build` → upload `dist/` → `actions/deploy-pages`. A type error or a failing unit test blocks the deploy.
 - Branches: `master` is this Svelte version. The React version (v0) is frozen on `v0-react`.
 
 ### Upgrading from v0 (React)

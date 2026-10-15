@@ -11,11 +11,12 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 | `taskbar-clock.svelte` | Time and short date, rendered inside the tray button |
 | `start-menu.svelte` | Start button + anchored `popover` element |
 | `start-menu-popover.svelte` | Popover contents: search, app tile grid, pin buttons, footer |
+| `command-mode.svelte` | The `>` command palette inside the start menu ([Command mode](#start-menu)) |
 
 ## Responsibilities
 
 - Show a start button, one item per window and the tray.
-- Lay itself out for the taskbar position. `os.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
+- Lay itself out for the taskbar position. `desktop-shell.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
 - Styling: a floating dock. The outer strip is transparent and pads only its screen-edge sides by 8px (bottom bar: `px-2 pb-2`, and so on). The side facing the windows gets its 8px from the window area's own snap inset, so every gap (screen edge, between snapped windows, window to dock) is 8px. Inside the strip, `<nav aria-label="Taskbar" class="taskbar-dock">` is a `rounded-2xl bg-background-light/90 backdrop-blur-xl shadow-popover` bar, `h-13` (horizontal) or `w-13` (vertical), with a `p-1.5` inset and `gap-1`. **Flush mode:** while any non-minimized window is maximized, the strip drops its padding and the bar drops its radius and shadow, becoming an edge bar with a `foreground/8` hairline on the window side, so the maximized window's square edge joins it instead of meeting the dock's rounded corners. `anchor-name: --taskbar-dock` sits on an absolute inner box (`inset-0`, or inset 8px along the bar in flush mode), so the start menu and notification center keep 8px off the screen corners either way. The bar has `view-transition-name: taskbar-dock`, so going flush or back morphs inside the maximize, restore and minimize view transitions together with the window. Closing a clean maximized window (the titlebar's Close, `win close`) runs in a view transition too; a dirty one asks first and switches instantly.
 - Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tray at the far end.
 - **Terminal button**: 40px `rounded-xl` like the start button, `TerminalWindow` icon (`fill` while a Terminal runs, `bold` otherwise), `bg-foreground/10` while one is focused. A click toggles like a window item on the newest Terminal: focused or minimized → `toggle_minimize` in a view transition; open behind → `focus`; none → `apps.launch("terminal")`. Desktop only: the phone has no taskbar.
@@ -26,7 +27,7 @@ The position comes from [settings](../services/settings.md) (`taskbar.position`:
 
 - The list is `windows.sorted_list()` by `created_at`, so it's in open order and stable under focus changes.
 - One item per window, no grouping by app (ADR-014).
-- Each item is a 40px `rounded-xl` button with the app icon (`size-5.5`), `aria-label` and `title` set to the app name, and `aria-pressed` when it's the focused, visible window.
+- Each item is a 40px `rounded-xl` button with the app icon (`size-5.5`), `aria-label` and `title` set to "{title} — {app}" when the window has a title, else the app name, and `aria-pressed` when it's the focused, visible window.
 - While its window is minimized the button carries `view-transition-name: window-{id}`, and minimize/restore from it run in `view_transition()`, so the window flies into and out of the button ([window motion](window.md#motion)).
 
 States:

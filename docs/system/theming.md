@@ -75,7 +75,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 | Radius | `rounded-xs` 4 · `sm` 6 · `md` 8 · `lg` 10 · `xl` 14 · `2xl` 18 (px) | Constants. The old `--radius` root variable is gone |
 | Shadows | `shadow-raised`, `shadow-popover`, `shadow-window`, `shadow-window-focused` | Cast in `color-mix(… var(--background-darkest) …)`, never black, so they stay on-palette in light themes. `popover` includes a 1px `foreground/16` hairline |
 | Easing | `ease-out` `cubic-bezier(0.22, 1, 0.36, 1)`, `ease-in-out` `cubic-bezier(0.65, 0, 0.35, 1)` | Override Tailwind's defaults |
-| Animation | `animate-pop-in` | 160ms fade plus `scale: 0.97 → 1`. Menus, dialogs, snap preview |
+| Animation | `animate-pop-in`, `animate-sheet-in` | `pop-in`: 160ms fade plus `scale: 0.97 → 1`. Menus, dialogs, snap preview. `sheet-in`: 200ms rise from `translate: 0 100%`, for anchored dialogs shown as bottom sheets on mobile (`dialogs-host.svelte` with `anchored="sheet"`) |
 
 ### Base layer
 
@@ -88,7 +88,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 - Every element: thin scrollbars, thumb `foreground` at 22% on a transparent track.
 - `prefers-reduced-motion: reduce`: every animation and transition collapses to 1ms.
 
-The OS root grid (`os.svelte`) and the desktop surface paint `background-darkest`.
+The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (`desktop/wallpaper.svelte`, under the desktop and the mobile home) paint `background-darkest`.
 
 ## `cn()` and `tv`
 
@@ -102,12 +102,12 @@ Hardcoded colours outside the token system, all deliberate:
 
 | Where | Value | Why |
 |-------|-------|-----|
-| `index.html` body + `#splash`, `<meta name="theme-color">`, PWA manifest `theme_color` + `background_color` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
-| `vite.config.ts` PWA manifest `theme_color` | `#17252C` | Same |
+| `index.html` body + `#splash`, `<meta name="theme-color">` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
+| `vite.config.ts` PWA manifest `theme_color` + `background_color` | `#17252C` | Same |
 | `index.html` `#splash-progress` (track, bar, label) | Brand Dark `background_lightest`, `primary`, `foreground` as OKLCH | Same: the boot progress bar shows before any token exists (ADR-036) |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 
-Components that need a token outside a utility read the variable directly in a `<style>` block (`var(--background-darker)` in Media Preview, `var(--background-darkest)` on the desktop, `var(--background-lighter)` for the `<select>` picker). The Style Guide's swatches use `var(--{token})` with the kebab-case names.
+Components that need a token outside a utility read the variable directly: in a `<style>` block (`var(--background-lighter)` for the `<select>` picker in `ui/select.svelte`), in the CodeMirror theme (`components/code/editor.ts`), or in an arbitrary value (`bg-[light-dark(var(--background-lightest),var(--background-darker))]` in the `field` recipe and Segmented). The Style Guide's swatches use `var(--{token})` with the kebab-case names.
 
 ## Built-in themes (`themes.ts`)
 

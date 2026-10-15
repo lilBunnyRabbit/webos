@@ -89,7 +89,7 @@ What this shows:
 
 ## 4. Try it
 
-`bun dev`, open the start menu, click Notes. Pin it to the desktop with the + button. If it handles files, create one in File Explorer and double-click it. `bun run check` must stay at 0 errors.
+`bun dev`, open the start menu, click Notes. Pin it to the desktop with its pin button (`PushPin`, "Pin Notes to desktop"). If it handles files, create one in File Explorer and double-click it. `bun run check` must stay at 0 errors.
 
 ## Things to know
 
@@ -112,7 +112,7 @@ What this shows:
 | Component import fails | The window shows an error empty state, "This app failed to load", with the message |
 | App throws while rendering, in an effect or a `$derived` | The window shows "This app crashed" with Restart app / Close window, plus an error toast. The OS keeps running. Event-handler errors aren't caught: report those yourself |
 | Same app opened twice | Two windows. Shared `persisted()` values, separate component state |
-| User closes the window | Immediate unmount; clean up in `$effect` returns or `onDestroy`. There's no close veto |
+| User closes the window | Unmount; clean up in `$effect` returns or `onDestroy`. A window marked dirty with `window.set_dirty(true, { save })` asks Save / Don't save / Cancel first (ADR-029) |
 | Report an error to the user | `kernel.service<NotificationsService>("notifications").notify(app_id, { type: "error", title })` ([notifications](../services/notifications.md)) |
 | Ask the user something outside the window | `dialogs.show(Component, props, { anchor })` ([dialogs](../services/dialogs.md)) |
 | Need the file's bytes | `files.get_file(path)` returns a `File` or `null` ([files](../services/files.md)) |
