@@ -243,6 +243,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] CSS custom properties for all theme values
 - [ ] Theme export/import as JSON
 - [ ] Theme sharing via URL
+- [ ] Chromatics in WebOS (owner, 2026-10-15). Bring the whole Chromatics API (OKLCH engine, colour DSL, ~100 colour models, WCAG/APCA analysis, schemes, mixer, export) into WebOS, likely as an app plus a core colour layer. Open questions: depend on the `chromatics` package (not published yet: a new dependency) or vendor its source; what lives in core (theme maths, `derive_theme` today) and what stays in an app; shell commands (`color` values, convert, contrast); how it sits next to Culori (style default)
+- [ ] Build WebOS themes with Chromatics: write a theme in the Chromatics DSL or studio, preview it live on the desktop, check contrast of every token pair, save it as a WebOS theme (feeds export/import and sharing above, and may replace `derive_theme`)
 - [ ] Sound effects (window open/close, notifications) — low priority
 
 ---
