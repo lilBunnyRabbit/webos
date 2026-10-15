@@ -9,12 +9,14 @@ Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/de
 | `wallpaper.svelte` | The wallpaper layer, shared with the phone home |
 | `desktop-item.svelte` | One icon: a draggable button showing selected, dimmed and drop-target states; reports clicks, menus and drag start/end up |
 | `desktop-item-face.svelte` | Icon + label |
+| `desktop-widget.svelte` | One widget (ADR-034): a frame spanning `size.w × size.h` cells, a title strip as its handle and the app's lazy widget component as the body |
+| `desktop-actions.ts` | The desktop's menus, questions and actions: open, copy/cut/paste, delete, new folder, rename, properties, sort ([Context menus](#context-menus-adr-025)) |
 
 ## Responsibilities
 
 - Measure itself into `desktop.set_container()` (ResizeObserver) and render a CSS grid with `repeat(columns, minmax(64px, 1fr))` × `repeat(rows, …)`, with padding from `container.config.padding` (12px). Cells are at least 88px (`cell_size`), so the 64px floor never bites.
 - Paint the surface: the [wallpaper](#wallpaper), and for the grid preset a dot at every cell corner (`.desktop-surface[data-dots]::before`: `foreground` at 14%, a 1px `radial-gradient` sized to `container.cell` and offset by the padding, so the dots sit on the cell corners). The cell size reaches CSS as `--cell-width` / `--cell-height` (88px until measured), the padding as `--grid-offset`.
-- Flatten `desktop.list()` into `cells` (`{ item, x, y }`, reading order: rows top to bottom, cells left to right) and render each as a `DesktopItem` at `grid-column: x+1; grid-row: y+1`, keyed by entry name.
+- Flatten `desktop.list()` into `cells` (`{ item, x, y }`, reading order: rows top to bottom, cells left to right) and render each at `grid-column: x+1; grid-row: y+1`, keyed by entry name: a `DesktopItem`, or a `DesktopWidget` spanning its size for a widget.
 - Render nothing until the grid has at least 1×1.
 
 It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too.
@@ -46,6 +48,7 @@ Apps and files look different without a badge: an app shortcut sits in a 44px `r
 | `shortcut` | `ShortcutIcon` (`components/files/shortcut-icon.svelte`) with `badge={false}`: the target app's icon, or a generic `AppWindow` glyph when the app isn't registered. File Explorer rows keep the arrow badge (the default) | `item.label` (file name without `.desktop`), plus " · missing" in `text-error` when the app isn't registered |
 | `file` | `FileIcon` by MIME, then extension, duotone at `foreground/85` | File name |
 | `directory` | `FileIcon` folder, `fill` in `primary` | Folder name |
+| `widget` | Not an icon: `desktop-widget.svelte` draws a `rounded-xl bg-background-light shadow-raised` frame over its cells. The 24px title strip (app icon, `item.label`) is the button that selects, drags, opens and takes the menu; `[data-widget-body]` holds the app's `widget()` component (loaded once per app) with `{ props, size, name }`. Apps with `widget_size` get a resize grip (pointer) and Shift+arrows on the strip. A missing app, a broken file or an app without a widget shows a line of text instead | `item.label` in the strip |
 
 - The label is up to two lines (`line-clamp-2`, `text-2xs`, `break-words`), with the full entry name as its `title`.
 - It's a `<button>` filling its cell (`rounded-xl`, `draggable`, `data-desktop-name`, `aria-pressed` when selected). Hover tints the cell `foreground/6` and lifts the tile or glyph 2px (`group-hover:-translate-y-0.5`). Selected: `primary/14` with an inset `primary/40` ring. Drop target (a folder under a drag): `primary/18`, inset `primary/70` 2px ring. Dragged or cut: 40% opacity. Keyboard focus: `foreground/8` plus the global cottontail outline.

@@ -1,7 +1,9 @@
 # ADR-015: Customization & Theming
 
 **Date:** 2026-02-01
-**Status:** Accepted
+**Status:** Implemented (colours only)
+
+> **Revision 2026-10-15: what's built.** Only the colour system above, plus the taskbar position that predates this ADR. Radius, shadow, motion speed and export/import were deferred by the owner on 2026-10-13. Fonts, taskbar size and auto-hide, desktop icon settings and sounds aren't built.
 
 > **Revision 2026-10-10: colours follow the lilBunnyRabbit brand** ([brainstorm](../brainstorm/2026-10-10_brand-theming.md))
 > - A theme is a palette of 11 colour tokens: `background`, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, `success`, `warning`, `error`, `info`. Values are OKLCH.

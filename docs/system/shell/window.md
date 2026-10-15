@@ -5,7 +5,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | File | Role |
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
-| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, Copy link (shareable apps), min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
+| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, Copy link, min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
@@ -47,7 +47,7 @@ The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-backgro
 ADR-014 revision ([brainstorm](../../brainstorm/2026-10-12_window-polish.md)). Reduced motion turns all of it off (`view_transition()` skips, the global reduced-motion rule shortens Svelte's CSS animations to 1ms).
 
 - **Open / close:** the frame has `in:pop|global` (140ms) and `out:pop|global` (100ms): opacity 0→1 and the CSS `scale` property 0.96→1, `cubicOut`. `scale`, not `transform`, so it never fights the drag `translate3d`. `|global` because the frame is the component root inside the window manager's `{#each}`. A restored session animates in too.
-- **Minimize, restore, maximize, snap:** View Transitions through `view_transition()` (`$lib/core/utils/view-transition`, shared with the mobile shell). The frame carries `view-transition-name: window-{id}` while it's not minimized; its [taskbar button](taskbar.md#window-items) carries the same name while it is, so minimizing morphs the window into its button and restoring morphs it back out. Maximize and snap morph between the two frames. Wrapped: the titlebar's minimize and maximize buttons, the titlebar double-click, the taskbar button, and the window shortcuts ([shortcuts](../services/shortcuts.md)). Not wrapped: a drag that drops into a snap zone (the preview already shows the target), close (it has its outro).
+- **Minimize, restore, maximize, snap:** View Transitions through `view_transition()` (`$lib/core/utils/view-transition`, shared with the mobile shell). The frame carries `view-transition-name: window-{id}` while it's not minimized; its [taskbar button](taskbar.md#window-items) carries the same name while it is, so minimizing morphs the window into its button and restoring morphs it back out. Maximize and snap morph between the two frames. Wrapped: the titlebar's minimize and maximize buttons, the titlebar double-click, the taskbar button, and the window shortcuts ([shortcuts](../services/shortcuts.md)). Close is wrapped only for a clean maximized window, so it morphs back into the taskbar; any other close plays its outro, and a dirty one asks first. Not wrapped: a drag that drops into a snap zone (the preview already shows the target).
 - During a view transition the page is a snapshot for ~250ms: live content freezes and clicks land on nothing (accepted cost).
 
 **Keyboard focus.** An effect focuses the frame (`tabindex=-1`, `preventScroll`) whenever the window is focused and visible and DOM focus isn't already inside it, so a new window, a taskbar click or Alt+\` hands it the keyboard. A click on a field keeps that field focused; an app that focuses its own input on mount keeps it.
@@ -89,13 +89,12 @@ Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) 
 
 | Control | Action |
 |---------|--------|
-| App icon + `manifest.name` | Static. There's no `set_title`/`set_icon` yet (ROADMAP). |
-| App icon (duotone) + `manifest.name` | Static, `text-ui font-medium`. The pair fades to 80% opacity when the window isn't focused. There's no `set_title`/`set_icon` yet (ROADMAP). |
+| App icon (duotone) + title | `instance.title ?? manifest.name`, `text-ui font-medium`; with a title the tooltip is "{title} — {app}". A `primary` dot follows while the window is dirty. The group fades to 80% opacity when the window isn't focused. The icon is always the manifest's (no `set_icon`). |
 | Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.5 to 2 in 0.1 steps (rounded to one decimal). − and + are `IconButton`s (Phosphor `Minus` / `Plus`) that disable at the limits. The % button resets to 1; its accessible name is "Reset zoom, now N%". A quiet pill that's invisible until the titlebar is hovered or something in it has focus, and always visible when zoom isn't 100%. The state is local to `window.svelte`, so it's lost on reload and not saved in the session. |
-| Copy link | Phosphor `Link`. Shown only when `router.link_for(id)` isn't `null` (the app's props schema has no `path` key). Calls `router.copy_link(id)`, which copies the URL and toasts "Link copied" ([router](../services/router.md)). Not on mobile: there's no titlebar there. |
+| Copy link | Phosphor `Link`. Shown when `router.link_for(id)` isn't `null`, which is every open window: device paths are left out of the link, not the button. Calls `router.copy_link(id)`, which copies the URL and toasts "Link copied" ([router](../services/router.md)). Not on mobile: there's no titlebar there. |
 | Minimize | `windows.toggle_minimize(id)` |
 | Maximize / Restore | `windows.toggle_maximize(id)`. The icon swaps between `CornersOut` and `CornersIn`; label and title follow. |
-| Close | `windows.close(id)`. Immediate, no veto. Hover turns it `bg-error text-background`. |
+| Close | `windows.close(id)`, guarded (ADR-029): a dirty window asks Save / Don't save / Cancel first. A clean maximized window closes inside a view transition. Hover turns it `bg-error text-background`. |
 
 Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w-6`), so each has its `label` as accessible name and tooltip. Every button carries `data-window-button` so the drag attachment and the double-click handler skip it.
 

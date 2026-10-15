@@ -27,28 +27,49 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | Storage persistence | `navigator.storage.persist()` | FilesService, requested on first `get_root()` (during `init()`) | Browser permission | n/a | `false` → `console.warn("[FilesService] Storage not persisted")` | Once per page load |
 | Cache Storage + service worker | Workbox precache (`sw.js`, `workbox-*.js`, `registerSW.js`) | vite-plugin-pwa (`vite.config.ts`, `registerType: "autoUpdate"`), production only | Workbox-managed | Workbox revisions | Workbox handles it | On SW install/update. `VersionService.apply_update()` installs the new worker before reloading ([services/version.md](services/version.md#service-worker)) |
 
-Not used anywhere in OS code: `sessionStorage`, IndexedDB, cookies, the URL (no hash/query state; ADR-010 is only accepted).
+Not used anywhere in OS code: `sessionStorage`, IndexedDB, cookies. The URL holds no state: RouterService reads a `#/app/{id}?{props}` deep link once and clears the hash ([router](services/router.md)); `?platform=` only overrides platform detection.
 
-App storage keys in use today:
+App storage keys in use today (from a grep of `storage.persisted` / `get` / `set` in `src/lib/apps`):
 
 | Key | App | Value |
 |-----|-----|-------|
-| `app.tic-tac-toe.stats` | `user/tic-tac-toe` | Win/loss/draw counts |
-| `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
-| `app.example.count` | `user/example` | Counter (`number`) |
 | `app.calculator.history` | `system/calculator` | Past calculations, capped at 50 |
-| `app.minesweeper.{difficulty,custom,stats}` | `user/minesweeper` | Last difficulty, last custom board, played/won/best times |
-| `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
-| `app.snake.{speed,wrap,high_scores}` | `user/snake` | Last mode; high score per speed and wall mode |
-| `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
-| `app.rng-tools.{section,number,dice.notation,list,password,coin.tally,draws}` | `user/rng-tools` | Last section and per-section settings; coin tally; Draws presets |
+| `app.archive.method` | `user/archive` | Compression method (`deflate` / `store`) |
+| `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
+| `app.clock.stopwatch` | `user/clock` | Stopwatch state |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped) |
-| `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
-| `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
+| `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
+| `app.example.count` | `user/example` | Counter (`number`) |
+| `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
+| `app.game-hub.sort` | `user/game-hub` | Library sort |
+| `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
+| `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
+| `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
+| `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
+| `app.minesweeper.{difficulty,custom,stats}` | `user/minesweeper` | Last difficulty, last custom board, played/won/best times |
 | `app.music-visualizer.{mode,volume,smoothing,sensitivity}` | `user/music-visualizer` | Visualizer settings |
+| `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
+| `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
 | `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
+| `app.pdf-tools.{sign,export,images}` | `user/pdf-tools` | Sign ink and date option; Export and Images section settings |
+| `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
+| `app.quick-notes.notes-status` | `user/quick-notes` | Notes status filter |
+| `app.recorder.{screen_mic,photo_format}` | `user/recorder` | Mic with screen recording; photo format |
+| `app.rng-tools.{section,number,dice.notation,list,password,coin.tally,draws}` | `user/rng-tools` | Last section and per-section settings; coin tally; Draws presets |
+| `app.snake.{speed,wrap,high_scores}` | `user/snake` | Last mode; high score per speed and wall mode |
+| `app.solitaire.{stats,draw}` | `user/solitaire` | Stats; draw one or three |
+| `app.soundboard.{volume,mode}` | `user/soundboard` | Volume and play mode |
+| `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
+| `app.sprite-extract.settings` | `user/sprite-extract` | Extraction settings |
+| `app.sudoku.{stats,daily,game,difficulty}` | `user/sudoku` | Stats; daily puzzle; game in progress; last difficulty |
+| `app.tic-tac-toe.{stats,mode}` | `user/tic-tac-toe` | Win/loss/draw counts; last mode |
+| `app.time-since.sort` | `user/time-since` | Counter sort |
+| `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
+| `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
+| `app.word-search.{stats,daily,game,difficulty}` | `user/word-search` | Stats; daily puzzle; game in progress; last difficulty |
+| `app.work-hours.last_target` | `user/work-hours` | Last monthly target, offered as the default |
 
-Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
+Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Sprite Extract, RNG Tools section, the puzzle games' size, difficulty and saved game, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
 
 ## App storage handle
 
@@ -82,9 +103,9 @@ interface StorageHandle {
 | Files and folders | Yes | OPFS. Lasts longer if `persist()` was granted. The browser may evict it otherwise. |
 | `/tmp` contents | **No** | Emptied at every boot |
 | Directory revisions | **No** | In-memory `SvelteMap` in FilesService |
-| Open windows: app, props, bounds, z-order, maximized/minimized, snap zone | Yes, if the user picks Restore |
+| Open windows: app, props, bounds, z-order, maximized/minimized, snap zone | Yes, if the user picks Restore | `/var/lib/session/session.json`, offered by a dialog at boot. Apps with manifest `restore: false` are left out. Window ids, `created_at` and the `debug` flag aren't kept; bounds are clamped to the current container |
 | Where each app's windows open (its last closed window's frame) | Yes, always | `frames` in `/var/lib/session/session.json`, recorded on close (ADR-014 revision) |
-| Recently closed windows (Alt+Shift+T) | No | SessionService memory, last 10 | `/var/lib/session/session.json`, offered by a dialog at boot. Apps with manifest `restore: false` are left out. Window ids, `created_at` and the `debug` flag aren't kept; bounds are clamped to the current container |
+| Recently closed windows (Alt+Shift+T) | No | SessionService memory, last 10 |
 | Desktop icons | Yes | They're the entries of `/home/Desktop` |
 | Desktop icon positions | Yes, once moved | `/var/lib/desktop/layout.json`. Icons never moved take the first free cells again |
 | Notification history | **No** | NotificationsService `all` is in-memory |
@@ -96,7 +117,7 @@ interface StorageHandle {
 
 ## Conventions
 
-The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/layout.json`, `/var/lib/session/session.json` and `/var/lib/version/state.json`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
+The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/{layout,home-layout,additions}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
 
 ## Wiping
 

@@ -15,7 +15,9 @@ The service doesn't know about app lifecycles. A window is just a record holding
 | `service.svelte.ts` | Desktop implementation |
 | `mobile.svelte.ts` | Mobile implementation, see [Mobile](#mobile) |
 | `close-guard.ts` | `CloseGuard`: close prompt and per-window save for the dirty path |
-| `helper.ts` | `WindowsHelper.place` (where a new window opens), `clamp_bounds`, `CASCADE_OFFSET`. Tested in `helper.test.ts` |
+| `helper.ts` | `WindowsHelper.place` (where a new window opens), `clamp_bounds`, `keep_reachable`, `CASCADE_OFFSET`, `REACHABLE`. Tested in `helper.test.ts` |
+| `shell.ts`, `shell-run.ts` | The shell contribution and its lazy bodies, see [Shell](#shell) |
+| `inspector.svelte`, `mobile-inspector.svelte` | Kernel app inspectors for each implementation |
 
 ## Window model
 
@@ -48,8 +50,8 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 
 Two interfaces in `type.ts` (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-groundwork.md)):
 
-- **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
-- **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container` and `snap`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
+- **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap`, `gather` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
+- **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container`, `snap` and `gather`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
 
 The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.ts` registers `MobileWindowsService` (`mobile.svelte.ts`) under the same key instead; see [Mobile](#mobile). Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); mobile treats them as no-ops. Members that are identical on both platforms live once in `BaseWindowsService` (`base.svelte.ts`); everything platform-specific (focus, placement, close, minimize) stays in each class.
 
@@ -78,9 +80,9 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `page_hidden` | `boolean` | `document.hidden`, kept by one `visibilitychange` listener (ADR-035). Reactive |
 | `is_visible` | `(id) => boolean` | `!page_hidden` and not minimized; on mobile, `!page_hidden` and on screen (`is_focused`). `WindowHandle.is_visible` reads it |
 | `get_focused` | `() => WindowId \| null` | Linear scan with `is_focused`. Used by [DialogsService](dialogs.md) to anchor dialogs. |
-| `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. Nothing calls it; the drag handler writes `instance.snap_zone` directly. |
+| `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. The `win snap` command (and through it the Alt+Shift snap keys) calls it; the drag handler writes `instance.snap_zone` directly. |
 | `add_back_handler` | `(id, handler: () => boolean) => () => void` | Registers a back handler (the window handle's `on_back`). A plain per-window array, newest last; the disposer removes that handler. `close()` drops the window's handlers. Both implementations |
-| `back` | `(id) => boolean` | Runs the handlers newest first until one returns `true`. The mobile shell's Back calls it; desktop has no caller |
+| `back` | `(id) => boolean` | Runs the handlers newest first until one returns `true`. `UiService.back()` calls it on both platforms, after closing dialogs and sheets ([ui](ui.md)) |
 | `toggle_maximize` | `(id) => boolean` | Adding the flag also focuses. Removing it doesn't. Returns the new state (`false` for a missing id too). |
 | `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Minimizing the focused window hands focus to the next one (see below). Returns the new state. |
 | `name`, `description`, `to_string()` | IService | `to_string()` lists `id: app name`. |
@@ -133,14 +135,14 @@ Size is then clamped to the manifest's `constraints` and capped at the container
 
 **Snapping.** `snap_zone` is set by the drag handler on drop. Any non-snapped drop clears it, and so does any resize. A snapped window keeps its pre-snap `bounds`. Maximize and snap aren't mutually exclusive in state, but maximize wins when rendering, and any drag or resize clears both.
 
-**Close.** `close()` records the frame and deletes the record. The keyed `{#each}` in the window manager unmounts the window, and the app's component and `$effect`s tear down with it. That includes `storage.persisted` cells, which release their refcount. There's no close hook and no "unsaved changes" veto. The closed-window stack lives in [SessionService](session.md), which notices the window missing from its next snapshot. AppsService AppsService doesn't track which windows belong to which app (`AppInstance.window_ids` is commented out).
+**Close.** `close()` goes through the close guard (ADR-029, `close-guard.ts`): a dirty window asks before it goes, see the `close` row. `force_close()` records the frame and deletes the record. The keyed `{#each}` in the window manager unmounts the window, and the app's component and `$effect`s tear down with it. That includes `storage.persisted` cells, which release their refcount. The closed-window stack lives in [SessionService](session.md), which notices the window missing from its next snapshot. AppsService doesn't track which windows belong to which app.
 
 **Who mutates instances directly.** The service doesn't own every write. `WindowGeometryHandler` (`components/window/window.handler.svelte.ts`) writes `instance.bounds`, `instance.snap_zone` and `instance.flags.delete(MAXIMIZED)` itself, without going through `snap()` or `toggle_maximize()`. Swapping in a different WindowsService (ADR-016) would have to keep returning mutable proxies from `get()`.
 
 ### Restore
 
 ```ts
-interface WindowSnapshot { app_id: AppId; props?: AppProps; bounds: Bounds; flags: WindowFlag[]; snap_zone: SnapZone | null }
+interface WindowSnapshot { app_id: AppId; props?: AppProps; bounds: Bounds; flags: WindowFlag[]; snap_zone: SnapZone | null; state?: Record<string, unknown> }
 interface RestoreResult { restored: WindowId[]; skipped: WindowSnapshot[] }
 ```
 
@@ -179,6 +181,5 @@ Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximi
 ## Known gaps
 
 - Resizing keeps only a titlebar strip on screen, not the whole window; "Gather windows" is the full fix, on demand.
-- `snap()` is unused.
 - The container is measured by a ResizeObserver plus an rAF after taskbar moves. Both are paused in hidden tabs, so a tab that starts hidden keeps the `window.innerWidth/innerHeight` default until it's shown.
 - `index` is a plain record (`// TODO: map?`). `list()` order is insertion order, not z-order.

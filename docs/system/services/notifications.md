@@ -94,9 +94,15 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 | Source | app id | When |
 |--------|--------|------|
 | `files/file-explorer.errors.ts` (`report_file_error`) | `"file-explorer"` | File operation failed |
-| `AppsService.open()` | `"apps"` | File not found (error), broken `.desktop` shortcut (error), no app can open it (warning) |
+| File Explorer (`file-explorer.svelte`, `file-actions.ts`) | `"file-explorer"` | The open folder was moved or deleted (info), Save to disk finished |
+| `utils/zip/job.svelte.ts` (zip and unzip jobs) | the calling app's id | A `progress` toast with Cancel, updated through `update()` as bytes stream, then done, cancelled or failed (with Discard / Keep for a partial file) |
+| `AppsService.open()` | `"apps"` | File not found (error), broken `.desktop` shortcut or `.widget` (error), no app can open it (warning) |
 | `AppsService` props validation | the app's id | Props discarded (warning) |
 | `SessionService` restore | `"session"` | Some saved windows couldn't be restored (warning, one toast with the count) |
+| `RouterService` | `"router"` | Link copied (info) or couldn't be copied; a deep link that's unknown, names a missing app or has bad props (error) |
+| `VersionService` | `"version"` | Updated to a new version (sticky, "What's new"), a new version is ready (sticky, "Update and reload") |
+| `ShellService.execute()` | `"shell"` | A command run from a shortcut or the palette failed (error) |
+| `notify` command | `"shell"` | Whatever the user asked for |
 
 ## Divergence from ADR
 
@@ -108,7 +114,6 @@ Contributes `notify`, `notifications` and the `notification` value type (`notifi
 
 ## Known gaps
 
-- `mark_read(id)` and `update()` have no caller.
 - No toast tap action: a toast doesn't open the center or the sending app.
 - `app_id` is shown in the center, not in the toast.
 - `system` alerts depend on a timer firing in a hidden tab, which Chrome throttles to about once a minute: up to a minute late.

@@ -74,7 +74,7 @@ When multiple windows of the same app are open, the taskbar can group them:
 
 ### Session Persistence
 
-> **Superseded 2026-10-11 by [ADR-023](023-session-persistence.md):** SessionService, `/var/session.json`, reactive saving, restore dialog, manifest `restore: false` only.
+> **Superseded 2026-10-11 by [ADR-023](023-session-persistence.md):** SessionService, `/var/lib/session/session.json`, reactive saving, restore dialog, manifest `restore: false` only.
 
 Save and restore open windows across page reloads.
 

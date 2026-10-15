@@ -23,9 +23,10 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path`, `resolve_path`, `tilde_path`, `base_name`, `parent_path`, `file_stem`, `file_extension` |
 | `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
-| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session) and `json_file`. `busy` and `idle()` tell whether a write is still on its way |
+| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session, shell history, version state) and `json_file`. `busy` and `idle()` tell whether a write is still on its way |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
+| `shell.ts`, `shell-run.ts` | The shell contribution and its lazy bodies, see [Shell](#shell) |
 | `index.ts` | `export * from "./type"` |
 
 ## Paths
@@ -34,12 +35,14 @@ Handles are what OPFS operates on. Paths exist for identity, display, and anythi
 
 - Absolute, `/`-separated, rooted at the OPFS root: `/home/Documents/a.txt`. Root is `/`, displayed as `/`.
 - Two forms. `segments: string[]` is primary (`[]` is root, `["home", "Documents"]`). `path` is derived as `"/" + segments.join("/")`.
-- No `.`/`..` handling, no escaping. Names are whatever OPFS accepts.
+- Paths carry no `.`/`..` and no escaping. Names are whatever OPFS accepts. Typed shell input goes through `resolve_path` first.
 
 | Helper | Signature | Notes |
 |--------|-----------|-------|
 | `split_path` | `(path: string) => string[]` | Drops empty segments: `"//docs/"` → `["docs"]` |
 | `join_path` | `(segments: string[], name?: string) => string` | `(["docs"], "a.txt")` → `"/docs/a.txt"`, `([])` → `"/"` |
+| `resolve_path` | `(cwd: string, input: string) => string` | What the shell does with a typed path: absolute stays, `~` is `/home`, otherwise relative to `cwd`; `.` and `..` resolve, `..` stops at `/` |
+| `tilde_path` | `(path: string) => string` | `/home/Pictures` → `~/Pictures`, `/home` → `~`, for prompts |
 | `base_name` | `(path: string) => string` | Last segment: `"/docs/a.txt"` → `"a.txt"`, `"/"` → `""` |
 | `parent_path` | `(path: string) => string` | `"/docs/a.txt"` → `"/docs"`; anything directly under the root, and the root, → `"/"` |
 | `file_stem` | `(name: string) => string` | Drops the last extension: `"a.tar.gz"` → `"a.tar"`. A dotfile is all stem: `".env"` → `".env"` |
@@ -59,8 +62,10 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 │ └ Downloads/
 ├ etc/           OS config: hierarchy.json (migration marker), settings.json (SettingsService)
 ├ var/
-│ └ lib/         OS component state, one folder each: desktop/layout.json (DesktopService),
-│                session/session.json (SessionService)
+│ └ lib/         OS component state, one folder each: desktop/ (layout.json, home-layout.json,
+│                additions.json; DesktopService), session/session.json (SessionService),
+│                version/state.json (VersionService), shell/history (ShellService),
+│                wallpaper/ (SettingsService), games/plays.json, apps/{id}/ (app storage.file())
 └ tmp/           emptied at every boot
 ```
 
@@ -127,11 +132,11 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `export_to_disk` | `(path) => Promise<string \| null>` | Copies the entry at `path` onto the real disk with the File System Access pickers. A file goes through `showSaveFilePicker` (suggested name, starts in Downloads) and `write_file`. A folder goes through `showDirectoryPicker({ mode: "readwrite" })` and `copy_directory`, which works on disk handles too and auto-renames on clash. Resolves the written name; `null` when the picker is cancelled (`AbortError`). Throws `NotFoundError` for a missing path. Bumps no revision: nothing in OPFS changes |
 | `get_storage_estimate` | `() => Promise<{ usage; quota }>` | `navigator.storage.estimate()`, missing values become `0`. Covers the whole origin, not only OPFS |
 | `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0 |
-| `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), clears every revision and bumps `/`. No confirmation |
+| `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), bumps every revision cell, then `/`. No confirmation |
 
 `changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
 
-`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `keep_unchanged`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService imports `available_name`. `PATHS` is imported by File Explorer, DesktopService, `desktop/layout.ts` and `settings/persistence.ts`, `is_system_path` by `file-list.svelte`, `file-explorer-navigation.svelte`, the picker footer, Text Editor and Paint; `is_locked_path` by `file-list.svelte`.
+`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `keep_unchanged`, `move_directory`, `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`, and DesktopService and the Image Editor and PDF Tools `shell.ts` import `available_name`. `PATHS` is imported by File Explorer, DesktopService, `desktop/layout.ts` and `settings/persistence.ts`, `is_system_path` by `file-list.svelte`, `file-list.handler.svelte.ts`, `file-explorer-navigation.svelte`, the picker footer, `files/shell.ts`, and the Save as of Text Editor, Paint, Image Editor, Markdown PDF and Diff; `is_locked_path` by `file-list.svelte` and `files/shell-run.ts`.
 
 ## DirectoryHandler
 
@@ -171,11 +176,11 @@ There's no handler cache. Two handlers on the same directory are independent, bu
 | What | Where | Lifetime |
 |------|-------|----------|
 | Root handle promise | `FilesService._root` | Until a rejection clears it |
-| Directory revisions | `FilesService.revisions`, `SvelteMap<path, number>` | Page lifetime. Emptied by `clear()`. Not persisted |
+| Directory revisions | `FilesService.revisions`, `Map<path, Revision>` (one reactive cell per path) | Page lifetime. `clear()` bumps every cell. Not persisted |
 | Directory listings | each `DirectoryHandler.items` | Owner's lifetime. Re-read on reload only |
 | File contents and metadata | never cached | Re-read on every call |
 
-`revisions` is the service's only reactive state.
+The revision cells are the service's only reactive state.
 
 ## Lifecycle
 
@@ -190,7 +195,7 @@ The first `get_root()`, which is now the one inside `init()`:
 
 ## Persistence
 
-The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The service itself writes only the migration marker `/etc/hierarchy.json` (`{"version":1}`). Other services write their OS files through it: `/etc/settings.json` ([settings](settings.md#persistence)), `/var/lib/desktop/layout.json` and `.desktop` shortcuts in `/home/Desktop` ([desktop](desktop.md#persistence)), `/var/lib/session/session.json` ([session](session.md#persistence)). Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
+The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The service itself writes only the migration marker `/etc/hierarchy.json` (`{"version":1}`). Other services write their OS files through it: `/etc/settings.json` and `/var/lib/wallpaper/` ([settings](settings.md#persistence)), `/var/lib/desktop/*.json` and `.desktop` / `.widget` files in `/home/Desktop` ([desktop](desktop.md#persistence)), `/var/lib/session/session.json` ([session](session.md#persistence)), `/var/lib/version/state.json` ([version](version.md)), `/var/lib/shell/history` ([shell](shell.md#persistence)). Apps write `/var/lib/apps/{id}/` through `storage.file()` and games `/var/lib/games/plays.json`. Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
 
 ## Behaviour & invariants
 
@@ -205,7 +210,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 **Moves are native.** `move_file` calls `FileSystemFileHandle.move(target_dir, name)`, so the bytes aren't copied and the handle you passed stays valid, now at the new path. `source_parent` only feeds the same-directory no-op check. Rename is `move_file(parent, file, parent, "new.txt")`. If `new.txt` is taken, you get `new (1).txt`.
 
-`opfs.move_directory(source_parent, source, target_dir, new_name?)` exists because OPFS directory handles have no `move()` in Chrome 154. It creates the target folder (auto-renamed), moves each file natively and each subfolder recursively, then removes the now-empty source with a non-recursive `removeEntry`, and returns the new directory handle. It isn't atomic: a failure part-way leaves the tree split between source and target. Only the migration uses it; FilesService doesn't wrap it, and there's still no directory copy.
+`opfs.move_directory(source_parent, source, target_dir, new_name?)` exists because OPFS directory handles have no `move()` in Chrome 154. It creates the target folder (auto-renamed), moves each file natively and each subfolder recursively, then removes the now-empty source with a non-recursive `removeEntry`, and returns the new directory handle. It isn't atomic: a failure part-way leaves the tree split between source and target. The migration calls it raw; everything else goes through FilesService's `move_directory` and `copy_directory`, which wrap it and bump revisions.
 
 ### Revisions
 
@@ -223,7 +228,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 | `move_file` | source parent, then target directory |
 | `upload_files` | the target, only if something was stored |
 | `DirectoryHandler` create, delete, rename, upload | its directory, before its own `reload()` (which the watcher's call then joins) |
-| `clear()` | all revisions are dropped, then `/` is bumped |
+| `clear()` | every existing revision cell, then `/` |
 
 - The bump happens after the OPFS call resolves. A failed mutation bumps nothing.
 - Readers today: DesktopService watches `/home/Desktop` ([desktop](desktop.md#lifecycle)). Every live `DirectoryHandler` watches its own folder and its ancestors.
@@ -235,7 +240,7 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 ### LatestWriter
 
-`new LatestWriter(files: () => FilesService, path, label)`, then `write(text)`. For state files that change often (ADR-023 revision; used by SettingsService and SessionService).
+`new LatestWriter(files: () => FilesService, path, label)`, then `write(text)`. For state files that change often (ADR-023 revision; used by SettingsService, SessionService, ShellService history, VersionService state and app `storage.file()`).
 
 - `write(text)` replaces the pending text and starts a flush unless one is running. Never awaits, never throws.
 - The flush loop takes the pending text, walks the parent folders from the root (`exists(dir, name, "directory")` → open it, else `create_directory`), then `create_file(parent, name, { content, overwrite: true })`. It repeats while new text arrived meanwhile, so writes never overlap and only the newest of a burst lands.
@@ -288,6 +293,12 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 | `file-explorer-status-bar.svelte` | `StatusBar` (single line, `nowrap`, each child truncates): "N items" for the unfiltered directory, plus "· x folders, y files" when both kinds are present (from `@sm`). On the right, from `@md`, a storage meter: a 64px `primary` bar (at least 2% wide) and "{usage} of {quota}", percentage in the `title` |
 | `file-upload-button.svelte` | Upload `IconButton`, calls `handler.upload_files()`, disabled while it runs |
 | `file-explorer.errors.ts` | `report_file_error(title, error)`: `console.error`, then an `error` notification from source `"file-explorer"` ([notifications](notifications.md)) |
+| `file-actions.ts` | The actions rows and menus share: `create_folder`, `delete_items`, `upload`, `rename_item`, `show_properties`, `open_with_items`, `open_with`, `open_terminal(cwd)`, `compress_items`, `extract_here` (zip code imported lazily), `copy_items`, `cut_items`, `paste`, `save_to_disk`, `set_wallpaper` |
+| `name-rules.ts` | `name_problem(name, taken, except?)`: the error for a new name (empty, `/`, `.`/`..`, taken), or `null`. Tested in `name-rules.test.ts` |
+| `picker.ts` | `PickerMode` and `accepts(picker, item)` for [Picker mode](#picker-mode-adr-025) |
+| `file-picker-dialog.svelte` | The window sheet behind `pick_file` / `pick_directory` / `pick_save`: File Explorer in picker mode |
+| `file-picker-footer.svelte` | The picker's footer in place of the status bar: chosen path and buttons, or the Save form |
+| `properties-dialog.svelte` | Properties sheet (`{ path, kind }`): kind, size, folder contents, modified, location ([dialogs](dialogs.md#context-menus-adr-025)) |
 | `file-icon.svelte` | Phosphor icon by MIME type first, then extension. Generic fallback |
 
 ### Multi-select and drag and drop
@@ -339,13 +350,13 @@ Rows are 32px (44px on a coarse pointer) `rounded-md` `<button role="row">`s in 
 | Alt+Enter | Focused row | Properties sheet |
 | ContextMenu key, Shift+F10 | Focused row | Item menu, anchored under the row |
 | Delete, or Backspace with `metaKey` (Cmd on macOS; Ctrl doesn't count) | Focused row | Danger confirm sheet (`window.confirm`, Cancel focused), then delete (folders recursively) |
-| Tab | Rows | Rows are `<button>`s, so Tab moves between them. There's no arrow-key movement or selection model |
+| Tab | Rows | Rows are `<button>`s, so Tab moves between them. There's no arrow-key movement |
 | Click | Back / Reload / New folder / Upload | As labelled (each `IconButton` has a label and tooltip). New folder (toolbar or folder menu; shared `file-actions.ts`) opens a prompt sheet (`window.prompt`, initial "New folder", validated by `name-rules.ts`: not empty, no `/`, not `.`/`..`, not an existing name) |
 | Click | Breadcrumb segment | Jump to that folder |
 | Click | Places entry | Jump to that folder |
 | Click × | Filter field | Clears it |
 
-A single click only focuses the row. There are no context menus, rename, drag-and-drop or multi-select.
+A single click selects the row (see [Multi-select](#multi-select-and-drag-and-drop)).
 
 ### Opening files
 
@@ -385,16 +396,13 @@ Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and
 
 - Revisions only see mutations made through FilesService and DirectoryHandler in this tab. Raw `opfs.*` calls, other tabs and anything outside the OS don't bump them (cross-tab sync would need its own brainstorm). `FileSystemObserver` is a candidate platform API for it.
 - A revision bumps only the directly affected directory. A consumer of `/home` doesn't see a change inside `/home/Documents`.
-- After `clear()`, every revision except `/` reads `0`. A directory that was already at `0` reads the same value, so a consumer that compares values (through `$derived`, for example) sees no change even though its contents were wiped. An effect that calls `revision()` directly does re-run: `SvelteMap.clear()` invalidates every key's signal and the map's version (DesktopService reloads, then re-seeds).
 - The system folders and `/home` aren't protected. Deleting `/home` from File Explorer breaks every new Explorer window ("Couldn't open this folder") until the next boot recreates it. Places entries for a deleted folder report `Could not open …`.
 - `move_directory` isn't atomic and has no guard against moving a folder into its own subtree. An interrupted migration resumes on the next boot, but a folder that was half-moved ends up split between `/home/X` and `/home/X (1)`.
 - A root **file** named `home`, `etc`, `var` or `tmp` makes `ensure_hierarchy` throw (`TypeMismatchError` on create), which now fails the whole boot.
-- No rename UI, no directory move or copy through the service or UI, no context menu, no drag-and-drop, no file properties.
 - The list's icon cell has no `role="gridcell"`, and buttons used as `role="row"` lose button semantics. The grid has no arrow-key model behind the role.
 - `get_file` returns a `File`, not a handle. A path-based app can read but can't write back without walking the tree itself.
 - Focus is lost after a keyboard delete: the deleted row unmounts and nothing moves focus to a neighbour.
 - A `DirectoryHandler` listing failure is invisible to the user.
-- No tests, despite `opfs.ts` being shaped for them.
 
 ### Picker mode (ADR-025)
 

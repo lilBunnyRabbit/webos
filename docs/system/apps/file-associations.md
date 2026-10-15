@@ -69,10 +69,13 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 
 | App | Tools |
 |-----|-------|
-| `image-crop`, `background-remove`, `image-concat`, `image-split`, `sprite-extract`, `qr-reader` | `image/*` |
+| `image-crop`, `background-remove`, `image-concat`, `image-split`, `image-editor`, `sprite-extract`, `qr-reader` | `image/*` |
 | `gif-player` | `image/gif`, `.gif`, `video/*` |
 | `paint` | `image/*` |
-| `music-visualizer` | `audio/*` |
+| `music-visualizer`, `soundboard` | `audio/*` |
+| `diff` | `text/*`, `.txt`, `.md`, … (`DIFF_ACCEPT`) |
+| `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
+| `pdf-tools` | `.pdf`, `application/pdf` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 
 ## Remembered defaults
@@ -110,8 +113,9 @@ All three resolve `null` and come from app id `"apps"`.
 | File Explorer, Enter on a file row | The row's bottom-left corner |
 | Desktop, double-click a file or shortcut icon (`DesktopService.open`) | The pointer |
 | Desktop, Enter on a file or shortcut icon | The icon's bottom-left corner |
+| Shell `open` command and clicking a file row in Terminal output (`services/apps/shell.ts`; folders go to File Explorer) | None: centred over the focused window |
 
-Errors thrown by `open()` (for example from `files.get_file`) are caught there and reported with `report_file_error` (File Explorer) or `console.error` (desktop). Shell `open` (ADR-007) and `#/file/{path}` deep links (ADR-010) are meant to call the same method; neither exists yet.
+Errors thrown by `open()` (for example from `files.get_file`) are caught there and reported with `report_file_error` (File Explorer) or `console.error` (desktop). `#/file/{path}` deep links (ADR-010) are meant to call the same method; they don't exist yet (the router only handles `#/app/`).
 
 ## Receiving the file
 

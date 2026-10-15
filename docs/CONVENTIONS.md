@@ -1,6 +1,6 @@
 # Conventions
 
-How code is written in this repo. Derived from the code as it is, not from wishes. When this file and the code disagree, the code in the newest area (files service, ADR-005) wins and this file gets fixed.
+How code is written in this repo. Derived from the code as it is, not from wishes. When this file and the code disagree, the code wins and this file gets fixed.
 
 For *why* things are built this way, read [PRINCIPLES.md](PRINCIPLES.md).
 
@@ -16,16 +16,21 @@ src/lib/
 │   │   ├── type.ts               # IService, ServiceDescriptor
 │   │   ├── kernel/
 │   │   │   ├── kernel.svelte.ts  # registry, dependency resolution
-│   │   │   └── init.ts           # THE place services get registered
+│   │   │   ├── init.ts           # THE place services get registered
+│   │   │   ├── platform.ts       # desktop or mobile, detected once (ADR-016)
+│   │   │   └── test-kernel.ts    # boot_test_kernel, stub_service for browser tests
 │   │   └── services/{name}/
-│   │       ├── index.ts          # export * from "./type" (types only)
+│   │       ├── index.ts          # export * from "./type", plus pure helpers apps may use
 │   │       ├── type.ts           # public interface + domain types
 │   │       ├── service.svelte.ts # implementation class (runes)
 │   │       ├── shell.ts          # shell commands: definitions, eager (ADR-033)
 │   │       ├── shell-run.ts      # their bodies, `import()`ed on first use (when ≥ 1 KB)
+│   │       ├── inspector.svelte  # Kernel app view, lazy (ADR-020)
+│   │       ├── persistence.ts    # parse/serialize for its files, when it persists
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
-│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; code (shared CodeMirror setup)
+│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; code (shared CodeMirror setup); ui (the kit)
+│   ├── games/                    # shared game helpers: play tracking, stopwatch (ADR-035)
 │   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types
 └── apps/
     ├── system/{id}/              # bundled OS apps
@@ -48,7 +53,7 @@ Hard logic lives in plain TS so it can be tested without Svelte. ADR-005 (`opfs.
 
 - Interface in `type.ts`, named the same as the class: `interface FilesService extends IService`. Class in `service.svelte.ts` does `implements IFilesService` (imported under alias).
 - Document the public API with JSDoc in `type.ts`. `windows/type.ts` is the reference.
-- `index.ts` exports **types only**. Only `kernel/init.ts` imports service classes.
+- `index.ts` exports types, plus pure helpers and constants apps need (`DesktopHelper`, `format_keys`, the shell's `arg` and `define_command`). Never the service class: only `kernel/init.ts` imports service classes.
 - Registration name is lowercase singular domain: `"windows"`, `"files"`, `"apps"`. Class `name` field is the class name: `"WindowsService"`.
 - Dependencies are declared in `init.ts` (`dependencies: ["windows"]`), never assumed.
 - Pure logic beside the service: older services use a static helper class (`WindowsHelper`, `DesktopHelper`), files uses module-level functions (`opfs.ts`). New services follow the files style. Don't convert old helpers as a drive-by.
@@ -140,7 +145,7 @@ export type SnapZone = (typeof SnapZone)[keyof typeof SnapZone];
 - `$state.raw` for objects that get replaced wholesale and aren't mutated (`container` bounds).
 - Collections: `SvelteMap`, `SvelteSet`, `Flags<T>` (flag sets), `Order<T>` (z-order).
 - DOM behaviour via attachments (`{@attach handler.drag_attachment()}`), not actions.
-- Use `pointer*` events with pointer capture for drag (window handler). The desktop item handler still uses `mouse*`, which is older code.
+- Use `pointer*` events with pointer capture for drag (window handler, desktop handler).
 
 ---
 
@@ -167,7 +172,7 @@ The app follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/bran
 | `mark-ears` | Fixed logo colour. The same in every theme |
 
 - All values are OKLCH. Tailwind's default palette is **disabled** (`--color-*: initial`), so `red-500`, `white` and similar don't compile. If a colour seems to be missing, it's a token at reduced opacity, not a new colour.
-- The brand's seven-shade surface ladder is in every theme (`background-darkest` … `background-lightest`, ADR-024). Desktop on darkest, windows on `background`, chrome and cards on `background-light`, inputs on `background-darker`. At most three shades per view. Neutral fills are `foreground` at an opacity.
+- The brand's seven-shade surface ladder is in every theme (`background-darkest` … `background-lightest`, ADR-024). Desktop on darkest, windows on `background`, chrome and cards on `background-light`, fields recessed on `background-darker` (raised on `background-lightest` in light palettes). At most three shades per view. Neutral fills are `foreground` at an opacity.
 - A preset that defines only the five base colours gets the rest from `derive_theme()`. It follows the brand formula: states sit at the primary colour's lightness with fixed hues, and tertiary and cottontail derive from primary. Never hand-pick extra colours for a preset.
 - Interaction opacity, from the brand modifiers: hover `opacity-85`, active `opacity-70`, disabled `opacity-38`. Muted text is `text-foreground/65`, for captions and metadata only.
 
@@ -192,21 +197,23 @@ The rules:
 - Minimum width is 24px.
 - Leave clear space of half the mark's height on every side.
 - Never stretch, rotate, shadow, outline, fade or blur it, and don't "fix" its contrast.
-- No faded watermarks.
+- No faded watermarks. One exception: the mobile home shows the mark centred at `primary/10` over a preset wallpaper (`mobile-shell.svelte`).
 
 Current placements:
 
 - favicon and PWA icons (`public/logo.svg` → `bun run generate:pwa-assets`)
 - the boot splash in `index.html`
 - the start button
-- the start menu header
+- the start menu footer
+- the introduction and the update overlay
+- the mobile home (the watermark above)
 - Settings → About
 - the Kernel app header
 
 ### Fonts
 
 Inter (`font-sans`) for everything you read. Hack (`font-mono`) for values: hexes, IDs, sizes, code, and the wordmark. Both are self-hosted in `src/assets/fonts/`, with their licences.
-- `cn()` merges classes. `ov(map, key)` picks a variant from a map (see `os.svelte` taskbar positions).
+- `cn()` merges classes. `ov(map, key)` picks a variant from a map (see `desktop-shell.svelte` taskbar positions).
 - Layout problems get solved in CSS (grid, container queries), not JS measurement.
 - Icons: `phosphor-svelte` only. Import with an `Icon` alias, `import { Gear as GearIcon } from "phosphor-svelte"`, which keeps names from clashing with globals like `File`. Size with `class` (`class="size-4"`), not `className`. Phosphor defaults to `1em`, so set a size where the surrounding CSS doesn't.
 
@@ -260,7 +267,7 @@ Rules:
 - Reactive code: call `flushSync()` after a change so effects run, then `vi.waitFor` for the async part. Dispose what you create (`DirectoryHandler.dispose()`) in `afterEach`.
 - Test behaviour through the public API, not private fields. A test should fail when the behaviour breaks: break the code once on purpose and check.
 - Services: `boot_test_kernel({ files: FilesService, …, session: SessionService })` from `kernel/test-kernel.ts` builds a real `Kernel` with only those services, constructed and `init()`ed in the order given (list dependencies first). A service whose answer only comes from UI (dialogs) goes in as `stub_service("dialogs", { show: vi.fn(async () => true) })`. Call the returned `shutdown()` in `afterEach`. Seed OPFS files before booting.
-- No component tests (ADR-027).
+- No component tests (ADR-027). A test may mount a tiny host component when runes need a component context (`json-file.svelte.browser.test.ts`); it tests the module, not the host.
 
 ---
 

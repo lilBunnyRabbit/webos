@@ -2,6 +2,8 @@
 **Date:** 2026-10-13
 **Status:** Implemented
 
+> **Revision 2026-10-15: as built.** The preview iframe's sandbox is `allow-scripts allow-popups allow-popups-to-escape-sandbox`, so a link opened from the preview loads as a normal page instead of inheriting the sandbox. The CodeMirror setup (token theme, highlight style, language loading) moved to `$lib/core/components/code` on 2026-10-14; Diff and Markdown → PDF use it too.
+
 ## Context
 
 Text Viewer can only read. The ROADMAP's Text Editor was waiting on the close guard (ADR-029) and on whether to take a code-editor dependency. [Brainstorm](../brainstorm/2026-10-13_text-editor.md).

@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented
 
+> **Revision 2026-10-15: `defaults` is `WindowOptions`.** There's no `defaults.size`: a new window gets its app's remembered frame or a centred one (ADR-014 revision). `defaults` is `WindowOptions` from `services/windows/type.ts`: `constraints`, `flags` and `snap_zone`.
+
 > **Revision 2026-10-12: one category, system from the folder** (owner, [brainstorm](../brainstorm/2026-10-12_app-candidates.md))
 > - `categories: AppCategory[]` (`"system" | "user" | custom-*`) is replaced by a required `category` from a closed const object: Productivity, Media, Utilities, Developer, Games.
 > - `system: boolean` is set at discovery from the folder (`./system/*`). `define_app` returns an `AppDefinition` without it.

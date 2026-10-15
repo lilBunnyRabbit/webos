@@ -2,7 +2,7 @@
 
 Source: `src/lib/core/components/mobile/` · ADR: [ADR-016](../../adrs/016-mobile-support.md) (revision 2026-10-12) · [Brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)
 
-The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`) imports it instead of `desktop-shell.svelte` when `kernel.platform` is `mobile`, and `os.svelte` renders what it loaded; that's the only platform check in the UI. Each shell is its own chunk, so a phone never downloads the desktop shell and the other way round (ADR-036). Everything inside types against the mobile services: [`MobileWindowsService`](../services/windows.md#mobile) and [`MobileDesktopService`](../services/desktop.md#mobile-home). Try it on a desktop with `?platform=mobile`.
+The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`) imports it instead of `desktop-shell.svelte` when `kernel.platform` is `mobile`, and `os.svelte` renders what it loaded. That's the shell's one platform branch; below it, a few components and apps still read `kernel.platform` for touch behaviour (File Explorer's file list, Media Preview, App Library details, Activity Monitor's widgets section and several user apps). Each shell is its own chunk, so a phone never downloads the desktop shell and the other way round (ADR-036). Everything inside types against the mobile services: [`MobileWindowsService`](../services/windows.md#mobile) and [`MobileDesktopService`](../services/desktop.md#mobile-home). Try it on a desktop with `?platform=mobile`.
 
 ## Layout
 
@@ -60,7 +60,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 `mobile-home.svelte`:
 
-- **Pages:** a horizontal scroll-snap row, one page per `desktop.pages(columns × rows)` chunk. `columns = clamp(floor(width / 88), 4, 8)`, `rows = floor(height / 104)`, measured from the row with `bind:clientWidth/Height`. A phone gets 4 columns; a tablet more; rotation just reflows. `overscroll-x-contain` stops a fling at the last page from turning into browser back. Dots under the pages when there's more than one; tapping one scrolls there.
+- **Pages:** a horizontal scroll-snap row, one page per `desktop.pages(columns × rows)` chunk. `columns = clamp(floor(width / 88), 4, 8)`, `rows = max(1, floor(height / 104))`, measured from the row with `bind:clientWidth/Height`. A phone gets 4 columns; a tablet more; rotation just reflows. `overscroll-x-contain` stops a fling at the last page from turning into browser back. Dots under the pages when there's more than one; tapping one scrolls there.
 - **Icons:** `home-icon.svelte`, the desktop's rule: apps get a 56px `rounded-2xl` tile on `background-light` with `shadow-raised` and a hairline around a 28px `ShortcutIcon` (no badge); files and folders a bare 48px `FileIcon` (`.bare-glyph`, folders `primary` fill). A two-line `text-xs` label below. Tap opens through `desktop.open`.
 - **Dock:** the taskbar's look (`rounded-2xl bg-background-light/90 shadow-popover backdrop-blur-xl`): an All apps button (`SquaresFour`), a separator, then up to four docked items without labels. Empty, it says "Hold an icon, then Add to dock".
 - **Long press** (`long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the page doesn't scroll under the finger, and the click after release swallowed. Release without moving → menu; moving after the hold cancels it (home icons pass no drag handlers). Android's own long-press `contextmenu` is suppressed; a mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
@@ -74,7 +74,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 ## Services read
 
-`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`, or the base in the drawer), `apps`, `dialogs`, `notifications` (toasts).
+`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`, or the base in the drawer), `apps`, `dialogs`, `notifications` (toasts, the nav bar's unread dot), `ui` (launcher and switcher overlays, `back()`), `settings` (wallpaper).
 
 ## Known gaps
 

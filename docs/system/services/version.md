@@ -57,7 +57,7 @@ The bundle and `version.json` always carry the same `buildTimestamp`. Only a new
 
 ## State
 
-Four `$state` fields (`info`, `update_available`, `is_checking`, `unseen`) and private `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `poll_interval`, `destroyed`. Nothing derived.
+Five `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`) and private `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `poll_interval`, `destroyed`. Nothing derived.
 
 ## Lifecycle
 
@@ -146,7 +146,7 @@ Who does what:
 - **`apply_update()`** bridges them. A plain reload would boot the old build from the precache. So it calls `registration.update()` to fetch the new `sw.js`, waits for that worker to activate (it skips waiting and claims this page), and only then reloads. The reload is served from the new precache, and offline keeps working afterwards.
 - **Fallback (2026-10-12).** GitHub Pages' CDN can keep serving the old `sw.js` for minutes after `version.json` changed. Then `update()` finds nothing, and the old flow reloaded into the same build, so "Update and reload" looked like it did nothing. Now that case unregisters this app's worker, deletes its scoped caches and reloads with a cache-busting query, so the next boot comes from the network and registers the new worker. Modelled on series-tracker's `applyUpdate`, minus its origin-wide wipe.
 
-If the browser already installed the new worker before the click, `installing` and `waiting` are both `null` and it reloads straight away, which is correct: the active worker already serves the new build.
+If the browser already installed the new worker before the click, `installing` and `waiting` are both `null`, so it takes the fallback path: unregister, clear this app's caches, reload from the network. Slower than needed, but it ends on the new build either way.
 
 ## Divergence from ADR
 
@@ -164,4 +164,4 @@ Contributes `version`, `changelog`, `install` and the `release` value type (`ver
 
 - `update_available` is never cleared, even if a later check finds nothing newer.
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.
-- `activated()` has no timeout. A worker stuck in `installing` (slow network on a big precache) leaves the button with no feedback until it finishes.
+- `activated()` gives up after 8 s (`ACTIVATE_TIMEOUT`) and falls through to clearing, so a slow precache on a bad network throws away a worker that was about to finish.

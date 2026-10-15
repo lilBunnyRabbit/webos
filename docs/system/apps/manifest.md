@@ -10,8 +10,9 @@ Every app is a folder with an `index.ts` that default-exports `define_app({...})
 function define_app<TProps extends AppProps = {}>(config: AppConfig<TProps>): AppDefinition<TProps>
 ```
 
-Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. Discovery (`src/lib/apps/index.ts`) turns each one into an `AppManifest` by adding `system: true` for apps under `./system/`. `define_app` itself does one thing:
+Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. Discovery (`src/lib/apps/index.ts`) turns each one into an `AppManifest` by adding `system: true` for apps under `./system/`. `define_app` itself does two things:
 
+- It validates `widget_size` when given (spans 1–8, `min ≤ default ≤ max`) and throws `[define_app] {id}: widget_size needs …` otherwise, so a bad manifest fails at boot.
 - `component` is wrapped: `() => config.component().then((m) => m.default)`. You write a plain dynamic import; the manifest's loader resolves straight to the component.
 
 `TProps` is inferred from the `props` schema.
@@ -22,7 +23,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 |-------|------|----------|--------------|
 | `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
 | `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
-| `version` | `string` | yes | Stored only. Nothing reads it |
+| `version` | `string` | yes | Shown in the App Library details (`v{version}`) and the apps inspector's registry table |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. Use a `phosphor-svelte` icon |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |

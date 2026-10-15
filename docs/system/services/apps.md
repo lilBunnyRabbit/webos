@@ -8,10 +8,14 @@ The app registry. Holds every discovered manifest, launches an app into a new wi
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `AppsService` interface, `AppManifest`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppCategory`, `AppProps` |
+| `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppCategory`, `AppProps`, `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
+| `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_MAX_SPAN`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
+| `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()`, `group_apps()`, `within_one_edit()`, `APP_CATEGORY_LABELS`, `AppSection` |
+| `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
+| `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
 
 Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The full launch path, window included, is in [apps/lifecycle.md](../apps/lifecycle.md).
@@ -37,6 +41,8 @@ Pure helpers, exported from the barrel:
 | `file_extension(name)` | `"Notes.TXT"` → `".txt"`. Lowercased. A dotfile is its own extension (`.env` → `".env"`). Returns `""` only when there's no dot |
 | `association_tier(entry, file)` | `3` exact extension, `2` exact MIME, `1` MIME wildcard (`image/*`), `0` no match. Case-insensitive. Empty `file.type` never matches a MIME entry |
 | `best_apps_for(apps, file)` | Every app tied on the highest non-zero tier, in iteration order. `[]` when nothing matches |
+| `apps_for(apps, file)` | Every app with a tier above 0, best tier first, then by name. Feeds File Explorer's "Open with" submenu (ADR-025), shown when two or more apps qualify |
+| `tools_for(apps, file)` | Apps whose `tools` match the file at any tier and whose `associations` don't, sorted by name. `open_with_items` appends them after a separator. `open()` never looks at `tools` |
 | `parse_shortcut(text)` | `Shortcut \| null`. See [Shortcuts](#shortcuts-desktop-files) |
 | `serialize_shortcut(shortcut)` | Pretty-printed JSON |
 | `shortcut_label(file_name)` | `"Settings.desktop"` → `"Settings"`. Strips the last 8 characters without checking them |
@@ -115,6 +121,7 @@ Discarding does two things: `console.warn("[AppsService] \"{id}\" {reason}, disc
 1. `files.get_file(path)`. `null` → error notification "File not found" (app id `"apps"`, message = path) → resolve `null`. If `get_file` throws, the promise rejects; the caller handles it.
 2. `extension = file_extension(file.name)`.
 3. **Shortcut.** If the extension is `.desktop`: read the file and `parse_shortcut()` it. Unparseable, or the `app_id` isn't registered → error notification "Broken shortcut" (app id `"apps"`, message = path) → `null`. Otherwise → `launch(app_id, props)`, with the shortcut's props, not `{ path }`. This runs before remembered defaults and associations, so no default or Open-with choice can capture `.desktop`.
+   **Widget.** Same for `.widget`: `parse_widget()`, and an unparseable file or unregistered `app` → error notification "Broken widget" → `null`. Otherwise → `launch(app, props)` with the widget's props, so opening a widget opens its app in a window.
 4. **Remembered default.** If there is an extension, `settings.file_defaults[extension]` names an app, and that app is in the registry → `launch(default_id, { path })`. The default app does not have to list the extension in its associations. A default pointing at a missing app is skipped, not deleted.
 5. **Candidates.** `best_apps_for(registry.values(), file)`, matching on `file.name` and `file.type` (the MIME the browser assigns to the OPFS `File`).
 6. Zero candidates → warning notification "No app can open {name}" (app id `"apps"`) → `null`.
@@ -123,7 +130,7 @@ Discarding does two things: `console.warn("[AppsService] \"{id}\" {reason}, disc
    - `null` (Esc, outside click, shutdown) → resolve `null`. Nothing opens, no notification.
    - `{ app_id, always }`: if `always` and there is an extension, `settings.file_defaults[extension] = app_id`. Then `launch(app_id, { path })`.
 
-Outside the shortcut case, the props passed are always `{ path }`, which fits `FILE_PROPS`. The receiving app looks the file up again itself.
+Outside the shortcut and widget cases, the props passed are always `{ path }`, which fits `FILE_PROPS`. The receiving app looks the file up again itself.
 
 Details on tiers, the dropdown and remembered defaults: [apps/file-associations.md](../apps/file-associations.md).
 
@@ -151,6 +158,3 @@ Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.
 - Stale `file_defaults` entries (pointing at removed apps) stay in settings until the user forgets them in Settings → Default apps, which flags them as "no longer installed".
-
-- `apps_for(apps, file)` (`associations.ts`, exported): every app with an association tier above 0, best tier first then by name. It feeds File Explorer's "Open with" submenu (ADR-025), which shows when two or more apps qualify.
-- `tools_for(apps, file)` (`associations.ts`, exported): apps whose `tools` match the file at any tier and whose `associations` don't, sorted by name. `open_with_items` appends them after a separator. `open()` never looks at `tools`.
