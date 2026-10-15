@@ -200,6 +200,8 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     () => import("$lib/core/api/services/files/shell"),
     ["assert_writable", "file_value", "is_file_value"],
   ],
+  ["$lib/core/games/time", () => import("$lib/core/games/time"), ["daily_seed", "format_time", "parse_day"]],
+  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), ["Direction", "key_direction", "swipe_direction"]],
   ["$lib/core/utils/date", () => import("$lib/core/utils/date"), ["day_key", "parse_time", "resolve_day"]],
   ["$lib/core/utils/detached-root.svelte", () => import("$lib/core/utils/detached-root.svelte"), ["detached_root"]],
   ["$lib/core/utils/device-file", () => import("$lib/core/utils/device-file"), ["pick_device_files"]],
