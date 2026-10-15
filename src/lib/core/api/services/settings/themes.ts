@@ -42,6 +42,28 @@ export const BRAND_LIGHT: Theme = {
   info: "oklch(0.4829 0.1244 246.07)",
 };
 
+// Neubrutalist, from the While True style guide: the orange is the desktop, windows are white, text is #090919. Written out because
+// derive_theme shades every surface from one base, which can't put white panels on an orange desktop.
+export const WHILE_TRUE: Theme = {
+  background_lightest: "oklch(1 0 0)",
+  background_lighter: "oklch(1 0 0)",
+  background_light: "oklch(0.995 0.004 66.05)",
+  background: "oklch(0.985 0.012 66.05)",
+  background_dark: "oklch(0.94 0.04 62)",
+  background_darker: "oklch(0.86 0.1 58)",
+  background_darkest: "oklch(0.787 0.1433 55.27)",
+  foreground: "oklch(0.15 0.0339 281.52)",
+  primary: "oklch(0.15 0.0339 281.52)",
+  secondary: "oklch(0.6 0.17 48)",
+  tertiary: "oklch(0.45 0.12 276)",
+  accent: "oklch(0.55 0.16 276)",
+  cottontail: "oklch(0.15 0.0339 281.52)",
+  success: "oklch(0.4745 0.1538 140.32)",
+  warning: "oklch(0.4761 0.1064 113.24)",
+  error: "oklch(0.4743 0.1556 30)",
+  info: "oklch(0.4829 0.1244 246.07)",
+};
+
 const SURFACE_STEPS: Record<ThemeSurfaceToken, number> = {
   background_lightest: 3,
   background_lighter: 2,
@@ -126,5 +148,5 @@ export const THEME_PRESETS: ThemePreset[] = [
   base("Black & White", ["oklch(0.0 0 0)", "oklch(1.0 0 0)", "oklch(0.6 0 0)", "oklch(0.4 0 0)", "oklch(0.8 0 0)"]),
   base("Speed Reader Light", ["oklch(0.976 0.022 80.58)", "oklch(0.586 0.0467 242.26)", "oklch(0.75 0.0905 55.2)", "oklch(0.836 0.1393 129.45)", "oklch(0.679 0.1263 20.92)"], ThemeGroup.PROJECTS),
   base("Speed Reader Dark", ["oklch(0.278 0.0269 229.12)", "oklch(0.775 0.0171 95.16)", "oklch(0.863 0.0575 65.19)", "oklch(0.907 0.0926 128.53)", "oklch(0.803 0.078 18.92)"], ThemeGroup.PROJECTS),
-  base("While True", ["oklch(0.15 0.0339 281.52)", "oklch(0.946 0.0368 66.05)", "oklch(0.787 0.1433 55.27)", "oklch(0.761 0.123 275.94)", "oklch(0.904 0.2226 135.81)"], ThemeGroup.PROJECTS),
+  { name: "While True", theme: WHILE_TRUE, group: ThemeGroup.PROJECTS },
 ];

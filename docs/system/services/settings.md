@@ -40,7 +40,7 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 | `BRAND_LIGHT` | `Theme` | All OKLCH literals, including the brand's exact surface ladder. |
 | `derive_surfaces` | `() => Record<ThemeSurfaceToken, string>` | The six ladder shades as `oklch(from var(--background) …)` at ±n·0.034 lightness, reflecting at 0 and 1 with `abs()` ([theming](../theming.md#the-surface-ladder)). Used by `derive_theme()` and for older saves. |
 | `derive_theme` | `(base: ThemeBase) => Theme` | Spreads `derive_surfaces()` and fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`. |
-| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (from the While True style guide: `#ff9f58` on `#090919`, `#9caaff`, `#97ff58`, `#ffe9d4` text). All base colours are OKLCH. |
+| `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (`WHILE_TRUE`, written out like the brand themes: the style guide's `#ff9f58` as `background_darkest` (desktop), white and cream windows, `#090919` text and primary; neubrutalist in colour only, hard borders and offset shadows need ADR-015). All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
 
 Token list and semantics: [theming.md](../theming.md).

@@ -115,7 +115,7 @@ Components that need a token outside a utility read the variable directly: in a 
 |-------|------------------|
 | **Brand Dark** (`BRAND_DARK`) | 17 explicit OKLCH values. The default. |
 | **Brand Light** (`BRAND_LIGHT`) | 17 explicit OKLCH values. UI only, never for the icon or splash. |
-| 22 user presets | `derive_theme({ background, foreground, primary, secondary, accent })`. All base colours are OKLCH. Group `projects` (Speed Reader Light and Dark, While True) gets its own "Project themes" grid in Settings |
+| 22 user presets | `derive_theme({ background, foreground, primary, secondary, accent })`, except While True: written out, because its orange desktop and white windows can't come from one base. All base colours are OKLCH. Group `projects` (Speed Reader Light and Dark, While True) gets its own "Project themes" grid in Settings |
 
 `derive_theme()` spreads `derive_surfaces()` and follows the brand formula for the rest, leaving the derived tokens as live CSS expressions:
 

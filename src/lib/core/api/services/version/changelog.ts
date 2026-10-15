@@ -9,7 +9,7 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-15",
     title: "Project themes",
     changes: [
-      { kind: NEW, text: "A While True theme: warm orange on deep navy." },
+      { kind: NEW, text: "A While True theme: an orange desktop, white windows and ink-dark text." },
       { kind: IMPROVED, text: "Themes from other projects, Speed Reader and While True, now sit together under Project themes in Settings › Appearance." },
     ],
   },
