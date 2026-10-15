@@ -36,7 +36,7 @@
   type Media = GifMedia | VideoMedia;
 
   const { path }: { path?: string } = $props();
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
   let media = $state.raw<Media | null>(null);
@@ -47,6 +47,8 @@
   let playing = $state(false);
   let speed_value = $state("1");
   const speed = $derived(Number(speed_value));
+  // A minimized window or hidden tab pauses playback without touching the play button.
+  const running = $derived(playing && win.is_visible);
   const speed_options = SPEED_OPTIONS.map((value) => ({ value: String(value), label: `${value}×` }));
 
   let delays = $state.raw<number[]>([]);
@@ -127,7 +129,7 @@
   }
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: ACCEPT, title: "Open in GIF Player" });
+    const chosen = await win.pick_file({ accept: ACCEPT, title: "Open in GIF Player" });
     if (chosen) await open_path(chosen);
   }
 
@@ -179,7 +181,7 @@
   });
 
   $effect(() => {
-    if (!playing || media?.kind !== "gif") return;
+    if (!running || media?.kind !== "gif") return;
     const { decoder } = media;
     const delay = Math.max(20, decoder.delays[index]) / speed;
     const timer = setTimeout(() => (index = (index + 1) % decoder.frame_count), delay);
@@ -191,7 +193,7 @@
     const element = video;
     const last = media.frame_count - 1;
     element.playbackRate = speed;
-    if (!playing) {
+    if (!running) {
       element.pause();
       return;
     }
