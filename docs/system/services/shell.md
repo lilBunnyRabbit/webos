@@ -172,6 +172,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | soundboard | `sb`, `sb ls [-b]`, `sb play <pad> [-b]`, `sb stop`, `sb add <path…> [-b]` | `pad` values (open plays); `pad` completer |
 | recorder | `rec list`, `rec start [-s mic\|screen\|camera]` | `recording` values (open → Media Preview) |
 | image-editor | `image edit <path>`, `image convert <path> -f [-q]`, `image resize <path> <w> [h]`, `image rotate <path> <deg>` | `file` |
+| image-tools | `image tools [section] [path]`, `image trim [path…] [--alpha]`, `image split <path> -c\|-r <n>`, `image join [path…] [-d row\|column] [-g] [--align] [--fit] [--background] [--opacity]`, `image unbg <path> [-c <hex>…]` | `file`; path completion filtered to images |
 | archive | `zip [paths…] [--to] [--store]`, `zip list <path>`, `unzip <path> [--to]` | `file`; `zip-entry` values (open → Archive) |
 | diff | `diff <left> <right> [--stat]` | opens Diff; `diff-stat` with `--stat` |
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |

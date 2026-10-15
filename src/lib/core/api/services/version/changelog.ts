@@ -7,8 +7,10 @@ export const CHANGELOG: Release[] = [
   {
     version: "1.2.0",
     date: "2026-10-15",
-    title: "Project themes",
+    title: "Image Tools and project themes",
     changes: [
+      { kind: NEW, text: "Image Tools brings Remove background, Join, Trim, Split and Sprites together in one app." },
+      { kind: NEW, text: "The Terminal can trim, split, join and remove the background of images with image trim, image split, image join and image unbg, and open Image Tools with image tools." },
       { kind: NEW, text: "A While True theme: an orange desktop, white windows and ink-dark text." },
       { kind: IMPROVED, text: "Themes from other projects, Speed Reader and While True, now sit together under Project themes in Settings › Appearance." },
     ],

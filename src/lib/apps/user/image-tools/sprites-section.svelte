@@ -46,19 +46,20 @@
   import SpriteNumberField from "./sprite-number-field.svelte";
   import SpritePreview from "./sprite-preview.svelte";
   import SpriteSheet from "./sprite-sheet.svelte";
+  import type { SectionProps } from "./sections";
   import { base_name, parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   const ZOOM_STEP = 1.25;
 
-  const { path }: { path?: string } = $props();
+  const { picker, initial_paths }: SectionProps = $props();
 
   const { app_id, storage, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const sprite = new SpriteExtractState(storage.get("settings", SETTINGS_SCHEMA) ?? DEFAULT_SETTINGS);
+  const sprite = new SpriteExtractState(storage.get("sprite-settings", SETTINGS_SCHEMA) ?? DEFAULT_SETTINGS);
 
-  $effect(() => storage.set("settings", sprite.settings));
+  $effect(() => storage.set("sprite-settings", sprite.settings));
 
   let sheet = $state<SpriteSheet>();
   let preview = $state<SpritePreview>();
@@ -86,7 +87,7 @@
   const start_path = $derived(source?.path ? parent_path(source.path) : undefined);
 
   function report(title: string, error: unknown, type: NotificationType = NotificationType.ERROR) {
-    if (type === NotificationType.ERROR) console.error(`[SpriteExtract] ${title}`, error);
+    if (type === NotificationType.ERROR) console.error(`[ImageTools] ${title}`, error);
     notifications.notify(app_id, { type, title, message: error_message(error) });
   }
 
@@ -157,7 +158,8 @@
     if (file) await open_file(file, null);
   }
 
-  untrack(() => path && open_path(path));
+  const initial = untrack(() => initial_paths[0]);
+  if (initial) open_path(initial);
 
   function auto_detect() {
     if (sprite.auto_detect()) {
@@ -335,7 +337,7 @@
 <div
   role="presentation"
   tabindex="-1"
-  class={cn("relative h-full outline-none", dragging && "ring-2 ring-primary ring-inset")}
+  class={cn("relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] outline-none", dragging && "ring-2 ring-primary ring-inset")}
   onkeydown={on_keydown}
   onkeyup={(event) => event.code === "Space" && (space_held = false)}
   onfocusout={(event) => !(event.currentTarget as Node).contains(event.relatedTarget as Node | null) && (space_held = false)}
@@ -345,6 +347,29 @@
   ondrop={on_drop}
   onpaste={on_paste}
 >
+  <Toolbar>
+    {@render picker()}
+    <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
+    {#if source}
+      <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @md:block" title={source.path ?? source.name}>{source.name}</span>
+      <span class="flex-1 @md:hidden"></span>
+      <IconButton label="Zoom out (-)" size="sm" onclick={() => sheet?.zoom_by(1 / ZOOM_STEP)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
+      <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(zoom * 100)}%</span>
+      <IconButton label="Zoom in (+)" size="sm" onclick={() => sheet?.zoom_by(ZOOM_STEP)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
+      <IconButton label="Fit (F)" size="sm" onclick={() => sheet?.fit()}><CornersOutIcon weight="bold" /></IconButton>
+      <Separator vertical />
+      <IconButton
+        label={show_labels ? "Hide frame numbers (L)" : "Show frame numbers (L)"}
+        size="sm"
+        pressed={show_labels}
+        onclick={() => (show_labels = !show_labels)}
+      >
+        <TagIcon weight="bold" />
+      </IconButton>
+    {/if}
+  </Toolbar>
+
   {#if !source}
     {#if loading}
       <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
@@ -362,191 +387,169 @@
       </EmptyState>
     {/if}
   {:else}
-    <div class="grid h-full grid-rows-[auto_1fr_auto]">
-      <Toolbar>
-        <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
-        <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @md:block" title={source.path ?? source.name}>{source.name}</span>
-        <span class="flex-1 @md:hidden"></span>
-        <IconButton label="Zoom out (-)" size="sm" onclick={() => sheet?.zoom_by(1 / ZOOM_STEP)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
-        <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(zoom * 100)}%</span>
-        <IconButton label="Zoom in (+)" size="sm" onclick={() => sheet?.zoom_by(ZOOM_STEP)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
-        <IconButton label="Fit (F)" size="sm" onclick={() => sheet?.fit()}><CornersOutIcon weight="bold" /></IconButton>
-        <Separator vertical />
-        <IconButton
-          label={show_labels ? "Hide frame numbers (L)" : "Show frame numbers (L)"}
-          size="sm"
-          pressed={show_labels}
-          onclick={() => (show_labels = !show_labels)}
-        >
-          <TagIcon weight="bold" />
-        </IconButton>
-      </Toolbar>
+    <div class="flex min-h-0 flex-col overflow-y-auto @4xl:grid @4xl:grid-cols-[16rem_minmax(0,1fr)_17rem] @4xl:overflow-hidden">
+      <aside class="order-2 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-r @4xl:border-foreground/8">
+        <Section title="Sheet" flush>
+          <p class="font-mono text-2xs break-all text-foreground/65">{source.name} · {sprite.width}×{sprite.height}</p>
+          <div class="grid grid-cols-2 gap-2">
+            <Button size="sm" title="Find the grid from the gaps between frames" onclick={auto_detect}><ScanIcon weight="bold" /> Detect</Button>
+            <Button size="sm" title="Clear every dragged line and adjusted frame" disabled={!override_count} onclick={() => sprite.reset_overrides()}>
+              <TrashIcon weight="bold" /> Reset ({override_count})
+            </Button>
+          </div>
+        </Section>
 
-      <div class="flex min-h-0 flex-col overflow-y-auto @4xl:grid @4xl:grid-cols-[16rem_minmax(0,1fr)_17rem] @4xl:overflow-hidden">
-        <aside class="order-2 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-r @4xl:border-foreground/8">
-          <Section title="Sheet" flush>
-            <p class="font-mono text-2xs break-all text-foreground/65">{source.name} · {sprite.width}×{sprite.height}</p>
+        <Section title="Grid" flush>
+          <Segmented
+            label="Grid mode"
+            class="w-full [&>label]:flex-1 [&>label]:justify-center"
+            bind:value={() => sprite.settings.mode, (mode) => sprite.patch_settings({ mode })}
+            options={[
+              { value: GridMode.GRID, label: "Columns × rows" },
+              { value: GridMode.SIZE, label: "Frame size" },
+            ]}
+          />
+          {#if sprite.settings.mode === GridMode.GRID}
             <div class="grid grid-cols-2 gap-2">
-              <Button size="sm" title="Find the grid from the gaps between frames" onclick={auto_detect}><ScanIcon weight="bold" /> Detect</Button>
-              <Button size="sm" title="Clear every dragged line and adjusted frame" disabled={!override_count} onclick={() => sprite.reset_overrides()}>
-                <TrashIcon weight="bold" /> Reset ({override_count})
+              <SpriteNumberField label="Columns" min={1} value={sprite.settings.columns} onchange={(v) => sprite.patch_settings({ columns: Math.max(1, v) })} />
+              <SpriteNumberField label="Rows" min={1} value={sprite.settings.rows} onchange={(v) => sprite.patch_settings({ rows: Math.max(1, v) })} />
+            </div>
+          {:else}
+            <div class="grid grid-cols-2 gap-2">
+              <SpriteNumberField label="Width" min={1} value={sprite.settings.frame_width} onchange={(v) => sprite.patch_settings({ frame_width: Math.max(1, v) })} />
+              <SpriteNumberField label="Height" min={1} value={sprite.settings.frame_height} onchange={(v) => sprite.patch_settings({ frame_height: Math.max(1, v) })} />
+            </div>
+          {/if}
+          <p class="text-ui text-foreground/65">Padding, the outer margin in px</p>
+          <div class="grid grid-cols-4 gap-2">
+            <SpriteNumberField label="Left" min={0} value={sprite.settings.padding.left} onchange={(v) => sprite.set_padding("left", v)} />
+            <SpriteNumberField label="Right" min={0} value={sprite.settings.padding.right} onchange={(v) => sprite.set_padding("right", v)} />
+            <SpriteNumberField label="Top" min={0} value={sprite.settings.padding.top} onchange={(v) => sprite.set_padding("top", v)} />
+            <SpriteNumberField label="Bottom" min={0} value={sprite.settings.padding.bottom} onchange={(v) => sprite.set_padding("bottom", v)} />
+          </div>
+          <p class="text-ui text-foreground/65">Spacing, the gap between frames in px</p>
+          <div class="grid grid-cols-2 gap-2">
+            <SpriteNumberField label="X" min={0} value={sprite.settings.spacing.x} onchange={(v) => sprite.set_spacing("x", v)} />
+            <SpriteNumberField label="Y" min={0} value={sprite.settings.spacing.y} onchange={(v) => sprite.set_spacing("y", v)} />
+          </div>
+          <p class="font-mono text-2xs text-foreground/65 tabular-nums">
+            {grid.columns.length} × {grid.rows.length} = {grid.frames.length} frames
+            {#if grid.columns[0] && grid.rows[0]}
+              · {Math.round(grid.columns[0].end - grid.columns[0].start)}×{Math.round(grid.rows[0].end - grid.rows[0].start)} px
+            {/if}
+          </p>
+          <Button size="sm" title="Snap every dragged line back to the even grid" disabled={!has_line_overrides} onclick={() => sprite.reset_lines()}>
+            <ColumnsIcon weight="bold" /> Reset lines
+          </Button>
+        </Section>
+
+        <!-- On touch the sheet sits above this column, so the frame controls come first, right under it. -->
+        <Section title={sprite.selected === null ? "Frame" : `Frame #${sprite.selected}`} class="pointer-coarse:order-first" flush>
+          {#if selected_frame && sprite.selected !== null}
+            {@const index = sprite.selected}
+            <div class="grid grid-cols-2 gap-2">
+              <SpriteNumberField label="X" value={selected_frame.x} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, x: v })} />
+              <SpriteNumberField label="Y" value={selected_frame.y} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, y: v })} />
+              <SpriteNumberField label="Width" min={1} value={selected_frame.w} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, w: Math.max(1, v) })} />
+              <SpriteNumberField label="Height" min={1} value={selected_frame.h} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, h: Math.max(1, v) })} />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <Button size="sm" title="Shrink to the visible pixels (C)" onclick={() => sprite.fit_frame_to_content(index)}><CrosshairIcon weight="bold" /> Fit content</Button>
+              <Button size="sm" title="Back to the grid cell (R)" disabled={!sprite.overrides.frames[index]} onclick={() => sprite.reset_frame(index)}>
+                <ArrowCounterClockwiseIcon weight="bold" /> Reset
               </Button>
             </div>
-          </Section>
-
-          <Section title="Grid" flush>
-            <Segmented
-              label="Grid mode"
-              class="w-full [&>label]:flex-1 [&>label]:justify-center"
-              bind:value={() => sprite.settings.mode, (mode) => sprite.patch_settings({ mode })}
-              options={[
-                { value: GridMode.GRID, label: "Columns × rows" },
-                { value: GridMode.SIZE, label: "Frame size" },
-              ]}
-            />
-            {#if sprite.settings.mode === GridMode.GRID}
-              <div class="grid grid-cols-2 gap-2">
-                <SpriteNumberField label="Columns" min={1} value={sprite.settings.columns} onchange={(v) => sprite.patch_settings({ columns: Math.max(1, v) })} />
-                <SpriteNumberField label="Rows" min={1} value={sprite.settings.rows} onchange={(v) => sprite.patch_settings({ rows: Math.max(1, v) })} />
-              </div>
-            {:else}
-              <div class="grid grid-cols-2 gap-2">
-                <SpriteNumberField label="Width" min={1} value={sprite.settings.frame_width} onchange={(v) => sprite.patch_settings({ frame_width: Math.max(1, v) })} />
-                <SpriteNumberField label="Height" min={1} value={sprite.settings.frame_height} onchange={(v) => sprite.patch_settings({ frame_height: Math.max(1, v) })} />
-              </div>
-            {/if}
-            <p class="text-ui text-foreground/65">Padding, the outer margin in px</p>
-            <div class="grid grid-cols-4 gap-2">
-              <SpriteNumberField label="Left" min={0} value={sprite.settings.padding.left} onchange={(v) => sprite.set_padding("left", v)} />
-              <SpriteNumberField label="Right" min={0} value={sprite.settings.padding.right} onchange={(v) => sprite.set_padding("right", v)} />
-              <SpriteNumberField label="Top" min={0} value={sprite.settings.padding.top} onchange={(v) => sprite.set_padding("top", v)} />
-              <SpriteNumberField label="Bottom" min={0} value={sprite.settings.padding.bottom} onchange={(v) => sprite.set_padding("bottom", v)} />
-            </div>
-            <p class="text-ui text-foreground/65">Spacing, the gap between frames in px</p>
-            <div class="grid grid-cols-2 gap-2">
-              <SpriteNumberField label="X" min={0} value={sprite.settings.spacing.x} onchange={(v) => sprite.set_spacing("x", v)} />
-              <SpriteNumberField label="Y" min={0} value={sprite.settings.spacing.y} onchange={(v) => sprite.set_spacing("y", v)} />
-            </div>
-            <p class="font-mono text-2xs text-foreground/65 tabular-nums">
-              {grid.columns.length} × {grid.rows.length} = {grid.frames.length} frames
-              {#if grid.columns[0] && grid.rows[0]}
-                · {Math.round(grid.columns[0].end - grid.columns[0].start)}×{Math.round(grid.rows[0].end - grid.rows[0].start)} px
-              {/if}
+            <Button size="sm" title="Toggle the frame in the sequence (Del)" onclick={() => sprite.toggle_in_sequence(index)}>
+              {#if selected_included}<EyeSlashIcon weight="bold" /> Exclude from sequence{:else}<EyeIcon weight="bold" /> Include in sequence{/if}
+            </Button>
+            <p class="text-ui text-foreground/65 pointer-coarse:hidden">Arrows move, Shift ×10, Alt+arrows resize.</p>
+          {:else}
+            <p class="text-ui text-foreground/65 pointer-coarse:hidden">Click a frame on the sheet to adjust it. Drag it or its handles, or use the arrow keys.</p>
+            <p class="hidden text-ui text-foreground/65 pointer-coarse:block">
+              Tap a frame on the sheet to adjust it, then drag it or its handles. Hold a frame to include or exclude it. Pinch to zoom.
             </p>
-            <Button size="sm" title="Snap every dragged line back to the even grid" disabled={!has_line_overrides} onclick={() => sprite.reset_lines()}>
-              <ColumnsIcon weight="bold" /> Reset lines
-            </Button>
-          </Section>
+          {/if}
+          <Button size="sm" title="Shrink every frame to its visible pixels. Breaks alignment, so export with a uniform size and an anchor" onclick={() => sprite.fit_all_to_content()}>
+            <CrosshairIcon weight="bold" /> Fit all to content
+          </Button>
+        </Section>
 
-          <!-- On touch the sheet sits above this column, so the frame controls come first, right under it. -->
-          <Section title={sprite.selected === null ? "Frame" : `Frame #${sprite.selected}`} class="pointer-coarse:order-first" flush>
-            {#if selected_frame && sprite.selected !== null}
-              {@const index = sprite.selected}
-              <div class="grid grid-cols-2 gap-2">
-                <SpriteNumberField label="X" value={selected_frame.x} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, x: v })} />
-                <SpriteNumberField label="Y" value={selected_frame.y} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, y: v })} />
-                <SpriteNumberField label="Width" min={1} value={selected_frame.w} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, w: Math.max(1, v) })} />
-                <SpriteNumberField label="Height" min={1} value={selected_frame.h} onchange={(v) => sprite.set_frame_rect(index, { ...selected_frame, h: Math.max(1, v) })} />
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <Button size="sm" title="Shrink to the visible pixels (C)" onclick={() => sprite.fit_frame_to_content(index)}><CrosshairIcon weight="bold" /> Fit content</Button>
-                <Button size="sm" title="Back to the grid cell (R)" disabled={!sprite.overrides.frames[index]} onclick={() => sprite.reset_frame(index)}>
-                  <ArrowCounterClockwiseIcon weight="bold" /> Reset
-                </Button>
-              </div>
-              <Button size="sm" title="Toggle the frame in the sequence (Del)" onclick={() => sprite.toggle_in_sequence(index)}>
-                {#if selected_included}<EyeSlashIcon weight="bold" /> Exclude from sequence{:else}<EyeIcon weight="bold" /> Include in sequence{/if}
-              </Button>
-              <p class="text-ui text-foreground/65 pointer-coarse:hidden">Arrows move, Shift ×10, Alt+arrows resize.</p>
-            {:else}
-              <p class="text-ui text-foreground/65 pointer-coarse:hidden">Click a frame on the sheet to adjust it. Drag it or its handles, or use the arrow keys.</p>
-              <p class="hidden text-ui text-foreground/65 pointer-coarse:block">
-                Tap a frame on the sheet to adjust it, then drag it or its handles. Hold a frame to include or exclude it. Pinch to zoom.
-              </p>
-            {/if}
-            <Button size="sm" title="Shrink every frame to its visible pixels. Breaks alignment, so export with a uniform size and an anchor" onclick={() => sprite.fit_all_to_content()}>
-              <CrosshairIcon weight="bold" /> Fit all to content
-            </Button>
-          </Section>
+        <Section title="Export" description="Both include a JSON file with the source rects and order." flush>
+          <label class="flex flex-col gap-1" title="Where a smaller frame sits inside the cell">
+            <span class="text-2xs text-foreground/65">Anchor</span>
+            <Select size="sm" bind:value={sprite.anchor} options={ANCHORS} />
+          </label>
+          <label class="flex cursor-pointer items-center gap-2 text-ui select-none">
+            <Checkbox bind:checked={sprite.uniform} />
+            Same size for every frame
+          </label>
+          <SpriteNumberField
+            label="Sheet columns"
+            title="Columns in the repacked sheet. 0 keeps the source grid's"
+            min={0}
+            placeholder={String(grid.columns.length)}
+            value={sheet_columns}
+            onchange={(v) => (sheet_columns = Math.max(0, v))}
+          />
+          <Button variant="primary" size="sm" disabled={!sprite.sequence.length || !!exporting} onclick={save_frames}>
+            <FloppyDiskIcon weight="bold" /> Save frames…
+          </Button>
+          <Button size="sm" disabled={!sprite.sequence.length || !!exporting} onclick={save_sheet}>
+            <FloppyDiskIcon weight="bold" /> Save clean sheet…
+          </Button>
+        </Section>
+      </aside>
 
-          <Section title="Export" description="Both include a JSON file with the source rects and order." flush>
-            <label class="flex flex-col gap-1" title="Where a smaller frame sits inside the cell">
-              <span class="text-2xs text-foreground/65">Anchor</span>
-              <Select size="sm" bind:value={sprite.anchor} options={ANCHORS} />
-            </label>
-            <label class="flex cursor-pointer items-center gap-2 text-ui select-none">
-              <Checkbox bind:checked={sprite.uniform} />
-              Same size for every frame
-            </label>
-            <SpriteNumberField
-              label="Sheet columns"
-              title="Columns in the repacked sheet. 0 keeps the source grid's"
-              min={0}
-              placeholder={String(grid.columns.length)}
-              value={sheet_columns}
-              onchange={(v) => (sheet_columns = Math.max(0, v))}
-            />
-            <Button variant="primary" size="sm" disabled={!sprite.sequence.length || !!exporting} onclick={save_frames}>
-              <FloppyDiskIcon weight="bold" /> Save frames…
-            </Button>
-            <Button size="sm" disabled={!sprite.sequence.length || !!exporting} onclick={save_sheet}>
-              <FloppyDiskIcon weight="bold" /> Save clean sheet…
-            </Button>
-          </Section>
-        </aside>
-
-        <!-- The sheet takes every touch on it, so it never fills the column: there's always room below to scroll by. -->
-        <div class="stage relative order-1 h-[clamp(12rem,60cqh,32rem)] shrink-0 @4xl:order-none @4xl:h-auto">
-          <SpriteSheet bind:this={sheet} bind:zoom {sprite} {show_labels} pan_mode={space_held} />
-        </div>
-
-        <aside class="order-3 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-l @4xl:border-foreground/8">
-          <Section title="Preview" flush>
-            <SpritePreview bind:this={preview} {sprite} />
-            <SpriteNumberField label="FPS" min={1} max={120} value={sprite.fps} onchange={(v) => (sprite.fps = Math.max(1, Math.min(120, v)))} />
-          </Section>
-
-          <Section title="Sequence ({sprite.sequence.length})" flush>
-            <div class="grid grid-cols-3 gap-1">
-              <Button size="sm" title="Row by row" onclick={() => sprite.reset_sequence("row")}><RowsIcon weight="bold" /> Rows</Button>
-              <Button size="sm" title="Column by column" onclick={() => sprite.reset_sequence("column")}><ColumnsIcon weight="bold" /> Cols</Button>
-              <Button size="sm" title="Reverse the current order" disabled={!sprite.sequence.length} onclick={() => sprite.reverse_sequence()}>
-                <ArrowsDownUpIcon weight="bold" /> Rev
-              </Button>
-            </div>
-            <label class="flex flex-col gap-1" title={'Frame indices, like "0-7, 9, 15-8". Ranges are inclusive and can run backwards.'}>
-              <span class={cn("text-2xs", sequence_valid ? "text-foreground/65" : "text-error")}>{sequence_valid ? "Order" : "Order: not a valid list of frames"}</span>
-              <Input
-                size="sm"
-                class={cn("font-mono", !sequence_valid && "ring-2 ring-error hover:ring-error")}
-                spellcheck={false}
-                aria-invalid={!sequence_valid}
-                value={sequence_text}
-                oninput={(event) => {
-                  const text = event.currentTarget.value;
-                  sequence_draft = text;
-                  const parsed = parse_sequence(text, grid.frames.length);
-                  if (parsed) sprite.sequence = parsed;
-                }}
-                onblur={() => (sequence_draft = null)}
-              />
-            </label>
-            <SpriteFilmstrip {sprite} />
-          </Section>
-        </aside>
+      <!-- The sheet takes every touch on it, so it never fills the column: there's always room below to scroll by. -->
+      <div class="stage relative order-1 h-[clamp(12rem,60cqh,32rem)] shrink-0 @4xl:order-none @4xl:h-auto">
+        <SpriteSheet bind:this={sheet} bind:zoom {sprite} {show_labels} pan_mode={space_held} />
       </div>
 
-      <StatusBar>
-        {#if exporting}
-          <span class="flex items-center gap-1.5 text-foreground"><Spinner label="Saving" /> Saving {exporting.done} of {exporting.total}</span>
-        {/if}
-        <span>{grid.frames.length} frames</span>
-        <span>{sprite.sequence.length} in sequence</span>
-        <span class="ml-auto hidden truncate @3xl:block pointer-coarse:@3xl:hidden">Drag lines · click a frame · drag it or its handles · double-click to toggle · Space or Alt drag to pan · Ctrl+scroll to zoom</span>
-        <span class="ml-auto hidden truncate pointer-coarse:@3xl:block">Drag lines · tap a frame · drag it or its handles · hold to toggle · pinch to zoom</span>
-      </StatusBar>
+      <aside class="order-3 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-l @4xl:border-foreground/8">
+        <Section title="Preview" flush>
+          <SpritePreview bind:this={preview} {sprite} />
+          <SpriteNumberField label="FPS" min={1} max={120} value={sprite.fps} onchange={(v) => (sprite.fps = Math.max(1, Math.min(120, v)))} />
+        </Section>
+
+        <Section title="Sequence ({sprite.sequence.length})" flush>
+          <div class="grid grid-cols-3 gap-1">
+            <Button size="sm" title="Row by row" onclick={() => sprite.reset_sequence("row")}><RowsIcon weight="bold" /> Rows</Button>
+            <Button size="sm" title="Column by column" onclick={() => sprite.reset_sequence("column")}><ColumnsIcon weight="bold" /> Cols</Button>
+            <Button size="sm" title="Reverse the current order" disabled={!sprite.sequence.length} onclick={() => sprite.reverse_sequence()}>
+              <ArrowsDownUpIcon weight="bold" /> Rev
+            </Button>
+          </div>
+          <label class="flex flex-col gap-1" title={'Frame indices, like "0-7, 9, 15-8". Ranges are inclusive and can run backwards.'}>
+            <span class={cn("text-2xs", sequence_valid ? "text-foreground/65" : "text-error")}>{sequence_valid ? "Order" : "Order: not a valid list of frames"}</span>
+            <Input
+              size="sm"
+              class={cn("font-mono", !sequence_valid && "ring-2 ring-error hover:ring-error")}
+              spellcheck={false}
+              aria-invalid={!sequence_valid}
+              value={sequence_text}
+              oninput={(event) => {
+                const text = event.currentTarget.value;
+                sequence_draft = text;
+                const parsed = parse_sequence(text, grid.frames.length);
+                if (parsed) sprite.sequence = parsed;
+              }}
+              onblur={() => (sequence_draft = null)}
+            />
+          </label>
+          <SpriteFilmstrip {sprite} />
+        </Section>
+      </aside>
     </div>
+
+    <StatusBar>
+      {#if exporting}
+        <span class="flex items-center gap-1.5 text-foreground"><Spinner label="Saving" /> Saving {exporting.done} of {exporting.total}</span>
+      {/if}
+      <span>{grid.frames.length} frames</span>
+      <span>{sprite.sequence.length} in sequence</span>
+      <span class="ml-auto hidden truncate @3xl:block pointer-coarse:@3xl:hidden">Drag lines · click a frame · drag it or its handles · double-click to toggle · Space or Alt drag to pan · Ctrl+scroll to zoom</span>
+      <span class="ml-auto hidden truncate pointer-coarse:@3xl:block">Drag lines · tap a frame · drag it or its handles · hold to toggle · pinch to zoom</span>
+    </StatusBar>
   {/if}
 </div>
 
