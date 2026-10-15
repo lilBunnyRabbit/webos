@@ -32,7 +32,8 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "generate:pwa-assets": "pwa-assets-generator",
     "test": "vitest run",
-    "test:unit": "vitest run --project unit"
+    "test:unit": "vitest run --project unit",
+    "budget": "bun scripts/boot-budget.ts"
   },
   "type": "module",
   "dependencies": {
