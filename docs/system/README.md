@@ -57,6 +57,7 @@ The reference is part of the code. A change isn't finished until the page that d
 
 | Page | Covers |
 |------|--------|
+| [app-api.md](app-api.md) | The stable app API frozen at 1.0: what an app may rely on, what is internal, the semver rule |
 | [apps/manifest.md](apps/manifest.md) | Every `define_app` field |
 | [apps/lifecycle.md](apps/lifecycle.md) | Discovery, launch, props, close |
 | [apps/app-context.md](apps/app-context.md) | `get_app_context()`: window and storage handles |

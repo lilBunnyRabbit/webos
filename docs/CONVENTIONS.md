@@ -94,6 +94,7 @@ export default define_app({
 });
 ```
 
+- What an app may rely on (stable until 2.0) and what is internal: [system/app-api.md](system/app-api.md).
 - Auto-discovered by glob in `src/lib/apps/index.ts`. No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
