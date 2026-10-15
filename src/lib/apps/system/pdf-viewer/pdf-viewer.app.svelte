@@ -19,10 +19,10 @@
   // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
   let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
   const path = $derived(typeof source === "string" ? source : undefined);
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in PDF Viewer" });
+    const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in PDF Viewer" });
     if (chosen) source = chosen;
   }
 

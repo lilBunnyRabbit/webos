@@ -20,7 +20,7 @@
   import { QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
 
   const { path }: { path?: string } = $props();
-  const { window, storage, app_id } = get_app_context();
+  const { window: win, storage, app_id } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
@@ -80,7 +80,7 @@
   }
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: ["image/*"], title: "Scan an image" });
+    const chosen = await win.pick_file({ accept: ["image/*"], title: "Scan an image" });
     if (chosen) await open_path(chosen);
   }
 
@@ -144,7 +144,7 @@
 
   async function clear_all() {
     const count = entries.value.length;
-    const confirmed = await window.confirm(`Clear ${count === 1 ? "1 scanned code" : `${count} scanned codes`}?`, {
+    const confirmed = await win.confirm(`Clear ${count === 1 ? "1 scanned code" : `${count} scanned codes`}?`, {
       detail: "The history and its thumbnails are deleted.",
       confirm_label: "Clear",
       danger: true,

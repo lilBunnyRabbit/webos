@@ -9,7 +9,7 @@
   import { Check as CheckIcon, Devices as DevicesIcon, Image as ImageIcon } from "phosphor-svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
 
   const PRESETS: { preset: WallpaperPreset; label: string }[] = [
     { preset: WallpaperPreset.GRID, label: "Grid" },
@@ -40,7 +40,7 @@
   }
 
   async function choose() {
-    const path = await window.pick_file({ accept: ["image/*"], title: "Choose a wallpaper" });
+    const path = await win.pick_file({ accept: ["image/*"], title: "Choose a wallpaper" });
     if (path) await set_image(path);
   }
 

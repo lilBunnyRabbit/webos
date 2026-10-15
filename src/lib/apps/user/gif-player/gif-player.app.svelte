@@ -36,7 +36,7 @@
   type Media = GifMedia | VideoMedia;
 
   const { path }: { path?: string } = $props();
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
   let media = $state.raw<Media | null>(null);
@@ -127,7 +127,7 @@
   }
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: ACCEPT, title: "Open in GIF Player" });
+    const chosen = await win.pick_file({ accept: ACCEPT, title: "Open in GIF Player" });
     if (chosen) await open_path(chosen);
   }
 

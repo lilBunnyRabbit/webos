@@ -25,10 +25,10 @@
   let view = $state<"preview" | "source">("preview");
   let revision = $state(0);
 
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in HTML Preview" });
+    const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in HTML Preview" });
     if (chosen) source = chosen;
   }
 
