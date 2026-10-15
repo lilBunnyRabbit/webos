@@ -13,7 +13,7 @@
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes, error_message } from "$lib/core/utils";
   import { indentWithTab } from "@codemirror/commands";
-  import { Compartment, EditorState } from "@codemirror/state";
+  import { Compartment, EditorState, Text } from "@codemirror/state";
   import { EditorView, keymap } from "@codemirror/view";
   import { basicSetup } from "codemirror";
   import {
@@ -56,8 +56,12 @@
   let device_name = $state<string | null>(null);
   let status = $state<Status>(untrack(() => (initial_path ? Status.LOADING : Status.READY)));
   let error = $state("");
-  let text = $state.raw("");
-  let saved_text = $state.raw("");
+  let doc = $state.raw<Text>(Text.empty);
+  /** The doc as last loaded or saved. `eq` skips the subtrees an edit left shared, so the dirty check stays cheap. */
+  let saved_doc = $state.raw<Text>(Text.empty);
+  const text = $derived(doc.toString());
+  let byte_size = $state<number | null>(null);
+  let load_id = 0;
   /** `lastModified` of the version on disk this buffer is based on. Newer on disk = changed elsewhere. */
   let base_modified = 0;
   let stale_modified = $state<number | null>(null);
@@ -68,7 +72,7 @@
   const language_slot = new Compartment();
   const read_only_slot = new Compartment();
 
-  const dirty = $derived(text !== saved_text);
+  const dirty = $derived(!doc.eq(saved_doc));
   /** OS files (/etc, /var, /tmp) are for reading; a change can only be saved as a copy elsewhere. */
   const read_only = $derived(path !== null && is_system_path(path));
   const name = $derived(path ? base_name(path) : (device_name ?? "Untitled"));
@@ -80,7 +84,6 @@
   let preview_scroll = 0;
   const nonce = crypto.randomUUID();
   const preview_srcdoc = $derived(preview_document(preview_html, settings.theme, untrack(() => preview_scroll), nonce));
-  const line_count = $derived(text.split("\n").length);
 
   function mount(host: HTMLElement) {
     const editor = new EditorView({
@@ -95,7 +98,7 @@
           language_slot.of([]),
           read_only_slot.of([]),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) text = update.state.doc.toString();
+            if (update.docChanged) doc = update.state.doc;
           }),
         ],
       }),
@@ -120,7 +123,6 @@
     });
     if (keep_position) view.scrollDOM.scrollTop = scroll;
     else view.scrollDOM.scrollTop = 0;
-    text = content;
   }
 
   async function set_language(file_name: string) {
@@ -131,24 +133,28 @@
   }
 
   async function load(target: string, keep_position = false) {
+    const id = ++load_id;
     if (!keep_position) status = Status.LOADING;
     try {
       const file = await files.get_file(target);
+      if (id !== load_id) return;
       if (!file) {
         path = target;
         status = Status.MISSING;
         return;
       }
       const content = await file.text();
+      if (id !== load_id) return;
       path = target;
       base_modified = file.lastModified;
-      saved_text = content;
       stale_modified = null;
       set_doc(content, keep_position);
+      saved_doc = doc;
       status = Status.READY;
       set_language(name);
       if (!keep_position) view?.focus();
     } catch (reason) {
+      if (id !== load_id) return;
       path = target;
       error = error_message(reason);
       status = Status.ERROR;
@@ -165,12 +171,13 @@
   }
 
   function open_untitled(file_name: string | null, content: string) {
+    load_id++;
     path = null;
     device_name = file_name;
     base_modified = 0;
-    saved_text = content;
     stale_modified = null;
     set_doc(content, false);
+    saved_doc = doc;
     status = Status.READY;
     set_language(name);
     view?.focus();
@@ -213,10 +220,10 @@
       }
       const directory = await files.get_directory(parent_path(target));
       if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
-      const content = text;
-      await files.create_file(directory, base_name(target), { content, overwrite: true });
+      const written = doc;
+      await files.create_file(directory, base_name(target), { content: written.toString(), overwrite: true });
       base_modified = (await files.get_file(target))?.lastModified ?? Date.now();
-      saved_text = content;
+      saved_doc = written;
       stale_modified = null;
       if (target !== path) {
         path = target;
@@ -253,12 +260,12 @@
     if (target !== path) return;
     if (content === text) {
       base_modified = file.lastModified;
-      saved_text = content;
+      saved_doc = doc;
       stale_modified = null;
     } else if (!dirty) {
-      saved_text = content;
       base_modified = file.lastModified;
       set_doc(content, true);
+      saved_doc = doc;
     } else {
       stale_modified = file.lastModified;
     }
@@ -303,6 +310,13 @@
   $effect(() => {
     const locked = read_only;
     view?.dispatch({ effects: read_only_slot.reconfigure(locked ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []) });
+  });
+
+  // Byte size needs the whole text encoded: done when the editor is idle, not per keystroke.
+  $effect(() => {
+    const current = doc;
+    const handle = requestIdleCallback(() => (byte_size = new TextEncoder().encode(current.toString()).length));
+    return () => cancelIdleCallback(handle);
   });
 
   $effect(() => win.set_title(name));
@@ -400,8 +414,8 @@
   <StatusBar>
     <span class="truncate">{name}</span>
     {#if read_only}<span class="shrink-0">Read-only</span>{/if}
-    <span class="ml-auto">{line_count} lines</span>
-    <span>{text.length} chars</span>
-    <span>{format_bytes(new TextEncoder().encode(text).length)}</span>
+    <span class="ml-auto">{doc.lines} lines</span>
+    <span>{doc.length} chars</span>
+    {#if byte_size !== null}<span>{format_bytes(byte_size)}</span>{/if}
   </StatusBar>
 </div>
