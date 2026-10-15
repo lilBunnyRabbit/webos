@@ -14,7 +14,20 @@
   // Read once and saved on change rather than `persisted()`: each window keeps its own inputs instead of mirroring
   // another window's typing, and a new window opens on whatever was used last.
   const tools = $state(storage.get("state", DevToolsState) ?? initial_state());
-  $effect(() => storage.set("state", to_stored($state.snapshot(tools))));
+
+  const SAVE_DELAY_MS = 500;
+  let unsaved: DevToolsState | null = null;
+  function save() {
+    if (unsaved) storage.set("state", to_stored(unsaved));
+    unsaved = null;
+  }
+  $effect(() => {
+    unsaved = $state.snapshot(tools);
+    const timer = setTimeout(save, SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  });
+  // Cleanup only: closing the window writes an edit still waiting on the delay.
+  $effect(() => save);
 
   const current = $derived(TOOLS.find((tool) => tool.value === tools.tool) ?? TOOLS[0]);
 </script>
