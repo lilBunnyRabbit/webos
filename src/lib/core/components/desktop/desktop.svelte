@@ -58,7 +58,7 @@
       const items = handler.targets(item);
       const rect = (document.activeElement as HTMLElement).getBoundingClientRect();
       const point = { x: rect.left + rect.width / 2, y: rect.bottom };
-      if (event.key === "Enter" && event.altKey && items.length === 1) show_properties(item);
+      if (event.key === "Enter" && event.altKey && items.length === 1) void show_properties(item);
       else if (event.key === "Enter") open_items(items, point);
       else if (event.key === "F2" && items.length === 1) rename_item(item);
       else if (is_mod(event) && key === "c") copy_items(items);

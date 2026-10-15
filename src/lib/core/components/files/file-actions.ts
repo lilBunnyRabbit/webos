@@ -13,14 +13,15 @@ import kernel, {
   type NotificationsService,
   type SettingsService,
 } from "$lib/core/api";
-import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { FileSystemItem } from "$lib/core/api/services/files";
 import { join_path } from "$lib/core/api/services/files/path";
 import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
 import type { WindowHandle } from "$lib/core/contexts/app";
 import { report_file_error } from "./file-explorer.errors";
 import { name_problem } from "./name-rules";
-import PropertiesDialog from "./properties-dialog.svelte";
+
+const conflict_dialog = async () => (await import("../dialogs/conflict-dialog.svelte")).default;
+const properties_dialog = async () => (await import("./properties-dialog.svelte")).default;
 
 /** File Explorer actions shared by the toolbar, keyboard shortcuts and context menus, so each exists once. */
 export async function create_folder(handler: DirectoryHandler, window: WindowHandle): Promise<void> {
@@ -85,9 +86,9 @@ export async function rename_item(handler: DirectoryHandler, window: WindowHandl
 }
 
 export function show_properties(handler: DirectoryHandler, window: WindowHandle, item: FileSystemItem): void {
-  void kernel
-    .service<DialogsService>("dialogs")
-    .show(PropertiesDialog, { path: join_path(handler.segments, item.name), kind: item.kind }, { window: window.id });
+  void properties_dialog().then((dialog) =>
+    kernel.service<DialogsService>("dialogs").show(dialog, { path: join_path(handler.segments, item.name), kind: item.kind }, { window: window.id })
+  );
 }
 
 /** "Open with" entries for a file: every associated app, best match first, then tool apps. Ids are `open_with:<app id>`. */
@@ -145,7 +146,7 @@ export function cut_items(handler: DirectoryHandler, items: FileSystemItem[]): v
 export async function paste(handler: DirectoryHandler, window: WindowHandle): Promise<void> {
   const dialogs = kernel.service<DialogsService>("dialogs");
   const ask = async (name: string): Promise<ConflictChoice> =>
-    (await dialogs.show(ConflictDialog, { name, folder: handler.path }, { window: window.id, dismissible: false })) ?? "skip";
+    (await dialogs.show(await conflict_dialog(), { name, folder: handler.path }, { window: window.id, dismissible: false })) ?? "skip";
 
   try {
     await clipboard().paste_files(handler.path, ask);

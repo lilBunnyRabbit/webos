@@ -13,7 +13,6 @@ import kernel, {
   DesktopSort,
 } from "$lib/core/api";
 import { view_transition } from "$lib/core/utils/view-transition";
-import ConflictDialog from "../dialogs/conflict-dialog.svelte";
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
@@ -33,7 +32,6 @@ import {
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
 import PromptDialog from "../dialogs/prompt-dialog.svelte";
-import PropertiesDialog from "../files/properties-dialog.svelte";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
@@ -59,9 +57,12 @@ export function open_items(items: DesktopItem[], anchor: Position): void {
   for (const item of items) desktop().open(item, { anchor });
 }
 
+const conflict_dialog = async () => (await import("../dialogs/conflict-dialog.svelte")).default;
+const properties_dialog = async () => (await import("../files/properties-dialog.svelte")).default;
+
 export async function paste(): Promise<void> {
   const ask = async (name: string): Promise<ConflictChoice> =>
-    (await dialogs().show(ConflictDialog, { name, folder: PATHS.desktop }, { dismissible: false })) ?? "skip";
+    (await dialogs().show(await conflict_dialog(), { name, folder: PATHS.desktop }, { dismissible: false })) ?? "skip";
   try {
     await clipboard().paste_files(PATHS.desktop, ask);
   } catch (error) {
@@ -157,8 +158,8 @@ export async function rename_item(item: DesktopItem): Promise<void> {
   }
 }
 
-export function show_properties(item: DesktopItem): void {
-  void dialogs().show(PropertiesDialog, {
+export async function show_properties(item: DesktopItem): Promise<void> {
+  await dialogs().show(await properties_dialog(), {
     path: desktop_path(item),
     kind: item.kind === "directory" ? ("directory" as const) : ("file" as const),
   });
@@ -198,7 +199,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
   else if (choice === "copy") copy_items(items);
   else if (choice === "cut") cut_items(items);
   else if (choice === "delete") remove_items(items);
-  else if (choice === "properties") show_properties(item);
+  else if (choice === "properties") void show_properties(item);
   else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
   else if (choice === "wallpaper") set_wallpaper(desktop_path(item));
 }
