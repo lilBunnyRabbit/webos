@@ -418,9 +418,36 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Error boundaries for app crashes (per window, Restart app / Close window, error toast)
 
 ### Performance
-- [ ] Lazy loading for apps (dynamic imports — already in place via `component()`)
-- [ ] Virtual scrolling for large lists (file explorer, game hub)
-- [ ] Performance targets: <100ms interaction, <3s initial load
+- [x] Lazy loading for apps (dynamic imports via `component()`), per-platform shell chunks, lazy service shell command bodies and dialogs boot doesn't show ([ADR-036](adrs/036-boot-loading-screen.md))
+- [x] Boot loading screen with progress; the shell, desktop widgets and session apps start loading during boot (ADR-036). Entry chunk 269 → 164 KB gz
+- [ ] Virtual scrolling for large lists (file explorer, game hub). Explorer got `content-visibility` and reused row objects instead (2000 files: add one 170 → 8 ms); windowing is the owner's call
+- [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
+
+### Code quality pass (2026-10-15, 0.37.0)
+- **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)
+- [x] Fork test: deleting `src/lib/apps/user` leaves check at 0 errors, a working build, passing tests and a booting desktop and mobile. Zip engine moved to `core/utils/zip`, default widgets come from the `default_widget` manifest flag, core tests use a test-only app
+- [x] Phosphor `thin`/`light` weights stripped at build, Inter preloaded
+- [x] `BaseWindowsService`, `FileListHandler`/`DesktopHandler` pointer handlers, shared helpers (`files/path`, `History`, `date`, `live_file`, `confirm_discard`, games `grid`/`direction`, `CameraScan`)
+- [x] App pass: tickers gated on visibility, debounced saves, Nonogram worker, Paint patch undo, camera/mic/bitmap leaks, CSV Viewer paging, Text Editor keystrokes
+- [ ] Owner's call: Inter preload costs ~0.8 s on a slow first visit (keep, drop, or `font-display` only)
+- [ ] Owner's call: `<link rel="modulepreload">` for platform chunks (needs a build hook)
+- [ ] Owner's call: windowed rendering for long lists; `getFile` metadata cache for Explorer
+- [ ] Owner's call: session-save cadence; desktop widgets covered by windows keep ticking
+- [ ] Owner's call: `TextDraft` is duplicated in Kanban and Work Hours: move to core?
+- [ ] Owner's call: `CameraScan` lives in core utils; keep there or move to an app-shared spot
+- [ ] Owner's call: Recorder keeps chunks in RAM (stream to OPFS = persistence decision); QR Reader history into `storage.file`
+- [ ] Owner's call: a `$docs` alias (Settings › Roadmap and markdown-pdf use long relative imports)
+- [ ] Diff: undo history is lost when the window crosses the split/unified width (keeping it broke the automatic switch)
+- [ ] Minesweeper and Nurikabe have no `daily` command
+- [ ] Activity Monitor's Windows section shows "—" on mobile
+- [ ] `state_proxy_equality_mismatch` warning in Terminal and some games
+
+### 1.0 criteria (draft, owner to confirm)
+- [ ] Fork test in CI (delete `src/lib/apps/user`, check + build + tests)
+- [ ] App API frozen: `define_app`, `get_app_context`, `WindowHandle`
+- [ ] Boot budget agreed and measured
+- [ ] Tasks service (ADR-013)
+- [ ] Backups / export of OPFS data
 
 ### PWA & Offline
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)
