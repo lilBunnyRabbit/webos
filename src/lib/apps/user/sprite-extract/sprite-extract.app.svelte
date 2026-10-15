@@ -37,7 +37,7 @@
     WarningCircle as WarningCircleIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { has_files, image_files, load_image } from "$lib/core/utils/image";
   import { ANCHORS, frame_file_name, frames_metadata, render_frames, render_sheet, type ExportOptions } from "./sprite-export";
   import { SpriteExtractState } from "./sprite-extract.svelte";
@@ -94,13 +94,33 @@
     return [{ label: "Show folder", on_click: () => kernel.service<AppsService>("apps").launch("file-explorer", { path: folder_path }) }];
   }
 
+  // An export keeps rendering from its bitmap after another sheet is opened; that one closes when the export ends.
+  let saving: ImageBitmap | null = null;
+  let destroyed = false;
+
+  function release(bitmap: ImageBitmap) {
+    if (bitmap !== saving) bitmap.close();
+  }
+
+  function done_saving(bitmap: ImageBitmap) {
+    saving = null;
+    if (destroyed || bitmap !== sprite.source?.bitmap) bitmap.close();
+  }
+
+  onDestroy(() => {
+    destroyed = true;
+    if (sprite.source) release(sprite.source.bitmap);
+  });
+
   async function open_file(file: File, file_path: string | null) {
     const id = ++load_id;
     loading = true;
     try {
       const loaded = await load_image(file, file_path);
-      if (id !== load_id) return;
+      if (id !== load_id) return loaded.bitmap.close();
+      const previous = source;
       sprite.set_source(loaded);
+      if (previous) release(previous.bitmap);
       sequence_draft = null;
       load_error = null;
     } catch (error) {
@@ -113,12 +133,15 @@
   }
 
   async function open_path(file_path: string) {
+    const id = ++load_id;
     try {
       const file = await files.get_file(file_path);
+      if (id !== load_id) return;
       if (file) return open_file(file, file_path);
       if (source) report("File not found", file_path);
       else load_error = { title: "File not found", description: file_path };
     } catch (error) {
+      if (id !== load_id) return;
       if (source) report("Couldn't read the file", error);
       else load_error = { title: "Couldn't read the file", description: error_message(error) };
     }
@@ -164,10 +187,11 @@
     const stem = file_stem(name);
 
     const folder = await win.pick_directory({ title: "Save frames to…", start_path });
-    if (!folder) return;
+    if (!folder || bitmap !== sprite.source?.bitmap) return;
 
     const total = sequence.length;
     exporting = { done: 0, total };
+    saving = bitmap;
     try {
       const parent = await files.get_directory(folder);
       if (!parent) throw new Error(`${folder} no longer exists`);
@@ -183,6 +207,7 @@
       report("Couldn't save the frames", error);
     } finally {
       exporting = null;
+      done_saving(bitmap);
     }
   }
 
@@ -194,9 +219,10 @@
     const options = export_options();
 
     const chosen = await win.pick_save({ name: `${file_stem(name)}_sheet.png`, accept: [".png"], start_path, title: "Save sheet as" });
-    if (!chosen) return;
+    if (!chosen || bitmap !== sprite.source?.bitmap) return;
 
     exporting = { done: 0, total: 1 };
+    saving = bitmap;
     try {
       const folder = parent_path(chosen);
       const file_name = base_name(chosen);
@@ -212,6 +238,7 @@
       report("Couldn't save the sheet", error);
     } finally {
       exporting = null;
+      done_saving(bitmap);
     }
   }
 

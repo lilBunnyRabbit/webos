@@ -137,7 +137,12 @@ export function compute_grid(
       frames.push(
         override
           ? { ...override }
-          : { x: columns[c].start, y: rows[r].start, w: columns[c].end - columns[c].start, h: rows[r].end - rows[r].start }
+          : {
+              x: columns[c].start,
+              y: rows[r].start,
+              w: columns[c].end - columns[c].start,
+              h: rows[r].end - rows[r].start,
+            }
       );
     }
   }
@@ -146,7 +151,9 @@ export function compute_grid(
 }
 
 export function count_overrides(overrides: SpriteOverrides): number {
-  return Object.keys(overrides.frames).length + Object.keys(overrides.columns).length + Object.keys(overrides.rows).length;
+  return (
+    Object.keys(overrides.frames).length + Object.keys(overrides.columns).length + Object.keys(overrides.rows).length
+  );
 }
 
 export function round_rect(rect: Rect): Rect {
@@ -281,18 +288,11 @@ function corner_background(data: Uint8ClampedArray, width: number, height: numbe
 
 /** Separator gaps from alpha, or from the corner colour when the sheet has no transparency. */
 export function detect_grid(
-  image: CanvasImageSource & { width: number; height: number },
+  ctx: CanvasRenderingContext2D,
   options: DetectOptions = DEFAULT_DETECT_OPTIONS
 ): { columns: Range[]; rows: Range[] } | null {
-  const { width, height } = image;
+  const { width, height } = ctx.canvas;
   if (!width || !height) return null;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return null;
-  ctx.drawImage(image, 0, 0);
   const data = ctx.getImageData(0, 0, width, height).data;
 
   let has_alpha = false;

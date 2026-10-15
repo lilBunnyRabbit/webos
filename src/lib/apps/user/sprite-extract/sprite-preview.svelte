@@ -1,12 +1,14 @@
 <script lang="ts">
   import { Checkbox, IconButton } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
+  import { get_app_context } from "$lib/core/contexts/app";
   import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
   import { anchor_offset } from "./sprite-export";
   import type { SpriteExtractState } from "./sprite-extract.svelte";
   import { frame_size, round_rect } from "./sprite-model";
 
   let { sprite }: { sprite: SpriteExtractState } = $props();
+  const { window: win } = get_app_context();
 
   let playing = $state(true);
   let step = $state(0);
@@ -18,8 +20,9 @@
   const frame_index = $derived(length ? sprite.sequence[current] : null);
 
   $effect(() => {
-    if (!playing || length <= 1) return;
-    const timer = setTimeout(() => (step = (current + 1) % length), 1000 / Math.max(1, sprite.fps));
+    if (!playing || length <= 1 || !win.is_visible) return;
+    const next = (current + 1) % length;
+    const timer = setTimeout(() => (step = next), 1000 / Math.max(1, sprite.fps));
     return () => clearTimeout(timer);
   });
 
