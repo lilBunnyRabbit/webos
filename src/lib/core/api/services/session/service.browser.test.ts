@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Kernel } from "$lib/core/api";
 import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import { AppsService } from "../apps/service.svelte";
+import { TestAppsService } from "../apps/test-apps";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
@@ -40,7 +41,7 @@ async function boot(saved: WindowSnapshot[] | null, answer = true, frames: Windo
     windows: WindowsService,
     notifications: NotificationsService,
     dialogs: stub_service("dialogs", { show: vi.fn(async () => answer) }),
-    apps: AppsService,
+    apps: TestAppsService,
     session: SessionService,
   });
   shutdown = booted.shutdown;
