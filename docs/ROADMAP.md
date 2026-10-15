@@ -89,6 +89,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ## P1 — Essential UX
 
+### App author highlights
+- **Priority:** high, as soon as PR contributions come in
+- [ ] Credit an app's author (and later contributors) where the app is shown: App Library details, the new-app announcement, maybe About. Needs an ADR: where the author lives (manifest field vs changelog), what it holds (name, GitHub handle, link), and whether OS apps show the owner
+
 ### Design System
 - **Status:** Done (2026-10-11, ADR-024, [docs/design](design/README.md)). Follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/)
 - [x] Brand palettes (Brand Dark default, Brand Light) + extended tokens (tertiary, cottontail, states)
