@@ -2,7 +2,7 @@
   import kernel, { NotificationType, Platform, type DesktopService, type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Input, Section, Segmented, SettingRow, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time } from "$lib/core/games/time";
+  import { format_time } from "$lib/core/games";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";

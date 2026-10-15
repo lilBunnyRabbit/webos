@@ -1,4 +1,4 @@
-import { day_key } from "$lib/core/games";
+import { day_key } from "$lib/core/utils/date";
 
 /** Call during component init: it uses `$effect`. */
 export function use_today(active: () => boolean = () => true): { readonly value: string } {

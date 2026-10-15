@@ -5,7 +5,9 @@
   import WindowContent from "./window-content.svelte";
   import WindowTitlebar from "./window-titlebar.svelte";
   import WindowSheets from "./window-sheets.svelte";
-  import { create_storage_handle, create_window_handle, set_app_context } from "$lib/core/contexts/app";
+  import { create_storage_handle } from "$lib/core/contexts/app";
+  import { set_app_context } from "$lib/core/contexts/app/context";
+  import { create_window_handle } from "$lib/core/contexts/app/window-handle";
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
   import { cubicOut } from "svelte/easing";
   import { view_transition } from "$lib/core/utils/view-transition";

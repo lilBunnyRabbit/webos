@@ -1,7 +1,9 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import kernel, { type DialogsService, type MobileWindowsService, type WindowId } from "$lib/core/api";
-  import { create_storage_handle, create_window_handle, set_app_context } from "$lib/core/contexts/app";
+  import { create_storage_handle } from "$lib/core/contexts/app";
+  import { set_app_context } from "$lib/core/contexts/app/context";
+  import { create_window_handle } from "$lib/core/contexts/app/window-handle";
   import WindowContent from "../window/window-content.svelte";
   import WindowSheets from "../window/window-sheets.svelte";
 

@@ -140,7 +140,6 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "PlaysSchema",
       "Stopwatch",
       "daily_seed",
-      "day_key",
       "format_time",
       "grid_key_move",
       "key_direction",

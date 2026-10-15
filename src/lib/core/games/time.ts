@@ -1,7 +1,5 @@
 import { day_key } from "$lib/core/utils/date";
 
-export { day_key };
-
 export interface FormatTimeOptions {
   /** Adds tenths of a second: `1:05.3`. */
   tenths?: boolean;

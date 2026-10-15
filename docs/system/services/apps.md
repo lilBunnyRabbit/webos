@@ -12,7 +12,7 @@ The app registry. Holds every discovered manifest, launches an app into a new wi
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
-| `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_MAX_SPAN`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
+| `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
 | `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()`, `group_apps()`, `within_one_edit()`, `APP_CATEGORY_LABELS`, `AppSection` |
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |

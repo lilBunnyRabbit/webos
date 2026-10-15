@@ -1,8 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
-  import { app_data_path } from "$lib/core/contexts/app/json-file.svelte";
+  import { app_data_path, get_app_context } from "$lib/core/contexts/app";
   import { cn, format_datetime } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
   import { ArrowCounterClockwise, ArrowLeft, ClockCounterClockwise, Pause, PencilSimple, Play, Plus, Sticker, Trash, Trophy, Warning } from "phosphor-svelte";

@@ -1,6 +1,6 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import type { CommandContext, Tagged } from "$lib/core/api/services/shell/type";
-import { live_file } from "$lib/core/contexts/app/live-file.svelte";
+import { live_file } from "$lib/core/contexts/app";
 import {
   add_days,
   APP_ID,

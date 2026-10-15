@@ -16,7 +16,7 @@ import {
   type Board,
   type KanbanFile,
 } from "./data";
-import { live_file, type LiveFile } from "$lib/core/contexts/app/live-file.svelte";
+import { live_file, type LiveFile } from "$lib/core/contexts/app";
 import { all_cards, first_open_column, resolve_board, resolve_card, resolve_column, type FoundCard } from "./lookup";
 import { day_key, resolve_day } from "$lib/core/utils/date";
 

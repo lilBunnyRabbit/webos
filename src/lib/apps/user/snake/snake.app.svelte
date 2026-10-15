@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { track_play } from "$lib/core/games";
+  import { key_direction, swipe_direction, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import {
     ArrowDown as ArrowDownIcon,
@@ -15,7 +15,6 @@
   import { z } from "zod";
   import { draw_board, read_palette, type Palette } from "./draw";
   import { create_game, Direction, fixed_steps, high_scores_schema, mode_key, set_status, Speed, SPEEDS, speed_schema, Status, step, STEP_MS, turn, type HighScores } from "./game";
-  import { key_direction, swipe_direction } from "$lib/core/games/direction";
 
   const SPEED_LABELS: Record<Speed, string> = { slow: "Slow", normal: "Normal", fast: "Fast" };
   const SPEED_OPTIONS = SPEEDS.map((value) => ({ value, label: SPEED_LABELS[value] }));

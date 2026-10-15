@@ -2,7 +2,7 @@ import { flushSync } from "svelte";
 import { afterAll, afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import kernel from "$lib/core/api";
 import type { CommandContext, Value } from "$lib/core/api/services/shell/type";
-import { app_data_path, json_file } from "$lib/core/contexts/app/json-file.svelte";
+import { app_data_path, json_file } from "$lib/core/contexts/app";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { BoardFileSchema, EMPTY_FILE, PlayMode, type Pad } from "./board";

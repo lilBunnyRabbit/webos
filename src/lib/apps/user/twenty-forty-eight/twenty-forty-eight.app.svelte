@@ -1,13 +1,12 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { track_play } from "$lib/core/games";
+  import { key_direction, swipe_direction, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon } from "phosphor-svelte";
   import { z } from "zod";
   import { can_move, new_game, play, saved_schema, shows_win, SIZE, WIN_VALUE, type Direction, type Game, type Tile } from "./game";
-  import { key_direction, swipe_direction } from "$lib/core/games/direction";
 
   const SWIPE_THRESHOLD_PX = 24;
   const CELLS = Array.from({ length: SIZE * SIZE }, (_, i) => ({ row: Math.floor(i / SIZE), col: i % SIZE }));

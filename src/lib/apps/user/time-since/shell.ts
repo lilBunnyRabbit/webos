@@ -1,7 +1,6 @@
 import kernel, { type AppsService, type DesktopItem, type DesktopService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
-import { app_data_path } from "$lib/core/contexts/app/json-file.svelte";
-import { live_file } from "$lib/core/contexts/app/live-file.svelte";
+import { app_data_path, live_file } from "$lib/core/contexts/app";
 import { format_datetime } from "$lib/core/utils";
 import {
   APP_ID,

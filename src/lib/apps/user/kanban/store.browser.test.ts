@@ -2,7 +2,7 @@ import { flushSync } from "svelte";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import kernel from "$lib/core/api";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
-import { json_file } from "$lib/core/contexts/app/json-file.svelte";
+import { json_file } from "$lib/core/contexts/app";
 import { add_card, BOARDS_PATH, default_file, KanbanFileSchema, new_card, update_board } from "./data";
 import { read_boards } from "./store";
 

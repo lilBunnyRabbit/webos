@@ -31,7 +31,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: app manifests build their commands eagerly |
 | `$lib/core/contexts/app` | See [App context and data](#app-context-and-data) | Import from the barrel. The files behind it are internal paths |
 | `$lib/core/components/ui` | The whole UI kit | |
-| `$lib/core/games` | The whole games kit | Import from the barrel; `games/time` and `games/direction` are internal paths |
+| `$lib/core/games` | The whole games kit | Import from the barrel. Manifests and kernel-free logic files that Node tests load use `games/time` or `games/direction` instead, because the barrel reaches the kernel ([Known gaps](#known-gaps)) |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 
 ## Manifest: `define_app`
@@ -87,8 +87,8 @@ Outside the context, from `$lib/core/contexts/app`:
 | `app_data_path(app_id, name?)` | yes | `/var/lib/apps/{app_id}/{name}` |
 | `confirm_discard(win, name)` | yes | The "Discard changes to …?" sheet before New or Open |
 | `create_storage_handle(app_id, state)` | yes, for use outside a window | The only way shell code and background players reach `app.{id}.*` (Solitaire's commands, Soundboard's player). Pass `{}` as `state`; `window()` on such a handle keeps nothing |
-| `set_app_context`, `create_window_handle` | no | The window frame builds the context with these |
-| `LINGER_MS` | no | `live_file`'s release delay |
+
+The barrel exports nothing else. The window frame builds the context with `set_app_context` (`contexts/app/context`) and `create_window_handle` (`contexts/app/window-handle`), and `live_file`'s release delay is `LINGER_MS` (`contexts/app/live-file.svelte`). All three are internal and imported from their own modules.
 
 ## Widgets and badges
 
@@ -153,7 +153,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`code`,
 | Area | Names |
 |------|-------|
 | Time | `format_time`, `FormatTimeOptions`, `Stopwatch` |
-| Daily puzzles | `daily_seed`, `day_key`, `parse_day`, `ParsedDay` |
+| Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`. `day_key` comes from `$lib/core/utils/date` |
 | Play tracking | `track_play`, `PlayTracker`, `use_plays`, `Plays`, `GameStats`, `PlaysSchema`, `EMPTY_PLAYS`, `PLAYS_PATH` |
 | Input | `Direction`, `key_direction`, `swipe_direction`, `grid_key_move`, `stroke_axis`, `stroke_end`, `stroke_cells`, `Axis` |
 
@@ -196,5 +196,5 @@ Users' data sits in these, so moving one is a 2.0 even when no code signature ch
 
 - The pin test checks names. A signature change (a parameter made required, a return type changed) passes it; review catches those.
 - `create_storage_handle(app_id, state)` is stable because two apps need storage outside a window, but its `state` parameter only matters to the window frame. A cleaner out-of-window entry point would be an additive change.
-- Several bundled apps import stable names through internal paths (`$lib/core/games/time`, `games/direction`, `contexts/app/json-file.svelte`, `live-file.svelte`, `storage-handle.svelte`). They work; a fork copying them should switch to the barrels.
+- Two kinds of bundled file still import the games kit through `$lib/core/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Promoting those two paths to stable, or splitting the kit's kernel-free part into its own module, is open.
 - The `$lib/core/api` barrel exports much more than this page promises (theme presets, widget and shortcut file parsers, association ranking, launcher search, `Kernel`, `detect_platform`). Listing isn't promising.

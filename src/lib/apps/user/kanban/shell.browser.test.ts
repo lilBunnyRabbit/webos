@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, expect, test, vi } from "vitest";
 import kernel from "$lib/core/api";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
-import { json_file } from "$lib/core/contexts/app/json-file.svelte";
+import { json_file } from "$lib/core/contexts/app";
 import { BOARDS_PATH, default_file, KanbanFileSchema } from "./data";
 import { LINGER_MS } from "$lib/core/contexts/app/live-file.svelte";
 import { add, archive, done, list, mv } from "./shell";

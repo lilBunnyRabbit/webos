@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { daily_seed, day_key, format_time, parse_day } from "./time";
+import { day_key } from "$lib/core/utils/date";
+import { daily_seed, format_time, parse_day } from "./time";
 
 describe("format_time", () => {
   it("formats minutes and seconds", () => {

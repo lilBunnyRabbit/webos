@@ -1,5 +1,5 @@
 import kernel, { type FilesService } from "$lib/core/api";
-import { create_storage_handle } from "$lib/core/contexts/app/storage-handle.svelte";
+import { create_storage_handle } from "$lib/core/contexts/app";
 import { SvelteMap } from "svelte/reactivity";
 import { DEFAULT_VOLUME, play_action, PlayAction, PlayMode, PlayModeSchema, VolumeSchema, type Pad } from "./board";
 import { APP_ID, read_sound } from "./store";

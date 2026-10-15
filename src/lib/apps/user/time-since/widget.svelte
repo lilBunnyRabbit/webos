@@ -2,7 +2,7 @@
   import kernel, { type DialogsService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
   import { IconButton } from "$lib/core/components/ui";
-  import { app_data_path, json_file } from "$lib/core/contexts/app/json-file.svelte";
+  import { app_data_path, json_file } from "$lib/core/contexts/app";
   import { cn, format_datetime } from "$lib/core/utils";
   import { ArrowCounterClockwise, Play } from "phosphor-svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";

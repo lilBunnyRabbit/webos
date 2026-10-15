@@ -3,7 +3,7 @@ import type { AppId, AppProps, WidgetSize, WidgetSizeLimits } from "./type";
 
 /** `.widget` files: an app's widget on the desktop, `w × h` grid cells (ADR-034). */
 export const WIDGET_EXTENSION = ".widget";
-export const WIDGET_MAX_SPAN = 8;
+const WIDGET_MAX_SPAN = 8;
 /** What `pin_widget` writes for an app that declares no `widget_size`. */
 export const WIDGET_FALLBACK_SIZE: WidgetSize = { w: 2, h: 2 };
 

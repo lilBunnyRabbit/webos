@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import { IconButton, Spinner } from "$lib/core/components/ui";
-  import { format_time } from "$lib/core/games/time";
+  import { format_time } from "$lib/core/games";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowSquareOut, Pause, Play } from "phosphor-svelte";

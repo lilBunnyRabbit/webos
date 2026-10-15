@@ -1,6 +1,6 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
-import { create_storage_handle } from "$lib/core/contexts/app/storage-handle.svelte";
+import { create_storage_handle } from "$lib/core/contexts/app";
 import { parse_day } from "$lib/core/games";
 import type { Draw } from "./klondike";
 import { draw_schema, empty_stats, stats_schema, stats_values } from "./save";
