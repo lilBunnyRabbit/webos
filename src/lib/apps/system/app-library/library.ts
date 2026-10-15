@@ -1,5 +1,7 @@
 import { APP_CATEGORY_LABELS, group_apps, search_apps } from "$lib/core/api/services/apps/search";
 import { AppCategory, type AppId, type AppManifest } from "$lib/core/api/services/apps/type";
+import { recency } from "$lib/core/api/services/version/history";
+import type { Release } from "$lib/core/api/services/version/type";
 
 export const LibraryCategory = { ALL: "all", ...AppCategory, SYSTEM: "system" } as const;
 export type LibraryCategory = (typeof LibraryCategory)[keyof typeof LibraryCategory];
@@ -21,11 +23,13 @@ export type LibraryFilter = (typeof LibraryFilter)[keyof typeof LibraryFilter];
 export const LibrarySort = {
   NAME: "name",
   CATEGORY: "category",
+  RECENT: "recent",
 } as const;
 export type LibrarySort = (typeof LibrarySort)[keyof typeof LibrarySort];
 
 export interface LibrarySection {
-  id: LibraryCategory;
+  /** A category, or a release version for the recent sort. */
+  id: string;
   label: string | null;
   apps: AppManifest[];
 }
@@ -69,11 +73,34 @@ export function category_counts(apps: Iterable<AppManifest>, query: Omit<Library
 }
 
 /** The search only narrows; the order always comes from `sort`, so tiles keep their order while typing. */
-export function library_sections(apps: Iterable<AppManifest>, { category, sort, ...rest }: LibraryQuery & { sort: LibrarySort }): LibrarySection[] {
+export function library_sections(
+  apps: Iterable<AppManifest>,
+  { category, sort, changelog = [], ...rest }: LibraryQuery & { sort: LibrarySort; changelog?: readonly Release[] }
+): LibrarySection[] {
   const list = matching(apps, rest).filter((manifest) => category === LibraryCategory.ALL || category_of(manifest) === category);
   if (list.length === 0) return [];
   if (sort === LibrarySort.CATEGORY) return group_apps(list);
+  if (sort === LibrarySort.RECENT) return recent_sections(list, changelog);
   return [{ id: LibraryCategory.ALL, label: null, apps: list.sort((a, b) => a.name.localeCompare(b.name)) }];
+}
+
+/** One section per release, newest first, holding the apps it last added or changed; apps it never mentions go last. */
+function recent_sections(list: AppManifest[], changelog: readonly Release[]): LibrarySection[] {
+  const groups = new Map<number, AppManifest[]>();
+  for (const manifest of list) {
+    const index = recency(changelog, manifest.id);
+    groups.set(index, [...(groups.get(index) ?? []), manifest]);
+  }
+  return [...groups]
+    .sort(([a], [b]) => a - b)
+    .map(([index, apps]) => {
+      const release = changelog[index];
+      return {
+        id: release?.version ?? "earlier",
+        label: release ? `v${release.version} · ${release.title}` : "Earlier",
+        apps: apps.sort((a, b) => a.name.localeCompare(b.name)),
+      };
+    });
 }
 
 export function app_commands(manifest: AppManifest): { id: string; description: string }[] {

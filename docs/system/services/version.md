@@ -1,10 +1,10 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-Knows which build is running and detects when a newer build has been deployed, by polling `{BASE_URL}version.json`. It can also apply the update: install the new service worker, then reload into the new build. It owns the release notes (`changelog.ts`), remembers which release this device last saw, and shows the full-screen introduction on first boot (ADR-026).
+Knows which build is running and detects when a newer build has been deployed, by polling `{BASE_URL}version.json`. It can also apply the update: install the new service worker, then reload into the new build. It owns the release notes (`changelog.ts`), remembers which release this device last saw, and shows the full-screen introduction on first boot (ADR-026). The release notes also record which apps each line is about and which release introduced each app; after an update, the apps it introduced are announced (ADR-038).
 
 ## Public API
 
@@ -18,6 +18,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
 | `changelog` | `readonly Release[]` | `CHANGELOG` from `changelog.ts`, newest first |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
+| `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to installed apps: what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
 | `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte`, then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits that import, so the introduction is up when the splash goes (ADR-036). Resolves when it closes. Doesn't write the seen marker |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
@@ -34,8 +35,9 @@ interface VersionInfo {
 
 ```ts
 const ChangeKind = { NEW: "new", IMPROVED: "improved", FIXED: "fixed" } as const;
-interface Change { kind: ChangeKind; text: string }
-interface Release { version: string; date: string /* YYYY-MM-DD */; title: string; changes: Change[] }
+interface Change { kind: ChangeKind; text: string; apps?: AppId[] }        // apps: whose history the line belongs to
+interface Release { version: string; date: string /* YYYY-MM-DD */; title: string; changes: Change[]; introduces?: AppId[] }
+interface AppIntroduction { app: AppId; release: Release }
 ```
 
 `buildTime` and `buildTimestamp` are camelCase on purpose. They're the deployed wire format ([CONVENTIONS → Naming](../../CONVENTIONS.md#naming)).
@@ -57,7 +59,7 @@ The bundle and `version.json` always carry the same `buildTimestamp`. Only a new
 
 ## State
 
-Five `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`) and private `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `poll_interval`, `destroyed`. Nothing derived.
+Six `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`, `announced`) and private `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `poll_interval`, `destroyed`. Nothing derived.
 
 ## Lifecycle
 
@@ -70,7 +72,7 @@ Five `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`,
 
 - Reads `/var/lib/version/state.json` and branches, see [Release notes and introduction](#release-notes-and-introduction). The introduction is requested without awaiting, like Restore.
 
-`destroy()` clears the interval, removes the listener, and stops a pending introduction from writing the marker.
+`destroy()` clears the interval, removes the listener, stops a pending introduction from writing the marker, and disposes the wait for the Restore answer.
 
 No check runs at boot. The first check happens on the first tab-visible event (`last_check` starts at `0`), on the 30-minute tick, or when the Settings app button is clicked.
 
@@ -78,6 +80,7 @@ No check runs at boot. The first check happens on the first tab-visible event (`
 
 - Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev. Its Install row reads `installer` directly (see [Install](#install)).
 - Settings › What's new: `changelog`, `unseen`, `info.version`.
+- App Library: `changelog` (History section, Recently added / updated sort through `app_history` and `recency`) and `unseen` (session-only New / Updated badges through `introduced_apps` and `updated_apps`).
 - Its own toasts (below).
 
 ## Release notes and introduction
@@ -91,6 +94,30 @@ At boot (`init()`), after reading the seen marker:
 | missing or invalid | `show_intro()`. When it closes, `seen = info.version` is written |
 | `seen >= info.version` | Nothing |
 | `seen < info.version` | `unseen` = releases in `(seen, info.version]`. `seen = info.version` is written at once. If `unseen` isn't empty: sticky toast "Updated to v{version}", message "3 new · 1 improved · 2 fixed" (only kinds present), action "What's new" → `apps.launch("settings", { section: "whats-new" })` |
+
+### App history and announcements (ADR-038)
+
+`history.ts` holds the pure helpers, exported from the barrel and unit-tested (`history.test.ts`, which also checks every id the changelog names is an app folder, every app is introduced at most once, and each introduced app has a tagged line in its release):
+
+| Function | Returns |
+|----------|---------|
+| `app_history(changelog, app)` | `{ added, updated, changes }`: the release that introduces it (`null` if none does), the newest later release with a tagged line, and every tagged line newest first |
+| `introduced_apps(releases)` | `AppIntroduction[]`, each app once, in the releases' order |
+| `updated_apps(releases)` | `Set<AppId>` tagged in those releases but not introduced by them |
+| `recency(changelog, app)` | Index of the newest release that introduces or tags it, `Infinity` for never |
+
+Tagging rules for `changelog.ts`: `apps` names the apps whose own UI or own commands the line is about. Shell-wide, launcher and desktop lines stay untagged, as do lines about a service (backups, tasks) rather than an app. A line about a retired app is tagged with its successor (Image Tools' history keeps the five image apps' lines; Text Viewer's lines belong to `text-editor`). `introduces` lists apps first shipped in that release; Style Guide and Example were never announced and have none.
+
+Announcement: when `announced` isn't empty, `init()` starts an `$effect.root` that waits for `session.status !== PENDING` (RouterService's pattern), so an app opened from it lands above the restored windows. It then imports `components/announcement/app-announcement.svelte` and calls `dialogs.show(AppAnnouncement, { apps })` once, dismissible (Esc, outside click, the phone's Back). Nothing is persisted: it shows once because the seen marker moves at boot. The "Updated to vX" toast still shows. First boot shows the introduction and no announcement.
+
+`AppAnnouncement` (`{ apps: { manifest, version }[] }`):
+
+| Apps | Layout |
+|------|--------|
+| 1–4 | A page per app: a primary glow, "New app" badge, the icon in a large tile, name, category · since v{version}, description, the manifest `preview` (lazy image) and `highlights` cards when present, then a recessed strip "Start menu › {category}" and `app launch {id}`. Footer: dots (when more than one; ←/→ also page), **Later** (quiet: next page, or close on the last) and **Open {name}** (primary, autofocused: launches, then next page or close). A close button sits top right |
+| 5 or more | One list page, "N new apps": a row per app with icon, name, version and description, and an Open button that turns into "Opened". Footer: Later, or Done once something was opened |
+
+A centred card on `background-lighter` (`rounded-2xl`, `w-[36rem]`, capped at the viewport height with its body scrolling), container queries inside, so the phone gets the same component in one column. The Style Guide (Feedback) renders it in place with `inline` (no autofocus) and shows it as a dialog.
 
 When `check()` finds a newer build: one sticky toast per build (`notified_build`), "A new version is ready", "v{x}. WebOS reloads and offers your open windows back.", action "Update and reload" → `apply_update()`. Skipped in dev. The release notes stay hidden until after the reload, since the old bundle can't know them.
 
@@ -157,7 +184,7 @@ If the browser already installed the new worker before the click, `installing` a
 
 ## Shell
 
-Contributes `version`, `changelog`, `install` and the `release` value type (`version/shell.ts`). `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
+Contributes `version`, `changelog`, `install` and the `release` and `new-app` value types (`version/shell.ts`). `changelog --apps` yields one `new-app` row per introduced, installed app (id, name, added, date), newest release first; clicking a row launches the app. `new-app` is its own type because `app`'s columns (id, name, category) would hide when it came; the command's `yields` stays `release`, so `where` after `--apps` completes release columns. `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
 
 ## Known gaps
 

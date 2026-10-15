@@ -60,7 +60,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `settings` | `SettingsService` | `files` |
 | `windows` | `WindowsService` | none |
 | `files` | `FilesService` | none |
-| `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps` |
+| `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps`, `session` |
 | `notifications` | `NotificationsService` | none |
 | `dialogs` | `DialogsService` | `windows` |
 | `apps` | `AppsService` | `windows`, `notifications`, `files`, `settings`, `dialogs` |
@@ -87,7 +87,7 @@ windows, dialogs, shell ──────────────────�
 notifications ──────────────────────────────────────► tasks
 files, dialogs, notifications, windows ─────────────► backup
 windows, apps, session, clipboard, notifications ───► router
-files, notifications, dialogs, apps ────────────────► version
+files, notifications, dialogs, apps, session ───────► version
 ```
 
 ### Init order
@@ -121,7 +121,7 @@ Which services implement which hooks today:
 | Service | `init` | `destroy` |
 |---------|--------|-----------|
 | settings | read `/etc/settings.json` (import + remove legacy `webos.settings` / v0 `settings`), start token + save effects | dispose effects |
-| version | start 30-min poll, `visibilitychange` listener; read `/var/lib/version/state.json`, then request the introduction (first boot) or toast "Updated to vX" ([version](services/version.md#release-notes-and-introduction)) | clear both |
+| version | start 30-min poll, `visibilitychange` listener; read `/var/lib/version/state.json`, then request the introduction (first boot) or toast "Updated to vX" and, once Restore is answered, announce the apps those releases introduce ([version](services/version.md#release-notes-and-introduction)) | clear both |
 | notifications | none | clear toast timers |
 | dialogs | register the close prompt with windows (save-changes sheet, ADR-029), start the effect that resolves a closed window's sheets ([dialogs](services/dialogs.md)) | dispose both, resolve every open entry `null` |
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |

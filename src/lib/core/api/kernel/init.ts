@@ -117,6 +117,6 @@ export async function register_default_services(kernel: Kernel) {
   // Registered last so it initialises after session: its introduction stacks above the Restore dialog (ADR-026).
   kernel.register("version", {
     instance: VersionService,
-    dependencies: ["files", "notifications", "dialogs", "apps"],
+    dependencies: ["files", "notifications", "dialogs", "apps", "session"],
   });
 }

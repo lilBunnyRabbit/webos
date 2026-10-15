@@ -2,6 +2,8 @@
 **Date:** 2026-10-11
 **Status:** Implemented
 
+> **Revision 2026-10-16: app tags and announcements** ([ADR-038](038-app-announcements.md)). `Change` gains `apps?: AppId[]` and `Release` gains `introduces?: AppId[]`. After an update, the apps the unseen releases introduce are announced in a dialog once Restore is answered, so VersionService now also depends on `session`. The seen marker is unchanged.
+
 ## Context
 ADR-004 planned a `CHANGELOG.md` rendered in Settings and an "update available" toast. Neither was built. `package.json` stayed at `0.0.0`, so there was no notion of a release. There was also no record of what a user has already seen. The owner wants to hear about changes, see every release in Settings (including history), and get an introduction on first use. Discussion: [2026-10-11 release notes](../brainstorm/2026-10-11_release-notes.md).
 

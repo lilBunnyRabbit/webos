@@ -1,13 +1,25 @@
-import type { AppsService, DialogsService, FilesService, Kernel, NotificationId, NotificationsService } from "$lib/core/api";
+import type {
+  AppsService,
+  DialogsService,
+  FilesService,
+  Kernel,
+  NotificationId,
+  NotificationsService,
+  SessionService,
+} from "$lib/core/api";
+import { untrack } from "svelte";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
 import { LatestWriter } from "../files/latest-writer";
+import { SessionStatus } from "../session/type";
 import { CHANGELOG } from "./changelog";
+import { introduced_apps } from "./history";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
 import { scope_caches, strip_update_param, with_update_param } from "./update";
 import {
   ChangeKind,
   UpdateStage,
+  type AppIntroduction,
   type Release,
   type VersionInfo,
   type VersionService as IVersionService,
@@ -24,12 +36,13 @@ const ACTIVATE_TIMEOUT = 8000;
 const STAGE_BEAT = 250;
 
 const intro_dialog = () => import("$lib/core/components/intro/intro-dialog.svelte");
+const announcement_dialog = () => import("$lib/core/components/announcement/app-announcement.svelte");
 
 export class VersionService implements IVersionService {
   name = "VersionService";
   description = "Build info, update detection, release notes and the introduction";
   inspector = () => import("./inspector.svelte");
-  shell = () => version_shell(this);
+  shell = () => version_shell(this, () => this.apps_service);
 
   public info = $state<VersionInfo>(__VERSION_INFO__);
   public update_available = $state<VersionInfo | null>(null);
@@ -38,17 +51,20 @@ export class VersionService implements IVersionService {
 
   public readonly changelog = CHANGELOG;
   public unseen = $state<Release[]>([]);
+  public announced = $state<AppIntroduction[]>([]);
 
   private last_check = 0;
   private notified_build = 0;
   private update_toast: NotificationId | null = null;
   private poll_interval?: ReturnType<typeof setInterval>;
   private destroyed = false;
+  private dispose_announcement?: () => void;
 
   private files_service!: FilesService;
   private notifications_service!: NotificationsService;
   private dialogs_service!: DialogsService;
   private apps_service!: AppsService;
+  private session_service!: SessionService;
 
   private writer = new LatestWriter(() => this.files_service, VERSION_STATE_PATH, "version state");
 
@@ -70,6 +86,7 @@ export class VersionService implements IVersionService {
     this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
     this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
     this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
+    this.session_service = $derived(this.kernel.service<SessionService>("session"));
   }
 
   async init() {
@@ -101,10 +118,14 @@ export class VersionService implements IVersionService {
     );
     this.writer.write(serialize_seen(this.info.version));
     if (this.unseen.length > 0) this.notify_updated();
+
+    this.announced = introduced_apps(this.unseen).filter(({ app }) => this.apps_service.get(app));
+    if (this.announced.length > 0) this.announce_after_restore();
   }
 
   destroy() {
     this.destroyed = true;
+    this.dispose_announcement?.();
     clearInterval(this.poll_interval);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
     window.removeEventListener("vite:preloadError", this.on_preload_error);
@@ -182,6 +203,28 @@ export class VersionService implements IVersionService {
 
   async show_intro(): Promise<void> {
     await this.dialogs_service.show((await intro_dialog()).default, {}, { dismissible: false });
+  }
+
+  // Like RouterService's links: after the Restore answer, so an app opened from it lands above the restored windows.
+  private announce_after_restore(): void {
+    let shown = false;
+    this.dispose_announcement = $effect.root(() => {
+      $effect(() => {
+        if (shown || this.session_service.status === SessionStatus.PENDING) return;
+        shown = true;
+        untrack(() => this.show_announcement());
+      });
+    });
+  }
+
+  private async show_announcement(): Promise<void> {
+    const apps = this.announced.flatMap(({ app, release }) => {
+      const manifest = this.apps_service.get(app);
+      return manifest ? [{ manifest, version: release.version }] : [];
+    });
+    const component = (await announcement_dialog()).default;
+    if (this.destroyed || apps.length === 0) return;
+    await this.dialogs_service.show(component, { apps });
   }
 
   private notify_updated(): void {

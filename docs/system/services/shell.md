@@ -149,7 +149,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 | settings | `theme get`, `theme list`, `theme set` | `theme` | `theme` |
 | notifications | `notify`, `notifications` | | `notification` |
 | clipboard | `copy`, `paste` | | |
-| version | `version`, `changelog [-c]`, `install` | | `release` |
+| version | `version`, `changelog [-c] [--apps]`, `install` | | `release`, `new-app` (click launches) |
 | router | `link [id] [-c]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |

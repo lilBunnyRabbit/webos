@@ -105,7 +105,8 @@ The desktop and File Explorer select the same way (`$lib/core/utils/selection.ts
 
 - **Menus at the cursor** (Open with): `rounded-xl bg-background-lighter p-1.5 shadow-popover`, an overline title, 36px items with icon tiles, on the shared scrim.
 - **Questions** (Restore session): centered, `rounded-2xl p-5`, a tinted icon tile, a title phrased as a question, one line of context, then actions right-aligned: quiet dismiss, primary confirm (autofocused). The OS behind is dimmed and slightly blurred.
-- Both enter with `animate-pop-in`. Menus dismiss with Esc or an outside click (`closedby="any"`). Questions are shown with `dismissible: false` (`closedby="none"`): only their buttons close them, so a stray click can't throw away a session.
+- **Announcements** (new apps, ADR-038): a wider centred card (`w-[36rem]`, `rounded-2xl`, `background-lighter`, capped at the viewport height with only the body scrolling). The top carries a soft `primary` glow fading to transparent (one brand colour into nothing, never into another brand colour), a primary "New app" badge, the app icon in a large raised tile in `primary`, the name at `text-xl`, one muted meta line and the description. Feature cards follow the introduction's point cards (tinted icon tile, title, one sentence), then a recessed strip saying where to find the app. The footer sits on `background-light` behind a hairline: page dots left, quiet Later and the primary Open right (autofocused). Unlike questions it is dismissible: nothing is lost by closing it. Past four items it becomes one list with an Open per row.
+- All of them enter with `animate-pop-in`. Menus dismiss with Esc or an outside click (`closedby="any"`). Questions are shown with `dismissible: false` (`closedby="none"`): only their buttons close them, so a stray click can't throw away a session.
 - Floating layers sit on `background-lighter`, one step above window chrome, so they read as on top even over a window.
 
 ## Context menus

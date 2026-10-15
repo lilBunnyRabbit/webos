@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import type {
   AppConfig,
   AppDefinition,
+  AppHighlight,
   AppId,
   AppManifest,
   AppProps,
@@ -258,11 +259,13 @@ const manifest_fields: Members<
   | "default_widget"
   | "defaults"
   | "description"
+  | "highlights"
   | "icon"
   | "id"
   | "keywords"
   | "license"
   | "name"
+  | "preview"
   | "props"
   | "repository"
   | "restore"
@@ -298,6 +301,7 @@ const window_handle_members: Members<
 
 const storage_handle_members: Members<StorageHandle, "file" | "get" | "persisted" | "remove" | "set" | "window"> = true;
 const app_context_members: Members<AppContext, "app_id" | "storage" | "window" | "window_id"> = true;
+const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -313,6 +317,7 @@ const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "rend
 type StableTypes = [
   AppConfig,
   AppDefinition,
+  AppHighlight,
   AppId,
   AppManifest,
   AppProps,

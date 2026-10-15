@@ -2,11 +2,19 @@ import { z } from "zod";
 import { installer } from "$lib/core/utils/install.svelte";
 import { define_command } from "../shell/define";
 import type { ShellContribution, Value } from "../shell/type";
+import type { AppsService } from "../apps/type";
+import { introduced_apps } from "./history";
 import type { VersionService } from "./type";
 
-export function version_shell(version: VersionService): ShellContribution {
+export function version_shell(version: VersionService, apps: () => AppsService): ShellContribution {
   return {
     values: {
+      // Its own type rather than `app`, whose columns (id, name, category) would hide when it came.
+      "new-app": {
+        columns: ["id", "name", "added", "date"],
+        text: (app) => `${String(app.id).padEnd(20)} ${String(app.name).padEnd(20)} v${String(app.added).padEnd(8)} ${String(app.date)}`,
+        open: (app) => void apps().launch(String(app.id)),
+      },
       release: {
         columns: ["version", "date", "title"],
         text: (release) => `${String(release.version).padEnd(8)} ${String(release.date)}  ${String(release.title)}`,
@@ -21,10 +29,20 @@ export function version_shell(version: VersionService): ShellContribution {
       define_command({
         id: "changelog",
         description: "Releases, newest first",
-        args: z.object({ changes: z.boolean().default(false).describe("Each change instead of each release") }),
+        args: z.object({
+          changes: z.boolean().default(false).describe("Each change instead of each release"),
+          apps: z.boolean().default(false).describe("Each app a release introduced, newest first"),
+        }),
         short: { changes: "c" },
         yields: "release",
         *run({ args }): Generator<Value, void> {
+          if (args.apps) {
+            for (const { app, release } of introduced_apps(version.changelog)) {
+              const manifest = apps().get(app);
+              if (manifest) yield { $type: "new-app", id: app, name: manifest.name, added: release.version, date: release.date };
+            }
+            return;
+          }
           for (const release of version.changelog) {
             if (!args.changes) yield { $type: "release", version: release.version, date: release.date, title: release.title };
             else for (const change of release.changes) yield { version: release.version, kind: change.kind, text: change.text };

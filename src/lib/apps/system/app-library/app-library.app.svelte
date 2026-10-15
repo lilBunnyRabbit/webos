@@ -1,8 +1,16 @@
 <script lang="ts">
-  import kernel, { type AppManifest, type AppsService, type SessionService, type WindowsService } from "$lib/core/api";
+  import kernel, {
+    introduced_apps,
+    updated_apps,
+    type AppManifest,
+    type AppsService,
+    type SessionService,
+    type VersionService,
+    type WindowsService,
+  } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
-  import { Button, EmptyState, IconButton, Input, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     Briefcase as BriefcaseIcon,
@@ -57,6 +65,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const session = $derived(kernel.service<SessionService>("session"));
+  const version = $derived(kernel.service<VersionService>("version"));
 
   const category = storage.window<LibraryCategory>("category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
   const filters = storage.window<LibraryFilter[]>("filters", [], z.array(z.enum(Object.values(LibraryFilter))));
@@ -80,7 +89,12 @@
 
   const filter_query = $derived({ query, filters: filters.value, used });
   const counts = $derived(category_counts(manifests, filter_query));
-  const sections = $derived(library_sections(manifests, { ...filter_query, category: category.value, sort: sort.value }));
+  const sections = $derived(
+    library_sections(manifests, { ...filter_query, category: category.value, sort: sort.value, changelog: version.changelog })
+  );
+  // Only for this session, like What's new's "New to you": nothing records which apps were looked at.
+  const fresh = $derived(new Set(introduced_apps(version.unseen).map(({ app }) => app)));
+  const updated = $derived(updated_apps(version.unseen));
   const shown = $derived(sections.reduce((sum, section) => sum + section.apps.length, 0));
   const first = $derived(sections[0]?.apps[0]);
 
@@ -115,6 +129,14 @@
   </span>
 {/snippet}
 
+{#snippet freshness(manifest: AppManifest)}
+  {#if fresh.has(manifest.id)}
+    <Badge tone="primary">New</Badge>
+  {:else if updated.has(manifest.id)}
+    <Badge tone="info">Updated</Badge>
+  {/if}
+{/snippet}
+
 {#snippet tiles(list: AppManifest[])}
   {#if view.value === ViewMode.GRID}
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
@@ -132,6 +154,7 @@
           >
             {@render icon_tile(manifest, "md")}
             <span class="line-clamp-2 max-w-full text-center text-2xs leading-tight font-medium pointer-coarse:text-xs">{manifest.name}</span>
+            {@render freshness(manifest)}
           </button>
         </li>
       {/each}
@@ -158,7 +181,10 @@
             ondblclick={() => apps.launch(manifest.id)}
           >
             {@render icon_tile(manifest, "sm")}
-            <span class="w-36 shrink-0 truncate text-ui font-medium @lg:w-44">{manifest.name}</span>
+            <span class="flex w-36 shrink-0 items-center gap-1.5 @lg:w-44">
+              <span class="truncate text-ui font-medium">{manifest.name}</span>
+              {@render freshness(manifest)}
+            </span>
             <span class="hidden min-w-0 flex-1 truncate text-ui text-foreground/65 @lg:block">{manifest.description ?? ""}</span>
             <span class="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/65">
               {#each FILTERS.slice(0, 3) as filter (filter.id)}
@@ -204,6 +230,7 @@
           options={[
             { value: LibrarySort.NAME, label: "A–Z" },
             { value: LibrarySort.CATEGORY, label: "By category" },
+            { value: LibrarySort.RECENT, label: "Recently added / updated" },
           ]}
         />
         <div role="group" aria-label="View" class="flex">
@@ -274,7 +301,11 @@
     >
       {#if selected}
         {#key selected.id}
-          <AppDetails manifest={selected} onback={() => (selected_id.value = null)} />
+          <AppDetails
+            manifest={selected}
+            freshness={fresh.has(selected.id) ? "new" : updated.has(selected.id) ? "updated" : null}
+            onback={() => (selected_id.value = null)}
+          />
         {/key}
       {:else}
         <EmptyState icon={SquaresFourIcon} title="Pick an app" description="Its details, the files it opens and its commands show here." />

@@ -23,13 +23,15 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 |-------|------|----------|--------------|
 | `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
 | `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
-| `version` | `string` | yes | Shown in the App Library details (`v{version}`) and the apps inspector's registry table |
+| `version` | `string` | yes | The apps inspector's registry table, and the App Library details when the changelog says nothing about the app (it shows "Added v… · Updated v…" from the release notes otherwise, ADR-038) |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. Use a `phosphor-svelte` icon |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
 | `system` | `boolean` | set by discovery | `true` for apps in `src/lib/apps/system/`. Puts the app in the launcher's System section; the apps inspector counts it. Not written in `define_app` |
 | `description` | `string` | no | Launcher search (lowest rank, with the category label) |
 | `keywords` | `string[]` | no | Launcher search, ranked with `id` below any name match |
+| `highlights` | `AppHighlight[]` (`{ icon: Component; title: string; text: string }`) | no | Three or four cards on what the app does: the new-app announcement and the App Library's "What it does" (ADR-038). Evaluated at boot like the rest of the manifest, so keep the text short. Without them the announcement shows the description only |
+| `preview` | `() => Promise<{ default: string }>` | no | A picture of the app for the announcement, as a lazy URL import (`() => import("./preview.webp?url")`), so it never weighs on boot |
 | `author` | `string` | no | Stored only |
 | `license` | `string` | no | Stored only |
 | `repository` | `string` | no | Stored only |

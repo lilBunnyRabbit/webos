@@ -1,5 +1,7 @@
 <script lang="ts">
+  import kernel, { type AppManifest, type AppsService, type DialogsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import AppAnnouncement, { type AnnouncedApp } from "$lib/core/components/announcement/app-announcement.svelte";
   import {
     Badge,
     BoardOverlay,
@@ -24,6 +26,10 @@
   } from "$lib/core/components/ui";
   import {
     Bell as BellIcon,
+    PaintBrush as PaintBrushIcon,
+    FloppyDisk as FloppyDiskIcon,
+    PaintBucket as PaintBucketIcon,
+    Shapes as ShapesIcon,
     CursorClick as CursorClickIcon,
     Eraser as EraserIcon,
     Folder as FolderIcon,
@@ -82,6 +88,33 @@
   let large = $state(true);
   let tool = $state<"pencil" | "eraser">("pencil");
   let speed = $state<"slow" | "normal" | "fast">("normal");
+
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+
+  // Paint with made-up highlights, so the cards and the "Start menu" strip both show.
+  const SAMPLE_HIGHLIGHTS = [
+    { icon: PaintBrushIcon, title: "Brushes and pencil", text: "Draw freehand at any size, with smoothing for steady lines." },
+    { icon: PaintBucketIcon, title: "Fill", text: "Flood an area with the current colour in one click." },
+    { icon: ShapesIcon, title: "Shapes and text", text: "Lines, rectangles, ellipses and text on their own layer until placed." },
+    { icon: FloppyDiskIcon, title: "Your files", text: "Opens and saves PNG, JPEG and WebP in your folders." },
+  ];
+  const sample_apps = $derived.by((): AnnouncedApp[] => {
+    const pick = (id: string) => apps.get(id);
+    const paint = pick("paint");
+    const list = [
+      paint && { ...paint, highlights: SAMPLE_HIGHLIGHTS },
+      pick("maze"),
+      pick("calculator"),
+    ].filter((manifest): manifest is AppManifest => Boolean(manifest));
+    return list.map((manifest) => ({ manifest, version: "1.5.0" }));
+  });
+  const many_apps = $derived(
+    ["paint", "maze", "snake", "sudoku", "kanban", "clock"].flatMap((id) => {
+      const manifest = apps.get(id);
+      return manifest ? [{ manifest, version: "0.34.0" }] : [];
+    })
+  );
 </script>
 
 {#snippet swatch(token: string)}
@@ -322,6 +355,18 @@
               <Button size="sm" variant="quiet">Undo</Button>
               <Button size="sm" variant="primary">New game</Button>
             </BoardOverlay>
+          </div>
+        </Section>
+        <Section
+          title="App announcement"
+          description="Shown once after an update that adds apps: a page per app with Later and Open, or one list past four. Highlights and the preview come from the manifest."
+        >
+          <div class="flex flex-col items-center gap-3">
+            <AppAnnouncement apps={sample_apps} resolve={() => {}} inline class="max-w-full shadow-raised" />
+            <div class="flex flex-wrap justify-center gap-2">
+              <Button size="sm" onclick={() => dialogs.show(AppAnnouncement, { apps: sample_apps })}>Show as dialog</Button>
+              <Button size="sm" onclick={() => dialogs.show(AppAnnouncement, { apps: many_apps })}>Show with {many_apps.length} apps</Button>
+            </div>
           </div>
         </Section>
         <Section title="Empty state" description="Icon tile, one line of title, one of help, optional action.">

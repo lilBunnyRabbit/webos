@@ -13,6 +13,8 @@
   <InspectorStat label="Version" value="v{service.info.version}" />
   <InspectorStat label="Commit" value={service.info.commit} />
   <InspectorStat label="Status" value={status} />
+  <InspectorStat label="Unseen" value={service.unseen.length} />
+  <InspectorStat label="New apps" value={service.announced.length} />
 </InspectorStats>
 
 {#if detailed}
@@ -25,4 +27,14 @@
       </tr>
     {/each}
   </InspectorTable>
+  {#if service.announced.length > 0}
+    <InspectorTable columns={["New app", "Since"]}>
+      {#each service.announced as { app, release } (app)}
+        <tr>
+          <td>{app}</td>
+          <td>v{release.version}</td>
+        </tr>
+      {/each}
+    </InspectorTable>
+  {/if}
 {/if}

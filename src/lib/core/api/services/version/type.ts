@@ -1,4 +1,5 @@
 import type { IService } from "../../type";
+import type { AppId } from "../apps/type";
 
 export interface VersionInfo {
   version: string;
@@ -28,6 +29,8 @@ export interface Change {
   kind: ChangeKind;
   /** User-facing wording, one sentence. */
   text: string;
+  /** The apps this line is about; it shows in each one's history in the App Library (ADR-038). */
+  apps?: AppId[];
 }
 
 /** One entry of the hand-written changelog (ADR-026). */
@@ -38,6 +41,14 @@ export interface Release {
   date: string;
   title: string;
   changes: Change[];
+  /** Apps that first shipped in this release. A device updating past it gets the app announcement (ADR-038). */
+  introduces?: AppId[];
+}
+
+/** An app and the release that first shipped it. */
+export interface AppIntroduction {
+  app: AppId;
+  release: Release;
 }
 
 export interface VersionService extends IService {
@@ -58,6 +69,12 @@ export interface VersionService extends IService {
 
   /** Releases newer than what this device had seen at boot. Kept for the session after they're marked seen. */
   readonly unseen: Release[];
+
+  /**
+   * Installed apps that `unseen` introduces: what the new-app announcement shows once the Restore question is answered
+   * (ADR-038). Kept for the session, like `unseen`.
+   */
+  readonly announced: AppIntroduction[];
 
   /** Fetch remote version.json and compare buildTimestamp. */
   check(): Promise<void>;

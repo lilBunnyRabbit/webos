@@ -44,6 +44,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 |-------|--------|-------|
 | `id`, `name`, `version`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
 | `description`, `keywords` | yes | Launcher search |
+| `highlights`, `preview` | yes (1.5) | The new-app announcement and the App Library details. `highlights: AppHighlight[]` (`{ icon, title, text }`), `preview: () => import("./preview.webp?url")` (ADR-038) |
 | `author`, `license`, `repository` | yes | Stored only today |
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
@@ -56,7 +57,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 
 `define_app` throws at boot on an invalid `widget_size`. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
-Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
+Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppHighlight`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
 
 ## Props and file associations
 

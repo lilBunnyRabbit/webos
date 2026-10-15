@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { AppCategory, type AppManifest } from "$lib/core/api/services/apps/type";
 import type { Command } from "$lib/core/api/services/shell/type";
+import { ChangeKind, type Release } from "$lib/core/api/services/version/type";
 import { app_commands, app_file_types, category_counts, category_of, has_filter, library_sections, LibraryCategory, LibraryFilter, LibrarySort } from "./library";
 
 const app = (name: string, extra: Partial<AppManifest> = {}) =>
@@ -43,6 +44,21 @@ describe("has_filter", () => {
 });
 
 describe("library_sections", () => {
+  test("recent sort: one section per release by its newest mention, unmentioned apps last", () => {
+    const changelog: Release[] = [
+      { version: "0.3.0", date: "2026-01-03", title: "Fixes", changes: [{ kind: ChangeKind.FIXED, apps: ["snake"], text: "x" }] },
+      { version: "0.2.0", date: "2026-01-02", title: "Games", introduces: ["sudoku", "snake"], changes: [{ kind: ChangeKind.NEW, apps: ["sudoku", "snake"], text: "x" }] },
+      { version: "0.1.0", date: "2026-01-01", title: "Tools", introduces: ["calculator"], changes: [{ kind: ChangeKind.NEW, apps: ["calculator"], text: "x" }] },
+    ];
+    const sections = library_sections(APPS, { ...BASE, sort: LibrarySort.RECENT, changelog });
+    expect(sections.map((section) => [section.label, section.apps.map((manifest) => manifest.id)])).toEqual([
+      ["v0.3.0 · Fixes", ["snake"]],
+      ["v0.2.0 · Games", ["sudoku"]],
+      ["v0.1.0 · Tools", ["calculator"]],
+      ["Earlier", ["diff", "quick-notes", "text-editor"]],
+    ]);
+  });
+
   test("name sort is one untitled section, A–Z", () => {
     const sections = library_sections(APPS, BASE);
     expect(sections).toHaveLength(1);
