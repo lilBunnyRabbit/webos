@@ -12,6 +12,7 @@
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
+  import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
   import { ArrowLeft as ArrowLeftIcon, Play as PlayIcon, PushPin as PushPinIcon, Sparkle as SparkleIcon, Sticker as StickerIcon } from "phosphor-svelte";
   import { format_date } from "$lib/core/utils";
@@ -107,6 +108,7 @@
           <span class="font-mono text-2xs text-foreground/65">v{manifest.version}</span>
         {/if}
       </p>
+      <AppByline {manifest} class="mt-0.5" />
     </div>
   </div>
 

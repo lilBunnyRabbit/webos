@@ -143,7 +143,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 |---------|----------|------------|-------------|
 | shell | `help clear history echo sudo where sort select first last count get kernel services` | | `command`, `history`, `service` |
 | files | `ls cd pwd cat cp mv rm mkdir touch du df` | `path` | `file`, `storage` |
-| apps | `app list`, `app info`, `app launch`, `open`, plus every app's `shell` (ADR-034) | `app` | `app`, `file.open` |
+| apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `open`, plus every app's `shell` (ADR-034) | `app` | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | session | `win reopen` | | |
 | settings | `theme get`, `theme list`, `theme set` | `theme` | `theme` |

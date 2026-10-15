@@ -38,7 +38,14 @@ The manifest `version` field is decorative: 49 apps say `1.0.0`. Hopsprite, a pi
 
    Not in Settings.
 7. **Shell.** Only `changelog --apps`. Not `--app <id>`, not `app announce`.
-8. **Records.** ADR-038, the ADR-026 revision note, the roadmap, a 1.5.0 release (master shipped 1.4.0 meanwhile).
+8. **App author highlights** (added later the same session, roadmap P1). Optional manifest `authors?: AppAuthor[]` (`{ name, github?, url? }`); omitted means `OWNER` (lilBunnyRabbit, GitHub `lilBunnyRabbit`, from the repo URL). A pure `app_authors()`. Credited in four places:
+   - the App Library details ("By …", linking out in a new tab)
+   - the announcement byline
+   - Settings › About › Credits (each author with their apps, owner first)
+   - `app info` (`author`) and `app list` (an `authors` column)
+
+   The old `author?: string` isn't read. Only Example sets it ("John Doe"), and showing that as a real credit would be wrong.
+9. **Records.** ADR-038, the ADR-026 revision note, the roadmap, a 1.5.0 release (master shipped 1.4.0 meanwhile).
 
 ## Implementation notes
 

@@ -32,7 +32,8 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `keywords` | `string[]` | no | Launcher search, ranked with `id` below any name match |
 | `highlights` | `AppHighlight[]` (`{ icon: Component; title: string; text: string }`) | no | Three or four cards on what the app does: the new-app announcement and the App Library's "What it does" (ADR-038). Evaluated at boot like the rest of the manifest, so keep the text short. Without them the announcement shows the description only |
 | `preview` | `() => Promise<{ default: string }>` | no | A picture of the app for the announcement, as a lazy URL import (`() => import("./preview.webp?url")`), so it never weighs on boot |
-| `author` | `string` | no | Stored only |
+| `author` | `string` | no | Stored only. Older than `authors`; nothing reads it |
+| `authors` | `AppAuthor[]` (`{ name: string; github?: string; url?: string }`) | no | Who made the app. Omitted or empty means the owner, `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`. `app_authors(manifest)` in `services/apps/authors.ts` resolves it; the credit links to `github.com/{github}`, else `url`. Shown as "By …" in the App Library details and the new-app announcement, in Settings › About › Credits, and as `author` in `app info` and an `authors` column in `app list` |
 | `license` | `string` | no | Stored only |
 | `repository` | `string` | no | Stored only |
 | `defaults` | `WindowOptions` | no | Initial window state, below |

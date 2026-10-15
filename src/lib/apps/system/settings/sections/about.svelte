@@ -1,5 +1,15 @@
 <script lang="ts">
-  import kernel, { BRAND_DARK, TaskbarPosition, WallpaperPreset, type SettingsService, type VersionService } from "$lib/core/api";
+  import kernel, {
+    author_link,
+    BRAND_DARK,
+    credits,
+    OWNER,
+    TaskbarPosition,
+    WallpaperPreset,
+    type AppsService,
+    type SettingsService,
+    type VersionService,
+  } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
   import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
@@ -10,12 +20,19 @@
     ArrowSquareOut as ArrowSquareOutIcon,
     CheckCircle as CheckCircleIcon,
     DownloadSimple as DownloadSimpleIcon,
+    GithubLogo as GithubLogoIcon,
+    Link as LinkIcon,
     Play as PlayIcon,
     Sparkle as SparkleIcon,
   } from "phosphor-svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const version = $derived(kernel.service<VersionService>("version"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+
+  const CREDIT_PREVIEW = 12;
+  const credit_list = $derived(credits([...apps.list()].map(([, manifest]) => manifest)));
+  let expanded = $state<string[]>([]);
 
   const DEV = import.meta.env.DEV;
   const INSTALL_WHY = "Its own window, works offline, and the browser is far less likely to clear its storage.";
@@ -99,6 +116,59 @@
         <PlayIcon /> Show again
       </Button>
     </SettingRow>
+  </Section>
+
+  <Section title="Credits" description="Who made the apps in WebOS. An app without a credit of its own is the owner's.">
+    {#each credit_list as { author, apps: made } (author.name)}
+      {@const href = author_link(author)}
+      {@const open = expanded.includes(author.name)}
+      {@const shown = open ? made : made.slice(0, CREDIT_PREVIEW)}
+      <div class="flex flex-col gap-2.5 px-4 py-3">
+        <div class="flex items-center gap-3">
+          <span aria-hidden="true" class="grid size-9 shrink-0 place-items-center rounded-full bg-primary/12 text-sm font-semibold text-primary">
+            {author.name.slice(0, 1).toUpperCase()}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="flex items-center gap-2 text-ui font-semibold">
+              <span class="truncate">{author.name}</span>
+              {#if author.github?.toLowerCase() === OWNER.github?.toLowerCase()}<Badge>Owner</Badge>{/if}
+            </p>
+            <p class="text-2xs text-foreground/65">{made.length} {made.length === 1 ? "app" : "apps"}</p>
+          </div>
+          {#if href}
+            <a
+              {href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-ui text-foreground/80 hover:bg-foreground/8 hover:text-foreground"
+            >
+              {#if author.github}<GithubLogoIcon class="size-4" weight="duotone" /> <span class="font-mono text-2xs">{author.github}</span>
+              {:else}<LinkIcon class="size-4" /> Website{/if}
+            </a>
+          {/if}
+        </div>
+        <ul class="flex flex-wrap gap-1 pl-12">
+          {#each shown as manifest (manifest.id)}
+            <li class="flex h-6 items-center gap-1.5 rounded-md bg-foreground/6 px-2 text-2xs text-foreground/80">
+              <manifest.icon class="size-3.5 text-foreground/65" weight="duotone" />
+              {manifest.name}
+            </li>
+          {/each}
+          {#if made.length > CREDIT_PREVIEW}
+            <li>
+              <Button
+                size="sm"
+                variant="quiet"
+                class="h-6 px-2 text-2xs"
+                onclick={() => (expanded = open ? expanded.filter((name) => name !== author.name) : [...expanded, author.name])}
+              >
+                {open ? "Show fewer" : `+${made.length - CREDIT_PREVIEW} more`}
+              </Button>
+            </li>
+          {/if}
+        </ul>
+      </div>
+    {/each}
   </Section>
 
   <Section title="Reset">

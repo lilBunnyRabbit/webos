@@ -52,6 +52,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   system: boolean;
   keywords?: string[];
   author?: string;
+  /** Who made the app, credited in the App Library, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
+  authors?: AppAuthor[];
   license?: string;
   repository?: string;
   defaults?: WindowOptions;
@@ -89,6 +91,14 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   preview?: () => Promise<{ default: string }>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
+}
+
+export interface AppAuthor {
+  name: string;
+  /** GitHub handle; the credit links to the profile. */
+  github?: string;
+  /** Used when there's no `github`. */
+  url?: string;
 }
 
 export interface AppHighlight {

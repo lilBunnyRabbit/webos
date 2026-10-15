@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import type {
   AppConfig,
+  AppAuthor,
   AppDefinition,
   AppHighlight,
   AppId,
@@ -253,6 +254,7 @@ const manifest_fields: Members<
   AppConfig,
   | "associations"
   | "author"
+  | "authors"
   | "badge"
   | "category"
   | "component"
@@ -301,6 +303,7 @@ const window_handle_members: Members<
 
 const storage_handle_members: Members<StorageHandle, "file" | "get" | "persisted" | "remove" | "set" | "window"> = true;
 const app_context_members: Members<AppContext, "app_id" | "storage" | "window" | "window_id"> = true;
+const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
@@ -316,6 +319,7 @@ const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "rend
 
 type StableTypes = [
   AppConfig,
+  AppAuthor,
   AppDefinition,
   AppHighlight,
   AppId,

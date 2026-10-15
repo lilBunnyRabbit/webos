@@ -13,6 +13,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, apps: ["app-library"], text: "App Library shows when each app was added and every change since, in a History section of its details." },
       { kind: NEW, apps: ["app-library"], text: "Sort the App Library by Recently added / updated, and spot New and Updated apps after an update." },
       { kind: NEW, text: "The Terminal lists every app and the version that brought it with changelog --apps." },
+      { kind: NEW, apps: ["app-library", "settings"], text: "Apps credit who made them: in the App Library, when a new app is introduced, and in a Credits list in Settings › About." },
     ],
   },
   {

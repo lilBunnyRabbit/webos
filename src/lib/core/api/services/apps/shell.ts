@@ -5,6 +5,7 @@ import { ShellError, type ShellContribution, type Tagged } from "../shell/type";
 import { is_file_value } from "../files/shell";
 import { resolve_path } from "../files/path";
 import type { FilesService } from "../files/type";
+import { author_names } from "./authors";
 import { APP_CATEGORY_LABELS } from "./search";
 import type { AppManifest, AppsService } from "./type";
 
@@ -16,6 +17,7 @@ function app_value(manifest: AppManifest): Tagged {
     id: manifest.id,
     name: manifest.name,
     category: manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category],
+    authors: author_names(manifest),
     description: manifest.description ?? "",
   };
 }
@@ -43,7 +45,7 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
     values: {
       ...Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
       app: {
-        columns: ["id", "name", "category"],
+        columns: ["id", "name", "category", "authors"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
         open: (app) => void apps.launch(String(app.id)),
       },
@@ -68,9 +70,10 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
         positional: ["id"],
         run({ args }) {
           const manifest = require_app(args.id);
-          const { $type: _, ...app } = app_value(manifest);
+          const { $type: _, authors, ...app } = app_value(manifest);
           return {
             ...app,
+            author: authors,
             version: manifest.version,
             opens: (manifest.associations ?? []).join(" "),
             props: manifest.props ? "yes" : "no",

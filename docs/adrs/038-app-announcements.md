@@ -39,6 +39,17 @@ ADR-026 gives WebOS a typed changelog, an "Updated to vX" toast and Settings ›
 - `changelog --apps` yields one `new-app` row per introduced app (id, name, added, date); clicking it launches the app.
 - It's its own value type, because `app`'s columns would hide the release.
 
+### App authors
+Added the same day (owner):
+- `AppManifest.authors?: AppAuthor[]` with `interface AppAuthor { name; github?; url? }`. Omitted or empty means `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`, so built-in apps credit the owner.
+- `services/apps/authors.ts` holds `app_authors`, `author_link` (GitHub first, else `url`), `author_names` and `credits` (grouped by GitHub handle, url or name; owner first).
+- Shown in four places:
+  - "By …" in the App Library details
+  - the announcement byline
+  - Settings › About › Credits
+  - `app info`'s `author` field and `app list`'s `authors` column
+- The older `author?: string` field stays stable and unread. Only the Example template sets it.
+
 ## Alternatives Considered
 - **Per-app `history` in `define_app`.** The same sentence would be written twice, about 51 manifests' strings would sit in the boot chunk, and removed apps would take their history with them.
 - **A separate apps changelog file.** Two files have to agree on versions.

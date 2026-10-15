@@ -114,7 +114,7 @@ Announcement: when `announced` isn't empty, `init()` starts an `$effect.root` th
 
 | Apps | Layout |
 |------|--------|
-| 1–4 | A page per app: a primary glow, "New app" badge, the icon in a large tile, name, category · since v{version}, description, the manifest `preview` (lazy image) and `highlights` cards when present, then a recessed strip "Start menu › {category}" and `app launch {id}`. Footer: dots (when more than one; ←/→ also page), **Later** (quiet: next page, or close on the last) and **Open {name}** (primary, autofocused: launches, then next page or close). A close button sits top right |
+| 1–4 | A page per app: a primary glow, "New app" badge, the icon in a large tile, name, category · since v{version}, the "By …" byline (`AppByline`), description, the manifest `preview` (lazy image) and `highlights` cards when present, then a recessed strip "Start menu › {category}" and `app launch {id}`. Footer: dots (when more than one; ←/→ also page), **Later** (quiet: next page, or close on the last) and **Open {name}** (primary, autofocused: launches, then next page or close). A close button sits top right |
 | 5 or more | One list page, "N new apps": a row per app with icon, name, version and description, and an Open button that turns into "Opened". Footer: Later, or Done once something was opened |
 
 A centred card on `background-lighter` (`rounded-2xl`, `w-[36rem]`, capped at the viewport height with its body scrolling), container queries inside, so the phone gets the same component in one column. The Style Guide (Feedback) renders it in place with `inline` (no autofocus) and shows it as a dialog.

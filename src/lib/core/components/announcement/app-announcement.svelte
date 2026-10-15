@@ -21,6 +21,7 @@
     TerminalWindow as TerminalWindowIcon,
     X as XIcon,
   } from "phosphor-svelte";
+  import AppByline from "../apps/app-byline.svelte";
   import { Badge, Button, IconButton } from "../ui";
 
   interface Props extends DialogProps<true> {
@@ -151,6 +152,7 @@
                 <span aria-hidden="true" class="size-1 rounded-full bg-foreground/30"></span>
                 <span class="font-mono text-2xs">since v{version}</span>
               </p>
+              <AppByline {manifest} />
             </div>
             {#if manifest.description}
               <p class="max-w-sm text-sm text-pretty text-foreground/80">{manifest.description}</p>
