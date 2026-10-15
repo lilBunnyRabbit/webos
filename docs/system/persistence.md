@@ -34,7 +34,7 @@ App storage keys in use today:
 | Key | App | Value |
 |-----|-----|-------|
 | `app.tic-tac-toe.stats` | `user/tic-tac-toe` | Win/loss/draw counts |
-| `app.qr-reader.entries` | `user/qr-reader` | Scanned codes |
+| `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.calculator.history` | `system/calculator` | Past calculations, capped at 50 |
 | `app.minesweeper.{difficulty,custom,stats}` | `user/minesweeper` | Last difficulty, last custom board, played/won/best times |
