@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { check_drawing, compact, parse_nonogram, serialize_nonogram, VERDICT_TEXT, type Drawing } from "./file";
-import { Ink, Verdict } from "./puzzle";
+import { compact, parse_nonogram, serialize_nonogram, VERDICT_TEXT, type Drawing } from "./file";
+import { analyze_solution, Ink, Verdict } from "./puzzle";
 
 const heart: Drawing = {
   width: 3,
@@ -12,11 +12,20 @@ const heart: Drawing = {
 describe("serialize_nonogram", () => {
   test("writes rows as strings and lists the colours", () => {
     const json = JSON.parse(serialize_nonogram({ ...heart, title: "Heart" }));
-    expect(json).toEqual({ version: 1, title: "Heart", width: 3, height: 2, colors: ["error", "info"], cells: ["1.1", "212"] });
+    expect(json).toEqual({
+      version: 1,
+      title: "Heart",
+      width: 3,
+      height: 2,
+      colors: ["error", "info"],
+      cells: ["1.1", "212"],
+    });
   });
 
   test("leaves colours out of a black-and-white picture", () => {
-    const json = JSON.parse(serialize_nonogram({ width: 2, height: 2, palette: [Ink.FOREGROUND], cells: [1, 0, 0, 1] }));
+    const json = JSON.parse(
+      serialize_nonogram({ width: 2, height: 2, palette: [Ink.FOREGROUND], cells: [1, 0, 0, 1] })
+    );
     expect(json).toEqual({ version: 1, width: 2, height: 2, cells: ["1.", ".1"] });
   });
 
@@ -33,7 +42,9 @@ describe("compact", () => {
   });
 
   test("keeps one ink for an empty picture", () => {
-    expect(compact({ width: 2, height: 2, palette: [Ink.WARNING], cells: [0, 0, 0, 0] }).palette).toEqual([Ink.WARNING]);
+    expect(compact({ width: 2, height: 2, palette: [Ink.WARNING], cells: [0, 0, 0, 0] }).palette).toEqual([
+      Ink.WARNING,
+    ]);
   });
 });
 
@@ -64,8 +75,16 @@ describe("parse_nonogram", () => {
   });
 });
 
-describe("check_drawing", () => {
-  const bw = (width: number, cells: number[]): Drawing => ({ width, height: cells.length / width, palette: [Ink.FOREGROUND], cells });
+describe("analyze_solution", () => {
+  const check_drawing = ({ width, height, palette, cells }: Drawing) =>
+    analyze_solution(width, height, palette, cells, 20_000).verdict;
+
+  const bw = (width: number, cells: number[]): Drawing => ({
+    width,
+    height: cells.length / width,
+    palette: [Ink.FOREGROUND],
+    cells,
+  });
 
   test("a picture the clues pin down is unique", () => {
     expect(check_drawing(bw(2, [1, 1, 1, 0]))).toBe(Verdict.LOGIC);

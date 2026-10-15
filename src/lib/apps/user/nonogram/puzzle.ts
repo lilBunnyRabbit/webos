@@ -60,7 +60,9 @@ export function clue_of(line: readonly number[]): Run[] {
 }
 
 export function same_clue(a: Clue, b: Clue): boolean {
-  return a.length === b.length && a.every((run, index) => run.length === b[index].length && run.color === b[index].color);
+  return (
+    a.length === b.length && a.every((run, index) => run.length === b[index].length && run.color === b[index].color)
+  );
 }
 
 export function row_of<T>(cells: readonly T[], width: number, row: number): T[] {
@@ -331,7 +333,8 @@ function random_grid(width: number, height: number, colors: number, rng: Rng): n
       const col = index % width;
       let nearest = centres[0];
       for (const centre of centres) {
-        if ((centre.row - row) ** 2 + (centre.col - col) ** 2 < (nearest.row - row) ** 2 + (nearest.col - col) ** 2) nearest = centre;
+        if ((centre.row - row) ** 2 + (centre.col - col) ** 2 < (nearest.row - row) ** 2 + (nearest.col - col) ** 2)
+          nearest = centre;
       }
       return nearest.color;
     });
@@ -346,7 +349,13 @@ function random_grid(width: number, height: number, colors: number, rng: Rng): n
   return grid;
 }
 
-export function from_solution(seed: number, width: number, height: number, palette: readonly Ink[], solution: readonly number[]): Puzzle {
+export function from_solution(
+  seed: number,
+  width: number,
+  height: number,
+  palette: readonly Ink[],
+  solution: readonly number[]
+): Puzzle {
   return {
     seed,
     width,
@@ -356,6 +365,19 @@ export function from_solution(seed: number, width: number, height: number, palet
     rows: Array.from({ length: height }, (_, row) => clue_of(row_of(solution, width, row))),
     cols: Array.from({ length: width }, (_, col) => clue_of(col_of(solution, width, height, col))),
   };
+}
+
+/** `analyze` for a finished picture: are its own clues enough to get it back? */
+export function analyze_solution(
+  width: number,
+  height: number,
+  palette: readonly Ink[],
+  solution: readonly number[],
+  budget = 4000,
+  deadline = Infinity
+): Analysis {
+  const puzzle = from_solution(0, width, height, palette, solution);
+  return analyze(width, height, palette.length, puzzle.rows, puzzle.cols, budget, deadline);
 }
 
 const MAX_TRIES = 400;
@@ -392,7 +414,14 @@ export function generate(width: number, height: number, seed: number, palette: r
 }
 
 /** Empties undecided cells one at a time; emptier lines constrain more, so it converges. */
-function settle(seed: number, width: number, height: number, palette: readonly Ink[], solution: number[], rng: Rng): Puzzle {
+function settle(
+  seed: number,
+  width: number,
+  height: number,
+  palette: readonly Ink[],
+  solution: number[],
+  rng: Rng
+): Puzzle {
   const grid = [...solution];
   for (;;) {
     const puzzle = from_solution(seed, width, height, palette, grid);

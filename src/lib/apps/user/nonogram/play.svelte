@@ -30,7 +30,7 @@
     Square as SquareIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onMount, untrack } from "svelte";
   import Board from "./board.svelte";
   import {
     cols_done,
@@ -184,10 +184,8 @@
     return () => disposers.forEach((dispose) => dispose());
   });
 
-  $effect(() => {
-    untrack(() => {
-      if (source.kind === "free" && source.fresh) void new_puzzle(source.fresh.size ?? size, source.fresh.mode ?? mode);
-    });
+  onMount(() => {
+    if (source.kind === "free" && source.fresh) void new_puzzle(source.fresh.size ?? size, source.fresh.mode ?? mode);
   });
 
   $effect(() => {
