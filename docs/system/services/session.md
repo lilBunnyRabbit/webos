@@ -9,7 +9,8 @@ Saves the open windows and the remembered window frames to `/var/lib/session/ses
 | File | Contents |
 |------|----------|
 | `type.ts` | `SessionService` interface, `SessionStatus` const enum |
-| `persistence.ts` | `SESSION_PATH`, `SESSION_FLAGS`, `SessionFile`, `parse_session()`, `serialize_session()`, zod schema (v1 and v2) |
+| `persistence.ts` | `SESSION_PATH`, `SESSION_FLAGS`, `SessionFile`, `parse_session()`, `serialize_session()`, zod schema (v1 and v2), `remove_legacy_view_keys()` (drops old per-app view keys from localStorage, run at init) |
+| `shell.ts` | `win reopen`, see [Shell](#shell) |
 | `service.svelte.ts` | The class |
 | `inspector.svelte` | Status, saved count, last save; detailed adds the file path |
 

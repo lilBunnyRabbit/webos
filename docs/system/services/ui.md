@@ -4,7 +4,7 @@ Key `ui` · Depends on: windows, dialogs · ADR: [ADR-028](../../adrs/028-ui-ser
 
 ## Purpose
 
-The shell's overlay state, so a service (shortcuts now, a command palette later) can open what used to be component state: the launcher (the desktop start menu, the mobile app drawer), the mobile running-apps switcher and the notification center. It also owns back: one chain for the phone's nav bar, the device's back gesture and the desktop browser's Back ([brainstorm](../../brainstorm/2026-10-14_os-back.md)).
+The shell's overlay state, so a service or a shell command (shortcuts, the Terminal, the launcher's command mode) can open what used to be component state: the launcher (the desktop start menu, the mobile app drawer), the mobile running-apps switcher and the notification center. It also owns back: one chain for the phone's nav bar, the device's back gesture and the desktop browser's Back ([brainstorm](../../brainstorm/2026-10-14_os-back.md)).
 
 ## Public API
 

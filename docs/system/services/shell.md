@@ -4,7 +4,7 @@ Key `shell` · Depends on: `files`, `dialogs`, `notifications` · ADR: [ADR-033]
 
 ## Purpose
 
-The command system behind the OS shortcuts (and, later, the terminal and the Mod+K palette). It is headless. Services attach commands, Tab completers and value types through their `shell()` hook. The shell parses a line into stages, binds args with zod, and streams structured values through `|`.
+The command system behind the OS shortcuts, the [Terminal](../system-apps.md#terminal) and the launcher's command mode (Mod+K, then `>`; [taskbar](../shell/taskbar.md#start-menu)). It is headless. Services attach commands, Tab completers and value types through their `shell()` hook. The shell parses a line into stages, binds args with zod, and streams structured values through `|`.
 
 | File | Contents |
 |------|----------|
@@ -206,7 +206,6 @@ Files:
 
 ## Known gaps
 
-- Callers: the shortcuts, the [Terminal](../system-apps.md#terminal) and the launcher's command mode ([taskbar](../shell/taskbar.md#start-menu)).
 - No background jobs, variables, globs or chaining (ADR-033, deferred).
 - App commands are global only; window-scoped ones (in-app shortcuts as commands) are deferred (ADR-034).
 - `touch` on an existing file doesn't update its modified time.

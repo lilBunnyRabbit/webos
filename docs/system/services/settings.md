@@ -6,8 +6,9 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 |------|----------|
 | `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit` |
 | `service.svelte.ts` | The class |
-| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, sanitizing (`merge_theme`) |
+| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset` |
+| `shell.ts` | `settings_shell()`, see [Shell](#shell) |
 
 `index.ts` exports `type.ts` and `themes.ts`. `persistence.ts` stays private to the service.
 
@@ -85,7 +86,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 | Written | On every change, after the effect flush. Also once right after `init()`, which creates or normalizes the file. |
 | Legacy | localStorage `webos.settings` (same format), then v0 `settings` (zustand). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
 
-**Write queue.** The saver goes through `LatestWriter` (`files/latest-writer.ts`, shared with [session](session.md); see [files](files.md#latestwriter)): writes never overlap, and a burst of changes (typing in a token field) collapses to at most one write in flight plus the newest pending one. `/etc` is recreated if missing. Each write bumps the `/etc` revision.
+**Write queue.** The saver goes through `LatestWriter` (`files/latest-writer.ts`, shared with [session](session.md), shell history, version state and app `storage.file()`; see [files](files.md#latestwriter)): writes never overlap, and a burst of changes (typing in a token field) collapses to at most one write in flight plus the newest pending one. `/etc` is recreated if missing. Each write bumps the `/etc` revision.
 
 Load and sanitize rules (`parse_settings` in `persistence.ts`):
 

@@ -80,7 +80,9 @@ Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-
 - Keyboard: ↑/↓ wrap through enabled items, Home/End, typeahead on the first letter. Keys are handled by the deepest open level only.
 - First focus: the first enabled item carries `autofocus`, because `showModal()` would otherwise focus the panel itself.
 
-Other sheets: `components/files/file-picker-dialog.svelte` (`{ kind: "file" | "directory" | "save", accept?, name?, start_path?, title? }` → path; File Explorer with a `picker` prop), `components/dialogs/conflict-dialog.svelte` (`{ name, folder }` → `"replace" | "keep_both" | "skip"`, Keep both focused) and `components/files/properties-dialog.svelte` (`{ path, kind }`: kind, size, folder contents, modified, location; resolves `true` on Close). File Explorer shows it as a window sheet, the desktop as a system dialog. The file picker, conflict and properties dialogs are imported on first use, so they stay out of the boot bundle.
+Other sheets: `components/files/file-picker-dialog.svelte` (`{ kind: "file" | "directory" | "save", accept?, name?, start_path?, title? }` → path; File Explorer with a `picker` prop), `components/dialogs/conflict-dialog.svelte` (`{ name, folder }` → `"replace" | "keep_both" | "skip"`, Keep both focused) and `components/files/properties-dialog.svelte` (`{ path, kind }`: kind, size, folder contents, modified, location; resolves `true` on Close). File Explorer shows it as a window sheet, the desktop as a system dialog. The file picker, conflict and properties dialogs are imported on first use, so they stay out of the boot bundle. `components/dialogs/save-changes-dialog.svelte` (`{ title, can_save }` → `CloseChoice`) is the close guard's sheet, shown by this service's close prompt (see Lifecycle).
+
+One more system dialog: `components/dialogs/shortcuts-dialog.svelte`, the Mod+/ cheat sheet (no props, resolves only `null`), shown by the `shortcuts sheet` command ([shortcuts](shortcuts.md#cheat-sheet)). Loaded with `shortcuts/shell-run.ts`, on first use.
 
 Callers: File Explorer rows and background (`components/files/file-list.svelte`), desktop icons and background (`components/desktop/desktop-actions.ts`). Both also open the item menu from the keyboard with the ContextMenu key or Shift+F10.
 
@@ -142,8 +144,11 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 
 - ADR-019 sketches `show<T>(component: Component<DialogProps<T>>, props: object, …)`. The code types `props` against the component (`P`), so wrong props don't compile.
 
+## Shell
+
+Contributes no commands.
+
 ## Known gaps
 
-- Mobile presentation is undecided (ADR-019, ADR-016). Today it's the same anchored dialog.
 - Menus use the full scrim like every dialog; a lighter treatment for menus may read better.
 - Two `show()` calls in a row stack two modals; there's no queueing or dedup (two quick `open()` calls on ambiguous files show two choosers).

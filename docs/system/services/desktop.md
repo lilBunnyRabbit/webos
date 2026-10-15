@@ -11,8 +11,12 @@ The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon.
 | `type.ts` | `DesktopService` (base), `GridDesktopService`, `MobileDesktopService` interfaces, `DesktopGrid`, `DesktopItem` |
 | `folder.svelte.ts` | `DesktopFolder`: the folder state and operations both layouts share, `DEFAULT_SHORTCUTS`, `write_var_lib()` |
 | `service.svelte.ts` | Desktop implementation (`GridDesktopService`) |
-| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()` and `sort_moves()`, all pure; `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
-| `layout.ts` | `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions` |
+| `mobile.svelte.ts` | Mobile home implementation (`MobileDesktopService`), see [Mobile home](#mobile-home) |
+| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()`, `resize_target()` and `sort_moves()`, all pure; `snap_cells()`, `item_span()`, `grid_items()`, `ResizeTarget`, `DesktopMove`, `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
+| `layout.ts` | `LAYOUT_DIRECTORY_NAME` (`desktop`), `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions`, `take_v0_pins()` |
+| `additions.ts` | Default widgets: `default_widgets()`, `pending_widgets()`, `ADDITIONS_FILE` (`additions.json`), `ADDITIONS_PATH`, `parse_additions()`, `serialize_additions()` |
+| `home-layout.ts` | Mobile home model: `HOME_LAYOUT_FILE` (`home-layout.json`), `HOME_LAYOUT_PATH`, `DOCK_SIZE`, `HomeLayout`, `parse_home_layout()`, `serialize_home_layout()`, `arrange_home()`, `paginate()` |
+| `inspector.svelte`, `mobile-inspector.svelte` | Kernel app inspectors for each implementation |
 
 Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/shortcut.ts`, see [apps.md](apps.md#shortcuts-desktop-files).
 
@@ -80,7 +84,7 @@ Three layers of state turn the folder into a grid:
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
 | `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. Same on mobile, where it's written but not shown |
-| `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
+| `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" (or "Broken widget") toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
 
@@ -122,8 +126,10 @@ A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.
 | Icons | The entries of `/home/Desktop` themselves (OPFS). Shortcuts are `.desktop` JSON files: `{ "app_id": "settings" }`, optionally `"props"`, pretty-printed |
 | Positions | `/var/lib/desktop/layout.json`: `{ "version": 1, "positions": { "Settings.desktop": { "x": 0, "y": 0 } } }`, pretty-printed |
 | Version | `LAYOUT_VERSION = 1` (private to `layout.ts`) |
+| Default widgets | `/var/lib/desktop/additions.json`: `{ "version": 1, "applied": ["game-hub"] }`, the default widget ids already placed. See Default widgets below |
+| Mobile home | `/var/lib/desktop/home-layout.json`, written by `MobileDesktopService`. See [Mobile home](#mobile-home) |
 | Load | zod: `version` literal `1`, `positions` a record of `{ x, y }` non-negative integers. Wrong version, bad shape or bad JSON → `{}` (every icon takes a free cell), no error logged |
-| Written | Seeding, and every `move_items()`. `/var/lib/desktop` is created on first write (`files.create_directory` under `/var/lib`, which `ensure_hierarchy` guarantees). Write errors: `console.error("[DesktopService] Failed to save the layout")` |
+| Written | Seeding, every `move_items()`, `rename_item()` (the cell moves to the new name) and `resize_widget()` (visible items pinned). `/var/lib/desktop` is created on first write (`files.create_directory` under `/var/lib`, which `ensure_hierarchy` guarantees). Write errors: `console.error("[DesktopService] Failed to save the layout")` |
 
 Positions are keyed by entry name, so renaming an entry in File Explorer loses its position.
 
@@ -193,6 +199,10 @@ ADR-022's body puts positions in `/home/Desktop/.layout.json` and writes back th
 
 ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context menu, auto-arrange, icon settings.
 
+## Shell
+
+Contributes no commands.
+
 ## Known gaps
 
 - Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. They don't show on the phone.
@@ -201,8 +211,6 @@ ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context me
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.
 - `pin()` doesn't dedupe. The start menu ignores its `null` and its errors beyond `console.error`.
 - Layout changes made in another tab aren't picked up until a page reload (the file is read once).
-- Deleting a file or folder from the desktop silently does nothing.
 - Changes from other tabs, or OPFS writes that bypass FilesService, show up only after a reload.
-- Until `/home/Desktop` has been bumped once this session, `revision()` returns `0` for a missing `SvelteMap` key, which tracks the map's version. Any revision bump anywhere (a settings save to `/etc`, a File Explorer upload) then re-runs the watcher and reloads the desktop. Harmless but wasteful.
 - If `/home/Desktop` itself is deleted, nothing reloads (the bump is on `/home`), and the next reload throws `/home/Desktop is missing` to `console.error`; the desktop keeps the old icons until the next boot recreates the folder.
 - A 0-column grid would make `cell` `Infinity`/`NaN`; the shell guards against rendering that.

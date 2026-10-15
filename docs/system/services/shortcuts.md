@@ -111,5 +111,5 @@ ADR-012's "app" scope, `unregister(id)`, `get_conflicts`, the `enabled` toggle, 
 
 - No remapping. Where Alt+Shift switches the keyboard layout (some Windows setups), it can't be fixed.
 - Mod+, on macOS Chrome may open Chrome's own settings before the page sees it; untested on a real Mac keyboard.
-- No app uses window-scoped shortcuts yet; apps' own keys (Tic-Tac-Toe Ctrl+Z, Sprite Extract, GIF Player) are local handlers and don't show in the cheat sheet.
+- Window-scoped shortcuts are used by Text Editor, Paint, Image Editor, Soundboard, Diff, Markdown PDF, PDF Tools and most games (Tic-Tac-Toe, Solitaire, Sudoku, Kakuro, Nonogram and others). Some apps still keep local key handlers that don't show in the cheat sheet (Sprite Extract, GIF Player).
 - Snap only covers halves; quarters and top/bottom have no keys.
