@@ -31,7 +31,9 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: app manifests build their commands eagerly |
 | `$lib/core/contexts/app` | See [App context and data](#app-context-and-data) | Import from the barrel. The files behind it are internal paths |
 | `$lib/core/components/ui` | The whole UI kit | |
-| `$lib/core/games` | The whole games kit | Import from the barrel. Manifests and kernel-free logic files that Node tests load use `games/time` or `games/direction` instead, because the barrel reaches the kernel ([Known gaps](#known-gaps)) |
+| `$lib/core/games` | The whole games kit | Import from the barrel in components and lazy files |
+| `$lib/core/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
+| `$lib/core/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 
 ## Manifest: `define_app`
@@ -196,5 +198,5 @@ Users' data sits in these, so moving one is a 2.0 even when no code signature ch
 
 - The pin test checks names. A signature change (a parameter made required, a return type changed) passes it; review catches those.
 - `create_storage_handle(app_id, state)` is stable because two apps need storage outside a window, but its `state` parameter only matters to the window frame. A cleaner out-of-window entry point would be an additive change.
-- Two kinds of bundled file still import the games kit through `$lib/core/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Promoting those two paths to stable, or splitting the kit's kernel-free part into its own module, is open.
+- Two kinds of bundled file still import the games kit through `$lib/core/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
 - The `$lib/core/api` barrel exports much more than this page promises (theme presets, widget and shortcut file parsers, association ranking, launcher search, `Kernel`, `detect_platform`). Listing isn't promising.
