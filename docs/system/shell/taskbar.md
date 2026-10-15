@@ -8,6 +8,7 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 | `taskbar-item.svelte` | One button per open window, with a running indicator |
 | `terminal-button.svelte` | The Terminal button, just before the tray |
 | `taskbar-tray.svelte` | The tray button (bell, unread badge, clock) and the notification center popover |
+| `show-desktop-button.svelte` | The show desktop sliver at the far end, after the tray |
 | `taskbar-clock.svelte` | Time and short date, rendered inside the tray button |
 | `start-menu.svelte` | Start button + anchored `popover` element |
 | `start-menu-popover.svelte` | Popover contents: search, app tile grid, pin buttons, footer |
@@ -18,8 +19,9 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 - Show a start button, one item per window and the tray.
 - Lay itself out for the taskbar position. `desktop-shell.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
 - Styling: a floating dock. The outer strip is transparent and pads only its screen-edge sides by 8px (bottom bar: `px-2 pb-2`, and so on). The side facing the windows gets its 8px from the window area's own snap inset, so every gap (screen edge, between snapped windows, window to dock) is 8px. Inside the strip, `<nav aria-label="Taskbar" class="taskbar-dock">` is a `rounded-2xl bg-background-light/90 backdrop-blur-xl shadow-popover` bar, `h-13` (horizontal) or `w-13` (vertical), with a `p-1.5` inset and `gap-1`. **Flush mode:** while any non-minimized window is maximized, the strip drops its padding and the bar drops its radius and shadow, becoming an edge bar with a `foreground/8` hairline on the window side, so the maximized window's square edge joins it instead of meeting the dock's rounded corners. `anchor-name: --taskbar-dock` sits on an absolute inner box (`inset-0`, or inset 8px along the bar in flush mode), so the start menu and notification center keep 8px off the screen corners either way. The bar has `view-transition-name: taskbar-dock`, so going flush or back morphs inside the maximize, restore and minimize view transitions together with the window. Closing a clean maximized window (the titlebar's Close, `win close`) runs in a view transition too; a dirty one asks first and switches instantly.
-- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tray at the far end.
+- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tray, then the show desktop sliver at the far end.
 - **Terminal button**: 40px `rounded-xl` like the start button, `TerminalWindow` icon (`fill` while a Terminal runs, `bold` otherwise), `bg-foreground/10` while one is focused. A click toggles like a window item on the newest Terminal: focused or minimized → `toggle_minimize` in a view transition; open behind → `focus`; none → `apps.launch("terminal")`. Desktop only: the phone has no taskbar.
+- **Show desktop sliver**: Windows 11 style. A `w-3` (horizontal) or `h-3` (vertical) `rounded-md` button filling the bar's height, holding a 1px line (`foreground/20`, `foreground/45` on hover, `primary` while `windows.showing_desktop`). `aria-label` "Show desktop", `aria-pressed` while shown, title with Alt+Shift+D. A click runs `toggle_desktop()` in a view transition, the same as `win desktop`.
 
 The position comes from [settings](../services/settings.md) (`taskbar.position`: `top | bottom | left | right`, persisted there). The bar re-renders when it changes, and the [window manager](window-manager.md) re-measures its container.
 
@@ -83,6 +85,7 @@ Contents (`start-menu-popover.svelte`):
 | Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
 | Click | Start button | Toggle the start menu |
 | Click | Tray | Toggle the notification center |
+| Click | Show desktop sliver | `windows.toggle_desktop()` in a view transition: minimizes every visible window, or brings back the ones it hid |
 | Click | Entry's close button / action | Run the action, then `notifications.dismiss(id)` |
 | Click | Clear all | Dismiss every notification |
 | Type | Search field | Filter the tiles |

@@ -76,7 +76,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `window.previous` | Alt+\` | `win previous`: the most recent other window (from home: the newest), un-minimizing it | ✓ | ✓ |
 | `window.cycle` | Alt+Shift+\` | `win cycle`: the least recently used window | ✓ | ✓ |
 | `window.reopen` | Alt+Shift+T | `win reopen` (session); available while something was closed | ✓ | ✓ |
-| `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop | Go home |
+| `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop; again brings the windows back | Go home |
 | `window.maximize` | Alt+Shift+↑ | `win maximize` | ✓ | — |
 | `window.gather` | Alt+Shift+G | `win gather` | ✓ | — |
 | `window.snap_left` / `window.snap_right` | Alt+Shift+← / → | `win snap left` / `win snap right`; the same zone again unsnaps | ✓ | — |

@@ -168,6 +168,16 @@ export interface DesktopWindowsService extends WindowsService {
 
   /** Moves every visible window fully on screen, shrinking any larger than the area. The recovery for lost windows. */
   gather(): void;
+
+  /** `true` while the desktop is shown by `toggle_desktop()` and nothing has been focused since. */
+  readonly showing_desktop: boolean;
+
+  /**
+   * Minimizes every visible window, or, when the previous call did that and nothing was focused since, brings exactly
+   * those back. Windows minimized before stay minimized.
+   * @returns `true` when the desktop is now shown
+   */
+  toggle_desktop(): boolean;
 }
 
 /**

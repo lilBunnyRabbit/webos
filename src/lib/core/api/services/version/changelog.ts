@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.1.0",
+    date: "2026-10-15",
+    title: "Show desktop",
+    changes: [
+      { kind: NEW, text: "Show desktop: click the thin strip at the end of the taskbar or press Alt+Shift+D to hide every window, and again to bring them back." },
+    ],
+  },
+  {
     version: "1.0.0",
     date: "2026-10-15",
     title: "WebOS 1.0",

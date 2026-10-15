@@ -1,7 +1,7 @@
 import { view_transition } from "$lib/core/utils/view-transition";
 import { ShellError, type CommandContext, type Completion, type Value } from "../shell/type";
 import { is_tagged } from "../shell/values";
-import { is_mobile, short_id, type WindowValue } from "./shell";
+import { is_desktop, is_mobile, short_id, type WindowValue } from "./shell";
 import { WindowFlag, type DesktopWindowsService, type SnapZone, type WindowId, type WindowsService } from "./type";
 
 /** Newest first, minimized ones included: they're still running. */
@@ -97,10 +97,8 @@ export const cycle = (windows: WindowsService) => bring(windows, recent(windows)
 
 export function show_desktop(windows: WindowsService) {
   view_transition(() => {
-    if (is_mobile(windows)) return windows.go_home();
-    for (const id of windows.list()) {
-      if (!windows.get(id)?.flags.has(WindowFlag.MINIMIZED)) windows.toggle_minimize(id);
-    }
+    if (is_mobile(windows)) windows.go_home();
+    else if (is_desktop(windows)) windows.toggle_desktop();
   });
 }
 

@@ -40,6 +40,13 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
 
   private max_order = $state<number>(0);
 
+  // The windows show_desktop hid, so a second press brings back only those. Any other focus change forgets them, like Win+D.
+  private peeked = $state.raw<WindowId[] | null>(null);
+
+  public get showing_desktop(): boolean {
+    return this.peeked !== null;
+  }
+
   public frames = $state.raw<WindowFrames>({});
 
   public load_frames(frames: WindowFrames): void {
@@ -57,6 +64,7 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
   private reset_state(): void {
     this.index = {};
     this.max_order = 0;
+    this.peeked = null;
   }
 
   public is_visible(id: WindowId): boolean {
@@ -168,6 +176,7 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
 
     // Increment max order and set new order
     instance.order = ++this.max_order;
+    this.peeked = null;
 
     return true;
   }
@@ -201,6 +210,7 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
 
   public open(app: AppInstance): WindowId {
     const id = uuid();
+    this.peeked = null;
 
     const options = app.manifest.defaults ?? {};
     const sibling = Object.values(this.index)
@@ -231,6 +241,7 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
     create: (snapshot: WindowSnapshot) => AppInstance | null
   ): RestoreResult {
     const result: RestoreResult = { restored: [], skipped: [] };
+    this.peeked = null;
 
     for (const snapshot of windows) {
       const app = create(snapshot);
@@ -311,6 +322,23 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
     }
 
     return !is_minimized;
+  }
+
+  public toggle_desktop(): boolean {
+    if (this.peeked) {
+      const hidden = this.peeked;
+      this.peeked = null;
+      for (const id of hidden) this.get(id)?.flags.delete(WindowFlag.MINIMIZED);
+      this.focus_next();
+      return false;
+    }
+
+    const visible = Object.values(this.index).filter((instance) => !instance.flags.has(WindowFlag.MINIMIZED));
+    if (visible.length === 0) return false;
+    for (const instance of visible) instance.flags.add(WindowFlag.MINIMIZED);
+    this.focus_next();
+    this.peeked = visible.map((instance) => instance.id);
+    return true;
   }
 
   /** Hands focus to the topmost visible window, or to none when every window is minimized. */

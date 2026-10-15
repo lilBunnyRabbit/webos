@@ -21,7 +21,7 @@ export interface WindowValue extends Tagged {
 /** Window ids are UUIDs; the shell shows and accepts the first eight characters. */
 export const short_id = (id: WindowId) => id.slice(0, 8);
 
-const is_desktop = (windows: WindowsService): windows is DesktopWindowsService => "snap" in windows;
+export const is_desktop = (windows: WindowsService): windows is DesktopWindowsService => "snap" in windows;
 export const is_mobile = (windows: WindowsService): windows is MobileWindowsService => "go_home" in windows;
 
 const logic = () => import("./shell-run");
@@ -83,7 +83,7 @@ export function windows_shell(windows: WindowsService): ShellContribution {
     }),
     define_command({
       id: "win desktop",
-      description: is_mobile(windows) ? "Go home" : "Show the desktop",
+      description: is_mobile(windows) ? "Go home" : "Show the desktop, or bring back the windows it hid",
       run: async () => (await logic()).show_desktop(windows),
     }),
   ];

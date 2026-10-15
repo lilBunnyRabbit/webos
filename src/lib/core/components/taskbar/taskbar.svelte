@@ -6,6 +6,7 @@
   import StartMenu from "./start-menu.svelte";
   import TaskbarTray from "./taskbar-tray.svelte";
   import TerminalButton from "./terminal-button.svelte";
+  import ShowDesktopButton from "./show-desktop-button.svelte";
 
   let { class: class_name, ...rest_props }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
@@ -58,6 +59,7 @@
 
     <TerminalButton />
     <TaskbarTray {vertical} />
+    <ShowDesktopButton {vertical} />
   </nav>
 </div>
 

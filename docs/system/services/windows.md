@@ -51,7 +51,7 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 Two interfaces in `type.ts` (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-groundwork.md)):
 
 - **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap`, `gather` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
-- **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container`, `snap` and `gather`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
+- **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container`, `snap`, `gather`, `toggle_desktop` and `showing_desktop`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
 
 The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.ts` registers `MobileWindowsService` (`mobile.svelte.ts`) under the same key instead; see [Mobile](#mobile). Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); mobile treats them as no-ops. Members that are identical on both platforms live once in `BaseWindowsService` (`base.svelte.ts`); everything platform-specific (focus, placement, close, minimize) stays in each class.
 
@@ -60,6 +60,8 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `container` | `readonly { bounds: Bounds; element: HTMLElement \| null }` | `$state.raw`. Bounds are **viewport** coordinates of the window-manager element. Starts as `0,0,innerWidth,innerHeight` (read in the constructor). |
 | `set_container` | `(element?: HTMLElement \| null) => Bounds` | Measures `element` with `getBoundingClientRect()`. A falsy element zeroes the bounds. Then runs `WindowsHelper.keep_reachable` on every window, so a shrinking area (browser resize, taskbar move) never strands one. Called by the window manager. |
 | `gather` | `() => void` | Desktop only. `clamp_bounds` on every non-minimized window: fully on screen, shrunk if larger than the area. Alt+Shift+G and the desktop's "Gather windows" menu item, both in a view transition |
+| `toggle_desktop` | `() => boolean` | Desktop only. Minimizes every visible window and remembers them; called again with nothing focused since, it restores exactly those and focuses the topmost. Windows minimized before stay minimized. Returns `true` when the desktop is now shown. `win desktop`, Alt+Shift+D and the taskbar sliver |
+| `showing_desktop` | `boolean` (readonly) | Desktop only. `true` while `toggle_desktop` has windows to bring back |
 | `open` | `(app: AppInstance) => WindowId` | New uuid. `order = ++max_order`, so it opens in front. Flags, snap zone and constraints come from `app.manifest.defaults`. Bounds come from `WindowsHelper.place` (see [Placement](#placement)). |
 | `restore` | `(windows: WindowSnapshot[], create: (snapshot) => AppInstance \| null) => RestoreResult` | Reopens saved windows with their own bounds, flags and snap zone, in array order (last ends on top). `create` returning `null` skips that snapshot. Ends with `focus_next()`. See [Restore](#restore). |
 | `close` | `(id) => Promise<boolean>` | Guarded (ADR-029). A clean window closes synchronously through `force_close`. A dirty one comes forward (un-minimized, focused) and the registered close prompt asks; Cancel, a `save` resolving `false`, or no prompt registered keep it open (`false`). A second request while its sheet is up resolves `false` without stacking another. |
@@ -94,6 +96,7 @@ Not on the interface: private `index: Record<WindowId, WindowInstance>` (`$state
 - `index`: a deep `$state` record. `WindowInstance` objects are deep proxies, so `instance.bounds.x = …` from anywhere is reactive.
 - `max_order`: the highest `order` handed out. It only grows, and resets to 0 only when the last window closes. Orders are never compacted, so `z-index` climbs without bound over a long session. That's harmless in practice.
 - `container`: `$state.raw`, replaced wholesale on every `set_container`.
+- `peeked`: `$state.raw<WindowId[] | null>`, the windows `toggle_desktop` hid. Any `focus` that changes the order, `open`, session `restore` or `close_all` clears it, like Win+D forgetting once you pick a window. Never persisted.
 
 ## Lifecycle
 
