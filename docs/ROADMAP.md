@@ -93,6 +93,9 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Status:** Done 2026-10-16 ([ADR-038](adrs/038-app-announcements.md#app-authors)): manifest `authors`, owner by default, in the App Library, the announcement, Settings › About › Credits and `app info` / `app list`
 - [x] Credit an app's author (and later contributors) where the app is shown: App Library details, the new-app announcement, maybe About. Needs an ADR: where the author lives (manifest field vs changelog), what it holds (name, GitHub handle, link), and whether OS apps show the owner
 
+### Showcasing features to new users
+- [ ] Brainstorm how new users discover what WebOS can do: the shell and palette, shortcuts, tasks, widgets, file associations, deep links, backup and the apps. Ideas to weigh: a richer intro tour, contextual tips the first time a feature is near, a "Getting started" app or desktop widget, feature highlights per app (the manifest `highlights`), sample files on first boot, a demo deep link. Ties into Installed apps (starter set) and the new-app announcements
+
 ### Installed apps
 - [ ] Install model instead of showing every app: App Library is the store (Get / Open), the start menu, launcher, desktop and mobile drawer show installed apps only, and search covers everything (installed first, then a "Not installed" group with Get). First boot installs a starter set, maybe picked in the intro by interest. Opening a file, a deep link, `app launch` or an announcement's Open installs silently. Not gamified unlocking: gating tools reads as a bug. Needs an ADR. Open questions:
   - existing users migrate with everything installed
