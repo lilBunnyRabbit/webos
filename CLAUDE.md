@@ -33,7 +33,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `settings` | SettingsService | Theme tokens, taskbar position, file defaults, persisted in `/etc/settings.json` | files |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap. `MobileWindowsService` on mobile (ADR-016) | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
-| `version` | VersionService | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps |
+| `version` | VersionService | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026), new-app announcements after the Restore answer (ADR-038). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps, session |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
 | `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
