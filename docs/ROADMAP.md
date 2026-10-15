@@ -369,6 +369,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Image Tools — Remove background, Join, Trim, Split, Sprites in one app with sections and `image tools|trim|split|join|unbg` commands (2026-10-15, [brainstorm](brainstorm/2026-10-15_image-tools.md)). Replaces the separate Image Crop, Background Remove, Image Concat, Image Split and Sprite Extractor ports
 - [x] GIF Player (`ImageDecoder`)
 - [x] Hopsprite — indexed pixel art and animation editor: layers, timeline, onion skin, tags, `.hopsprite` JSON with RLE cels, SVG and animated SVG (SMIL) export on Tasks (2026-10-16, [ADR-039](adrs/039-hopsprite.md), [brainstorm](brainstorm/2026-10-16_hopsprite.md)). GIF export pending the owner's call
+- [x] Hopsprite UI and performance pass — canvas-first layout, filmstrip of thumbnails, side panel for colours and layers, resizable and foldable panels, dirty-rect drawing, cached frame composites, faster open (2026-10-16, [brainstorm](brainstorm/2026-10-16_hopsprite.md#ui-pass))
 - [x] QR Reader (`BarcodeDetector`; covers the "QR Code Scanner" utility)
 
 ### File Associations

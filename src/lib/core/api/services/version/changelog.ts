@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.6.1",
+    date: "2026-10-16",
+    title: "A roomier Hopsprite",
+    changes: [
+      { kind: IMPROVED, apps: ["hopsprite"], text: "Hopsprite gives the canvas most of the window: tools in a slim rail, colours and layers in a side panel, and frames in a filmstrip of live thumbnails." },
+      { kind: IMPROVED, apps: ["hopsprite"], text: "Drag the edges of the colour panel and the filmstrip to resize them, or double-click to fold them away; Hopsprite remembers the sizes." },
+      { kind: IMPROVED, apps: ["hopsprite"], text: "Drawing, switching frames and opening big sprites in Hopsprite are much faster." },
+      { kind: FIXED, apps: ["hopsprite"], text: "The brush preview no longer shows outside the sprite." },
+    ],
+  },
+  {
     version: "1.6.0",
     date: "2026-10-16",
     title: "Hopsprite",

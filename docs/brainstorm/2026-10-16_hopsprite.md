@@ -51,3 +51,38 @@ Future features, none decided:
 - Shell commands (`sprite export`) once the owner wants them
 - A kit `ColorPicker` (OKLCH) that Settings, Paint and Hopsprite share
 - A File Explorer icon for `.hopsprite`
+
+## UI pass
+
+Owner feedback on 1.6.0: too little canvas, an Aseprite-style timeline that felt heavy for a one-frame sprite, rows of unlabeled icons, a duplicated colour block, a stray brush preview. Follow-ups asked for performance first, resizable panels and saving vertical space on short windows. All app-local; no core or kit changes.
+
+| Area | Before | After |
+|---|---|---|
+| Top | Toolbar of 12 file/edit icons, then a separate tool-options bar | One toolbar: a File menu (new, open, device, save, save as, sprite size, flip and rotate, tile grid), undo, redo, the active tool's options inline, Export |
+| Tools | Left rail | Same rail, wraps into two columns on short windows; a bottom dock with the colour wells on phones |
+| Colours | 230px panel: big well, small well, hex, alpha, palette | Side panel: wells, hex, palette grid with a + tile, layers below. Hex, picker, alpha, presets and remove live in a popover on the primary well. On phones the popover also holds the palette |
+| Animation | Transport row, loop/ping-pong/once, ghost, tag, ms field, layers × frames grid, an opacity row | One filmstrip row: play, onion toggle, live frame thumbnails, + (duplicates the frame), layers button (phones, or when the side panel is folded), a popover for timing (ms, fps presets, loop mode), tags and onion settings. Right-click a frame for the rest |
+| Status bar | Size, cursor, frame, colour, counts | Gone: size and cursor in a small badge on the canvas, frame count at the strip's end |
+| View | Zoom group in the toolbar | Floating pill on the canvas: grid, zoom, fit. Fit stays on through window and panel resizes until the user zooms or pans |
+
+Resizing: the colour panel and the filmstrip have an app-local `resize-handle.svelte` (ARIA window splitter: arrows, Home folds, End, Enter toggles, double-click toggles, drag past half the minimum folds). Sizes persist in `app.hopsprite.side` / `app.hopsprite.strip`. During a drag only a CSS variable on the root changes, once per frame; the stage refits and never recomposites. The strip is capped at 30% of the window height, 18% below 45rem and 11% below 34rem, so persisted sizes shrink with the window. A splitter is a kit candidate if a second app wants one; that's the owner's call.
+
+Performance, measured on a 512×512 sprite with 8 layers and 30 frames (Chrome, main-thread time per event):
+
+| | Before | After |
+|---|---|---|
+| Pointer move while drawing | 3.9 ms avg, 5.1 ms p95 | 0.3–0.4 ms avg, 0.8–0.9 ms p95 |
+| Switching frame (stepping all 30) | 3.9 ms | 0.8 ms once composites are cached (4.4 ms on the first pass) |
+| Parsing the 5.1 MB file | 258 ms | 68 ms |
+| Thumbnail | n/a | 0.18 ms at 64 px, 0.40 ms at 128 px |
+
+How:
+
+- Strokes paint into one buffer in place (`paint.ts`): freehand dabs only the new points, pixel-perfect lifts corners through a per-pixel coverage count, shapes restore the rect their last preview covered. Each draft carries the rect it changed.
+- The stage recomposites only that rect (`composite_into`) and puts just that region. A commit that stores the draft's buffer is recognised by identity and costs nothing. Whole-frame composites are cached per frame (copied, capped at 96 MB), so playback and frame stepping are a `putImageData`.
+- Grid, tiles, border and mirror axes sit on their own canvas, redrawn only when the view changes; the cursor overlay no longer redraws them on every move. The cursor only updates when it enters a new pixel, and the status readout stopped copying the cel on every move.
+- Thumbnails sample nearest pixels at thumbnail size (`composite_sampled`), only when visible, only when the frame's cels, layers or palette changed, and at power-of-two resolutions so resizing the strip rescales in CSS.
+- Runs in a file are validated while decoding instead of by a zod tuple per run.
+
+Layout share of the canvas (stage height over the app's height, default panel sizes): 1874×959 viewport 85%, 1320×677 78%, 1394×509 78%, phone width 74%.
+

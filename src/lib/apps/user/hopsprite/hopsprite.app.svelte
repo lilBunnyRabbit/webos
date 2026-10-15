@@ -8,7 +8,7 @@
     type NotificationsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { Button, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, Separator, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
@@ -18,10 +18,8 @@
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     CaretDown as CaretDownIcon,
-    CaretUp as CaretUpIcon,
     CornersOut as CornersOutIcon,
     Devices as DevicesIcon,
-    DotsThree as DotsThreeIcon,
     Export as ExportIcon,
     FilePlus as FilePlusIcon,
     FlipHorizontal as FlipHorizontalIcon,
@@ -29,9 +27,11 @@
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
     FolderOpen as FolderOpenIcon,
+    GridFour as GridFourIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
     MagnifyingGlassPlus as MagnifyingGlassPlusIcon,
     Resize as ResizeIcon,
+    SquaresFour as SquaresFourIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
@@ -40,21 +40,25 @@
   import { Editor } from "./editor.svelte";
   import { write_animated_svg, write_frame_svg } from "./export";
   import { EXTENSION, serialize_sprite } from "./format";
+  import HopspriteLayers from "./hopsprite-layers.svelte";
   import HopspriteExportPopover, { type ExportRequest } from "./hopsprite-export-popover.svelte";
   import HopspriteNewPopover from "./hopsprite-new-popover.svelte";
+  import HopspriteColorPopover from "./hopsprite-color-popover.svelte";
   import HopspriteOptions from "./hopsprite-options.svelte";
-  import HopspritePalette from "./hopsprite-palette.svelte";
   import HopspriteSizePopover from "./hopsprite-size-popover.svelte";
   import HopspriteStage from "./hopsprite-stage.svelte";
-  import HopspriteTimeline from "./hopsprite-timeline.svelte";
+  import HopspriteStrip from "./hopsprite-strip.svelte";
+  import HopspriteSwatches from "./hopsprite-swatches.svelte";
   import HopspriteToolbox from "./hopsprite-toolbox.svelte";
+  import HopspriteWells from "./hopsprite-wells.svelte";
+  import ResizeHandle from "./resize-handle.svelte";
   import { read_file, read_path, sprite_name_for, write_text, type Opened } from "./io";
   import { below } from "./menu";
   import { create_sprite, Direction, type Point } from "./model";
   import { DEFAULT_PRESET, preset_by_id } from "./palettes";
-  import { create_prefs, MAX_BRUSH } from "./prefs";
+  import { create_prefs, MAX_BRUSH, SIDE, STRIP, type Panel } from "./prefs";
   import { frame_sequence, full_range, PlayMode } from "./sequence";
-  import { paints, Tool, TOOL_KEYS, TOOL_LABELS, TOOLS, type ToolSettings } from "./tools";
+  import { Tool, TOOL_KEYS, TOOL_LABELS, TOOLS, type ToolSettings } from "./tools";
   import { Viewport } from "./viewport.svelte";
 
   const { path: initial_path }: { path?: string } = $props();
@@ -66,9 +70,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   const prefs = create_prefs(storage);
-  const panel = storage.window<"palette" | "timeline">("panel", "palette", z.enum(["palette", "timeline"]));
   const range = storage.window("range", -1, z.number().int().min(-1));
-  const panel_open = storage.window("panel_open", true, z.boolean());
 
   const editor = new Editor(create_sprite(32, 32, DEFAULT_PRESET.colors));
   const viewport = new Viewport();
@@ -230,20 +232,63 @@
     }
   }
 
-  async function sprite_menu(event: MouseEvent) {
+  const TILE_SIZES = [0, 8, 16, 32];
+
+  async function file_menu(event: MouseEvent) {
     const choice = await dialogs.menu(
       [
-        { id: Transform.FLIP_H, label: "Flip horizontally", icon: FlipHorizontalIcon },
-        { id: Transform.FLIP_V, label: "Flip vertically", icon: FlipVerticalIcon },
+        { id: "new", label: "New sprite…", icon: FilePlusIcon },
+        { id: "open", label: "Open…", icon: FolderOpenIcon, shortcut: "Mod+O" },
+        { id: "device", label: "Open from device…", icon: DevicesIcon },
+        { id: "save", label: "Save", icon: FloppyDiskIcon, shortcut: "Mod+S" },
+        { id: "save-as", label: "Save as…", icon: FloppyDiskBackIcon, shortcut: "Mod+Shift+S" },
         { separator: true },
-        { id: Transform.ROTATE_CW, label: "Rotate 90° right", icon: ArrowClockwiseIcon },
-        { id: Transform.ROTATE_CCW, label: "Rotate 90° left", icon: ArrowCounterClockwiseIcon },
+        { id: "size", label: "Sprite size…", icon: ResizeIcon },
+        {
+          label: "Flip and rotate",
+          icon: ArrowClockwiseIcon,
+          items: [
+            { id: Transform.FLIP_H, label: "Flip horizontally", icon: FlipHorizontalIcon },
+            { id: Transform.FLIP_V, label: "Flip vertically", icon: FlipVerticalIcon },
+            { separator: true },
+            { id: Transform.ROTATE_CW, label: "Rotate 90° right", icon: ArrowClockwiseIcon },
+            { id: Transform.ROTATE_CCW, label: "Rotate 90° left", icon: ArrowCounterClockwiseIcon },
+          ],
+        },
+        {
+          label: "Tile grid",
+          icon: SquaresFourIcon,
+          items: TILE_SIZES.map((size) => ({ id: `tile:${size}`, label: `${size ? `${size} px` : "Off"}${prefs.tile.value === size ? " ✓" : ""}` })),
+        },
       ],
       { anchor: below(event) }
     );
     if (!choice) return;
-    editor.apply((value) => transform_sprite(value, choice as Transform));
-    editor.selection = null;
+    if (choice === "new") document.getElementById(`new-${popover}`)?.showPopover();
+    else if (choice === "open") void open();
+    else if (choice === "device") void open_device();
+    else if (choice === "save") void save();
+    else if (choice === "save-as") void save_as();
+    else if (choice === "size") document.getElementById(`size-${popover}`)?.showPopover();
+    else if (choice.startsWith("tile:")) prefs.tile.value = Number(choice.slice(5));
+    else {
+      editor.apply((value) => transform_sprite(value, choice as Transform));
+      editor.selection = null;
+    }
+  }
+
+  let root = $state<HTMLElement>();
+  let palette_in_popover = $state(false);
+
+  const side_size = $derived(prefs.side.value.collapsed ? SIDE.rest : prefs.side.value.size);
+  const strip_size = $derived(prefs.strip.value.collapsed ? STRIP.rest : prefs.strip.value.size);
+
+  function preview_panel(variable: string, size: number) {
+    root?.style.setProperty(variable, `${size}px`);
+  }
+
+  function commit_panel(box: { value: Panel }, size: number, collapsed: boolean) {
+    box.value = { size, collapsed };
   }
 
   function toggle_play() {
@@ -354,7 +399,7 @@
 
   const cursor_index = $derived.by(() => {
     if (!cursor || cursor.x < 0 || cursor.y < 0 || cursor.x >= sprite.width || cursor.y >= sprite.height) return null;
-    return editor.cel()[cursor.y * sprite.width + cursor.x];
+    return editor.index_at(cursor);
   });
 
   const primary_rgba = $derived.by(() => {
@@ -364,188 +409,231 @@
   });
 </script>
 
-{#snippet zoom_controls()}
-  <IconButton label="Zoom out" size="sm" onclick={() => viewport.step(-1)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
-  <button type="button" class="w-12 rounded-md py-1 text-center font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/8" title="Actual size" onclick={() => viewport.zoom_to(1)}>
-    {Math.round(viewport.zoom * 100)}%
-  </button>
-  <IconButton label="Zoom in" size="sm" onclick={() => viewport.step(1)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
-  <IconButton label="Fit to window (Mod+0)" size="sm" onclick={() => viewport.fit(sprite.width, sprite.height)}><CornersOutIcon weight="bold" /></IconButton>
-{/snippet}
-
-<div class="hopsprite grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] bg-background">
-  <Toolbar>
-    <IconButton label="New sprite…" size="sm" popovertarget="new-{popover}" style="anchor-name: --new-{popover}"><FilePlusIcon weight="bold" /></IconButton>
-    <IconButton label="Open… (Mod+O)" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
-    <IconButton label="Save (Mod+S)" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
-    <IconButton label="Save as… (Mod+Shift+S)" size="sm" class="hidden @md:inline-flex" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
-    <Separator vertical />
-    <IconButton label="Undo (Mod+Z)" size="sm" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
-    <IconButton label="Redo (Mod+Shift+Z)" size="sm" disabled={!editor.redoable} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
-    <Separator vertical />
-    <IconButton label="Sprite size…" size="sm" popovertarget="size-{popover}" style="anchor-name: --size-{popover}"><ResizeIcon weight="bold" /></IconButton>
-    <IconButton label="Flip and rotate the sprite" size="sm" onclick={sprite_menu}><DotsThreeIcon weight="bold" /></IconButton>
-
-    <span class="flex min-w-12 flex-1 items-center gap-1.5 px-1">
-      {#if kernel.platform === Platform.MOBILE}
+<div
+  bind:this={root}
+  class={["hopsprite bg-background", !prefs.side.value.collapsed && "side-open"]}
+  style:--side="{side_size}px"
+  style:--strip="{strip_size}px"
+>
+  <Toolbar class="area-bar flex-nowrap gap-1">
+    <Button size="sm" variant="quiet" class="shrink-0 gap-1 pr-1.5" style="anchor-name: --file-{popover}" onclick={file_menu}>
+      File<CaretDownIcon weight="bold" class="size-3 opacity-65" />
+    </Button>
+    {#if kernel.platform === Platform.MOBILE}
+      <span class="flex min-w-0 shrink items-center gap-1.5 px-1">
         <span class="truncate text-ui font-medium" title={file_path ?? "Not saved yet"}>{file_name}</span>
         {#if editor.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
-      {/if}
-    </span>
-
-    <div class="hidden items-center gap-0.5 @lg:flex" role="group" aria-label="Zoom">{@render zoom_controls()}</div>
-    <Separator vertical class="hidden @lg:block" />
-    <Button size="sm" popovertarget="export-{popover}" style="anchor-name: --export-{popover}">
-      <ExportIcon weight="bold" /><span class="hidden @sm:inline">Export</span>
+      </span>
+    {/if}
+    <IconButton label="Undo (Mod+Z)" size="sm" class="shrink-0" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
+    <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.redoable} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
+    <Separator vertical />
+    <div class="options flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&>*]:shrink-0" role="group" aria-label="{TOOL_LABELS[prefs.tool.value]} options">
+      <span class="hidden shrink-0 pr-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase @2xl:inline">{TOOL_LABELS[prefs.tool.value]}</span>
+      <HopspriteOptions {editor} {prefs} />
+    </div>
+    <Button size="sm" class="shrink-0" popovertarget="export-{popover}" style="anchor-name: --export-{popover}">
+      <ExportIcon weight="bold" /><span class="hidden @md:inline">Export</span>
     </Button>
   </Toolbar>
 
-  <HopspriteOptions {editor} {prefs} />
+  <div class="area-tools border-r border-foreground/8 bg-background-light p-1">
+    <HopspriteToolbox bind:tool={prefs.tool.value} />
+  </div>
 
-  <div class="body min-h-0">
-    <div class="area-tools min-h-0 overflow-auto border-foreground/8 @2xl:border-r">
-      <HopspriteToolbox bind:tool={prefs.tool.value} />
-    </div>
-
-    <div class="area-stage relative grid min-h-0 min-w-0">
-      <HopspriteStage
-        {editor}
-        {viewport}
-        {settings}
-        onion={prefs.onion.value}
-        grid={prefs.grid.value}
-        tile={prefs.tile.value}
-        {playing}
-        visible={win.is_visible}
-        bind:cursor
-      />
-      {#if loading}
-        <div class="absolute inset-0 grid place-items-center bg-background-darker/70"><Spinner label="Opening sprite" /></div>
-      {/if}
-      {#if editor.notice}
-        <div class="pointer-events-none absolute inset-x-0 top-3 flex justify-center" aria-live="polite">
-          <span class="rounded-full bg-background-lighter px-3 py-1 text-ui shadow-popover">{editor.notice}</span>
-        </div>
-      {/if}
-      <div class="pointer-events-auto absolute right-2 bottom-2 flex items-center gap-0.5 rounded-lg bg-background-light/90 p-0.5 shadow-popover @lg:hidden" role="group" aria-label="Zoom">
-        {@render zoom_controls()}
+  <div class="area-stage relative grid min-h-0 min-w-0">
+    <HopspriteStage
+      {editor}
+      {viewport}
+      {settings}
+      onion={prefs.onion.value}
+      grid={prefs.grid.value}
+      tile={prefs.tile.value}
+      {playing}
+      visible={win.is_visible}
+      bind:cursor
+    />
+    {#if loading}
+      <div class="absolute inset-0 grid place-items-center bg-background-darker/70"><Spinner label="Opening sprite" /></div>
+    {/if}
+    {#if editor.notice}
+      <div class="pointer-events-none absolute inset-x-0 top-3 flex justify-center" aria-live="polite">
+        <span class="rounded-full bg-background-lighter px-3 py-1 text-ui shadow-popover">{editor.notice}</span>
       </div>
+    {/if}
+    <div class="info pointer-events-none absolute bottom-2 left-2 hidden rounded-md bg-background-light/85 px-2 py-1 font-mono text-2xs text-foreground/80 tabular-nums shadow-raised @md:block">
+      {sprite.width}×{sprite.height}{cursor_index !== null && cursor ? ` · ${cursor.x}, ${cursor.y}` : ""}
     </div>
-
-    <div class="area-tabs flex items-center gap-1 border-t border-foreground/8 bg-background-light px-2 py-1.5 @2xl:hidden">
-      <Segmented
-        size="sm"
-        label="Panel"
-        class="flex-1 [&>label]:flex-1 [&>label]:justify-center"
-        options={[
-          { value: "palette", label: "Palette" },
-          { value: "timeline", label: "Layers & frames" },
-        ]}
-        bind:value={() => panel.value, (value) => ((panel.value = value), (panel_open.value = true))}
-      />
-      <IconButton label={panel_open.value ? "Hide panel" : "Show panel"} size="sm" onclick={() => (panel_open.value = !panel_open.value)}>
-        {#if panel_open.value}<CaretDownIcon weight="bold" />{:else}<CaretUpIcon weight="bold" />{/if}
-      </IconButton>
-    </div>
-
-    <div class={["area-palette min-h-0 overflow-auto border-foreground/8 bg-background-light @2xl:border-l", (panel.value !== "palette" || !panel_open.value) && "narrow-hidden"]}>
-      <HopspritePalette {editor} />
-    </div>
-
-    <div class={["area-timeline min-h-0 border-t border-foreground/8", (panel.value !== "timeline" || !panel_open.value) && "narrow-hidden"]}>
-      <HopspriteTimeline
-        {editor}
-        {playing}
-        mode={prefs.play_mode}
-        {range}
-        onion={prefs.onion}
-        ontoggleplay={toggle_play}
-      />
+    <div class="absolute right-2 bottom-2 flex items-center gap-0.5 rounded-lg bg-background-light/90 p-0.5 shadow-popover" role="group" aria-label="View">
+      <IconButton label="Pixel grid" size="sm" pressed={prefs.grid.value} onclick={() => (prefs.grid.value = !prefs.grid.value)}><GridFourIcon weight="bold" /></IconButton>
+      <span class="hidden @sm:contents">
+        <IconButton label="Zoom out" size="sm" onclick={() => viewport.step(-1)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
+        <button type="button" class="h-7 w-12 rounded-md text-center font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/8" title="Actual size" onclick={() => viewport.zoom_to(1)}>
+          {Math.round(viewport.zoom * 100)}%
+        </button>
+        <IconButton label="Zoom in" size="sm" onclick={() => viewport.step(1)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
+      </span>
+      <IconButton label="Fit to window (Mod+0)" size="sm" pressed={viewport.fitted} onclick={() => viewport.fit(sprite.width, sprite.height)}><CornersOutIcon weight="bold" /></IconButton>
     </div>
   </div>
 
-  <StatusBar>
-    <span>{sprite.width} × {sprite.height}</span>
-    <span>{cursor ? `${cursor.x}, ${cursor.y}` : "–"}</span>
-    <span class="hidden @sm:inline">Frame {editor.frame + 1}/{sprite.frames.length}</span>
-    <span class="hidden @md:flex items-center gap-1.5">
-      <span class="inline-block size-2.5 rounded-xs ring-1 ring-foreground/30" style:background={primary_rgba}></span>
-      #{editor.primary}{cursor_index !== null ? ` · under cursor #${cursor_index}` : ""}
-    </span>
-    <span class="hidden @lg:inline">{sprite.palette.length - 1} colours · {sprite.layers.length} layers</span>
-    {#if paints(prefs.tool.value) && (prefs.mirror_x.value || prefs.mirror_y.value)}<span class="hidden @md:inline">Mirror on</span>{/if}
-  </StatusBar>
+  <div class="area-side-handle">
+    <ResizeHandle
+      axis="column"
+      label="Colour panel width"
+      size={prefs.side.value.size}
+      min={SIDE.min}
+      max={SIDE.max}
+      rest={SIDE.rest}
+      collapsed={prefs.side.value.collapsed}
+      onpreview={(size) => preview_panel("--side", size)}
+      oncommit={(size, collapsed) => commit_panel(prefs.side, size, collapsed)}
+    />
+  </div>
+
+  <aside class="area-side @container flex min-h-0 flex-col gap-2.5 overflow-hidden bg-background-light p-2" aria-label="Colours">
+    <div class="flex items-center gap-2">
+      <HopspriteWells {editor} popover="color-{popover}" anchor="--wells-{popover}" onopen={() => (palette_in_popover = false)} />
+      <span class="side-wide min-w-0 truncate font-mono text-2xs text-foreground/80 tabular-nums">
+        {editor.primary === 0 ? "Transparent" : sprite.palette[editor.primary]?.slice(1, 7).toUpperCase()}
+      </span>
+    </div>
+    <HopspriteSwatches {editor} class="min-h-12 shrink overflow-y-auto p-0.5" />
+    <HopspriteLayers {editor} class="side-wide min-h-28 flex-1 border-t border-foreground/8 pt-2" />
+  </aside>
+
+  <div class="area-strip-handle">
+    <ResizeHandle
+      axis="row"
+      label="Frames height"
+      size={prefs.strip.value.size}
+      min={STRIP.min}
+      max={STRIP.max}
+      rest={STRIP.rest}
+      collapsed={prefs.strip.value.collapsed}
+      onpreview={(size) => preview_panel("--strip", size)}
+      oncommit={(size, collapsed) => commit_panel(prefs.strip, size, collapsed)}
+    />
+  </div>
+
+  <div class="area-strip min-h-0">
+    <HopspriteStrip {editor} {playing} mode={prefs.play_mode} {range} onion={prefs.onion} ontoggleplay={toggle_play} />
+  </div>
+
+  <div class="area-dock items-center gap-2 border-t border-foreground/8 bg-background-light px-2 py-1.5">
+    <HopspriteWells {editor} size="sm" popover="color-{popover}" anchor="--dock-wells-{popover}" onopen={() => (palette_in_popover = true)} />
+    <Separator vertical />
+    <div class="min-w-0 flex-1"><HopspriteToolbox bind:tool={prefs.tool.value} /></div>
+  </div>
 </div>
 
-<HopspriteNewPopover id="new-{popover}" anchor="--new-{popover}" oncreate={create} />
-<HopspriteSizePopover id="size-{popover}" anchor="--size-{popover}" {editor} />
+<HopspriteNewPopover id="new-{popover}" anchor="--file-{popover}" oncreate={create} />
+<HopspriteSizePopover id="size-{popover}" anchor="--file-{popover}" {editor} />
 <HopspriteExportPopover id="export-{popover}" anchor="--export-{popover}" {editor} onexport={export_svg} />
+<HopspriteColorPopover
+  id="color-{popover}"
+  anchor={palette_in_popover ? `--dock-wells-${popover}` : `--wells-${popover}`}
+  {editor}
+  with_palette={palette_in_popover}
+/>
 
 <style>
-  .body {
+  .hopsprite {
+    container-type: size;
     display: grid;
+    height: 100%;
+    min-height: 0;
+    --side-size: min(var(--side), 40cqw);
+    --strip-size: max(2.75rem, min(var(--strip), 30cqh));
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(8rem, 1fr) auto auto minmax(0, auto);
-    grid-template-areas: "stage" "tools" "tabs" "panel";
+    grid-template-rows: auto minmax(0, 1fr) auto var(--strip-size) auto;
+    grid-template-areas: "bar" "stage" "strip-handle" "strip" "dock";
+  }
+
+  .hopsprite :global(.area-bar) {
+    grid-area: bar;
+  }
+
+  .area-tools {
+    grid-area: tools;
+    display: none;
   }
 
   .area-stage {
     grid-area: stage;
   }
 
-  .area-tools {
-    grid-area: tools;
-    border-top-width: 1px;
-  }
-
-  .area-tabs {
-    grid-area: tabs;
-  }
-
-  .area-palette,
-  .area-timeline {
-    grid-area: panel;
-    max-height: 13rem;
-  }
-
-  .area-timeline {
-    display: grid;
-  }
-
-  .narrow-hidden {
+  .area-side-handle,
+  .area-side {
     display: none;
   }
 
-  @container (width >= 42rem) {
-    .body {
-      grid-template-columns: auto minmax(0, 1fr) 15rem;
-      grid-template-rows: minmax(0, 1fr) minmax(0, 13.5rem);
+  .area-strip-handle {
+    grid-area: strip-handle;
+  }
+
+  .area-strip {
+    grid-area: strip;
+  }
+
+  .area-dock {
+    grid-area: dock;
+    display: flex;
+  }
+
+  .options {
+    scrollbar-width: none;
+  }
+
+  @container (height < 45rem) {
+    .hopsprite {
+      --strip-size: max(2.75rem, min(var(--strip), 18cqh));
+    }
+  }
+
+  @container (height < 34rem) {
+    .hopsprite {
+      --strip-size: max(2.75rem, min(var(--strip), 11cqh));
+    }
+  }
+
+  @container (width >= 40rem) {
+    .hopsprite {
+      grid-template-columns: auto minmax(0, 1fr) auto var(--side-size);
+      grid-template-rows: auto minmax(0, 1fr) auto var(--strip-size);
       grid-template-areas:
-        "tools stage palette"
-        "timeline timeline timeline";
+        "bar bar bar bar"
+        "tools stage side-handle side"
+        "strip-handle strip-handle strip-handle strip-handle"
+        "strip strip strip strip";
     }
 
     .area-tools {
-      border-top-width: 0;
-    }
-
-    .area-palette {
-      grid-area: palette;
-      max-height: none;
-    }
-
-    .area-timeline {
-      grid-area: timeline;
-      max-height: none;
-    }
-
-    .narrow-hidden {
       display: block;
     }
 
-    .area-timeline.narrow-hidden {
-      display: grid;
+    .area-side-handle {
+      grid-area: side-handle;
+      display: flex;
+    }
+
+    .area-side {
+      grid-area: side;
+      display: flex;
+    }
+
+    .area-dock {
+      display: none;
+    }
+
+    .side-open :global(.strip-layers) {
+      display: none;
+    }
+  }
+
+  @container (width < 9rem) {
+    :global(.side-wide) {
+      display: none;
     }
   }
 </style>

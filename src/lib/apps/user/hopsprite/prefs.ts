@@ -30,7 +30,19 @@ export interface Prefs {
   tile: Box<number>;
   onion: Box<Onion>;
   play_mode: Box<PlayMode>;
+  side: Box<Panel>;
+  strip: Box<Panel>;
 }
+
+export interface Panel {
+  size: number;
+  collapsed: boolean;
+}
+
+export const SIDE = { rest: 56, min: 152, default: 200, max: 360 } as const;
+export const STRIP = { rest: 44, min: 60, default: 84, max: 280 } as const;
+
+const PanelSchema = z.object({ size: z.number().min(0).max(2000), collapsed: z.boolean() });
 
 export const MAX_BRUSH = 16;
 
@@ -58,5 +70,7 @@ export function create_prefs(storage: StorageHandle): Prefs {
     tile: storage.persisted("tile", 0, z.number().int().min(0).max(256)),
     onion: storage.persisted<Onion>("onion", { enabled: false, before: 1, after: 1, opacity: 40, tint: true }, OnionSchema),
     play_mode: storage.persisted<PlayMode>("play_mode", PlayMode.LOOP, z.enum(PLAY_MODES)),
+    side: storage.persisted<Panel>("side", { size: SIDE.default, collapsed: false }, PanelSchema),
+    strip: storage.persisted<Panel>("strip", { size: STRIP.default, collapsed: false }, PanelSchema),
   };
 }

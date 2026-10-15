@@ -33,24 +33,46 @@
   };
 </script>
 
-<div
-  class="flex shrink-0 items-center gap-1 overflow-x-auto bg-background-light p-1.5 @2xl:flex-col @2xl:overflow-x-visible @2xl:overflow-y-auto"
-  role="toolbar"
-  aria-label="Tools"
-  aria-orientation="vertical"
->
+<div class="toolbox" role="toolbar" aria-label="Tools">
   {#each TOOL_GROUPS as group, g (g)}
-    {#if g > 0}<span class="mx-0.5 h-5 w-px shrink-0 bg-foreground/10 @2xl:mx-0 @2xl:my-0.5 @2xl:h-px @2xl:w-5" aria-hidden="true"></span>{/if}
+    {#if g > 0}<span class="divider shrink-0 bg-foreground/10" aria-hidden="true"></span>{/if}
     {#each group as item (item)}
       {@const Icon = ICONS[item]}
-      <IconButton
-        label="{TOOL_LABELS[item]} ({TOOL_KEYS[item].toUpperCase()})"
-        size="md"
-        pressed={tool === item}
-        onclick={() => (tool = item)}
-      >
+      <IconButton label="{TOOL_LABELS[item]} ({TOOL_KEYS[item].toUpperCase()})" pressed={tool === item} class="shrink-0" onclick={() => (tool = item)}>
         <Icon weight={tool === item ? "fill" : "bold"} />
       </IconButton>
     {/each}
   {/each}
 </div>
+
+<style>
+  .toolbox {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .divider {
+    width: 1px;
+    height: 1.25rem;
+    margin-inline: 0.25rem;
+  }
+
+  @container (width >= 40rem) {
+    .toolbox {
+      height: 100%;
+      flex-direction: column;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      overflow: visible;
+    }
+
+    .divider {
+      width: 1.25rem;
+      height: 1px;
+      margin: 0.25rem 0.375rem;
+    }
+  }
+</style>
