@@ -58,6 +58,20 @@ windows.focus(id); // always via the prefix, never destructured
 
 Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS. Inside an app, `get_app_context()` from `$lib/core/contexts/app` gives its window handle (reactive state, controls) and `app.{id}.*` localStorage (ADR-003).
 
+### Long-running work: use tasks
+
+Anything slow that a user would want to watch, cancel or retry runs through `TasksService` (ADR-013, [tasks](docs/system/services/tasks.md)), on `@lilbunnyrabbit/task-manager`. That covers zip, PDF jobs, batches, imports and downloads. Any app, service or core util can use it, and it's the default over hand-rolling a progress toast with a Cancel flag. Model the work the way the package is designed for: a `createTask` per unit (file, page, folder), `createTaskGroup` for steps (`sequential`, or `parallel` when units are independent), progress through `this.setProgress()`, logs through `this.logger`, and the status line through `parse()`. The job gets a progress toast, a row in Activity Monitor › Tasks with the run's tree, and a taskbar indicator for free.
+
+```ts
+const job = kernel.service<TasksService>("tasks").run(app_id, (context) => /* fresh tasks: build runs again on Retry */, {
+  title: "Exporting 12 pages",
+  done: (result) => ({ title: "Exported", actions: [...] }),
+});
+// Inside execute: context.signal (Cancel), context.message("3 of 12"), await context.pace() in tight loops
+```
+
+References: `src/lib/apps/user/example/task.ts` (parallel group, logs, `parse()`, fail once), `src/lib/core/utils/zip/operations.ts` (one task per picked item, then a write step).
+
 ## Hard rules
 
 - Runes only. No `any`. `interface` for object shapes.

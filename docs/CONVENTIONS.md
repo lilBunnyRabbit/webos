@@ -239,7 +239,7 @@ No error strategy yet (roadmap P4). Current de-facto rules:
 
 ## Dependencies
 
-Ask before adding one. The bar: browser-native API first, then own package (`@lilbunnyrabbit/*`), then small focused library. Planned and approved: `zod` (ADR-008), `@lilbunnyrabbit/task-manager` (ADR-013). Hosting is GitHub Pages, so anything needing a server is out unless an ADR says otherwise.
+Ask before adding one. The bar: browser-native API first, then own package (`@lilbunnyrabbit/*`), then small focused library. Approved: `zod` (ADR-008), `@lilbunnyrabbit/task-manager` (ADR-013, installed 1.0.1: any app, service or util with long work uses it through TasksService, see [tasks](system/services/tasks.md#writing-a-task)). Hosting is GitHub Pages, so anything needing a server is out unless an ADR says otherwise.
 
 ---
 

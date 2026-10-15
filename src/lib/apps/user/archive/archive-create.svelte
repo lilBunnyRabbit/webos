@@ -18,9 +18,9 @@
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
   import { device_item, item_at } from "$lib/core/utils/zip/files";
-  import { add_item, all_sources, archive_name, parent_path, type CreateItem } from "$lib/core/utils/zip/create";
+  import { add_item, archive_name, parent_path, type CreateItem } from "$lib/core/utils/zip/create";
   import { Method } from "$lib/core/utils/zip/format";
-  import { zip_sources } from "$lib/core/utils/zip/operations";
+  import { zip_items } from "$lib/core/utils/zip/operations";
 
   const { tabs, initial_paths }: { tabs: Snippet; initial_paths: string[] } = $props();
 
@@ -87,7 +87,7 @@
     if (!path) return;
 
     const zip_method = method.value === "store" ? Method.STORE : Method.DEFLATE;
-    await zip_sources(all_sources(items), total, path, zip_method, { app_id, on_job: (next) => (job = next) });
+    await zip_items(items, path, zip_method, { app_id, on_job: (next) => (job = next) });
   }
 </script>
 

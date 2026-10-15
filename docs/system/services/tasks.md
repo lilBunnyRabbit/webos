@@ -118,5 +118,5 @@ await job.done; // null when it failed or was cancelled
 ## Known gaps
 
 - No automatic retry or backoff; retry is manual.
-- Groups work, but no consumer uses them yet (Image Tools batches are next).
+- Extraction is still one task; compression is a group (one task per picked file or folder, then "Write archive", in order because `ZipWriter` appends). PDF Tools and Image Tools batches are single tasks for now.
 - Cancel only lands where the work checks the signal.

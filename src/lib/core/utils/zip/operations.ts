@@ -1,6 +1,7 @@
-import { createTask } from "@lilbunnyrabbit/task-manager";
+import { createTask, createTaskGroup } from "@lilbunnyrabbit/task-manager";
 import kernel, {
   NotificationType,
+  TaskJobStatus,
   type AppsService,
   type FilesService,
   type NotificationsService,
@@ -12,10 +13,10 @@ import kernel, {
 import type { AppId } from "$lib/core/api/services/apps/type";
 import { error_message, format_bytes } from "$lib/core/utils";
 import { extract_entries, item_at, join, remove_at, write_at, type ExtractResult } from "./files";
-import { add_item, all_sources, archive_name, base_name, stem, unique_name, type CreateItem } from "./create";
+import { add_item, archive_name, base_name, stem, unique_name, type CreateItem } from "./create";
 import { Method, type StreamOptions } from "./format";
 import { read_zip, type ZipEntry } from "./read";
-import { write_zip, type ZipSource } from "./write";
+import { ZipWriter } from "./write";
 
 // Explorer's Compress and Extract here are an OS feature, so their notifications come from it unless a caller names its app.
 const SENDER: AppId = "file-explorer";
@@ -108,31 +109,60 @@ export async function free_path(folder: string, name: string): Promise<string> {
   return join(folder, unique_name(name, taken));
 }
 
-export async function zip_sources(
-  sources: ZipSource[],
-  total: number,
-  target: string,
-  method: Method,
-  options: RunOptions = {}
-): Promise<string | null> {
+/**
+ * One task per picked file or folder, then one that writes the archive: a sequential group, since the writer appends
+ * entries in order.
+ */
+export async function zip_items(items: CreateItem[], target: string, method: Method = Method.DEFLATE, options: RunOptions = {}): Promise<string | null> {
   const app_id = options.app_id ?? SENDER;
   const existed = (await files().get_file(target)) !== null;
+  const total = items.reduce((sum, item) => sum + item.size, 0);
   let leftover: Leftover | null = null;
   let size = 0;
-  const job = tasks().run<string>(
+  const job = tasks().run(
     app_id,
-    (context) =>
-      createTask<void, string>({
-        name: "Compress",
+    (context) => {
+      const writer = new ZipWriter(method);
+      let done = 0;
+      const add = (item: CreateItem) =>
+        createTask<void, void>({
+          name: item.directory ? `${item.name}/` : item.name,
+          parse() {
+            if (item.directory) return { status: `${item.files} ${item.files === 1 ? "file" : "files"} · ${format_bytes(item.size)}` };
+            return { status: format_bytes(item.size) };
+          },
+          async execute() {
+            let mine = 0;
+            const stream: StreamOptions = {
+              signal: context.signal,
+              pace: context.pace,
+              on_bytes: (bytes) => {
+                mine += bytes;
+                done += bytes;
+                this.setProgress(item.size > 0 ? mine / item.size : 0);
+                context.message(`${format_bytes(done)} of ${format_bytes(total)}`);
+              },
+            };
+            for (const source of item.sources) await writer.add(source, stream);
+            this.logger.info(`Packed ${item.sources.length} ${item.sources.length === 1 ? "entry" : "entries"}`);
+          },
+        })();
+      const write = createTask<void, string>({
+        name: "Write archive",
         async execute() {
           leftover = null;
-          const zip = await write_zip(sources, { method, ...stream(this, context, total) });
+          context.message(`Writing ${base_name(target)}`);
+          const zip = writer.finish();
           if (!existed) leftover = { path: target, discard: () => remove_at(target) };
           await write_at(target, zip);
           size = zip.size;
+          context.message(null);
+          this.logger.info(`${target} · ${format_bytes(zip.size)}`);
           return target;
         },
-      })(),
+      });
+      return createTaskGroup({ name: `Compress ${base_name(target)}`, tasks: () => [...items.map(add), write()] })();
+    },
     {
       title: `Compressing ${base_name(target)}`,
       signal: options.signal,
@@ -141,24 +171,12 @@ export async function zip_sources(
         message: `${target} · ${format_bytes(size)}`,
         actions: [{ label: "Open", on_click: () => void apps().open(target) }],
       }),
-      failed: failed(
-        app_id,
-        { cancelled: "Compression cancelled", failed: "Couldn't create the archive" },
-        () => leftover
-      ),
+      failed: failed(app_id, { cancelled: "Compression cancelled", failed: "Couldn't create the archive" }, () => leftover),
     }
   );
-  return tracked(job, options);
-}
-
-export async function zip_items(
-  items: CreateItem[],
-  target: string,
-  method: Method = Method.DEFLATE,
-  options: RunOptions = {}
-): Promise<string | null> {
-  const total = items.reduce((sum, item) => sum + item.size, 0);
-  return zip_sources(all_sources(items), total, target, method, options);
+  // The root is a group, which has no result of its own.
+  await tracked(job, options);
+  return job.status === TaskJobStatus.DONE ? target : null;
 }
 
 export async function compress_into(paths: string[], folder: string): Promise<string | null> {

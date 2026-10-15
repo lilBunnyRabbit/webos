@@ -116,5 +116,6 @@ What this shows:
 | Report an error to the user | `kernel.service<NotificationsService>("notifications").notify(app_id, { type: "error", title })` ([notifications](../services/notifications.md)) |
 | Ask the user something outside the window | `dialogs.show(Component, props, { anchor })` ([dialogs](../services/dialogs.md)) |
 | Need the file's bytes | `files.get_file(path)` returns a `File` or `null` ([files](../services/files.md)) |
+| Long work the user should see, cancel or retry | `tasks.run(app_id, (context) => task, { title })` with `@lilbunnyrabbit/task-manager` tasks and groups; it keeps running after the window closes ([tasks](../services/tasks.md#writing-a-task)) |
 
-References in the repo: `user/example` (context, persisted state, props), `system/text-editor` (file app that saves: close guard, disk watch, window-scoped shortcuts), `system/media-preview` (file app with a toolbar and status bar), `system/settings` (side-nav app with sections), `system/style-guide` (every kit component).
+References in the repo: `user/example` (context, persisted state, props, a background task in `task.ts`), `system/text-editor` (file app that saves: close guard, disk watch, window-scoped shortcuts), `system/media-preview` (file app with a toolbar and status bar), `system/settings` (side-nav app with sections), `system/style-guide` (every kit component).

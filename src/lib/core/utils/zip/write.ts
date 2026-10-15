@@ -59,27 +59,30 @@ function header(size: number, write: (view: DataView) => void): Uint8Array<Array
 }
 
 // A Blob of parts: stored entries reference the source Blob itself, so nothing is held twice.
-export async function write_zip(sources: ZipSource[], options: WriteOptions): Promise<Blob> {
-  const { signal } = options;
-  const encoder = new TextEncoder();
-  const parts: BlobPart[] = [];
-  const central: Uint8Array<ArrayBuffer>[] = [];
-  let offset = 0;
+export class ZipWriter {
+  private readonly encoder = new TextEncoder();
+  private readonly parts: BlobPart[] = [];
+  private readonly central: Uint8Array<ArrayBuffer>[] = [];
+  private offset = 0;
+  private count = 0;
 
-  if (sources.length >= MAX_16) throw new ZipError("Too many files for one archive (65,534 at most).");
+  constructor(private readonly method: Method) {}
 
-  for (const source of sources) {
+  /** Appends one entry. Entries go in the order they're added, so adds must not overlap. */
+  async add(source: ZipSource, options: StreamOptions = {}): Promise<void> {
+    const { signal } = options;
     if (signal?.aborted) throw abort_error(signal);
+    if (this.count + 1 >= MAX_16) throw new ZipError("Too many files for one archive (65,534 at most).");
     const name = source.directory ? `${source.name}/` : source.name;
-    const name_bytes = encoder.encode(name);
+    const name_bytes = this.encoder.encode(name);
     if (name_bytes.length > MAX_16) throw new ZipError(`The name "${name}" is too long.`);
     const flags = is_ascii(name) ? 0 : Flag.UTF8;
     const { time, date } = to_dos_datetime(source.modified ?? new Date());
 
     const packed: Packed = source.directory
       ? { method: Method.STORE, crc: 0, size: 0, payload: new Blob() }
-      : await pack(source.data ?? new Blob(), options.method, options);
-    if (packed.size >= MAX_32 || packed.payload.size >= MAX_32 || offset >= MAX_32) {
+      : await pack(source.data ?? new Blob(), this.method, options);
+    if (packed.size >= MAX_32 || packed.payload.size >= MAX_32 || this.offset >= MAX_32) {
       throw new ZipError("Archives over 4 GB aren't supported.");
     }
 
@@ -95,7 +98,8 @@ export async function write_zip(sources: ZipSource[], options: WriteOptions): Pr
       v.setUint32(22, packed.size, true);
       v.setUint16(26, name_bytes.length, true);
     });
-    central.push(
+    const offset = this.offset;
+    this.central.push(
       header(CENTRAL_HEADER_SIZE, (v) => {
         v.setUint32(0, Signature.CENTRAL, true);
         v.setUint16(4, VERSION_MADE_BY, true);
@@ -113,18 +117,28 @@ export async function write_zip(sources: ZipSource[], options: WriteOptions): Pr
       }),
       name_bytes
     );
-    parts.push(local, name_bytes, packed.payload);
-    offset += LOCAL_HEADER_SIZE + name_bytes.length + packed.payload.size;
+    this.parts.push(local, name_bytes, packed.payload);
+    this.offset += LOCAL_HEADER_SIZE + name_bytes.length + packed.payload.size;
+    this.count++;
   }
 
-  const directory_size = central.reduce((sum, bytes) => sum + bytes.length, 0);
-  if (offset + directory_size >= MAX_32) throw new ZipError("Archives over 4 GB aren't supported.");
-  const end = header(END_SIZE, (v) => {
-    v.setUint32(0, Signature.END, true);
-    v.setUint16(8, sources.length, true);
-    v.setUint16(10, sources.length, true);
-    v.setUint32(12, directory_size, true);
-    v.setUint32(16, offset, true);
-  });
-  return new Blob([...parts, ...central, end], { type: "application/zip" });
+  finish(): Blob {
+    const directory_size = this.central.reduce((sum, bytes) => sum + bytes.length, 0);
+    if (this.offset + directory_size >= MAX_32) throw new ZipError("Archives over 4 GB aren't supported.");
+    const end = header(END_SIZE, (v) => {
+      v.setUint32(0, Signature.END, true);
+      v.setUint16(8, this.count, true);
+      v.setUint16(10, this.count, true);
+      v.setUint32(12, directory_size, true);
+      v.setUint32(16, this.offset, true);
+    });
+    return new Blob([...this.parts, ...this.central, end], { type: "application/zip" });
+  }
+}
+
+export async function write_zip(sources: ZipSource[], options: WriteOptions): Promise<Blob> {
+  if (sources.length >= MAX_16) throw new ZipError("Too many files for one archive (65,534 at most).");
+  const writer = new ZipWriter(options.method);
+  for (const source of sources) await writer.add(source, options);
+  return writer.finish();
 }
