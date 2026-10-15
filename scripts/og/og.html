@@ -1,0 +1,98 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url("../../src/assets/fonts/InterVariable.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: Hack; src: url("../../src/assets/fonts/hack-regular.woff2") format("woff2"); }
+:root {
+  --bg-darkest: oklch(0.153 0.014 230.47); --bg-darker: oklch(0.187 0.0171 230.47); --bg-dark: oklch(0.221 0.0202 230.47);
+  --bg: oklch(0.255 0.0233 230.47); --bg-light: oklch(0.289 0.0264 230.47); --bg-lighter: oklch(0.323 0.0295 230.47);
+  --bg-lightest: oklch(0.357 0.0326 230.47); --fg: oklch(0.745 0.0078 50.47); --primary: oklch(0.745 0.0699 122.47);
+  --secondary: oklch(0.745 0.0466 302.47); --accent: oklch(0.745 0.0932 50.47); --tertiary: oklch(0.745 0.0233 176.47);
+  --cottontail: oklch(0.949 0.0939 122.47); --info: oklch(0.745 0.1398 240);
+}
+* { box-sizing: border-box; margin: 0; }
+body { width: 1200px; height: 630px; overflow: hidden; background: var(--bg-darkest); font-family: Inter, sans-serif; color: var(--fg); position: relative; }
+.glow { position: absolute; inset: 0; background: radial-gradient(60% 70% at 20% 30%, oklch(0.745 0.0699 122.47 / 0.13), transparent 70%), radial-gradient(50% 60% at 85% 90%, oklch(0.745 0.0466 302.47 / 0.10), transparent 70%); }
+.frame { position: absolute; inset: 20px; border: 2px solid var(--bg-light); border-radius: 28px; }
+.left { position: absolute; left: 76px; top: 0; bottom: 0; width: 470px; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.brand { display: flex; align-items: center; gap: 22px; }
+.brand img { width: 104px; height: 104px; }
+h1 { font-size: 104px; font-weight: 800; letter-spacing: -0.045em; color: var(--cottontail); line-height: 1; }
+.tag { font-size: 32px; font-weight: 500; line-height: 1.25; color: var(--fg); letter-spacing: -0.01em; }
+.tag b { color: var(--primary); font-weight: 600; }
+.feat { font-size: 19px; color: oklch(0.745 0.0078 50.47 / 0.7); }
+.screen { position: absolute; left: 590px; top: 70px; width: 548px; height: 490px; border-radius: 22px; overflow: hidden; background: var(--bg-darker); border: 1px solid var(--bg-lighter); box-shadow: 0 30px 80px oklch(0 0 0 / 0.5); }
+.dots { position: absolute; inset: 0; background-image: radial-gradient(oklch(0.745 0.0078 50.47 / 0.14) 1px, transparent 1.5px); background-size: 44px 44px; background-position: 10px 10px; }
+.screen::before { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 60% at 30% 20%, oklch(0.745 0.0699 122.47 / 0.10), transparent 70%); }
+.icons { position: absolute; left: 18px; top: 18px; display: grid; gap: 14px; }
+.icon { width: 58px; display: grid; justify-items: center; gap: 6px; font-size: 10px; }
+.icon i { width: 40px; height: 40px; border-radius: 11px; display: block; }
+.win { position: absolute; border-radius: 12px; background: var(--bg); border: 1px solid var(--bg-lightest); box-shadow: 0 16px 40px oklch(0 0 0 / 0.45); overflow: hidden; }
+.bar { height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--bg-light); font-size: 12px; font-weight: 600; }
+.bar .sp { flex: 1; }
+.bar s { width: 10px; height: 10px; border-radius: 50%; background: oklch(0.745 0.0078 50.47 / 0.3); display: block; text-decoration: none; }
+.term { left: 96px; top: 150px; width: 330px; height: 196px; background: var(--bg-darkest); }
+.term pre { font-family: Hack, monospace; font-size: 12.5px; line-height: 1.6; padding: 10px 14px; color: var(--fg); }
+.p { color: var(--primary); } .d { color: oklch(0.745 0.0078 50.47 / 0.55); } .s { color: var(--secondary); } .a { color: var(--accent); }
+.files { left: 230px; top: 40px; width: 290px; height: 190px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; font-size: 12px; }
+.row i { width: 16px; height: 16px; border-radius: 4px; display: block; }
+.row.sel { background: oklch(0.745 0.0699 122.47 / 0.14); }
+.row span:last-child { margin-left: auto; color: oklch(0.745 0.0078 50.47 / 0.5); }
+.widget { position: absolute; right: 18px; top: 250px; width: 120px; height: 120px; border-radius: 14px; background: var(--bg-light); box-shadow: 0 10px 30px oklch(0 0 0 / 0.35); display: grid; place-items: center; }
+.widget b { font-family: Hack, monospace; font-size: 30px; color: var(--primary); font-weight: 400; }
+.widget small { position: absolute; top: 12px; left: 14px; font-size: 10px; opacity: 0.65; }
+.dock { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 50px; border-radius: 16px; background: oklch(0.289 0.0264 230.47 / 0.92); box-shadow: 0 10px 30px oklch(0 0 0 / 0.4); display: flex; align-items: center; gap: 8px; padding: 0 9px; }
+.dock .start { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.dock .start img { width: 26px; height: 26px; }
+.dock .sep { width: 1px; height: 22px; background: oklch(0.745 0.0078 50.47 / 0.15); }
+.dock .app { width: 34px; height: 34px; border-radius: 10px; position: relative; display: grid; place-items: center; }
+.dock .app.on { background: oklch(0.745 0.0078 50.47 / 0.1); }
+.dock .app i { width: 20px; height: 20px; border-radius: 6px; display: block; }
+.dock .app.on::after { content: ""; position: absolute; bottom: 2px; width: 12px; height: 3px; border-radius: 3px; background: var(--primary); }
+.dock .clock { margin-left: auto; text-align: right; font-size: 11px; line-height: 1.2; padding-right: 6px; }
+.dock .clock b { font-family: Hack, monospace; font-weight: 400; font-size: 13px; display: block; }
+</style></head>
+<body>
+<div class="glow"></div>
+<div class="frame"></div>
+<div class="left">
+  <div class="brand"><img src="../../public/logo.svg"><h1>WebOS</h1></div>
+  <p class="tag">A desktop in your browser. <b>Windows, files, a terminal</b> and 40+ apps.</p>
+  <p class="feat">Offline PWA · your files stay on your device · Svelte 5</p>
+</div>
+<div class="screen">
+  <div class="dots"></div>
+  <div class="icons">
+    <div class="icon"><i style="background: var(--primary)"></i>Files</div>
+    <div class="icon"><i style="background: var(--secondary)"></i>Paint</div>
+    <div class="icon"><i style="background: var(--accent)"></i>Notes</div>
+    <div class="icon"><i style="background: var(--tertiary)"></i>Games</div>
+  </div>
+  <div class="win files">
+    <div class="bar">File Explorer<span class="sp"></span><s></s><s></s><s></s></div>
+    <div class="row"><i style="background: var(--info)"></i>Documents<span>12 items</span></div>
+    <div class="row sel"><i style="background: var(--primary)"></i>Pictures<span>48 items</span></div>
+    <div class="row"><i style="background: var(--accent)"></i>notes.md<span>2 KB</span></div>
+    <div class="row"><i style="background: var(--secondary)"></i>sketch.png<span>184 KB</span></div>
+  </div>
+  <div class="win term">
+    <div class="bar">Terminal<span class="sp"></span><s></s><s></s><s></s></div>
+<pre><span class="p">~</span> <span class="d">›</span> ls ~/Pictures <span class="d">|</span> where size &gt; 1mb
+<span class="s">beach.jpg</span>      <span class="a">3.2 MB</span>
+<span class="s">skyline.png</span>    <span class="a">1.8 MB</span>
+<span class="p">~</span> <span class="d">›</span> backup create
+<span class="d">saved webos-backup.zip · 48 MB</span>
+<span class="p">~</span> <span class="d">›</span> <span style="background: var(--fg); color: var(--fg)">_</span></pre>
+  </div>
+  <div class="widget"><small>Pomodoro</small><b>24:59</b></div>
+  <div class="dock">
+    <div class="start"><img src="../../public/logo.svg"></div>
+    <div class="sep"></div>
+    <div class="app on"><i style="background: var(--primary)"></i></div>
+    <div class="app on"><i style="background: var(--fg)"></i></div>
+    <div class="app"><i style="background: var(--secondary)"></i></div>
+    <div class="clock"><b>12:04</b>Thu, Oct 15</div>
+  </div>
+</div>
+</body></html>

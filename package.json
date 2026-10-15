@@ -33,7 +33,8 @@
     "generate:pwa-assets": "pwa-assets-generator",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
-    "budget": "bun scripts/boot-budget.ts"
+    "budget": "bun scripts/boot-budget.ts",
+    "og": "bun scripts/og/render.ts"
   },
   "type": "module",
   "dependencies": {

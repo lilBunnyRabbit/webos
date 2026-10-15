@@ -254,6 +254,7 @@ Ask before adding one. The bar: browser-native API first, then own package (`@li
 | `bun run test` | Vitest, both projects: `unit` (Node) and `browser` (Chromium through Playwright). First run needs `bunx playwright install chromium` |
 | `bun run test:unit` | Node project only. CI runs this before `build` |
 | `bun run budget` | After a build: entry chunk gz size against the 180 KB budget. CI runs it after `build` |
+| `bun run og` | Renders `scripts/og/og.html` to `public/og.png` (the 1200×630 link preview card) through Playwright |
 
 Prettier: 120 cols, double quotes, semicolons, ES5 trailing commas. 
 ### Tests

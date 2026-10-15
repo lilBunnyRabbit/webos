@@ -79,7 +79,7 @@ The desktop, window manager and toast area share one grid cell, stacked with z-i
 
 | Path | What lives there |
 |------|------------------|
-| `index.html` | Splash, favicon/PWA links, description and Open Graph/Twitter card meta (`public/og.png`, 1200×630, absolute URLs because crawlers ignore `base`), `#app` mount point |
+| `index.html` | Splash, favicon/PWA links, description and Open Graph/Twitter card meta (`public/og.png`, 1200×630, rendered from `scripts/og/og.html` by `bun run og`; absolute URLs because crawlers ignore `base`), `#app` mount point |
 | `src/main.ts` | Boot: `kernel.init(on_step)` with the splash progress and chunk warming, `load_shell()`, mount, splash removal, boot error on the splash, pagehide/HMR shutdown |
 | `src/App.svelte` | Renders `web-os.svelte` |
 | `src/app.css` | Tailwind, fonts, `@theme inline` tokens (colours, type, radius, shadows, easing, `pop-in`), base layer ([theming.md](theming.md)) |
