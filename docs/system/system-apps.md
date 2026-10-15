@@ -300,6 +300,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 - **Toolbar:** Open…, the full path in mono, and a "First row is header" `Switch` (on by default; "Header row" below `@md`).
 - **Table:** each row is its own grid on one shared fixed template: `{digits+3}ch` for row numbers, then `12rem` per column. Rows line up without a `<table>`, so each body row can use `content-visibility: auto` with `contain-intrinsic-block-size: auto 1.75rem`, and the browser skips rendering off-screen rows with no JS virtualization. Table rows can't do this, because containment doesn't apply to them. The header row is sticky on `background-light`: the first row, or A, B, … AA when the header is off. The row-number column is sticky on the left. Cells are mono `text-ui`, truncated, with the full value as `title`. Clicking or tapping a cell (one delegated handler on the scroller) highlights it `primary/12` and shows its full value, wrapped and selectable, in a strip above the status bar with its row number and column; the same cell again closes it, and so does a new file or a header toggle. That's the touch path to long values.
+- **Show more:** the table renders the first 1000 body rows (`ROW_PAGE`). Past that, a sticky "Show more" `Button` with `{shown} of {rows} rows` sits under the last row and adds another 1000 per click. Opening another file starts again at 1000.
 - **Status bar:** file name, `{rows} rows × {columns} columns` (excluding the header), delimiter (Comma / Tab), size.
 
 **Persistence.** None. The header toggle is per window.
@@ -307,7 +308,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 **Known gaps.**
 
 - Fixed column width: long values are truncated (tooltip, or tap for the value strip), short columns waste space.
-- Parses on the main thread and builds every row's DOM; `content-visibility` only skips layout and paint.
+- Parses on the main thread. Rendering is capped by "Show more", not virtualized: every shown row has DOM, and `content-visibility` only skips its layout and paint.
 - No delimiter detection (semicolon CSVs show as one column), UTF-8 only, read-only, no sorting or filtering.
 
 ---

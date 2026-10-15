@@ -18,17 +18,25 @@
   let has_header = $state(true);
   /** The tapped cell, shown in full above the status bar: tooltips need a hover that touch doesn't have. */
   let inspected = $state<{ row: number; column: number; value: string } | null>(null);
+  /** Rendering every row of a big file freezes the window; rows come in pages instead. */
+  const ROW_PAGE = 1000;
+  let shown = $state(ROW_PAGE);
 
-  const { window } = get_app_context();
+  const { window: win } = get_app_context();
+
+  function show(next: string | File) {
+    source = next;
+    shown = ROW_PAGE;
+  }
 
   async function pick() {
-    const chosen = await window.pick_file({ accept: manifest.associations, title: "Open in CSV Viewer" });
-    if (chosen) source = chosen;
+    const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in CSV Viewer" });
+    if (chosen) show(chosen);
   }
 
   async function pick_device() {
     const [picked] = await pick_device_files({ accept: manifest.associations });
-    if (picked) source = picked;
+    if (picked) show(picked);
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -99,7 +107,7 @@
                   <span class="truncate px-2 text-2xs" title={label}>{label}</span>
                 {/each}
               </div>
-              {#each body as row, index (index)}
+              {#each body.slice(0, shown) as row, index (index)}
                 <div class="grid h-7 items-center border-b border-foreground/6 [contain-intrinsic-block-size:auto_1.75rem] [content-visibility:auto]" style:grid-template-columns={template}>
                   <span class="sticky left-0 flex h-full items-center justify-end bg-background pr-3 text-2xs text-foreground/65 tabular-nums select-none">{index + 1}</span>
                   {#each columns as column (column)}
@@ -111,6 +119,12 @@
                   {/each}
                 </div>
               {/each}
+              {#if body.length > shown}
+                <div class="sticky left-0 flex w-fit items-center gap-3 px-3 py-2 font-sans text-2xs text-foreground/65">
+                  <Button size="sm" onclick={() => (shown += ROW_PAGE)}>Show more</Button>
+                  <span>{shown} of {body.length} rows</span>
+                </div>
+              {/if}
             </div>
           </div>
         {/if}
