@@ -13,7 +13,15 @@ import {
 } from "$lib/core/api/services/shell/type";
 import { page_size_label, type PageSize } from "./geometry";
 import { run_job, type JobReport, type JobStep } from "./job";
-import { images_pdf_name, is_pdf_name, merged_name, page_image_name, part_name, child_path } from "./naming";
+import {
+  images_pdf_name,
+  is_image_name,
+  is_pdf_name,
+  merged_name,
+  page_image_name,
+  part_name,
+  child_path,
+} from "./naming";
 import { initial_pages, normalize_rotation } from "./pages";
 import { images_to_pdf, load_pdf, merge_pdfs, organize_pdf, split_pdf, type PdfImage } from "./pdf";
 import { SIGNATURES_DIR, is_image, prepare_image, read_bytes, write_at, type SourceFile } from "./pdf-files";
@@ -355,8 +363,6 @@ export function open_signature(name: string): void {
   apps().launch(APP_ID, { section: Section.SIGN, signature: name });
 }
 
-const IMAGE_NAME = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
-
 export async function complete_files(
   partial: string,
   context: { session: ShellSession },
@@ -364,6 +370,6 @@ export async function complete_files(
 ): Promise<Completion[]> {
   const completer = kernel.service<ShellService>("shell").completer(ArgKind.PATH);
   if (!completer) return [];
-  const matches = kind === "pdf" ? is_pdf_name : (name: string) => IMAGE_NAME.test(name);
+  const matches = kind === "pdf" ? is_pdf_name : is_image_name;
   return (await completer(partial, context)).filter((item) => item.final === false || matches(item.value));
 }

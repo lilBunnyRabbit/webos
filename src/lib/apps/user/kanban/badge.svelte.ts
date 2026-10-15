@@ -14,6 +14,7 @@ let due = $state<number | null>(null);
 let today = $state(day_key());
 // Manifests load at boot; the board logic waits until an icon shows the badge.
 let logic = $state.raw<Logic | null>(null);
+let read_id = 0;
 
 /** Runs only while an icon shows the badge; the minute tick moves "today" past midnight. */
 const subscribe = createSubscriber(() =>
@@ -30,8 +31,9 @@ const subscribe = createSubscriber(() =>
       const files = kernel.service<FilesService>("files");
       const day = today;
       files.revision(parent_path(BOARDS_PATH));
+      const id = ++read_id;
       void read_boards(files).then((file) => {
-        if (file) due = count_due(file, day);
+        if (id === read_id) due = file ? count_due(file, day) : null;
       });
     });
   })

@@ -27,7 +27,12 @@
   import { ThumbCache } from "./thumbs.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
-  const { picker, initial_paths, active }: { picker: Snippet; initial_paths: string[]; active: boolean } = $props();
+  const {
+    picker,
+    initial_paths,
+    active,
+    ondirty,
+  }: { picker: Snippet; initial_paths: string[]; active: boolean; ondirty: (dirty: boolean, save: () => Promise<boolean>) => void } = $props();
 
   const { app_id, window_id, window: win } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -122,7 +127,7 @@
     return loaded?.source.path ? write(loaded.source.path) : save_as();
   }
 
-  $effect(() => win.set_dirty(dirty, { save }));
+  $effect(() => ondirty(dirty, save));
   $effect(() => win.set_title(active && loaded ? loaded.source.name : null));
 
   $effect(() => {

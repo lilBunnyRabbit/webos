@@ -77,7 +77,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | `sections/whats-new.svelte` | The changelog (ADR-026) |
 | `sections.ts` | `SECTIONS` (id, label, icon) and `SECTION_IDS`, shared by the manifest's props schema and the app |
 | `sections/about.svelte` | Install, build info, updates, introduction replay, reset, source link |
-| `color.ts` | `to_hex()` and `to_oklch()` for the colour picker, through a probe element and relative colour syntax |
+| `color.ts` | `to_hex()` (a batch of colours) and `to_oklch()` for the colour picker, through probe elements and relative colour syntax. A batch appends every probe before reading any, so it costs one style recalc |
 
 **Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, What's new, Roadmap and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
 
@@ -85,7 +85,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 |---------|--------------|
 | Appearance → Theme | A grid of `ThemeCard`s, one per `THEME_PRESETS` entry. Clicking one replaces the theme with a copy. The active preset is the one whose 17 tokens all equal `settings.theme`; it gets a `primary` ring and a check. The section description names it, or says "A customised theme is active." ([theming](theming.md)) |
 | Appearance → Wallpaper | Tiles (16:10 previews drawn by the real `wallpaper.svelte` with `value`) for Grid, Glow, Tint and Plain, then Image: the current image, or "Image…" which opens the picker. The active tile gets the `primary` ring and a check. "Choose image…" (`window.pick_file`, `image/*`) and "From device…" (`pick_device_files`) call `settings.set_wallpaper_image`; failures toast. With an image: Fit (Segmented: Fill, Fit, Tile, Center), Dim (slider 0–60%) and Blur (slider 0–20px), each writing a new `wallpaper` object |
-| Appearance → Customise colours | A `<details>` disclosure, closed by default. Tokens grouped Surfaces (the seven ladder shades), Text and brand (foreground, primary, secondary, tertiary, accent, cottontail) and States. Each token: a swatch that opens `<input type="color">`, the label, and a mono text field. Both write on `change` (the text field on blur or Enter). The rows only render while the disclosure is open (`bind:open`), so the hex conversions cost nothing when it's closed. The picker shows `to_hex(value)` (sRGB, clipped) and stores `to_oklch(hex)`, the computed `oklch(from <hex> l c h)`. Picking or typing a derived token replaces its live expression with a fixed value |
+| Appearance → Customise colours | A `<details>` disclosure, closed by default. Tokens grouped Surfaces (the seven ladder shades), Text and brand (foreground, primary, secondary, tertiary, accent, cottontail) and States. Each token: a swatch that opens `<input type="color">`, the label, and a mono text field. Both write on `change` (the text field on blur or Enter). The rows only render while the disclosure is open (`bind:open`), so the hex conversions cost nothing when it's closed. The picker shows the token's hex (sRGB, clipped) from one `$derived` map: every token goes through a single `to_hex()` batch per theme change and stores `to_oklch(hex)`, the computed `oklch(from <hex> l c h)`. Picking or typing a derived token replaces its live expression with a fixed value |
 | Taskbar | A `Segmented` (Bottom, Top, Left, Right, with icons) bound to `settings.taskbar.position`, and a miniature screen preview that moves its dock to the chosen edge |
 | Default apps | Lists `settings.file_defaults` sorted by extension: the extension in mono, the app's icon and name (or "{id} (no longer installed)" in `error`), and a Forget `IconButton` that removes that entry. "Forget all" in the section header sets `{}`. Empty: "No default apps yet". Entries are added by "Always use" in the Open-with menu ([file associations](apps/file-associations.md)) |
 | What's new | `version.changelog`, newest first: one `background-light` card per release with title, mono version `Badge`, a primary "New to you" `Badge` for releases in `version.unseen`, and the date (`format_date` of the local day). Each change is a row: kind `Badge` (New `primary`, Improved `info`, Fixed `success`) and the text |
@@ -98,7 +98,6 @@ Every write goes straight to service state. Persistence is the settings service'
 
 **Known gaps / oddities.**
 
-- While the customiser is open, `to_hex()` appends and removes a probe `<span>` per token on every theme change (17 per render).
 - Theme cards re-declare only the five base variables on the miniature, so its `shadow-raised` uses the active theme's darkest shade.
 - The "checks every 30 minutes" copy matches `version/service.svelte.ts`, but it's hardcoded.
 - The Updates row shows a success check whenever no check is running in production, even before the first check has completed.
@@ -162,7 +161,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 **Behaviour.** Always editable. Launched without a path it's an untitled buffer ("Untitled", path "Not saved yet"). States: loading (`Spinner`), ready, not found and read error (error empty states with Open a file…), drawn over the editor so CodeMirror stays mounted. `text` mirrors the document (update listener); `dirty = text !== saved_text`.
 
 - **Toolbar:** New, Open…, Open from device…, Save, Save as… (`IconButton`s), the path in mono, the Markdown view switch (`.md` only), wrap toggle (`pressed`), Copy all (`CopyButton`).
-- **Status bar:** file name, lines, characters, UTF-8 size.
+- **Status bar:** file name, lines, characters, UTF-8 size. Lines and characters come from the CodeMirror doc (`doc.lines`, `doc.length`), so a keystroke never splits or encodes the text; the UTF-8 size is encoded in a `requestIdleCallback`. The buffer is kept as the CodeMirror `Text` and compared with the saved one through `Text.eq`, which skips the subtrees an edit left shared. A `load_id` drops a load that a newer load or New/Open from device overtook.
 - **Files** like Paint: `pick_file` / `pick_save` with `accept: manifest.associations`, written with `files.create_file(…, { overwrite: true })`. New and Open ask before discarding unsaved changes.
 - **Close guard:** `set_title(file name)`, `set_dirty(dirty, { save })` (ADR-029).
 - **System files** (`is_system_path`: `/etc`, `/var`, `/tmp`) open read-only: a compartment sets `EditorState.readOnly` and `EditorView.editable` off, Save is disabled, an `info/10` strip says "This is a system file, so it opens read-only" with a Save as… button, and the status bar says Read-only. Save (Mod+S) goes to Save as…, starting in `/home`. The OS rewrites these files on its own, so an edit would be lost or break it.
@@ -300,6 +299,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 - **Toolbar:** Open…, the full path in mono, and a "First row is header" `Switch` (on by default; "Header row" below `@md`).
 - **Table:** each row is its own grid on one shared fixed template: `{digits+3}ch` for row numbers, then `12rem` per column. Rows line up without a `<table>`, so each body row can use `content-visibility: auto` with `contain-intrinsic-block-size: auto 1.75rem`, and the browser skips rendering off-screen rows with no JS virtualization. Table rows can't do this, because containment doesn't apply to them. The header row is sticky on `background-light`: the first row, or A, B, … AA when the header is off. The row-number column is sticky on the left. Cells are mono `text-ui`, truncated, with the full value as `title`. Clicking or tapping a cell (one delegated handler on the scroller) highlights it `primary/12` and shows its full value, wrapped and selectable, in a strip above the status bar with its row number and column; the same cell again closes it, and so does a new file or a header toggle. That's the touch path to long values.
+- **Show more:** the table renders the first 1000 body rows (`ROW_PAGE`). Past that, a sticky "Show more" `Button` with `{shown} of {rows} rows` sits under the last row and adds another 1000 per click. Opening another file starts again at 1000.
 - **Status bar:** file name, `{rows} rows × {columns} columns` (excluding the header), delimiter (Comma / Tab), size.
 
 **Persistence.** None. The header toggle is per window.
@@ -307,7 +307,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 **Known gaps.**
 
 - Fixed column width: long values are truncated (tooltip, or tap for the value strip), short columns waste space.
-- Parses on the main thread and builds every row's DOM; `content-visibility` only skips layout and paint.
+- Parses on the main thread. Rendering is capped by "Show more", not virtualized: every shown row has DOM, and `content-visibility` only skips its layout and paint.
 - No delimiter detection (semicolon CSVs show as one column), UTF-8 only, read-only, no sorting or filtering.
 
 ---
@@ -323,9 +323,9 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 **Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `DomMonitor` (two instances: windows and widgets), `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
 - `observe()`: the event-driven observers (long animation frames, CPU pressure, resource timing, the connection `change` listener). They run for the window's lifetime.
-- `sample()`: the 1 s ticks, the rAF frame counter and the per-window and per-widget MutationObservers. They run only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035).
+- `sample()`: the 1 s ticks, the rAF frame counter and the per-window and per-widget MutationObservers. Only the monitor of the shown section samples (Windows, Widgets or Performance; Network and Storage have none), and only while the window is visible (`win.is_visible`: not minimized, tab not hidden, ADR-035). A section's sparklines start filling when it's opened.
 
-Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start calls so a window opening doesn't restart the samplers.
+Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untrack` wraps the start call so a window opening doesn't restart the sampler.
 
 **Sections** (`SideNav`, Settings-style frame):
 
@@ -334,7 +334,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
   - **Mutations:** a MutationObserver (subtree, childList, attributes, characterData) on each `[data-window-id]` element, read and reset every second. Shown as mutations per second, peak, and a 60 s sparkline.
   - **Other columns:** DOM node count, and media (canvases, playing/total video and audio, iframes).
   - **Live rows:** rows follow the window list. The tick attaches observers to new windows and disconnects closed ones.
-  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not. The long-frames table drops its Blocking column there.
+  - **Sorting:** by name, rate, peak or nodes. Unsorted rows keep open order, so End buttons don't move under the cursor. The table is its own `@container`, so columns follow the table's width, not the window's (the page is capped at `max-w-3xl`): Nodes from `@md`, Peak and Media from `@xl`, the sparkline from `@2xl`. The name column keeps the rest. Headers are uppercase overlines, sortable or not; the sortable ones are `sections/sort-header.svelte`, shared with Widgets (`next_sort` in `sort.ts`). The long-frames table drops its Blocking column there.
   - **End:** calls `windows.force_close(id)`, skipping unsaved-changes prompts.
 - **Widgets:** its own section, after Windows, because widgets aren't windows: they have no id, no z-order and no End.
   - One row per `desktop.items()` entry with `kind === "widget"`: the app's icon (`ShortcutIcon`, no badge), the widget's label (its file name without `.widget`), and the app name next to it when the label differs (from `@md`). The tooltip has label, app and file name.
@@ -369,7 +369,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 - Its own row counts the mutations from re-rendering its own table.
 - Widgets can't be highlighted on the desktop from their row: the desktop's selection is local to the desktop component.
 - Shared clocks (`utils/ticker.svelte.ts`) and shared app-data cells (`json_file`) aren't listed: their registries are module-private, and a count would need a new core export.
-- Monitors keep running while another section is shown; minimizing or hiding the tab pauses sampling.
+- Sparklines have no history from before their section was opened.
 - Cross-origin resources without `Timing-Allow-Origin` report 0 bytes.
 
 ---
@@ -506,7 +506,7 @@ ADR-033. A [shell](services/shell.md) session per window, on the field surface (
 | Key | Does |
 |-----|------|
 | Typing | Ghost text: the newest history line that continues it, else the single completion that fits. → at the end accepts it |
-| Tab | One completion: applied (a space after unless it's a folder). Several: fills the common prefix and opens a popup (top-layer popover, anchored under the prompt row, flips above). Tab / Shift+Tab / ↑ ↓ move, Enter picks, Esc closes. Picking a folder lists its contents. Typing refreshes the list |
+| Tab | One completion: applied (a space after unless it's a folder). Several: fills the common prefix and opens a popup (top-layer popover, anchored under the prompt row, flips above). Tab / Shift+Tab / ↑ ↓ move, Enter picks, Esc closes. Picking a folder lists its contents. Typing refreshes the list (the ghost-text lookup has its own request counter, so it doesn't cancel the refresh) |
 | ↑ ↓ | History (shared by all terminals), keeping the line you were typing as a draft |
 | Enter | Runs the line; ignored while one is running |
 | Ctrl+C | Aborts the run, or clears the line |
@@ -518,7 +518,7 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 **Touch.** The key row shows on `pointer-coarse`: Ctrl (sticky: the next typed letter acts as Ctrl+letter), Tab, Esc, arrows, `|`, `~`, `/`. Its buttons `preventDefault` on pointerdown, so the field keeps focus and the soft keyboard stays up. `index.html` sets `interactive-widget=resizes-content`, so on Android the layout shrinks above the keyboard and the row stays visible.
 
 **Persistence.**
-- Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached once an entry finishes) and `started`. Session restore therefore brings back the folder and the screen.
+- Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached per entry while its output is unchanged; a running entry's output is saved once a second, not per streamed batch) and `started`. Session restore therefore brings back the folder and the screen.
 - Restored output is plain text. An entry restored mid-run shows as aborted.
 - `run` executes only on the first mount (`started`), so a restore doesn't rerun it.
 - Closing the window aborts the running line.

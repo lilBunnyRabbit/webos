@@ -10,7 +10,7 @@ export default define_app({
   icon: FileCsvIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
-  description: "Opens CSV and TSV files as a sortable table.",
+  description: "Opens CSV and TSV files as a table.",
   keywords: ["csv", "tsv", "table", "spreadsheet", "data", "excel", "columns"],
   associations: ["text/csv", "text/tab-separated-values", ".csv", ".tsv"],
   props: FILE_PROPS,

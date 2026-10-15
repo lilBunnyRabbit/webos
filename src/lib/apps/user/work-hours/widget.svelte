@@ -26,7 +26,8 @@
 
   const ticker = new Ticker(
     () => !windows.page_hidden,
-    () => (running ? 1000 : 30_000)
+    // Only the tall widget shows seconds; the compact one shows h:mm.
+    () => (size.h < 2 ? 60_000 : running ? 1000 : 30_000)
   );
   const now = $derived(new Date(ticker.now));
   const today = $derived(day_key(now));

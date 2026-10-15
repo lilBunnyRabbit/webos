@@ -3,7 +3,7 @@ import { has_drag_paths, has_os_files, read_drag_paths, read_os_entries } from "
 import { load_image } from "$lib/core/utils/image";
 import type { PdfImage } from "./pdf";
 import { parse_signature_svg, signature_svg, type Signature } from "./stroke";
-import { child_path } from "./naming";
+import { child_path, is_image_name } from "./naming";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
 export const SIGNATURES_DIR = "/home/Signatures";
@@ -80,7 +80,7 @@ export function is_pdf(source: SourceFile): boolean {
 }
 
 export function is_image(source: SourceFile): boolean {
-  return source.file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(source.name);
+  return source.file.type.startsWith("image/") || is_image_name(source.name);
 }
 
 // PNG and JPEG go in as they are; anything else the browser can decode is redrawn to PNG first.

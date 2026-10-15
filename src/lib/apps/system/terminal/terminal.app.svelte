@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { EntryStatus, type Run, type SavedEntry, type ShellService } from "$lib/core/api";
+  import kernel, { EntryStatus, type Run, type SavedEntry, type ShellService, type Value } from "$lib/core/api";
   import { tilde_path } from "$lib/core/api/services/files/path";
   import { get_app_context } from "$lib/core/contexts/app";
   import { untrack } from "svelte";
@@ -15,6 +15,7 @@
   const shell = $derived(kernel.service<ShellService>("shell"));
 
   const SCROLLBACK_LIMIT = 100;
+  const RUNNING_SAVE_MS = 1000;
   const saved_schema = z.array(
     z.object({
       input: z.string(),
@@ -52,22 +53,32 @@
     win.set_title(tilde_path(session.cwd));
   });
 
-  /** Finished entries keep their text; only the running one is still changing. */
-  const saved = new Map<number, SavedEntry>();
+  /** Saved items keyed by entry, reused while the entry's values are the same array. */
+  const saved = new Map<number, { values: Value[]; item: SavedEntry }>();
+  /** A running entry's output is saved on this tick, not on every streamed batch. */
+  let save_tick = $state(0);
   $effect(() => {
+    if (!running) return;
+    const timer = setInterval(() => save_tick++, RUNNING_SAVE_MS);
+    return () => clearInterval(timer);
+  });
+  $effect(() => {
+    void save_tick;
     const entries = session.entries.slice(-SCROLLBACK_LIMIT);
+    const ids = new Set(entries.map((entry) => entry.id));
+    for (const id of saved.keys()) if (!ids.has(id)) saved.delete(id);
     scrollback.value = entries.map((entry) => {
-      const done = entry.status !== EntryStatus.RUNNING;
-      const cached = done ? saved.get(entry.id) : undefined;
-      if (cached) return cached;
+      const values = entry.status === EntryStatus.RUNNING ? untrack(() => entry.values) : entry.values;
+      const cached = saved.get(entry.id);
+      if (cached && cached.values === values && cached.item.status === entry.status) return cached.item;
       const item: SavedEntry = {
         input: entry.input,
         cwd: entry.cwd,
         status: entry.status,
         error: entry.error,
-        text: saved_text(entry.values, (type) => shell.value_type(type)),
+        text: saved_text(values, (type) => shell.value_type(type)),
       };
-      if (done) saved.set(entry.id, item);
+      saved.set(entry.id, { values, item });
       return item;
     });
   });

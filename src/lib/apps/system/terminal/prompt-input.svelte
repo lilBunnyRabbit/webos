@@ -32,7 +32,8 @@
   let completion_hint = $state("");
   let history_index = $state<number | null>(null);
   let draft = "";
-  let sequence = 0;
+  // The hint and the popup refresh on the same keystroke, so each keeps its own counter.
+  const sequence = { hint: 0, popup: 0 };
 
   const at_end = $derived(cursor === line.length);
   const hint = $derived(!at_end || popup ? "" : history_hint(line, shell.history) || completion_hint);
@@ -69,17 +70,17 @@
     input.setSelectionRange(at, at);
   }
 
-  async function fetch_completions(): Promise<CompletionResult | null> {
-    const id = ++sequence;
+  async function fetch_completions(kind: keyof typeof sequence): Promise<CompletionResult | null> {
+    const id = ++sequence[kind];
     const result = await shell.complete(line, cursor, session);
-    return id === sequence ? result : null;
+    return id === sequence[kind] ? result : null;
   }
 
   /** The one completion that fits, as ghost text. History wins when it has a match. */
   async function refresh_hint(): Promise<void> {
     completion_hint = "";
     if (!at_end || line.trim() === "" || history_hint(line, shell.history)) return;
-    const result = await fetch_completions();
+    const result = await fetch_completions("hint");
     if (!result || result.items.length !== 1) return;
     const typed = line.slice(result.from, result.to);
     const value = result.items[0].value;
@@ -87,12 +88,12 @@
   }
 
   async function refresh_popup(): Promise<void> {
-    const result = await fetch_completions();
+    const result = await fetch_completions("popup");
     popup = result && result.items.length > 1 ? { ...result, index: Math.min(popup?.index ?? 0, result.items.length - 1) } : null;
   }
 
   async function tab(): Promise<void> {
-    const result = await fetch_completions();
+    const result = await fetch_completions("popup");
     if (!result || result.items.length === 0) return;
     if (result.items.length === 1) {
       const next = apply(line, result.from, result.to, result.items[0]);

@@ -25,6 +25,7 @@
     type Card,
     type Label,
   } from "./data";
+  import { TextDraft } from "./draft.svelte";
   import MarkdownView from "./markdown-view.svelte";
   import { describe_due, DUE_TONE, LABEL_CHIP, LABEL_COLOR_NAMES, LABEL_DOT } from "./view";
 
@@ -50,6 +51,19 @@
   let new_check = $state("");
 
   const change = (update: (card: Card) => Card) => edit((board) => update_card(board, card_id, update));
+
+  // Typing writes the whole boards file, so text fields save after a pause. Keys carry the card (and item) they edit.
+  const title = new TextDraft(async (id, text) => edit((board) => update_card(board, id, (card) => ({ ...card, title: text }))));
+  const notes = new TextDraft(async (id, text) => edit((board) => update_card(board, id, (card) => ({ ...card, notes: text }))));
+  const check_text = new TextDraft(async (key, text) => {
+    const [id, item_id] = key.split(" ");
+    edit((board) => update_card(board, id, (card) => update_check(card, item_id, { text })));
+  });
+  $effect(() => () => {
+    title.flush();
+    notes.flush();
+    check_text.flush();
+  });
 
   function add_item(event: SubmitEvent) {
     event.preventDefault();
@@ -116,11 +130,8 @@
     <div class="grid min-h-0 flex-1 content-start gap-5 overflow-y-auto px-4 py-4">
       <textarea
         rows="1"
-        value={card.title}
-        oninput={(event) => {
-          const title = event.currentTarget.value.replace(/\n/g, " ");
-          change((card) => ({ ...card, title }));
-        }}
+        value={title.value(card_id, card.title)}
+        oninput={(event) => title.edit(card_id, event.currentTarget.value.replace(/\n/g, " "))}
         onkeydown={(event) => event.key === "Enter" && event.preventDefault()}
         placeholder="Card title"
         aria-label="Title"
@@ -188,12 +199,9 @@
               <li class="group flex min-h-8 items-center gap-2 rounded-md px-1.5 hover:bg-foreground/6">
                 <Checkbox checked={item.done} aria-label="Done: {item.text}" onchange={() => change((card) => update_check(card, item.id, { done: !item.done }))} />
                 <input
-                  value={item.text}
+                  value={check_text.value(`${card_id} ${item.id}`, item.text)}
                   aria-label="Checklist item"
-                  oninput={(event) => {
-                    const text = event.currentTarget.value;
-                    change((card) => update_check(card, item.id, { text }));
-                  }}
+                  oninput={(event) => check_text.edit(`${card_id} ${item.id}`, event.currentTarget.value)}
                   class={cn(
                     "h-7 min-w-0 flex-1 rounded-sm bg-transparent px-1 text-ui focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none",
                     item.done && "text-foreground/50 line-through"
@@ -232,17 +240,14 @@
         </div>
         {#if mode === NotesMode.WRITE}
           <Textarea
-            value={card.notes}
-            oninput={(event) => {
-              const notes = event.currentTarget.value;
-              change((card) => ({ ...card, notes }));
-            }}
+            value={notes.value(card_id, card.notes)}
+            oninput={(event) => notes.edit(card_id, event.currentTarget.value)}
             placeholder={"Details, links, a plan.\n# heading, - list, **bold**, *italic*, `code`"}
             aria-label="Notes"
             class="field-sizing-content min-h-32"
           />
-        {:else if card.notes.trim()}
-          <div class="rounded-md bg-foreground/4 px-3 py-2.5"><MarkdownView source={card.notes} /></div>
+        {:else if notes.value(card_id, card.notes).trim()}
+          <div class="rounded-md bg-foreground/4 px-3 py-2.5"><MarkdownView source={notes.value(card_id, card.notes)} /></div>
         {:else}
           <p class="text-ui text-foreground/55">No notes yet.</p>
         {/if}

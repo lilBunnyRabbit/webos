@@ -1,5 +1,5 @@
 import { SvelteMap } from "svelte/reactivity";
-import { canvas_blob, render_width, type PdfDocument } from "./render";
+import { canvas_blob, release_canvas, render_width, type PdfDocument } from "./render";
 
 // One page at a time, newest request first, so pages scrolled past don't hold up the ones on screen.
 export class ThumbCache {
@@ -36,6 +36,7 @@ export class ThumbCache {
         try {
           const canvas = await render_width(this.document, index, this.width);
           const blob = await canvas_blob(canvas, "image/png");
+          release_canvas(canvas);
           if (this.destroyed) return;
           this.urls.set(index, URL.createObjectURL(blob));
         } catch (error) {

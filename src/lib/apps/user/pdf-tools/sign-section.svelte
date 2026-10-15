@@ -26,7 +26,7 @@
   import { PDF_ACCEPT, device_source, save_signature, write_at } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
-  import { page_info, render_width, type PageInfo } from "./render";
+  import { page_info, release_canvas, render_width, type PageInfo } from "./render";
   import SignaturePad from "./signature-pad.svelte";
   import SignaturePreview from "./signature-preview.svelte";
   import { watch_signatures } from "./signatures.svelte";
@@ -38,7 +38,14 @@
     initial_paths,
     signature_name = $bindable(null),
     active,
-  }: { picker: Snippet; initial_paths: string[]; signature_name?: string | null; active: boolean } = $props();
+    ondirty,
+  }: {
+    picker: Snippet;
+    initial_paths: string[];
+    signature_name?: string | null;
+    active: boolean;
+    ondirty: (dirty: boolean, save: () => Promise<boolean>) => void;
+  } = $props();
 
   const { app_id, window: win, storage } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -66,6 +73,7 @@
   let info = $state<PageInfo | null>(null);
   let page_url = $state<string | null>(null);
   let rendering = $state(false);
+  let render_id = 0;
   let area_width = $state(0);
   let stamps = $state<PlacedStamp[]>([]);
   let selected = $state<string | null>(null);
@@ -82,6 +90,12 @@
   const display_width = $derived(Math.max(200, Math.min(area_width - 32, 960)));
   const page_aspect = $derived(info ? info.width / info.height : 1 / 1.414);
   const date_text = $derived(format_date(new Date()));
+  /** Stamps as of the last signed copy: placing, moving or removing one makes the window dirty again. */
+  const stamps_key = $derived(JSON.stringify(stamps.map((stamp) => [stamp.id, stamp.page, stamp.placement])));
+  let saved_key = $state("[]");
+  const dirty = $derived(stamps_key !== saved_key);
+
+  $effect(() => ondirty(dirty, save));
 
   $effect(() => () => slot.close());
 
@@ -93,6 +107,7 @@
     untrack(() => {
       page = 0;
       stamps = [];
+      saved_key = "[]";
       selected = null;
     });
   });
@@ -104,11 +119,13 @@
     if (!current || !active || !win.is_visible || index >= current.count) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
+      const id = ++render_id;
       rendering = true;
       try {
         const next_info = await page_info(current.document, index);
         const canvas = await render_width(current.document, index, width * Math.min(2, window.devicePixelRatio || 1));
         const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+        release_canvas(canvas);
         if (cancelled || !blob) return;
         info = next_info;
         if (page_url) URL.revokeObjectURL(page_url);
@@ -116,7 +133,8 @@
       } catch (error) {
         if (!cancelled) console.warn("[pdf-tools] Couldn't render the page", error);
       } finally {
-        if (!cancelled) rendering = false;
+        // A newer render owns the spinner; a cancelled one with nothing after it (section hidden) clears it.
+        if (id === render_id) rendering = false;
       }
     }, untrack(() => page_url) ? 120 : 0);
     return () => {
@@ -249,15 +267,16 @@
     }
   }
 
-  async function save() {
-    if (!loaded || !stamps.length || saving) return;
+  async function save(): Promise<boolean> {
+    if (!loaded || !stamps.length || saving) return false;
+    const key = stamps_key;
     const path = await win.pick_save({
       name: signed_name(loaded.source.name),
       accept: PDF_ACCEPT,
       start_path: loaded.source.path ? parent_path(loaded.source.path) : "/home",
       title: "Save signed PDF as",
     });
-    if (!path) return;
+    if (!path) return false;
     saving = true;
     try {
       const bytes = await sign_pdf(
@@ -266,9 +285,12 @@
         loaded.source.name
       );
       await write_at(path, bytes);
+      saved_key = key;
       notifications.notify(app_id, { title: "Signed copy saved", message: path, actions: [{ label: "Open", on_click: () => apps.open(path) }] });
+      return true;
     } catch (error) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the signed PDF", message: error_message(error) });
+      return false;
     } finally {
       saving = false;
     }

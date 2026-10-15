@@ -102,6 +102,7 @@
   let text = $state.raw("");
   let saved_text = $state.raw("");
   let base_modified = 0;
+  let load_id = 0;
   let editor = $state.raw<EditorView | null>(null);
   const language_slot = new Compartment();
 
@@ -161,9 +162,11 @@
   }
 
   async function load(target: string) {
+    const id = ++load_id;
     status = Status.LOADING;
     try {
       const file = await files.get_file(target);
+      if (id !== load_id) return;
       doc_path.value = target;
       device_name = null;
       if (!file) {
@@ -171,11 +174,13 @@
         return;
       }
       const content = await file.text();
+      if (id !== load_id) return;
       base_modified = file.lastModified;
       saved_text = content;
       set_doc(content);
       status = Status.READY;
     } catch (reason) {
+      if (id !== load_id) return;
       doc_path.value = target;
       error = error_message(reason);
       status = Status.ERROR;
@@ -183,6 +188,7 @@
   }
 
   function start(file_name: string | null, content: string) {
+    load_id++;
     doc_path.value = null;
     device_name = file_name;
     base_modified = 0;
@@ -287,7 +293,7 @@
 
   $effect(() => {
     const source = text;
-    const timer = setTimeout(() => (rendered = render_markdown(source)), rendered.html ? 200 : 0);
+    const timer = setTimeout(() => (rendered = render_markdown(source)), untrack(() => rendered.html) ? 200 : 0);
     return () => clearTimeout(timer);
   });
 
@@ -314,7 +320,8 @@
 
   $effect(() => {
     const content = frame_doc?.getElementById("content");
-    if (!content) return;
+    // Edit view hides the preview: it catches up when it's shown again.
+    if (!content || view.value === View.EDIT) return;
     content.innerHTML = body;
     measure();
   });
@@ -343,6 +350,7 @@
       void files.get_file(target).then(async (file) => {
         if (!file || target !== path || dirty || file.lastModified <= base_modified) return;
         const content = await file.text();
+        if (target !== path || dirty) return;
         base_modified = file.lastModified;
         saved_text = content;
         if (content !== text) set_doc(content);

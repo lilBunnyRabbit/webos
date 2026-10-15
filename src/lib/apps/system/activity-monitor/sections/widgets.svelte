@@ -6,12 +6,12 @@
   import { cn, error_message } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
-    CaretDown as CaretDownIcon,
-    CaretUp as CaretUpIcon,
     SquaresFour as SquaresFourIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { format_rate } from "../browser";
+  import { next_sort, type Sort } from "../sort";
+  import SortHeader from "./sort-header.svelte";
   import Sparkline from "../sparkline.svelte";
   import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
   import { summarize_props } from "../widget-props";
@@ -27,7 +27,7 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  let sort = $state<{ key: SortKey; desc: boolean } | null>(null);
+  let sort = $state<Sort<SortKey> | null>(null);
 
   interface Row {
     item: Widget;
@@ -50,9 +50,7 @@
 
   const total_rate = $derived(rows.reduce((sum, row) => sum + (row.stats?.rate ?? 0), 0));
 
-  function toggle_sort(key: SortKey) {
-    sort = sort?.key === key ? { key, desc: !sort.desc } : { key, desc: key !== "name" };
-  }
+  const onsort = (key: SortKey) => (sort = next_sort(sort, key));
 
   async function remove(item: Widget) {
     const confirmed = await win.confirm(`Remove the “${item.label}” widget?`, {
@@ -75,23 +73,6 @@
   const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_4rem] @md:grid-cols-[minmax(0,1fr)_3rem_3.5rem_4rem] @xl:grid-cols-[minmax(0,1fr)_minmax(0,9rem)_3rem_3.5rem_3.5rem_4rem] @2xl:grid-cols-[minmax(0,1fr)_minmax(0,8rem)_3rem_5rem_3.5rem_3.5rem_4rem]";
 </script>
 
-{#snippet header(label: string, key: SortKey | null, class_name = "")}
-  {#if key}
-    {@const active = sort?.key === key}
-    <button
-      class={cn("flex items-center gap-1 tracking-wide uppercase hover:text-foreground", key !== "name" && "justify-end", active && "text-foreground", class_name)}
-      onclick={() => toggle_sort(key)}
-    >
-      {label}
-      {#if active}
-        {#if sort?.desc}<CaretDownIcon class="size-3" weight="bold" />{:else}<CaretUpIcon class="size-3" weight="bold" />{/if}
-      {/if}
-    </button>
-  {:else}
-    <span class={class_name}>{label}</span>
-  {/if}
-{/snippet}
-
 <Section title="Desktop widgets" description="DOM activity per widget, sampled every second while Activity Monitor is visible.">
   {#if kernel.platform === Platform.MOBILE}
     <EmptyState icon={SquaresFourIcon} title="No widgets on phones" description="Widgets show on the desktop only. Pinned ones stay in your Desktop folder and show on a computer." />
@@ -100,12 +81,12 @@
   {:else}
     <div class="@container divide-y divide-foreground/8">
       <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
-        {@render header("Widget", "name")}
-        {@render header("Props", null, "hidden @xl:block")}
-        {@render header("Size", null, "hidden text-right @md:block")}
-        {@render header("Activity", null, "hidden @2xl:block")}
-        {@render header("Mut/s", "rate")}
-        {@render header("Nodes", "nodes", "hidden @xl:flex")}
+        <SortHeader label="Widget" key="name" {sort} {onsort} />
+        <span class="hidden @xl:block">Props</span>
+        <span class="hidden text-right @md:block">Size</span>
+        <span class="hidden @2xl:block">Activity</span>
+        <SortHeader label="Mut/s" key="rate" {sort} {onsort} />
+        <SortHeader label="Nodes" key="nodes" {sort} {onsort} class="hidden @xl:flex" />
         <span></span>
       </div>
 

@@ -23,6 +23,12 @@
 
   // The customiser converts every token to hex for the colour inputs; only pay for it while it's open.
   let customising = $state(false);
+  const hex = $derived.by(() => {
+    if (!customising) return null;
+    const tokens = GROUPS.flatMap((group) => group.tokens);
+    const values = to_hex(tokens.map((token) => settings.theme[token]));
+    return new Map(tokens.map((token, index) => [token, values[index]]));
+  });
 
   function set_token(token: ThemeToken, value: string) {
     settings.theme = { ...settings.theme, [token]: value };
@@ -62,7 +68,7 @@
                   <input
                     type="color"
                     class="absolute inset-0 cursor-pointer opacity-0"
-                    value={to_hex(value)}
+                    value={hex?.get(token)}
                     onchange={(event) => set_token(token, to_oklch(event.currentTarget.value))}
                   />
                 </label>
