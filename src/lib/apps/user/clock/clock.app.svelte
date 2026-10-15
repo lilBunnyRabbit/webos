@@ -21,7 +21,7 @@
     type Alarm,
     type AlarmDraft,
   } from "./clock";
-  import { gate_clock_file, ring_while_alive } from "./ringer.svelte";
+  import { ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import TimersTab from "./timers-tab.svelte";
@@ -35,12 +35,16 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
-  const file = gate_clock_file(storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema));
+  const file = storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema);
   const stopwatch = storage.persisted("stopwatch", EMPTY_STOPWATCH, StopwatchSchema);
   const tab = storage.window<ClockTab>("tab", untrack(() => initial_tab ?? ClockTab.WORLD), z.enum(ClockTab));
 
   ring_while_alive(file);
-  const ticker = new Ticker(() => win.is_visible, 250);
+  // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
+  const ticker = new Ticker(
+    () => win.is_visible,
+    () => (tab.value === ClockTab.TIMERS ? 250 : 1000)
+  );
 
   let adding_zone = $state(false);
   let adding_timer = $state(false);

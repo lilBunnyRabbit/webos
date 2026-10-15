@@ -1,6 +1,5 @@
-import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
-import { split_path } from "$lib/core/api/services/files/path";
-import { app_data_path, json_file } from "$lib/core/contexts/app";
+import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
+import { app_data_path, json_file, live_file, type JsonFile } from "$lib/core/contexts/app";
 import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
 import { untrack } from "svelte";
 import { play_chime } from "./chime";
@@ -24,75 +23,25 @@ import {
   type Timer,
 } from "./clock";
 
-export interface ClockFile {
-  value: ClockData;
-  readonly ready: boolean;
-  readonly error: string | null;
-}
+export type ClockFile = Omit<JsonFile<ClockData>, "release">;
 
 const notifications = () => kernel.service<NotificationsService>("notifications");
 
-/** For code with no app context (the widget, a toast action). Release it when done. */
-export function open_clock_file() {
+/** For code with no app context (the widget). Release it when done. */
+export function open_clock_file(): JsonFile<ClockData> {
   return json_file(app_data_path(APP_ID, DATA_FILE), EMPTY_CLOCK, ClockDataSchema);
 }
 
-let ensuring: Promise<void> | null = null;
+/** For code that reads or changes the data once (shell commands, toast actions). */
+export const clock_file = live_file(app_data_path(APP_ID, DATA_FILE), EMPTY_CLOCK, ClockDataSchema);
 
-/**
- * Works around json_file's first write: creating the missing folder adds a revision key, which re-reads every cell
- * watching a missing key; the cell finds no file yet, resets to `initial`, and the data it is writing never shows (the
- * next change then overwrites it on disk). Creating the file before anything can be edited avoids it.
- */
-export function ensure_clock_file(): Promise<void> {
-  ensuring ??= (async () => {
-    const files = kernel.service<FilesService>("files");
-    const path = app_data_path(APP_ID, DATA_FILE);
-    if (await files.get_file(path)) return;
-    let directory = await files.get_root();
-    for (const segment of split_path(path).slice(0, -1)) {
-      directory = (await files.exists(directory, segment, "directory"))
-        ? await directory.getDirectoryHandle(segment)
-        : await files.create_directory(directory, segment);
-    }
-    if (!(await files.exists(directory, DATA_FILE, "file"))) {
-      await files.create_file(directory, DATA_FILE, { content: `${JSON.stringify(EMPTY_CLOCK, null, 2)}\n`, overwrite: true });
-    }
-  })().catch((error) => {
-    ensuring = null;
-    console.warn("[Clock] Couldn't create the data file:", error);
-  });
-  return ensuring;
-}
-
-/** `file`, but only `ready` once the data file exists on disk (see `ensure_clock_file`). Call during component init. */
-export function gate_clock_file(file: ClockFile): ClockFile {
-  let ensured = $state(false);
-  void ensure_clock_file().then(() => (ensured = true));
-  return {
-    get value() {
-      return file.value;
-    },
-    set value(value: ClockData) {
-      file.value = value;
-    },
-    get ready() {
-      return ensured && file.ready;
-    },
-    get error() {
-      return file.error;
-    },
-  };
-}
-
-async function edit_clock(change: (data: ClockData) => void): Promise<void> {
-  const file = open_clock_file();
-  try {
-    for (let waited = 0; !file.ready && waited < 5000; waited += 25) await new Promise((resolve) => setTimeout(resolve, 25));
-    if (file.ready) change(file.value);
-  } finally {
-    file.release();
-  }
+function edit_clock(change: (data: ClockData) => void): void {
+  void clock_file
+    .edit((data) => {
+      change(data);
+      return data;
+    })
+    .catch((error) => console.warn("[Clock] Couldn't change the data:", error));
 }
 
 function ring_alarm(alarm: Alarm): void {
@@ -108,7 +57,7 @@ function ring_alarm(alarm: Alarm): void {
       {
         label: "Snooze 10 min",
         on_click: () =>
-          void edit_clock((data) => {
+          edit_clock((data) => {
             const target = data.alarms.find((entry) => entry.id === alarm.id);
             if (target) target.snooze_until = Date.now() + SNOOZE_MS;
           }),
@@ -139,7 +88,7 @@ function ring_timer(timer: Timer): void {
       {
         label: "Restart",
         on_click: () =>
-          void edit_clock((data) => {
+          edit_clock((data) => {
             const index = data.timers.findIndex((entry) => entry.id === timer.id);
             if (index >= 0) data.timers[index] = start_timer(data.timers[index], Date.now());
           }),

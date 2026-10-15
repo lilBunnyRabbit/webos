@@ -5,7 +5,7 @@
   import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
   import { APP_ID, ClockFace, ClockTab, format_hm, format_until, next_alarm, timer_remaining } from "./clock";
-  import { gate_clock_file, open_clock_file, ring_while_alive } from "./ringer.svelte";
+  import { open_clock_file, ring_while_alive } from "./ringer.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
@@ -14,12 +14,14 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
-  const handle = open_clock_file();
-  $effect(() => () => handle.release());
-  const file = gate_clock_file(handle);
+  const file = open_clock_file();
+  $effect(() => () => file.release());
   ring_while_alive(file);
 
-  const ticker = new Ticker(() => !windows.page_hidden, 250);
+  const ticker = new Ticker(
+    () => !windows.page_hidden,
+    () => (timer ? 250 : 1000)
+  );
   const face = $derived(props.face === ClockFace.DIGITAL ? ClockFace.DIGITAL : ClockFace.ANALOG);
   const date = $derived(new Date(ticker.now));
   const upcoming = $derived(file.ready ? next_alarm(file.value.alarms, ticker.now) : null);
