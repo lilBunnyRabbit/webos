@@ -1,4 +1,5 @@
 <script lang="ts">
+  import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { track_play } from "$lib/core/games";
   import { Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -30,7 +31,10 @@
   const MODE_OPTIONS = MODES.map((value) => ({ value, label: MODE_LABELS[value] }));
   const COMPUTER_DELAY_MS = 350;
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
+
+  $effect(() => shortcuts.register({ id: "tic-tac-toe.undo", keys: "mod+z", label: "Undo", category: ShortcutCategory.APP, window: window_id, run: undo }));
   track_play(app_id, () => win.is_visible);
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
 
@@ -112,13 +116,7 @@
   }
 
   function on_keydown(event: KeyboardEvent) {
-    if (event.altKey || event.metaKey || event.ctrlKey) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        undo();
-      }
-      return;
-    }
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
     const digit = Number(event.key);
     if (Number.isInteger(digit) && digit >= 1 && digit <= CELLS) {
       event.preventDefault();
