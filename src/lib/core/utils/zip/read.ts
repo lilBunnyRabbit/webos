@@ -18,7 +18,7 @@ import {
   safe_segments,
   type Bytes,
   type StreamOptions,
-} from "./zip-format";
+} from "./format";
 
 const UNICODE_PATH_EXTRA = 0x7075;
 const END64_SIZE = 56;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { crc32 } from "./crc32";
-import { Flag, Method, ZipError, decode_name, deflate_raw, from_dos_datetime, inflate_raw, safe_segments, to_dos_datetime } from "./zip-format";
-import { entry_blob, read_zip, readable, type ZipArchive } from "./zip-read";
-import { write_zip, type ZipSource } from "./zip-write";
+import { Flag, Method, ZipError, decode_name, deflate_raw, from_dos_datetime, inflate_raw, safe_segments, to_dos_datetime } from "./format";
+import { entry_blob, read_zip, readable, type ZipArchive } from "./read";
+import { write_zip, type ZipSource } from "./write";
 
 // Made with Info-ZIP 3.0 (`zip -X -r -n .bin`): folders, a stored .bin, a deflated .txt and an empty file.
 const INFOZIP =

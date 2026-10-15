@@ -1,3 +1,5 @@
+export const APP_ID = "archive";
+
 export const View = {
   BROWSE: "browse",
   CREATE: "create",

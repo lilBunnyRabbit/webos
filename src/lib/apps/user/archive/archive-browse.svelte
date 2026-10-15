@@ -2,7 +2,7 @@
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, Checkbox, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, format_bytes } from "$lib/core/utils";
+  import { cn, error_message, format_bytes } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowLineDown as ArrowLineDownIcon,
@@ -18,11 +18,11 @@
   import { untrack, type Snippet } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
   import ArchivePreview from "./archive-preview.svelte";
-  import { parent_path } from "./create";
-  import { ArchiveJob, error_message } from "./job.svelte";
-  import { extract_blob } from "./operations";
+  import { parent_path } from "$lib/core/utils/zip/create";
+  import { ArchiveJob } from "$lib/core/utils/zip/job.svelte";
+  import { extract_blob } from "$lib/core/utils/zip/operations";
   import { build_tree, entries_to_extract, folder_keys, format_ratio, is_covered, visible_rows, type TreeNode } from "./tree";
-  import { read_zip, readable, type ZipArchive } from "./zip-read";
+  import { read_zip, readable, type ZipArchive } from "$lib/core/utils/zip/read";
 
   interface Opened {
     blob: Blob;
@@ -118,7 +118,7 @@
     if (!folder) return;
 
     const entries = entries_to_extract(source.archive.entries, selection);
-    await extract_blob(source.blob, source.name, entries, folder, { on_job: (next) => (job = next) });
+    await extract_blob(source.blob, source.name, entries, folder, { app_id, on_job: (next) => (job = next) });
   }
 </script>
 

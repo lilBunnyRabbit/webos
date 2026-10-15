@@ -1,8 +1,8 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { base_name, parent_path, type CreateItem } from "./create";
-import { abort_error, type StreamOptions } from "./zip-format";
-import { entry_blob, readable, type ZipEntry } from "./zip-read";
-import type { ZipSource } from "./zip-write";
+import { abort_error, type StreamOptions } from "./format";
+import { entry_blob, readable, type ZipEntry } from "./read";
+import type { ZipSource } from "./write";
 
 function files(): FilesService {
   return kernel.service<FilesService>("files");

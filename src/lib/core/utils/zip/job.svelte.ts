@@ -1,7 +1,7 @@
 import kernel, { NotificationType, type NotificationAction, type NotificationsService } from "$lib/core/api";
 import type { AppId } from "$lib/core/api/services/apps/type";
-import { format_bytes } from "$lib/core/utils";
-import { is_abort, type StreamOptions } from "./zip-format";
+import { error_message, format_bytes } from "$lib/core/utils";
+import { is_abort, type StreamOptions } from "./format";
 
 const UPDATE_MS = 150;
 const SLICE_MS = 16;
@@ -25,10 +25,6 @@ export interface JobTexts {
 export interface Leftover {
   path: string;
   discard: () => Promise<void>;
-}
-
-export function error_message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 // Stands in for TasksService until it exists (ADR-035); Archive moves onto it then.

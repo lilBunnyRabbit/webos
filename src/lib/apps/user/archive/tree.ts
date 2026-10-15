@@ -1,4 +1,4 @@
-import type { ZipEntry } from "./zip-read";
+import type { ZipEntry } from "$lib/core/utils/zip/read";
 
 export interface TreeNode {
   name: string;

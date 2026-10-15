@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { build_tree, entries_to_extract, folder_keys, format_ratio, is_covered, visible_rows } from "./tree";
-import { safe_segments } from "./zip-format";
-import type { ZipEntry } from "./zip-read";
+import { safe_segments } from "$lib/core/utils/zip/format";
+import type { ZipEntry } from "$lib/core/utils/zip/read";
 
 function entry(name: string, size = 0, compressed_size = size): ZipEntry {
   return {

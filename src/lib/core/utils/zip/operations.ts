@@ -1,15 +1,18 @@
 import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import type { AppId } from "$lib/core/api/services/apps/type";
 import { format_bytes } from "$lib/core/utils";
-import { extract_entries, item_at, join, remove_at, write_at, type ExtractResult } from "./archive-files";
+import { extract_entries, item_at, join, remove_at, write_at, type ExtractResult } from "./files";
 import { add_item, all_sources, archive_name, base_name, stem, unique_name, type CreateItem } from "./create";
 import { ArchiveJob } from "./job.svelte";
-import { Method } from "./zip-format";
-import { read_zip, type ZipEntry } from "./zip-read";
-import { write_zip, type ZipSource } from "./zip-write";
+import { Method } from "./format";
+import { read_zip, type ZipEntry } from "./read";
+import { write_zip, type ZipSource } from "./write";
 
-export const APP_ID = "archive";
+// Explorer's Compress and Extract here are an OS feature, so their notifications come from it unless a caller names its app.
+const SENDER: AppId = "file-explorer";
 
 export interface RunOptions {
+  app_id?: AppId;
   signal?: AbortSignal;
   on_job?: (job: ArchiveJob | null) => void;
 }
@@ -36,7 +39,7 @@ export async function free_path(folder: string, name: string): Promise<string> {
 
 export async function zip_sources(sources: ZipSource[], total: number, target: string, method: Method, options: RunOptions = {}): Promise<string | null> {
   const existed = (await files().get_file(target)) !== null;
-  const job = new ArchiveJob(APP_ID, { title: `Compressing ${base_name(target)}`, cancelled: "Compression cancelled", failed: "Couldn't create the archive" }, total, options.signal);
+  const job = new ArchiveJob(options.app_id ?? SENDER, { title: `Compressing ${base_name(target)}`, cancelled: "Compression cancelled", failed: "Couldn't create the archive" }, total, options.signal);
   options.on_job?.(job);
   try {
     return await job.run(async (stream) => {
@@ -67,7 +70,7 @@ export async function compress_into(paths: string[], folder: string): Promise<st
 
 export async function extract_blob(blob: Blob, name: string, entries: ZipEntry[], folder: string, options: RunOptions = {}): Promise<ExtractResult | null> {
   const total = entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0);
-  const job = new ArchiveJob(APP_ID, { title: `Extracting ${name}`, cancelled: "Extraction cancelled", failed: "Couldn't extract the archive" }, total, options.signal);
+  const job = new ArchiveJob(options.app_id ?? SENDER, { title: `Extracting ${name}`, cancelled: "Extraction cancelled", failed: "Couldn't extract the archive" }, total, options.signal);
   options.on_job?.(job);
   try {
     return await job.run(async (stream) => {

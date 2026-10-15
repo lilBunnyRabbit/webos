@@ -1,4 +1,4 @@
-import type { ZipSource } from "./zip-write";
+import type { ZipSource } from "./write";
 
 export interface CreateItem {
   id: string;

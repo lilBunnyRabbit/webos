@@ -4,7 +4,7 @@
   import type { Snippet } from "svelte";
   import { lz77, lz77_segments, lz77_stats, source_range, type Lz77Match } from "./lz77";
   import { HOW_LIMIT, SAMPLE_TEXT } from "./views";
-  import { deflate_raw } from "./zip-format";
+  import { deflate_raw } from "$lib/core/utils/zip/format";
 
   let { tabs, text = $bindable(), source = $bindable() }: { tabs: Snippet; text: string; source: string | null } = $props();
 

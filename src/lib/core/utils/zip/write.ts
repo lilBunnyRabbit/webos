@@ -15,7 +15,7 @@ import {
   to_dos_datetime,
   ZipError,
   type StreamOptions,
-} from "./zip-format";
+} from "./format";
 
 export interface ZipSource {
   name: string;

@@ -2,11 +2,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
-import { extract_entries, item_at, write_at } from "./archive-files";
+import { extract_entries, item_at, write_at } from "./files";
 import { all_sources } from "./create";
-import { Method } from "./zip-format";
-import { read_zip } from "./zip-read";
-import { write_zip } from "./zip-write";
+import { Method } from "./format";
+import { read_zip } from "./read";
+import { write_zip } from "./write";
 
 let files: FilesService;
 

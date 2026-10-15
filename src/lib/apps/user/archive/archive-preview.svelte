@@ -1,13 +1,12 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Spinner } from "$lib/core/components/ui";
-  import { format_bytes, format_datetime } from "$lib/core/utils";
+  import { error_message, format_bytes, format_datetime } from "$lib/core/utils";
   import { File as FileIcon, Lightbulb as LightbulbIcon, Lock as LockIcon, X as XIcon } from "phosphor-svelte";
-  import { error_message } from "./job.svelte";
   import { PREVIEW_LIMIT, PreviewKind, TEXT_PREVIEW_CHARS, image_type, preview_kind } from "./preview";
   import { format_ratio } from "./tree";
   import { HOW_LIMIT } from "./views";
-  import { Method } from "./zip-format";
-  import { entry_blob, readable, type ZipEntry } from "./zip-read";
+  import { Method } from "$lib/core/utils/zip/format";
+  import { entry_blob, readable, type ZipEntry } from "$lib/core/utils/zip/read";
 
   type Loaded = { kind: "text"; text: string; truncated: boolean } | { kind: "image"; url: string } | { kind: "none"; reason: string };
 
