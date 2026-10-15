@@ -20,17 +20,12 @@ describe("pdf operations", () => {
   test("merge keeps every page in order", async () => {
     const a = await make_pdf(["a1", "a2"], [100, 100]);
     const b = await make_pdf(["b1"], [200, 200]);
-    let steps = 0;
-    const merged = await merge_pdfs(
-      [
-        { name: "a.pdf", bytes: a },
-        { name: "b.pdf", bytes: b },
-      ],
-      { step: async () => void steps++ }
-    );
+    const merged = await merge_pdfs([
+      { name: "a.pdf", bytes: a },
+      { name: "b.pdf", bytes: b },
+    ]);
     const document = await load_pdf(merged);
     expect(sizes(document)).toEqual(["100x100@0", "100x100@0", "200x200@0"]);
-    expect(steps).toBe(2);
   });
 
   test("organize reorders, rotates, deletes and inserts blanks", async () => {

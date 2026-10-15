@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.3.1",
+    date: "2026-10-16",
+    title: "PDF steps",
+    changes: [
+      { kind: IMPROVED, text: "PDF Tools jobs show every page, part, PDF or image as its own step in Activity Monitor, with what each one did." },
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-10-16",
     title: "Background tasks",

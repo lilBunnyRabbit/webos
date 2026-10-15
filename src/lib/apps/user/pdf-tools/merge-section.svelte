@@ -20,7 +20,7 @@
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
   import { merged_name } from "./naming";
-  import { merge_pdfs, page_count } from "./pdf";
+  import { PdfWriter, page_count } from "./pdf";
   import { PDF_ACCEPT, device_source, is_pdf, read_bytes, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
@@ -98,13 +98,24 @@
     if (!path) return;
     const list = ready.map((item) => item.source);
     busy = true;
-    await run_job(app_id, `Merging ${list.length} PDFs`, list.length, async (step) => {
-      const sources = [];
-      for (const source of list) sources.push({ name: source.name, bytes: await read_bytes(source) });
-      const bytes = await merge_pdfs(sources, { step: () => step() });
-      await write_at(path, bytes);
-      return { title: "PDFs merged", message: `${path} · ${total_pages} pages`, actions: [{ label: "Open", on_click: () => apps.open(path) }] };
-    });
+    await run_job(
+      app_id,
+      `Merging ${list.length} PDFs`,
+      () => {
+        const writer = new PdfWriter();
+        return [
+          ...list.map((source) => ({
+            name: source.name,
+            async run() {
+              const pages = await writer.append(await read_bytes(source), source.name);
+              return `Added ${pages} ${pages === 1 ? "page" : "pages"}`;
+            },
+          })),
+          { name: "Write PDF", run: async () => write_at(path, await writer.finish()) },
+        ];
+      },
+      () => ({ title: "PDFs merged", message: `${path} · ${total_pages} pages`, actions: [{ label: "Open", on_click: () => apps.open(path) }] })
+    );
     busy = false;
   }
 

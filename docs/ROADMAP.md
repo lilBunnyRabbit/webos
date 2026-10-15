@@ -223,6 +223,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Notification integration: a progress toast with Cancel that becomes done, failed or cancelled
 - [x] Shell: `task list`, `task cancel`, `task retry`, `task clear`
 - [ ] Keyboard shortcut: owner said none for now
+- [x] PDF Tools as task groups: a task per page, part, PDF or image, then a write step
 - [ ] Image Tools batches as a task group
 
 ### URL Deep Linking & Share System
@@ -423,6 +424,9 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Boot loading screen with progress; the shell, desktop widgets and session apps start loading during boot (ADR-036). Entry chunk 269 → 164 KB gz
 - [ ] Virtual scrolling for large lists (file explorer, game hub). Explorer got `content-visibility` and reused row objects instead (2000 files: add one 170 → 8 ms); windowing is the owner's call
 - [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
+
+### Scoped app dependencies
+- [ ] Scoped node modules for apps: an app can use an npm package without adding it to the core `package.json` (needs an ADR: where the manifest lives, how it's installed and bundled, how the boot budget stays clean)
 
 ### Code quality pass (2026-10-15, 0.37.0)
 - **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)

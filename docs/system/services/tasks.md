@@ -118,5 +118,5 @@ await job.done; // null when it failed or was cancelled
 ## Known gaps
 
 - No automatic retry or backoff; retry is manual.
-- Zip runs as groups: compression is a task per picked file or folder, then "Write archive" (`ZipWriter` appends in order); extraction is "Create folder", then a task per top-level file or folder of the archive (`ZipExtractor`). Both are sequential. PDF Tools and Image Tools batches are single tasks for now.
+- Zip runs as groups: compression is a task per picked file or folder, then "Write archive" (`ZipWriter` appends in order); extraction is "Create folder", then a task per top-level file or folder of the archive (`ZipExtractor`). Both are sequential. PDF Tools runs a sequential group with a task per unit through its `run_job(app_id, title, build, report)` (`pdf-tools/job.ts`): export a task per page, split a task per part, merge and images a task per source PDF or image appended to one `PdfWriter`, then "Write PDF". Image Tools batches are single tasks for now.
 - Cancel only lands where the work checks the signal.

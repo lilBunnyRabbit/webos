@@ -10,10 +10,6 @@ export class EncryptedPdfError extends Error {
   }
 }
 
-export interface Pacing {
-  step?: () => Promise<void>;
-}
-
 let lib: Promise<typeof import("pdf-lib")> | null = null;
 
 export function pdf_lib(): Promise<typeof import("pdf-lib")> {
@@ -39,15 +35,38 @@ async function save(document: PDFDocument): Promise<Uint8Array> {
   return document.save({ addDefaultPage: false });
 }
 
-export async function merge_pdfs(sources: { name: string; bytes: Uint8Array }[], pacing: Pacing = {}): Promise<Uint8Array> {
-  const { PDFDocument } = await pdf_lib();
-  const out = await PDFDocument.create();
-  for (const source of sources) {
-    const document = await load_pdf(source.bytes, source.name);
-    for (const page of await out.copyPages(document, document.getPageIndices())) out.addPage(page);
-    await pacing.step?.();
+/** Builds one PDF a source at a time, so each PDF or image can be its own task. */
+export class PdfWriter {
+  private document: Promise<PDFDocument> | null = null;
+
+  private out(): Promise<PDFDocument> {
+    return (this.document ??= pdf_lib().then(({ PDFDocument }) => PDFDocument.create()));
   }
-  return save(out);
+
+  /** Appends every page of a PDF and resolves how many. */
+  async append(bytes: Uint8Array, name?: string): Promise<number> {
+    const out = await this.out();
+    const document = await load_pdf(bytes, name);
+    for (const page of await out.copyPages(document, document.getPageIndices())) out.addPage(page);
+    return document.getPageCount();
+  }
+
+  async append_image(image: PdfImage, size: PageSize, margin: number): Promise<void> {
+    const out = await this.out();
+    const embedded = image.kind === "png" ? await out.embedPng(image.bytes) : await out.embedJpg(image.bytes);
+    const layout = image_page(image.width, image.height, size, margin);
+    out.addPage([layout.width, layout.height]).drawImage(embedded, layout.image);
+  }
+
+  async finish(): Promise<Uint8Array> {
+    return save(await this.out());
+  }
+}
+
+export async function merge_pdfs(sources: { name: string; bytes: Uint8Array }[]): Promise<Uint8Array> {
+  const writer = new PdfWriter();
+  for (const source of sources) await writer.append(source.bytes, source.name);
+  return writer.finish();
 }
 
 function shown_size(page: PDFPage): [number, number] {
@@ -81,14 +100,27 @@ export async function organize_pdf(bytes: Uint8Array, pages: PageItem[], name?: 
   return save(out);
 }
 
-export async function* split_pdf(bytes: Uint8Array, groups: number[][], name?: string): AsyncGenerator<{ pages: number[]; bytes: Uint8Array }> {
-  const { PDFDocument } = await pdf_lib();
-  const source = await load_pdf(bytes, name);
-  for (const pages of groups) {
+/** Cuts parts out of one PDF, loading it once on the first part. */
+export class PdfSplitter {
+  private source: Promise<PDFDocument> | null = null;
+
+  constructor(
+    private readonly bytes: Uint8Array,
+    private readonly name?: string
+  ) {}
+
+  async part(pages: number[]): Promise<Uint8Array> {
+    const { PDFDocument } = await pdf_lib();
+    const source = await (this.source ??= load_pdf(this.bytes, this.name));
     const out = await PDFDocument.create();
     for (const page of await out.copyPages(source, pages.map((page) => page - 1))) out.addPage(page);
-    yield { pages, bytes: await save(out) };
+    return save(out);
   }
+}
+
+export async function* split_pdf(bytes: Uint8Array, groups: number[][], name?: string): AsyncGenerator<{ pages: number[]; bytes: Uint8Array }> {
+  const splitter = new PdfSplitter(bytes, name);
+  for (const pages of groups) yield { pages, bytes: await splitter.part(pages) };
 }
 
 export const Ink = { BLACK: "black", BLUE: "blue" } as const;
@@ -147,14 +179,8 @@ export interface PdfImage {
   height: number;
 }
 
-export async function images_to_pdf(images: PdfImage[], size: PageSize, margin: number, pacing: Pacing = {}): Promise<Uint8Array> {
-  const { PDFDocument } = await pdf_lib();
-  const out = await PDFDocument.create();
-  for (const image of images) {
-    const embedded = image.kind === "png" ? await out.embedPng(image.bytes) : await out.embedJpg(image.bytes);
-    const layout = image_page(image.width, image.height, size, margin);
-    out.addPage([layout.width, layout.height]).drawImage(embedded, layout.image);
-    await pacing.step?.();
-  }
-  return save(out);
+export async function images_to_pdf(images: PdfImage[], size: PageSize, margin: number): Promise<Uint8Array> {
+  const writer = new PdfWriter();
+  for (const image of images) await writer.append_image(image, size, margin);
+  return writer.finish();
 }

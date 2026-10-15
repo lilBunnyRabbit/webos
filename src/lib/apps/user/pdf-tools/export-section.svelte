@@ -17,6 +17,7 @@
   import { canvas_blob, page_info, render_page } from "./render";
   import { ThumbCache } from "./thumbs.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
+  import { format_bytes } from "$lib/core/utils";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
   const { app_id, window: win, storage } = get_app_context();
@@ -93,16 +94,22 @@
     const { format, scale } = settings.value;
     const type = format === "png" ? "image/png" : "image/jpeg";
     busy = true;
-    await run_job(app_id, `Exporting ${list.length} ${list.length === 1 ? "page" : "pages"}`, list.length, async (step) => {
-      for (const page of list) {
-        const canvas = await render_page(document, page - 1, Number(scale));
-        const blob = await canvas_blob(canvas, type, 0.92);
-        canvas.width = canvas.height = 0;
-        await write_into(folder, page_image_name(source.name, page, count, format), blob);
-        await step(`Page ${page} of ${count}`);
-      }
-      return { title: "Pages exported", message: `${list.length} ${format.toUpperCase()} ${list.length === 1 ? "image" : "images"} in ${folder}`, actions: [{ label: "Show", on_click: () => apps.open(folder) }] };
-    });
+    await run_job(
+      app_id,
+      `Exporting ${list.length} ${list.length === 1 ? "page" : "pages"}`,
+      () =>
+        list.map((page) => ({
+          name: `Page ${page}`,
+          async run() {
+            const canvas = await render_page(document, page - 1, Number(scale));
+            const blob = await canvas_blob(canvas, type, 0.92);
+            canvas.width = canvas.height = 0;
+            await write_into(folder, page_image_name(source.name, page, count, format), blob);
+            return `Saved ${format_bytes(blob.size)}`;
+          },
+        })),
+      () => ({ title: "Pages exported", message: `${list.length} ${format.toUpperCase()} ${list.length === 1 ? "image" : "images"} in ${folder}`, actions: [{ label: "Show", on_click: () => apps.open(folder) }] })
+    );
     busy = false;
   }
 </script>

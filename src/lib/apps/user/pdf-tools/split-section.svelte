@@ -9,7 +9,7 @@
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
   import { part_name } from "./naming";
-  import { split_pdf } from "./pdf";
+  import { PdfSplitter } from "./pdf";
   import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
@@ -74,15 +74,21 @@
     const { source, bytes } = loaded;
     const groups = plan.groups;
     busy = true;
-    await run_job(app_id, `Splitting ${source.name}`, groups.length, async (step) => {
-      let written = 0;
-      for await (const part of split_pdf(bytes, groups, source.name)) {
-        await write_into(folder, part_name(source.name, part.pages), part.bytes);
-        written++;
-        await step();
-      }
-      return { title: "PDF split", message: `${written} ${written === 1 ? "file" : "files"} in ${folder}`, actions: [{ label: "Show", on_click: () => apps.open(folder) }] };
-    });
+    await run_job(
+      app_id,
+      `Splitting ${source.name}`,
+      () => {
+        const splitter = new PdfSplitter(bytes, source.name);
+        return groups.map((pages) => ({
+          name: part_name(source.name, pages),
+          status: pages.length === 1 ? `page ${pages[0]}` : `${pages.length} pages`,
+          async run() {
+            await write_into(folder, part_name(source.name, pages), await splitter.part(pages));
+          },
+        }));
+      },
+      () => ({ title: "PDF split", message: `${groups.length} ${groups.length === 1 ? "file" : "files"} in ${folder}`, actions: [{ label: "Show", on_click: () => apps.open(folder) }] })
+    );
     busy = false;
   }
 </script>

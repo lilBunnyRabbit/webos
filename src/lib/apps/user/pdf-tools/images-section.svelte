@@ -21,7 +21,7 @@
   import { PageSize } from "./geometry";
   import { run_job } from "./job";
   import { images_pdf_name } from "./naming";
-  import { images_to_pdf, type PdfImage } from "./pdf";
+  import { PdfWriter } from "./pdf";
   import { IMAGE_ACCEPT, device_source, is_image, prepare_image, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
@@ -115,16 +115,25 @@
     const list = items.map((item) => item.source);
     const { size, margin } = settings.value;
     busy = true;
-    await run_job(app_id, `Making a PDF of ${list.length} ${list.length === 1 ? "image" : "images"}`, list.length * 2, async (step) => {
-      const images: PdfImage[] = [];
-      for (const source of list) {
-        images.push(await prepare_image(source));
-        await step();
-      }
-      const bytes = await images_to_pdf(images, size, Number(margin), { step: () => step() });
-      await write_at(path, bytes);
-      return { title: "PDF created", message: `${path} · ${list.length} ${list.length === 1 ? "page" : "pages"}`, actions: [{ label: "Open", on_click: () => apps.open(path) }] };
-    });
+    await run_job(
+      app_id,
+      `Making a PDF of ${list.length} ${list.length === 1 ? "image" : "images"}`,
+      () => {
+        const writer = new PdfWriter();
+        return [
+          ...list.map((source) => ({
+            name: source.name,
+            async run() {
+              const image = await prepare_image(source);
+              await writer.append_image(image, size, Number(margin));
+              return `${image.width}×${image.height} ${image.kind.toUpperCase()}`;
+            },
+          })),
+          { name: "Write PDF", run: async () => write_at(path, await writer.finish()) },
+        ];
+      },
+      () => ({ title: "PDF created", message: `${path} · ${list.length} ${list.length === 1 ? "page" : "pages"}`, actions: [{ label: "Open", on_click: () => apps.open(path) }] })
+    );
     busy = false;
   }
 
