@@ -11,7 +11,7 @@
     Warning as WarningIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { crop, find_crop_bounds, type CropBounds } from "./crop";
   import {
     FORMAT_OPTIONS,
@@ -55,13 +55,18 @@
     error = null;
     try {
       const result = await task();
-      if (id === request) source = result;
+      if (id !== request) return result.bitmap.close();
+      const previous = source;
+      source = result;
+      previous?.bitmap.close();
     } catch (reason) {
       if (id === request) error = error_message(reason);
     } finally {
       if (id === request) loading = false;
     }
   }
+
+  onDestroy(() => source?.bitmap.close());
 
   const initial = untrack(() => initial_path);
   if (initial) load(() => load_image_at(initial));
