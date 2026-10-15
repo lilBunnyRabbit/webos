@@ -1,11 +1,19 @@
 import type { AppId, AppProps, AppsService, FilesService, OpenOptions } from "$lib/core/api";
 import { parse_shortcut, serialize_shortcut, shortcut_label, SHORTCUT_EXTENSION } from "../apps/shortcut";
-import { clamp_widget_size, initial_widget_size, parse_widget, serialize_widget, widget_label, WIDGET_EXTENSION } from "../apps/widget";
+import {
+  clamp_widget_size,
+  initial_widget_size,
+  parse_widget,
+  serialize_widget,
+  widget_label,
+  WIDGET_EXTENSION,
+} from "../apps/widget";
 import type { WidgetSize } from "../apps/type";
 import { file_extension } from "../apps/associations";
 import { PATHS } from "../files/hierarchy";
 import { available_name } from "../files/opfs";
 import { join_path, split_path } from "../files/path";
+import type { FileSystemItem } from "../files/type";
 import type { DesktopItem } from "./type";
 
 /** Shortcuts written into an empty desktop on first boot. */
@@ -30,7 +38,7 @@ interface DesktopFolderOptions {
  * grid and the mobile home share (ADR-016). The owner keeps the layout; this keeps the folder.
  */
 export class DesktopFolder {
-  public entries = $state<DesktopItem[]>([]);
+  public entries = $state.raw<DesktopItem[]>([]);
 
   private dispose_watch?: () => void;
   private reload_id = 0;
@@ -82,7 +90,8 @@ export class DesktopFolder {
     try {
       await this.read();
     } catch (error) {
-      const stale = error instanceof DOMException && (error.name === "NotFoundError" || error.name === "NotReadableError");
+      const stale =
+        error instanceof DOMException && (error.name === "NotFoundError" || error.name === "NotReadableError");
       if (!stale || attempt >= 3) throw error;
       await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
       return this.reload(attempt + 1);
@@ -93,10 +102,11 @@ export class DesktopFolder {
     const id = ++this.reload_id;
     const files = this.options.files();
     const folder = await this.handle();
-    const items = await files.list(folder);
-
     // The layout file is read until it's been handed over once; later reloads would race the owner's own writes to it.
-    const layout = this.layout_loaded ? null : await this.options.read_layout();
+    const [items, layout] = await Promise.all([
+      files.list(folder),
+      this.layout_loaded ? null : this.options.read_layout(),
+    ]);
     const visible = items.filter((item) => !item.name.startsWith("."));
 
     // An empty folder with no layout file has never been set up: seed it once, then read what was written. The layout
@@ -106,34 +116,14 @@ export class DesktopFolder {
       return this.reload();
     }
 
-    const entries: DesktopItem[] = [];
-    for (const item of visible) {
-      if (item.kind === "directory") {
-        entries.push({ kind: "directory", name: item.name });
-        continue;
-      }
-
-      if (file_extension(item.name) === WIDGET_EXTENSION) {
-        const widget = parse_widget(await (await item.handle.getFile()).text());
-        if (widget) {
-          const { app, props, w, h } = widget;
-          // Clamped for display only; the file keeps what it says until the user resizes it.
-          const size = clamp_widget_size({ w, h }, this.options.apps().get(app)?.widget_size);
-          entries.push({ kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size });
-          continue;
-        }
-      }
-
-      const shortcut =
-        file_extension(item.name) === SHORTCUT_EXTENSION
-          ? parse_shortcut(await (await item.handle.getFile()).text())
-          : null;
-      entries.push(
-        shortcut
-          ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), ...shortcut }
-          : { kind: "file", name: item.name, type: item.type ?? "" }
-      );
-    }
+    const texts = await Promise.all(
+      visible.map(async (item) =>
+        item.kind === "file" && [WIDGET_EXTENSION, SHORTCUT_EXTENSION].includes(file_extension(item.name))
+          ? (await item.handle.getFile()).text()
+          : null
+      )
+    );
+    const entries = visible.map((item, index) => this.reuse(this.to_entry(item, texts[index])));
 
     // A newer reload started while this one was reading; its result wins.
     if (id !== this.reload_id) return;
@@ -142,6 +132,29 @@ export class DesktopFolder {
       this.layout_loaded = true;
       this.options.loaded(layout);
     }
+  }
+
+  private to_entry(item: FileSystemItem, text: string | null): DesktopItem {
+    if (item.kind === "directory") return { kind: "directory", name: item.name };
+
+    const widget = file_extension(item.name) === WIDGET_EXTENSION && text !== null ? parse_widget(text) : null;
+    if (widget) {
+      const { app, props, w, h } = widget;
+      // Clamped for display only; the file keeps what it says until the user resizes it.
+      const size = clamp_widget_size({ w, h }, this.options.apps().get(app)?.widget_size);
+      return { kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size };
+    }
+
+    const shortcut = file_extension(item.name) === SHORTCUT_EXTENSION && text !== null ? parse_shortcut(text) : null;
+    return shortcut
+      ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), ...shortcut }
+      : { kind: "file", name: item.name, type: item.type ?? "" };
+  }
+
+  /** The current object when nothing about the entry changed, so icons and widgets keep their props across reloads. */
+  private reuse(entry: DesktopItem): DesktopItem {
+    const current = this.get(entry.name);
+    return current && JSON.stringify(current) === JSON.stringify(entry) ? current : entry;
   }
 
   /** Writes `{App name}.desktop`, auto-renamed on a clash. Returns the file name, or `null` for an unknown app. */
@@ -156,7 +169,10 @@ export class DesktopFolder {
   }
 
   /** Writes `{label}.widget`, auto-renamed on a clash. Returns the file name, or `null` for an app without a widget. */
-  public async write_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null> {
+  public async write_widget(
+    app_id: AppId,
+    options: { label: string; props?: AppProps; size?: WidgetSize }
+  ): Promise<string | null> {
     const manifest = this.options.apps().get(app_id);
     if (!manifest?.widget) return null;
 
@@ -164,21 +180,32 @@ export class DesktopFolder {
     const label = options.label.replace(/[/\\:]/g, " ").trim() || "Widget";
     const name = await available_name(folder, `${label}${WIDGET_EXTENSION}`);
     const { w, h } = initial_widget_size(manifest.widget_size, options.size);
-    await this.options.files().create_file(folder, name, { content: serialize_widget({ app: app_id, props: options.props, w, h }) });
+    await this.options
+      .files()
+      .create_file(folder, name, { content: serialize_widget({ app: app_id, props: options.props, w, h }) });
     return name;
   }
 
   public write_widget_size(name: string, size: WidgetSize): Promise<void> {
     // Shown at once: the reload the write triggers lands later, and a second Shift+arrow must build on this size.
-    this.entries = this.entries.map((entry) => (entry.name === name && entry.kind === "widget" ? { ...entry, size } : entry));
+    this.entries = this.entries.map((entry) =>
+      entry.name === name && entry.kind === "widget" ? { ...entry, size } : entry
+    );
     // Queued, so quick resizes reach the file in the order they were made.
-    this.size_writes = this.size_writes.catch(() => {}).then(async () => {
-      const folder = await this.handle();
-      const file = await this.options.files().get_file(join_path(split_path(PATHS.desktop), name));
-      const widget = file && parse_widget(await file.text());
-      if (!widget) return;
-      await this.options.files().create_file(folder, name, { content: serialize_widget({ ...widget, w: size.w, h: size.h }), overwrite: true });
-    });
+    this.size_writes = this.size_writes
+      .catch(() => {})
+      .then(async () => {
+        const folder = await this.handle();
+        const file = await this.options.files().get_file(join_path(split_path(PATHS.desktop), name));
+        const widget = file && parse_widget(await file.text());
+        if (!widget) return;
+        await this.options
+          .files()
+          .create_file(folder, name, {
+            content: serialize_widget({ ...widget, w: size.w, h: size.h }),
+            overwrite: true,
+          });
+      });
     return this.size_writes;
   }
 

@@ -119,7 +119,7 @@ Discarding does two things: `console.warn("[AppsService] \"{id}\" {reason}, disc
 5. **Candidates.** `best_apps_for(registry.values(), file)`, matching on `file.name` and `file.type` (the MIME the browser assigns to the OPFS `File`).
 6. Zero candidates → warning notification "No app can open {name}" (app id `"apps"`) → `null`.
 7. One candidate → `launch(candidate.id, { path })`.
-8. Several → `dialogs.show(OpenWithDialog, { file_name, extension, apps }, { anchor: options.anchor })`.
+8. Several → `import()` `open-with-dialog.svelte`, then `dialogs.show(OpenWithDialog, { file_name, extension, apps }, { anchor: options.anchor })`.
    - `null` (Esc, outside click, shutdown) → resolve `null`. Nothing opens, no notification.
    - `{ app_id, always }`: if `always` and there is an extension, `settings.file_defaults[extension] = app_id`. Then `launch(app_id, { path })`.
 

@@ -1,12 +1,17 @@
 import type { AppsService, DialogsService, FilesService, Kernel, NotificationsService } from "$lib/core/api";
-import IntroDialog from "$lib/core/components/intro/intro-dialog.svelte";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { CHANGELOG } from "./changelog";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
 import { scope_caches, strip_update_param, with_update_param } from "./update";
-import { ChangeKind, UpdateStage, type Release, type VersionInfo, type VersionService as IVersionService } from "./type";
+import {
+  ChangeKind,
+  UpdateStage,
+  type Release,
+  type VersionInfo,
+  type VersionService as IVersionService,
+} from "./type";
 import { version_shell } from "./shell";
 
 declare const __VERSION_INFO__: VersionInfo;
@@ -17,6 +22,8 @@ const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
 const ACTIVATE_TIMEOUT = 8000;
 /** Long enough for a stage to paint before the next one, or the page, replaces it. */
 const STAGE_BEAT = 250;
+
+const intro_dialog = () => import("$lib/core/components/intro/intro-dialog.svelte");
 
 export class VersionService implements IVersionService {
   name = "VersionService";
@@ -68,6 +75,8 @@ export class VersionService implements IVersionService {
     const seen = file ? parse_seen(await file.text()) : null;
 
     if (seen === null) {
+      // Loaded during boot, so the introduction is already up when the splash goes.
+      await intro_dialog();
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
       this.show_intro().then(() => {
         if (!this.destroyed) this.writer.write(serialize_seen(this.info.version));
@@ -78,7 +87,8 @@ export class VersionService implements IVersionService {
     if (compare_versions(seen, this.info.version) >= 0) return;
 
     this.unseen = this.changelog.filter(
-      (release) => compare_versions(release.version, seen) > 0 && compare_versions(release.version, this.info.version) <= 0
+      (release) =>
+        compare_versions(release.version, seen) > 0 && compare_versions(release.version, this.info.version) <= 0
     );
     this.writer.write(serialize_seen(this.info.version));
     if (this.unseen.length > 0) this.notify_updated();
@@ -142,7 +152,11 @@ export class VersionService implements IVersionService {
     try {
       await registration?.unregister();
       const keys = await caches.keys();
-      await Promise.all(scope_caches(keys, registration?.scope ?? new URL(import.meta.env.BASE_URL, location.origin).href).map((key) => caches.delete(key)));
+      await Promise.all(
+        scope_caches(keys, registration?.scope ?? new URL(import.meta.env.BASE_URL, location.origin).href).map((key) =>
+          caches.delete(key)
+        )
+      );
     } catch (error) {
       console.warn("[VersionService] Couldn't clear the old build", error);
     }
@@ -157,7 +171,7 @@ export class VersionService implements IVersionService {
   }
 
   async show_intro(): Promise<void> {
-    await this.dialogs_service.show(IntroDialog, {}, { dismissible: false });
+    await this.dialogs_service.show((await intro_dialog()).default, {}, { dismissible: false });
   }
 
   private notify_updated(): void {
@@ -172,7 +186,9 @@ export class VersionService implements IVersionService {
       icon: SparkleIcon,
       // Sticky: at boot it can sit behind the introduction or the Restore dialog.
       duration: null,
-      actions: [{ label: "What's new", on_click: () => this.apps_service.launch("settings", { section: "whats-new" }) }],
+      actions: [
+        { label: "What's new", on_click: () => this.apps_service.launch("settings", { section: "whats-new" }) },
+      ],
     });
   }
 

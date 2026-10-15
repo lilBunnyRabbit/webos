@@ -3,6 +3,12 @@ import { SvelteMap } from "svelte/reactivity";
 import { register_default_services } from "./init";
 import { detect_platform, type Platform } from "./platform";
 
+export interface BootStep {
+  key: string;
+  done: number;
+  total: number;
+}
+
 export class Kernel {
   private is_initialized = false;
 
@@ -13,16 +19,17 @@ export class Kernel {
   private readonly descriptors: Map<string, ServiceDescriptor<IService>> = new Map();
   private init_order: string[] = [];
 
-  public async init(): Promise<Kernel> {
+  public async init(on_step?: (step: BootStep) => void): Promise<Kernel> {
     if (this.is_initialized) {
       return this;
     }
 
-    register_default_services(this);
+    await register_default_services(this);
 
     this.init_order = this.resolve_order();
     try {
-      for (const name of this.init_order) {
+      for (const [done, name] of this.init_order.entries()) {
+        on_step?.({ key: name, done, total: this.init_order.length });
         const instance = new (this.descriptors.get(name)!.instance)(this);
         await instance.init?.();
         this.services.set(name, instance);

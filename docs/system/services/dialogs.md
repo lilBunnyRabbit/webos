@@ -34,7 +34,7 @@ Types (`type.ts`):
 ## Lifecycle
 
 - `init()` starts an `$effect.root` that watches `windows.list()`: a window-bound entry whose window no longer exists resolves with `null`, like a cancel.
-- `init()` also registers the close prompt (ADR-029): `windows.set_close_prompt` shows `SaveChangesDialog` as a non-dismissible window sheet (title, Cancel / Don't save / Save, Save only when the app gave a `save`) and maps `null` to Cancel. `destroy()` unregisters it.
+- `init()` also registers the close prompt (ADR-029): `windows.set_close_prompt` imports and shows `SaveChangesDialog` (lazy: boot never needs it) as a non-dismissible window sheet (title, Cancel / Don't save / Save, Save only when the app gave a `save`) and maps `null` to Cancel. `destroy()` unregisters it.
 - `destroy()` disposes that watcher and resolves every open entry with `null`, top first. Each resolve splices its entry, so the host unmounts the dialogs.
 
 ## Persistence

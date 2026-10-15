@@ -1,16 +1,12 @@
 <script lang="ts">
-  import kernel, { Platform } from "$lib/core/api";
-  import DesktopShell from "./desktop-shell.svelte";
-  import MobileShell from "./mobile/mobile-shell.svelte";
+  import type { Component } from "svelte";
   import UpdateOverlay from "./update/update-overlay.svelte";
+
+  // The current platform's shell (ADR-016), loaded by main.ts during boot so it renders with the first paint (ADR-036).
+  // Each shell renders its own DialogsHost.
+  let { shell: Shell }: { shell: Component } = $props();
 </script>
 
-<!-- The one platform branch (ADR-016): everything below types against its own platform's services. Each shell renders
-     its own DialogsHost. -->
-{#if kernel.platform === Platform.MOBILE}
-  <MobileShell />
-{:else}
-  <DesktopShell />
-{/if}
+<Shell />
 
 <UpdateOverlay />

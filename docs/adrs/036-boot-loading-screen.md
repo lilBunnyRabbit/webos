@@ -1,7 +1,9 @@
 # ADR-036: Boot Loading Screen and Boot Weight
 
 **Date:** 2026-10-15
-**Status:** Accepted
+**Status:** Implemented 2026-10-15
+
+> **Revision 2026-10-15: implementation.** The session's app components are warmed by SessionService in its own `init()` (it holds the saved list; no new API). `main.ts` warms widgets after the `desktop` step and awaits the shell chunk with `kernel.init()`, then passes it to `os.svelte` as a prop so it paints with the splash's removal. On first boot VersionService awaits the introduction's chunk inside `init()`, so the introduction is up at the first paint. `changelog.ts` stays eager: boot reads it for the "Updated to vX" toast. Measured on a cold first visit (HTTP/2 + gzip, 1.6 Mbps, 150 ms RTT, 4x CPU): the entry chunk went from 1021 KB / 269 KB gz to 583 KB / 164 KB gz, but time to a ready desktop went from ~2.1 s to ~3.2 s, mostly because the Inter preload (352 KB) now competes with the boot chunks (~2.4 s without it). Warm and unthrottled boots are unchanged.
 
 ## Context
 

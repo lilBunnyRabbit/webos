@@ -2,7 +2,7 @@
 
 Source: `src/lib/core/components/mobile/` · ADR: [ADR-016](../../adrs/016-mobile-support.md) (revision 2026-10-12) · [Brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)
 
-The shell phones and tablets get. `os.svelte` renders it instead of `desktop-shell.svelte` when `kernel.platform` is `mobile`; that's the only platform check in the UI. Everything inside types against the mobile services: [`MobileWindowsService`](../services/windows.md#mobile) and [`MobileDesktopService`](../services/desktop.md#mobile-home). Try it on a desktop with `?platform=mobile`.
+The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`) imports it instead of `desktop-shell.svelte` when `kernel.platform` is `mobile`, and `os.svelte` renders what it loaded; that's the only platform check in the UI. Each shell is its own chunk, so a phone never downloads the desktop shell and the other way round (ADR-036). Everything inside types against the mobile services: [`MobileWindowsService`](../services/windows.md#mobile) and [`MobileDesktopService`](../services/desktop.md#mobile-home). Try it on a desktop with `?platform=mobile`.
 
 ## Layout
 

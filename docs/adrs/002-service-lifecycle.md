@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented (2026-10-10, partially; see revision)
 
+> **Revision 2026-10-15: init progress** ([ADR-036](./036-boot-loading-screen.md)). `kernel.init(on_step?)` calls `on_step({ key, done, total })` before each service's `init()`, so the splash can show a bar and a label. Init stays serial; `register_default_services()` is async because it `import()`s the platform's `windows` and `desktop` classes.
+
 > **Revision 2026-10-14: shell hook** ([ADR-033](./033-shell.md)). `IService` gains an optional `shell?(): ShellContribution` (commands, completers, value types). The shell service reads it from every initialised service.
 
 > **Revision 2026-10-10: implementation** (owner decisions, see [brainstorm](../brainstorm/2026-10-10_service-lifecycle.md))

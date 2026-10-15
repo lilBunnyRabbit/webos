@@ -1,12 +1,11 @@
 import type { Kernel } from "./kernel.svelte";
 import { Platform } from "./platform";
 import type { DesktopService as IDesktopService, WindowsService as IWindowsService } from "../services";
+// App manifests load with AppsService and read WindowFlag through the barrel, which is still mid-cycle here. The windows
+// service used to load it first; now that it's lazy, this keeps that order.
+import "../services/windows/type";
 import { SettingsService } from "../services/settings/service.svelte";
-import { WindowsService } from "../services/windows/service.svelte";
-import { MobileWindowsService } from "../services/windows/mobile.svelte";
 import { AppsService } from "../services/apps/service.svelte";
-import { DesktopService } from "../services/desktop/service.svelte";
-import { MobileDesktopService } from "../services/desktop/mobile.svelte";
 import { SessionService } from "../services/session/service.svelte";
 import { ClipboardService } from "../services/clipboard/service.svelte";
 import { FilesService } from "../services/files/service.svelte";
@@ -18,9 +17,25 @@ import { ShortcutsService } from "../services/shortcuts/service.svelte";
 import { RouterService } from "../services/router/service.svelte";
 import { ShellService } from "../services/shell/service.svelte";
 
-export function register_default_services(kernel: Kernel) {
-  // Phones and tablets get their own windows and desktop; every other service is shared (ADR-016).
-  const mobile = kernel.platform === Platform.MOBILE;
+// Phones and tablets get their own windows and desktop (ADR-016); the other platform's code is never downloaded (ADR-036).
+async function platform_services(platform: Platform) {
+  if (platform === Platform.MOBILE) {
+    const [windows, desktop] = await Promise.all([
+      import("../services/windows/mobile.svelte"),
+      import("../services/desktop/mobile.svelte"),
+    ]);
+    return { windows: windows.MobileWindowsService, desktop: desktop.MobileDesktopService };
+  }
+
+  const [windows, desktop] = await Promise.all([
+    import("../services/windows/service.svelte"),
+    import("../services/desktop/service.svelte"),
+  ]);
+  return { windows: windows.WindowsService, desktop: desktop.DesktopService };
+}
+
+export async function register_default_services(kernel: Kernel) {
+  const platform = await platform_services(kernel.platform);
 
   kernel.register("settings", {
     instance: SettingsService,
@@ -28,7 +43,7 @@ export function register_default_services(kernel: Kernel) {
   });
 
   kernel.register<IWindowsService>("windows", {
-    instance: mobile ? MobileWindowsService : WindowsService,
+    instance: platform.windows,
     dependencies: [],
   });
 
@@ -53,7 +68,7 @@ export function register_default_services(kernel: Kernel) {
   });
 
   kernel.register<IDesktopService>("desktop", {
-    instance: mobile ? MobileDesktopService : DesktopService,
+    instance: platform.desktop,
     dependencies: ["files", "apps"],
   });
 

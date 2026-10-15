@@ -67,6 +67,12 @@ export class SessionService implements ISessionService {
       return;
     }
 
+    // Warmed while the rest of boot runs and the Restore dialog is up (ADR-036). Restore imports again, so failures don't matter.
+    for (const app_id of new Set(saved.map((snapshot) => snapshot.app_id))) {
+      const manifest = this.apps_service.get(app_id);
+      manifest?.component().catch(() => {});
+    }
+
     // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
     this.status = SessionStatus.PENDING;
     this.offer_restore(saved).catch((error) => {
@@ -86,7 +92,9 @@ export class SessionService implements ISessionService {
     if (this.destroyed) return;
 
     if (restore) {
-      const result = this.windows_service.restore(saved, ({ app_id, props, state }) => this.apps_service.create_instance(app_id, props, state));
+      const result = this.windows_service.restore(saved, ({ app_id, props, state }) =>
+        this.apps_service.create_instance(app_id, props, state)
+      );
       this.status = SessionStatus.RESTORED;
 
       if (result.skipped.length > 0) {
@@ -151,12 +159,12 @@ export class SessionService implements ISessionService {
       .map(([id, instance]) => [
         id,
         {
-        app_id: instance.app.id,
-        props: $state.snapshot(instance.app.props),
-        bounds: { ...instance.bounds },
-        flags: [...instance.flags].filter((flag) => SESSION_FLAGS.includes(flag)),
-        snap_zone: instance.snap_zone,
-        ...(Object.keys(instance.app.state).length > 0 && { state: $state.snapshot(instance.app.state) }),
+          app_id: instance.app.id,
+          props: $state.snapshot(instance.app.props),
+          bounds: { ...instance.bounds },
+          flags: [...instance.flags].filter((flag) => SESSION_FLAGS.includes(flag)),
+          snap_zone: instance.snap_zone,
+          ...(Object.keys(instance.app.state).length > 0 && { state: $state.snapshot(instance.app.state) }),
         },
       ]);
   }

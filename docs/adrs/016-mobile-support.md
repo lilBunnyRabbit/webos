@@ -5,6 +5,8 @@
 
 > **Revision 2026-10-15: shared base class** ([brainstorm](../brainstorm/2026-10-15_code-quality-pass.md)). `WindowsService` and `MobileWindowsService` both extend the abstract `BaseWindowsService` (`windows/base.svelte.ts`), which holds the members they had byte-identical: back handlers, the close guard, `set_title`, `set_dirty`, `has_dirty` and `page_hidden`. Platform behaviour stays in each class; the public interface and registration are unchanged.
 
+> **Revision 2026-10-15: lazy platform modules** ([ADR-036](./036-boot-loading-screen.md)). The platform's shell (`load_shell()` in `components/platform-shell.ts`) and its `WindowsService` / `DesktopService` classes (`kernel/init.ts`) are `import()`ed for `kernel.platform` only, so a phone never downloads the desktop shell and the other way round. `main.ts` awaits the shell during boot and hands it to `os.svelte` as a prop, so it renders with the first paint.
+
 > **Revision 2026-10-14: OS back** (owner, [brainstorm](../brainstorm/2026-10-14_os-back.md)). The device's back gesture now runs the same back as the nav bar, through a history guard in UiService (ADR-028 revision). Sheets now come before the app's own back. Desktop browser Back gets the same guard.
 
 > **Revision 2026-10-12: groundwork** (owner, [brainstorm](../brainstorm/2026-10-12_mobile-groundwork.md))

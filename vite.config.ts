@@ -1,10 +1,34 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
 import { version_plugin } from "./vite-plugin-version";
+import { phosphor_plugin } from "./vite-plugin-phosphor";
 import path from "path";
+
+// The font is only discovered once the CSS has loaded; a preload starts it with the entry chunk. Hashed name, so build only.
+function preload_font_plugin(file: RegExp): Plugin {
+  let base = "/";
+  return {
+    name: "webos-preload-font",
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml(_, { bundle }) {
+      const font = Object.keys(bundle ?? {}).find((name) => file.test(name));
+      if (!font) return;
+      return [
+        {
+          tag: "link",
+          attrs: { rel: "preload", href: `${base}${font}`, as: "font", type: "font/woff2", crossorigin: "" },
+          injectTo: "head",
+        },
+      ];
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,6 +36,7 @@ export default defineConfig({
   base: "/webos/",
   plugins: [
     tailwindcss(),
+    phosphor_plugin(),
     svelte(),
     //   {
     //   compilerOptions: {
@@ -19,6 +44,7 @@ export default defineConfig({
     //   },
     // }
     version_plugin(),
+    preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
@@ -69,7 +95,15 @@ export default defineConfig({
   // ADR-027. Browser tests run on the Vitest server's own origin, so their OPFS never sees real WebOS data.
   test: {
     projects: [
-      { extends: true, test: { name: "unit", include: ["src/**/*.test.ts"], exclude: ["src/**/*.browser.test.ts"], environment: "node" } },
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          include: ["src/**/*.test.ts"],
+          exclude: ["src/**/*.browser.test.ts"],
+          environment: "node",
+        },
+      },
       {
         extends: true,
         // Pre-bundled up front: discovering them mid-run makes Vite reload the test page.

@@ -40,7 +40,7 @@ Read-only state plus `reopen_closed()`.
 0. `remove_legacy_view_keys()`: deletes the five localStorage keys that held view state before `storage.window()` (`LEGACY_VIEW_KEYS`). Cheap no-op once they're gone.
 1. `files.get_file(SESSION_PATH)` → `parse_session()`, or empty when missing. `saved_count` = the windows' length. `windows.load_frames(frames)` runs now, whatever the restore answer: Start fresh drops windows, not where apps open.
 2. Nothing saved → `start_saving()`, `status` stays `none`, done.
-3. Otherwise `status = pending` and `offer_restore(saved)` starts **without being awaited**: the kernel awaits `init()` before mounting, and the dialogs host only renders after mount. A rejection is logged (`[SessionService] Restore failed:`) and saving starts anyway.
+3. Otherwise it starts importing each saved app's component (`manifest.component()`, once per app, errors ignored), so the chunks load while the rest of boot runs and the Restore dialog is up (ADR-036). Then `status = pending` and `offer_restore(saved)` starts **without being awaited**: the kernel awaits `init()` before mounting, and the dialogs host only renders after mount. A rejection is logged (`[SessionService] Restore failed:`) and saving starts anyway.
 
 `offer_restore(saved)`:
 
