@@ -140,8 +140,8 @@ export class SpriteExtractState {
 
   /** `false` when the sheet has no clear gaps to detect. */
   auto_detect(): boolean {
-    if (!this.source) return false;
-    const detected = detect_grid(this.source.bitmap);
+    if (!this.pixels) return false;
+    const detected = detect_grid(this.pixels);
     if (!detected) return false;
     const next = detection_to_state(this.width, this.height, detected, this.settings);
     this.settings = next.settings;

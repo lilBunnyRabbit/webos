@@ -248,7 +248,18 @@ export interface Scene {
   handle_size: number;
 }
 
+const checkers = new WeakMap<CanvasRenderingContext2D, { palette: Palette; pattern: CanvasPattern | null }>();
+
+/** Built once per canvas and palette; the sheet redraws on every pointer move. */
 function checkerboard(ctx: CanvasRenderingContext2D, palette: Palette): CanvasPattern | null {
+  const cached = checkers.get(ctx);
+  if (cached?.palette === palette) return cached.pattern;
+  const pattern = checker_pattern(ctx, palette);
+  checkers.set(ctx, { palette, pattern });
+  return pattern;
+}
+
+function checker_pattern(ctx: CanvasRenderingContext2D, palette: Palette): CanvasPattern | null {
   const size = 16;
   const tile = new OffscreenCanvas(size, size);
   const t = tile.getContext("2d");

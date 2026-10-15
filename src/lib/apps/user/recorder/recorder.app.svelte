@@ -4,6 +4,7 @@
   import { Badge, Button, EmptyState, IconButton, Section, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { format_time } from "$lib/core/games";
   import { cn, format_bytes, format_datetime, error_message } from "$lib/core/utils";
   import {
@@ -79,14 +80,8 @@
 
   $effect(() => session.sync_camera(source === Source.CAMERA && session.phase === Phase.IDLE && visible));
 
-  let now = $state(Date.now());
-  $effect(() => {
-    if (!recording || !visible) return;
-    now = Date.now();
-    const timer = setInterval(() => (now = Date.now()), 250);
-    return () => clearInterval(timer);
-  });
-  const elapsed = $derived(session.take ? session.take.duration : session.elapsed(now));
+  const ticker = new Ticker(() => recording && visible, 250);
+  const elapsed = $derived(session.take ? session.take.duration : session.elapsed(ticker.now));
 
   let camera_video: HTMLVideoElement | null = $state(null);
 

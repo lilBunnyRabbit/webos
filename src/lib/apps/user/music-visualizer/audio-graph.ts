@@ -8,6 +8,8 @@ export class AudioGraph {
   private readonly gain = this.context.createGain();
   private readonly element: MediaElementAudioSourceNode;
   private mic: { stream: MediaStream; source: MediaStreamAudioSourceNode } | null = null;
+  private mic_request: Promise<void> | null = null;
+  private closed = false;
 
   constructor(element: HTMLMediaElement) {
     this.analyser.fftSize = 2048;
@@ -32,9 +34,20 @@ export class AudioGraph {
     if (this.context.state === "suspended") await this.context.resume();
   }
 
-  async start_mic(): Promise<void> {
-    if (this.mic) return;
+  // One request at a time: a second click while the permission prompt is open joins the first instead of opening a
+  // second stream.
+  start_mic(): Promise<void> {
+    if (this.mic) return Promise.resolve();
+    this.mic_request ??= this.open_mic().finally(() => (this.mic_request = null));
+    return this.mic_request;
+  }
+
+  private async open_mic(): Promise<void> {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (this.closed) {
+      for (const track of stream.getTracks()) track.stop();
+      return;
+    }
     const source = this.context.createMediaStreamSource(stream);
     this.element.disconnect(this.analyser);
     source.connect(this.analyser);
@@ -51,6 +64,7 @@ export class AudioGraph {
   }
 
   close(): void {
+    this.closed = true;
     this.stop_mic();
     void this.context.close();
   }

@@ -1,4 +1,5 @@
-import { ellipse_in, line_points, rect_from, snap_line, type Point } from "./shapes";
+import { segment_bounds } from "./patch";
+import { ellipse_in, line_points, rect_from, snap_line, type Point, type Rect } from "./shapes";
 import { FillMode, Tool } from "./tools";
 
 type Context = CanvasRenderingContext2D;
@@ -16,7 +17,14 @@ export function stamp_pencil(context: Context, from: Point, to: Point, size: num
   for (const point of line_points(from, to)) context.fillRect(point.x - offset, point.y - offset, size, size);
 }
 
-export function stroke_brush(context: Context, from: Point, to: Point, width: number, color: string, erase: boolean): void {
+export function stroke_brush(
+  context: Context,
+  from: Point,
+  to: Point,
+  width: number,
+  color: string,
+  erase: boolean
+): void {
   context.save();
   context.globalCompositeOperation = erase ? "destination-out" : "source-over";
   context.strokeStyle = color;
@@ -43,7 +51,14 @@ function crisp(point: Point, size: number): Point {
   return { x: Math.floor(point.x) + shift, y: Math.floor(point.y) + shift };
 }
 
-export function draw_shape(context: Context, tool: Tool, from: Point, to: Point, constrain: boolean, style: ShapeStyle): void {
+export function draw_shape(
+  context: Context,
+  tool: Tool,
+  from: Point,
+  to: Point,
+  constrain: boolean,
+  style: ShapeStyle
+): void {
   const a = crisp(from, style.size);
   const b = crisp(to, style.size);
   context.save();
@@ -73,4 +88,14 @@ export function draw_shape(context: Context, tool: Tool, from: Point, to: Point,
   if (style.mode !== FillMode.OUTLINE) context.fill();
   if (style.mode !== FillMode.FILL) context.stroke();
   context.restore();
+}
+
+// What `draw_shape` can touch. Antialiasing spills a pixel past the stroke and a rectangle's miter corners reach
+// further than half the line width, so the margin is generous.
+export function shape_bounds(tool: Tool, from: Point, to: Point, constrain: boolean, size: number): Rect {
+  const a = crisp(from, size);
+  const b = crisp(to, size);
+  if (tool === Tool.LINE) return segment_bounds(a, constrain ? snap_line(a, b) : b, size / 2 + 2);
+  const rect = rect_from(a, b, constrain);
+  return segment_bounds({ x: rect.x, y: rect.y }, { x: rect.x + rect.width, y: rect.y + rect.height }, size + 2);
 }

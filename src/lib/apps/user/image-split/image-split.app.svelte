@@ -13,7 +13,7 @@
     WarningCircle as WarningCircleIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { clamp_count, compute_layout, draw_preview, MAX_COUNT, render_tiles, SplitDirection } from "./image-split";
   import { has_files, image_files, load_image, type SourceImage } from "$lib/core/utils/image";
   import { parent_path, file_stem } from "$lib/core/api/services/files/path";
@@ -43,13 +43,28 @@
     notifications.notify(app_id, { type, title, message: error_message(error) });
   }
 
+  // A save keeps rendering tiles from its bitmap after another image is opened; that one closes when the save ends.
+  let saving: ImageBitmap | null = null;
+  let destroyed = false;
+
+  function release(bitmap: ImageBitmap) {
+    if (bitmap !== saving) bitmap.close();
+  }
+
+  onDestroy(() => {
+    destroyed = true;
+    if (source) release(source.bitmap);
+  });
+
   async function open_file(file: File, file_path: string | null) {
     const id = ++load_id;
     loading = true;
     try {
       const loaded = await load_image(file, file_path);
-      if (id !== load_id) return;
+      if (id !== load_id) return loaded.bitmap.close();
+      const previous = source;
       source = loaded;
+      if (previous) release(previous.bitmap);
       load_error = null;
     } catch (error) {
       if (id !== load_id) return;
@@ -61,12 +76,15 @@
   }
 
   async function open_path(file_path: string) {
+    const id = ++load_id;
     try {
       const file = await files.get_file(file_path);
+      if (id !== load_id) return;
       if (file) return open_file(file, file_path);
       if (source) report("File not found", file_path);
       else load_error = { title: "File not found", description: file_path };
     } catch (error) {
+      if (id !== load_id) return;
       if (source) report("Couldn't read the file", error);
       else load_error = { title: "Couldn't read the file", description: error_message(error) };
     }
@@ -92,10 +110,11 @@
     const stem = file_stem(name);
 
     const folder = await win.pick_directory({ title: "Save tiles to…", start_path: source_path ? parent_path(source_path) : undefined });
-    if (!folder) return;
+    if (!folder || bitmap !== source?.bitmap) return;
 
     const total = plan.columns * plan.rows;
     progress = { done: 0, total };
+    saving = bitmap;
     try {
       const parent = await files.get_directory(folder);
       if (!parent) throw new Error(`${folder} no longer exists`);
@@ -114,6 +133,8 @@
       report("Couldn't save the tiles", error);
     } finally {
       progress = null;
+      saving = null;
+      if (destroyed || bitmap !== source?.bitmap) bitmap.close();
     }
   }
 

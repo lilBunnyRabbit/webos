@@ -14,7 +14,7 @@
     X as XIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { Align, Direction, concat_images } from "./concat";
   import {
     FORMAT_OPTIONS,
@@ -80,6 +80,7 @@
     const results = await Promise.allSettled(tasks.map((task) => task()));
     loading--;
     const loaded = results.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
+    if (destroyed) return close_all(loaded);
     if (loaded.length) images = [...images, ...loaded];
     for (const entry of results) {
       if (entry.status === "rejected") {
@@ -91,6 +92,17 @@
       }
     }
   }
+
+  let destroyed = false;
+
+  function close_all(list: SourceImage[]) {
+    for (const image of list) image.bitmap.close();
+  }
+
+  onDestroy(() => {
+    destroyed = true;
+    close_all(images);
+  });
 
   const initial = untrack(() => initial_path);
   if (initial) add([() => load_image_at(initial)]);
@@ -112,7 +124,15 @@
   }
 
   function remove(index: number) {
+    const removed = images[index];
     images = images.filter((_, i) => i !== index);
+    removed?.bitmap.close();
+  }
+
+  function remove_all() {
+    const removed = images;
+    images = [];
+    close_all(removed);
   }
 
   function on_paste(event: ClipboardEvent) {
@@ -204,7 +224,7 @@
           <div class="flex flex-col gap-1.5">
             <div class="flex items-center justify-between px-0.5">
               <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Images</h3>
-              <IconButton label="Remove all" size="sm" onclick={() => (images = [])}><TrashIcon weight="bold" /></IconButton>
+              <IconButton label="Remove all" size="sm" onclick={remove_all}><TrashIcon weight="bold" /></IconButton>
             </div>
             <ol class="flex flex-col gap-0.5">
               {#each images as image, index (image)}

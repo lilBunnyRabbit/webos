@@ -214,7 +214,7 @@
     dragging = false;
     const dropped = Array.from(event.dataTransfer?.files ?? []).find((item) => item.type.startsWith("audio/"));
     if (dropped) void load(async () => ({ file: dropped, path: null }));
-    else error = "That isn't an audio file.";
+    else notifications.notify(app_id, { type: NotificationType.WARNING, title: "That isn't an audio file", message: "Drop a song to play it." });
   }
 </script>
 

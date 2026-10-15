@@ -36,7 +36,7 @@
     Sliders as SlidersIcon,
     Warning as WarningIcon,
   } from "phosphor-svelte";
-  import { flushSync, untrack } from "svelte";
+  import { flushSync, onDestroy, untrack } from "svelte";
   import { z } from "zod";
   import { ASPECT_PRESETS, Handle, RESIZE_HANDLES, aspect_of, drag_rect, fit_aspect } from "./crop-rect";
   import {
@@ -136,10 +136,13 @@
   const undoable = $derived(can_undo(history));
   const redoable = $derived(can_redo(history));
 
-  const preview_operations = $derived(
-    tool.value === Tool.ROTATE && angle !== 0 ? add_operation(doc.operations, { type: OperationType.ROTATE, degrees: angle }) : doc.operations
+  // The angle slider previews a rotation on top of the committed chain, so dragging it re-renders one step, not all.
+  const operations = $derived(doc.operations);
+  const base = $derived(source ? render_operations(source.bitmap, operations) : null);
+  const preview_angle = $derived(tool.value === Tool.ROTATE ? angle : 0);
+  const geometry = $derived(
+    base && preview_angle !== 0 ? render_operations(base, [{ type: OperationType.ROTATE, degrees: preview_angle }]) : base
   );
-  const geometry = $derived(source ? render_operations(source.bitmap, preview_operations) : null);
   const size = $derived<Size>(geometry ? { width: geometry.width, height: geometry.height } : { width: 1, height: 1 });
   const aspect = $derived(aspect_of(aspect_choice, size));
   const file_format = $derived(file_path ? format_of(file_path) : null);
@@ -262,6 +265,8 @@
   }
 
   let request = 0;
+
+  onDestroy(() => source?.bitmap.close());
 
   async function open_image(task: () => Promise<SourceImage>) {
     const id = ++request;

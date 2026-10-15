@@ -58,7 +58,12 @@ export interface SendEvents {
 }
 
 /** Sends `files` from wherever the receiver says it left off. Resolves once the receiver has saved everything. */
-export async function send_files(channel: RTCDataChannel, inbox: Inbox, files: File[], events: SendEvents): Promise<void> {
+export async function send_files(
+  channel: RTCDataChannel,
+  inbox: Inbox,
+  files: File[],
+  events: SendEvents
+): Promise<void> {
   const { on_progress } = events;
   channel.bufferedAmountLowThreshold = LOW_WATER;
   send_message(channel, { type: "manifest", protocol: PROTOCOL_VERSION, files: files.map(describe_file) });
@@ -73,7 +78,8 @@ export async function send_files(channel: RTCDataChannel, inbox: Inbox, files: F
       const data = await inbox.next();
       const message = typeof data === "string" ? parse_message(data) : null;
       if (message?.type === "received") return;
-      if (message?.type !== "ack" || !files[message.index]) throw new Error("The other device sent something unexpected");
+      if (message?.type !== "ack" || !files[message.index])
+        throw new Error("The other device sent something unexpected");
       on_progress(message.index, Math.min(message.bytes, files[message.index].size));
     }
   })();
@@ -151,11 +157,12 @@ export async function receive_files(
   events.on_manifest(entries);
 
   let acked = { bytes: -1, at: 0 };
-  const ack = (index: number, bytes: number, force = false) => {
+  const ack = (index: number, bytes: number, force = false): boolean => {
     const now = performance.now();
-    if (!force && bytes - acked.bytes < ACK_BYTES && now - acked.at < ACK_MS) return;
+    if (!force && bytes - acked.bytes < ACK_BYTES && now - acked.at < ACK_MS) return false;
     acked = { bytes, at: now };
     send_message(channel, { type: "ack", index, bytes });
+    return true;
   };
 
   const offsets: (number | null)[] = [];
@@ -176,17 +183,19 @@ export async function receive_files(
       if (typeof data !== "string") {
         if (!current) throw new Error("The other device sent data outside a file");
         current.written += data.byteLength;
-        if (current.written > entries[current.index].size) throw new Error("The other device sent more than it announced");
+        if (current.written > entries[current.index].size)
+          throw new Error("The other device sent more than it announced");
         await current.writable.write(data);
-        events.on_progress(current.index, current.written);
-        ack(current.index, current.written);
+        // Progress follows the ack cadence: a reactive update per 64 KB chunk re-renders the UI hundreds of times a second.
+        if (ack(current.index, current.written)) events.on_progress(current.index, current.written);
         continue;
       }
 
       const message = parse_message(data);
       if (message.type === "start") {
         const entry = entries[message.index];
-        if (current || !entry || message.offset !== offsets[message.index]) throw new Error("The transfer got out of step");
+        if (current || !entry || message.offset !== offsets[message.index])
+          throw new Error("The transfer got out of step");
         const handle = await parts.getFileHandle(part_name(entry), { create: true });
         const writable = await handle.createWritable({ keepExistingData: true });
         await writable.truncate(message.offset);
@@ -202,6 +211,7 @@ export async function receive_files(
         const entry = entries[finished.index];
         const saved = await files.move_file(parts, finished.handle, downloads, entry.name);
         completed.add(part_name(entry));
+        events.on_progress(finished.index, finished.written);
         events.on_saved(finished.index, `${PATHS.downloads}/${saved.name}`);
         ack(finished.index, finished.written, true);
       } else if (message.type === "done") {

@@ -32,15 +32,17 @@
     BoardFileSchema,
     create_pad,
     DEFAULT_BOARD_ID,
+    DEFAULT_VOLUME,
     EMPTY_FILE,
     free_keys,
     is_audio,
     move_pad,
-    PLAY_MODES,
     PlayMode,
+    PlayModeSchema,
     sound_in_use,
     sounds_freed_by_board,
     unique_board_name,
+    VolumeSchema,
     type Board,
     type Pad,
   } from "./board";
@@ -65,8 +67,8 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const data = storage.file("board.json", EMPTY_FILE, BoardFileSchema);
-  const volume = storage.persisted("volume", 0.8, z.number().min(0).max(1));
-  const mode = storage.persisted<PlayMode>("mode", PlayMode.RESTART, z.enum(PLAY_MODES));
+  const volume = storage.persisted("volume", DEFAULT_VOLUME, VolumeSchema);
+  const mode = storage.persisted<PlayMode>("mode", PlayMode.RESTART, PlayModeSchema);
   const active_id = storage.window("board", DEFAULT_BOARD_ID, z.string());
   const imported = storage.window("imported", false, z.boolean());
 

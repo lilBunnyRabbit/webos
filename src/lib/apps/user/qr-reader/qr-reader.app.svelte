@@ -16,8 +16,9 @@
     Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
-  import { QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
+  import { create_qr_detector, detect_qr } from "$lib/core/utils/qr";
+  import { CameraScan } from "$lib/core/utils/qr-scan.svelte";
+  import { HISTORY_LIMIT, QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
 
   const { path }: { path?: string } = $props();
   const { window: win, storage, app_id } = get_app_context();
@@ -25,23 +26,11 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const detector_ready = create_qr_detector();
-  let detector = $state.raw<BarcodeDetector | null>(null);
   let detector_error = $state<string | null>(null);
-  detector_ready.then(
-    (result) => (detector = result),
-    (reason) => (detector_error = error_message(reason))
-  );
+  detector_ready.catch((reason) => (detector_error = error_message(reason)));
   const entries = storage.persisted<QrEntry[]>("entries", [], QrEntries);
 
-  let stream = $state.raw<MediaStream | null>(null);
-  let starting = $state(false);
-  let video: HTMLVideoElement | null = $state(null);
   let dragging = $state(false);
-  let destroyed = false;
-
-  $effect(() => () => {
-    destroyed = true;
-  });
 
   function report(title: string, reason?: unknown, type: NotificationType = NotificationType.ERROR) {
     if (reason instanceof Error) console.error(`[QrReader] ${title}`, reason);
@@ -50,7 +39,8 @@
   }
 
   function add_entry(content: string, image_url: string) {
-    entries.value = [{ id: crypto.randomUUID(), content, image_url, scanned_at: Date.now() }, ...entries.value];
+    const entry = { id: crypto.randomUUID(), content, image_url, scanned_at: Date.now() };
+    entries.value = [entry, ...entries.value].slice(0, HISTORY_LIMIT);
   }
 
   async function scan_file(file: File) {
@@ -87,55 +77,15 @@
   const initial_path = untrack(() => path);
   if (initial_path) void open_path(initial_path);
 
-  async function start_camera() {
-    starting = true;
-    try {
-      const media = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      if (destroyed) media.getTracks().forEach((track) => track.stop());
-      else stream = media;
-    } catch (reason) {
-      report("Couldn't start the camera", reason);
-    } finally {
-      starting = false;
-    }
-  }
-
-  function stop_camera() {
-    stream = null;
-  }
-
-  $effect(() => {
-    const current = stream;
-    if (!current) return;
-    return () => current.getTracks().forEach((track) => track.stop());
-  });
-
-  $effect(() => {
-    if (!stream || !video || !detector) return;
-    const element = video;
-    const reader = detector;
-    element.srcObject = stream;
-    element.play().catch((reason) => console.warn("[QrReader] camera preview failed to play", reason));
-
-    let active = true;
-    let handle = 0;
-    const scan = async () => {
-      const content = await detect_qr(reader, element).catch(() => null);
-      if (!active) return;
-      if (content) {
-        add_entry(content, thumbnail(element, element.videoWidth, element.videoHeight));
-        stop_camera();
-        return;
-      }
-      handle = element.requestVideoFrameCallback(scan);
-    };
-    handle = element.requestVideoFrameCallback(scan);
-
-    return () => {
-      active = false;
-      element.cancelVideoFrameCallback(handle);
-      element.srcObject = null;
-    };
+  const camera = new CameraScan({
+    constraints: { facingMode: "environment" },
+    detector: () => detector_ready,
+    visible: () => win.is_visible,
+    oncode(content, video) {
+      add_entry(content, thumbnail(video, video.videoWidth, video.videoHeight));
+      return true;
+    },
+    onerror: (reason) => report("Couldn't start the camera", reason),
   });
 
   function remove(id: string) {
@@ -198,33 +148,33 @@
     <Toolbar>
       <Button variant="quiet" size="sm" onclick={pick}><ImageSquareIcon weight="bold" /> Open image…</Button>
       <Button variant="quiet" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
-      {#if stream}
-        <Button variant="quiet" size="sm" onclick={stop_camera}><CameraSlashIcon weight="bold" /> Stop camera</Button>
+      {#if camera.active}
+        <Button variant="quiet" size="sm" onclick={() => camera.stop()}><CameraSlashIcon weight="bold" /> Stop camera</Button>
       {:else}
-        <Button variant="quiet" size="sm" disabled={starting} onclick={start_camera}><CameraIcon weight="bold" /> Use camera</Button>
+        <Button variant="quiet" size="sm" disabled={camera.starting} onclick={() => camera.start()}><CameraIcon weight="bold" /> Use camera</Button>
       {/if}
     </Toolbar>
 
     <div class="min-h-0 overflow-auto">
-      {#if !stream && entries.value.length === 0}
+      {#if !camera.active && entries.value.length === 0}
         <EmptyState icon={QrCodeIcon} title="No QR codes scanned yet" description="Open an image or use the camera. You can also paste or drop an image here.">
           {#snippet actions()}
             <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Open image…</Button>
             <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
-            <Button onclick={start_camera} disabled={starting}><CameraIcon weight="bold" /> Use camera</Button>
+            <Button onclick={() => camera.start()} disabled={camera.starting}><CameraIcon weight="bold" /> Use camera</Button>
           {/snippet}
         </EmptyState>
       {:else}
         <div class="mx-auto flex max-w-3xl flex-col gap-6 p-4 @md:p-6">
-          {#if stream}
+          {#if camera.active}
             <div class="relative mx-auto overflow-hidden rounded-lg bg-background-darker">
-              <video bind:this={video} muted playsinline class="block max-h-64 max-w-full"></video>
+              <video {@attach camera.preview} muted playsinline class="block max-h-64 max-w-full"></video>
               <div class="pointer-events-none absolute inset-0 animate-pulse rounded-lg ring-2 ring-primary ring-inset"></div>
             </div>
           {/if}
 
           {#if entries.value.length > 0}
-            <Section title="History" description="Newest first. Kept in this app's storage.">
+            <Section title="History" description={`Newest first, up to ${HISTORY_LIMIT}. Kept in this app's storage.`}>
               {#snippet actions()}
                 <Button variant="quiet" size="sm" onclick={clear_all}><TrashIcon weight="bold" /> Clear all ({entries.value.length})</Button>
               {/snippet}

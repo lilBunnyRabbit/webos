@@ -13,7 +13,7 @@
     X as XIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { remove_colours } from "./background-remove";
   import {
     FORMAT_OPTIONS,
@@ -30,6 +30,7 @@
   import { parent_path, file_stem } from "$lib/core/api/services/files/path";
 
   // JPEG has no alpha channel, so the removed pixels would come back black.
+  const APPLY_DELAY = 150;
   const FORMATS = FORMAT_OPTIONS.filter((option) => option.value !== ImageFormat.JPEG);
 
   const { path: initial_path }: { path?: string } = $props();
@@ -46,7 +47,15 @@
   /** A phone shows one image at a time at full size instead of two tiny ones. */
   let shown = $state<"original" | "result">("result");
 
-  const result = $derived(source ? remove_colours(source.bitmap, colours) : null);
+  // Dragging in the colour picker fires input many times a second; the pixel pass waits until it settles.
+  let applied = $state.raw<string[]>(["#ffffff"]);
+  $effect(() => {
+    const next = $state.snapshot(colours);
+    const timer = setTimeout(() => (applied = next), APPLY_DELAY);
+    return () => clearTimeout(timer);
+  });
+
+  const result = $derived(source ? remove_colours(source.bitmap, applied) : null);
 
   let request = 0;
 
@@ -56,13 +65,18 @@
     error = null;
     try {
       const loaded = await task();
-      if (id === request) source = loaded;
+      if (id !== request) return loaded.bitmap.close();
+      const previous = source;
+      source = loaded;
+      previous?.bitmap.close();
     } catch (reason) {
       if (id === request) error = error_message(reason);
     } finally {
       if (id === request) loading = false;
     }
   }
+
+  onDestroy(() => source?.bitmap.close());
 
   const initial = untrack(() => initial_path);
   if (initial) load(() => load_image_at(initial));

@@ -11,6 +11,9 @@ export type QrEntry = z.infer<typeof QrEntry>;
 
 export const QrEntries = z.array(QrEntry);
 
+// Every entry carries a PNG thumbnail in localStorage, whose quota is a few MB for the whole origin.
+export const HISTORY_LIMIT = 50;
+
 const THUMBNAIL_SIZE = 200;
 
 /** A PNG data URL of `source` scaled down to fit a 200px square, small enough to keep in app storage. */
