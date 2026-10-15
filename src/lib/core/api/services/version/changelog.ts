@@ -13,7 +13,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, text: "The Terminal can trim, split, join and remove the background of images with image trim, image split, image join and image unbg, and open Image Tools with image tools." },
       { kind: NEW, text: "A While True theme: an orange desktop, white windows and ink-dark text." },
       { kind: IMPROVED, text: "Themes from other projects, Speed Reader and While True, now sit together under Project themes in Settings › Appearance." },
-      { kind: FIXED, text: "An app that fails to open because WebOS was updated in the meantime now offers Update and reload right in its window." },
+      { kind: FIXED, text: "When WebOS was updated while open, an app or dialog that fails to load now offers Update and reload instead of only an error." },
     ],
   },
   {

@@ -66,6 +66,7 @@ Five `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`,
 - `setInterval(check, 30 min)`
 - `document.addEventListener("visibilitychange", …)`: when the tab becomes visible and more than 60 s have passed since `last_check`, it runs `check()`.
 - `update/load-failed.svelte` (a window or widget whose app chunk failed to import) runs `check()` immediately and offers `apply_update()` in place, so a stale tab after a deploy doesn't wait for the 30-minute poll.
+- `window.addEventListener("vite:preloadError", …)`: any lazy chunk that fails to load (dialogs, shell command bodies, app sections) runs `check()` and, with a newer build found, shows the "A new version is ready" toast again even if this build was already announced. `update_toast` keeps one such toast: a new one dismisses the previous, so chunks failing together don't stack copies. The failing caller still reports its own error.
 
 - Reads `/var/lib/version/state.json` and branches, see [Release notes and introduction](#release-notes-and-introduction). The introduction is requested without awaiting, like Restore.
 

@@ -1,4 +1,4 @@
-import type { AppsService, DialogsService, FilesService, Kernel, NotificationsService } from "$lib/core/api";
+import type { AppsService, DialogsService, FilesService, Kernel, NotificationId, NotificationsService } from "$lib/core/api";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { CHANGELOG } from "./changelog";
@@ -41,6 +41,7 @@ export class VersionService implements IVersionService {
 
   private last_check = 0;
   private notified_build = 0;
+  private update_toast: NotificationId | null = null;
   private poll_interval?: ReturnType<typeof setInterval>;
   private destroyed = false;
 
@@ -57,6 +58,13 @@ export class VersionService implements IVersionService {
     }
   };
 
+  // Vite fires this when a lazy chunk fails to load anywhere (dialogs, shell bodies, sections). After a deploy that means this
+  // tab runs a replaced build, so check now and ask again even if this build was announced and the toast dismissed.
+  private on_preload_error = async () => {
+    await this.check();
+    if (this.update_available) this.notify_update_available(this.update_available, true);
+  };
+
   constructor(private kernel: Kernel) {
     this.files_service = $derived(this.kernel.service<FilesService>("files"));
     this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
@@ -70,6 +78,7 @@ export class VersionService implements IVersionService {
 
     this.poll_interval = setInterval(() => this.check(), POLL_INTERVAL);
     document.addEventListener("visibilitychange", this.on_visibility_change);
+    window.addEventListener("vite:preloadError", this.on_preload_error);
 
     const file = await this.files_service.get_file(VERSION_STATE_PATH);
     const seen = file ? parse_seen(await file.text()) : null;
@@ -98,6 +107,7 @@ export class VersionService implements IVersionService {
     this.destroyed = true;
     clearInterval(this.poll_interval);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
+    window.removeEventListener("vite:preloadError", this.on_preload_error);
   }
 
   to_string(): string {
@@ -193,11 +203,13 @@ export class VersionService implements IVersionService {
   }
 
   /** Once per detected build; a later check that finds the same build stays quiet. */
-  private notify_update_available(remote: VersionInfo): void {
-    if (import.meta.env.DEV || remote.buildTimestamp === this.notified_build) return;
+  private notify_update_available(remote: VersionInfo, again = false): void {
+    if (import.meta.env.DEV || (!again && remote.buildTimestamp === this.notified_build)) return;
     this.notified_build = remote.buildTimestamp;
 
-    this.notifications_service.notify("version", {
+    // One toast at a time: several chunks failing together would otherwise stack copies.
+    if (this.update_toast) this.notifications_service.dismiss(this.update_toast);
+    this.update_toast = this.notifications_service.notify("version", {
       title: "A new version is ready",
       message: `v${remote.version}. WebOS reloads and offers your open windows back.`,
       icon: ArrowCircleUpIcon,
