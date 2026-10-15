@@ -41,11 +41,12 @@
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
-  import { draw_shape, stamp_pencil, stroke_brush } from "./draw";
+  import { draw_shape, shape_bounds, stamp_pencil, stroke_brush } from "./draw";
   import { flood_fill } from "./flood-fill";
+  import { changed_bounds, clip_rect, copy_region, empty_patch, paste_region, patch_bytes, segment_bounds, union, type Patch } from "./patch";
   import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
   import { css_to_hex } from "./paint-file";
-  import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point } from "./shapes";
+  import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point, type Rect } from "./shapes";
   import {
     Background,
     FILL_MODES,
@@ -81,7 +82,7 @@
 
   const DEFAULT_WIDTH = 800;
   const DEFAULT_HEIGHT = 600;
-  const HISTORY_LIMITS = { max_entries: 50, max_bytes: 256 * 1024 * 1024, size_of: (image: ImageData) => image.data.byteLength };
+  const HISTORY_LIMITS = { max_entries: 50, max_bytes: 256 * 1024 * 1024, size_of: patch_bytes };
 
   const TOOL_ICONS: Record<Tool, IconComponent> = {
     pencil: PencilSimpleIcon,
@@ -133,8 +134,10 @@
   let file_path = $state<string | null>(null);
   /** The name Save as suggests while there's no path: a new canvas, or an image opened from the device. */
   let untitled_name = $state("Untitled.png");
-  let history = $state.raw<History<ImageData> | null>(null);
-  let saved = $state.raw<ImageData | null>(null);
+  let history = $state.raw<History<Patch> | null>(null);
+  let saved = $state.raw<Patch | null>(null);
+  // The canvas as of the last commit: a stroke's undo keeps only the pixels it changed, read from here.
+  let committed: ImageData | null = null;
   let loading = $state(false);
   let cursor = $state<Point | null>(null);
 
@@ -155,6 +158,7 @@
     start: Point;
     last: Point;
     constrain: boolean;
+    bounds: Rect | null;
   }
   let stroke: Stroke | null = null;
   let pan: { pointer_id: number; x: number; y: number } | null = null;
@@ -181,32 +185,51 @@
     return context().getImageData(0, 0, width, height);
   }
 
-  function restore(image: ImageData) {
-    if (image.width !== width || image.height !== height) set_size(image.width, image.height);
-    context().putImageData(image, 0, 0);
+  function clone(image: ImageData): ImageData {
+    return new ImageData(new Uint8ClampedArray(image.data), image.width, image.height);
+  }
+
+  function restore(patch: Patch, image: ImageData | null) {
+    if (!image) return;
+    if (patch.resize) {
+      set_size(image.width, image.height);
+      context().putImageData(image, 0, 0);
+      committed = clone(image);
+      return;
+    }
+    context().putImageData(image, patch.x, patch.y);
+    if (committed) paste_region(committed, image, patch.x, patch.y);
   }
 
   function reset_history() {
-    const image = snapshot();
-    history = create_history(image);
-    saved = image;
+    committed = snapshot();
+    const first = empty_patch();
+    history = create_history(first);
+    saved = first;
   }
 
-  function commit() {
-    if (!history) return;
-    history = push(history, snapshot(), HISTORY_LIMITS);
+  function commit(area: Rect | null) {
+    if (!history || !committed) return;
+    const rect = area && clip_rect(area, width, height);
+    if (!rect) return void (history = push(history, empty_patch(), HISTORY_LIMITS));
+    const before = new ImageData(copy_region(committed, rect), rect.width, rect.height);
+    const after = context().getImageData(rect.x, rect.y, rect.width, rect.height);
+    paste_region(committed, after, rect.x, rect.y);
+    history = push(history, { x: rect.x, y: rect.y, before, after, resize: false }, HISTORY_LIMITS);
   }
 
   function do_undo() {
     if (stroke || !history || !can_undo(history)) return;
+    const patch = current(history);
     history = undo(history);
-    restore(current(history));
+    restore(patch, patch.before);
   }
 
   function do_redo() {
     if (stroke || !history || !can_redo(history)) return;
     history = redo(history);
-    restore(current(history));
+    const patch = current(history);
+    restore(patch, patch.after);
   }
 
   function remember(color: string) {
@@ -246,10 +269,12 @@
     const next_width = clamp_side(new_width ?? width);
     const next_height = clamp_side(new_height ?? height);
     if (next_width === width && next_height === height) return size_popover?.hidePopover();
-    const before = snapshot();
+    const before = committed ?? snapshot();
     blank(next_width, next_height, new_background);
     context().drawImage(image_canvas(before), 0, 0);
-    commit();
+    const after = snapshot();
+    committed = clone(after);
+    if (history) history = push(history, { x: 0, y: 0, before, after, resize: true }, HISTORY_LIMITS);
     size_popover?.hidePopover();
   }
 
@@ -260,10 +285,14 @@
     return canvas;
   }
 
+  let open_request = 0;
+
   async function open_image(task: () => Promise<SourceImage>) {
+    const id = ++open_request;
     loading = true;
     try {
       const image = await task();
+      if (id !== open_request) return image.bitmap.close();
       set_size(image.bitmap.width, image.bitmap.height);
       const ctx = context();
       ctx.clearRect(0, 0, width, height);
@@ -274,9 +303,10 @@
       reset_history();
       fit();
     } catch (reason) {
+      if (id !== open_request) return;
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the image", message: error_message(reason) });
     } finally {
-      loading = false;
+      if (id === open_request) loading = false;
     }
   }
 
@@ -346,8 +376,14 @@
 
   function freehand(from: Point, to: Point, event: PointerEvent, active: Stroke) {
     const ctx = context();
-    if (active.tool === Tool.PENCIL) stamp_pencil(ctx, floor(from), floor(to), size.value, active.color);
-    else stroke_brush(ctx, from, to, brush_width(event), active.color, active.tool === Tool.ERASER);
+    if (active.tool === Tool.PENCIL) {
+      stamp_pencil(ctx, floor(from), floor(to), size.value, active.color);
+      active.bounds = union(active.bounds, segment_bounds(floor(from), floor(to), size.value + 1));
+    } else {
+      const line_width = brush_width(event);
+      stroke_brush(ctx, from, to, line_width, active.color, active.tool === Tool.ERASER);
+      active.bounds = union(active.bounds, segment_bounds(from, to, line_width / 2 + 2));
+    }
   }
 
   function preview(active: Stroke) {
@@ -372,8 +408,9 @@
     const { x, y } = floor(point);
     const image = snapshot();
     if (!flood_fill(image, x, y, parse_hex(color), tolerance.value)) return;
-    context().putImageData(image, 0, 0);
-    commit();
+    const changed = committed && changed_bounds(committed, image);
+    if (changed) context().putImageData(image, 0, 0, changed.x, changed.y, changed.width, changed.height);
+    commit(changed);
     remember(color);
   }
 
@@ -385,9 +422,17 @@
     ctx.fillStyle = color;
     ctx.textBaseline = "top";
     ctx.font = `${text_font_size(size.value)}px sans-serif`;
-    ctx.fillText(text, Math.floor(point.x), Math.floor(point.y));
+    const x = Math.floor(point.x);
+    const y = Math.floor(point.y);
+    ctx.fillText(text, x, y);
+    const metrics = ctx.measureText(text);
     ctx.restore();
-    commit();
+    commit({
+      x: x - metrics.actualBoundingBoxLeft - 2,
+      y: y - metrics.actualBoundingBoxAscent - 2,
+      width: metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + 4,
+      height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 4,
+    });
     remember(color);
   }
 
@@ -413,7 +458,7 @@
     if (active_tool === Tool.TEXT) return void place_text(point, color);
 
     overlay_canvas!.setPointerCapture(event.pointerId);
-    stroke = { pointer_id: event.pointerId, tool: active_tool, color, other, start: point, last: point, constrain: event.shiftKey };
+    stroke = { pointer_id: event.pointerId, tool: active_tool, color, other, start: point, last: point, constrain: event.shiftKey, bounds: null };
     if (is_freehand(active_tool)) freehand(point, point, event, stroke);
   }
 
@@ -455,8 +500,9 @@
         fill: active.other,
         mode: fill_mode.value,
       });
+      active.bounds = shape_bounds(active.tool, active.start, active.last, active.constrain, size.value);
     }
-    commit();
+    commit(active.bounds);
     if (active.tool !== Tool.ERASER) remember(active.color);
   }
 
