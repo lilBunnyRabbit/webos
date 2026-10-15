@@ -72,6 +72,7 @@ What are the implications of this decision?
 | [036](./036-boot-loading-screen.md) | Boot Loading Screen and Boot Weight | 2026-10-15 | Implemented |
 | [037](./037-backups.md) | Backups | 2026-10-15 | Implemented |
 | [038](./038-app-announcements.md) | New-App Announcements and App History | 2026-10-16 | Implemented |
+| [039](./039-hopsprite.md) | Hopsprite File Format and Export Pipeline | 2026-10-16 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
