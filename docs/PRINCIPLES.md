@@ -50,10 +50,10 @@ The same test killed or shrank other ideas:
 | Proposed | Outcome | Why |
 |----------|---------|-----|
 | Capability system | Deferred | Browser JS can't enforce it without iframes. It would be "security theater" |
-| Router service | App-level pattern | In-app navigation isn't a system concern |
+| Router service | App-level pattern | In-app navigation isn't a system concern. RouterService exists now, but only for deep links into the OS (ADR-010) |
 | PlatformService | `kernel.platform` value | One value doesn't need a service |
 | IPC service | Not needed | Svelte state and context already cover it |
-| Clipboard API, system dialogs | Dropped | No concrete use case |
+| Clipboard API, system dialogs | Dropped, later built | No concrete use case at first. Both came back once one showed up: DialogsService (ADR-019), ClipboardService (ADR-025) |
 | Bash-like shell scripting | Rejected | A command dispatcher with structured output is enough |
 | Service priority field | Never added | Dependencies cover ordering |
 
@@ -62,8 +62,8 @@ The same test killed or shrank other ideas:
 ### 2. Lightest approach that fits the constraints
 
 - Update detection uses `version.json` polling. A service worker, SSE, and the GitHub API were all considered and rejected (ADR-004).
-- Session state goes to localStorage, not IndexedDB (ADR-014).
-- Commands are flat, not subcommand trees (ADR-007).
+- Session state goes to one JSON file, not IndexedDB (ADR-014). It started in localStorage and moved to `/var/lib/session/session.json` with the file system hierarchy (ADR-021, ADR-023).
+- Commands are one level deep: Unix verbs for files, `noun verb` groups for domains (`win list`, `theme set`), no deeper trees (ADR-033, which replaced ADR-007's flat list).
 - Window animations use CSS, not JS (ADR-014).
 - Runtime platform detection happens once, with no live switching (ADR-016).
 
@@ -71,7 +71,7 @@ The same test killed or shrank other ideas:
 
 - An app's component is an explicit `() => import(...)`. Convention-based discovery was rejected as *"too much magic"* (ADR-001).
 - Apps use Svelte's own `onMount` plus a window handle, not lifecycle callbacks in the manifest (ADR-003).
-- Domain logic stays in the service that owns it. The `open` command belongs to AppsService, not the shell (ADR-007).
+- Domain logic stays in the service that owns it. The `open` command belongs to AppsService, not the shell (ADR-033).
 
 ### 4. Use the platform
 
@@ -147,9 +147,9 @@ When implementing an ADR:
 
 ## Known tensions
 
-- **Scope.** ADR-009 catalogues 30+ apps, and ADR-015 adds sound effects and theme sharing. Meanwhile the core P0 work is unfinished: app context. The architecture review said *"Simplify before scaling."* Work P0 before P3 unless told otherwise.
-- **Multi-window file sync.** It was a hard requirement in the React days (*"if i have two windows open and i add a file to any of them that will reflect in both windows"*). ADR-005 dropped it for correctness. It's still wanted, just not via a path-keyed cache. Event-based invalidation is the recorded way back in.
-- **Code ahead of docs, docs ahead of code.** App context (ADR-003) doesn't exist yet. Don't write code that assumes it.
+- **Scope.** ADR-009 catalogues 30+ apps, and ADR-015 adds sound effects and theme sharing. The architecture review said *"Simplify before scaling."* Work P0 before P3 unless told otherwise.
+- **Multi-window file sync.** It was a hard requirement in the React days (*"if i have two windows open and i add a file to any of them that will reflect in both windows"*). ADR-005 dropped it for correctness. It came back through invalidation, not a path-keyed cache: per-directory `revision(path)` counters (ADR-021) make every explorer on a folder re-list after a change.
+- **Code ahead of docs, docs ahead of code.** An accepted ADR isn't built until the [ADR index](adrs/README.md) says Implemented. Don't write code that assumes an unbuilt one.
 
 ## Settled 2026-10-10
 
