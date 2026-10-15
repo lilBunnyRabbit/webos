@@ -6,23 +6,27 @@ export function hex_to_rgb(hex: string): [number, number, number] {
   return [channel(0), channel(2), channel(4)];
 }
 
+function pack(r: number, g: number, b: number): number {
+  return (r << 16) | (g << 8) | b;
+}
+
 /** Makes every visible pixel whose RGB exactly matches one of `colours` fully transparent. */
-export function remove_colours(source: CanvasImageSource & { width: number; height: number }, colours: string[]): OffscreenCanvas {
+export function remove_colours(
+  source: CanvasImageSource & { width: number; height: number },
+  colours: string[]
+): OffscreenCanvas {
   const canvas = new OffscreenCanvas(source.width, source.height);
   const context = canvas.getContext("2d", { willReadFrequently: true })!;
   context.drawImage(source, 0, 0);
   if (!colours.length) return canvas;
 
-  const targets = colours.map(hex_to_rgb);
+  const targets = new Set(colours.map((colour) => pack(...hex_to_rgb(colour))));
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
   const { data } = image;
 
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] === 0) continue;
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    if (targets.some((target) => target[0] === r && target[1] === g && target[2] === b)) {
+    if (targets.has(pack(data[i], data[i + 1], data[i + 2]))) {
       data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
     }
   }
