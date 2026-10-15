@@ -57,9 +57,17 @@ The owner added mid-session that the pass covers apps too, not just core; an app
 ## Action items
 
 - [x] Audits
-- [ ] ADR-036 (boot), revision notes on ADR-002, ADR-016, ADR-033, ADR-034, ADR-035
-- [ ] Implement, verify on desktop and mobile, fork test, push 0.37.0
+- [x] ADR-036 (boot), revision notes on ADR-002, ADR-016, ADR-033, ADR-034, ADR-035
+- [x] Implement, verify on desktop and mobile, fork test, push 0.37.0
 - [ ] Docs pass against the docs audit, README architecture graph
+
+## Outcome
+
+- Fork test passes: without `src/lib/apps/user`, check has 0 errors, the build works, 419 core tests pass, and desktop and mobile boot clean. Full tree: 1488 tests, every app launches on desktop and mobile without console errors.
+- Zip: the engine (read, write, extract, `compress_into`/`extract_to`, `ArchiveJob`) is in `core/utils/zip`. The LZ77 teaching code and the tree/preview views stay in the Archive app. Jobs take an `app_id`; Explorer's toasts come from File Explorer.
+- Default widgets: `default_widget: true` in the manifest, and the pass runs after boot instead of on the init path.
+- Diff: the agent's "undo survives resize" change broke the automatic split/unified switch, so it was reverted. Undo across a layout switch is on the roadmap.
+- Open owner decisions are listed under ROADMAP › Code quality pass.
 
 ## Next session topics
 
