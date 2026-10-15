@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.6.0",
+    date: "2026-10-16",
+    title: "Hopsprite",
+    introduces: ["hopsprite"],
+    changes: [
+      { kind: NEW, apps: ["hopsprite"], text: "Hopsprite is a pixel art editor with animation: layers, a timeline with per-frame timing, tags, playback and onion skin ghosts." },
+      { kind: NEW, apps: ["hopsprite"], text: "Draw with a pixel-perfect pencil, shapes, fill, dither patterns and mirror drawing, then select, move, flip and rotate pixels." },
+      { kind: NEW, apps: ["hopsprite"], text: "Hopsprite opens PNG and GIF files as sprites, with every GIF frame and its timing." },
+      { kind: NEW, apps: ["hopsprite"], text: "Export a frame or a whole animation as SVG; the animation plays anywhere an SVG does." },
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-10-16",
     title: "Meet the new apps",

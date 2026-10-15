@@ -368,6 +368,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Brainstorm:** [2026-10-11 App ports](brainstorm/2026-10-11_app-ports.md). Outputs saved into OPFS (`pick_save`, folders for multi-file), native APIs instead of gifuct-js/jszip; QR uses `BarcodeDetector` with a lazy jsqr fallback
 - [x] Image Tools — Remove background, Join, Trim, Split, Sprites in one app with sections and `image tools|trim|split|join|unbg` commands (2026-10-15, [brainstorm](brainstorm/2026-10-15_image-tools.md)). Replaces the separate Image Crop, Background Remove, Image Concat, Image Split and Sprite Extractor ports
 - [x] GIF Player (`ImageDecoder`)
+- [x] Hopsprite — indexed pixel art and animation editor: layers, timeline, onion skin, tags, `.hopsprite` JSON with RLE cels, SVG and animated SVG (SMIL) export on Tasks (2026-10-16, [ADR-039](adrs/039-hopsprite.md), [brainstorm](brainstorm/2026-10-16_hopsprite.md)). GIF export pending the owner's call
 - [x] QR Reader (`BarcodeDetector`; covers the "QR Code Scanner" utility)
 
 ### File Associations

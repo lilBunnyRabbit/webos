@@ -22,7 +22,7 @@ The owner asked for a pixel art editor with animation, in the spirit of Aseprite
 | Colour picker | App-local: native `<input type="color">`, hex field, alpha slider | A kit `ColorPicker` now |
 | Mobile | Full touch editing: one finger draws, two fingers pan and pinch-zoom, a long press picks a colour. Container-query layout: tools in a bottom strip, Palette / Timeline tabs when narrow | View-only on phones |
 | Shell | Association only: `.hopsprite` opens in Hopsprite, PNG and GIF list it under Open with (GIF frames and delays through `ImageDecoder`). No commands, only the standard `path` prop | `sprite new/export/info` commands |
-| Release | 1.4.0 | |
+| Release | 1.6.0 | |
 
 ## Key takeaways
 
@@ -34,7 +34,7 @@ The owner asked for a pixel art editor with animation, in the spirit of Aseprite
 
 - [x] Model, format, raster ops, composite, SVG export with tests
 - [x] Editor: tools, palette, layers, timeline, onion skin, playback, tags, import, SVG export
-- [x] ADR-039, roadmap, changelog 1.4.0
+- [x] ADR-039, roadmap, changelog 1.6.0
 
 ## Next session topics
 
