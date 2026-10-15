@@ -1,6 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
+import { create_storage_handle } from "$lib/core/contexts/app/storage-handle.svelte";
 import { SvelteMap } from "svelte/reactivity";
-import { play_action, PlayAction, PlayMode, PLAY_MODES, type Pad } from "./board";
+import { DEFAULT_VOLUME, play_action, PlayAction, PlayMode, PlayModeSchema, VolumeSchema, type Pad } from "./board";
 import { APP_ID, read_sound } from "./store";
 
 export interface PlayState {
@@ -16,6 +17,8 @@ interface Voice {
 }
 
 const RESUME_TIMEOUT = 1000;
+// Decoded audio is uncompressed PCM, ~10 MB a minute of stereo; only the most recently played sounds stay decoded.
+const BUFFER_CACHE = 24;
 
 export class SoundPlayer {
   readonly playing = new SvelteMap<string, PlayState>();
@@ -57,12 +60,16 @@ export class SoundPlayer {
     const { context } = this.ensure();
     if (context.state === "running") return;
     await Promise.race([context.resume(), new Promise((resolve) => setTimeout(resolve, RESUME_TIMEOUT))]);
-    if ((context.state as AudioContextState) !== "running") throw new Error("The browser blocked sound. Click anywhere on the page, then try again.");
+    if ((context.state as AudioContextState) !== "running")
+      throw new Error("The browser blocked sound. Click anywhere on the page, then try again.");
   }
 
   private buffer(context: AudioContext, sound: string): Promise<AudioBuffer> {
     let pending = this.buffers.get(sound);
-    if (!pending) {
+    if (pending) {
+      this.buffers.delete(sound);
+      this.buffers.set(sound, pending);
+    } else {
       pending = (async () => {
         const file = await this.read(sound);
         if (!file) throw new Error("The sound file is missing.");
@@ -70,6 +77,7 @@ export class SoundPlayer {
       })();
       this.buffers.set(sound, pending);
       pending.catch(() => this.buffers.delete(sound));
+      if (this.buffers.size > BUFFER_CACHE) this.buffers.delete(this.buffers.keys().next().value!);
     }
     return pending;
   }
@@ -86,6 +94,7 @@ export class SoundPlayer {
     } finally {
       this.pending--;
     }
+    if (context !== this.context) return;
     if (action === PlayAction.RESTART) this.stop(pad.id);
 
     const source = context.createBufferSource();
@@ -101,7 +110,12 @@ export class SoundPlayer {
     this.voices.set(pad.id, set);
     source.onended = () => this.ended(pad.id, voice);
     source.start();
-    this.playing.set(pad.id, { count: set.size, started: performance.now(), duration: buffer.duration, loop: pad.loop });
+    this.playing.set(pad.id, {
+      count: set.size,
+      started: performance.now(),
+      duration: buffer.duration,
+      loop: pad.loop,
+    });
   }
 
   private ended(pad_id: string, voice: Voice): void {
@@ -150,18 +164,6 @@ export class SoundPlayer {
   }
 }
 
-function stored<T>(key: string, valid: (value: unknown) => value is T, fallback: T): T {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem(`app.${APP_ID}.${key}`) ?? "null");
-    return valid(value) ? value : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-const is_volume = (value: unknown): value is number => typeof value === "number" && value >= 0 && value <= 1;
-const is_mode = (value: unknown): value is PlayMode => PLAY_MODES.includes(value as PlayMode);
-
 // One per page, shared by every window and the shell, so sounds started anywhere show and stop everywhere. With no
 // window holding it, it closes once the last sound ends; closing the last window stops every sound, as before.
 let shared: SoundPlayer | null = null;
@@ -177,8 +179,9 @@ export function sound_player(): SoundPlayer {
       shared = null;
     }
   );
-  player.set_volume(stored("volume", is_volume, 0.8));
-  player.mode = stored("mode", is_mode, PlayMode.RESTART);
+  const storage = create_storage_handle(APP_ID, {});
+  player.set_volume(storage.get("volume", VolumeSchema) ?? DEFAULT_VOLUME);
+  player.mode = storage.get("mode", PlayModeSchema) ?? PlayMode.RESTART;
   shared = player;
   return player;
 }

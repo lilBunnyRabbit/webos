@@ -124,6 +124,9 @@ export const PlayMode = {
 } as const;
 export type PlayMode = (typeof PlayMode)[keyof typeof PlayMode];
 export const PLAY_MODES = Object.values(PlayMode);
+export const PlayModeSchema = z.enum(PLAY_MODES);
+export const VolumeSchema = z.number().min(0).max(1);
+export const DEFAULT_VOLUME = 0.8;
 
 export const PlayAction = {
   START: "start",
