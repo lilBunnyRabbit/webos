@@ -452,6 +452,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Cache strategies (cache-first for assets, network-first for version check)
 - [ ] Background sync for queued operations
 - [x] Install prompt customization (`install.svelte.ts`, introduction and Settings › About)
+- [ ] Stable chunk names across deploys (owner's call, measured 2026-10-15). Today they aren't: a one-line change in one app renamed 272 of 296 JS chunks, and a core util change did the same. Rollup puts the hashes of a chunk's imports into its own hash, the entry chunk holds the app manifests' `import()` paths, and every app and icon chunk imports the entry (kernel, svelte runtime). So any change renames the entry and everything below it, and every open tab's lazy loads break after a deploy (now caught by the update offer, 1.2.0). Fix needs structure: keep the module with the manifests' `import()` strings in a chunk only the entry imports, with core and the runtime in a stable chunk (`manualChunks`), so an app change renames just that app and the small manifest chunk
 
 ### Workers Service
 - Deferred until an app needs a worker; then it also feeds a Workers tab in Activity Monitor ([brainstorm](brainstorm/2026-10-11_app-ports.md))
