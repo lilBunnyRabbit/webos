@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Segmented, Spinner } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
-  import { CheckCircle, Circle, CircleHalf } from "phosphor-svelte";
+  import { CheckCircle as CheckCircleIcon, Circle as CircleIcon, CircleHalf as CircleHalfIcon } from "phosphor-svelte";
   import { count_status, ItemStatus, parse_roadmap, type RoadmapSection } from "../roadmap";
 
   const Filter = { ALL: "all", OPEN: "open", DONE: "done" } as const;
@@ -50,11 +50,11 @@
           {#each section.items as item, index (index)}
             <li class="flex items-start gap-2 text-ui" style:padding-inline-start="{item.depth * 1.25}rem">
               {#if item.status === ItemStatus.DONE}
-                <CheckCircle class="mt-0.5 size-4 shrink-0 text-success" weight="fill" aria-label="Done" />
+                <CheckCircleIcon class="mt-0.5 size-4 shrink-0 text-success" weight="fill" aria-label="Done" />
               {:else if item.status === ItemStatus.PARTIAL}
-                <CircleHalf class="mt-0.5 size-4 shrink-0 text-warning" weight="fill" aria-label="In progress" />
+                <CircleHalfIcon class="mt-0.5 size-4 shrink-0 text-warning" weight="fill" aria-label="In progress" />
               {:else}
-                <Circle class="mt-0.5 size-4 shrink-0 text-foreground/40" aria-label="Planned" />
+                <CircleIcon class="mt-0.5 size-4 shrink-0 text-foreground/40" aria-label="Planned" />
               {/if}
               <span class={cn(item.status === ItemStatus.DONE && "text-foreground/65")}>{item.text}</span>
             </li>

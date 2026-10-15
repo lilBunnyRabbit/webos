@@ -2,7 +2,7 @@
   import { day_minutes, format_hours } from "$lib/apps/user/work-hours/data";
   import { Button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
-  import { ClockUser, Kanban, Plus } from "phosphor-svelte";
+  import { ClockUser as ClockUserIcon, Kanban as KanbanIcon, Plus as PlusIcon } from "phosphor-svelte";
   import { day_title, format_day, month_grid, month_of } from "./calendar";
   import { EVENT_CHIP, EVENT_DOT } from "./colors";
   import DayList from "./day-list.svelte";
@@ -82,7 +82,7 @@
                     actions.open_work();
                   }}
                 >
-                  <ClockUser class="hidden size-3 shrink-0 @xl:block" />{format_hours(worked)}
+                  <ClockUserIcon class="hidden size-3 shrink-0 @xl:block" />{format_hours(worked)}
                 </button>
               {/if}
             </div>
@@ -121,7 +121,7 @@
                         actions.open_card(card.id);
                       }}
                     >
-                      <Kanban class="size-3 shrink-0 text-foreground/65" />
+                      <KanbanIcon class="size-3 shrink-0 text-foreground/65" />
                       <span class={cn("truncate", lane.done && "text-foreground/55 line-through")}>{card.title || "Untitled card"}</span>
                     </button>
                   {/if}
@@ -152,7 +152,7 @@
   <section class="grid shrink-0 content-start gap-2 border-t border-foreground/8 p-2 @xl:hidden" aria-label="Selected day">
     <div class="flex items-center gap-2 px-1">
       <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">{day_title(selected, today)}</h2>
-      <Button variant="quiet" size="sm" onclick={() => actions.create(selected)}><Plus weight="bold" />Event</Button>
+      <Button variant="quiet" size="sm" onclick={() => actions.create(selected)}><PlusIcon weight="bold" />Event</Button>
     </div>
     <DayList day={selected} {sources} {actions} />
   </section>

@@ -1,7 +1,13 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Input } from "$lib/core/components/ui";
   import { cn, format_date, pad2 } from "$lib/core/utils";
-  import { GlobeHemisphereWest, MagnifyingGlass, Moon, Sun, X } from "phosphor-svelte";
+  import {
+    GlobeHemisphereWest as GlobeHemisphereWestIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    Moon as MoonIcon,
+    Sun as SunIcon,
+    X as XIcon,
+  } from "phosphor-svelte";
   import { tick } from "svelte";
   import type { ClockFile } from "./ringer.svelte";
   import {
@@ -73,7 +79,7 @@
           if (event.key === "Enter" && results[0]) add(results[0]);
         }}
       >
-        {#snippet leading()}<MagnifyingGlass />{/snippet}
+        {#snippet leading()}<MagnifyingGlassIcon />{/snippet}
       </Input>
       <Button variant="quiet" size="sm" onclick={() => (adding = false)}>Cancel</Button>
     </div>
@@ -115,7 +121,7 @@
       </section>
 
       {#if rows.length === 0}
-        <EmptyState icon={GlobeHemisphereWest} title="No other cities" description="Add a city to see its time next to yours." class="h-auto p-4">
+        <EmptyState icon={GlobeHemisphereWestIcon} title="No other cities" description="Add a city to see its time next to yours." class="h-auto p-4">
           {#snippet actions()}<Button size="sm" onclick={() => (adding = true)}>Add city</Button>{/snippet}
         </EmptyState>
       {:else}
@@ -124,7 +130,7 @@
             {@const day = is_daytime(row.wall.hour)}
             <li class="group flex min-h-14 items-center gap-3 rounded-lg bg-background-light px-3 py-2">
               <span class="grid size-8 shrink-0 place-items-center rounded-md bg-foreground/6 text-foreground/65" title={day ? "Daytime" : "Night"}>
-                {#if day}<Sun weight="duotone" class="size-4.5" />{:else}<Moon weight="duotone" class="size-4.5" />{/if}
+                {#if day}<SunIcon weight="duotone" class="size-4.5" />{:else}<MoonIcon weight="duotone" class="size-4.5" />{/if}
               </span>
               <span class="grid min-w-0 flex-1">
                 <span class="truncate text-ui font-medium">{zone_city(row.zone)}</span>
@@ -132,7 +138,7 @@
               </span>
               <span class={cn("font-mono text-2xl font-medium tabular-nums", !day && "text-foreground/75")}>{format_wall(row.wall)}</span>
               <IconButton label="Remove {zone_city(row.zone)}" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100" onclick={() => remove(row.zone)}>
-                <X />
+                <XIcon />
               </IconButton>
             </li>
           {/each}

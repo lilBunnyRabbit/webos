@@ -5,7 +5,19 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { CalendarBlank, CaretLeft, CaretRight, ClockUser, DotsThree, Kanban, ListBullets, Plus, Rows, SquaresFour, Sticker } from "phosphor-svelte";
+  import {
+    CalendarBlank as CalendarBlankIcon,
+    CaretLeft as CaretLeftIcon,
+    CaretRight as CaretRightIcon,
+    ClockUser as ClockUserIcon,
+    DotsThree as DotsThreeIcon,
+    Kanban as KanbanIcon,
+    ListBullets as ListBulletsIcon,
+    Plus as PlusIcon,
+    Rows as RowsIcon,
+    SquaresFour as SquaresFourIcon,
+    Sticker as StickerIcon,
+  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import AgendaView from "./agenda-view.svelte";
@@ -173,9 +185,9 @@
     const pinned = can_pin ? widget_on_desktop() : undefined;
     const choice = await dialogs.menu(
       [
-        { id: "work", label: sources.value.work_hours ? "Hide worked hours" : "Show worked hours", icon: ClockUser },
-        { id: "kanban", label: sources.value.kanban ? "Hide Kanban due dates" : "Show Kanban due dates", icon: Kanban },
-        ...(can_pin ? [{ separator: true as const }, { id: "widget", label: pinned ? "Remove from desktop" : "Add to desktop", icon: Sticker }] : []),
+        { id: "work", label: sources.value.work_hours ? "Hide worked hours" : "Show worked hours", icon: ClockUserIcon },
+        { id: "kanban", label: sources.value.kanban ? "Hide Kanban due dates" : "Show Kanban due dates", icon: KanbanIcon },
+        ...(can_pin ? [{ separator: true as const }, { id: "widget", label: pinned ? "Remove from desktop" : "Add to desktop", icon: StickerIcon }] : []),
       ],
       { anchor: anchor_at }
     );
@@ -217,9 +229,9 @@
   const upcoming = $derived(file.ready ? next_reminder(file.value.events, now) : null);
 
   const views = [
-    { value: View.MONTH, label: "Month", icon: SquaresFour },
-    { value: View.WEEK, label: "Week", icon: Rows },
-    { value: View.AGENDA, label: "Agenda", icon: ListBullets },
+    { value: View.MONTH, label: "Month", icon: SquaresFourIcon },
+    { value: View.WEEK, label: "Week", icon: RowsIcon },
+    { value: View.AGENDA, label: "Agenda", icon: ListBulletsIcon },
   ];
 </script>
 
@@ -231,8 +243,8 @@
   {:else}
     <Toolbar>
       <Button variant="quiet" size="sm" onclick={go_today}>Today</Button>
-      <IconButton label="Previous" size="sm" onclick={() => go(-1)}><CaretLeft weight="bold" /></IconButton>
-      <IconButton label="Next" size="sm" onclick={() => go(1)}><CaretRight weight="bold" /></IconButton>
+      <IconButton label="Previous" size="sm" onclick={() => go(-1)}><CaretLeftIcon weight="bold" /></IconButton>
+      <IconButton label="Next" size="sm" onclick={() => go(1)}><CaretRightIcon weight="bold" /></IconButton>
       <span class="relative min-w-0 flex-1">
         <button
           type="button"
@@ -254,9 +266,9 @@
       </span>
       <Segmented bind:value={view.value} options={views} label="View" size="sm" class="hidden @2xl:inline-flex" />
       <Select bind:value={view.value} options={views} size="sm" aria-label="View" class="w-24 @2xl:hidden" />
-      <IconButton label="More" size="sm" onclick={(event) => more({ x: event.clientX, y: event.clientY })}><DotsThree weight="bold" /></IconButton>
+      <IconButton label="More" size="sm" onclick={(event) => more({ x: event.clientX, y: event.clientY })}><DotsThreeIcon weight="bold" /></IconButton>
       <Button variant="primary" size="sm" aria-label="New event" onclick={() => actions.create(view.value === View.AGENDA ? today : selected)}>
-        <Plus weight="bold" /><span class="hidden @md:inline">New event</span>
+        <PlusIcon weight="bold" /><span class="hidden @md:inline">New event</span>
       </Button>
     </Toolbar>
   {/if}
@@ -267,7 +279,7 @@
     {:else if draft}
       <EventEditor bind:draft {occurrence_day} onsave={save} ondelete={remove} oncancel={() => (draft = null)} />
     {:else if file.error}
-      <EmptyState icon={CalendarBlank} tone="error" title="Couldn't read your events" description={file.error} />
+      <EmptyState icon={CalendarBlankIcon} tone="error" title="Couldn't read your events" description={file.error} />
     {:else if view.value === View.MONTH}
       <MonthView {month} {today} bind:selected sources={day_sources} {actions} />
     {:else if view.value === View.WEEK}

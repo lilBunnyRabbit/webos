@@ -1,7 +1,12 @@
 <script lang="ts">
   import { Button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
-  import { ArrowCounterClockwise, Flag, Pause, Play } from "phosphor-svelte";
+  import {
+    ArrowCounterClockwise as ArrowCounterClockwiseIcon,
+    Flag as FlagIcon,
+    Pause as PauseIcon,
+    Play as PlayIcon,
+  } from "phosphor-svelte";
   import { EMPTY_STOPWATCH, format_stopwatch, laps_of, stopwatch_elapsed, type StopwatchState } from "./clock";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
@@ -42,12 +47,12 @@
     {/if}
     <div class="flex gap-2">
       {#if running}
-        <Button size="lg" onclick={lap}><Flag weight="bold" />Lap</Button>
+        <Button size="lg" onclick={lap}><FlagIcon weight="bold" />Lap</Button>
       {:else if elapsed > 0}
-        <Button size="lg" onclick={() => (stopwatch.value = structuredClone(EMPTY_STOPWATCH))}><ArrowCounterClockwise weight="bold" />Reset</Button>
+        <Button size="lg" onclick={() => (stopwatch.value = structuredClone(EMPTY_STOPWATCH))}><ArrowCounterClockwiseIcon weight="bold" />Reset</Button>
       {/if}
       <Button size="lg" variant="primary" class="min-w-28" onclick={toggle}>
-        {#if running}<Pause weight="bold" />Stop{:else}<Play weight="bold" />{elapsed > 0 ? "Resume" : "Start"}{/if}
+        {#if running}<PauseIcon weight="bold" />Stop{:else}<PlayIcon weight="bold" />{elapsed > 0 ? "Resume" : "Start"}{/if}
       </Button>
     </div>
   </div>
