@@ -151,6 +151,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 | clipboard | `copy`, `paste` | | |
 | version | `version`, `changelog [-c]`, `install` | | `release` |
 | router | `link [id] [-c]` | | |
+| backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |
 

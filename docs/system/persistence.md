@@ -119,6 +119,10 @@ interface StorageHandle {
 
 The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/{layout,home-layout,additions}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
 
+## Backups
+
+BackupService (ADR-037, [backup](services/backup.md)) zips three areas into one `webos-backup-YYYY-MM-DD.zip` on the device, never in OPFS: Files (`/home` → `home/`), Settings (`/etc` → `etc/`) and App data (`/var/lib` → `var/lib/`, plus every `app.*` localStorage key in `backup.json`). `/tmp`, the service worker caches and the legacy localStorage keys never go in. Restore replaces each area the zip holds and leaves the rest alone, then reloads. `backup.json` carries `format: 1`; a newer format is refused.
+
 ## Wiping
 
 | What | How |
@@ -127,5 +131,6 @@ The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.
 | Session | Start fresh in the boot dialog, which saves an empty session. Deleting `/var/lib/session/session.json` in File Explorer doesn't stick: the next window change rewrites it. |
 | Desktop | Delete shortcuts from the desktop, or anything in `/home/Desktop` from File Explorer. Delete `/var/lib/desktop/layout.json` to forget positions; with an empty `/home/Desktop` too, the next boot seeds the two default shortcuts again. |
 | App data | `localStorage` keys `app.{id}.*` (no UI) |
+| Restore a backup | Settings → Backup → Restore…, or `backup restore`: replaces `/home`, `/etc`, `/var/lib` and the `app.*` keys for each area the backup holds, then reloads ([backup](services/backup.md)) |
 | Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`, then rebuilds the empty hierarchy and marker; no UI caller), or DevTools → Application → Storage (the hierarchy comes back on the next boot) |
 | SW / caches | No UI. DevTools → Application → Storage. `apply_update()` replaces the precache with the new build's, it doesn't wipe it. |

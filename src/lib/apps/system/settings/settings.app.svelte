@@ -4,6 +4,7 @@
   import { z } from "zod";
   import About from "./sections/about.svelte";
   import Appearance from "./sections/appearance.svelte";
+  import Backup from "./sections/backup.svelte";
   import Files from "./sections/files.svelte";
   import Taskbar from "./sections/taskbar.svelte";
   import WhatsNew from "./sections/whats-new.svelte";
@@ -31,6 +32,8 @@
         <Taskbar />
       {:else if section.value === "files"}
         <Files />
+      {:else if section.value === "backup"}
+        <Backup />
       {:else if section.value === "whats-new"}
         <WhatsNew />
       {:else if section.value === "roadmap"}

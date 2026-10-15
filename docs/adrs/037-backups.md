@@ -1,6 +1,6 @@
 # ADR-037: Backups
 **Date:** 2026-10-15
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -35,3 +35,11 @@ webos-backup-YYYY-MM-DD.zip
 - A fifteenth service with an inspector.
 - Restore must stop services that write in the background (session, desktop layout) from writing stale state over the restored files before the reload.
 - `format` is versioned from day one; a migration runs only when a format 2 exists.
+
+## Revision 2026-10-15 (implementation)
+
+- **Dependencies:** files, dialogs, notifications **and windows**. Restore refuses while a window has unsaved changes (`windows.has_dirty()`): the reload would raise the browser's "Leave site?", and staying would leave a page whose writes are held.
+- **Stopping background writers:** `files/opfs.ts` gained `hold_writes()`, a module-level gate every mutating OPFS function passes through (so FilesService, DirectoryHandler, `LatestWriter`, `json_file`). Restore holds writes, wipes and writes the areas through native handles (no revision bumps, so no watcher reloads and writes defaults back), and reloads with the hold still on. On a failure part way it releases the hold and throws. No service interface changed.
+- **Create** copies each file into memory while collecting: a zip referencing OPFS `File`s turns unreadable once a file changes (session.json does constantly) before the zip is saved.
+- **Pickers** need a user activation; without one the service throws a `BackupError` instead of a picker that never opens. Restore's fallback picker is `pick_device_files` (`<input type=file>`).
+
