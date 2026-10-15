@@ -2,7 +2,15 @@
   import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService } from "$lib/core/api";
   import { Button, Segmented, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Alarm as AlarmIcon, Clock, GlobeHemisphereWest, Hourglass, Plus, Sticker, Timer as TimerIcon } from "phosphor-svelte";
+  import {
+    Alarm as AlarmIcon,
+    Clock as ClockIcon,
+    GlobeHemisphereWest as GlobeHemisphereWestIcon,
+    Hourglass as HourglassIcon,
+    Plus as PlusIcon,
+    Sticker as StickerIcon,
+    Timer as TimerIcon,
+  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import AlarmsTab from "./alarms-tab.svelte";
@@ -21,7 +29,7 @@
     type Alarm,
     type AlarmDraft,
   } from "./clock";
-  import { gate_clock_file, ring_while_alive } from "./ringer.svelte";
+  import { ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import TimersTab from "./timers-tab.svelte";
@@ -35,12 +43,16 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
-  const file = gate_clock_file(storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema));
+  const file = storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema);
   const stopwatch = storage.persisted("stopwatch", EMPTY_STOPWATCH, StopwatchSchema);
   const tab = storage.window<ClockTab>("tab", untrack(() => initial_tab ?? ClockTab.WORLD), z.enum(ClockTab));
 
   ring_while_alive(file);
-  const ticker = new Ticker(() => win.is_visible, 250);
+  // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
+  const ticker = new Ticker(
+    () => win.is_visible,
+    () => (tab.value === ClockTab.TIMERS ? 250 : 1000)
+  );
 
   let adding_zone = $state(false);
   let adding_timer = $state(false);
@@ -49,9 +61,9 @@
   const can_pin = kernel.platform !== Platform.MOBILE;
 
   const tabs = [
-    { value: ClockTab.WORLD, label: "World", icon: GlobeHemisphereWest },
+    { value: ClockTab.WORLD, label: "World", icon: GlobeHemisphereWestIcon },
     { value: ClockTab.ALARMS, label: "Alarms", icon: AlarmIcon },
-    { value: ClockTab.TIMERS, label: "Timer", icon: Hourglass },
+    { value: ClockTab.TIMERS, label: "Timer", icon: HourglassIcon },
     { value: ClockTab.STOPWATCH, label: "Stopwatch", icon: TimerIcon },
   ];
 
@@ -86,7 +98,7 @@
       }
       const face = await dialogs.menu(
         [
-          { id: ClockFace.ANALOG, label: "Analog clock", icon: Clock },
+          { id: ClockFace.ANALOG, label: "Analog clock", icon: ClockIcon },
           { id: ClockFace.DIGITAL, label: "Digital clock", icon: TimerIcon },
         ],
         { anchor }
@@ -127,14 +139,14 @@
           title={pinned ? "A clock is on the desktop. Click to remove it." : "Show a clock on the desktop. It also rings alarms and timers with this window closed."}
           onclick={(event) => toggle_widget({ x: event.clientX, y: event.clientY })}
         >
-          <Sticker />{pinned ? "On desktop" : "Add to desktop"}
+          <StickerIcon />{pinned ? "On desktop" : "Add to desktop"}
         </Button>
       {/if}
-      <Button variant="primary" size="sm" onclick={() => (adding_zone = true)}><Plus weight="bold" />Add city</Button>
+      <Button variant="primary" size="sm" onclick={() => (adding_zone = true)}><PlusIcon weight="bold" />Add city</Button>
     {:else if tab.value === ClockTab.ALARMS && !draft}
-      <Button variant="primary" size="sm" onclick={new_alarm}><Plus weight="bold" />New alarm</Button>
+      <Button variant="primary" size="sm" onclick={new_alarm}><PlusIcon weight="bold" />New alarm</Button>
     {:else if tab.value === ClockTab.TIMERS && !adding_timer && file.value.timers.length > 0}
-      <Button variant="primary" size="sm" onclick={() => (adding_timer = true)}><Plus weight="bold" />New timer</Button>
+      <Button variant="primary" size="sm" onclick={() => (adding_timer = true)}><PlusIcon weight="bold" />New timer</Button>
     {/if}
   </Toolbar>
 

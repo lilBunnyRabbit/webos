@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { analyze, BW_PALETTE, from_solution, INKS, Ink, MAX_COLORS, Verdict } from "./puzzle";
+import { BW_PALETTE, INKS, Ink, MAX_COLORS, Verdict } from "./puzzle";
 
 export const NONOGRAM_EXTENSION = ".nonogram";
 export const MIN_SIDE = 2;
@@ -16,14 +16,23 @@ export const NonogramFileSchema = z
     title: z.string().max(120).optional(),
     width: z.number().int().min(MIN_SIDE).max(MAX_SIDE),
     height: z.number().int().min(MIN_SIDE).max(MAX_SIDE),
-    colors: z.array(z.enum(INKS as [Ink, ...Ink[]])).min(1).max(MAX_COLORS).optional(),
+    colors: z
+      .array(z.enum(INKS as [Ink, ...Ink[]]))
+      .min(1)
+      .max(MAX_COLORS)
+      .optional(),
     cells: z.array(z.string()),
   })
   .superRefine((file, context) => {
     const colors = file.colors ?? BW_PALETTE;
-    if (new Set(colors).size !== colors.length) context.addIssue({ code: "custom", path: ["colors"], message: "Colours repeat" });
+    if (new Set(colors).size !== colors.length)
+      context.addIssue({ code: "custom", path: ["colors"], message: "Colours repeat" });
     if (file.cells.length !== file.height) {
-      context.addIssue({ code: "custom", path: ["cells"], message: `Expected ${file.height} rows, got ${file.cells.length}` });
+      context.addIssue({
+        code: "custom",
+        path: ["cells"],
+        message: `Expected ${file.height} rows, got ${file.cells.length}`,
+      });
       return;
     }
     const allowed = new RegExp(`^[.1-${colors.length}]{${file.width}}$`);
@@ -73,10 +82,16 @@ export function parse_nonogram(text: string): ParseResult {
 
 /** Unused colours are dropped and the rest renumbered in palette order, so a file only lists what it paints. */
 export function compact(drawing: Drawing): Drawing {
-  const used = drawing.palette.flatMap((ink, index) => (drawing.cells.includes(index + 1) ? [{ ink, from: index + 1 }] : []));
+  const used = drawing.palette.flatMap((ink, index) =>
+    drawing.cells.includes(index + 1) ? [{ ink, from: index + 1 }] : []
+  );
   if (!used.length) return { ...drawing, palette: [drawing.palette[0] ?? Ink.FOREGROUND] };
   const renumber = new Map(used.map(({ from }, index) => [from, index + 1]));
-  return { ...drawing, palette: used.map(({ ink }) => ink), cells: drawing.cells.map((cell) => renumber.get(cell) ?? 0) };
+  return {
+    ...drawing,
+    palette: used.map(({ ink }) => ink),
+    cells: drawing.cells.map((cell) => renumber.get(cell) ?? 0),
+  };
 }
 
 export function serialize_nonogram(drawing: Drawing): string {
@@ -89,7 +104,10 @@ export function serialize_nonogram(drawing: Drawing): string {
     height,
     ...(black_and_white ? {} : { colors: [...palette] }),
     cells: Array.from({ length: height }, (_, row) =>
-      cells.slice(row * width, row * width + width).map((cell) => (cell > 0 ? String(cell) : ".")).join("")
+      cells
+        .slice(row * width, row * width + width)
+        .map((cell) => (cell > 0 ? String(cell) : "."))
+        .join("")
     ),
   };
   return `${JSON.stringify(file, null, 2)}\n`;
@@ -102,9 +120,3 @@ export const VERDICT_TEXT: Record<Verdict, string> = {
   [Verdict.NONE]: "none: no picture fits the clues",
   [Verdict.UNKNOWN]: "unknown: too complex to check",
 };
-
-export function check_drawing(drawing: Drawing, budget = 20_000, deadline = Infinity): Verdict {
-  const { width, height, palette, cells } = drawing;
-  const puzzle = from_solution(0, width, height, palette, cells);
-  return analyze(width, height, palette.length, puzzle.rows, puzzle.cols, budget, deadline).verdict;
-}

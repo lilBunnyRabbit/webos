@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   clear,
+  clue_runs,
+  combos_text,
   conflicts,
   daily_game,
   empty_stats,
+  first_white,
   hint,
   is_solved,
+  key_move,
   new_game,
   place,
   record,
@@ -79,13 +83,41 @@ describe("entries", () => {
   });
 
   it("lists the combinations a run can still be", () => {
-    const puzzle = from_solution(0, 4, [0, 0, 0, 0, 0, 1, 2, 4, 0, 3, 4, 5, 0, 0, 0, 0].map((d, i) => (i >= 12 ? 0 : d)));
+    const puzzle = from_solution(
+      0,
+      4,
+      [0, 0, 0, 0, 0, 1, 2, 4, 0, 3, 4, 5, 0, 0, 0, 0].map((d, i) => (i >= 12 ? 0 : d))
+    );
     const run = puzzle.runs[0];
     expect(run.sum).toBe(7);
     expect(run_combos(run, new Array(16).fill(0))).toEqual(["1+2+4"]);
     const ten = from_solution(0, 3, [0, 0, 0, 0, 1, 9, 0, 3, 4]).runs[0];
     expect(run_combos(ten, new Array(9).fill(0))).toEqual(["1+9", "2+8", "3+7", "4+6"]);
     expect(run_combos(ten, [0, 0, 0, 0, 0, 8, 0, 0, 0])).toEqual(["2+8"]);
+    expect(combos_text(ten, new Array(9).fill(0), 2)).toBe("1+9  2+8  +2");
+    expect(combos_text(ten, [0, 0, 0, 0, 0, 8, 0, 0, 0], 2)).toBe("2+8");
+  });
+});
+
+describe("board", () => {
+  it("moves the cursor over white cells only", () => {
+    const { puzzle } = tiny();
+    expect(first_white(puzzle)).toBe(4);
+    expect(key_move(puzzle, "ArrowRight", 4)).toBe(5);
+    expect(key_move(puzzle, "ArrowRight", 5)).toBe(5);
+    expect(key_move(puzzle, "ArrowUp", 4)).toBe(4);
+    expect(key_move(puzzle, "ArrowDown", 4)).toBe(7);
+    expect(key_move(puzzle, "Home", 5)).toBe(4);
+    expect(key_move(puzzle, "End", 7)).toBe(8);
+    expect(key_move(puzzle, "x", 4)).toBeNull();
+  });
+
+  it("maps each clue cell to the runs it heads", () => {
+    const { puzzle } = tiny();
+    const clues = clue_runs(puzzle);
+    expect(puzzle.runs[clues.get(3)!.across!].cells).toEqual([4, 5]);
+    expect(puzzle.runs[clues.get(1)!.down!].cells).toEqual([4, 7]);
+    expect(clues.has(0)).toBe(false);
   });
 });
 
@@ -129,7 +161,9 @@ describe("save", () => {
 
   it("rejects a save that doesn't fit the puzzle", () => {
     expect(restore({ size: Size.S6, seed: 1, values: [1], notes: [0], hints: 0, elapsed: 0 })).toBeNull();
-    expect(saved_schema.safeParse({ size: "7", seed: 1, values: [], notes: [], hints: 0, elapsed: 0 }).success).toBe(false);
+    expect(saved_schema.safeParse({ size: "7", seed: 1, values: [], notes: [], hints: 0, elapsed: 0 }).success).toBe(
+      false
+    );
   });
 });
 

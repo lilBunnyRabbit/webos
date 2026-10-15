@@ -16,7 +16,8 @@
   import Board from "./board.svelte";
   import { compact, NONOGRAM_EXTENSION, parse_nonogram, serialize_nonogram, type Drawing } from "./file";
   import { Mark, Mode } from "./game";
-  import { analyze, BW_PALETTE, differences, from_solution, INKS, MAX_COLORS, Verdict } from "./puzzle";
+  import { analyze_off_thread, type AnalysisJob } from "./analysis";
+  import { BW_PALETTE, differences, from_solution, INKS, MAX_COLORS, Verdict } from "./puzzle";
   import { resize, sides_for, to_editor } from "./drawing";
   import Swatches from "./swatches.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
@@ -72,15 +73,23 @@
 
   $effect(() => {
     if (empty) return;
-    const snapshot = compact(current);
+    const { width, height, palette, cells } = compact(current);
     const for_text = text;
+    let job: AnalysisJob | null = null;
     const timer = setTimeout(() => {
-      const puzzle = from_solution(0, snapshot.width, snapshot.height, snapshot.palette, snapshot.cells);
-      const result = analyze(snapshot.width, snapshot.height, snapshot.palette.length, puzzle.rows, puzzle.cols, 4000, Date.now() + 400);
-      const flagged = result.verdict === Verdict.MULTIPLE ? new Set(differences(result.solutions[0], result.solutions[1])) : new Set<number>();
-      check = { verdict: result.verdict, flagged, for_text };
+      job = analyze_off_thread({ width, height, palette, cells, budget: 4000, time_ms: 400 });
+      job.result.then(
+        (result) => {
+          const flagged = result.verdict === Verdict.MULTIPLE ? new Set(differences(result.solutions[0], result.solutions[1])) : new Set<number>();
+          check = { verdict: result.verdict, flagged, for_text };
+        },
+        (error) => console.warn("[Nonogram] Couldn't check the puzzle:", error)
+      );
     }, 180);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      job?.cancel();
+    };
   });
 
   const VERDICTS: Record<Verdict, { tone: "success" | "warning" | "error"; badge: string; detail: string }> = {

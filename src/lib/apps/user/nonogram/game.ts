@@ -53,7 +53,12 @@ export function start(puzzle: Puzzle): Game {
   return { puzzle, marks: new Array(puzzle.width * puzzle.height).fill(Mark.EMPTY), hints: 0, solved: false };
 }
 
-export function game_of(drawing: { width: number; height: number; palette: Puzzle["palette"]; cells: readonly number[] }): Game {
+export function game_of(drawing: {
+  width: number;
+  height: number;
+  palette: Puzzle["palette"];
+  cells: readonly number[];
+}): Game {
   return start(from_solution(0, drawing.width, drawing.height, drawing.palette, drawing.cells));
 }
 
@@ -157,28 +162,18 @@ export function hint(game: Game): Hint | null {
   return index >= 0 ? { index, mark: puzzle.solution[index], fix: false } : null;
 }
 
-/** Cells from `from` to `to` along one axis, the way a drag paints: locked to the first direction it moves. */
-export function stroke_cells(width: number, from: number, to: number, axis: "row" | "col" | null): number[] {
-  const [r0, c0] = [Math.floor(from / width), from % width];
-  const [r1, c1] = [Math.floor(to / width), to % width];
-  const along_row = axis ? axis === "row" : Math.abs(c1 - c0) >= Math.abs(r1 - r0);
-  const cells: number[] = [];
-  if (along_row) {
-    const step = Math.sign(c1 - c0) || 1;
-    for (let c = c0; c !== c1 + step; c += step) cells.push(r0 * width + c);
-  } else {
-    const step = Math.sign(r1 - r0) || 1;
-    for (let r = r0; r !== r1 + step; r += step) cells.push(r * width + c0);
-  }
-  return cells;
-}
-
 /**
  * A stroke either paints `mark` onto blank cells or, when it started on a cell already holding `mark`, erases that
  * mark. Neither touches other marks, so dragging across a row of crosses to fill never wipes them. `overwrite` (the
  * editor) paints over other colours too, and painting EMPTY clears everything it crosses.
  */
-export function paint(base: readonly Mark[], cells: readonly number[], mark: Mark, erase: boolean, overwrite = false): Mark[] {
+export function paint(
+  base: readonly Mark[],
+  cells: readonly number[],
+  mark: Mark,
+  erase: boolean,
+  overwrite = false
+): Mark[] {
   const next = [...base];
   for (const index of cells) {
     if (mark === Mark.EMPTY) next[index] = Mark.EMPTY;

@@ -136,11 +136,11 @@
     else play();
   }
 
-  function seek(target: number) {
+  function seek(target: number, persist = true) {
     if (!tokens.length) return;
     index = clamp_int(target, 0, tokens.length - 1);
     progress = 0;
-    if (!playing) save_position();
+    if (persist && !playing) save_position();
   }
 
   function step_to(target: number) {
@@ -421,7 +421,8 @@
           value={index}
           size="sm"
           class="w-full"
-          oninput={(event) => seek(event.currentTarget.valueAsNumber)}
+          oninput={(event) => seek(event.currentTarget.valueAsNumber, false)}
+          onchange={() => !playing && save_position()}
         />
         <div class="flex items-center justify-between gap-3 font-mono text-2xs text-foreground/80 tabular-nums">
           <span>{format_duration(elapsed_for_index(timeline, index))} / {format_duration(timeline.total_ms)}</span>

@@ -2,7 +2,7 @@
   import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { Bell } from "phosphor-svelte";
+  import { Bell as BellIcon } from "phosphor-svelte";
   import {
     add_days,
     APP_ID,
@@ -66,7 +66,7 @@
   </ul>
 
   <p class="flex min-w-0 items-center gap-1.5 border-t border-foreground/8 px-3 py-1.5 text-2xs text-foreground/80">
-    <Bell class={cn("size-3.5 shrink-0", upcoming && "text-primary")} weight={upcoming ? "fill" : "regular"} />
+    <BellIcon class={cn("size-3.5 shrink-0", upcoming && "text-primary")} weight={upcoming ? "fill" : "regular"} />
     {#if upcoming}
       {@const at = new Date(upcoming.at)}
       <span class="truncate"

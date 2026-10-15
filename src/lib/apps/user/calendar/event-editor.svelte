@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, Input, Select, Switch, Textarea } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
-  import { Check, Trash } from "phosphor-svelte";
+  import { Check as CheckIcon, Trash as TrashIcon } from "phosphor-svelte";
   import { draft_error, EVENT_COLORS, format_day, REMINDER_OPTIONS, Repeat, repeat_label, type EventDraft } from "./calendar";
   import { COLOR_NAMES, EVENT_DOT } from "./colors";
 
@@ -112,7 +112,7 @@
             aria-pressed={draft.color === color}
             onclick={() => (draft.color = color)}
           >
-            {#if draft.color === color}<Check weight="bold" class="size-4 text-background" />{/if}
+            {#if draft.color === color}<CheckIcon weight="bold" class="size-4 text-background" />{/if}
           </button>
         {/each}
       </div>
@@ -129,7 +129,7 @@
 
     <div class="flex flex-wrap items-center gap-2">
       {#if draft.id}
-        <Button variant="danger" size="md" onclick={() => ondelete(null)}><Trash weight="bold" />{draft.repeat === "none" ? "Delete" : "Delete all"}</Button>
+        <Button variant="danger" size="md" onclick={() => ondelete(null)}><TrashIcon weight="bold" />{draft.repeat === "none" ? "Delete" : "Delete all"}</Button>
         {#if draft.repeat !== "none" && occurrence_day}
           <Button variant="quiet" size="md" title="Delete only the {format_day(occurrence_day)} occurrence" onclick={() => ondelete(occurrence_day)}>Delete this one</Button>
         {/if}

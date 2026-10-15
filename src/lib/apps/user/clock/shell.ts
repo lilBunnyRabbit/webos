@@ -22,25 +22,31 @@ import {
   type ClockData,
   type Timer,
 } from "./clock";
-import { ensure_clock_file, open_clock_file, ring_while_timers } from "./ringer.svelte";
-import { all_zones, format_offset, format_utc_offset, format_wall, is_zone, local_zone, search_zones, wall_time, zone_offset } from "./zones";
-
-const READY_TIMEOUT = 5000;
+import { clock_file, ring_while_timers } from "./ringer.svelte";
+import {
+  all_zones,
+  format_offset,
+  format_utc_offset,
+  format_wall,
+  is_zone,
+  local_zone,
+  search_zones,
+  wall_time,
+  zone_offset,
+} from "./zones";
 
 async function with_clock<T>(action: (data: ClockData) => T): Promise<T> {
-  await ensure_clock_file();
-  const file = open_clock_file();
-  try {
-    for (let waited = 0; !file.ready; waited += 25) {
-      if (waited >= READY_TIMEOUT) throw new ShellError("clock: the data didn't load");
-      await new Promise((resolve) => setTimeout(resolve, 25));
-    }
-    const result = action(file.value);
-    if (file.value.timers.some((timer) => timer.end_at !== null)) ring_while_timers();
-    return result;
-  } finally {
-    file.release();
-  }
+  let result!: T;
+  const data = await clock_file.edit((value) => {
+    result = action(value);
+    return value;
+  });
+  ring_if_timers(data);
+  return result;
+}
+
+function ring_if_timers(data: ClockData): void {
+  if (data.timers.some((timer) => timer.end_at !== null)) ring_while_timers();
 }
 
 function launch(tab?: ClockTab): void {
@@ -85,7 +91,7 @@ export function timer_value(timer: Timer, now: number): Tagged {
 
 export async function* alarms(): AsyncGenerator<Tagged> {
   const now = Date.now();
-  const list = await with_clock((data) => data.alarms.map((alarm) => alarm_value(alarm, now)));
+  const list = (await clock_file.read()).alarms.map((alarm) => alarm_value(alarm, now));
   yield* list.sort((a, b) => String(a.time).localeCompare(String(b.time)));
 }
 
@@ -95,7 +101,16 @@ export function alarm_add({ args }: CommandContext<{ time: string; days?: string
   const days = args.days === undefined ? [] : parse_days(args.days);
   if (!days) throw new ShellError(`alarm add: "${args.days}" isn't days like mon,wed, weekdays or weekends`);
   const now = Date.now();
-  const alarm: Alarm = { id: new_id(), time, days, label: args.label.join(" ").trim(), enabled: true, armed_at: now, last_fired: null, snooze_until: null };
+  const alarm: Alarm = {
+    id: new_id(),
+    time,
+    days,
+    label: args.label.join(" ").trim(),
+    enabled: true,
+    armed_at: now,
+    last_fired: null,
+    snooze_until: null,
+  };
   return with_clock((data) => {
     data.alarms.push(alarm);
     return alarm_value(alarm, now);
@@ -130,7 +145,10 @@ export function timer_start({ args }: CommandContext<{ duration: string; label: 
   const ms = parse_duration(args.duration);
   if (!ms) throw new ShellError(`timer: "${args.duration}" isn't a duration like 5m, 1h30m or 90s`);
   const now = Date.now();
-  const timer = start_timer({ id: new_id(), label: args.label.join(" ").trim(), duration_ms: ms, end_at: null, remaining_ms: ms }, now);
+  const timer = start_timer(
+    { id: new_id(), label: args.label.join(" ").trim(), duration_ms: ms, end_at: null, remaining_ms: ms },
+    now
+  );
   return with_clock((data) => {
     data.timers.push(timer);
     return timer_value(timer, now);
@@ -139,7 +157,9 @@ export function timer_start({ args }: CommandContext<{ duration: string; label: 
 
 export async function* timers(): AsyncGenerator<Tagged> {
   const now = Date.now();
-  yield* await with_clock((data) => data.timers.map((timer) => timer_value(timer, now)));
+  const data = await clock_file.read();
+  ring_if_timers(data);
+  yield* data.timers.map((timer) => timer_value(timer, now));
 }
 
 export function timer_stop({ args }: CommandContext<{ timer: string }>): Promise<string> {
@@ -152,7 +172,9 @@ export function timer_stop({ args }: CommandContext<{ timer: string }>): Promise
 }
 
 export async function pin({ args }: CommandContext<{ face: ClockFace }>): Promise<string> {
-  const name = await kernel.service<DesktopService>("desktop").pin_widget(APP_ID, { label: "Clock", props: { face: args.face } });
+  const name = await kernel
+    .service<DesktopService>("desktop")
+    .pin_widget(APP_ID, { label: "Clock", props: { face: args.face } });
   if (!name) throw new ShellError("clock pin: couldn't pin the clock");
   return `pinned ${name} to the desktop`;
 }
@@ -171,7 +193,12 @@ export function time({ args }: CommandContext<{ zone?: string }>): string {
   const zone = args.zone ? resolve_zone(args.zone) : home;
   if (!zone) throw new ShellError(`time: no time zone "${args.zone}"`);
   const now = Date.now();
-  const date = new Date(now).toLocaleDateString("en-GB", { timeZone: zone, weekday: "short", day: "numeric", month: "short" });
+  const date = new Date(now).toLocaleDateString("en-GB", {
+    timeZone: zone,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
   const offset = zone_offset(now, zone);
   const parts = [format_wall(wall_time(now, zone), true), zone, date, format_utc_offset(offset)];
   if (zone !== home) parts.push(format_offset(offset - zone_offset(now, home)));

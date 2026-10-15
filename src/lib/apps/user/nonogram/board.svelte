@@ -2,7 +2,8 @@
   import { cn } from "$lib/core/utils";
   import { X as XIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { Mark, paint, stroke_cells } from "./game";
+  import { grid_key_move, stroke_axis, stroke_cells, stroke_end, type Axis } from "$lib/core/games";
+  import { Mark, paint } from "./game";
   import type { Clue, Ink } from "./puzzle";
 
   interface Props {
@@ -69,7 +70,7 @@
     mark: Mark;
     erase: boolean;
     base: readonly Mark[];
-    axis: "row" | "col" | null;
+    axis: Axis | null;
   } | null = null;
 
   const clue_cols = $derived(Math.max(1, ...rows.map((clue) => clue.length)));
@@ -111,15 +112,8 @@
     if (!stroke || event.pointerId !== stroke.pointer) return;
     const index = cell_at(event.clientX, event.clientY);
     if (index === null || index === stroke.last) return;
-    const start_row = Math.floor(stroke.start / width);
-    const start_col = stroke.start % width;
-    if (stroke.axis === null && index !== stroke.start) {
-      const same_row = Math.floor(index / width) === start_row;
-      const same_col = index % width === start_col;
-      stroke.axis = same_row ? "row" : same_col ? "col" : Math.abs((index % width) - start_col) >= Math.abs(Math.floor(index / width) - start_row) ? "row" : "col";
-    }
-    // Locked to its axis, the stroke ends at the pointer's projection onto the start cell's row or column.
-    const end = stroke.axis === "row" ? start_row * width + (index % width) : Math.floor(index / width) * width + start_col;
+    if (stroke.axis === null && index !== stroke.start) stroke.axis = stroke_axis(width, stroke.start, index);
+    const end = stroke_end(width, stroke.start, index, stroke.axis);
     stroke.last = index;
     active = hover = end;
     on_change(paint(stroke.base, stroke_cells(width, stroke.start, end, stroke.axis), stroke.mark, stroke.erase, overwrite));
@@ -148,19 +142,9 @@
 
   function on_keydown(event: KeyboardEvent) {
     if (event.altKey || event.metaKey || event.ctrlKey) return;
-    const row = Math.floor(active / width);
-    const col = active % width;
-    const moves: Record<string, number> = {
-      ArrowUp: Math.max(0, row - 1) * width + col,
-      ArrowDown: Math.min(height - 1, row + 1) * width + col,
-      ArrowLeft: row * width + Math.max(0, col - 1),
-      ArrowRight: row * width + Math.min(width - 1, col + 1),
-      Home: row * width,
-      End: row * width + width - 1,
-    };
-    if (event.key in moves) {
+    const next = grid_key_move(event.key, active, width, height);
+    if (next !== null) {
       event.preventDefault();
-      const next = moves[event.key];
       // Shift paints the cell left behind, so a run can be laid down without lifting the keys.
       if (event.shiftKey && !solved && marks[active] === Mark.EMPTY) {
         const painted = [...marks];

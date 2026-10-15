@@ -141,6 +141,27 @@ describe("json_file", () => {
     }
   });
 
+  test("edits to a new file stick while several holders watch it and other folders appear", async () => {
+    const List = z.object({ items: z.array(z.number()) });
+    const path = app_data_path("json-holders", "data.json");
+    const watcher = json_file(app_data_path("json-holders-other", "data.json"), { count: 0 }, Schema);
+    const one = json_file(path, { items: [] as number[] }, List);
+    const two = json_file(path, { items: [] as number[] }, List);
+    await vi.waitFor(() => expect(one.ready && two.ready && watcher.ready).toBe(true));
+
+    one.value.items.push(1);
+    flushSync();
+    two.value.items.push(2);
+    flushSync();
+    await vi.waitFor(async () => expect(await read(path)).not.toBeNull());
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(one.value.items).toEqual([1, 2]);
+    await vi.waitFor(async () => expect(JSON.parse((await read(path))!)).toEqual({ items: [1, 2] }));
+    one.release();
+    two.release();
+    watcher.release();
+  });
+
   test("keeps working when its creator plays an outro while the file changes", async () => {
     const path = app_data_path("json-outro", "data.json");
     const target = document.body.appendChild(document.createElement("div"));

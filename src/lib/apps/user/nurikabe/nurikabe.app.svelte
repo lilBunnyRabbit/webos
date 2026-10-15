@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, grid_key_move, Stopwatch, stroke_axis, stroke_cells, stroke_end, track_play, type Axis } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
@@ -32,7 +32,6 @@
     size_schema,
     SIZES,
     stats_schema,
-    stroke_cells,
     Tool,
     with_marks,
     type Game,
@@ -80,7 +79,7 @@
     mark: Mark;
     erased: Mark;
     base: readonly Mark[];
-    axis: "row" | "col" | null;
+    axis: Axis | null;
     hold: ReturnType<typeof setTimeout> | null;
   } | null = null;
 
@@ -270,16 +269,8 @@
       clearTimeout(stroke.hold);
       stroke.hold = null;
     }
-    if (stroke.axis === null && index !== stroke.start) {
-      const same_row = Math.floor(index / width) === Math.floor(stroke.start / width);
-      const same_col = index % width === stroke.start % width;
-      stroke.axis = same_row ? "row" : same_col ? "col" : Math.abs((index % width) - (stroke.start % width)) >= Math.abs(Math.floor(index / width) - Math.floor(stroke.start / width)) ? "row" : "col";
-    }
-    // Locked to its axis, the stroke ends at the pointer's projection onto the start cell's row or column.
-    const end =
-      stroke.axis === "row"
-        ? Math.floor(stroke.start / width) * width + (index % width)
-        : Math.floor(index / width) * width + (stroke.start % width);
+    if (stroke.axis === null && index !== stroke.start) stroke.axis = stroke_axis(width, stroke.start, index);
+    const end = stroke_end(width, stroke.start, index, stroke.axis);
     stroke.last = index;
     active = end;
     game = with_marks(game, paint(stroke.base, puzzle.clues, stroke_cells(width, stroke.start, end, stroke.axis), stroke.mark, stroke.erased));
@@ -310,19 +301,9 @@
 
   function on_board_keydown(event: KeyboardEvent) {
     if (event.altKey || event.metaKey || event.ctrlKey) return;
-    const row = Math.floor(active / width);
-    const col = active % width;
-    const moves: Record<string, number> = {
-      ArrowUp: Math.max(0, row - 1) * width + col,
-      ArrowDown: Math.min(height - 1, row + 1) * width + col,
-      ArrowLeft: row * width + Math.max(0, col - 1),
-      ArrowRight: row * width + Math.min(width - 1, col + 1),
-      Home: row * width,
-      End: row * width + width - 1,
-    };
-    if (event.key in moves) {
+    const next = grid_key_move(event.key, active, width, height);
+    if (next !== null) {
       event.preventDefault();
-      const next = moves[event.key];
       // Shift paints the cell left behind and the one arrived at, so a wall of sea can be laid without lifting the keys.
       if (event.shiftKey && !game.solved) {
         const marks = [...game.marks];

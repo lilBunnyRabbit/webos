@@ -5,7 +5,6 @@
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowSquareOut, Pause, Play } from "phosphor-svelte";
-  import { untrack } from "svelte";
   import { APP_ID, is_break, PHASE_LABELS, progress, remaining_ms, Status } from "./pomodoro";
   import Ring from "./ring.svelte";
   import { acquire_timer } from "./timer.svelte";
@@ -20,13 +19,8 @@
 
   const run = $derived(timer.run);
   const running = $derived(timer.ready && run.status === Status.RUNNING);
-  const ticker = new Ticker(() => running && !windows.page_hidden, 250);
+  const ticker = new Ticker(() => running && !windows.page_hidden, 1000);
   const now = $derived(ticker.now);
-
-  $effect(() => {
-    const at = now;
-    if (running) untrack(() => timer.settle(at));
-  });
 
   const rest = $derived(is_break(run.phase));
 </script>

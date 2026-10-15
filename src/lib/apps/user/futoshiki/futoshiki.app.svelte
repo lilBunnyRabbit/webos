@@ -18,7 +18,7 @@
     Lightbulb as LightbulbIcon,
     PencilSimple as PencilIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import {
     clear_notes,
     conflicts,
@@ -131,6 +131,8 @@
   function save() {
     store_game(to_saved(game, size, clock.read()));
   }
+  // Moves save as they happen; the time since the last one would be lost on close.
+  onDestroy(save);
 
   function apply(next: Game, hints = game.hints) {
     if (!clock.running) clock.start();

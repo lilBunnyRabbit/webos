@@ -1,4 +1,5 @@
 <script lang="ts">
+  import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { track_play } from "$lib/core/games";
   import { BoardOverlay, Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -11,7 +12,10 @@
   const SWIPE_THRESHOLD_PX = 24;
   const CELLS = Array.from({ length: SIZE * SIZE }, (_, i) => ({ row: Math.floor(i / SIZE), col: i % SIZE }));
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
+
+  $effect(() => shortcuts.register({ id: "twenty-forty-eight.undo", keys: "mod+z", label: "Undo", category: ShortcutCategory.APP, window: window_id, run: undo }));
   track_play(app_id, () => win.is_visible);
   const best = storage.persisted("best", 0, z.number().int().nonnegative());
 
@@ -88,13 +92,7 @@
 
   function on_keydown(event: KeyboardEvent) {
     if (event.defaultPrevented) return;
-    if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.code === "KeyZ") {
-        event.preventDefault();
-        undo();
-      }
-      return;
-    }
+    if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) return;
     const direction = key_direction(event.code);
     if (!direction) return;
     event.preventDefault();

@@ -4,7 +4,16 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time, use_plays } from "$lib/core/games";
   import { cn } from "$lib/core/utils";
-  import { CalendarCheck, ChartBar, CheckCircle, Fire, GameController, Play, SquaresFour, Sticker } from "phosphor-svelte";
+  import {
+    CalendarCheck as CalendarCheckIcon,
+    ChartBar as ChartBarIcon,
+    CheckCircle as CheckCircleIcon,
+    Fire as FireIcon,
+    GameController as GameControllerIcon,
+    Play as PlayIcon,
+    SquaresFour as SquaresFourIcon,
+    Sticker as StickerIcon,
+  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import { entries, format_duration, format_last_played, list_games, Sort, SORT_OPTIONS, sort_entries, streak, supports_daily, Tab, totals } from "./hub";
@@ -23,9 +32,9 @@
   const today = use_today(() => win.is_visible);
 
   const TABS = [
-    { value: Tab.LIBRARY, label: "Library", icon: SquaresFour },
-    { value: Tab.TODAY, label: "Today", icon: CalendarCheck },
-    { value: Tab.STATS, label: "Stats", icon: ChartBar },
+    { value: Tab.LIBRARY, label: "Library", icon: SquaresFourIcon },
+    { value: Tab.TODAY, label: "Today", icon: CalendarCheckIcon },
+    { value: Tab.STATS, label: "Stats", icon: ChartBarIcon },
   ];
 
   const games = $derived(list_games([...apps.list()].map(([, manifest]) => manifest)));
@@ -77,14 +86,14 @@
         title={widget ? "Game Hub is on the desktop. Click to remove it." : "Put your games, today's puzzles and your streak on the desktop."}
         onclick={toggle_widget}
       >
-        <Sticker />{widget ? "On desktop" : "Add to desktop"}
+        <StickerIcon />{widget ? "On desktop" : "Add to desktop"}
       </Button>
     {/if}
   </Toolbar>
 
   <div class="min-h-0 overflow-auto">
     {#if games.length === 0}
-      <EmptyState icon={GameController} title="No games installed" description="Games you add show up here." />
+      <EmptyState icon={GameControllerIcon} title="No games installed" description="Games you add show up here." />
     {:else if tab.value === Tab.LIBRARY}
       <ul class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3 p-4">
         {#each library as { game, stats } (game.id)}
@@ -107,7 +116,7 @@
                   {/if}
                   {#if supports_daily(game.props)}
                     <span class={cn("ml-auto flex items-center gap-1", solved_today[game.id] && "text-success")}>
-                      {#if solved_today[game.id]}<CheckCircle class="size-3.5" weight="fill" />{:else}<CalendarCheck class="size-3.5" />{/if}Daily
+                      {#if solved_today[game.id]}<CheckCircleIcon class="size-3.5" weight="fill" />{:else}<CalendarCheckIcon class="size-3.5" />{/if}Daily
                     </span>
                   {/if}
                 </span>
@@ -118,7 +127,7 @@
       </ul>
     {:else if tab.value === Tab.TODAY}
       {#if dailies.length === 0}
-        <EmptyState icon={CalendarCheck} title="No daily puzzles yet" description="When a game offers a puzzle of the day, it shows up here, the same for everyone." />
+        <EmptyState icon={CalendarCheckIcon} title="No daily puzzles yet" description="When a game offers a puzzle of the day, it shows up here, the same for everyone." />
       {:else}
         <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 @md:px-6">
           <header class="flex items-center gap-4">
@@ -129,7 +138,7 @@
               </p>
             </div>
             <div class={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 ring-1", current_streak ? "bg-primary/10 ring-primary/25" : "bg-background-light ring-foreground/8")}>
-              <Fire class={cn("size-6", current_streak ? "text-primary" : "text-foreground/45")} weight={current_streak ? "fill" : "regular"} />
+              <FireIcon class={cn("size-6", current_streak ? "text-primary" : "text-foreground/45")} weight={current_streak ? "fill" : "regular"} />
               <div class="leading-tight">
                 <p class="font-mono text-base font-semibold tabular-nums">{current_streak}</p>
                 <p class="text-2xs text-foreground/65">day streak</p>
@@ -146,13 +155,13 @@
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-ui font-medium">{game.name}</p>
                     {#if solved}
-                      <p class="flex items-center gap-1 text-2xs text-success"><CheckCircle class="size-3.5" weight="fill" />Solved in <span class="font-mono tabular-nums">{format_time(solved.ms)}</span></p>
+                      <p class="flex items-center gap-1 text-2xs text-success"><CheckCircleIcon class="size-3.5" weight="fill" />Solved in <span class="font-mono tabular-nums">{format_time(solved.ms)}</span></p>
                     {:else}
                       <p class="text-2xs text-foreground/65">Not solved yet</p>
                     {/if}
                   </div>
                   <Button variant={solved ? "secondary" : "primary"} size="sm" onclick={() => apps.launch(game.id, { daily: today.value })}>
-                    <Play weight="fill" />{solved ? "Again" : "Play"}
+                    <PlayIcon weight="fill" />{solved ? "Again" : "Play"}
                   </Button>
                 </li>
               {/each}
@@ -161,7 +170,7 @@
         </div>
       {/if}
     {:else if total.sessions === 0 && total.ms === 0}
-      <EmptyState icon={ChartBar} title="Nothing played yet" description="Play time and sessions show up here once you play a game." />
+      <EmptyState icon={ChartBarIcon} title="Nothing played yet" description="Play time and sessions show up here once you play a game." />
     {:else}
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 @md:px-6">
         <dl class="grid grid-cols-2 gap-3 @md:grid-cols-4">
@@ -191,7 +200,7 @@
                     {stats?.sessions === 1 ? "session" : "sessions"} · {format_last_played(stats?.last ?? "")}
                   </p>
                 </div>
-                <IconButton size="sm" label="Play {game.name}" onclick={() => apps.launch(game.id)}><Play weight="fill" /></IconButton>
+                <IconButton size="sm" label="Play {game.name}" onclick={() => apps.launch(game.id)}><PlayIcon weight="fill" /></IconButton>
               </li>
             {/each}
           </ul>

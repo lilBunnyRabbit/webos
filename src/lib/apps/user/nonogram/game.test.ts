@@ -13,7 +13,6 @@ import {
   restore,
   runs_done,
   saved_schema,
-  stroke_cells,
   with_marks,
 } from "./game";
 import type { Clue } from "./puzzle";
@@ -62,11 +61,6 @@ describe("a game", () => {
 });
 
 describe("strokes", () => {
-  test("stay on one axis", () => {
-    expect(stroke_cells(5, 0, 3, "row")).toEqual([0, 1, 2, 3]);
-    expect(stroke_cells(5, 12, 2, "col")).toEqual([12, 7, 2]);
-  });
-
   test("paint blanks only, or erase their own mark only", () => {
     expect(paint([_, X, F, _], [0, 1, 2, 3], F, false)).toEqual([F, X, F, F]);
     expect(paint([F, X, F, _], [0, 1, 2, 3], F, true)).toEqual([_, X, _, _]);
@@ -163,6 +157,12 @@ describe("restoring", () => {
   test("marks that don't fit the puzzle are refused", () => {
     const game = new_game("5", 8);
     expect(resume(game, [F], 0)).toBeNull();
-    expect(resume(game, game.marks.map(() => 3), 0)).toBeNull();
+    expect(
+      resume(
+        game,
+        game.marks.map(() => 3),
+        0
+      )
+    ).toBeNull();
   });
 });
