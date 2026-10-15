@@ -1,18 +1,22 @@
 <script lang="ts">
-  import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
-    Crop as CropIcon,
+    Eraser as EraserIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
+    Plus as PlusIcon,
     Warning as WarningIcon,
+    X as XIcon,
     Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { crop, find_crop_bounds, type CropBounds } from "./crop";
+  import { remove_colours } from "./remove-background";
+  import { transparent_name } from "./naming";
+  import type { SectionProps } from "./sections";
   import {
     FORMAT_OPTIONS,
     ImageFormat,
@@ -22,13 +26,16 @@
     load_image,
     load_image_at,
     paint,
-    read_pixels,
     save_image,
     type SourceImage,
   } from "$lib/core/utils/image";
-  import { parent_path, file_stem } from "$lib/core/api/services/files/path";
+  import { parent_path } from "$lib/core/api/services/files/path";
 
-  const { path: initial_path }: { path?: string } = $props();
+  // JPEG has no alpha channel, so the removed pixels would come back black.
+  const APPLY_DELAY = 150;
+  const FORMATS = FORMAT_OPTIONS.filter((option) => option.value !== ImageFormat.JPEG);
+
+  const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window: win } = get_app_context();
 
   let root = $state<HTMLElement>();
@@ -37,15 +44,20 @@
   let error = $state<string | null>(null);
   let dragging = $state(false);
 
-  let alpha = $state<number | null>(0);
+  let colours = $state<string[]>(["#ffffff"]);
   let format = $state<ImageFormat>(ImageFormat.PNG);
   /** A phone shows one image at a time at full size instead of two tiny ones. */
-  let shown = $state<"original" | "cropped">("cropped");
+  let shown = $state<"original" | "result">("result");
 
-  const alpha_percent = $derived(typeof alpha === "number" && Number.isFinite(alpha) ? alpha : 0);
-  const pixels = $derived(source ? read_pixels(source.bitmap) : null);
-  const bounds = $derived(pixels ? find_crop_bounds(pixels, alpha_percent) : null);
-  const cropped = $derived(source && bounds ? crop(source.bitmap, bounds) : null);
+  // Dragging in the colour picker fires input many times a second; the pixel pass waits until it settles.
+  let applied = $state.raw<string[]>(["#ffffff"]);
+  $effect(() => {
+    const next = $state.snapshot(colours);
+    const timer = setTimeout(() => (applied = next), APPLY_DELAY);
+    return () => clearTimeout(timer);
+  });
+
+  const result = $derived(source ? remove_colours(source.bitmap, applied) : null);
 
   let request = 0;
 
@@ -54,10 +66,10 @@
     loading = true;
     error = null;
     try {
-      const result = await task();
-      if (id !== request) return result.bitmap.close();
+      const loaded = await task();
+      if (id !== request) return loaded.bitmap.close();
       const previous = source;
-      source = result;
+      source = loaded;
       previous?.bitmap.close();
     } catch (reason) {
       if (id === request) error = error_message(reason);
@@ -68,12 +80,12 @@
 
   onDestroy(() => source?.bitmap.close());
 
-  const initial = untrack(() => initial_path);
+  const initial = untrack(() => initial_paths[0]);
   if (initial) load(() => load_image_at(initial));
 
   async function pick() {
     const start_path = source?.path ? parent_path(source.path) : undefined;
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Open in Image Crop" });
+    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Remove a background" });
     if (chosen) load(() => load_image_at(chosen));
   }
 
@@ -85,7 +97,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!active || !win.is_focused) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);
@@ -112,42 +124,29 @@
   }
 
   function save() {
-    if (!source || !cropped) return;
+    if (!source || !result) return;
     save_image({
       app_id,
       window: win,
-      canvas: cropped,
-      name: `${file_stem(source.name)}-cropped${extension_for(format)}`,
+      canvas: result,
+      name: transparent_name(source.name, extension_for(format)),
       format,
       start_path: source.path ? parent_path(source.path) : null,
     });
-  }
-
-  function percent(value: number, total: number) {
-    return `${(value / total) * 100}%`;
   }
 </script>
 
 <svelte:document onpaste={on_paste} />
 
-{#snippet panel(label: string, width: number, height: number, draw: (canvas: HTMLCanvasElement) => void, frame: CropBounds | null)}
+{#snippet panel(label: string, width: number, height: number, draw: (canvas: HTMLCanvasElement) => void)}
   <figure class="flex min-h-0 min-w-0 flex-col gap-2">
     <div class="grid min-h-0 flex-1 place-items-center [container-type:size]">
       <div
-        class="checker relative overflow-hidden rounded-xs ring-1 ring-foreground/10"
+        class="checker overflow-hidden rounded-xs ring-1 ring-foreground/10"
         style:aspect-ratio="{width} / {height}"
         style:width="min(100cqw, calc(100cqh * {width / height}))"
       >
         <canvas {@attach draw} class="block size-full [image-rendering:pixelated]"></canvas>
-        {#if frame}
-          <div
-            class="crop-frame absolute"
-            style:left={percent(frame.left, width)}
-            style:top={percent(frame.top, height)}
-            style:width={percent(frame.right - frame.left, width)}
-            style:height={percent(frame.bottom - frame.top, height)}
-          ></div>
-        {/if}
       </div>
     </div>
     <figcaption class="truncate text-center font-mono text-2xs text-foreground/65 tabular-nums">{label} · {width} × {height} px</figcaption>
@@ -156,69 +155,87 @@
 
 <div
   bind:this={root}
-  class="relative h-full"
+  class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
-  aria-label="Image Crop"
+  aria-label="Remove background"
   ondragenter={on_dragover}
   ondragover={on_dragover}
   ondragleave={on_dragleave}
   ondrop={on_drop}
 >
+  <Toolbar>
+    {@render picker()}
+    <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
+    <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{source?.name ?? ""}</span>
+    {#if source && result && !loading && !error}
+      <Select size="sm" class="w-auto" options={FORMATS} bind:value={format} aria-label="Format" />
+      <Button variant="primary" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>
+    {/if}
+  </Toolbar>
+
   {#if loading}
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
       {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
-  {:else if !source || !bounds || !cropped}
-    <EmptyState icon={CropIcon} title="No image open" description="Trims transparent borders from an image. Open one, drop it here or paste it.">
+  {:else if !source || !result}
+    <EmptyState icon={EraserIcon} title="No image open" description="Makes chosen colours transparent. Open an image, drop it here or paste it.">
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
     </EmptyState>
   {:else}
-    <div class="grid h-full grid-rows-[auto_1fr_auto]">
-      <Toolbar>
-        <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
-        <span class="min-w-24 flex-1 truncate px-1 text-ui font-medium">{source.name}</span>
-
-        <label class="flex items-center gap-1.5 text-ui text-foreground/80" title="Pixels at or below this opacity count as transparent">
-          Alpha
-          <Input type="number" size="sm" min={0} max={100} bind:value={alpha} class="w-16 font-mono tabular-nums" />
-          <span class="font-mono text-2xs">%</span>
-        </label>
-        <Separator vertical />
-        <Select size="sm" options={FORMAT_OPTIONS} bind:value={format} aria-label="Format" />
-        <Button variant="primary" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>
-      </Toolbar>
+    <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[15rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
+      <aside class="flex max-h-44 flex-col gap-2 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+        <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Colours to remove</h3>
+        <ul class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-1.5">
+          {#each colours as colour, index (index)}
+            <li class="flex items-center gap-2 rounded-lg bg-background-darker p-1 ring-1 ring-inset ring-foreground/8">
+              <label class="relative size-7 pointer-coarse:size-9 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={colour} title="Pick colour {index + 1}">
+                <input
+                  type="color"
+                  class="absolute inset-0 cursor-pointer opacity-0"
+                  value={colour}
+                  oninput={(event) => (colours[index] = event.currentTarget.value)}
+                />
+              </label>
+              <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{colour}</span>
+              <IconButton label="Remove colour" size="sm" onclick={() => colours.splice(index, 1)}><XIcon weight="bold" /></IconButton>
+            </li>
+          {/each}
+        </ul>
+        <Button size="sm" class="self-start" onclick={() => colours.push("#ffffff")}><PlusIcon weight="bold" /> Add colour</Button>
+      </aside>
 
       <div
-        class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] place-items-stretch gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
+        class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 p-4 @xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @xl:grid-rows-[minmax(0,1fr)] @xl:gap-4 @xl:p-6"
       >
         <Segmented
           class="justify-self-center @xl:hidden"
           label="Image shown"
           options={[
             { value: "original", label: "Original" },
-            { value: "cropped", label: "Cropped" },
+            { value: "result", label: "Result" },
           ]}
           bind:value={shown}
         />
         <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "original" ? "grid" : "hidden"]}>
-          {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap), bounds)}
+          {@render panel("Original", source.bitmap.width, source.bitmap.height, paint(source.bitmap))}
         </div>
         <div class="hidden place-items-center text-foreground/65 @xl:grid">
           <ArrowRightIcon class="size-5" weight="bold" />
         </div>
-        <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "cropped" ? "grid" : "hidden"]}>
-          {@render panel("Cropped", cropped.width, cropped.height, paint(cropped), null)}
+        <div class={["min-h-0 grid-rows-[minmax(0,1fr)] @xl:grid", shown === "result" ? "grid" : "hidden"]}>
+          {@render panel("Result", result.width, result.height, paint(result))}
         </div>
       </div>
-
-      <StatusBar>
-        <span>{source.type || "unknown type"}</span>
-        <span>{format_bytes(source.size)}</span>
-      </StatusBar>
     </div>
+
+    <StatusBar>
+      <span>{source.type || "unknown type"}</span>
+      <span>{format_bytes(source.size)}</span>
+      <span class="ml-auto">{colours.length} {colours.length === 1 ? "colour" : "colours"}</span>
+    </StatusBar>
   {/if}
 
   {#if dragging}
@@ -233,13 +250,8 @@
     background: var(--background-darker);
   }
 
-  /* Transparent pixels are what this tool is about, so they show as a checkerboard instead of the stage colour. */
+  /* Transparent pixels are what this tool makes, so they show as a checkerboard instead of the stage colour. */
   .checker {
     background: repeating-conic-gradient(color-mix(in oklch, var(--foreground) 8%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
-  }
-
-  .crop-frame {
-    outline: 1px solid var(--primary);
-    box-shadow: 0 0 0 100vmax color-mix(in oklch, var(--primary) 40%, transparent);
   }
 </style>

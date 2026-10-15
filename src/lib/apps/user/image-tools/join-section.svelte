@@ -15,7 +15,9 @@
     Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { Align, Direction, concat_images } from "./concat";
+  import { Align, Direction, concat_images } from "./join";
+  import { joined_name } from "./naming";
+  import type { SectionProps } from "./sections";
   import {
     FORMAT_OPTIONS,
     ImageFormat,
@@ -45,7 +47,7 @@
     { value: Align.END, label: "End" },
   ];
 
-  const { path: initial_path }: { path?: string } = $props();
+  const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window: win } = get_app_context();
 
   let root = $state<HTMLElement>();
@@ -104,8 +106,8 @@
     close_all(images);
   });
 
-  const initial = untrack(() => initial_path);
-  if (initial) add([() => load_image_at(initial)]);
+  const initial = untrack(() => initial_paths);
+  if (initial.length) add(initial.map((path) => () => load_image_at(path)));
 
   const start_path = $derived.by(() => {
     const path = images.find((image) => image.path)?.path;
@@ -113,7 +115,7 @@
   });
 
   async function pick() {
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Image Concat" });
+    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Join" });
     if (chosen) add([() => load_image_at(chosen)]);
   }
 
@@ -136,7 +138,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!active || !win.is_focused) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);
@@ -172,7 +174,7 @@
       app_id,
       window: win,
       canvas: result,
-      name: `joined${extension_for(format)}`,
+      name: joined_name(extension_for(format)),
       format,
       start_path: start_path ?? null,
     });
@@ -183,14 +185,35 @@
 
 <div
   bind:this={root}
-  class="relative h-full"
+  class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
-  aria-label="Image Concat"
+  aria-label="Join"
   ondragenter={on_dragover}
   ondragover={on_dragover}
   ondragleave={on_dragleave}
   ondrop={on_drop}
 >
+  <Toolbar>
+    {@render picker()}
+    <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
+    <IconButton label="Add from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
+    <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{images.length ? `${images.length} ${images.length === 1 ? "image" : "images"}` : ""}</span>
+    {#if result}
+      {#if loading}<Spinner label="Loading images" />{/if}
+
+      <IconButton label="Zoom out" size="sm" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>
+        <MagnifyingGlassMinusIcon weight="bold" />
+      </IconButton>
+      <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{zoom}%</span>
+      <IconButton label="Zoom in" size="sm" disabled={zoom >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}>
+        <MagnifyingGlassPlusIcon weight="bold" />
+      </IconButton>
+      <Separator vertical />
+      <Select size="sm" class="w-auto" options={FORMAT_OPTIONS} bind:value={format} aria-label="Format" />
+      <Button variant="primary" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>
+    {/if}
+  </Toolbar>
+
   {#if !result}
     {#if loading}
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
@@ -200,101 +223,81 @@
       </EmptyState>
     {/if}
   {:else}
-    <div class="grid h-full grid-rows-[auto_1fr_auto]">
-      <Toolbar>
-        <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
-        <IconButton label="Add from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
-        <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{images.length} {images.length === 1 ? "image" : "images"}</span>
-        {#if loading}<Spinner label="Loading images" />{/if}
+    <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[16rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
+      <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between px-0.5">
+            <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Images</h3>
+            <IconButton label="Remove all" size="sm" onclick={remove_all}><TrashIcon weight="bold" /></IconButton>
+          </div>
+          <ol class="flex flex-col gap-0.5">
+            {#each images as image, index (image)}
+              <li class="flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6">
+                <span class="w-4 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>
+                <span class="min-w-0 flex-1 truncate text-ui" title={image.path ?? image.name}>{image.name}</span>
+                <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{image.bitmap.width}×{image.bitmap.height}</span>
+                <IconButton label="Remove {image.name}" size="sm" onclick={() => remove(index)}><XIcon weight="bold" /></IconButton>
+              </li>
+            {/each}
+          </ol>
+        </div>
 
-        <IconButton label="Zoom out" size="sm" disabled={zoom <= MIN_ZOOM} onclick={() => zoom_by(-ZOOM_STEP)}>
-          <MagnifyingGlassMinusIcon weight="bold" />
-        </IconButton>
-        <span class="min-w-11 text-center font-mono text-2xs text-foreground/80 tabular-nums">{zoom}%</span>
-        <IconButton label="Zoom in" size="sm" disabled={zoom >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}>
-          <MagnifyingGlassPlusIcon weight="bold" />
-        </IconButton>
-        <Separator vertical />
-        <Select size="sm" options={FORMAT_OPTIONS} bind:value={format} aria-label="Format" />
-        <Button variant="primary" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>
-      </Toolbar>
-
-      <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[16rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-        <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
-          <div class="flex flex-col gap-1.5">
-            <div class="flex items-center justify-between px-0.5">
-              <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Images</h3>
-              <IconButton label="Remove all" size="sm" onclick={remove_all}><TrashIcon weight="bold" /></IconButton>
+        <div class="flex flex-col gap-2.5">
+          <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Layout</h3>
+          <Segmented label="Direction" options={DIRECTIONS} bind:value={direction} class="self-start" />
+          <label class="flex items-center justify-between gap-2 text-ui">
+            {column ? "Match widths" : "Match heights"}
+            <Switch bind:checked={fit} />
+          </label>
+          {#if !fit}
+            <div class="flex flex-col gap-1.5">
+              <span class="text-ui">Align</span>
+              <Segmented label="Align" options={ALIGNS} bind:value={align} class="self-start" />
             </div>
-            <ol class="flex flex-col gap-0.5">
-              {#each images as image, index (image)}
-                <li class="flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6">
-                  <span class="w-4 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>
-                  <span class="min-w-0 flex-1 truncate text-ui" title={image.path ?? image.name}>{image.name}</span>
-                  <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{image.bitmap.width}×{image.bitmap.height}</span>
-                  <IconButton label="Remove {image.name}" size="sm" onclick={() => remove(index)}><XIcon weight="bold" /></IconButton>
-                </li>
-              {/each}
-            </ol>
-          </div>
+          {/if}
+          <label class="flex items-center justify-between gap-2 text-ui">
+            Gap
+            <span class="flex items-center gap-1.5">
+              <Input type="number" size="sm" min={0} bind:value={gap} class="w-16 font-mono tabular-nums" />
+              <span class="w-3 font-mono text-2xs text-foreground/80">px</span>
+            </span>
+          </label>
+        </div>
 
-          <div class="flex flex-col gap-2.5">
-            <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Layout</h3>
-            <Segmented label="Direction" options={DIRECTIONS} bind:value={direction} class="self-start" />
-            <label class="flex items-center justify-between gap-2 text-ui">
-              {column ? "Match widths" : "Match heights"}
-              <Switch bind:checked={fit} />
+        <div class="flex flex-col gap-2.5">
+          <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Background</h3>
+          <div class="flex items-center gap-2">
+            <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background title="Pick background colour">
+              <input type="color" class="absolute inset-0 cursor-pointer opacity-0" bind:value={background} />
             </label>
-            {#if !fit}
-              <div class="flex flex-col gap-1.5">
-                <span class="text-ui">Align</span>
-                <Segmented label="Align" options={ALIGNS} bind:value={align} class="self-start" />
-              </div>
-            {/if}
-            <label class="flex items-center justify-between gap-2 text-ui">
-              Gap
-              <span class="flex items-center gap-1.5">
-                <Input type="number" size="sm" min={0} bind:value={gap} class="w-16 font-mono tabular-nums" />
-                <span class="w-3 font-mono text-2xs text-foreground/80">px</span>
-              </span>
-            </label>
+            <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{background}</span>
           </div>
+          <label class="flex items-center justify-between gap-2 text-ui" title="0% leaves the background transparent">
+            Opacity
+            <span class="flex items-center gap-1.5">
+              <Input type="number" size="sm" min={0} max={100} bind:value={alpha} class="w-16 font-mono tabular-nums" />
+              <span class="w-3 font-mono text-2xs text-foreground/80">%</span>
+            </span>
+          </label>
+        </div>
+      </aside>
 
-          <div class="flex flex-col gap-2.5">
-            <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Background</h3>
-            <div class="flex items-center gap-2">
-              <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background title="Pick background colour">
-                <input type="color" class="absolute inset-0 cursor-pointer opacity-0" bind:value={background} />
-              </label>
-              <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{background}</span>
-            </div>
-            <label class="flex items-center justify-between gap-2 text-ui" title="0% leaves the background transparent">
-              Opacity
-              <span class="flex items-center gap-1.5">
-                <Input type="number" size="sm" min={0} max={100} bind:value={alpha} class="w-16 font-mono tabular-nums" />
-                <span class="w-3 font-mono text-2xs text-foreground/80">%</span>
-              </span>
-            </label>
-          </div>
-        </aside>
-
-        <div class="stage min-h-0 overflow-auto p-6 [container-type:size]">
-          <div class="grid h-max min-h-full w-max min-w-full place-items-center">
-            <canvas
-              {@attach paint(result)}
-              class="checker block ring-1 ring-foreground/15 [image-rendering:pixelated]"
-              style:width={column ? `${zoom}cqw` : undefined}
-              style:height={column ? undefined : `${zoom}cqh`}
-            ></canvas>
-          </div>
+      <div class="stage min-h-0 overflow-auto p-6 [container-type:size]">
+        <div class="grid h-max min-h-full w-max min-w-full place-items-center">
+          <canvas
+            {@attach paint(result)}
+            class="checker block ring-1 ring-foreground/15 [image-rendering:pixelated]"
+            style:width={column ? `${zoom}cqw` : undefined}
+            style:height={column ? undefined : `${zoom}cqh`}
+          ></canvas>
         </div>
       </div>
-
-      <StatusBar>
-        <span>{result.width} × {result.height} px</span>
-        <span class="ml-auto">{column ? "vertical" : "horizontal"}{fit ? ", matched" : `, ${align}`}</span>
-      </StatusBar>
     </div>
+
+    <StatusBar>
+      <span>{result.width} × {result.height} px</span>
+      <span class="ml-auto">{column ? "vertical" : "horizontal"}{fit ? ", matched" : `, ${align}`}</span>
+    </StatusBar>
   {/if}
 
   {#if dragging}

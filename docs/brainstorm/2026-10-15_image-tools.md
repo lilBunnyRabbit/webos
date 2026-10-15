@@ -18,4 +18,10 @@ The owner wants one Image Tools app, like PDF Tools, instead of single-purpose i
 
 ## Action items
 
-- [ ] Image Tools app, delete the five apps, shell verbs, tests, docs, 1.2.0
+- [x] Image Tools app, delete the five apps, shell verbs, tests, docs, 1.2.0
+
+## Implementation notes
+
+- One image, or none, opens Remove background; several open Join; `section` wins. Remove background is the one section that does something to any image.
+- Command options match the old apps: `image split` takes `--cols` or `--rows` (tiles are square), `image unbg` takes repeatable `--color` with exact matching (the old app had no tolerance), `image trim` keeps the `-cropped` suffix and the `--alpha` threshold.
+- Sprites' settings moved from `app.sprite-extract.settings` to `app.image-tools.sprite-settings`; the old key is left behind.

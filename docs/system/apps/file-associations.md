@@ -61,7 +61,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 
 ## Tools
 
-`tools` on the manifest uses the same syntax as `associations`, for apps that work on a file without being its viewer, such as the image tools (Image Crop, Background Remove, …: `tools: ["image/*"]`) or GIF Player (`image/gif`, `.gif`, `video/*`).
+`tools` on the manifest uses the same syntax as `associations`, for apps that work on a file without being its viewer, such as Image Tools and Image Editor (`tools: ["image/*"]`) or GIF Player (`image/gif`, `.gif`, `video/*`).
 
 - A tool match never counts toward `open()`: it can't win the default, can't cause a tie, and never shows the chooser.
 - File Explorer's "Open with" lists tool apps after the associated apps, behind a separator, by name (`tools_for`). An app that's both associated and a tool for the file appears once, with the associated apps.
@@ -69,7 +69,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 
 | App | Tools |
 |-----|-------|
-| `image-crop`, `background-remove`, `image-concat`, `image-split`, `image-editor`, `sprite-extract`, `qr-reader` | `image/*` |
+| `image-tools`, `image-editor`, `qr-reader` | `image/*` |
 | `gif-player` | `image/gif`, `.gif`, `video/*` |
 | `paint` | `image/*` |
 | `music-visualizer`, `soundboard` | `audio/*` |

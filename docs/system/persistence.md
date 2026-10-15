@@ -43,6 +43,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
+| `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
 | `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
 | `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
 | `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
@@ -60,7 +61,6 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.solitaire.{stats,draw}` | `user/solitaire` | Stats; draw one or three |
 | `app.soundboard.{volume,mode}` | `user/soundboard` | Volume and play mode |
 | `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
-| `app.sprite-extract.settings` | `user/sprite-extract` | Extraction settings |
 | `app.sudoku.{stats,daily,game,difficulty}` | `user/sudoku` | Stats; daily puzzle; game in progress; last difficulty |
 | `app.tic-tac-toe.{stats,mode}` | `user/tic-tac-toe` | Win/loss/draw counts; last mode |
 | `app.time-since.sort` | `user/time-since` | Counter sort |
@@ -69,7 +69,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.word-search.{stats,daily,game,difficulty}` | `user/word-search` | Stats; daily puzzle; game in progress; last difficulty |
 | `app.work-hours.last_target` | `user/work-hours` | Last monthly target, offered as the default |
 
-Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Sprite Extract, RNG Tools section, the puzzle games' size, difficulty and saved game, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
+Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Image Tools Sprites, RNG Tools section, the puzzle games' size, difficulty and saved game, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
 
 ## App storage handle
 

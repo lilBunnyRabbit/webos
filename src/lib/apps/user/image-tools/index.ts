@@ -1,0 +1,147 @@
+import { define_app } from "$lib/core/api";
+import { AppCategory } from "$lib/core/api/services/apps/type";
+import { arg } from "$lib/core/api/services/shell/arg";
+import { define_command } from "$lib/core/api/services/shell/define";
+import type { ShellSession } from "$lib/core/api/services/shell/type";
+import { ImagesSquare as ImagesSquareIcon } from "phosphor-svelte";
+import { z } from "zod";
+import { SECTION_IDS } from "./sections";
+
+const logic = () => import("./shell");
+
+const image_fields = new Set(["path", "paths"]);
+const complete_images = (field: string, partial: string, context: { session: ShellSession }) =>
+  image_fields.has(field) ? logic().then((m) => m.complete_images(partial, context)) : undefined;
+
+export default define_app({
+  id: "image-tools",
+  name: "Image Tools",
+  icon: ImagesSquareIcon,
+  version: "1.0.0",
+  description: "Remove a background, join, trim and split images, and slice sprite sheets into frames.",
+  keywords: [
+    "image",
+    "photo",
+    "transparent",
+    "colour key",
+    "chroma",
+    "green screen",
+    "remove background",
+    "cutout",
+    "join",
+    "merge",
+    "combine",
+    "stitch",
+    "collage",
+    "concat",
+    "trim",
+    "crop",
+    "alpha",
+    "split",
+    "tiles",
+    "grid",
+    "instagram",
+    "slice",
+    "sprite",
+    "sheet",
+    "frames",
+    "animation",
+    "extract",
+    "game assets",
+    "pixel art",
+  ],
+  category: AppCategory.MEDIA,
+  tools: ["image/*"],
+  props: z.object({
+    section: z.enum(SECTION_IDS).optional(),
+    path: z.string().optional(),
+    paths: z.array(z.string()).optional(),
+  }),
+  defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
+  shell: {
+    commands: [
+      define_command({
+        id: "image tools",
+        description: "Open Image Tools on a section, with an image",
+        args: z.object({ section: z.enum(SECTION_IDS).optional(), path: arg.path().optional() }),
+        positional: ["section", "path"],
+        complete: complete_images,
+        run: async (context) => (await logic()).tools(context),
+      }),
+      define_command({
+        id: "image trim",
+        description: "Save copies with transparent borders trimmed, next to the originals",
+        args: z.object({
+          paths: z.array(arg.path()).default([]).describe("Images, or the files piped in"),
+          alpha: z
+            .number()
+            .min(0)
+            .max(100)
+            .default(0)
+            .describe("Pixels at or below this opacity, 0–100, count as transparent"),
+        }),
+        positional: ["paths"],
+        yields: "file",
+        complete: complete_images,
+        async *run(context) {
+          yield* await (await logic()).trim(context);
+        },
+      }),
+      define_command({
+        id: "image split",
+        description: "Cut an image into square tiles: --cols N or --rows N",
+        args: z.object({
+          path: arg.path(),
+          cols: z.number().int().min(1).max(300).optional().describe("Tiles across; rows follow"),
+          rows: z.number().int().min(1).max(300).optional().describe("Tiles down; columns follow"),
+        }),
+        positional: ["path"],
+        short: { cols: "c", rows: "r" },
+        yields: "file",
+        complete: complete_images,
+        async *run(context) {
+          yield* await (await logic()).split(context);
+        },
+      }),
+      define_command({
+        id: "image join",
+        description: "Join images, in order, into one PNG next to the first",
+        args: z.object({
+          paths: z.array(arg.path()).default([]).describe("Images, or the files piped in"),
+          direction: z.enum(["column", "row"]).default("column").describe("column stacks, row goes side by side"),
+          gap: z.number().int().min(0).default(0).describe("Pixels between images"),
+          align: z.enum(["start", "center", "end"]).default("start"),
+          fit: z.boolean().default(false).describe("Scale every image to the widest (column) or tallest (row)"),
+          background: z
+            .string()
+            .regex(/^#[0-9a-f]{6}$/i)
+            .default("#ffffff")
+            .describe("Background colour, #rrggbb"),
+          opacity: z.number().min(0).max(100).default(0).describe("Background opacity, 0–100; 0 keeps it transparent"),
+        }),
+        positional: ["paths"],
+        short: { direction: "d", gap: "g" },
+        yields: "file",
+        complete: complete_images,
+        run: async (context) => (await logic()).join(context),
+      }),
+      define_command({
+        id: "image unbg",
+        description: "Save a copy with these colours made transparent, next to the original",
+        args: z.object({
+          path: arg.path(),
+          color: z
+            .array(z.string().regex(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i))
+            .default(["#ffffff"])
+            .describe("Colour to remove, #rgb or #rrggbb; repeat for more"),
+        }),
+        positional: ["path"],
+        short: { color: "c" },
+        yields: "file",
+        complete: complete_images,
+        run: async (context) => (await logic()).unbg(context),
+      }),
+    ],
+  },
+  component: () => import("./image-tools.app.svelte"),
+});
