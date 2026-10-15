@@ -1,10 +1,11 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { Platform } from "$lib/core/api";
+  import kernel, { Platform, type AppsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { z } from "zod";
   import { Badge, Button, Section } from "$lib/core/components/ui";
-  import { Plus as PlusIcon } from "phosphor-svelte";
+  import { ListChecks as ListChecksIcon, Play as PlayIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { run_example_task } from "./task";
 
   const { count: initial_count }: { count?: number } = $props();
 
@@ -27,6 +28,14 @@
         <Button onclick={() => (count.value = 0)}>Reset</Button>
         <Button variant="primary" onclick={() => count.value++}><PlusIcon weight="bold" /> Increment</Button>
       </div>
+    </div>
+  </Section>
+
+  <Section title="Background task" description="About 20 s of fake work on the tasks service: parallel downloads, then steps with logs, then packing. It keeps running when this window closes.">
+    <div class="flex flex-wrap justify-end gap-1.5 px-4 py-3">
+      <Button size="sm" onclick={() => kernel.service<AppsService>("apps").launch("activity-monitor", { section: "tasks" })}><ListChecksIcon weight="bold" /> Show tasks</Button>
+      <Button size="sm" onclick={() => run_example_task(true)}>Run, fail once</Button>
+      <Button size="sm" variant="primary" onclick={() => run_example_task()}><PlayIcon weight="fill" /> Run</Button>
     </div>
   </Section>
 

@@ -68,9 +68,52 @@ Ids are the first eight characters of the job id, completed by the `task` arg ki
 
 ## UI
 
-- **Activity Monitor › Tasks:** a list with status, progress and message, plus Cancel, Retry and Remove per row and Clear finished. `apps.launch("activity-monitor", { section: "tasks" })` opens it.
+- **Activity Monitor › Tasks:** one row per job: title, status badge, app, message or error, progress, and Cancel, Retry or Remove. Clear finished sits in the header, and a link to the package on npm sits under the list. `apps.launch("activity-monitor", { section: "tasks" })` opens it.
+- **Details toggle:** the caret on a row opens the run's tree (`task-details.svelte`).
+  - **Bridge:** `TaskTree` (`task-tree.svelte.ts`) uses `createSubscriber`, so it listens to the manager, groups and tasks (`onAll`) only while the tree is on screen, and snapshots them on each event.
+  - **Root group:** a lone root group named like the job is folded into a "sequential · 3 steps" line.
+  - **Each node:** the package status as an icon, its name, the group's mode or the task's own `parse().status`, and a bar and percentage while running or failed.
+  - **Logs:** a logs button opens the task's `logs`, which are kept scrolled to the newest (`flex-col-reverse`).
 - **Taskbar:** a spinner before the notification bell while `active_count > 0`. It shows the count when two or more jobs run, and clicking it opens Activity Monitor › Tasks.
 - **Mobile:** the notification center in the switcher shows an "N tasks running · Show" line (`NotificationList` `tasks` prop).
+
+## Writing a task
+
+The Example app's `example/task.ts` is the reference: about 20 s of parallel downloads, then steps with logs, then packing that can fail once (`example task --fail` in the Terminal, or the buttons in the app).
+
+```ts
+import { createTask, createTaskGroup, ExecutionMode } from "@lilbunnyrabbit/task-manager";
+
+const job = tasks.run(
+  "my-app",
+  (context) => {
+    const download = createTask<string, number>({
+      name: "Download",
+      parse() {
+        if (this.status === "in-progress") return { status: `Downloading ${this.data}` };
+      },
+      async execute(file) {
+        for (let chunk = 1; chunk <= 10; chunk++) {
+          context.signal.throwIfAborted();
+          await fetch_chunk(file, chunk, context.signal);
+          this.setProgress(chunk / 10);
+        }
+        this.logger.info(`${file} done`);
+        return 3;
+      },
+    });
+    const downloads = createTaskGroup({ name: "Downloads", mode: ExecutionMode.PARALLEL, tasks: () => files.map((file) => download(file)) });
+    return createTaskGroup({ name: "Import", tasks: () => [downloads(), save()] })();
+  },
+  { title: "Importing 4 files", done: () => ({ title: "Imported", actions: [{ label: "Open", on_click: open }] }) }
+);
+await job.done; // null when it failed or was cancelled
+```
+
+- **`build` runs again on Retry**, so it creates the tasks inside it.
+- **Every abortable wait takes `context.signal`.** Check it first: work starts a tick after `run`, once the package has loaded.
+- **`this` in `execute` is the package's `Task`.** Use `this.setProgress()`, `this.logger` and `this.query`. `query` sees its own group's tasks; reach into a nested group with `this.query.get(group).query`.
+- **`context.message()`** sets the line shown in the toast and the Tasks row.
 
 ## Known gaps
 

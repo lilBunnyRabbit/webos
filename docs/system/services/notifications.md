@@ -80,11 +80,11 @@ Desktop: the tray popover ([taskbar](../shell/taskbar.md#tray-and-notification-c
 
 ### Toast area
 
-`toast-area.svelte`. On desktop, `desktop-shell.svelte` mounts it in the desktop's grid cell and places it in the corner nearest the tray (ADR-006 revision): bottom-right for a bottom or right dock, top-right for a top dock, bottom-left for a left dock; toasts slide in from the left only for a left dock (`from` prop). On mobile it's top, centred, sliding down. A `pointer-events-none` flex column, `p-4`, newest on top. Each toast is a `notification-item.svelte` (shared with the notification center):
+`toast-area.svelte`. On desktop, `desktop-shell.svelte` mounts it in the desktop's grid cell and places it in the corner nearest the tray (ADR-006 revision): bottom-right for a bottom or right dock, top-right for a top dock, bottom-left for a left dock; toasts slide in from the left only for a left dock (`from` prop). On mobile it's top, centred, sliding down. A `pointer-events-none` flex column, `p-4`, newest on top. It has `min-h-0` and scrolls (scrollbar hidden) when the stack is taller than its grid cell, with `justify-end-safe` so the overflow starts at the newest toast; without this a tall stack grew the grid row and pushed the taskbar off screen. Each toast is a `notification-item.svelte` (shared with the notification center):
 
 - `w-80`, `rounded-xl bg-background-lighter p-3 shadow-popover`. `role="alert"` for errors, `role="status"` otherwise.
 - Grid: icon tile | title + message | dismiss `IconButton` ("Dismiss"). The icon tile is the type's colour at 12% with the full colour as ink (`info`, `warning`, `error`; `progress` uses `primary` and spins). The title is `text-ui font-semibold`, the message `text-ui` at 80%. A custom `icon` replaces the type icon.
-- An optional 4px progress bar (`primary` on `foreground/12`; a pulsing third for indeterminate `progress < 0`), then an optional row of `Button`s: the first `primary`, the rest `secondary`, all `sm`.
+- An optional 4px progress bar under the text column (`primary` on `foreground/12`, with the percentage beside it; a pulsing third for indeterminate `progress < 0`), then an optional row of `Button`s, all `sm`: the first `primary`, the rest `secondary`. On a `progress` toast every action is `secondary`, so Cancel doesn't shout.
 - Enters/leaves with `fly` (x 24px, 180 ms).
 
 Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.

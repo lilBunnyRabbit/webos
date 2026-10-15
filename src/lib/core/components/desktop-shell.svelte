@@ -65,9 +65,9 @@
       ov(
         {
           top: "[grid-area:2/1] items-end justify-start",
-          bottom: "[grid-area:1/1] items-end justify-end",
-          left: "[grid-area:1/2] items-start justify-end",
-          right: "[grid-area:1/1] items-end justify-end",
+          bottom: "[grid-area:1/1] items-end justify-end-safe",
+          left: "[grid-area:1/2] items-start justify-end-safe",
+          right: "[grid-area:1/1] items-end justify-end-safe",
         },
         position
       )

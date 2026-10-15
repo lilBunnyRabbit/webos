@@ -79,11 +79,16 @@
   </IconButton>
 
   {#if notification.progress != null}
-    <div class="col-span-3 h-1 overflow-hidden rounded-full bg-foreground/12">
-      {#if notification.progress < 0}
-        <div class="h-full w-1/3 animate-pulse rounded-full bg-primary"></div>
-      {:else}
-        <div class="h-full rounded-full bg-primary transition-[width] duration-300" style:width="{notification.progress * 100}%"></div>
+    <div class="col-span-2 col-start-2 flex items-center gap-2">
+      <div class="h-1 flex-1 overflow-hidden rounded-full bg-foreground/12">
+        {#if notification.progress < 0}
+          <div class="h-full w-1/3 animate-pulse rounded-full bg-primary"></div>
+        {:else}
+          <div class="h-full rounded-full bg-primary transition-[width] duration-300" style:width="{notification.progress * 100}%"></div>
+        {/if}
+      </div>
+      {#if notification.progress >= 0}
+        <span class="w-8 text-right text-2xs text-foreground/65 tabular-nums">{Math.round(notification.progress * 100)}%</span>
       {/if}
     </div>
   {/if}
@@ -93,7 +98,7 @@
       {#each notification.actions as action, idx (idx)}
         <Button
           size="sm"
-          variant={idx === 0 ? "primary" : "secondary"}
+          variant={idx === 0 && notification.type !== NotificationType.PROGRESS ? "primary" : "secondary"}
           onclick={() => {
             action.on_click();
             ondismiss();

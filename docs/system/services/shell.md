@@ -175,6 +175,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | image-editor | `image edit <path>`, `image convert <path> -f [-q]`, `image resize <path> <w> [h]`, `image rotate <path> <deg>` | `file` |
 | image-tools | `image tools [section] [path]`, `image trim [path…] [--alpha]`, `image split <path> -c\|-r <n>`, `image join [path…] [-d row\|column] [-g] [--align] [--fit] [--background] [--opacity]`, `image unbg <path> [-c <hex>…]` | `file`; path completion filtered to images |
 | archive | `zip [paths…] [--to] [--store]`, `zip list <path>`, `unzip <path> [--to]` | `file`; `zip-entry` values (open → Archive) |
+| example | `example task [--fail]`: starts the example background task (about 20 s; `--fail` fails its first run) | |
 | diff | `diff <left> <right> [--stat]` | opens Diff; `diff-stat` with `--stat` |
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
 | pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images |

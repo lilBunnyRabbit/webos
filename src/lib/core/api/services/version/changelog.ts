@@ -10,8 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Background tasks",
     changes: [
       { kind: NEW, text: "Compressing, extracting and PDF jobs now run as background tasks, with a spinner on the taskbar while they run." },
-      { kind: NEW, text: "Activity Monitor has a Tasks section to follow, cancel, retry and clear background tasks." },
+      { kind: NEW, text: "Activity Monitor has a Tasks section to follow, cancel, retry and clear background tasks, and to open each one to see its steps and their logs." },
       { kind: NEW, text: "The Terminal can list, cancel, retry and clear background tasks with task list, task cancel, task retry and task clear." },
+      { kind: NEW, text: "The Example app can start a long demo task, also with example task in the Terminal." },
+      { kind: IMPROVED, text: "Progress notifications show their percentage, and their Cancel button is quieter." },
+      { kind: FIXED, text: "Many notifications at once no longer push the taskbar off screen; the stack scrolls instead." },
     ],
   },
   {
