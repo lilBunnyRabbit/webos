@@ -5,6 +5,28 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "0.37.0",
+    date: "2026-10-15",
+    title: "Faster boot, lighter apps",
+    changes: [
+      { kind: NEW, text: "WebOS starts with a loading screen that shows what it's getting ready, and loads much less before your desktop appears." },
+      { kind: IMPROVED, text: "File Explorer stays quick in folders with thousands of files, when files change and when you drag to select." },
+      { kind: IMPROVED, text: "Text Editor keeps up with fast typing in long files." },
+      { kind: IMPROVED, text: "Paint's undo uses a fraction of the memory on big canvases, without dropping any steps." },
+      { kind: IMPROVED, text: "Background Remove and Image Editor follow their sliders and colour picker without stalling." },
+      { kind: IMPROVED, text: "Nonogram checks puzzles in the background, so big puzzles no longer freeze the screen." },
+      { kind: IMPROVED, text: "Clocks, timers and monitors do less work while their window is hidden, which saves battery." },
+      { kind: FIXED, text: "Music Visualizer no longer leaves the microphone on after you close it." },
+      { kind: FIXED, text: "QR Reader and P2P Transfer turn the camera off while their window is hidden." },
+      { kind: FIXED, text: "CSV Viewer opens big files without freezing; Show more adds the next thousand rows." },
+      { kind: FIXED, text: "Sprite Extractor's preview animation loops again, and GIF Player pauses while hidden." },
+      { kind: FIXED, text: "The Terminal's completion list stays open while you type." },
+      { kind: FIXED, text: "PDF Tools asks before closing with an unsaved signature." },
+      { kind: FIXED, text: "Futoshiki keeps your time when you close it mid-puzzle, and Kanban card edits no longer save on every key." },
+      { kind: FIXED, text: "Markdown to PDF no longer loses an edit made while the file changes on disk." },
+    ],
+  },
+  {
     version: "0.36.0",
     date: "2026-10-15",
     title: "PDF Tools, commands for every app",
