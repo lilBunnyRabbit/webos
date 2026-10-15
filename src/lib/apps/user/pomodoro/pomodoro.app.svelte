@@ -6,7 +6,6 @@
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";
-  import { untrack } from "svelte";
   import { z } from "zod";
   import { chime, prime_audio } from "./chime";
   import { format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, type Settings } from "./pomodoro";
@@ -36,14 +35,9 @@
   const running = $derived(timer.ready && run.status === Status.RUNNING);
   const ticker = new Ticker(
     () => win.is_visible,
-    () => (running ? 250 : 60_000)
+    () => (running ? 1000 : 60_000)
   );
   const now = $derived(ticker.now);
-
-  $effect(() => {
-    const at = now;
-    if (running) untrack(() => timer.settle(at));
-  });
 
   const remaining = $derived(remaining_ms(run, settings, now));
   const value = $derived(progress(run, settings, now));
