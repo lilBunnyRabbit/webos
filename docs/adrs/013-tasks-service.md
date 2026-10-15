@@ -3,6 +3,8 @@
 **Date:** 2026-02-01
 **Status:** Accepted (parked)
 
+> **Revision 2026-10-15: shortcut and zip.** Ctrl+Shift+Esc below is out: it's Windows' Task Manager ([ADR-017](./017-keyboard-shortcuts-strategy.md) revision). A Tasks shortcut takes an Alt+Shift binding, picked when it's built. Zip in File Explorer shipped without TasksService: Compress and Extract here run on the zip job in `core/utils/zip/job.svelte.ts` (progress toast, Cancel), which stands in until Tasks exists ([ADR-035](./035-app-platform-wave-2.md)).
+
 > **Revision 2026-10-12: parked** (owner, [brainstorm](../brainstorm/2026-10-12_tasks-parked.md)). Nothing in the system needs it yet. It gets built with its first real consumer (the terminal, or zip in File Explorer). Before building: check `TaskHandle` against the package's actual API, and add an `AbortSignal` to `execute` so Cancel can stop the work.
 
 > **Revision 2026-10-11:** No separate Task Manager app. The Activity Monitor system app (Windows, Performance, Network, Storage) gets a Tasks tab when TasksService lands ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).

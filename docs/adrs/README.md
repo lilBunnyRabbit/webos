@@ -36,9 +36,9 @@ What are the implications of this decision?
 |-----|-------|------|--------|
 | [001](./001-app-manifest-structure.md) | App Manifest Structure | 2026-01-24 | Implemented |
 | [002](./002-service-lifecycle.md) | Service Lifecycle Hooks | 2026-01-24 | Implemented (no swap/state yet) |
-| [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Implemented (no app_data/overlays yet) |
+| [003](./003-app-context.md) | App Context & AppData | 2026-01-24 | Implemented (app_data became storage.file; no set_icon or status bar) |
 | [004](./004-version-update-system.md) | Version & Update Detection | 2026-01-27 | Implemented |
-| [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented (explorer features pending) |
+| [005](./005-files-service.md) | Files Service API | 2026-01-27 | Implemented |
 | [006](./006-notifications-service.md) | Notifications Service | 2026-01-31 | Implemented |
 | [007](./007-shell-service.md) | Shell Service & Terminal | 2026-01-31 | Superseded by ADR-033 |
 | [008](./008-app-props-validation.md) | App Props Validation (zod) | 2026-01-31 | Implemented |
@@ -48,9 +48,9 @@ What are the implications of this decision?
 | [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted (parked) |
 | [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Implemented (single-instance, grouping parked) |
-| [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Accepted |
+| [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Implemented (colours only) |
 | [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented |
-| [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Revised (Alt+Shift scheme) |
+| [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Implemented (tier 1 only; tiers 2-3 not built) |
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
 | [019](./019-system-dialogs.md) | System Dialogs Service | 2026-10-11 | Implemented |
 | [020](./020-service-inspectors.md) | Service Inspectors | 2026-10-11 | Implemented |
@@ -66,7 +66,7 @@ What are the implications of this decision?
 | [030](./030-text-editor.md) | Text Editor | 2026-10-13 | Implemented |
 | [031](./031-open-from-device.md) | Open from Device | 2026-10-13 | Implemented |
 | [032](./032-p2p-transfer.md) | P2P Transfer | 2026-10-13 | Implemented |
-| [033](./033-shell.md) | Shell, Terminal and Command Palette | 2026-10-14 | Implemented (jobs, app commands, bigger language deferred) |
+| [033](./033-shell.md) | Shell, Terminal and Command Palette | 2026-10-14 | Implemented (jobs, window-scoped app commands, bigger language deferred) |
 | [034](./034-app-extension-points.md) | App Extension Points: Commands, Badge, Widgets | 2026-10-14 | Implemented (widgets hidden on mobile) |
 | [035](./035-app-platform-wave-2.md) | App Platform for the Second App Wave | 2026-10-14 | Implemented |
 | [036](./036-boot-loading-screen.md) | Boot Loading Screen and Boot Weight | 2026-10-15 | Implemented |

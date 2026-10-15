@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented (2026-10-10, partially; see revision)
 
+> **Revision 2026-10-15: overlays and app data shipped.** The overlays are sheets over the window: `confirm()`, `prompt()`, `pick_file()`, `pick_directory()` and `pick_save()` ([ADR-025](./025-menus-sheets-clipboard.md)). `app_data` is replaced by `storage.file(name, initial, schema)`, a JSON file in `/var/lib/apps/{app_id}/`, alongside `window.is_visible` and `notify({ system })` ([ADR-035](./035-app-platform-wave-2.md)). `AppContext` stays `{ window_id, app_id, window, storage }`. Not built: `set_icon`, the window's `set_badge` (the app badge is a manifest field, ADR-034) and `status_bar`.
+
 > **Revision 2026-10-10: implementation** ([brainstorm](../brainstorm/2026-10-10_app-context.md))
 > - **No `on()` events** (owner decision). Apps read the handle's reactive getters with `$derived`/`$effect`, and use `onDestroy` for close. An emitter would be new pub-sub infrastructure that every mutation site, including the drag handler and a mobile WindowsService, would have to call.
 > - **No `kernel` in the context** (owner decision). Apps import the singleton. `AppContext` is `{ window_id, app_id, window, storage }`.

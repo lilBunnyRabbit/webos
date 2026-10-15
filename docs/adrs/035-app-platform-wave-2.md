@@ -3,6 +3,10 @@
 **Date:** 2026-10-14
 **Status:** Implemented
 
+> **Revision 2026-10-15: game kit and zip as built**
+> - There's no `record_daily`. `track_play(app_id, visible)` returns a `PlayTracker`; a solved daily calls `tracker.daily(day, ms)`, which keeps the best time. `use_plays()` gives Game Hub the whole `plays.json`. Daily games take a `daily` prop (`YYYY-MM-DD`) and seed from `daily_seed(day, app_id)` themselves; there's no `seed` prop.
+> - The ZIP code moved from Archive to `$lib/core/utils/zip` (read, write, extract and the progress-toast job), so File Explorer's Compress and Extract here no longer import a user app.
+
 > **Revision 2026-10-15: `live_file` and `confirm_discard` in core** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))
 > - `live_file(path, initial, schema)` moves from Kanban to `$lib/core/contexts/app/live-file.svelte.ts`. Shell code reads and edits an app file through it: it takes the shared `json_file` cell, waits for `ready`, refuses an invalid file with a `ShellError`, and releases the cell after `LINGER_MS` so the save effect lands first. Calendar no longer imports Kanban; Time Since and Game Hub commands use it too.
 > - `confirm_discard(win, name)` in `$lib/core/contexts/app` is the one "Discard changes to …?" sheet document apps show before New or Open.

@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented (2026-10-10, partially; see revision)
 
+> **Revision 2026-10-15: settings live in OPFS** ([ADR-021](./021-file-system-hierarchy.md)). Since 2026-10-11 settings are `/etc/settings.json`, not `localStorage["webos.settings"]` as the implementation note and the sketch below say. SettingsService depends on `files` and loads in `init()`; the old key is imported once and removed.
+
 > **Revision 2026-10-15: init progress** ([ADR-036](./036-boot-loading-screen.md)). `kernel.init(on_step?)` calls `on_step({ key, done, total })` before each service's `init()`, so the splash can show a bar and a label. Init stays serial; `register_default_services()` is async because it `import()`s the platform's `windows` and `desktop` classes.
 
 > **Revision 2026-10-14: shell hook** ([ADR-033](./033-shell.md)). `IService` gains an optional `shell?(): ShellContribution` (commands, completers, value types). The shell service reads it from every initialised service.

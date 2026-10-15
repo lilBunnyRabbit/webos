@@ -1,8 +1,10 @@
 # ADR-033: Shell, Terminal and Command Palette
 **Date:** 2026-10-14
-**Status:** Implemented
+**Status:** Implemented (jobs, window-scoped app commands, bigger language deferred)
 
 Supersedes [ADR-007](./007-shell-service.md). [Brainstorm](../brainstorm/2026-10-14_shell-terminal.md).
+
+> **Revision 2026-10-15: dependencies and app commands.** ShellService depends on `files`, `dialogs` and `notifications` (`kernel/init.ts`), not only `files`. Apps contribute global commands through `define_app({ shell })` ([ADR-034](./034-app-extension-points.md)); a service wins an id clash. Only window-scoped app commands stay deferred, so in-app shortcuts keep `run`.
 
 > **Revision 2026-10-15: service command bodies load lazily** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))
 > - Services follow the app pattern (ADR-034). Definitions stay eager in `shell.ts`: id, description, zod args, `positional`, `short`, `yields`, `available()` and the value types' `columns` / `text` / `cell`. Command bodies, heavy helpers and UI imports move to `shell-run.ts`, loaded with `import()` on first use. `IService.shell()` stays sync and `ShellService` is unchanged.

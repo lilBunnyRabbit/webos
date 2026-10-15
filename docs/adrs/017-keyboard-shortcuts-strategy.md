@@ -1,7 +1,7 @@
 # ADR-017: Keyboard Shortcuts Strategy
 
 **Date:** 2026-02-01
-**Status:** Revised 2026-10-12
+**Status:** Implemented (tier 1 only; tiers 2-3 not built)
 
 > **Revision 2026-10-12: Alt+Shift** (owner, [brainstorm](../brainstorm/2026-10-12_shortcuts.md)). The `Ctrl+Shift+` scheme below doesn't hold: Ctrl+Shift+W closes the browser window and Ctrl+Shift+T reopens a tab (neither interceptable in Chrome), Ctrl+Shift+Esc is Windows' Task Manager, Ctrl+Space switches input on macOS, and Ctrl+Shift+arrows select text. OS shortcuts use **Alt+Shift** (Option+Shift on macOS) instead: close W, maximize ↑, minimize ↓, snap ← →, show desktop D, next/previous window Alt+\` / Alt+Shift+\`. Mod+K launcher, Mod+/ cheat sheet, Mod+, Settings. Tiers 2 and 3 (PWA, Keyboard Lock) aren't built. Not configurable in v1.
 
