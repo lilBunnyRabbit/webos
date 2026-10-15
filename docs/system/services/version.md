@@ -65,6 +65,7 @@ Five `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`,
 
 - `setInterval(check, 30 min)`
 - `document.addEventListener("visibilitychange", …)`: when the tab becomes visible and more than 60 s have passed since `last_check`, it runs `check()`.
+- `update/load-failed.svelte` (a window or widget whose app chunk failed to import) runs `check()` immediately and offers `apply_update()` in place, so a stale tab after a deploy doesn't wait for the 30-minute poll.
 
 - Reads `/var/lib/version/state.json` and branches, see [Release notes and introduction](#release-notes-and-introduction). The introduction is requested without awaiting, like Restore.
 

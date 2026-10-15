@@ -12,6 +12,7 @@
   import { cn } from "$lib/core/utils";
   import { Spinner } from "../ui";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
+  import LoadFailed from "../update/load-failed.svelte";
 
   type Widget = Extract<DesktopItem, { kind: "widget" }>;
 
@@ -101,8 +102,8 @@
         <div class="grid h-full place-items-center"><Spinner /></div>
       {:then Widget}
         <Widget props={widget_props ?? {}} size={item.size} name={item.name} />
-      {:catch}
-        <p class="p-3 text-ui text-error">Couldn't load this widget.</p>
+      {:catch error}
+        <LoadFailed {error} what="widget" compact />
       {/await}
     {:else}
       <p class="p-3 text-ui text-foreground/65">{manifest ? (widget_props ? `${manifest.name} has no widget.` : "This widget's file is broken.") : "The app for this widget isn't installed."}</p>

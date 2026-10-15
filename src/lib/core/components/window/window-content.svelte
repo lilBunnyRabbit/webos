@@ -4,6 +4,7 @@
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { ArrowClockwise as ArrowClockwiseIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { error_message } from "$lib/core/utils";
+  import LoadFailed from "../update/load-failed.svelte";
 
   let { zoom, window_id, children }: { zoom: number; window_id: WindowId; children?: Snippet } = $props();
 
@@ -39,7 +40,7 @@
       {/snippet}
     </svelte:boundary>
   {:catch error}
-    <EmptyState icon={WarningIcon} tone="error" title="This app failed to load" description={error_message(error)} />
+    <LoadFailed {error} />
   {/await}
 
   {#if instance.flags.has(WindowFlag.DEBUG)}

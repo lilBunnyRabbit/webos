@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, text: "A While True theme: an orange desktop, white windows and ink-dark text." },
       { kind: IMPROVED, text: "Themes from other projects, Speed Reader and While True, now sit together under Project themes in Settings › Appearance." },
+      { kind: FIXED, text: "An app that fails to open because WebOS was updated in the meantime now offers Update and reload right in its window." },
     ],
   },
   {
