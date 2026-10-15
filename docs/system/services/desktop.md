@@ -86,7 +86,7 @@ Three layers of state turn the folder into a grid:
 
 ## State
 
-- `folder.entries`: `$state<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()`.
+- `folder.entries`: `$state.raw<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()` (unchanged entries keep their object) and by `write_widget_size()`. Never mutated in place.
 - `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_items()`.
 - `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
@@ -108,9 +108,9 @@ Three layers of state turn the folder into a grid:
 
 1. Take `id = ++reload_id`.
 2. `files.get_directory("/home/Desktop")`. Missing → throws `/home/Desktop is missing` (FilesService recreates it at boot, so this means it was deleted this session).
-3. List it. **Only until the layout has been handed over once**, read it through `read_layout()` (here `/var/lib/desktop/layout.json`; `null` when missing). After that the owner's in-memory layout is the truth: re-reading the file raced the owner's own writes (a drop onto the desktop imports, which reloads, while `move_items` rewrites the file: `NotReadableError` / `NotFoundError`, and a stale file could overwrite a fresh move in memory).
+3. List it and, in parallel, **only until the layout has been handed over once**, read the layout through `read_layout()` (here `/var/lib/desktop/layout.json`; `null` when missing). After that the owner's in-memory layout is the truth: re-reading the file raced the owner's own writes (a drop onto the desktop imports, which reloads, while `move_items` rewrites the file: `NotReadableError` / `NotFoundError`, and a stale file could overwrite a fresh move in memory).
 4. **Seed** (the owner's `seed()`), on the first load only, when there's no layout file and no visible entry, then `return this.reload()` to read what was written (see Behaviour). The seeded layout file stops it from seeding twice.
-5. Build `entries`. Each `.desktop` file is read and parsed here, so listing costs one read per shortcut (and opening one reads it again in `apps.open`).
+5. Build `entries`. Every `.desktop` and `.widget` file is read in parallel (`Promise.all`, folder order kept) and parsed here, so listing costs one read per shortcut or widget (and opening one reads it again in `apps.open`). An entry equal to the current one with the same name (same parsed content, compared as JSON) keeps the current object, so icons and widgets don't get new props when something else on the desktop changes.
 6. If `reload_id` moved on meanwhile, drop the result. Otherwise assign `entries`, and the first time only call `loaded(layout)`, where this service runs `parse_layout()` (or `{}`) into `positions` in the same tick. Tested in `folder.browser.test.ts`.
 
 A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.md](../kernel.md#failed-init)).

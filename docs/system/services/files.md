@@ -70,10 +70,10 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 
 `ensure_hierarchy(root)`, in order:
 
-1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp` if missing.
+1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp` if missing, in parallel.
 2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var` or `tmp` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
 3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
-4. Empties `/tmp` (every entry, recursively).
+4. Empties `/tmp` (every entry, recursively). Steps 3 and 4 run in parallel, and so do the `/tmp` removals.
 
 Nothing protects the system folders. They're ordinary OPFS directories, and File Explorer can delete them like any other folder. Whatever is missing gets recreated on the next boot. Deleting the marker re-runs the migration, which is harmless once the root holds only the four top-level folders.
 
