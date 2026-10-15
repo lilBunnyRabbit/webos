@@ -442,12 +442,13 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Activity Monitor's Windows section shows "—" on mobile
 - [ ] `state_proxy_equality_mismatch` warning in Terminal and some games
 
-### 1.0 criteria (draft, owner to confirm)
-- [ ] Fork test in CI (delete `src/lib/apps/user`, check + build + tests)
-- [ ] App API frozen: `define_app`, `get_app_context`, `WindowHandle`
-- [ ] Boot budget agreed and measured
-- [ ] Tasks service (ADR-013)
-- [ ] Backups / export of OPFS data
+### 1.0 release
+- **Brainstorm:** [1.0 release](brainstorm/2026-10-15_v1-release.md)
+- [ ] Fork test in CI (delete `src/lib/apps/user`, check + build + unit tests)
+- [ ] App API frozen: `docs/system/app-api.md` + export pin test
+- [ ] Boot budget: entry chunk <= 180 KB gz, CI gate
+- [ ] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
+- [-] Tasks service (ADR-013): after 1.0, additive
 
 ### PWA & Offline
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)
