@@ -46,7 +46,7 @@ What are the implications of this decision?
 | [010](./010-url-deep-linking.md) | URL Deep Linking | 2026-02-01 | Implemented (app links; file, workspace, demo, embed deferred) |
 | [011](./011-desktop-enhancements.md) | Desktop Enhancements | 2026-02-01 | Implemented (multi-select, wallpaper, Sort by; icon settings not built) |
 | [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
-| [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted (parked) |
+| [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Accepted |
 | [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Implemented (single-instance, grouping parked) |
 | [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Implemented (colours only) |
 | [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented |
