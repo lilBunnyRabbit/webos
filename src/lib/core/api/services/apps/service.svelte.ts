@@ -1,9 +1,16 @@
 import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppProps, OpenOptions } from "./type";
-import type { DialogsService, FilesService, Kernel, NotificationsService, SettingsService, WindowsService, WindowId } from "$lib/core/api";
+import type {
+  DialogsService,
+  FilesService,
+  Kernel,
+  NotificationsService,
+  SettingsService,
+  WindowsService,
+  WindowId,
+} from "$lib/core/api";
 import { best_apps_for, file_extension } from "./associations";
 import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import { parse_widget, WIDGET_EXTENSION } from "./widget";
-import OpenWithDialog from "$lib/core/components/dialogs/open-with-dialog.svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { apps } from "$lib/apps";
 import { apps_shell } from "./shell";
@@ -69,7 +76,11 @@ export class AppsService implements IAppsService {
     return result.success ? this.instantiate(manifest, result.data, state) : null;
   }
 
-  private instantiate(manifest: AppManifest, props: AppProps | undefined, initial_state: Record<string, unknown> = {}): AppInstance {
+  private instantiate(
+    manifest: AppManifest,
+    props: AppProps | undefined,
+    initial_state: Record<string, unknown> = {}
+  ): AppInstance {
     const { component, ...partial_manifest } = manifest;
     const state = $state(initial_state);
     return { id: manifest.id, manifest: partial_manifest, component: component(), props, state };
@@ -120,7 +131,7 @@ export class AppsService implements IAppsService {
     }
 
     const choice = await this.dialogs_service.show(
-      OpenWithDialog,
+      (await import("$lib/core/components/dialogs/open-with-dialog.svelte")).default,
       { file_name: file.name, extension, apps: candidates },
       { anchor: options.anchor }
     );

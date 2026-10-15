@@ -19,7 +19,8 @@ async function boot(seen?: string): Promise<Kernel> {
     await files.init();
     const [directory, name] = [VERSION_STATE_PATH.slice(0, VERSION_STATE_PATH.lastIndexOf("/")), "state.json"];
     let handle = await files.get_root();
-    for (const segment of directory.split("/").filter(Boolean)) handle = await handle.getDirectoryHandle(segment, { create: true });
+    for (const segment of directory.split("/").filter(Boolean))
+      handle = await handle.getDirectoryHandle(segment, { create: true });
     await opfs.write_file(await handle.getFileHandle(name, { create: true }), serialize_seen(seen));
   }
 
@@ -46,7 +47,7 @@ afterEach(() => shutdown?.());
 describe("VersionService at boot", () => {
   test("first boot shows the introduction, then marks the current version seen", async () => {
     const kernel = await boot();
-    expect(show).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(show).toHaveBeenCalledOnce());
     await vi.waitFor(async () => expect(await seen_on_disk(kernel)).toBe(current));
     expect(kernel.service<NotificationsService>("notifications").all).toHaveLength(0);
   });

@@ -104,6 +104,7 @@ Hardcoded colours outside the token system, all deliberate:
 |-------|-------|-----|
 | `index.html` body + `#splash`, `<meta name="theme-color">`, PWA manifest `theme_color` + `background_color` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
 | `vite.config.ts` PWA manifest `theme_color` | `#17252C` | Same |
+| `index.html` `#splash-progress` (track, bar, label) | Brand Dark `background_lightest`, `primary`, `foreground` as OKLCH | Same: the boot progress bar shows before any token exists (ADR-036) |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 
 Components that need a token outside a utility read the variable directly in a `<style>` block (`var(--background-darker)` in Media Preview, `var(--background-darkest)` on the desktop, `var(--background-lighter)` for the `<select>` picker). The Style Guide's swatches use `var(--{token})` with the kebab-case names.

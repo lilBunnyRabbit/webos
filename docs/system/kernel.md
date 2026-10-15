@@ -38,9 +38,9 @@ There's a `// TODO: kernel to interface` in `type.ts`. `ServiceDescriptor` refer
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `platform` | `readonly platform: Platform` (`"desktop" \| "mobile"`) | `detect_platform()` from `kernel/platform.ts`, read once when the singleton is built (ADR-016). `?platform=mobile\|desktop` in the URL wins; otherwise a phone (`navigator.userAgentData.mobile`, User-Agent Client Hints) or a coarse primary pointer that can't hover (`(pointer: coarse) and (hover: none)`, tablets) is mobile. The hint comes first because Samsung Internet on Galaxy phones reports `hover: hover`. Not reactive, never changes. Read in two places: `init.ts` registers `MobileWindowsService` / `MobileDesktopService` under `windows` / `desktop` on mobile, and `os.svelte` renders the mobile or desktop shell ([shell/mobile.md](shell/mobile.md)). |
+| `platform` | `readonly platform: Platform` (`"desktop" \| "mobile"`) | `detect_platform()` from `kernel/platform.ts`, read once when the singleton is built (ADR-016). `?platform=mobile\|desktop` in the URL wins; otherwise a phone (`navigator.userAgentData.mobile`, User-Agent Client Hints) or a coarse primary pointer that can't hover (`(pointer: coarse) and (hover: none)`, tablets) is mobile. The hint comes first because Samsung Internet on Galaxy phones reports `hover: hover`. Not reactive, never changes. Read in two places: `init.ts` imports and registers `MobileWindowsService` / `MobileDesktopService` under `windows` / `desktop` on mobile, and `main.ts` loads the mobile or desktop shell through `load_shell()` (`components/platform-shell.ts`) ([shell/mobile.md](shell/mobile.md)). Both are `import()`s, so the other platform's code is never downloaded (ADR-036). |
 | `services` | `readonly services: Map<string, IService>` | A `SvelteMap`, so lookups inside `$derived` are reactive to set/replace. Holds only fully initialized services. Public: the Kernel app iterates it. |
-| `init` | `init(): Promise<Kernel>` | Idempotent while initialized. Calls `register_default_services(this)`, resolves order, then for each key: `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. Sets `is_initialized`. If a construction or `init()` throws, it tears down what already initialized and rethrows (see [Failed init](#failed-init)). |
+| `init` | `init(on_step?: (step: BootStep) => void): Promise<Kernel>` | Idempotent while initialized. Awaits `register_default_services(this)`, resolves order, then for each key: `on_step?.({ key, done, total })`, `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. `done` counts the services already initialised, `total` is the length of the order; the splash uses it ([Boot progress](#boot-progress)). Sets `is_initialized`. If a construction or `init()` throws, it tears down what already initialized and rethrows (see [Failed init](#failed-init)). |
 | `register` | `register<T extends IService>(name: string, descriptor: ServiceDescriptor<T>): void` | Records a descriptor only, constructing nothing. Throws if called after init. Warns `Overwriting service "x"` on a duplicate key. |
 | `service` | `service<T extends IService>(name: string): T` | Synchronous lookup. Throws `Service "x" not found` if absent. Unchecked cast to `T`. |
 | `shutdown` | `shutdown(): void` | No-op unless initialized. Runs the private `teardown()`, then clears `is_initialized`. |
@@ -51,7 +51,9 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 
 ## Registration
 
-`init.ts` → `register_default_services(kernel)` is **the** place services are registered. It is the only file that imports service classes. Called from `init()`, so registration happens at boot, not at import time.
+`init.ts` → `register_default_services(kernel)` is **the** place services are registered. It is the only file that imports service classes. Called from `init()`, so registration happens at boot, not at import time. It's async: the platform variants of `windows` and `desktop` are `import()`ed for `kernel.platform` only (ADR-016, ADR-036), so they live in their own chunks.
+
+`init.ts` also has a side-effect import of `services/windows/type`. AppsService loads every app manifest, and some read `WindowFlag` through the `$lib/core/api` barrel while the barrel is still mid-cycle. The windows service used to evaluate that module first; now that it's lazy, the explicit import keeps the order.
 
 | Key | Class | `dependencies` |
 |-----|-------|----------------|
@@ -129,6 +131,15 @@ Which services implement which hooks today:
 ### Shell hook
 
 `IService.shell?(): ShellContribution` is optional. A service that has it adds commands, completers and value types to the shell. ShellService reads it from every service in `services` through a `$derived`, so it doesn't matter which one initialises first ([shell](services/shell.md#contributions), ADR-033).
+
+### Boot progress
+
+`main.ts` passes `on_step` to `kernel.init()` (ADR-036). The kernel stays serial (ADR-002); the callback only reports.
+
+- **Splash.** `index.html` has `#splash-progress` under the logo: a 160px, 3px track (`#splash-bar`, `transform: scaleX(done / total)`, 150 ms ease-out) and a 12px label (`#splash-label`, `Loading` until the first step). Colours are Brand Dark tokens hardcoded as OKLCH (track `background_lightest`, bar `primary`, label `foreground`), since no theme exists before boot and the brand keeps the splash dark. `main.ts` maps each key to a short label (`files` → "Files", `ui` → "Interface", `router` → "Links", `version` → "Updates"; an unknown key shows as-is). The splash knows keys only, no service logic.
+- **Warm.** On each step `main.ts` runs the warmers whose service is already initialised. The `desktop` warmer `import()`s the widget component of every widget in `desktop.items()` (the mobile home lists no widgets, so nothing). SessionService warms the components of the saved session's apps itself, in its `init()`. Warms are fire-and-forget and ignore errors; the real import retries. Nothing renders before mount.
+- **Shell.** `main.ts` starts `load_shell(kernel.platform)` alongside `kernel.init()` and awaits both, then passes the component to `App` as the `shell` prop (`App` → `web-os` → `os.svelte`). It renders in the same frame the splash goes.
+- **Errors.** A failed shell import rejects `main()` like a failed init: the splash shows the boot error and `#splash-progress` is removed.
 
 ### Failed init
 

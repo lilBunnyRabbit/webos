@@ -18,7 +18,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
 | `changelog` | `readonly Release[]` | `CHANGELOG` from `changelog.ts`, newest first |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
-| `show_intro` | `show_intro(): Promise<void>` | `dialogs.show(IntroDialog, {}, { dismissible: false })`. Resolves when it closes. Doesn't write the seen marker |
+| `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte`, then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits that import, so the introduction is up when the splash goes (ADR-036). Resolves when it closes. Doesn't write the seen marker |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
 
