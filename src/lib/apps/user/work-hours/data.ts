@@ -220,7 +220,7 @@ export function format_hours(minutes: number): string {
 
 export function running_minutes(running: Running | null, now: Date): number {
   if (!running) return 0;
-  return Math.max(0, (now.getTime() - new Date(running.start).getTime()) / 60_000);
+  return Math.max(0, Math.floor((now.getTime() - new Date(running.start).getTime()) / 60_000));
 }
 
 export interface Segment {
