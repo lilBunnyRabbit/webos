@@ -1,5 +1,15 @@
 <script lang="ts">
-  import kernel, { group_apps, search_apps, type AppManifest, type AppsService, type DesktopService, type VersionService } from "$lib/core/api";
+  import kernel, {
+    format_keys,
+    group_apps,
+    search_apps,
+    type AppManifest,
+    type AppsService,
+    type DesktopService,
+    type ShellService,
+    type ShortcutsService,
+    type VersionService,
+  } from "$lib/core/api";
   import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
   import CommandMode from "./command-mode.svelte";
@@ -11,6 +21,8 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const version = $derived(kernel.service<VersionService>("version"));
+  const shell = $derived(kernel.service<ShellService>("shell"));
+  const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -120,7 +132,19 @@
   <span class="flex items-center gap-2 text-ui font-semibold"><LogoLockup height={20} /> WebOS</span>
   <div class="flex items-center gap-2 text-2xs text-foreground/80">
     {#if commanding}<span class="flex items-center gap-1"><Kbd>↵</Kbd> run</span>
-    {:else if query && matches[0]}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>{/if}
+    {:else if query && matches[0]}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
+    {:else}
+      <button
+        type="button"
+        class="flex items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-foreground/8 hover:text-foreground"
+        onclick={() => {
+          close();
+          void shell.execute("shortcuts sheet");
+        }}
+      >
+        {#each format_keys("mod+/", shortcuts.mac) as part, index (index)}<Kbd>{part}</Kbd>{/each} shortcuts
+      </button>
+    {/if}
     <span class="font-mono">v{version.info.version} · {version.info.commit}</span>
   </div>
 </footer>

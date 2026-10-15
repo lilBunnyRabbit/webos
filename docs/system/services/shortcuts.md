@@ -93,6 +93,8 @@ The window commands are `available()` only while a window is open, so with nothi
 
 `components/dialogs/shortcuts-dialog.svelte`: a `bg-background-lighter` card, `min(28rem, 100vw − 2rem)` wide, max `min(36rem, 100dvh − 2rem)` tall, scrolling. Header with a keyboard icon tile and a close button. Groups in order: This app (`app`), Windows, Apps, System; empty groups are hidden. Window-scoped shortcuts show only for the focused window. Each row: label, then `Kbd` chips from `format_keys`.
 
+Ways in: Mod+/, `shortcuts sheet` in the Terminal or palette, the `Mod+/ shortcuts` hint in the launcher footer ([taskbar](../shell/taskbar.md)), and the button under Settings › Shortcuts, which also lists the OS set inline ([system apps](../system-apps.md#settings)).
+
 ## Registering from an app
 
 ```ts

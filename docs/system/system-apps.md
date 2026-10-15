@@ -63,7 +63,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 
 **Purpose.** Edit the theme, taskbar position and remembered default apps, back up and restore WebOS data, read every release's notes, see build info, install WebOS, check for updates, replay the introduction, and reset.
 
-**Services.** `settings` ([settings](services/settings.md)), `version` ([version](services/version.md)), `apps` (Default apps names and icons), `backup` ([backup](services/backup.md)) and `notifications` (Backup errors). All through `$derived(kernel.service(...))`.
+**Services.** `settings` ([settings](services/settings.md)), `version` ([version](services/version.md)), `apps` (Default apps names and icons), `shortcuts` and `shell` (the Shortcuts section), `backup` ([backup](services/backup.md)) and `notifications` (Backup errors). All through `$derived(kernel.service(...))`.
 
 **Files.**
 
@@ -74,6 +74,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | `sections/wallpaper.svelte` | Wallpaper tiles, image pickers, fit, dim and blur |
 | `sections/taskbar.svelte` | Position `Segmented` + live preview |
 | `sections/files.svelte` | Default apps |
+| `sections/shortcuts.svelte` | Shortcuts: the OS set |
 | `sections/backup.svelte` | Backup: area switches with sizes, Download backup, Restore… (ADR-037) |
 | `sections/whats-new.svelte` | The changelog (ADR-026) |
 | `sections.ts` | `SECTIONS` (id, label, icon) and `SECTION_IDS`, shared by the manifest's props schema and the app |
@@ -82,7 +83,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | `roadmap.ts` | `parse_roadmap`, `count_status`, `plain` (inline markdown to text), `ItemStatus`. Unit tests in `roadmap.test.ts` |
 | `color.ts` | `to_hex()` (a batch of colours) and `to_oklch()` for the colour picker, through probe elements and relative colour syntax. A batch appends every probe before reading any, so it costs one style recalc |
 
-**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, Backup, What's new, Roadmap and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
+**Layout.** The settings-style frame: `SideNav` (sidebar at `@2xl`, a tab row below) with Appearance, Taskbar, Default apps, Shortcuts, Backup, What's new, Roadmap and About. The open section is `storage.window("section", section_prop ?? "appearance", z.enum(SECTION_IDS))`: each Settings window has its own, and a restored window reopens on its section. The "Updated to vX" toast launches `{ section: "whats-new" }`. Theme cards are `ThemeCard` from `$lib/core/components/theme/` (one preset as a miniature OS in its own colours), shared with the introduction.
 
 | Section | What it does |
 |---------|--------------|
@@ -91,6 +92,7 @@ On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `te
 | Appearance → Customise colours | A `<details>` disclosure, closed by default. Tokens grouped Surfaces (the seven ladder shades), Text and brand (foreground, primary, secondary, tertiary, accent, cottontail) and States. Each token: a swatch that opens `<input type="color">`, the label, and a mono text field. Both write on `change` (the text field on blur or Enter). The rows only render while the disclosure is open (`bind:open`), so the hex conversions cost nothing when it's closed. The picker shows the token's hex (sRGB, clipped) from one `$derived` map: every token goes through a single `to_hex()` batch per theme change and stores `to_oklch(hex)`, the computed `oklch(from <hex> l c h)`. Picking or typing a derived token replaces its live expression with a fixed value |
 | Taskbar | A `Segmented` (Bottom, Top, Left, Right, with icons) bound to `settings.taskbar.position`, and a miniature screen preview that moves its dock to the chosen edge |
 | Default apps | Lists `settings.file_defaults` sorted by extension: the extension in mono, the app's icon and name (or "{id} (no longer installed)" in `error`), and a Forget `IconButton` that removes that entry. "Forget all" in the section header sets `{}`. Empty: "No default apps yet". Entries are added by "Always use" in the Open-with menu ([file associations](apps/file-associations.md)) |
+| Shortcuts | A line on app shortcuts with the Mod+/ keys, then a `Section` per OS group (Windows, Apps, System) with each shortcut's label and `Kbd` chips (`format_keys`). Lists `shortcuts.list()` without window-scoped entries: those belong to whichever app is focused, and the sheet shows them. "Open the shortcuts sheet" runs `shortcuts sheet` |
 | Backup | Back up: a `SettingRow` + `Switch` per area (Files `/home`, Settings `/etc`, App data `/var/lib` and app storage), all on by default, each described by its folder and `backup.sizes()` (measured once per mount, `…` until then). The footer shows the last backup saved in this tab, or the chosen areas' total before compression, and a primary "Download backup" (`backup.create(areas)`), disabled with no area chosen or while a backup runs; a spinner replaces its icon while saving. Restore: "Restore…" (`backup.restore()`), which picks the file, asks, replaces and reloads. Errors toast from Settings with the message (`BackupError` text as is, anything else also logged) ([backup](services/backup.md)) |
 | What's new | `version.changelog`, newest first: one `background-light` card per release with title, mono version `Badge`, a primary "New to you" `Badge` for releases in `version.unseen`, and the date (`format_date` of the local day). Each change is a row: kind `Badge` (New `primary`, Improved `info`, Fixed `success`) and the text |
 | Roadmap | `docs/ROADMAP.md` imported as `?raw` in a lazy chunk (the roadmap this build shipped with), parsed by `roadmap.ts` (`parse_roadmap`: `##` group, `###` section, checklist items with status and nesting, inline markdown flattened to text; unit-tested) and shown as one card per section with a status icon per item (done `success`, in progress `warning`, planned muted). Counts on top; a `Segmented` filter All / Open (default) / Done. No HTML is rendered from the file |

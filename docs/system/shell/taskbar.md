@@ -75,7 +75,7 @@ Contents (`start-menu-popover.svelte`):
    - **Args:** rows are `shell.complete()` for the end of the line, shown unescaped (`Brand Dark`) and inserted escaped. Enter runs the line unless a row was picked with the arrows; then Enter applies it.
    - **Result:** a run with no output and no error closes the menu. Otherwise a card on the field surface shows the line, a spinner while it runs, the error, or the first 8 values in text form ("… N more"), plus **Open in Terminal**. That button, or Mod+Enter, launches the Terminal with `{ run: line }`.
    - The footer hint reads `↵ run`. The mobile app drawer has no command mode.
-5. A footer on `bg-background`: the logo lockup and "WebOS", a `↵ open` hint while a query has a first match, and `v{version} · {commit}` in mono.
+5. A footer on `bg-background`: the logo lockup and "WebOS", a `↵ open` hint while a query has a first match, otherwise a `Mod+/ shortcuts` button that closes the launcher and runs `shortcuts sheet`, and `v{version} · {commit}` in mono.
 
 ## User interactions
 

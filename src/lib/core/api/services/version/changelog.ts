@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.4.0",
+    date: "2026-10-16",
+    title: "Shortcuts in Settings",
+    changes: [
+      { kind: NEW, text: "Settings has a Shortcuts section listing every keyboard shortcut." },
+      { kind: IMPROVED, text: "The search menu shows the shortcut for the shortcuts sheet in its footer; click it to open the sheet." },
+    ],
+  },
+  {
     version: "1.3.1",
     date: "2026-10-16",
     title: "PDF steps",
