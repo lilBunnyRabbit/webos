@@ -59,10 +59,9 @@
   const left = new DiffSide(() => files);
   const right = new DiffSide(() => files);
 
-  /** Only the first measurement picks the layout: switching it rebuilds the editors, which drops their undo history. */
-  let first_width = $state(0);
-  const measured = $derived(first_width > 0);
-  const mode = $derived(chosen_mode.value ?? default_mode(first_width));
+  let width = $state(0);
+  const measured = $derived(width > 0);
+  const mode = $derived(chosen_mode.value ?? default_mode(width));
   let loading = $state(untrack(() => Boolean(left_prop ?? path_prop ?? right_prop)));
   let started = $state(false);
   /** Bumped when a side's text is replaced from outside the editors, which rebuilds them. */
@@ -363,7 +362,7 @@
   </div>
 {/snippet}
 
-<div class="flex h-full flex-col" bind:clientWidth={() => first_width, (value) => (first_width ||= value)}>
+<div class="flex h-full flex-col" bind:clientWidth={width}>
   <Toolbar>
     <Segmented
       size="sm"
