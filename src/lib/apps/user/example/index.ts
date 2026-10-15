@@ -11,7 +11,6 @@ export default define_app({
   name: "Example",
   icon: HandIcon,
   version: "1.0.0",
-  author: "John Doe",
   category: AppCategory.DEVELOPER,
   defaults: {
     constraints: {
