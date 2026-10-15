@@ -1,7 +1,8 @@
 import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
 import { pick_index } from "./composite";
 import * as doc from "./document";
-import { cel_key, create_sprite, type Layer, type Point, type Sprite } from "./model";
+import { cel_key, create_sprite, type Layer, type Point, type Rect, type Sprite } from "./model";
+import { bounds_rect, dab, empty_bounds, pixel_perfect_step, restore, union_rect, type Ink, type Surface } from "./paint";
 import {
   brush_offsets,
   ellipse_points,
@@ -9,17 +10,15 @@ import {
   line_points,
   mask_bounds,
   match_mask,
-  mirror_points,
   normalize_rect,
   Pattern,
   pattern_hit,
-  pixel_perfect,
   rect_mask,
   rect_points,
   snap_line,
   stamp,
 } from "./raster";
-import { combine_masks, is_freehand, is_shape, SelectMode, Tool, type ToolSettings } from "./tools";
+import { combine_masks, is_freehand, SelectMode, Tool, type ToolSettings } from "./tools";
 
 interface Entry {
   sprite: Sprite;
@@ -28,9 +27,16 @@ interface Entry {
 
 const LIMITS = { max_entries: 200, max_bytes: 128 * 1024 * 1024, size_of: (entry: Entry) => entry.bytes };
 
-interface Draft {
+/**
+ * The stroke in progress. `data` is painted in place, so each draft says what changed since the one before it
+ * (`after` is that draft's `version`, 0 for the first): the stage repaints just `damage`.
+ */
+export interface Draft {
   key: string;
   data: Uint8Array;
+  version: number;
+  after: number;
+  damage: Rect | null;
 }
 
 export interface Floating {
@@ -61,7 +67,11 @@ interface Stroke {
   start: Point;
   last: Point;
   path: Point[];
-  base: Uint8Array;
+  painted: number;
+  trail: Point[];
+  drawn: Rect | null;
+  surface: Surface;
+  ink: Ink;
   key: string;
   layer_id: string;
   frame_id: string;
@@ -92,6 +102,7 @@ export class Editor {
 
   private stroke: Stroke | null = null;
   private clip: Clip | null = null;
+  private drafts = 0;
 
   readonly sprite = $derived(current(this.history).sprite);
   readonly dirty = $derived(this.sprite !== this.saved);
@@ -191,9 +202,18 @@ export class Editor {
   }
 
   cel(layer_id = this.layer.id, frame = this.frame): Uint8Array {
+    return this.stored(layer_id, frame)?.slice() ?? new Uint8Array(this.sprite.width * this.sprite.height);
+  }
+
+  index_at(point: Point): number | null {
+    const { width, height } = this.sprite;
+    if (point.x < 0 || point.y < 0 || point.x >= width || point.y >= height) return null;
+    return this.stored(this.layer.id, this.frame)?.[point.y * width + point.x] ?? 0;
+  }
+
+  private stored(layer_id: string, frame: number): Uint8Array | undefined {
     const frame_id = this.sprite.frames[frame]?.id;
-    const data = frame_id ? this.sprite.cels.get(cel_key(layer_id, frame_id)) : undefined;
-    return data ? data.slice() : new Uint8Array(this.sprite.width * this.sprite.height);
+    return frame_id ? this.sprite.cels.get(cel_key(layer_id, frame_id)) : undefined;
   }
 
   private blocked(): string | null {
@@ -248,6 +268,18 @@ export class Editor {
     this.render(this.stroke);
   }
 
+  private ink(tool: Tool, settings: ToolSettings, index: number): Ink {
+    const erase = tool === Tool.ERASER;
+    const filled = (tool === Tool.RECTANGLE || tool === Tool.ELLIPSE) && settings.filled;
+    return {
+      index: erase ? 0 : index,
+      pattern: erase ? Pattern.SOLID : settings.pattern,
+      offsets: filled ? [{ x: 0, y: 0 }] : brush_offsets(settings.size, settings.shape),
+      mirror_x: settings.mirror_x,
+      mirror_y: settings.mirror_y,
+    };
+  }
+
   move(points: readonly Point[], modifiers: Modifiers): void {
     const stroke = this.stroke;
     if (!stroke || !points.length) return;
@@ -290,7 +322,7 @@ export class Editor {
     if (stroke.tool === Tool.MOVE) return;
     const draft = this.draft;
     this.draft = null;
-    if (!draft || equal(draft.data, stroke.base)) return;
+    if (!draft || equal(draft.data, stroke.surface.base)) return;
     this.commit(doc.set_cel(this.sprite, stroke.layer_id, stroke.frame_id, draft.data));
   }
 
@@ -310,6 +342,9 @@ export class Editor {
 
   private make_stroke(tool: Tool, settings: ToolSettings, index: number, point: Point, modifiers: Modifiers, mode: SelectMode): Stroke {
     const frame_id = this.sprite.frames[this.frame].id;
+    const { width, height } = this.sprite;
+    const base = this.stored(this.layer.id, this.frame) ?? new Uint8Array(width * height);
+    const pixel_perfect = is_freehand(tool) && settings.pixel_perfect && settings.size === 1;
     return {
       tool,
       settings: { ...settings },
@@ -317,7 +352,18 @@ export class Editor {
       start: point,
       last: point,
       path: [point],
-      base: this.cel(),
+      painted: 0,
+      trail: [],
+      drawn: null,
+      surface: {
+        base,
+        data: base.slice(),
+        width,
+        height,
+        selection: this.selection,
+        coverage: pixel_perfect ? new Uint16Array(width * height) : null,
+      },
+      ink: this.ink(tool, settings, index),
       key: cel_key(this.layer.id, frame_id),
       layer_id: this.layer.id,
       frame_id,
@@ -328,41 +374,45 @@ export class Editor {
     };
   }
 
-  private stroke_points(stroke: Stroke): { points: Point[]; brush: boolean } {
+  private shape_points(stroke: Stroke): Point[] {
     const { settings, start, last, constrain } = stroke;
-    if (is_freehand(stroke.tool)) {
-      return { points: settings.pixel_perfect && settings.size === 1 ? pixel_perfect(stroke.path) : stroke.path, brush: true };
-    }
-    if (stroke.tool === Tool.LINE) return { points: line_points(start, constrain ? snap_line(start, last) : last), brush: true };
+    if (stroke.tool === Tool.LINE) return line_points(start, constrain ? snap_line(start, last) : last);
     const rect = normalize_rect(start, last, constrain);
-    const points = stroke.tool === Tool.RECTANGLE ? rect_points(rect, settings.filled) : ellipse_points(rect, settings.filled);
-    return { points, brush: !settings.filled };
+    return stroke.tool === Tool.RECTANGLE ? rect_points(rect, settings.filled) : ellipse_points(rect, settings.filled);
   }
 
+  // Freehand dabs only the points added since the last move; shapes redraw over what their last preview covered.
   private render(stroke: Stroke): void {
-    const { width, height } = this.sprite;
-    const { settings } = stroke;
-    const data = stroke.base.slice();
-    const erase = stroke.tool === Tool.ERASER;
-    const index = erase ? 0 : stroke.index;
-    const pattern = erase ? Pattern.SOLID : settings.pattern;
-    const { points, brush } = this.stroke_points(stroke);
-    const offsets = brush ? brush_offsets(settings.size, settings.shape) : [{ x: 0, y: 0 }];
-    const selection = this.selection;
-
-    for (const point of points) {
-      for (const offset of offsets) {
-        const target = { x: point.x + offset.x, y: point.y + offset.y };
-        for (const { x, y } of mirror_points(target, width, height, settings.mirror_x, settings.mirror_y)) {
-          if (x < 0 || y < 0 || x >= width || y >= height) continue;
-          const i = y * width + x;
-          if (selection && !selection[i]) continue;
-          if (!pattern_hit(pattern, x, y)) continue;
-          data[i] = index;
+    const { surface, ink } = stroke;
+    const bounds = empty_bounds();
+    let damage: Rect | null;
+    if (is_freehand(stroke.tool)) {
+      for (; stroke.painted < stroke.path.length; stroke.painted++) {
+        const point = stroke.path[stroke.painted];
+        if (!surface.coverage) {
+          dab(surface, ink, point, 1, bounds);
+          continue;
         }
+        const { lift, add } = pixel_perfect_step(stroke.trail, point);
+        if (lift) dab(surface, ink, lift, -1, bounds);
+        if (add) dab(surface, ink, point, 1, bounds);
       }
+      damage = bounds_rect(bounds);
+    } else {
+      restore(surface, stroke.drawn);
+      for (const point of this.shape_points(stroke)) dab(surface, ink, point, 1, bounds);
+      const drawn = bounds_rect(bounds);
+      damage = union_rect(stroke.drawn, drawn);
+      stroke.drawn = drawn;
     }
-    this.draft = { key: stroke.key, data };
+    const previous = this.draft;
+    this.draft = {
+      key: stroke.key,
+      data: surface.data,
+      version: ++this.drafts,
+      after: previous?.key === stroke.key && previous.data === surface.data ? previous.version : 0,
+      damage,
+    };
   }
 
   private fill(point: Point, index: number, settings: ToolSettings): void {

@@ -13,8 +13,8 @@ import {
   type Layer,
   type Sprite,
 } from "./model";
-import { content_bounds, extract, stamp } from "./raster";
-import { decode_rle, encode_rle } from "./rle";
+import { content_bounds, extract } from "./raster";
+import { encode_rle, type Run } from "./rle";
 
 export const FORMAT = "hopsprite";
 export const VERSION = 1;
@@ -49,7 +49,8 @@ const FileSchema = z.object({
       y: Int.min(0),
       w: Int.min(1),
       h: Int.min(1),
-      rle: z.array(z.tuple([Int.min(1), Int.min(0).max(MAX_COLORS - 1)])),
+      // Runs are checked while decoding: a schema pass over every run costs more than the decode itself.
+      rle: z.custom<Run[]>(Array.isArray, "must be a list of runs"),
     })
   ),
   tags: z
@@ -88,11 +89,9 @@ export function parse_sprite(text: string): Sprite {
     const frame = frames[cel.frame];
     if (!layer || !frame) throw new Error(`Cel ${i} points at a layer or frame that doesn't exist`);
     if (cel.x + cel.w > file.width || cel.y + cel.h > file.height) throw new Error(`Cel ${i} reaches past the canvas`);
-    const pixels = decode_rle(cel.rle, cel.w * cel.h);
-    for (const index of pixels) if (index >= palette.length) throw new Error(`Cel ${i} uses colour ${index}, past the palette`);
     const key = cel_key(layer.id, frame.id);
     const data = cels.get(key) ?? new Uint8Array(file.width * file.height);
-    stamp(data, file.width, file.height, pixels, cel.w, cel.h, cel.x, cel.y);
+    decode_cel(data, file.width, cel, palette.length, i);
     cels.set(key, data);
   }
 
@@ -102,6 +101,31 @@ export function parse_sprite(text: string): Sprite {
     .map((tag) => ({ ...tag, to: Math.min(Math.max(tag.from, tag.to), last) }));
 
   return { width: file.width, height: file.height, palette, layers, frames, cels, tags };
+}
+
+function decode_cel(data: Uint8Array, width: number, cel: HopspriteFile["cels"][number], colors: number, i: number): void {
+  const total = cel.w * cel.h;
+  let offset = 0;
+  for (const run of cel.rle as unknown[]) {
+    if (!Array.isArray(run) || run.length !== 2) throw new Error(`Cel ${i} has a run that isn't [count, colour]`);
+    const [count, index] = run as [unknown, unknown];
+    if (typeof count !== "number" || !Number.isInteger(count) || count < 1) throw new Error(`Cel ${i} has a run with a bad length`);
+    if (typeof index !== "number" || !Number.isInteger(index) || index < 0) throw new Error(`Cel ${i} has a run with a bad colour`);
+    if (index >= colors) throw new Error(`Cel ${i} uses colour ${index}, past the palette`);
+    if (offset + count > total) throw new Error("Cel data is longer than the cel");
+    let left = count;
+    while (left > 0) {
+      const column = offset % cel.w;
+      const span = Math.min(left, cel.w - column);
+      if (index) {
+        const start = (cel.y + Math.floor(offset / cel.w)) * width + cel.x + column;
+        data.fill(index, start, start + span);
+      }
+      offset += span;
+      left -= span;
+    }
+  }
+  if (offset !== total) throw new Error("Cel data is shorter than the cel");
 }
 
 export function to_file(sprite: Sprite): HopspriteFile {

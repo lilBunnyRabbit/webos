@@ -2,11 +2,12 @@
   import kernel, { type SettingsService } from "$lib/core/api";
   import { resolve_token } from "$lib/core/utils";
   import { palette_rgba } from "./color";
-  import { composite } from "./composite";
-  import type { Editor } from "./editor.svelte";
-  import type { Point } from "./model";
+  import { untrack } from "svelte";
+  import { composite, composite_into, frame_inputs, same_inputs } from "./composite";
+  import type { Draft, Editor } from "./editor.svelte";
+  import type { Point, Sprite } from "./model";
   import type { Onion } from "./prefs";
-  import { brush_offsets, mask_edges, mirror_points } from "./raster";
+  import { brush_offsets, mask_edges } from "./raster";
   import { is_shape, paints, Tool, type ToolSettings } from "./tools";
   import type { Viewport } from "./viewport.svelte";
 
@@ -29,6 +30,7 @@
   let stage = $state<HTMLDivElement>();
   let sprite_canvas = $state<HTMLCanvasElement>();
   let onion_canvas = $state<HTMLCanvasElement>();
+  let guides = $state<HTMLCanvasElement>();
   let overlay = $state<HTMLCanvasElement>();
   let probe = $state<HTMLSpanElement>();
   let space = $state(false);
@@ -78,9 +80,15 @@
     if (!stage) return;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      if (viewport.width && viewport.height) viewport.pan(Math.round((width - viewport.width) / 2), Math.round((height - viewport.height) / 2));
+      if (!width || !height) return;
+      const resized = width !== viewport.width || height !== viewport.height;
+      if (resized && viewport.width && viewport.height && !viewport.fitted) {
+        viewport.x += Math.round((width - viewport.width) / 2);
+        viewport.y += Math.round((height - viewport.height) / 2);
+      }
       viewport.width = width;
       viewport.height = height;
+      if (viewport.fitted) untrack(() => viewport.fit(sprite.width, sprite.height));
     });
     observer.observe(stage);
     return () => observer.disconnect();
@@ -92,19 +100,66 @@
     if (!viewport.width || !viewport.height) return;
     if (key === fitted) return;
     fitted = key;
-    viewport.fit(sprite.width, sprite.height);
+    untrack(() => viewport.fit(sprite.width, sprite.height));
   });
+
+  // What the sprite canvas shows, so an effect run can tell a one-dab change from a full repaint.
+  interface Shown {
+    sprite: Sprite;
+    frame: number;
+    draft: Draft | null;
+    inputs: readonly unknown[];
+  }
+  let shown: Shown | null = null;
+  let image: ImageData | null = null;
+  const frame_cache = new Map<string, { inputs: readonly unknown[]; pixels: Uint8ClampedArray<ArrayBuffer> }>();
+  const CACHE_BYTES = 96 * 1024 * 1024;
 
   $effect(() => {
     const canvas = sprite_canvas;
     if (!canvas) return;
-    const { width, height } = sprite;
-    if (canvas.width !== width || canvas.height !== height) {
+    const value = sprite;
+    const frame = editor.frame;
+    const draft = editor.draft;
+    const overrides = editor.overrides;
+    const { width, height } = value;
+    const context = canvas.getContext("2d")!;
+    if (canvas.width !== width || canvas.height !== height || !image || image.width !== width || image.height !== height) {
       canvas.width = width;
       canvas.height = height;
+      image = new ImageData(width, height);
+      shown = null;
     }
-    const pixels = composite(sprite, editor.frame, { overrides: editor.overrides });
-    canvas.getContext("2d")!.putImageData(new ImageData(pixels, width, height), 0, 0);
+    const inputs = frame_inputs(value, frame, overrides);
+    const previous = shown;
+    shown = { sprite: value, frame, draft, inputs };
+
+    if (previous && draft && previous.sprite === value && previous.frame === frame && (previous.draft?.version ?? 0) === draft.after) {
+      const rect = draft.damage;
+      if (!rect) return;
+      composite_into(image.data, value, frame, rect, { overrides });
+      context.putImageData(image, 0, 0, rect.x, rect.y, rect.width, rect.height);
+      return;
+    }
+    if (previous && !draft && same_inputs(previous.inputs, inputs)) return;
+
+    const id = value.frames[frame]?.id;
+    const cached = id && overrides.size === 0 ? frame_cache.get(id) : undefined;
+    if (cached && same_inputs(cached.inputs, inputs)) {
+      image.data.set(cached.pixels);
+    } else {
+      composite_into(image.data, value, frame, { x: 0, y: 0, width, height }, { overrides });
+      if (id && overrides.size === 0) {
+        if ((frame_cache.size + 1) * width * height * 4 > CACHE_BYTES) frame_cache.clear();
+        frame_cache.set(id, { inputs, pixels: image.data.slice() });
+      }
+    }
+    context.putImageData(image, 0, 0);
+  });
+
+  $effect(() => {
+    void editor.generation;
+    frame_cache.clear();
   });
 
   $effect(() => {
@@ -119,14 +174,15 @@
     context.clearRect(0, 0, width, height);
     const palette = colors;
     if (!onion.enabled || playing || !palette) return;
+    const committed = editor.sprite;
 
     const scratch = new OffscreenCanvas(width, height);
     const scratch_context = scratch.getContext("2d")!;
     const draw = (offset: number, count: number, tint: string) => {
       const frame = editor.frame + offset;
-      if (frame < 0 || frame >= sprite.frames.length) return;
+      if (frame < 0 || frame >= committed.frames.length) return;
       scratch_context.globalCompositeOperation = "copy";
-      scratch_context.putImageData(new ImageData(composite(sprite, frame), width, height), 0, 0);
+      scratch_context.putImageData(new ImageData(composite(committed, frame), width, height), 0, 0);
       if (onion.tint) {
         scratch_context.globalCompositeOperation = "source-atop";
         scratch_context.globalAlpha = 0.7;
@@ -154,27 +210,34 @@
     return () => clearInterval(timer);
   });
 
-  $effect(() => {
-    const canvas = overlay;
-    const palette = colors;
-    if (!canvas || !palette) return;
+  function prepare(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
     const ratio = window.devicePixelRatio || 1;
-    const view_width = viewport.width;
-    const view_height = viewport.height;
-    canvas.width = Math.round(view_width * ratio);
-    canvas.height = Math.round(view_height * ratio);
+    const width = Math.round(viewport.width * ratio);
+    const height = Math.round(viewport.height * ratio);
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
     const context = canvas.getContext("2d")!;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, view_width, view_height);
+    context.clearRect(0, 0, viewport.width, viewport.height);
+    return context;
+  }
 
+  const sx = (value: number) => Math.round(viewport.x + value * viewport.zoom) + 0.5;
+  const sy = (value: number) => Math.round(viewport.y + value * viewport.zoom) + 0.5;
+
+  $effect(() => {
+    const canvas = guides;
+    const palette = colors;
+    if (!canvas || !palette) return;
+    const context = prepare(canvas);
     const { zoom, x: ox, y: oy } = viewport;
     const { width, height } = sprite;
     const left = Math.max(0, Math.floor(-ox / zoom));
-    const right = Math.min(width, Math.ceil((view_width - ox) / zoom));
+    const right = Math.min(width, Math.ceil((viewport.width - ox) / zoom));
     const top = Math.max(0, Math.floor(-oy / zoom));
-    const bottom = Math.min(height, Math.ceil((view_height - oy) / zoom));
-    const sx = (value: number) => Math.round(ox + value * zoom) + 0.5;
-    const sy = (value: number) => Math.round(oy + value * zoom) + 0.5;
+    const bottom = Math.min(height, Math.ceil((viewport.height - oy) / zoom));
 
     const lines = (step: number, color: string) => {
       context.beginPath();
@@ -197,7 +260,6 @@
     context.strokeRect(sx(0) - 1, sy(0) - 1, width * zoom + 1, height * zoom + 1);
 
     if ((settings.mirror_x || settings.mirror_y) && paints(tool)) {
-      context.save();
       context.setLineDash([6, 4]);
       context.strokeStyle = palette.axis;
       context.beginPath();
@@ -210,8 +272,17 @@
         context.lineTo(sx(width), sy(height / 2));
       }
       context.stroke();
-      context.restore();
+      context.setLineDash([]);
     }
+  });
+
+  $effect(() => {
+    const canvas = overlay;
+    const palette = colors;
+    if (!canvas || !palette) return;
+    const context = prepare(canvas);
+    const { zoom, x: ox, y: oy } = viewport;
+    const { width, height } = sprite;
 
     if (edges) {
       context.beginPath();
@@ -222,17 +293,16 @@
       context.lineWidth = 1;
       context.strokeStyle = palette.ants_dark;
       context.stroke();
-      context.save();
       context.setLineDash([4, 4]);
       context.lineDashOffset = -ants;
       context.strokeStyle = palette.ants_light;
       context.stroke();
-      context.restore();
+      context.setLineDash([]);
     }
 
     const point = cursor;
     if (!point || hand || editor.stroking || playing) return;
-    const brush = (is_shape(tool) && settings.filled) || !(paints(tool) && tool !== Tool.FILL)
+    const brush = (is_shape(tool) && settings.filled && tool !== Tool.LINE) || !(paints(tool) && tool !== Tool.FILL)
       ? [{ x: 0, y: 0 }]
       : brush_offsets(settings.size, settings.shape);
     const table = palette_rgba(sprite.palette);
@@ -240,18 +310,24 @@
     const fill = tool !== Tool.ERASER && paints(tool) && index > 0
       ? `rgba(${table[index * 4]}, ${table[index * 4 + 1]}, ${table[index * 4 + 2]}, ${(table[index * 4 + 3] / 255) * 0.75})`
       : null;
-    const cells = new Set<string>();
+    const cells = new Set<number>();
+    const add = (x: number, y: number) => {
+      if (x >= 0 && y >= 0 && x < width && y < height) cells.add(y * width + x);
+    };
+    const mirror = paints(tool);
     for (const offset of brush) {
-      const target = { x: point.x + offset.x, y: point.y + offset.y };
-      const mirrored = paints(tool) ? mirror_points(target, width, height, settings.mirror_x, settings.mirror_y) : [target];
-      for (const cell of mirrored) cells.add(`${cell.x},${cell.y}`);
+      const x = point.x + offset.x;
+      const y = point.y + offset.y;
+      add(x, y);
+      if (mirror && settings.mirror_x) add(width - 1 - x, y);
+      if (mirror && settings.mirror_y) add(x, height - 1 - y);
+      if (mirror && settings.mirror_x && settings.mirror_y) add(width - 1 - x, height - 1 - y);
     }
     context.lineWidth = 1;
+    const size = Math.max(1, Math.round(zoom));
     for (const cell of cells) {
-      const [cx, cy] = cell.split(",").map(Number);
-      const px = Math.round(ox + cx * zoom);
-      const py = Math.round(oy + cy * zoom);
-      const size = Math.max(1, Math.round(zoom));
+      const px = Math.round(ox + (cell % width) * zoom);
+      const py = Math.round(oy + Math.floor(cell / width) * zoom);
       if (fill) {
         context.fillStyle = fill;
         context.fillRect(px, py, size, size);
@@ -289,6 +365,10 @@
     return viewport.to_sprite(x, y);
   }
 
+  function set_cursor(point: Point) {
+    if (cursor?.x !== point.x || cursor?.y !== point.y) cursor = point;
+  }
+
   function modifiers(event: PointerEvent) {
     return { shift: event.shiftKey, alt: event.altKey };
   }
@@ -318,6 +398,7 @@
     const anchor_x = (gesture.mid.x - gesture.x) / gesture.zoom;
     const anchor_y = (gesture.mid.y - gesture.y) / gesture.zoom;
     viewport.zoom = zoom;
+    viewport.fitted = false;
     viewport.x = Math.round(mid.x - anchor_x * zoom);
     viewport.y = Math.round(mid.y - anchor_y * zoom);
   }
@@ -375,7 +456,7 @@
       touches.set(event.pointerId, local(event));
       if (gesture && touches.size >= 2) return update_gesture();
     }
-    if (event.pointerType !== "touch") cursor = sprite_point(event);
+    if (event.pointerType !== "touch") set_cursor(sprite_point(event));
 
     if (pan && pan.id === event.pointerId) {
       viewport.pan(event.clientX - pan.x, event.clientY - pan.y);
@@ -390,7 +471,7 @@
     if (tool === Tool.EYEDROPPER) return editor.pick(sprite_point(event), drawing.button === 2);
     const samples = event.getCoalescedEvents?.() ?? [];
     const points = (samples.length ? samples : [event]).map(sprite_point);
-    if (event.pointerType === "touch") cursor = points[points.length - 1];
+    if (event.pointerType === "touch") set_cursor(points[points.length - 1]);
     editor.move(points, modifiers(event));
   }
 
@@ -494,6 +575,7 @@
     <canvas bind:this={onion_canvas} class="absolute inset-0 size-full [image-rendering:pixelated]"></canvas>
     <canvas bind:this={sprite_canvas} class="absolute inset-0 size-full [image-rendering:pixelated]"></canvas>
   </div>
+  <canvas bind:this={guides} class="pointer-events-none absolute inset-0 size-full"></canvas>
   <canvas bind:this={overlay} class="pointer-events-none absolute inset-0 size-full"></canvas>
 </div>
 

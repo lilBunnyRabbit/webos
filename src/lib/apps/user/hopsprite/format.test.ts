@@ -53,6 +53,9 @@ describe("hopsprite format", () => {
     expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], x: 3 }] }))).toThrow(/past the canvas/);
     expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], rle: [[1, 9], [1, 1]] }] }))).toThrow(/past the palette/);
     expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], layer: 4 }] }))).toThrow(/doesn't exist/);
+    expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], rle: [[0, 1]] }] }))).toThrow(/bad length/);
+    expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], rle: [[1, 1, 1]] }] }))).toThrow(/\[count, colour\]/);
+    expect(() => parse_sprite(JSON.stringify({ ...file, cels: [{ ...file.cels[0], rle: [[1, 1]] }] }))).toThrow(/shorter/);
   });
 
   it("forces index 0 to transparent", () => {

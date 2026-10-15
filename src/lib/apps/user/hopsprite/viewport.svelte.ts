@@ -20,16 +20,15 @@ export class Viewport {
   y = $state(0);
   width = $state(0);
   height = $state(0);
+  /** True until the user zooms or pans, so a resized window refits instead of leaving the sprite off-centre. */
+  fitted = $state(true);
 
   fit(sprite_width: number, sprite_height: number): void {
     if (!this.width || !this.height) return;
-    this.zoom = fit_zoom(sprite_width, sprite_height, this.width - 48, this.height - 48);
-    this.center(sprite_width, sprite_height);
-  }
-
-  center(sprite_width: number, sprite_height: number): void {
+    this.zoom = fit_zoom(sprite_width, sprite_height, Math.max(16, this.width - 32), Math.max(16, this.height - 32));
     this.x = Math.round((this.width - sprite_width * this.zoom) / 2);
     this.y = Math.round((this.height - sprite_height * this.zoom) / 2);
+    this.fitted = true;
   }
 
   zoom_to(zoom: number, px = this.width / 2, py = this.height / 2): void {
@@ -38,6 +37,7 @@ export class Viewport {
     this.x = Math.round(px - (px - this.x) * ratio);
     this.y = Math.round(py - (py - this.y) * ratio);
     this.zoom = next;
+    this.fitted = false;
   }
 
   step(direction: 1 | -1, px?: number, py?: number): void {
@@ -47,6 +47,7 @@ export class Viewport {
   pan(dx: number, dy: number): void {
     this.x += dx;
     this.y += dy;
+    this.fitted = false;
   }
 
   to_sprite(px: number, py: number): { x: number; y: number } {
