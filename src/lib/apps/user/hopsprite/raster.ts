@@ -344,3 +344,32 @@ export function is_empty(data: Uint8Array): boolean {
 export function content_bounds(data: Uint8Array, width: number, height: number): Rect | null {
   return mask_bounds(data, width, height);
 }
+
+// Merged into runs so a big selection outlines with a few long segments, not one per pixel.
+export function mask_edges(mask: Uint8Array, width: number, height: number): number[] {
+  const segments: number[] = [];
+  const at = (x: number, y: number) => (x >= 0 && y >= 0 && x < width && y < height ? mask[y * width + x] : 0);
+  for (let y = 0; y <= height; y++) {
+    let start = -1;
+    for (let x = 0; x <= width; x++) {
+      const edge = x < width && at(x, y - 1) !== at(x, y);
+      if (edge && start < 0) start = x;
+      if (!edge && start >= 0) {
+        segments.push(start, y, x, y);
+        start = -1;
+      }
+    }
+  }
+  for (let x = 0; x <= width; x++) {
+    let start = -1;
+    for (let y = 0; y <= height; y++) {
+      const edge = y < height && at(x - 1, y) !== at(x, y);
+      if (edge && start < 0) start = y;
+      if (!edge && start >= 0) {
+        segments.push(x, start, x, y);
+        start = -1;
+      }
+    }
+  }
+  return segments;
+}

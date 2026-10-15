@@ -5,6 +5,7 @@ import {
   ellipse_points,
   flip_horizontal,
   line_points,
+  mask_edges,
   match_mask,
   mirror_points,
   normalize_rect,
@@ -137,5 +138,12 @@ describe("buffer transforms", () => {
 
   it("scales by nearest neighbour", () => {
     expect(Array.from(scale_nearest(Uint8Array.from([1, 2]), 2, 1, 4, 2))).toEqual([1, 1, 2, 2, 1, 1, 2, 2]);
+  });
+});
+
+describe("mask_edges", () => {
+  it("outlines a block with four merged segments", () => {
+    const mask = Uint8Array.from([0, 0, 0, 0, 1, 1, 0, 1, 1]);
+    expect(mask_edges(mask, 3, 3)).toEqual([1, 1, 3, 1, 1, 3, 3, 3, 1, 1, 1, 3, 3, 1, 3, 3]);
   });
 });
