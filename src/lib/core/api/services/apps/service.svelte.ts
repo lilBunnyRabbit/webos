@@ -2,7 +2,6 @@ import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppP
 import type {
   DialogsService,
   FilesService,
-  FileSystemItem,
   Kernel,
   NotificationsService,
   SettingsService,
@@ -19,9 +18,6 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
-import { used_apps, type UsageSignals } from "./usage";
-import { parse_session, SESSION_PATH } from "../session/persistence";
-import { HISTORY_PATH } from "../shell/service.svelte";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
@@ -62,11 +58,15 @@ export class AppsService implements IAppsService {
       for (const id of saved) if (this.registry.has(id)) this.installed.add(id);
       return;
     }
-    // No list yet. A first boot gets every app; a device from before installs existed keeps what it ever used, once.
-    const all = [...this.registry.keys()];
+    // No list yet. A first boot starts with the system apps (the intro adds the picked interests); a device from before
+    // installs existed keeps what it ever used, once.
     const first_boot = (await this.read(VERSION_STATE_PATH)) === null;
-    if (first_boot) this.install(all);
-    else this.tidy(all, used_apps(this.registry.values(), await this.usage()));
+    if (!first_boot) {
+      // Runs once per device, so its readers stay out of the boot chunk.
+      const { read_usage, used_apps } = await import("./usage");
+      const signals = await read_usage(this.files_service, this.settings_service.file_defaults);
+      this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals));
+    }
     this.writer.write(serialize_installed(this.installed));
   }
 
@@ -87,32 +87,6 @@ export class AppsService implements IAppsService {
   private async read(path: string): Promise<string | null> {
     const file = await this.files_service.get_file(path);
     return file ? file.text() : null;
-  }
-
-  private async entries(path: string): Promise<FileSystemItem[]> {
-    const directory = await this.files_service.get_directory(path);
-    return directory ? this.files_service.list(directory) : [];
-  }
-
-  private async usage(): Promise<UsageSignals> {
-    const session = parse_session((await this.read(SESSION_PATH)) ?? "");
-    const desktop: AppId[] = [];
-    for (const item of await this.entries(PATHS.desktop)) {
-      if (item.kind !== "file") continue;
-      const extension = file_extension(item.name);
-      if (extension !== SHORTCUT_EXTENSION && extension !== WIDGET_EXTENSION) continue;
-      const text = await (await item.handle.getFile()).text();
-      const target = extension === SHORTCUT_EXTENSION ? parse_shortcut(text)?.app_id : parse_widget(text)?.app;
-      if (target) desktop.push(target);
-    }
-    return {
-      windows: [...Object.keys(session.frames), ...session.windows.map((window) => window.app_id)],
-      desktop,
-      storage_keys: Object.keys(localStorage),
-      data_folders: (await this.entries(`${PATHS.var_lib}/apps`)).filter((item) => item.kind === "directory").map((item) => item.name),
-      history: ((await this.read(HISTORY_PATH)) ?? "").split("\n").filter(Boolean),
-      defaults: Object.values(this.settings_service.file_defaults),
-    };
   }
 
   public *list(filter: AppsFilter = {}): IterableIterator<[AppId, AppManifest]> {

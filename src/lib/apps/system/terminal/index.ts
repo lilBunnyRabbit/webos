@@ -17,5 +17,6 @@ export default define_app({
     /** A command line to run once at start, like "Open in Terminal" from the palette. */
     run: z.string().optional(),
   }),
+  highlights: () => import("./highlights"),
   component: () => import("./terminal.app.svelte"),
 });

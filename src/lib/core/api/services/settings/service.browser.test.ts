@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { boot_test_kernel } from "../../kernel/test-kernel";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
@@ -7,7 +7,7 @@ import { SettingsService } from "./service.svelte";
 
 let shutdown: () => void;
 
-beforeEach(() => opfs.clear_opfs());
+beforeEach(() => vi.waitFor(() => opfs.clear_opfs()));
 afterEach(() => shutdown?.());
 
 async function boot() {

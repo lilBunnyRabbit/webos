@@ -161,21 +161,23 @@
 
           {@render preview(manifest)}
 
-          {#if manifest.highlights?.length}
-            <ul class="grid gap-2 @md:grid-cols-2">
-              {#each manifest.highlights as highlight (highlight.title)}
-                <li class="flex gap-3 rounded-xl bg-background-light p-3.5 ring-1 ring-foreground/8">
-                  <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
-                    <highlight.icon class="size-4.5" weight="duotone" />
-                  </span>
-                  <div class="min-w-0">
-                    <h3 class="text-ui font-semibold">{highlight.title}</h3>
-                    <p class="text-ui text-pretty text-foreground/65">{highlight.text}</p>
-                  </div>
-                </li>
-              {/each}
-            </ul>
-          {/if}
+          {#await manifest.highlights?.() then module}
+            {#if module?.default.length}
+              <ul class="grid gap-2 @md:grid-cols-2">
+                {#each module.default as highlight (highlight.title)}
+                  <li class="flex gap-3 rounded-xl bg-background-light p-3.5 ring-1 ring-foreground/8">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
+                      <highlight.icon class="size-4.5" weight="duotone" />
+                    </span>
+                    <div class="min-w-0">
+                      <h3 class="text-ui font-semibold">{highlight.title}</h3>
+                      <p class="text-ui text-pretty text-foreground/65">{highlight.text}</p>
+                    </div>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          {/await}
 
           <div class="flex flex-col gap-1.5 rounded-xl bg-background-darker p-3 ring-1 ring-foreground/8 ring-inset @md:flex-row @md:items-center @md:justify-between">
             <p class="flex items-center gap-2 text-ui text-foreground/80">

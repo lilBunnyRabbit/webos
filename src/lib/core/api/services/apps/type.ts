@@ -106,8 +106,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * sticks.
    */
   default_widget?: boolean;
-  /** What the app does, as three or four cards: the new-app announcement and the App Library details show them (ADR-038). */
-  highlights?: AppHighlight[];
+  /**
+   * What the app does, as three or four cards: the new-app announcement and the App Library details show them (ADR-038).
+   * Lazy like `preview`: manifests load at boot, and the cards' icons and text are worth ~1 KB gz each app.
+   */
+  highlights?: () => Promise<{ default: AppHighlight[] }>;
   /** A picture of the app for the announcement, `import("./preview.webp?url")`. Lazy, so it never weighs on boot. */
   preview?: () => Promise<{ default: string }>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */

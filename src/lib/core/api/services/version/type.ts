@@ -64,8 +64,10 @@ export interface VersionService extends IService {
   /** Progress of `apply_update()`, for the update overlay. */
   readonly update_stage: UpdateStage;
 
-  /** Every release, newest first. */
+  /** Every release, newest first. Empty until `load_changelog()` resolves. */
   readonly changelog: Release[];
+  /** Loads the release notes into `changelog` (empty until then, kept out of the boot chunk). Safe to call often. */
+  load_changelog(): Promise<Release[]>;
 
   /** Releases newer than what this device had seen at boot. Kept for the session after they're marked seen. */
   readonly unseen: Release[];

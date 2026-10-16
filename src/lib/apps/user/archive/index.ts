@@ -73,5 +73,6 @@ export default define_app({
       }),
     ],
   },
+  highlights: () => import("./highlights"),
   component: () => import("./archive.app.svelte"),
 });

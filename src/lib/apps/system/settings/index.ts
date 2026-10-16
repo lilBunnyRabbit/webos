@@ -20,5 +20,6 @@ export default define_app({
   },
   /** `section` opens on that section, e.g. What's new from the update toast (ADR-026). */
   props: z.object({ section: z.enum(SECTION_IDS) }),
+  highlights: () => import("./highlights"),
   component: () => import("./settings.app.svelte"),
 });

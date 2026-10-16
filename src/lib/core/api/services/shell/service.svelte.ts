@@ -6,8 +6,10 @@ import { complete } from "./complete";
 import { Session } from "./session.svelte";
 import { EntryStatus, type Command, type Completer, type CompletionResult, type Entry, type ShellContribution, type ShellService as IShellService, type ShellSession, type ValueType } from "./type";
 import { plan } from "./pipeline";
+import { HISTORY_PATH } from "./history";
 
-export const HISTORY_PATH = "/var/lib/shell/history";
+export { HISTORY_PATH };
+
 const HISTORY_CAP = 1000;
 
 export class ShellService implements IShellService {

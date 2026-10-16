@@ -17,7 +17,7 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
 | `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
-| `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" suggestions |
+| `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
 
@@ -82,7 +82,7 @@ The constructor also wires `$derived` references to its five dependencies. There
 ### `init()`: the installed list (ADR-040)
 
 1. `/var/lib/apps/installed.json` parses → load it, dropping ids no app has. Done.
-2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → install every app, quietly.
+2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the system apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
 3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Library**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
 

@@ -52,10 +52,11 @@ beforeEach(async () => {
 afterEach(() => shutdown?.());
 
 describe("AppsService installed apps", () => {
-  test("a first boot installs every app, quietly", async () => {
+  test("a first boot starts with the system apps only, quietly", async () => {
     const kernel = await boot();
-    expect(user_apps(kernel).every((id) => apps(kernel).is_installed(id))).toBe(true);
-    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(user_apps(kernel).sort()));
+    expect(user_apps(kernel).some((id) => apps(kernel).is_installed(id))).toBe(false);
+    expect(apps(kernel).is_installed("settings")).toBe(true);
+    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual([]));
     expect(toasts(kernel)).toEqual([]);
   });
 

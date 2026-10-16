@@ -58,7 +58,7 @@ async function saved_file(kernel: Kernel): Promise<SessionFile> {
 
 const saved_on_disk = async (kernel: Kernel) => (await saved_file(kernel)).windows;
 
-beforeEach(() => opfs.clear_opfs());
+beforeEach(() => vi.waitFor(() => opfs.clear_opfs()));
 afterEach(() => shutdown?.());
 
 describe("SessionService", () => {

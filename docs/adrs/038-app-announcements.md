@@ -16,7 +16,7 @@ ADR-026 gives WebOS a typed changelog, an "Updated to vX" toast and Settings ›
 - The manifest `version` field stays as it is. The App Library shows "Added v… · Updated v…" from the notes instead, and falls back to `v{version}` when the notes don't mention the app.
 
 ### What an app is: the manifest
-- New optional manifest fields: `highlights?: AppHighlight[]` (`{ icon, title, text }`, three or four cards) and `preview?: () => Promise<{ default: string }>` (a lazy image URL). This is a minor addition to the 1.x app API.
+- New optional manifest fields: `highlights?: AppHighlight[]` (`{ icon, title, text }`, three or four cards; lazy since the 2026-10-16 revision) and `preview?: () => Promise<{ default: string }>` (a lazy image URL). This is a minor addition to the 1.x app API.
 - No backfill for old apps: their description is the fallback.
 
 ### The announcement
@@ -67,3 +67,7 @@ Added the same day (owner):
 - Swapping VersionService means providing the announcement too.
 - `changelog --apps` keeps `yields: "release"`, so `where` after it completes release columns.
 - With two tabs open, only the first to boot announces (same as the toast).
+
+## Revision 2026-10-16: lazy highlights
+
+Ten apps with highlights put the boot chunk 10 KB gz over budget: manifests load at boot, and each card's phosphor icon carries every weight. `highlights` is now `() => Promise<{ default: AppHighlight[] }>`, like `preview`, with the cards in each app's `highlights.ts`. The announcement and the App Library details await it.

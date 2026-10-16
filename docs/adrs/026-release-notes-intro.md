@@ -50,3 +50,7 @@ VersionService now depends on `files`, `notifications`, `dialogs` and `apps`.
 - A tab learns a release's notes only after reloading into it, since the changelog is in the bundle.
 - With two tabs open, the first to boot marks the release seen.
 - Swapping VersionService now means providing the changelog, seen state and introduction too.
+
+## Revision 2026-10-16: lazy changelog
+
+`changelog.ts` was the largest module in the boot chunk (37 KB raw) and grows with every release; with it the boot chunk passed its 180 KB gz budget. VersionService now imports it on demand (`load_changelog()`): at boot only after an update, otherwise when Settings › What's new, the App Library or the `changelog` command needs it. `version.changelog` is empty until then.

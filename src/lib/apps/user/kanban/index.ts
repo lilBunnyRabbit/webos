@@ -108,5 +108,6 @@ export default define_app({
       }),
     ],
   },
+  highlights: () => import("./highlights"),
   component: () => import("./kanban.app.svelte"),
 });

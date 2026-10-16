@@ -32,6 +32,7 @@ Two P1 roadmap items, taken together because the install model decides what a to
 - "what if we just uninstall the ones they havent used we have that info right": partly. Nothing logs app use, but window frames, saved windows, desktop shortcuts and widgets, `app.{id}.*` localStorage, `/var/lib/apps/{id}/`, shell history and file defaults all persist.
 - Options weighed: existing users once plus new users after 30 days; a rolling 30-day tidy; existing users once; a Tidy up review in App Library. Owner: "no after x days. one time thing."
 - **Decision:** one automatic tidy for devices from before installed apps, from those signals, with an Undo toast. No usage record is kept afterwards.
+- Then, after 1.8.0 shipped: "new users should have just the core apps installed? and the ones we decided". **First boot = system apps + the interests picked in the intro**; the picks install, pins pin. Old users keep the one-time tidy.
 - **Game Hub** stays the games store: it lists every game and Play installs. The Games interest installs Game Hub plus a few games.
 
 ## Showcasing features
@@ -56,7 +57,7 @@ Two P1 roadmap items, taken together because the install model decides what a to
 - [x] [ADR-040](../adrs/040-installed-apps.md) Installed apps
 - [x] [ADR-041](../adrs/041-getting-started.md) Getting started and sample files
 - [x] Implement ADR-040
-- [ ] Implement ADR-041 (after 040; the intro's interests page is done)
+- [x] Implement ADR-041 (after 040; the intro's interests page is done)
 
 ## Next session topics
 

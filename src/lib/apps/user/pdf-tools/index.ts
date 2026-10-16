@@ -171,5 +171,6 @@ export default define_app({
       }),
     ],
   },
+  highlights: () => import("./highlights"),
   component: () => import("./pdf-tools.app.svelte"),
 });

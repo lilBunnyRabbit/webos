@@ -68,6 +68,7 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const session = $derived(kernel.service<SessionService>("session"));
   const version = $derived(kernel.service<VersionService>("version"));
+  void kernel.service<VersionService>("version").load_changelog();
 
   const category = storage.window<LibraryCategory>("category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
   const filters = storage.window<LibraryFilter[]>("filters", [], z.array(z.enum(Object.values(LibraryFilter))));

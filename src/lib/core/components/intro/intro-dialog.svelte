@@ -59,9 +59,11 @@
     else set.add(value);
   }
 
-  /** Skip and Start both keep the pins picked so far. */
+  /** Skip and Start both keep what was picked so far. */
   function finish() {
-    for (const id of pins) desktop.pin(id).catch((error) => console.error(`[Intro] Failed to pin ${id}`, error));
+    const picked = interest_apps(interests);
+    apps.install(picked);
+    for (const id of picked.filter((id) => pins.has(id))) desktop.pin(id).catch((error) => console.error(`[Intro] Failed to pin ${id}`, error));
     resolve(true);
   }
 
@@ -136,7 +138,7 @@
     </span>
     <div class="min-w-0 flex-1">
       <h3 class="text-ui font-semibold">{manifest.name}</h3>
-      <p class="line-clamp-2 text-ui text-foreground/65">{manifest.highlights?.[0]?.text ?? manifest.description ?? ""}</p>
+      <p class="line-clamp-2 text-ui text-foreground/65">{manifest.description ?? ""}</p>
     </div>
     <Button
       variant="quiet"
@@ -232,7 +234,7 @@
           {@render heading(
             "Apps",
             "What are you into?",
-            `Every app is already installed. Pick a few interests for suggestions, and ${mobile ? "add the ones you like to the home screen" : "pin the ones you like to the desktop"}.`
+            `Pick what you're into and those apps get installed, then ${mobile ? "add favourites to the home screen" : "pin favourites to the desktop"}. Every other app is a search away.`
           )}
           <div class="flex flex-wrap gap-2" role="group" aria-label="Interests">
             {#each INTERESTS as interest (interest.id)}
@@ -248,7 +250,7 @@
               {/each}
             </ul>
           {:else}
-            <p class="text-ui text-foreground/65">Nothing picked yet. Everything stays in the start menu and the App Library either way.</p>
+            <p class="text-ui text-foreground/65">Nothing picked yet: you start with the core apps. The App Library has the rest.</p>
           {/if}
         {:else if PAGES[page] === "yours"}
           {@render heading("Make it yours", "Pick a look", "Changes apply right away. Fine-tune every colour later in Settings › Appearance.")}

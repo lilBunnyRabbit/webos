@@ -35,7 +35,8 @@ export function version_shell(version: VersionService, apps: () => AppsService):
         }),
         short: { changes: "c" },
         yields: "release",
-        *run({ args }): Generator<Value, void> {
+        async *run({ args }): AsyncGenerator<Value, void> {
+          await version.load_changelog();
           if (args.apps) {
             for (const { app, release } of introduced_apps(version.changelog)) {
               const manifest = apps().get(app);

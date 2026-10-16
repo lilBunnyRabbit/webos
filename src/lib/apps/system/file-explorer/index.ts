@@ -14,5 +14,6 @@ export default define_app({
   keywords: ["files", "folders", "finder", "browse", "explorer", "manager", "directory", "upload", "download"],
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,
+  highlights: () => import("./highlights"),
   component: () => import("./file-explorer.app.svelte"),
 });

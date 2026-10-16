@@ -19,12 +19,13 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
 | `app-library` | App Library | none | none | min 340×360 | apps, windows, session, desktop, notifications, version | window: `category`, `filters`, `sort`, `view`, `selected` |
+| `getting-started` | Getting started | none | `{ topic? }`: scrolls to that card | min 340×360 | shell, apps, desktop, files, router, shortcuts, notifications | `storage.file("progress.json")`: `{ tried }` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
 
 **Phones and tablets** (ADR-016 apps pass). Every app runs fullscreen in the [mobile shell](shell/mobile.md). Layout adapts through container queries and the kit's `pointer-coarse:` sizes; File Explorer reads `kernel.platform` to open on tap and uses long press for menus, and claims the Back button with `window.on_back`.
 
-On first boot the desktop seeds shortcuts to `settings`, `file-explorer` and `terminal` (`DEFAULT_SHORTCUTS` in `services/desktop/folder.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
+On first boot the desktop seeds shortcuts to `getting-started`, `settings`, `file-explorer` and `terminal` (`DEFAULT_SHORTCUTS` in `services/desktop/folder.svelte.ts`, [desktop](services/desktop.md#behaviour--invariants)).
 
 ---
 
@@ -543,6 +544,27 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 **Ways in.** The launcher and the `>` palette (Open in Terminal), the desktop and phone-home icon (new devices only: the seed runs once), the taskbar button, Alt+Shift+↵, File Explorer (toolbar and folder menu) and the desktop menu (Open Terminal here, in `~/Desktop`).
 
 **Known gaps.** iOS Safari ignores `interactive-widget`, so the keyboard can cover the key row there. The popup sits at the start of the prompt row, not at the completed word. Long lines scroll the field and hide the ghost text.
+
+## Getting started
+
+`getting-started` · `Compass` icon · source `system/getting-started/` · [ADR-041](../adrs/041-getting-started.md)
+
+**Purpose.** A tour of what WebOS can do, one card per part, each with a Try it button that runs the real thing. On the desktop of every new device (first in `DEFAULT_SHORTCUTS`) and linked from Settings › About.
+
+**Files.**
+
+| File | Contents |
+|------|----------|
+| `ids.ts` | `TOPIC_IDS`, `TopicId`: kept apart so the manifest doesn't load the topics |
+| `topics.ts` | `TOPICS` (id, icon, title, text, optional `keys`, `platforms`, the Try it label and `run(window_id)`) and `topics_for(platform)` |
+| `shell.ts` | `tour(topic)`: launches the app with the prop |
+| `getting-started.app.svelte` | Header with a "N of M tried" bar, then the cards |
+
+**Topics.** Desktop: Find any app (`ui launcher`), Command palette (`ui launcher`), Terminal (launches it with `run: "ls ~"`), Keyboard shortcuts (`shortcuts sheet`), Snap windows (`win snap left` on its own window), Desktop widgets (installs Clock and pins its widget), Files open in their app (File Explorer at `/home/Documents/Samples`, else home), Get more apps (App Library), Background tasks (Activity Monitor › Tasks), Share a window (`router.copy_link` of its own window), Back up your files (Settings › Backup). Phones drop the palette, shortcuts, snap, widgets and links, and add Home and dock (`ui launcher`) and Switch apps (`ui switcher`). Key chips (`format_keys`) show on desktop only.
+
+**Behaviour.** Pressing Try it adds the topic to `tried` (once the file is loaded), then runs it; a throw becomes an error toast "Couldn't {action}". Tried cards get a `success` check and a quiet button. A `topic` prop scrolls its card to the centre and rings it in `primary` for 1.6 s. Cards are one column, two from `@xl`.
+
+**Shell.** `tour [topic]` (manifest command; `topic` completes from the enum) opens it at a card. `#/app/getting-started?topic=widgets` does the same from a link.
 
 ## "Open…" in the viewers (ADR-025, ADR-031)
 

@@ -7,7 +7,7 @@ export interface Interest {
   apps: AppId[];
 }
 
-/** Suggestions on the intro's "What are you into?" page (ADR-040). Every app is installed anyway; these are the ones shown. */
+/** The intro's "What are you into?" groups (ADR-040): a first boot installs the system apps plus the picked groups. */
 export const INTERESTS: Interest[] = [
   {
     id: "create",
@@ -25,7 +25,7 @@ export const INTERESTS: Interest[] = [
     id: "games",
     label: "Play",
     description: "Puzzles and classics, with a daily challenge",
-    apps: ["minesweeper", "sudoku", "solitaire", "nonogram", "twenty-forty-eight"],
+    apps: ["game-hub", "minesweeper", "sudoku", "solitaire", "nonogram", "twenty-forty-eight"],
   },
   {
     id: "developer",
@@ -35,7 +35,7 @@ export const INTERESTS: Interest[] = [
   },
 ];
 
-/** The apps the picked interests suggest, in group order, without repeats. */
+/** The apps the picked interests install, in group order, without repeats. */
 export function interest_apps(picked: Iterable<string>): AppId[] {
   const ids = new Set(picked);
   return [...new Set(INTERESTS.filter((interest) => ids.has(interest.id)).flatMap((interest) => interest.apps))];

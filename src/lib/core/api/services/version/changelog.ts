@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.9.0",
+    date: "2026-10-16",
+    title: "Getting started",
+    introduces: ["getting-started"],
+    changes: [
+      { kind: NEW, apps: ["getting-started"], text: "Getting started walks through what WebOS can do, with a Try it button for each part. Type tour in the Terminal or the palette to open it." },
+      { kind: NEW, text: "A new device comes with sample files in Documents › Samples, each opening in a different app." },
+      { kind: IMPROVED, text: "Terminal, File Explorer, Kanban, PDF Tools, Image Tools, Archive, Calendar, Game Hub and Settings show what they do in the App Library." },
+      { kind: IMPROVED, text: "WebOS starts a little faster: the release notes load only when they're needed." },
+      { kind: IMPROVED, text: "A new device starts with the core apps, and the introduction installs the apps for the interests you pick." },
+    ],
+  },
+  {
     version: "1.8.0",
     date: "2026-10-16",
     title: "Installed apps",

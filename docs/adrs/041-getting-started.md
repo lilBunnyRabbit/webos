@@ -1,6 +1,6 @@
 # ADR-041: Getting Started and Sample Files
 **Date:** 2026-10-16
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The intro (ADR-026) covers files, getting around and the theme. Nothing points to the shell, the palette, shortcuts, widgets, tasks, file associations, deep links or backup, and with installed apps (ADR-040) fewer apps are in view. Only Hopsprite fills the manifest `highlights` (ADR-038). Discussion: [2026-10-16 installed apps and showcasing](../brainstorm/2026-10-16_installed-apps-and-showcasing.md).
@@ -16,6 +16,10 @@ The intro (ADR-026) covers files, getting around and the theme. Nothing points t
 
 ### Sample files
 - First boot only. VersionService's first-boot branch lazily imports `seed_samples()`, which writes a few files to `/home/Documents/Samples` from bundled assets (a welcome note, a `.hopsprite`, a `.kanban` board, an image), each opening in a different app. Off the boot budget. Existing users get nothing.
+
+## Revision 2026-10-16
+
+The samples are `Welcome.md`, `Bouncing ball.hopsprite`, `Fruit.csv` and `Sunset.svg`: no app opens `.kanban` files, so the board became a CSV, and the image is an SVG so no binary asset ships. The highlights went to nine apps (Terminal, File Explorer, Kanban, PDF Tools, Image Tools, Archive, Calendar, Game Hub, Settings) besides Hopsprite.
 
 ### Highlights
 - Write manifest `highlights` for about ten flagship apps now (Terminal, File Explorer, Hopsprite, Kanban, PDF Tools, Image Tools, Archive, Calendar, Game Hub, Settings); the rest as they're touched.

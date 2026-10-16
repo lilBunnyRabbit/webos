@@ -105,7 +105,7 @@
     const pick = (id: string) => apps.get(id);
     const paint = pick("paint");
     const list = [
-      paint && { ...paint, highlights: SAMPLE_HIGHLIGHTS },
+      paint && { ...paint, highlights: () => Promise.resolve({ default: SAMPLE_HIGHLIGHTS }) },
       pick("maze"),
       pick("calculator"),
     ].filter((manifest): manifest is AppManifest => Boolean(manifest));

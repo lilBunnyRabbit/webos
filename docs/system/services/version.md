@@ -16,7 +16,8 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running. Fetches `${import.meta.env.BASE_URL}version.json` (`/webos/version.json` in production) with `cache: "no-store"`. A non-OK response is ignored silently. Network or parse errors go to `console.error`. Never throws. |
 | `apply_update` | `apply_update(): Promise<void>` | Walks `update_stage` through `installing` → (`clearing`) → `reloading` while the update overlay shows it. `registration.update()`; a new worker that activates within 8 s means a reload into its precache. No new worker, a timeout or an error falls through to clearing: unregister this app's registration and delete only Cache Storage keys containing its scope (`scope_caches`, `update.ts`). Every path ends in `location.replace(?__upd=<now>)`; `init()` strips the parameter again. A second call while one runs is ignored. See [Service worker](#service-worker). |
 | `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
-| `changelog` | `readonly Release[]` | `CHANGELOG` from `changelog.ts`, newest first |
+| `changelog` | `Release[]` | `$state.raw`, empty until `load_changelog()` resolves, then `CHANGELOG` from `changelog.ts`, newest first |
+| `load_changelog` | `(): Promise<Release[]>` | Imports `changelog.ts` once (the promise is kept) and fills `changelog`. `init()` awaits it only after an update; Settings › What's new, App Library and the `changelog` command call it themselves. It's the largest module WebOS has and grows every release, so it stays out of the boot chunk |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
 | `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to installed apps: what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
 | `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte`, then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits that import, so the introduction is up when the splash goes (ADR-036). Resolves when it closes. Doesn't write the seen marker |
@@ -70,7 +71,7 @@ Six `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, 
 - `update/load-failed.svelte` (a window or widget whose app chunk failed to import) runs `check()` immediately and offers `apply_update()` in place, so a stale tab after a deploy doesn't wait for the 30-minute poll.
 - `window.addEventListener("vite:preloadError", …)`: any lazy chunk that fails to load (dialogs, shell command bodies, app sections) runs `check()` and, with a newer build found, shows the "A new version is ready" toast again even if this build was already announced. `update_toast` keeps one such toast: a new one dismisses the previous, so chunks failing together don't stack copies. The failing caller still reports its own error.
 
-- Reads `/var/lib/version/state.json` and branches, see [Release notes and introduction](#release-notes-and-introduction). The introduction is requested without awaiting, like Restore.
+- Reads `/var/lib/version/state.json` and branches, see [Release notes and introduction](#release-notes-and-introduction). The introduction is requested without awaiting, like Restore. A first boot also lazily imports `samples.ts` and runs `seed_samples(files)` (ADR-041), unawaited: it creates `/home/Documents/Samples` with `Welcome.md`, `Bouncing ball.hopsprite` (generated: 16×16, six frames, one `bounce` tag; a Hopsprite test parses it), `Fruit.csv` and `Sunset.svg`, one file per kind of app. A failure is logged only. Existing devices never get them.
 
 `destroy()` clears the interval, removes the listener, stops a pending introduction from writing the marker, and disposes the wait for the Restore answer.
 
@@ -79,8 +80,8 @@ No check runs at boot. The first check happens on the first tab-visible event (`
 ## Consumers
 
 - Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev. Its Install row reads `installer` directly (see [Install](#install)).
-- Settings › What's new: `changelog`, `unseen`, `info.version`.
-- App Library: `changelog` (History section, Recently added / updated sort through `app_history` and `recency`) and `unseen` (session-only New / Updated badges through `introduced_apps` and `updated_apps`).
+- Settings › What's new: `load_changelog()` on mount, `changelog`, `unseen`, `info.version`.
+- App Library: `load_changelog()` at init, `changelog` (History section, Recently added / updated sort through `app_history` and `recency`) and `unseen` (session-only New / Updated badges through `introduced_apps` and `updated_apps`).
 - Its own toasts (below).
 
 ## Release notes and introduction
@@ -93,7 +94,7 @@ At boot (`init()`), after reading the seen marker:
 |--------|--------------|
 | missing or invalid | `show_intro()`. When it closes, `seen = info.version` is written |
 | `seen >= info.version` | Nothing |
-| `seen < info.version` | `unseen` = releases in `(seen, info.version]`. `seen = info.version` is written at once. If `unseen` isn't empty: sticky toast "Updated to v{version}", message "3 new · 1 improved · 2 fixed" (only kinds present), action "What's new" → `apps.launch("settings", { section: "whats-new" })` |
+| `seen < info.version` | Awaits `load_changelog()`, then `unseen` = releases in `(seen, info.version]`. `seen = info.version` is written at once. If `unseen` isn't empty: sticky toast "Updated to v{version}", message "3 new · 1 improved · 2 fixed" (only kinds present), action "What's new" → `apps.launch("settings", { section: "whats-new" })` |
 
 ### App history and announcements (ADR-038)
 
@@ -133,7 +134,7 @@ Both toasts use app id `version`, so they're in the notification history.
 | Install | "Install WebOS first". One highlighted card (`ring-2 ring-primary/40`): why it matters in two lines (own window and offline; installed apps' storage is far less likely to be cleared), then the [install](#install) state: primary "Install WebOS" button, "Installed" in `success`, or the platform hint |
 | Your files | Four cards: stored on this device, one browser one disk, Save to disk, clearing site data deletes them (`warning` tile) |
 | Getting around | Start menu, windows (drag, snap, double-click), right-click menus, the desktop folder. Keyboard line with `Kbd`s |
-| Apps | "What are you into?" (ADR-040). Every app is already installed; four interest toggles (`INTERESTS` in `services/apps/suggestions.ts`: Create, Get things done, Play, Build) list their suggested apps as cards (icon, name, first highlight or the description) with a Pin toggle ("Add" on mobile). Skip and Start both pin the toggled apps to the desktop (`desktop.pin`); nothing is installed or removed |
+| Apps | "What are you into?" (ADR-040). A first boot has only the system apps; four interest toggles (`INTERESTS` in `services/apps/suggestions.ts`: Create, Get things done, Play, Build) list their apps as cards (icon, name, first highlight or the description) with a Pin toggle ("Add" on mobile). Skip and Start both install the picked groups (`apps.install`) and pin the toggled apps among them (`desktop.pin`). Replaying it only adds |
 | Make it yours | `ThemeCard` grid of `THEME_PRESETS` and a taskbar `Segmented`, both writing `settings` live |
 | Ready | Updates, windows come back, work in progress, replay from About. Button "Start using WebOS" |
 

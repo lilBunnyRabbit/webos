@@ -11,7 +11,6 @@ import { untrack } from "svelte";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { SessionStatus } from "../session/type";
-import { CHANGELOG } from "./changelog";
 import { introduced_apps } from "./history";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
@@ -49,7 +48,12 @@ export class VersionService implements IVersionService {
   public is_checking = $state(false);
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
 
-  public readonly changelog = CHANGELOG;
+  public changelog = $state.raw<Release[]>([]);
+  private loading: Promise<Release[]> | null = null;
+
+  public load_changelog(): Promise<Release[]> {
+    return (this.loading ??= import("./changelog").then(({ CHANGELOG }) => (this.changelog = CHANGELOG)));
+  }
   public unseen = $state<Release[]>([]);
   public announced = $state<AppIntroduction[]>([]);
 
@@ -101,6 +105,10 @@ export class VersionService implements IVersionService {
     const seen = file ? parse_seen(await file.text()) : null;
 
     if (seen === null) {
+      // Off the boot chunk: the samples are only ever written once (ADR-041).
+      void import("./samples")
+        .then(({ seed_samples }) => seed_samples(this.files_service))
+        .catch((error) => console.error("[VersionService] Failed to add sample files", error));
       // Loaded during boot, so the introduction is already up when the splash goes.
       await intro_dialog();
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
@@ -112,6 +120,7 @@ export class VersionService implements IVersionService {
 
     if (compare_versions(seen, this.info.version) >= 0) return;
 
+    await this.load_changelog();
     this.unseen = this.changelog.filter(
       (release) =>
         compare_versions(release.version, seen) > 0 && compare_versions(release.version, this.info.version) <= 0

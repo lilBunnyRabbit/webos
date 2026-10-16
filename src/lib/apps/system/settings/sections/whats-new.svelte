@@ -4,6 +4,7 @@
   import { format_date } from "$lib/core/utils";
 
   const version = $derived(kernel.service<VersionService>("version"));
+  void kernel.service<VersionService>("version").load_changelog();
 
   const KINDS = {
     [ChangeKind.NEW]: { label: "New", tone: "primary" },

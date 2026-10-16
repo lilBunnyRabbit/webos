@@ -19,6 +19,7 @@
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
     CheckCircle as CheckCircleIcon,
+    Compass as CompassIcon,
     DownloadSimple as DownloadSimpleIcon,
     GithubLogo as GithubLogoIcon,
     Link as LinkIcon,
@@ -114,6 +115,11 @@
     <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: installing, files, getting around, theme and taskbar.">
       <Button onclick={() => version.show_intro()}>
         <PlayIcon /> Show again
+      </Button>
+    </SettingRow>
+    <SettingRow label="Getting started" description="A card for each part of WebOS, from the command palette to backups, with a Try it button.">
+      <Button onclick={() => apps.launch("getting-started")}>
+        <CompassIcon /> Open
       </Button>
     </SettingRow>
   </Section>

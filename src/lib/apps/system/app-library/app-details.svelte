@@ -144,24 +144,26 @@
     <p class="text-sm text-pretty">{manifest.description}</p>
   {/if}
 
-  {#if manifest.highlights?.length}
-    <section>
-      {@render heading("What it does")}
-      <ul class="flex flex-col gap-1.5">
-        {#each manifest.highlights as highlight (highlight.title)}
-          <li class="flex gap-2.5 rounded-lg bg-background-light p-2.5 ring-1 ring-foreground/8">
-            <span class="grid size-7 shrink-0 place-items-center rounded-md bg-primary/12 text-primary">
-              <highlight.icon class="size-4" weight="duotone" />
-            </span>
-            <div class="min-w-0">
-              <h4 class="text-ui font-semibold">{highlight.title}</h4>
-              <p class="text-2xs text-pretty text-foreground/65">{highlight.text}</p>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    </section>
-  {/if}
+  {#await manifest.highlights?.() then module}
+    {#if module?.default.length}
+      <section>
+        {@render heading("What it does")}
+        <ul class="flex flex-col gap-1.5">
+          {#each module.default as highlight (highlight.title)}
+            <li class="flex gap-2.5 rounded-lg bg-background-light p-2.5 ring-1 ring-foreground/8">
+              <span class="grid size-7 shrink-0 place-items-center rounded-md bg-primary/12 text-primary">
+                <highlight.icon class="size-4" weight="duotone" />
+              </span>
+              <div class="min-w-0">
+                <h4 class="text-ui font-semibold">{highlight.title}</h4>
+                <p class="text-2xs text-pretty text-foreground/65">{highlight.text}</p>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+  {/await}
 
   {#if manifest.keywords?.length}
     <section>{@render heading("Keywords")}{@render chips(manifest.keywords)}</section>
