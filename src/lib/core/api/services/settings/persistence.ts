@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   AppearanceMotion,
   AppearanceRadius,
+  AppearanceShadow,
+  AppearanceText,
   TaskbarPosition,
   WallpaperFit,
   WallpaperPreset,
@@ -137,6 +139,8 @@ export function parse_wallpaper(saved: unknown): Wallpaper {
 const appearance_schema = z.object({
   radius: z.enum(Object.values(AppearanceRadius)).catch(DEFAULT_APPEARANCE.radius),
   motion: z.enum(Object.values(AppearanceMotion)).catch(DEFAULT_APPEARANCE.motion),
+  shadow: z.enum(Object.values(AppearanceShadow)).catch(DEFAULT_APPEARANCE.shadow),
+  text: z.enum(Object.values(AppearanceText)).catch(DEFAULT_APPEARANCE.text),
 });
 
 // Additive like the wallpaper; each field falls back on its own, so one bad value doesn't reset the others.

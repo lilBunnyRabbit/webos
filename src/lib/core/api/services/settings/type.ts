@@ -10,7 +10,7 @@ export interface SettingsService extends IService {
   wallpaper: Wallpaper;
   /** Themes the user named, in the order saved. Change it through `with_saved` / `without_saved` / `renamed_saved`. */
   saved_themes: SavedTheme[];
-  /** Non-colour look: corner radius and motion (ADR-015 revision). Not part of a theme, so presets and saved themes leave it alone. */
+  /** Non-colour look: corners, shadows, text size and motion (ADR-015 revision). Not part of a theme, so presets and saved themes leave it alone. */
   appearance: Appearance;
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
@@ -94,7 +94,24 @@ export const AppearanceMotion = {
 } as const;
 export type AppearanceMotion = (typeof AppearanceMotion)[keyof typeof AppearanceMotion];
 
+export const AppearanceShadow = {
+  NONE: "none",
+  SUBTLE: "subtle",
+  DEFAULT: "default",
+  STRONG: "strong",
+} as const;
+export type AppearanceShadow = (typeof AppearanceShadow)[keyof typeof AppearanceShadow];
+
+export const AppearanceText = {
+  S: "s",
+  M: "m",
+  L: "l",
+} as const;
+export type AppearanceText = (typeof AppearanceText)[keyof typeof AppearanceText];
+
 export interface Appearance {
   radius: AppearanceRadius;
   motion: AppearanceMotion;
+  shadow: AppearanceShadow;
+  text: AppearanceText;
 }

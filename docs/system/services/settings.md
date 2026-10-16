@@ -4,11 +4,11 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit`, `Appearance`, `AppearanceRadius`, `AppearanceMotion` |
+| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit`, `Appearance`, `AppearanceRadius`, `AppearanceMotion`, `AppearanceShadow`, `AppearanceText` |
 | `service.svelte.ts` | The class |
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `parse_appearance()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
-| `appearance.ts` | `DEFAULT_APPEARANCE`, `RADIUS_SCALE` (`sharp` 0.4, `default` 1, `round` 1.5) |
+| `appearance.ts` | `DEFAULT_APPEARANCE`, `RADIUS_SCALE` (`sharp` 0.4, `default` 1, `round` 1.5), `SHADOW_STRENGTH` (`none` 0, `subtle` 0.5, `default` 1, `strong` 1.4), `TEXT_SCALE` (`s` 0.9375, `m` 1, `l` 1.0625) |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
 | `saved-themes.ts` | `find_saved()`, `with_saved()`, `without_saved()`, `renamed_saved()`: pure helpers over `saved_themes`, names compared trimmed and case-insensitive. Saving an existing name replaces it in place; renaming onto another saved name returns the list unchanged |
 | `random-theme.ts` | `generate_theme()`, `DEFAULT_GENERATE`, `Harmony`, `ThemeMode`, `GenerateOptions`, `parse_oklch()`, `is_dark()`, `oklch_lightness()`, `MIN_TEXT_CONTRAST`, `MIN_COLOUR_CONTRAST` (ADR-015 revisions) |
@@ -18,7 +18,7 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 
 ## Purpose
 
-Owns the user's persisted OS preferences: theme colour tokens, saved themes, taskbar position, per-extension default apps, the wallpaper, and the non-colour appearance (corners, motion). It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
+Owns the user's persisted OS preferences: theme colour tokens, saved themes, taskbar position, per-extension default apps, the wallpaper, and the non-colour appearance (corners, shadows, text size, motion). It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
 
 ## Public API
 
@@ -31,7 +31,7 @@ The API is six plain reactive fields, which consumers assign to directly, plus o
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
 | `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`. Assign a preset, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
 | `saved_themes` | `saved_themes: SavedTheme[]` (`{ name, theme: Theme }`) | Themes the user named, in the order saved. Change through the `saved-themes.ts` helpers and assign the result. Written by Settings › Appearance (Save…, Rename…, Delete…, importing a `.webos-theme` file) and `theme save` / `theme delete`. Exported and imported as `.webos-theme` files by the Settings app ([Settings](../system-apps.md#settings)); the service has no file format of its own for them. Kept by About › Reset settings |
-| `appearance` | `appearance: Appearance` = `{ radius: "sharp" \| "default" \| "round", motion: "system" \| "off" }` | The non-colour look (ADR-015 revision). Not part of a theme: presets, the generator and saved themes never touch it. Mutate a field (`settings.appearance.radius = "round"`). Written by Settings › Appearance › Interface; reset by About › Reset settings |
+| `appearance` | `appearance: Appearance` = `{ radius: "sharp" \| "default" \| "round", motion: "system" \| "off", shadow: "none" \| "subtle" \| "default" \| "strong", text: "s" \| "m" \| "l" }` | The non-colour look (ADR-015 revision). Not part of a theme: presets, the generator and saved themes never touch it. Mutate a field (`settings.appearance.radius = "round"`). Written by Settings › Appearance › Interface; reset by About › Reset settings |
 | `set_wallpaper_image` | `(source: string \| File) => Promise<void>` | Copies a path or a device file (ADR-031 `string \| File`) to `/var/lib/wallpaper/{base36 time}-{name}`, sets `wallpaper` to it keeping the previous image's fit, dim and blur (else fill, 0, 0), then prunes the folder. Throws when the path doesn't exist. Callers: Settings › Appearance, `set_wallpaper()` in `file-actions.ts` (Explorer, desktop, Media Preview) |
 | `init` | `init(): Promise<void>` | See Lifecycle. |
 | `destroy` | `destroy(): void` | Disposes the effect root. |
@@ -79,7 +79,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar`, `file_defaults`, `wallpaper`, `saved_themes` and `appearance`. Then prune `/var/lib/wallpaper` without awaiting: every file but the current image is deleted, so an image left behind when a preset was chosen goes at the next boot. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
 4. Start an `$effect.root` with three effects:
    - **Token writer:** for each `[key, value]` of `theme`, call `document.documentElement.style.setProperty("--" + key.replaceAll("_", "-"), value)`, so `background_dark` is written as `--background-dark`. Then set `documentElement.style.colorScheme` to `light` when the applied background's lightness is above 0.6, otherwise `dark`. The lightness comes from a probe element (`background_lightness()`), so hex and relative colour syntax work too ([theming](../theming.md#color-scheme)).
-   - **Appearance writer:** sets `--radius-scale` on `<html>` to `RADIUS_SCALE[appearance.radius]`, and `data-motion="off"` on `<html>` while `appearance.motion` is `off` (removed otherwise).
+   - **Appearance writer:** sets `--radius-scale`, `--shadow-strength` and `--text-scale` on `<html>` from `RADIUS_SCALE`, `SHADOW_STRENGTH` and `TEXT_SCALE`, and `data-motion="off"` on `<html>` while `appearance.motion` is `off` (removed otherwise).
    - **Saver:** `writer.write(serialize_settings({ version: 1, theme, taskbar, file_defaults, wallpaper, saved_themes, appearance }))`. It tracks every field deeply, because `JSON.stringify` reads every property.
 
 `destroy()` disposes the root. A write already queued still finishes. Nothing extra is saved on destroy, because the saver has already run after every change.
@@ -92,7 +92,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 |-|-|
 | Store | OPFS, through FilesService |
 | Path | `/etc/settings.json` (ADR-021: OS config lives in `/etc`) |
-| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"] }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": … } }`, pretty-printed (2 spaces) |
+| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"] }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": …, "shadow": …, "text": … } }`, pretty-printed (2 spaces) |
 | Images | `/var/lib/wallpaper/`, copies owned by the OS. Only the current image is kept |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | On every change, after the effect flush. Also once right after `init()`, which creates or normalizes the file. |
@@ -111,7 +111,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - `file_defaults`: keeps entries whose key starts with `.` and whose value is a string. It's an additive field, so v1 blobs without it load as `{}`. The app id is not checked against the registry here. `apps.open()` deals with stale ids.
 - `wallpaper` (`parse_wallpaper`, zod): additive like `file_defaults`, so a missing or invalid value is the grid preset. An image path must be inside `/var/lib/wallpaper/`; a bad `fit` becomes `fill`, an out-of-range `dim` or `blur` becomes 0. The image file isn't checked here; a missing one draws the glow.
 - `saved_themes`: additive; entries need a non-empty trimmed name, the first of each name (case ignored) wins, each theme merged like `theme`. Missing → `[]`.
-- `appearance` (`parse_appearance`, zod): additive; each field falls back to its default (`default`, `system`) on its own, so one unknown value doesn't reset the others. Missing or not an object → `DEFAULT_APPEARANCE`.
+- `appearance` (`parse_appearance`, zod): additive; each field falls back to its default (`default`, `system`, `default`, `m`) on its own, so one unknown value doesn't reset the others. Missing or not an object → `DEFAULT_APPEARANCE`.
 - Write errors (quota, OPFS failure) → `console.error("Failed to save settings:")`; the writer moves on to the next queued text. A legacy-key read or remove that throws counts as no legacy copy.
 
 ## Behaviour & invariants
@@ -124,6 +124,8 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar` (position and pins), `theme`, `file_defaults`, `wallpaper` (grid preset; the image copy is pruned at the next boot) and `appearance`. Saved themes stay. Default apps → Forget / Forget all clears `file_defaults` entries only.
 - `color-scheme` is set in the same effect as the tokens, so native controls switch together with the palette.
 - **Radius:** every `@theme` radius in `app.css` (`--radius`, `xs` … `3xl`) is `calc(<px> * var(--radius-scale, 1))`, so the utilities follow the variable on `<html>`. `rounded-full` and arbitrary values (`rounded-[5px]`) aren't scaled.
+- **Shadows:** the darkest-shade percentage inside each `@theme` shadow's `color-mix` is `calc(<n>% * var(--shadow-strength, 1))`. Tailwind's `--tw-shadow-color` rewrite keeps the `calc()` intact (checked in the built CSS, inside its `@supports (color: color-mix(…))` block). A percentage past 100% (Strong on `shadow-window-focused`) clamps to 100%. The 1px `foreground/16` hairline in `shadow-popover`, the desktop glyph drop-shadows and the `--overlay` scrim aren't scaled.
+- **Text size:** the base layer gives `html` `font-size: calc(100% * var(--text-scale, 1))`: 15, 16 or 17px at the browser's default. Every size and most spacing is in rem, so the whole UI scales with it, inside windows whose sizes stay in px; `@container` layouts react to the content, not the window.
 - **Motion:** `appearance.motion` only ever removes motion. `off` sets `html[data-motion="off"]`, which gets the same 1ms rule as `prefers-reduced-motion: reduce` in the base layer; `system` leaves the OS setting in charge, and it always wins. Script-driven motion checks `motion_reduced()` (`$lib/core/utils/motion.ts`, either condition): `view_transition()` skips, and the shell's Svelte transitions (window open/close, toasts, the mobile app drawer, the update overlay) run with duration 0, since they use the Web Animations API, which the CSS rule doesn't reach.
 
 ## Divergence from ADR
@@ -136,5 +138,5 @@ Contributes `theme get|list|set|random|save|delete`, the `theme` completer and v
 
 ## Known gaps
 
-- ADR-015's font, taskbar size, desktop icon and sound settings aren't built. Easing and durations are constants in `app.css`.
+- ADR-015's font family, taskbar size, desktop icon and sound settings aren't built. Easing and durations are constants in `app.css`.
 - Every field added since v1 is additive and parsed with its own default, so no migration has been needed. Only a `version` other than 1 is discarded: a breaking change to the format would need `parse_settings()` to learn to migrate.

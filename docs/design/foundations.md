@@ -117,6 +117,8 @@ Shadows are cast in `background-darkest`, never black, so they stay on-palette i
 | `shadow-window` | Unfocused windows |
 | `shadow-window-focused` | The focused window |
 
+Settings › Appearance › Shadows multiplies the darkest-shade opacity: None 0, Subtle 0.5, Default 1, Strong 1.4 (capped at 100%). Hairlines stay. Text size (Small 15px, Medium 16px, Large 17px root) scales everything set in rem, so design in rem, not px, for anything that should grow with it.
+
 Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for dividers). Focused windows get `ring-foreground/16`.
 
 ## Motion

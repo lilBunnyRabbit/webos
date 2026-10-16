@@ -73,13 +73,13 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 | Type | `text-2xs` (11px / 16px), `text-ui` (13px / 20px) | Added to Tailwind's scale. `text-ui` is the default for controls and dense UI |
 | Tracking | `tracking-heading` (`-0.011em`) | Applied to `h1`–`h3` by the base layer |
 | Radius | `rounded` 4 · `xs` 4 · `sm` 6 · `md` 8 · `lg` 10 · `xl` 14 · `2xl` 18 · `3xl` 24 (px) | Each is `calc(<px> * var(--radius-scale, 1))`; SettingsService writes `--radius-scale` (0.4 / 1 / 1.5) from `appearance.radius` ([settings](services/settings.md#behaviour--invariants)). `rounded-full` isn't scaled |
-| Shadows | `shadow-raised`, `shadow-popover`, `shadow-window`, `shadow-window-focused` | Cast in `color-mix(… var(--background-darkest) …)`, never black, so they stay on-palette in light themes. `popover` includes a 1px `foreground/16` hairline |
+| Shadows | `shadow-raised`, `shadow-popover`, `shadow-window`, `shadow-window-focused` | Cast in `color-mix(… var(--background-darkest) …)`, never black, so they stay on-palette in light themes. The darkest-shade percentage is multiplied by `--shadow-strength` (0 / 0.5 / 1 / 1.4 from `appearance.shadow`). `popover` includes a 1px `foreground/16` hairline, which isn't scaled |
 | Easing | `ease-out` `cubic-bezier(0.22, 1, 0.36, 1)`, `ease-in-out` `cubic-bezier(0.65, 0, 0.35, 1)` | Override Tailwind's defaults |
 | Animation | `animate-pop-in`, `animate-sheet-in` | `pop-in`: 160ms fade plus `scale: 0.97 → 1`. Menus, dialogs, snap preview. `sheet-in`: 200ms rise from `translate: 0 100%`, for anchored dialogs shown as bottom sheets on mobile (`dialogs-host.svelte` with `anchored="sheet"`) |
 
 ### Base layer
 
-- `html`: Inter features `cv11`, `ss01`, antialiased.
+- `html`: `font-size: calc(100% * var(--text-scale, 1))` (Settings › Appearance › Text size), Inter features `cv11`, `ss01`, antialiased.
 - `body`: `bg-background-darkest text-foreground font-sans text-sm overflow-hidden`. `#app` fills `100dvw × 100dvh`.
 - `:focus-visible`: 2px `var(--cottontail)` outline, 2px offset.
 - `--overlay` on `html`: the shared scrim behind the start menu and every dialog, `background-darkest` at 60%.

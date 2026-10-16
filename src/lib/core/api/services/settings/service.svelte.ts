@@ -1,7 +1,7 @@
 import type { Appearance, FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
-import { DEFAULT_APPEARANCE, RADIUS_SCALE } from "./appearance";
+import { DEFAULT_APPEARANCE, RADIUS_SCALE, SHADOW_STRENGTH, TEXT_SCALE } from "./appearance";
 import type { FilesService, Kernel } from "$lib/core/api";
 import { LatestWriter } from "../files/latest-writer";
 import { write_var_lib } from "../desktop/folder.svelte";
@@ -72,6 +72,8 @@ export class SettingsService implements ISettingsService {
       $effect(() => {
         const root = document.documentElement;
         root.style.setProperty("--radius-scale", String(RADIUS_SCALE[this.appearance.radius]));
+        root.style.setProperty("--shadow-strength", String(SHADOW_STRENGTH[this.appearance.shadow]));
+        root.style.setProperty("--text-scale", String(TEXT_SCALE[this.appearance.text]));
         if (this.appearance.motion === "off") root.dataset.motion = "off";
         else delete root.dataset.motion;
       });
