@@ -68,3 +68,23 @@ ADR-011 asks for solid, gradient and image wallpapers (fit modes, blur, tint, br
 ## Next session topics
 
 - ADR-015 theme settings (radius, motion, shadows, font) and export/import, when the owner picks them up.
+
+## Session 2026-10-16: the rest of the theme system
+
+Picked up block 6 after the generator and saved themes shipped (1.14.x). Radius, shadows and motion are constants in `@theme inline` (`app.css`), baked into the CSS; a theme is the 17 colour tokens only.
+
+### Decisions
+
+- **Separate `appearance` field** in settings.json, sibling of `theme`, zod-parsed with defaults like `wallpaper`. No version bump. Presets, the generator and saved themes stay colour-only.
+- **Slice 1: radius + motion.**
+  - Radius: `sharp | default | round` maps to one `--radius-scale` (0.4 / 1 / 1.5) inside the `@theme` radius values. `rounded-full` stays out. No component edits.
+  - Motion: `system | off`. `html[data-motion=off]` reuses the reduced-motion rule; `view_transition()` checks it too. The OS setting always wins (no forcing motion on).
+- **Slice 2: theme export/import.** `.webos-theme` file: zod-validated JSON `{ format: "webos-theme", version: 1, name, theme }` with all 17 tokens, each checked with `CSS.supports("color", …)`. Export from Your themes writes `~/Documents/{name}.webos-theme`. Opening one from Explorer launches Settings › Appearance with an import preview: Settings gains a `path` prop and a file association. Import saves to Your themes and applies; a name clash gets " (2)". Presets' names stay refused.
+- **Slice 3: shadow strength and text size.** Shadow: `none | subtle | default | strong` multiplier in `color-mix`, hairline ring untouched; spike Tailwind's shadow rewriting first. Text size: `s | m | l` on the root font-size.
+- **Font family:** not now; the brand fixes Inter and Hack.
+- **Shell:** none. Settings UI only.
+
+### Action items
+
+- [ ] Slice 1, slice 2, slice 3 (spike first)
+- [ ] ADR-015 revision; docs/system settings page (also add `saved_themes` to Format, fix the stale "no migration path" gap); ROADMAP

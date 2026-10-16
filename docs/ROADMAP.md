@@ -444,6 +444,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Lazy loading for apps (dynamic imports via `component()`), per-platform shell chunks, lazy service shell command bodies and dialogs boot doesn't show ([ADR-036](adrs/036-boot-loading-screen.md))
 - [x] Boot loading screen with progress; the shell, desktop widgets and session apps start loading during boot (ADR-036). Entry chunk 269 → 164 KB gz
 - [ ] Virtual scrolling for large lists (file explorer, game hub). Explorer got `content-visibility` and reused row objects instead (2000 files: add one 170 → 8 ms); windowing is the owner's call
+- [ ] Performance pass (owner, 2026-10-16): after the 1.15–1.17 batch, sweep core, shell and apps for unnecessary logic, effects and re-renders
 - [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
 
 ### Scoped app dependencies
