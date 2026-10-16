@@ -1,11 +1,12 @@
 # Taskbar
 
-Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/windows.md), [settings](../services/settings.md), [apps](../services/apps.md), [desktop](../services/desktop.md), [version](../services/version.md) · ADRs: [ADR-014](../../adrs/014-window-enhancements.md), [ADR-015](../../adrs/015-customization-theming.md) (accepted), [ADR-024](../../adrs/024-design-system.md) · Design: [docs/design/shell.md](../../design/shell.md#taskbar)
+Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/windows.md), [settings](../services/settings.md), [apps](../services/apps.md), [desktop](../services/desktop.md), [version](../services/version.md) · ADRs: [ADR-014](../../adrs/014-window-enhancements.md), [ADR-015](../../adrs/015-customization-theming.md) (accepted), [ADR-042](../../adrs/042-quick-launch.md), [ADR-024](../../adrs/024-design-system.md) · Design: [docs/design/shell.md](../../design/shell.md#taskbar)
 
 | File | Role |
 |------|------|
-| `taskbar.svelte` | The floating dock, laid out per `settings.taskbar.position`: start button, separator, window items, tray |
-| `taskbar-item.svelte` | One button per open window, with a running indicator |
+| `taskbar.svelte` | The floating dock, laid out per `settings.taskbar.position`: start button, separator, quick launch, window items, tray |
+| `quick-launch.svelte` | Pinned apps (`settings.taskbar.pinned`) with drag to pin, reorder and unpin ([Quick launch](#quick-launch)) |
+| `taskbar-item.svelte` | One button per open window, with a running indicator and a context menu |
 | `terminal-button.svelte` | The Terminal button, just before the tray |
 | `tasks-indicator.svelte` | A spinner between the Terminal button and the tray while background tasks run ([tasks](../services/tasks.md)) |
 | `taskbar-tray.svelte` | The tray button (bell, unread badge, clock) and the notification center popover |
@@ -20,7 +21,7 @@ Source: `src/lib/core/components/taskbar/` · Services: [windows](../services/wi
 - Show a start button, one item per window and the tray.
 - Lay itself out for the taskbar position. `desktop-shell.svelte` decides which grid area the taskbar gets. The taskbar only switches between a `vertical` layout (`left`/`right`) and a `horizontal` one (`top`/`bottom`).
 - Styling: a floating dock. The outer strip is transparent and pads only its screen-edge sides by 8px (bottom bar: `px-2 pb-2`, and so on). The side facing the windows gets its 8px from the window area's own snap inset, so every gap (screen edge, between snapped windows, window to dock) is 8px. Inside the strip, `<nav aria-label="Taskbar" class="taskbar-dock">` is a `rounded-2xl bg-background-light/90 backdrop-blur-xl shadow-popover` bar, `h-13` (horizontal) or `w-13` (vertical), with a `p-1.5` inset and `gap-1`. **Flush mode:** while any non-minimized window is maximized, the strip drops its padding and the bar drops its radius and shadow, becoming an edge bar with a `foreground/8` hairline on the window side, so the maximized window's square edge joins it instead of meeting the dock's rounded corners. `anchor-name: --taskbar-dock` sits on an absolute inner box (`inset-0`, or inset 8px along the bar in flush mode), so the start menu and notification center keep 8px off the screen corners either way. The bar has `view-transition-name: taskbar-dock`, so going flush or back morphs inside the maximize, restore and minimize view transitions together with the window. Closing a clean maximized window (the titlebar's Close, `win close`) runs in a view transition too; a dirty one asks first and switches instantly.
-- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tasks indicator (only while tasks run), the tray, then the show desktop sliver at the far end.
+- Order: start button, a hairline separator (`foreground/12`, `role="separator"`), the quick launch and its own separator (only while something is pinned or an app drag is over the page), the window items (`flex-1`, scrolling along the bar's axis when they overflow), the Terminal button, the tasks indicator (only while tasks run), the tray, then the show desktop sliver at the far end.
 - **Terminal button**: 40px `rounded-xl` like the start button, `TerminalWindow` icon (`fill` while a Terminal runs, `bold` otherwise), `bg-foreground/10` while one is focused. A click toggles like a window item on the newest Terminal: focused or minimized → `toggle_minimize` in a view transition; open behind → `focus`; none → `apps.launch("terminal")`. Desktop only: the phone has no taskbar.
 - **Show desktop sliver**: Windows 11 style. A `w-3` (horizontal) or `h-3` (vertical) `rounded-md` button filling the bar's height, holding a 1px line (`foreground/20`, `foreground/45` on hover, `primary` while `windows.showing_desktop`). `aria-label` "Show desktop", `aria-pressed` while shown, title with Alt+Shift+D. A click runs `toggle_desktop()` in a view transition, the same as `win desktop`.
 
@@ -43,6 +44,19 @@ States:
 | hover | `bg-foreground/10` |
 
 The indicator sits under the button when horizontal and to its left when vertical, so it's on the same side whether the bar is at the top or the bottom (left or right). It animates between bar and dot over 200ms.
+
+Right-click a window item (ADR-042) for **Pin to taskbar** (or Unpin from taskbar when its app is pinned), then **Close window** (`windows.close`, so the close guard still asks).
+
+## Quick launch
+
+ADR-042, [brainstorm](../../brainstorm/2026-10-16_quick-launch-and-random-theme.md). `quick-launch.svelte`, a `role="toolbar"` "Quick launch" between the start separator and the window items, laid out along the bar. Desktop only: the phone has no taskbar.
+
+- **Icons:** `settings.taskbar.pinned` in order, skipping ids the registry doesn't know. 40px `rounded-xl` buttons, duotone icon, the app badge, and a small `foreground/45` dot (under, or left of, the icon) while the app has a window. `aria-label` is the app name; `title` adds "Shift-click for a new window".
+- **Click:** focus the app's window with the highest `order` (`toggle_minimize` in a view transition when it's minimized), else `apps.launch(id)`. Shift-click and middle-click always launch.
+- **Right-click:** Open, New window, Unpin from taskbar.
+- **Drag in:** any drag carrying `application/x-webos-app` (`components/apps/drag.ts`): start menu tiles, App Library cards, its own icons. On `dragover` the insertion index is the number of shown icons whose middle is before the pointer; a `primary/12` placeholder opens there and the icons slide with `animate:flip` (160 ms). An empty zone shows a dashed `+` slot while any app drag is over the page (a `document` `dragenter` sets it; `dragend` and `drop` clear it). The drop installs the app if needed (ADR-040) and stores `with_pin(pinned, id, index)`.
+- **Reorder:** dragging an own icon sets `application/x-webos-quick-launch` too. A frame after `dragstart` the icon goes `absolute opacity-0` (hiding the source inside `dragstart`, or removing it, cancels the drag in Chromium) and the placeholder takes its place.
+- **Drag off:** a `document` `dragover` listener records whether the own drag is over the taskbar `nav`; a `dragend` outside it unpins. The desktop ignores quick-launch drags, so dropping one there unpins it too.
 
 ## Clock
 
@@ -69,7 +83,7 @@ Contents (`start-menu-popover.svelte`):
 
 1. A large `Input` ("Search apps, or > for commands") with an **All apps** button (`quiet`, `lg`, `SquaresFour` icon) at the end of the row. It launches [App Library](../system-apps.md#app-library) and closes the menu. The field is focused by an `$effect` on mount (`autofocus` doesn't fire, because the content mounts after the popover opened). It runs `search_apps()` ([manifest](../apps/manifest.md#launcher-search-and-sections-searchts)): every query word must match name, id, keywords, description or category label, ranked, with one-typo tolerance for long words.
 2. With no query, one section per `group_apps()` entry (Productivity … Games, then System) of the **installed** apps (`apps.list({ installed: true })`, ADR-040), each an overline and a grid. While searching, a "Results" grid of installed matches in rank order, then a "Not installed" grid of the other matches, each tile marked with a `primary` "Get" pill; clicking one installs and opens it (`launch`). Enter opens the first result, else the first Get match. Grids are 4 columns of app tiles: a 44px icon tile (`bg-background`, `shadow-raised`, duotone glyph) over a one-line `text-2xs` name. No matches shows an `EmptyState` ("No apps match").
-3. A pin `IconButton` in each installed tile's top-right corner, invisible until the tile is hovered or the pin has keyboard focus. Right-click a tile for its menu: Open, Pin to desktop and, for user apps, **Uninstall…** (`uninstall_app()`, [apps](../services/apps.md#public-api)); a Get tile's menu has "Get and open".
+3. A pin `IconButton` in each installed tile's top-right corner, invisible until the tile is hovered or the pin has keyboard focus. Tiles are `draggable`: dragging one sets `application/x-webos-app` and closes the menu a frame later, so it can land on the desktop (pins it at that cell) or the quick launch. Right-click a tile for its menu: Open, Pin to desktop, Pin to taskbar (or Unpin from taskbar) and, for user apps, **Uninstall…** (`uninstall_app()`, [apps](../services/apps.md#public-api)); a Get tile's menu has "Get and open".
 4. **Command mode** (ADR-033). A query starting with `>` swaps the grids for `command-mode.svelte`. It keeps one [shell](../services/shell.md) session while the menu is open, and the field forwards its keys to the component:
    - **Naming** (the words typed don't resolve to a command yet): rows list every available command, matched by id or description with prefix matches first. Each row shows its description and its bound keys as `Kbd` chips. ↑ ↓ move, Tab fills the name. Enter runs a command that needs no args; a command with required positionals fills `> id ` instead, so its args come next.
    - **Args:** rows are `shell.complete()` for the end of the line, shown unescaped (`Brand Dark`) and inserted escaped. Enter runs the line unless a row was picked with the arrows; then Enter applies it.
@@ -84,6 +98,10 @@ Contents (`start-menu-popover.svelte`):
 | Click | Window item, minimized | `windows.toggle_minimize(id)`. Restores and focuses it in one click. |
 | Click | Window item, focused | `windows.toggle_minimize(id)`. Minimizes it; focus moves to the next visible window. |
 | Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
+| Click | Quick launch icon | Focus the app's latest window, else launch it; Shift or middle click launches a new one |
+| Drag | App tile / App Library card onto quick launch | Pin at the gap |
+| Drag | Quick launch icon | Reorder within the zone; out of the taskbar unpins |
+| Right-click | Window item | Pin to taskbar / Unpin, Close window |
 | Click | Start button | Toggle the start menu |
 | Click | Tray | Toggle the notification center |
 | Click | Show desktop sliver | `windows.toggle_desktop()` in a view transition: minimizes every visible window, or brings back the ones it hid |
@@ -106,4 +124,7 @@ Contents (`start-menu-popover.svelte`):
 ## Known gaps
 
 - "Pin to desktop" can pin duplicates (`Settings (1).desktop`) and gives no feedback: not on success, not when the grid is full and the new icon is hidden, not on failure.
-- No grouping, no context menus, no auto-hide or size options (ROADMAP "Taskbar Enhancements").
+- No grouping, no auto-hide or size options (ROADMAP "Taskbar Enhancements").
+- A pinned app with a window open shows twice: its launcher and its window item (ADR-042).
+- Drag off also unpins when a drag cancelled with Esc ends outside the taskbar.
+- Touch can't drag to pin (no native drag and drop); phones use the drawer's menu.

@@ -18,12 +18,13 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { without_pin } from "../settings/taskbar";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
   description = "App registry, launching and file associations";
   inspector = () => import("./inspector.svelte");
-  shell = () => apps_shell(this, () => this.files_service);
+  shell = () => apps_shell(this, () => this.files_service, () => this.settings_service);
 
   to_string(): string {
     return `AppsService: ${this.registry.size} apps registered, ${[...this.list({ installed: true })].length} installed`;
@@ -114,6 +115,7 @@ export class AppsService implements IAppsService {
     if (manifest.system) throw new Error(`${manifest.name} is part of WebOS and can't be uninstalled`);
     this.installed.delete(id);
     this.writer.write(serialize_installed(this.installed));
+    if (this.settings_service.taskbar.pinned.includes(id)) this.settings_service.taskbar.pinned = without_pin(this.settings_service.taskbar.pinned, id);
     if (!options.data) return;
 
     const prefix = `app.${id}.`;

@@ -7,6 +7,7 @@
     type AppsService,
     type DesktopService,
     type DialogsService,
+    type SettingsService,
     type ShellService,
     type ShortcutsService,
     type VersionService,
@@ -16,6 +17,8 @@
     DownloadSimple as DownloadSimpleIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     PushPin as PushPinIcon,
+    PushPinSimple as PushPinSimpleIcon,
+    PushPinSimpleSlash as PushPinSimpleSlashIcon,
     SquaresFour as SquaresFourIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
@@ -24,6 +27,8 @@
   import { Button, EmptyState, IconButton, Input, Kbd } from "../ui";
   import AppBadge from "../apps/app-badge.svelte";
   import { uninstall_app } from "../apps/app-actions";
+  import { set_drag_app } from "../apps/drag";
+  import { with_pin, without_pin } from "$lib/core/api";
 
   const APP_LIBRARY = "app-library";
 
@@ -33,6 +38,7 @@
   const shell = $derived(kernel.service<ShellService>("shell"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -79,6 +85,9 @@
         ? [
             { id: "open", label: "Open", icon: ArrowSquareOutIcon },
             { id: "pin", label: "Pin to desktop", icon: PushPinIcon },
+            settings.taskbar.pinned.includes(manifest.id)
+              ? { id: "unpin-taskbar", label: "Unpin from taskbar", icon: PushPinSimpleSlashIcon }
+              : { id: "pin-taskbar", label: "Pin to taskbar", icon: PushPinSimpleIcon },
             ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
         : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
@@ -86,6 +95,8 @@
     );
     if (choice === "open") launch(manifest);
     else if (choice === "pin") pin(manifest);
+    else if (choice === "pin-taskbar") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, manifest.id);
+    else if (choice === "unpin-taskbar") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, manifest.id);
     else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
   }
 </script>
@@ -100,6 +111,12 @@
             class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
             onclick={() => launch(manifest)}
             oncontextmenu={(event) => menu(manifest, event)}
+            draggable="true"
+            ondragstart={(event) => {
+              set_drag_app(event, manifest.id);
+              // Out of the way of the desktop and the taskbar; closing inside dragstart would cancel the drag.
+              requestAnimationFrame(close);
+            }}
           >
             <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
               <manifest.icon class="size-6" weight="duotone" />

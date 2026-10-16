@@ -31,7 +31,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `list(filter?)` | `(filter?: { installed?: boolean }): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. `installed: true` only installed apps (the start menu, drawer, `app list`), `false` only the others (search's Get group) |
 | `is_installed(id)` | `(id: AppId): boolean` | System apps always; unknown ids never. Reactive |
 | `install(ids)` | `(ids: AppId \| AppId[]): AppId[]` | Adds the ones not installed yet, saves, returns them. No toast |
-| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`. Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
+| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`. Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | |
 | `register(manifest)` | `(manifest: AppManifest): void` | `registry.set`. Same id overwrites silently. No `unregister` |
 | `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Installs an app that isn't, with an "{App} installed" toast. Always opens a new window |
@@ -168,7 +168,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Shell
 
-Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
+Contributes `app list|info|launch`, `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
 
 The shell never installs (ADR-040):
 

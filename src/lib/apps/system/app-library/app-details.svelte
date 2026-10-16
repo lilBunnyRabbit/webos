@@ -8,7 +8,10 @@
     type AppsService,
     type DesktopService,
     type NotificationsService,
+    type SettingsService,
     type VersionService,
+    with_pin,
+    without_pin,
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
@@ -20,6 +23,8 @@
     Package as PackageIcon,
     Play as PlayIcon,
     PushPin as PushPinIcon,
+    PushPinSimple as PushPinSimpleIcon,
+    PushPinSimpleSlash as PushPinSimpleSlashIcon,
     Sparkle as SparkleIcon,
     Sticker as StickerIcon,
   } from "phosphor-svelte";
@@ -49,6 +54,8 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const version = $derived(kernel.service<VersionService>("version"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const on_taskbar = $derived(settings.taskbar.pinned.includes(manifest.id));
 
   const history = $derived(app_history(version.changelog, manifest.id));
   let show_all = $state(false);
@@ -126,6 +133,13 @@
     {#if installed}
       <Button variant="primary" onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Open</Button>
       <Button onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
+      {#if !mobile}
+        <Button
+          onclick={() => (settings.taskbar.pinned = on_taskbar ? without_pin(settings.taskbar.pinned, manifest.id) : with_pin(settings.taskbar.pinned, manifest.id))}
+        >
+          {#if on_taskbar}<PushPinSimpleSlashIcon weight="bold" /> Unpin from taskbar{:else}<PushPinSimpleIcon weight="bold" /> Pin to taskbar{/if}
+        </Button>
+      {/if}
       {#if manifest.widget && !mobile}
         <Button onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>
       {/if}

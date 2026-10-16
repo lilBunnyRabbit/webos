@@ -27,7 +27,7 @@ export class SettingsService implements ISettingsService {
     return `SettingsService: taskbar ${this.taskbar.position}, theme ${JSON.stringify(this.theme)}`;
   }
 
-  public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM });
+  public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM, pinned: [] });
   public theme = $state<Theme>({ ...BRAND_DARK });
   public file_defaults = $state<FileDefaults>({});
   public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);

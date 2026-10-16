@@ -173,12 +173,12 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md), [ADR-015](adrs/015-customization-theming.md)
 - **Status:** In progress
 - [x] System tray area (notifications; a tasks indicator before it, ADR-013)
-- [ ] Context menus for taskbar items
+- [-] Context menus for taskbar items: window items have Pin to taskbar / Unpin and Close window; quick launch icons have Open, New window, Unpin (ADR-042)
 - [ ] Window grouping by app (badge count, expand to list)
-- [ ] Quick launch area
+- [x] Quick launch area ([ADR-042](adrs/042-quick-launch.md)): pinned apps between Start and the windows, focus-else-launch, drag to pin, reorder (icons slide apart) and drag off to unpin, `taskbar pin|unpin|list`
 - [ ] Taskbar auto-hide
 - [ ] Taskbar size options (small/medium/large)
-- [ ] Drag and drop apps to pin (owner, 2026-10-16): drag an app from the start menu, App Library or desktop onto the taskbar (mobile: the dock) to pin it, and drag pinned ones to reorder or off to unpin
+- [x] Drag and drop apps to pin (owner, 2026-10-16; [ADR-042](adrs/042-quick-launch.md)): start menu tiles and App Library cards drag onto the desktop (pins at that cell) or the quick launch; mobile keeps its menus
 - [x] Show desktop: a sliver at the far end of the taskbar and Alt+Shift+D (`win desktop`) minimize every visible window; again brings back only those, until another window is focused (2026-10-15, [brainstorm](brainstorm/2026-10-15_show-desktop.md)). Mobile: goes home
 
 ---
@@ -263,7 +263,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] CSS custom properties for all theme values
 - [ ] Theme export/import as JSON
 - [ ] Theme sharing via URL
-- [ ] Random theme generator (owner, 2026-10-16): a Randomize button that makes a new theme, not fully random: keep the logic that makes a theme work (contrast between token pairs, a coherent hue relationship such as analogous or complementary, sane lightness for light and dark), randomize within it
+- [x] Random theme generator (owner, 2026-10-16; ADR-015 revision): Shuffle in Appearance and `theme random`, keeping the mode, harmonic hues, readable lightness gaps. Originally: a Randomize button that makes a new theme, not fully random: keep the logic that makes a theme work (contrast between token pairs, a coherent hue relationship such as analogous or complementary, sane lightness for light and dark), randomize within it
 - [ ] Chromatics in WebOS (owner, 2026-10-15). Bring the whole Chromatics API (OKLCH engine, colour DSL, ~100 colour models, WCAG/APCA analysis, schemes, mixer, export) into WebOS, likely as an app plus a core colour layer. Open questions: depend on the `chromatics` package (not published yet: a new dependency) or vendor its source; what lives in core (theme maths, `derive_theme` today) and what stays in an app; shell commands (`color` values, convert, contrast); how it sits next to Culori (style default)
 - [ ] Build WebOS themes with Chromatics: write a theme in the Chromatics DSL or studio, preview it live on the desktop, check contrast of every token pair, save it as a WebOS theme (feeds export/import and sharing above, and may replace `derive_theme`)
 - [ ] Sound effects (window open/close, notifications) — low priority

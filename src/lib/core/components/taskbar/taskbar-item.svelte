@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { type WindowsService, WindowFlag, type WindowInstance } from "$lib/core/api";
+  import kernel, { type DialogsService, type SettingsService, type WindowsService, WindowFlag, type WindowInstance, with_pin, without_pin } from "$lib/core/api";
+  import { PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
   import { cn } from "$lib/core/utils";
   import { view_transition } from "$lib/core/utils/view-transition";
   import AppBadge from "../apps/app-badge.svelte";
@@ -7,10 +8,31 @@
   let { instance, vertical }: { instance: WindowInstance; vertical: boolean } = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const is_focused = $derived(windows.is_focused(instance.id));
   const is_minimized = $derived(instance.flags.has(WindowFlag.MINIMIZED));
   const label = $derived(instance.title ? `${instance.title} — ${instance.app.manifest.name}` : instance.app.manifest.name);
+
+  async function menu(event: MouseEvent) {
+    event.preventDefault();
+    const app_id = instance.app.id;
+    const pinned = settings.taskbar.pinned.includes(app_id);
+    const choice = await dialogs.menu(
+      [
+        pinned
+          ? { id: "unpin", label: "Unpin from taskbar", icon: PushPinSimpleSlashIcon }
+          : { id: "pin", label: "Pin to taskbar", icon: PushPinSimpleIcon },
+        { separator: true },
+        { id: "close", label: "Close window", icon: XIcon },
+      ],
+      { anchor: { x: event.clientX, y: event.clientY } }
+    );
+    if (choice === "pin") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, app_id);
+    else if (choice === "unpin") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, app_id);
+    else if (choice === "close") void windows.close(instance.id);
+  }
 </script>
 
 <button
@@ -23,6 +45,7 @@
     is_minimized && "text-foreground/65"
   )}
   style:view-transition-name={is_minimized ? `window-${instance.id}` : undefined}
+  oncontextmenu={menu}
   onclick={() => {
     // Minimizing flies the window into this button and restoring flies it back out: while minimized it carries the
     // window's view-transition name (ADR-014 revision).

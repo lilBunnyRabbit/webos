@@ -70,6 +70,7 @@ Native HTML drag and drop (`components/files/drag.ts`), shared with File Explore
 | `dragover` the surface | Accepted for a drag from here or one carrying WebOS paths. Over a folder icon that isn't being dragged, that folder highlights. Otherwise, for a drag from here, an outline (`foreground/6`, `foreground/20` inset ring) marks each icon's target: its offset from the grabbed icon, applied to the cell under the pointer |
 | `drop` on a folder icon | `drop_paths(paths, /home/Desktop/{folder})`: moved into the folder, keeping both on a clash |
 | `drop` elsewhere, drag from here | `desktop.move_items(...)`: the group keeps its shape, and taken or off-grid targets take the nearest free cell |
+| `drop` of an app (`application/x-webos-app`, ADR-042) from a start menu tile or an App Library card | `apps.install(id)`, `desktop.pin(id)`, then `move_items` to the drop cell. Folders under the pointer don't highlight for it. Drop effect `copy`. Quick launch drags (`application/x-webos-quick-launch`) are ignored, so dropping one here unpins it from the taskbar |
 | `drop` of real files from the OS | `import_dropped(...)` into the folder under the pointer, or into `/home/Desktop` and then `move_items` to the drop cell. Drop effect `copy` |
 | `drop` elsewhere, drag from Explorer | `drop_paths(paths, /home/Desktop)`, then `move_items` places the moved entries at the drop cell (and the nearest free ones) |
 | `dragend` / leaving the surface | Clears the drag and the hover state |

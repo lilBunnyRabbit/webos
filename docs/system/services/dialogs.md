@@ -101,7 +101,7 @@ The service reads the DOM directly here; it's the only DOM query in a service.
 Each shell mounts one: `desktop-shell.svelte` after its grid, `mobile-shell.svelte` with `anchored="sheet"` (ADR-016 apps pass). With `sheet`, anchored entries (menus, Open with) skip anchoring: the `<dialog>` sits at `inset-x-0 bottom-0`, full width, with `animate-sheet-in`, and the component gets `sheet: true` (ContextMenuList: full-width `rounded-t-2xl`, padded by the bottom safe area, submenus expand inline below their item, no shortcut hints; OpenWithDialog: the same surface). Unanchored dialogs stay centred. For each entry:
 
 - A `fixed`, 0×0, `pointer-events-none` div at `point`, with `anchor-name: --dialog-{id}`.
-- A native `<dialog>`, opened with `showModal()` by an attachment. The attachment's cleanup calls `close()` if it's still open.
+- A native `<dialog>`, opened with `showModal()` by an attachment. The attachment's cleanup calls `close()` if it's still open. A dialog that appears while a pointer button is held (the host tracks `pointerdown`/`pointerup`/`pointercancel` on `window`, capture) waits for the release, then opens a task later: a right-click's `contextmenu` fires mid-press, and a menu that flips above the pointer (anchored near the bottom, like the taskbar's) would get that release outside itself and light-dismiss at once. Mobile long press already opens on release.
   - `closedby="any"` when `entry.dismissible`, `closedby="none"` otherwise. A non-dismissible dialog also `preventDefault()`s `cancel`, so Esc can't close it.
   - `onclose` → `entry.resolve(null)`. For a dismissible dialog, Esc and outside click both end up here.
   - `position-anchor: --dialog-{id}`.

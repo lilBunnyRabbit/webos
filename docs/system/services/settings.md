@@ -1,6 +1,6 @@
 # SettingsService
 
-Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
+Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens), [ADR-042](../../adrs/042-quick-launch.md) (`taskbar.pinned`) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
 
 | File | Contents |
 |------|----------|
@@ -8,9 +8,11 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 | `service.svelte.ts` | The class |
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
+| `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
+| `random-theme.ts` | `random_theme()`, `is_dark()`, `oklch_lightness()`, `MIN_TEXT_CONTRAST`, `MIN_COLOUR_CONTRAST` (ADR-015 revision) |
 | `shell.ts` | `settings_shell()`, see [Shell](#shell) |
 
-`index.ts` exports `type.ts` and `themes.ts`. `persistence.ts` stays private to the service.
+`index.ts` exports `type.ts`, `themes.ts`, `taskbar.ts` and `random-theme.ts`. `persistence.ts` stays private to the service.
 
 ## Purpose
 
@@ -23,7 +25,7 @@ The API is four plain reactive fields, which consumers assign to directly, plus 
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `theme` | `theme: Theme` (`Record<ThemeToken, string>`) | 17 tokens (`snake_case` keys). Replace it wholesale (`settings.theme = { ...settings.theme, primary: v }`) or mutate a key. Both trigger the effects, because it's deep `$state`. |
-| `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition }` | Read by `os.svelte`, `taskbar.svelte`, `window-manager.svelte`. The Settings app mutates `taskbar.position`. |
+| `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition, pinned: AppId[] }` | Read by `os.svelte`, `taskbar.svelte`, `window-manager.svelte`. The Settings app mutates `taskbar.position`. `pinned` is the quick launch in order ([taskbar](../shell/taskbar.md#quick-launch)); assign `with_pin(pinned, id, index?)` / `without_pin(pinned, id)`. Written by the quick launch, the start menu, App Library, the window item menu, the `taskbar` commands (AppsService) and `apps.uninstall()`. |
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
 | `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`. Assign a preset, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
 | `set_wallpaper_image` | `(source: string \| File) => Promise<void>` | Copies a path or a device file (ADR-031 `string \| File`) to `/var/lib/wallpaper/{base36 time}-{name}`, sets `wallpaper` to it keeping the previous image's fit, dim and blur (else fill, 0, 0), then prunes the folder. Throws when the path doesn't exist. Callers: Settings › Appearance, `set_wallpaper()` in `file-actions.ts` (Explorer, desktop, Media Preview) |
@@ -42,13 +44,16 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 | `derive_theme` | `(base: ThemeBase) => Theme` | Spreads `derive_surfaces()` and fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`. |
 | `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (`WHILE_TRUE`, written out like the brand themes: the style guide's `#ff9f58` as `background_darkest` (desktop), white and cream windows, `#090919` text and primary; neubrutalist in colour only, hard borders and offset shadows need ADR-015). All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
+| `with_pin` / `without_pin` | `(pinned, id, index?) => AppId[]` / `(pinned, id) => AppId[]` | From `taskbar.ts`. `with_pin` moves an already pinned id instead of doubling it; `index` counts without it, clamped, default the end. |
+| `random_theme` | `(dark: boolean, rand?: () => number) => ThemeBase` | From `random-theme.ts`. One base hue, a random harmony (analogous `0 30 −30`, complementary `0 180 30`, triadic `0 120 240`, split `0 150 210`) for primary, secondary, accent. Dark: background L 0.16–0.30 C 0.01–0.04 at the base hue, foreground L 0.86–0.93 near-neutral at the opposite hue, colours L 0.70–0.80 C 0.07–0.14. Light: background L 0.93–0.96, foreground L 0.20–0.32, colours L 0.45–0.56 C 0.08–0.15. The ranges keep text ≥ 0.55 and colours ≥ 0.35 lightness from the background. Feed it to `derive_theme()`. |
+| `is_dark` | `(theme) => boolean` | Background lightness under 0.6; an unparseable (non-`oklch`) background counts as dark. |
 
 Token list and semantics: [theming.md](../theming.md).
 
 ## State
 
 ```ts
-taskbar       = $state<Taskbar>({ position: "bottom" });
+taskbar       = $state<Taskbar>({ position: "bottom", pinned: [] });
 theme         = $state<Theme>({ ...BRAND_DARK });
 file_defaults = $state<FileDefaults>({});
 wallpaper     = $state<Wallpaper>({ kind: "preset", preset: "grid" });
@@ -80,7 +85,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `o
 |-|-|
 | Store | OPFS, through FilesService |
 | Path | `/etc/settings.json` (ADR-021: OS config lives in `/etc`) |
-| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": … }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper }`, pretty-printed (2 spaces) |
+| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"] }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper }`, pretty-printed (2 spaces) |
 | Images | `/var/lib/wallpaper/`, copies owned by the OS. Only the current image is kept |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | On every change, after the effect flush. Also once right after `init()`, which creates or normalizes the file. |
@@ -95,6 +100,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - `version !== 1` → ignored, not migrated → defaults. The saver then overwrites the file with defaults on the first flush.
 - `theme` (`merge_theme`): starts from `BRAND_DARK`, overlaid with a surface ladder, then copies over only known token keys whose value is a `string`. Unknown keys are dropped. The ladder fills tokens a save predates: if the saved `background` equals Brand Dark's or Brand Light's, that palette's exact shades (and its other tokens) are the fallback; otherwise `derive_surfaces()`, so the ladder follows the saved background. Other missing tokens get the Brand Dark value. **Values are not validated as CSS.** A garbage string gets written to the variable as-is.
 - `taskbar.position`: must be one of `TaskbarPosition`, otherwise `bottom`.
+- `taskbar.pinned`: additive; strings only, deduplicated, else `[]`. Ids aren't checked against the registry; the quick launch skips unknown ones.
 - `file_defaults`: keeps entries whose key starts with `.` and whose value is a string. It's an additive field, so v1 blobs without it load as `{}`. The app id is not checked against the registry here. `apps.open()` deals with stale ids.
 - `wallpaper` (`parse_wallpaper`, zod): additive like `file_defaults`, so a missing or invalid value is the grid preset. An image path must be inside `/var/lib/wallpaper/`; a bad `fit` becomes `fill`, an out-of-range `dim` or `blur` becomes 0. The image file isn't checked here; a missing one draws the glow.
 - Write errors (quota, OPFS failure) → `console.error("Failed to save settings:")`; the writer moves on to the next queued text. A legacy-key read or remove that throws counts as no legacy copy.
@@ -106,7 +112,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - Derived presets store strings like `oklch(from var(--primary) l 0.14 140)` as the token value. They resolve at use time in CSS, so editing `primary` live re-derives the states.
 - No cross-tab sync, and none possible through `storage` events now that the store is OPFS. Two tabs each write their own state, and the last write wins on reload.
 - The file isn't watched. Editing or deleting `/etc/settings.json` (File Explorer can delete it) takes effect on the next boot, and the next settings change in this tab overwrites it.
-- The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar`, `theme`, `file_defaults` and `wallpaper` (grid preset; the image copy is pruned at the next boot). Default apps → Forget / Forget all clears `file_defaults` entries only.
+- The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar` (position and pins), `theme`, `file_defaults` and `wallpaper` (grid preset; the image copy is pruned at the next boot). Default apps → Forget / Forget all clears `file_defaults` entries only.
 - `color-scheme` is set in the same effect as the tokens, so native controls switch together with the palette.
 
 ## Divergence from ADR
@@ -115,7 +121,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 
 ## Shell
 
-Contributes `theme get|list|set`, the `theme` completer and value type (`settings/shell.ts`). See [shell](shell.md#contributions).
+Contributes `theme get|list|set|random`, the `theme` completer and value type (`settings/shell.ts`). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(random_theme(…))` and yields the five base colours. The `taskbar pin|unpin|list` commands live in AppsService's shell, since they need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
 
 ## Known gaps
 

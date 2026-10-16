@@ -7,10 +7,37 @@
 
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
-  // Native modal dialog: closedby="any" gives Esc, outside-click dismissal, focus trap/return and stacking (ADR-019).
-  const open_modal: Attachment<HTMLDialogElement> = (element) => {
-    element.showModal();
+  /** A button is held: a right-click's `contextmenu` fires mid-press. */
+  let pressed = false;
+
+  $effect(() => {
+    const down = () => (pressed = true);
+    const up = () => (pressed = false);
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
     return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+    };
+  });
+
+  // Native modal dialog: closedby="any" gives Esc, outside-click dismissal, focus trap/return and stacking (ADR-019).
+  // Opened mid-press, it waits for the release: a menu that flips above the pointer (the taskbar's) would otherwise
+  // get that release outside itself and light-dismiss at once.
+  const open_modal: Attachment<HTMLDialogElement> = (element) => {
+    const show = () => {
+      if (element.isConnected && !element.open) element.showModal();
+    };
+    const release = () => setTimeout(show);
+    if (pressed) {
+      window.addEventListener("pointerup", release, { once: true });
+      window.addEventListener("pointercancel", release, { once: true });
+    } else show();
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
       if (element.open) element.close();
     };
   };

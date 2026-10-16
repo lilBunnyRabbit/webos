@@ -121,3 +121,7 @@ interface ThemeExport {
 - Many settings to manage and test
 - Sound effects increase bundle size (mitigate with lazy loading)
 - Theme export format needs versioning for forward compatibility
+
+## Revision 2026-10-16 (random theme)
+
+Decided with the owner ([brainstorm](../brainstorm/2026-10-16_quick-launch-and-random-theme.md)). `random_theme(dark, rand?)` in `settings/random-theme.ts` makes a `ThemeBase` under rules, not at random: it keeps the current light or dark mode (`is_dark`, background lightness under 0.6); one base hue and a random harmony (analogous, complementary, triadic, split complementary) place primary, secondary and accent; the background is a low-chroma tint of the base hue and the foreground a near-neutral of the opposite hue; lightness ranges keep text at least 0.55 and colours at least 0.35 OKLCH lightness from the background. `derive_theme` expands it. Ways in: Settings › Appearance **Shuffle** and `theme random`. No new persistence: the result is an ordinary customised `settings.theme`.

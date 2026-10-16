@@ -59,7 +59,10 @@ export function parse_settings(raw: string): PersistedSettings | null {
     return {
       version: SETTINGS_VERSION,
       theme: merge_theme(data.theme),
-      taskbar: { position },
+      taskbar: {
+        position,
+        pinned: Array.isArray(data.taskbar?.pinned) ? [...new Set<string>(data.taskbar.pinned.filter((id: unknown) => typeof id === "string"))] : [],
+      },
       file_defaults: sanitize_file_defaults(data.file_defaults),
       wallpaper: parse_wallpaper(data.wallpaper),
     };

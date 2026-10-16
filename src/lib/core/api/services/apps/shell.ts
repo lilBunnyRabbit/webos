@@ -5,6 +5,8 @@ import { ShellError, type ShellContribution, type Tagged } from "../shell/type";
 import { is_file_value } from "../files/shell";
 import { resolve_path } from "../files/path";
 import type { FilesService } from "../files/type";
+import { with_pin, without_pin } from "../settings/taskbar";
+import type { SettingsService } from "../settings/type";
 import { author_names } from "./authors";
 import { APP_CATEGORY_LABELS } from "./search";
 import type { AppManifest, AppsService } from "./type";
@@ -22,7 +24,7 @@ function app_value(manifest: AppManifest): Tagged {
   };
 }
 
-export function apps_shell(apps: AppsService, files: () => FilesService): ShellContribution {
+export function apps_shell(apps: AppsService, files: () => FilesService, settings: () => SettingsService): ShellContribution {
   const require_app = (id: string) => {
     const manifest = apps.get(id);
     if (!manifest) throw new ShellError(`no app "${id}". Try app list`);
@@ -98,6 +100,38 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
           const manifest = require_app(args.id);
           if (!apps.is_installed(args.id)) throw new ShellError(not_installed(manifest));
           apps.launch(args.id);
+        },
+      }),
+      define_command({
+        id: "taskbar list",
+        description: "Apps pinned to the taskbar's quick launch, in order",
+        yields: "app",
+        *run() {
+          for (const id of settings().taskbar.pinned) {
+            const manifest = apps.get(id);
+            if (manifest) yield app_value(manifest);
+          }
+        },
+      }),
+      define_command({
+        id: "taskbar pin",
+        description: "Pin an app to the taskbar's quick launch",
+        args: z.object({ id: arg.app() }),
+        positional: ["id"],
+        run({ args }) {
+          const manifest = require_app(args.id);
+          if (!apps.is_installed(args.id)) throw new ShellError(not_installed(manifest));
+          settings().taskbar.pinned = with_pin(settings().taskbar.pinned, args.id);
+        },
+      }),
+      define_command({
+        id: "taskbar unpin",
+        description: "Remove an app from the taskbar's quick launch",
+        args: z.object({ id: arg.app() }),
+        positional: ["id"],
+        run({ args }) {
+          if (!settings().taskbar.pinned.includes(args.id)) throw new ShellError(`${args.id} isn't pinned. Try taskbar list`);
+          settings().taskbar.pinned = without_pin(settings().taskbar.pinned, args.id);
         },
       }),
       define_command({

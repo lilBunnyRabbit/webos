@@ -10,6 +10,7 @@
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
+  import { set_drag_app } from "$lib/core/components/apps/drag";
   import { Badge, Button, EmptyState, IconButton, Input, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -158,6 +159,8 @@
             )}
             onclick={() => select(manifest)}
             ondblclick={() => apps.launch(manifest.id)}
+            draggable="true"
+            ondragstart={(event) => set_drag_app(event, manifest.id)}
           >
             {@render icon_tile(manifest, "md")}
             <span class="line-clamp-2 max-w-full text-center text-2xs leading-tight font-medium pointer-coarse:text-xs">{manifest.name}</span>
@@ -186,6 +189,8 @@
             )}
             onclick={() => select(manifest)}
             ondblclick={() => apps.launch(manifest.id)}
+            draggable="true"
+            ondragstart={(event) => set_drag_app(event, manifest.id)}
           >
             {@render icon_tile(manifest, "sm")}
             <span class="flex w-36 shrink-0 items-center gap-1.5 @lg:w-44">

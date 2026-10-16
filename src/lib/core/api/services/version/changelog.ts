@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.11.0",
+    date: "2026-10-16",
+    title: "Quick launch",
+    changes: [
+      { kind: NEW, text: "Pin apps to the taskbar: drag one from the start menu or the App Library, or right-click and pick Pin to taskbar. Drag pinned apps to reorder them, or off the taskbar to unpin." },
+      { kind: NEW, text: "Drag an app from the start menu or the App Library onto the desktop to pin it right there." },
+      { kind: NEW, apps: ["settings"], text: "Shuffle in Settings › Appearance makes a new theme with colours that go together, keeping light or dark. Type theme random to do it from the Terminal." },
+      { kind: IMPROVED, text: "Right-click a window on the taskbar to pin its app or close it." },
+    ],
+  },
+  {
     version: "1.10.0",
     date: "2026-10-16",
     title: "Backups you can watch",

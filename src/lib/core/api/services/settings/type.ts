@@ -16,6 +16,8 @@ export type FileDefaults = Record<string, AppId>;
 
 export interface Taskbar {
   position: TaskbarPosition;
+  /** Quick launch, in order (ADR-042). Change it through `with_pin` / `without_pin`. */
+  pinned: AppId[];
 }
 
 export const TaskbarPosition = {

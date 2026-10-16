@@ -8,6 +8,7 @@
   import TasksIndicator from "./tasks-indicator.svelte";
   import TerminalButton from "./terminal-button.svelte";
   import ShowDesktopButton from "./show-desktop-button.svelte";
+  import QuickLaunch from "./quick-launch.svelte";
 
   let { class: class_name, ...rest_props }: Pick<SvelteHTMLElements["div"], "class" | "style"> = $props();
 
@@ -51,6 +52,8 @@
     <StartMenu />
 
     <div role="separator" class={cn("shrink-0 bg-foreground/12", vertical ? "mx-auto my-0.5 h-px w-6" : "mx-0.5 h-6 w-px")}></div>
+
+    <QuickLaunch {vertical} />
 
     <div class={cn("flex min-h-0 min-w-0 flex-1 gap-1", vertical ? "flex-col overflow-x-hidden overflow-y-auto px-1" : "flex-row overflow-x-auto overflow-y-hidden py-1")}>
       {#each list as [id, instance] (id)}

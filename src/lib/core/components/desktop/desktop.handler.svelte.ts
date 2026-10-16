@@ -1,4 +1,5 @@
-import kernel, { type DesktopItem as Item, type GridDesktopService } from "$lib/core/api";
+import kernel, { type AppsService, type DesktopItem as Item, type GridDesktopService } from "$lib/core/api";
+import { has_drag_app, is_quick_launch_drag, read_drag_app } from "../apps/drag";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { item_span, snap_cells, type ResizeTarget } from "$lib/core/api/services/desktop/helper";
 import type { WidgetSize } from "$lib/core/api/services/apps/type";
@@ -271,10 +272,11 @@ export class DesktopHandler {
     return (surface) => {
       const on_over = (event: DragEvent) => {
         const os = !this.drag && !has_drag_paths(event) && has_os_files(event);
-        if (!this.drag && !has_drag_paths(event) && !os) return;
+        const app = !this.drag && has_drag_app(event) && !is_quick_launch_drag(event);
+        if (!this.drag && !has_drag_paths(event) && !os && !app) return;
         event.preventDefault();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = os ? "copy" : "move";
-        this.hover = { cell: this.cell_at(event.clientX, event.clientY), folder: this.folder_under(event) };
+        if (event.dataTransfer) event.dataTransfer.dropEffect = os || app ? "copy" : "move";
+        this.hover = { cell: this.cell_at(event.clientX, event.clientY), folder: app ? null : this.folder_under(event) };
       };
 
       const on_leave = (event: DragEvent) => {
@@ -299,6 +301,15 @@ export class DesktopHandler {
     const cell = this.cell_at(event.clientX, event.clientY);
     this.hover = null;
     this.drag = null;
+
+    // An app from the start menu or the App Library: pinned where it was dropped (ADR-042).
+    const app = !local && has_drag_app(event) && !is_quick_launch_drag(event) ? read_drag_app(event) : null;
+    if (app) {
+      kernel.service<AppsService>("apps").install(app);
+      const name = await this.desktop.pin(app);
+      if (name) this.desktop.move_items([{ name, to: cell }]);
+      return;
+    }
 
     // Real files from the OS: imported, not moved (ADR-005 revision).
     if (!local && !has_drag_paths(event) && has_os_files(event)) {
