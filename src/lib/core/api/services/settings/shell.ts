@@ -2,7 +2,7 @@ import { z } from "zod";
 import { arg, ArgKind } from "../shell/arg";
 import { define_command } from "../shell/define";
 import { ShellError, type ShellContribution } from "../shell/type";
-import { is_dark, random_theme } from "./random-theme";
+import { is_dark, generate_theme, DEFAULT_GENERATE } from "./random-theme";
 import { derive_theme, THEME_PRESETS } from "./themes";
 import type { SettingsService, ThemeToken } from "./type";
 
@@ -40,7 +40,7 @@ export function settings_shell(settings: SettingsService): ShellContribution {
         id: "theme random",
         description: "A new theme that keeps light or dark and picks colours that go together",
         run() {
-          const base = random_theme(is_dark(settings.theme));
+          const base = generate_theme({ ...DEFAULT_GENERATE, mode: is_dark(settings.theme) ? "dark" : "light" });
           settings.theme = derive_theme(base);
           return base;
         },

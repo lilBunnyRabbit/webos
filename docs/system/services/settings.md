@@ -9,7 +9,7 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
-| `random-theme.ts` | `random_theme()`, `is_dark()`, `oklch_lightness()`, `MIN_TEXT_CONTRAST`, `MIN_COLOUR_CONTRAST` (ADR-015 revision) |
+| `random-theme.ts` | `generate_theme()`, `DEFAULT_GENERATE`, `Harmony`, `ThemeMode`, `GenerateOptions`, `parse_oklch()`, `is_dark()`, `oklch_lightness()`, `MIN_TEXT_CONTRAST`, `MIN_COLOUR_CONTRAST` (ADR-015 revisions) |
 | `shell.ts` | `settings_shell()`, see [Shell](#shell) |
 
 `index.ts` exports `type.ts`, `themes.ts`, `taskbar.ts` and `random-theme.ts`. `persistence.ts` stays private to the service.
@@ -45,7 +45,7 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 | `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (`WHILE_TRUE`, written out like the brand themes: the style guide's `#ff9f58` as `background_darkest` (desktop), white and cream windows, `#090919` text and primary; neubrutalist in colour only, hard borders and offset shadows need ADR-015). All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
 | `with_pin` / `without_pin` | `(pinned, id, index?) => AppId[]` / `(pinned, id) => AppId[]` | From `taskbar.ts`. `with_pin` moves an already pinned id instead of doubling it; `index` counts without it, clamped, default the end. |
-| `random_theme` | `(dark: boolean, rand?: () => number) => ThemeBase` | From `random-theme.ts`. One base hue, a random harmony (analogous `0 30 −30`, complementary `0 180 30`, triadic `0 120 240`, split `0 150 210`) for primary, secondary, accent. Dark: background L 0.16–0.30 C 0.01–0.04 at the base hue, foreground L 0.86–0.93 near-neutral at the opposite hue, colours L 0.70–0.80 C 0.07–0.14. Light: background L 0.93–0.96, foreground L 0.20–0.32, colours L 0.45–0.56 C 0.08–0.15. The ranges keep text ≥ 0.55 and colours ≥ 0.35 lightness from the background. Feed it to `derive_theme()`. |
+| `generate_theme` | `(options: GenerateOptions, rand?: () => number) => ThemeBase` | From `random-theme.ts` (ADR-015 revision, theme generator). Options: `mode` (`dark`, `light`, `any`: a coin flip), `harmony` (`analogous 0 30 −30`, `complementary 0 180 30`, `triadic 0 120 240`, `split 0 150 210`, or `any`), `vibrance` 0–1, `contrast` 0–1, `locked` (a `Partial<ThemeBase>` kept as given). One base hue (a locked primary's, else a locked background's, else random). Colours: chroma 0.05→0.30 by vibrance (±20%), hue ±8° jitter, L 0.66–0.82 dark / 0.42–0.56 light. Background: L 0.30→0.12 dark / 0.90→0.98 light by contrast, chroma 0.008→0.07 by vibrance, at the base hue. Foreground: L 0.86→0.97 dark / 0.34→0.16 light, near-neutral at the opposite hue. A locked background sets the mode. Then the gaps are enforced: an unlocked background moves away from locked text and colours, and generated text and colours move away from the background, so generated values keep text ≥ 0.55 and colours ≥ 0.35 lightness from it. Locks win: a lock that breaks a gap stays as given. Feed it to `derive_theme()`. `DEFAULT_GENERATE` is any harmony, vibrance and contrast 0.5. |
 | `is_dark` | `(theme) => boolean` | Background lightness under 0.6; an unparseable (non-`oklch`) background counts as dark. |
 
 Token list and semantics: [theming.md](../theming.md).
@@ -121,7 +121,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 
 ## Shell
 
-Contributes `theme get|list|set|random`, the `theme` completer and value type (`settings/shell.ts`). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(random_theme(…))` and yields the five base colours. The `taskbar pin|unpin|list` commands live in AppsService's shell, since they need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
+Contributes `theme get|list|set|random`, the `theme` completer and value type (`settings/shell.ts`). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(generate_theme({ ...DEFAULT_GENERATE, mode }))` and yields the five base colours. The `taskbar pin|unpin|list` commands live in AppsService's shell, since they need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
 
 ## Known gaps
 

@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.14.0",
+    date: "2026-10-16",
+    title: "Theme generator",
+    changes: [
+      { kind: NEW, apps: ["settings"], text: "Generate new themes in Settings › Appearance: pick light, dark or either, how the colours relate, how vivid and how contrasty, lock the colours you like, preview, then apply. Your last eight stay there to go back to." },
+    ],
+  },
+  {
     version: "1.13.0",
     date: "2026-10-16",
     title: "Lunar Lander",

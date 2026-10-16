@@ -1,10 +1,11 @@
 <script lang="ts">
-  import kernel, { derive_theme, is_dark, random_theme, THEME_PRESETS, ThemeGroup, type SettingsService, type ThemeToken } from "$lib/core/api";
-  import { Button, Section } from "$lib/core/components/ui";
-  import { CaretRight as CaretRightIcon, Shuffle as ShuffleIcon } from "phosphor-svelte";
+  import kernel, { THEME_PRESETS, ThemeGroup, type SettingsService, type ThemeToken } from "$lib/core/api";
+  import { Section } from "$lib/core/components/ui";
+  import { CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { to_hex, to_oklch } from "../color";
   import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
   import WallpaperSection from "./wallpaper.svelte";
+  import GenerateSection from "./generate.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
@@ -43,17 +44,14 @@
 
 <div class="flex flex-col gap-8">
   <Section title="Theme" description={active_preset ? `${active_preset.name} is active.` : "A customised theme is active."} flush>
-    {#snippet actions()}
-      <Button size="sm" title="A new theme that keeps light or dark and picks colours that go together" onclick={() => (settings.theme = derive_theme(random_theme(is_dark(settings.theme))))}>
-        <ShuffleIcon weight="bold" /> Shuffle
-      </Button>
-    {/snippet}
     <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
       {#each presets_in(ThemeGroup.WEBOS) as preset (preset.name)}
         <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />
       {/each}
     </div>
   </Section>
+
+  <GenerateSection />
 
   <Section title="Project themes" description="Colours from other projects: Speed Reader and While True." flush>
     <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">

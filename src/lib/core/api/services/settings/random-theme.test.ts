@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { is_dark, MIN_COLOUR_CONTRAST, MIN_TEXT_CONTRAST, oklch_lightness, random_theme } from "./random-theme";
+import { DEFAULT_GENERATE, generate_theme, Harmony, is_dark, MIN_COLOUR_CONTRAST, MIN_TEXT_CONTRAST, oklch_lightness, parse_oklch } from "./random-theme";
 import { BRAND_DARK, BRAND_LIGHT } from "./themes";
+import type { ThemeBase } from "./type";
 
 function seeded(seed: number) {
   return () => {
@@ -9,17 +10,65 @@ function seeded(seed: number) {
   };
 }
 
-describe("random theme", () => {
-  test.each([true, false])("keeps the mode and readable gaps (dark %s)", (dark) => {
+function expect_readable(theme: ThemeBase) {
+  const background = oklch_lightness(theme.background)!;
+  expect(Math.abs(oklch_lightness(theme.foreground)! - background)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST - 1e-3);
+  for (const colour of [theme.primary, theme.secondary, theme.accent]) {
+    expect(Math.abs(oklch_lightness(colour)! - background)).toBeGreaterThanOrEqual(MIN_COLOUR_CONTRAST - 1e-3);
+  }
+}
+
+describe("generate_theme", () => {
+  test.each(["dark", "light"] as const)("keeps the mode and readable gaps at every setting (%s)", (mode) => {
     const rand = seeded(42);
-    for (let run = 0; run < 200; run++) {
-      const theme = random_theme(dark, rand);
-      const background = oklch_lightness(theme.background)!;
-      expect(is_dark(theme)).toBe(dark);
-      expect(Math.abs(oklch_lightness(theme.foreground)! - background)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
-      for (const colour of [theme.primary, theme.secondary, theme.accent]) {
-        expect(Math.abs(oklch_lightness(colour)! - background)).toBeGreaterThanOrEqual(MIN_COLOUR_CONTRAST);
+    for (const vibrance of [0, 0.5, 1]) {
+      for (const contrast of [0, 0.5, 1]) {
+        for (let run = 0; run < 60; run++) {
+          const theme = generate_theme({ mode, harmony: "any", vibrance, contrast }, rand);
+          expect(is_dark(theme)).toBe(mode === "dark");
+          expect_readable(theme);
+        }
       }
+    }
+  });
+
+  test("any mode gives both", () => {
+    const rand = seeded(7);
+    const modes = new Set(Array.from({ length: 40 }, () => is_dark(generate_theme({ mode: "any", ...DEFAULT_GENERATE }, rand))));
+    expect(modes).toEqual(new Set([true, false]));
+  });
+
+  test("vibrance raises chroma", () => {
+    const rand = seeded(3);
+    const chroma = (vibrance: number) =>
+      Array.from({ length: 50 }, () => parse_oklch(generate_theme({ mode: "dark", harmony: "any", vibrance, contrast: 0.5 }, rand).primary)!.c).reduce((a, b) => a + b) / 50;
+    expect(chroma(1)).toBeGreaterThan(chroma(0) * 3);
+  });
+
+  test("a harmony places the colours around the base hue", () => {
+    const theme = generate_theme({ mode: "dark", harmony: Harmony.COMPLEMENTARY, vibrance: 0.5, contrast: 0.5 }, seeded(9));
+    const distance = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
+    expect(distance(parse_oklch(theme.secondary)!.h, parse_oklch(theme.primary)!.h)).toBeGreaterThan(160);
+  });
+
+  test("locked colours stay, and the rest are placed around them", () => {
+    const rand = seeded(11);
+    for (let run = 0; run < 100; run++) {
+      const background = "oklch(0.250 0.0300 200.00)";
+      const primary = "oklch(0.750 0.1500 40.00)";
+      const theme = generate_theme({ mode: "light", ...DEFAULT_GENERATE, locked: { background, primary } }, rand);
+      expect(theme.background).toBe(background);
+      expect(theme.primary).toBe(primary);
+      expect(is_dark(theme)).toBe(true);
+      expect_readable(theme);
+    }
+  });
+
+  test("a locked foreground pushes a generated background away", () => {
+    const rand = seeded(5);
+    for (let run = 0; run < 100; run++) {
+      const theme = generate_theme({ mode: "dark", ...DEFAULT_GENERATE, locked: { foreground: "oklch(0.800 0.0100 90.00)" } }, rand);
+      expect(oklch_lightness(theme.foreground)! - oklch_lightness(theme.background)!).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST - 1e-3);
     }
   });
 

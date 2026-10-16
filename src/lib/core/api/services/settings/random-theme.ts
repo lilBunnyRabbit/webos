@@ -1,35 +1,55 @@
 import type { Theme, ThemeBase } from "./type";
 
+export const Harmony = {
+  ANALOGOUS: "analogous",
+  COMPLEMENTARY: "complementary",
+  TRIADIC: "triadic",
+  SPLIT: "split",
+} as const;
+export type Harmony = (typeof Harmony)[keyof typeof Harmony];
+
 /** Hue offsets for primary, secondary and accent around the base hue. */
-const HARMONIES: Record<string, [number, number, number]> = {
+const HARMONIES: Record<Harmony, [number, number, number]> = {
   analogous: [0, 30, -30],
   complementary: [0, 180, 30],
   triadic: [0, 120, 240],
   split: [0, 150, 210],
 };
 
-interface Ranges {
-  background: { l: [number, number]; c: [number, number] };
-  foreground: { l: [number, number]; c: [number, number] };
-  colours: { l: [number, number]; c: [number, number] };
+export type ThemeMode = "dark" | "light" | "any";
+
+export interface GenerateOptions {
+  mode: ThemeMode;
+  harmony: Harmony | "any";
+  /** 0 muted, 1 vivid: the chroma of the colours and the tint of the background. */
+  vibrance: number;
+  /** 0 soft, 1 strong: how far the background sits from the text, never under the readable minimum. */
+  contrast: number;
+  /** Colours kept as they are; the rest are placed around them. */
+  locked?: Partial<ThemeBase>;
 }
 
-// Ranges keep text 0.55+ and accents 0.35+ lightness away from the background, so every result stays readable.
-const DARK: Ranges = {
-  background: { l: [0.16, 0.3], c: [0.01, 0.04] },
-  foreground: { l: [0.86, 0.93], c: [0.005, 0.02] },
-  colours: { l: [0.7, 0.8], c: [0.07, 0.14] },
-};
-const LIGHT: Ranges = {
-  background: { l: [0.93, 0.96], c: [0.008, 0.03] },
-  foreground: { l: [0.2, 0.32], c: [0.01, 0.025] },
-  colours: { l: [0.45, 0.56], c: [0.08, 0.15] },
-};
+export const DEFAULT_GENERATE: Omit<GenerateOptions, "mode"> = { harmony: "any", vibrance: 0.5, contrast: 0.5 };
 
 export const MIN_TEXT_CONTRAST = 0.55;
 export const MIN_COLOUR_CONTRAST = 0.35;
 
-const oklch = (l: number, c: number, h: number) => `oklch(${l.toFixed(3)} ${c.toFixed(4)} ${(((h % 360) + 360) % 360).toFixed(2)})`;
+interface Oklch {
+  l: number;
+  c: number;
+  h: number;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const lerp = (from: number, to: number, t: number) => from + (to - from) * clamp(t, 0, 1);
+const format = ({ l, c, h }: Oklch) => `oklch(${l.toFixed(3)} ${c.toFixed(4)} ${(((h % 360) + 360) % 360).toFixed(2)})`;
+
+/** An `oklch(…)` value's channels, `null` for anything else. */
+export function parse_oklch(value: string): Oklch | null {
+  const match = value.match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)/);
+  if (!match) return null;
+  return { l: Number(match[1]) / (match[2] ? 100 : 1), c: Number(match[3]), h: Number(match[4]) };
+}
 
 /** Lightness of an `oklch(…)` value, `null` for anything else. */
 export function oklch_lightness(value: string): number | null {
@@ -44,21 +64,68 @@ export function is_dark(theme: Pick<Theme, "background">): boolean {
 }
 
 /**
- * Five base colours under rules (ADR-015 revision): the mode stays, one base hue and a harmony pick the three colours,
- * the background is a low-chroma tint of the base, the foreground a near-neutral of the opposite hue.
+ * Five base colours under rules (ADR-015 revision): one base hue and a harmony place primary, secondary and accent; the
+ * background is a tint of the base hue, the foreground a near-neutral of the opposite hue. Generated colours always keep
+ * text 0.55+ and colours 0.35+ lightness from the background. Locked colours win: a lock that breaks a gap stays as given.
  */
-export function random_theme(dark: boolean, rand: () => number = Math.random): ThemeBase {
-  const ranges = dark ? DARK : LIGHT;
-  const between = ([min, max]: [number, number]) => min + rand() * (max - min);
-  const hue = rand() * 360;
-  const names = Object.keys(HARMONIES);
-  const [p, s, a] = HARMONIES[names[Math.floor(rand() * names.length)]];
-  const colour = (offset: number) => oklch(between(ranges.colours.l), between(ranges.colours.c), hue + offset);
-  return {
-    background: oklch(between(ranges.background.l), between(ranges.background.c), hue),
-    foreground: oklch(between(ranges.foreground.l), between(ranges.foreground.c), hue + 180),
+export function generate_theme(options: GenerateOptions, rand: () => number = Math.random): ThemeBase {
+  const locked = options.locked ?? {};
+  const read = (token: keyof ThemeBase) => (locked[token] ? parse_oklch(locked[token]) : null);
+  const locked_background = read("background");
+  const dark = locked_background ? locked_background.l < 0.6 : options.mode === "any" ? rand() < 0.5 : options.mode === "dark";
+
+  const names = Object.keys(HARMONIES) as Harmony[];
+  const harmony = options.harmony === "any" ? names[Math.floor(rand() * names.length)] : options.harmony;
+  const [p, s, a] = HARMONIES[harmony];
+  const hue = read("primary")?.h ?? locked_background?.h ?? rand() * 360;
+  const { vibrance, contrast } = options;
+  const jitter = (spread: number) => (rand() - 0.5) * spread;
+
+  const colour = (offset: number): Oklch => ({
+    l: dark ? lerp(0.66, 0.82, rand()) : lerp(0.42, 0.56, rand()),
+    c: lerp(0.05, 0.3, vibrance) * lerp(0.8, 1.2, rand()),
+    h: hue + offset + jitter(16),
+  });
+  const generated = {
+    background: {
+      l: dark ? clamp(lerp(0.3, 0.12, contrast) + jitter(0.04), 0.1, 0.3) : clamp(lerp(0.9, 0.98, contrast) + jitter(0.02), 0.9, 0.985),
+      c: lerp(0.008, 0.07, vibrance) * lerp(0.5, 1, rand()),
+      h: hue,
+    },
+    foreground: {
+      l: dark ? clamp(lerp(0.86, 0.97, contrast) + jitter(0.03), 0.86, 0.98) : clamp(lerp(0.34, 0.16, contrast) + jitter(0.03), 0.12, 0.34),
+      c: lerp(0.005, 0.03, rand()),
+      h: hue + 180,
+    },
     primary: colour(p),
     secondary: colour(s),
     accent: colour(a),
+  };
+
+  const gap = (token: keyof ThemeBase) => (token === "foreground" ? MIN_TEXT_CONTRAST : MIN_COLOUR_CONTRAST);
+  const others = ["foreground", "primary", "secondary", "accent"] as const;
+
+  // The background moves away from locked text and colours, then the generated ones move away from the background.
+  if (!locked_background) {
+    for (const token of others) {
+      const kept = read(token);
+      if (!kept) continue;
+      generated.background.l = dark ? Math.min(generated.background.l, kept.l - gap(token)) : Math.max(generated.background.l, kept.l + gap(token));
+    }
+    generated.background.l = clamp(generated.background.l, 0, 1);
+  }
+  const background_l = locked_background?.l ?? generated.background.l;
+  for (const token of others) {
+    const value = generated[token];
+    value.l = dark ? clamp(Math.max(value.l, background_l + gap(token)), 0, 0.99) : clamp(Math.min(value.l, background_l - gap(token)), 0.02, 1);
+  }
+
+  const pick = (token: keyof ThemeBase) => locked[token] ?? format(generated[token]);
+  return {
+    background: pick("background"),
+    foreground: pick("foreground"),
+    primary: pick("primary"),
+    secondary: pick("secondary"),
+    accent: pick("accent"),
   };
 }
