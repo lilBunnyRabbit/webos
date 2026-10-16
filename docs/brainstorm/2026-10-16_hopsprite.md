@@ -65,7 +65,7 @@ Owner feedback on 1.6.0: too little canvas, an Aseprite-style timeline that felt
 | Status bar | Size, cursor, frame, colour, counts | Gone: size and cursor in a small badge on the canvas, frame count at the strip's end |
 | View | Zoom group in the toolbar | Floating pill on the canvas: grid, zoom, fit. Fit stays on through window and panel resizes until the user zooms or pans |
 
-Resizing: the colour panel and the filmstrip have an app-local `resize-handle.svelte` (ARIA window splitter: arrows, Home folds, End, Enter toggles, double-click toggles, drag past half the minimum folds). Sizes persist in `app.hopsprite.side` / `app.hopsprite.strip`. During a drag only a CSS variable on the root changes, once per frame; the stage refits and never recomposites. The strip is capped at 30% of the window height, 18% below 45rem and 11% below 34rem, so persisted sizes shrink with the window. A splitter is a kit candidate if a second app wants one; that's the owner's call.
+Resizing: the colour panel and the filmstrip have an app-local `resize-handle.svelte` (ARIA window splitter: arrows, Home folds, End, Enter toggles, double-click toggles, drag past half the minimum folds). Sizes persist in `app.hopsprite.side` / `app.hopsprite.strip`. During a drag only a CSS variable on the root changes, once per frame; the stage refits and never recomposites. The strip is capped at 30% of the window height, 18% below 45rem and 11% below 34rem, so persisted sizes shrink with the window. The owner moved the splitter into the UI kit as `ResizeHandle` (2026-10-16), shown in the Style Guide. Zoom gained a 75% step so a 512px sprite fits a phone at more than 50%.
 
 Performance, measured on a 512×512 sprite with 8 layers and 30 frames (Chrome, main-thread time per event):
 

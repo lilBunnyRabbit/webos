@@ -144,7 +144,7 @@ Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesSer
 
 ## UI kit
 
-`$lib/core/components/ui`, all of it: `Badge`, `BoardOverlay`, `Button`, `Checkbox`, `CopyButton`, `EmptyState`, `IconButton`, `Input`, `Kbd`, `Section`, `Segmented`, `Select`, `Separator`, `SettingRow`, `SideNav`, `Slider`, `Spinner`, `StatusBar`, `Switch`, `Textarea`, `Toolbar`, the variant functions `button`, `field`, `badge`, and the types `IconComponent`, `ButtonVariants`, `FieldVariants`, `BadgeVariants`. Component names and the props documented in [design/components.md](../design/components.md) are stable; how they look is not.
+`$lib/core/components/ui`, all of it: `Badge`, `BoardOverlay`, `Button`, `Checkbox`, `CopyButton`, `EmptyState`, `IconButton`, `Input`, `Kbd`, `ResizeHandle`, `Section`, `Segmented`, `Select`, `Separator`, `SettingRow`, `SideNav`, `Slider`, `Spinner`, `StatusBar`, `Switch`, `Textarea`, `Toolbar`, the variant functions `button`, `field`, `badge`, and the types `IconComponent`, `ButtonVariants`, `FieldVariants`, `BadgeVariants`. Component names and the props documented in [design/components.md](../design/components.md) are stable; how they look is not.
 
 Theme tokens are part of the surface too: the token names in [CONVENTIONS](../CONVENTIONS.md#themes-and-tokens) (`background` ladder, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, the states) and their Tailwind classes. Renaming one breaks every app's markup, so that's a 2.0. Values change any time.
 

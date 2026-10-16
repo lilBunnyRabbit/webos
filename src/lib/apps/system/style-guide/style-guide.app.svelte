@@ -12,6 +12,7 @@
     IconButton,
     Input,
     Kbd,
+    ResizeHandle,
     Section,
     Segmented,
     Select,
@@ -88,6 +89,7 @@
   let large = $state(true);
   let tool = $state<"pencil" | "eraser">("pencil");
   let speed = $state<"slow" | "normal" | "fast">("normal");
+  let pane = $state({ size: 160, collapsed: false });
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -212,6 +214,23 @@
             </Toolbar>
             <div class="h-24 bg-background p-4 text-ui text-foreground/65">Content on background</div>
             <StatusBar><span>3 items</span><span class="ml-auto">1.42 MB</span></StatusBar>
+          </div>
+        </Section>
+        <Section title="Resize handle" description="A splitter between two panes: drag, arrow keys, Home and End; double-click or Enter folds the pane." flush>
+          <div class="flex h-32 overflow-hidden rounded-xl ring-1 ring-foreground/10">
+            <div class="min-w-0 flex-1 bg-background p-4 text-ui text-foreground/65">Content</div>
+            <ResizeHandle
+              axis="column"
+              label="Panel width"
+              size={pane.size}
+              min={96}
+              max={240}
+              rest={0}
+              collapsed={pane.collapsed}
+              onpreview={(size, collapsed) => (pane = { size: collapsed ? pane.size : size, collapsed })}
+              oncommit={(size, collapsed) => (pane = { size, collapsed })}
+            />
+            <div class="shrink-0 overflow-hidden bg-background-light p-4 text-ui text-foreground/65" style:width="{pane.collapsed ? 0 : pane.size}px">Panel</div>
           </div>
         </Section>
       {:else if section.value === "actions"}

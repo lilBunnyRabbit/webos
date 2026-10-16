@@ -8,7 +8,7 @@
     type NotificationsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { Button, IconButton, Separator, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, ResizeHandle, Separator, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
@@ -51,7 +51,6 @@
   import HopspriteSwatches from "./hopsprite-swatches.svelte";
   import HopspriteToolbox from "./hopsprite-toolbox.svelte";
   import HopspriteWells from "./hopsprite-wells.svelte";
-  import ResizeHandle from "./resize-handle.svelte";
   import { read_file, read_path, sprite_name_for, write_text, type Opened } from "./io";
   import { below } from "./menu";
   import { create_sprite, Direction, type Point } from "./model";

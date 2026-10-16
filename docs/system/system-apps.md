@@ -401,12 +401,12 @@ An API the browser doesn't have shows "Not available in this browser". There are
 |---------|-------|
 | Colour | The surface ladder as a strip, text and brand swatches, state swatches, the opacity modifiers. Swatches read `var(--{token})` and print the CSS variable |
 | Type | The type scale, from `text-lg` titles to mono `text-2xs` values |
-| Surfaces | Radius tokens, the four shadows, and a sample app frame (Toolbar, content, StatusBar) |
+| Surfaces | Radius tokens, the four shadows, a sample app frame (Toolbar, content, StatusBar), and a `ResizeHandle` between content and a panel |
 | Actions | `Button` variants and sizes, `IconButton`s, toggles (`pressed` on `Button` and `IconButton`), `CopyButton` (with text and empty) |
 | Inputs | `Input` (plain and with a leading icon), `Select`, `Segmented` (`md` and `sm`), `Slider` (`md` and `sm`), `Switch`, `Checkbox` inside `SettingRow`s; `Textarea` (prose and `mono`) |
 | Feedback | `Badge` tones, `Kbd`, `Spinner`, `BoardOverlay` over a sample board, the app announcement (in place with three sample apps, Paint with sample highlights; "Show as dialog" and "Show with 6 apps" open it for real), `EmptyState` with an action |
 
-The controls are bound to local `$state` and do nothing else. Nothing but the open section is persisted.
+The controls (and the sample panel's width) are bound to local `$state` and do nothing else. Nothing but the open section is persisted.
 
 **Known gaps.**
 

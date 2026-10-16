@@ -7,6 +7,7 @@ export { default as EmptyState } from "./empty-state.svelte";
 export { default as IconButton } from "./icon-button.svelte";
 export { default as Input } from "./input.svelte";
 export { default as Kbd } from "./kbd.svelte";
+export { default as ResizeHandle } from "./resize-handle.svelte";
 export { default as Section } from "./section.svelte";
 export { default as Segmented } from "./segmented.svelte";
 export { default as Select } from "./select.svelte";
