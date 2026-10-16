@@ -147,7 +147,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | extract (desktop) | `win pop`, `win back` | | |
 | session | `win reopen` | | |
-| settings | `theme get`, `theme list`, `theme set`, `theme random` | `theme` | `theme` |
+| settings | `theme get`, `theme list`, `theme set`, `theme random`, `theme save`, `theme delete` | `theme` | `theme` |
 | notifications | `notify`, `notifications` | | `notification` |
 | clipboard | `copy`, `paste` | | |
 | version | `version`, `changelog [-c] [--apps]`, `install` | | `release`, `new-app` (click launches) |

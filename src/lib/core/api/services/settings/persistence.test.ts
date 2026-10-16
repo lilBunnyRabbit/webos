@@ -23,3 +23,26 @@ test("settings saved before the wallpaper existed load with the default", () => 
   expect(settings?.wallpaper).toEqual(DEFAULT_WALLPAPER);
   expect(settings?.taskbar.position).toBe("top");
 });
+
+describe("saved themes", () => {
+  test("keeps named entries, drops nameless and repeated names, merges each theme over the defaults", () => {
+    const raw = JSON.stringify({
+      version: SETTINGS_VERSION,
+      saved_themes: [
+        { name: " Sunset ", theme: { primary: "oklch(0.7 0.2 40)" } },
+        { name: "", theme: {} },
+        { name: "sunset", theme: {} },
+        { theme: {} },
+        "nope",
+      ],
+    });
+    const saved = parse_settings(raw)!.saved_themes;
+    expect(saved.map((entry) => entry.name)).toEqual(["Sunset"]);
+    expect(saved[0].theme.primary).toBe("oklch(0.7 0.2 40)");
+    expect(saved[0].theme.background).toBeTruthy();
+  });
+
+  test("settings saved before saved themes existed have none", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.saved_themes).toEqual([]);
+  });
+});

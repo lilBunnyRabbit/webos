@@ -6,7 +6,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 
 | Store | Key / path | Owner | Format | Version | Load: sanitize / migrate | When written |
 |-------|-----------|-------|--------|---------|--------------------------|--------------|
-| OPFS | `/etc/settings.json` | SettingsService (`settings/persistence.ts`) | JSON `{ version, theme, taskbar, file_defaults, wallpaper }`, pretty-printed | `1` | Wrong version → discarded (no migration). Theme merged over Brand Dark, known token keys with string values only. Surface tokens a save predates come from the matching brand palette, else `derive_surfaces()`. Bad taskbar position → `bottom`; `taskbar.pinned` keeps unique strings (ADR-042). `file_defaults` keeps only `".ext" → string` entries. `wallpaper` invalid or missing → grid preset. Parse error → defaults. | `$effect` after every change, plus once right after init, through a write queue (no overlapping writes, newest wins). [Details](services/settings.md#persistence) |
+| OPFS | `/etc/settings.json` | SettingsService (`settings/persistence.ts`) | JSON `{ version, theme, taskbar, file_defaults, wallpaper, saved_themes }`, pretty-printed | `1` | Wrong version → discarded (no migration). Theme merged over Brand Dark, known token keys with string values only. Surface tokens a save predates come from the matching brand palette, else `derive_surfaces()`. Bad taskbar position → `bottom`; `taskbar.pinned` keeps unique strings (ADR-042). `file_defaults` keeps only `".ext" → string` entries. `wallpaper` invalid or missing → grid preset. `saved_themes` keeps entries with a non-empty name, first of each name (case ignored), each theme merged like `theme`; missing → `[]`. Parse error → defaults. | `$effect` after every change, plus once right after init, through a write queue (no overlapping writes, newest wins). [Details](services/settings.md#persistence) |
 | localStorage | `webos.settings` (legacy) | SettingsService (`take_legacy_settings`) | Same JSON as above | `1` | Imported only when `/etc/settings.json` doesn't exist | Never written. Removed on every boot |
 | localStorage | `settings` (v0 React, zustand) | SettingsService (`take_v0_settings`) | `{ state: { theme, taskbar } }` | zustand `0` | Taskbar position; theme only if changed from v0 defaults | Never written. Removed on every boot |
 | localStorage | `desktop` (v0 React, zustand) | DesktopService (`take_v0_pins`) | `{ state: { items: { [app_id]: { grid: { x, y } } } } }` | zustand `0` | zod; invalid → default seed | Never written. Read and removed when the desktop is seeded |
@@ -98,7 +98,7 @@ interface StorageHandle {
 
 | Thing | Survives? | Notes |
 |-------|-----------|-------|
-| Theme, taskbar position and pins, Open-with defaults, wallpaper | Yes | `/etc/settings.json`, the image in `/var/lib/wallpaper/` |
+| Theme, saved themes, taskbar position and pins, Open-with defaults, wallpaper | Yes | `/etc/settings.json`, the image in `/var/lib/wallpaper/` |
 | App data stored via `storage` | Yes | `app.{id}.*` |
 | Files and folders | Yes | OPFS. Lasts longer if `persist()` was granted. The browser may evict it otherwise. |
 | `/tmp` contents | **No** | Emptied at every boot |

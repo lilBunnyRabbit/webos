@@ -9,7 +9,8 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-16",
     title: "Theme generator",
     changes: [
-      { kind: NEW, apps: ["settings"], text: "Generate new themes in Settings › Appearance: pick light, dark or either, how the colours relate, how vivid and how contrasty, lock the colours you like, preview, then apply. Your last eight stay there to go back to." },
+      { kind: NEW, apps: ["settings"], text: "Generate new themes in Settings › Appearance: pick light, dark or either, how the colours relate, how vivid and how contrasty, lock the colours you like, preview, then apply. Your last three stay there to go back to." },
+      { kind: NEW, apps: ["settings"], text: "Save the themes you like under a name. They show under Your themes in Appearance, where you can rename or delete them, and theme save and theme set work with them in the Terminal." },
     ],
   },
   {

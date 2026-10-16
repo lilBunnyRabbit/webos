@@ -1,17 +1,46 @@
 <script lang="ts">
-  import kernel, { THEME_PRESETS, ThemeGroup, type SettingsService, type ThemeToken } from "$lib/core/api";
+  import kernel, { renamed_saved, THEME_PRESETS, without_saved, type DialogsService, type SavedTheme, ThemeGroup, type SettingsService, type Theme, type ThemeToken } from "$lib/core/api";
   import { Section } from "$lib/core/components/ui";
-  import { CaretRight as CaretRightIcon } from "phosphor-svelte";
+  import { CaretRight as CaretRightIcon, PencilSimple as PencilSimpleIcon, Trash as TrashIcon } from "phosphor-svelte";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { ask_theme_name } from "../theme-name";
   import { to_hex, to_oklch } from "../color";
   import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
   import WallpaperSection from "./wallpaper.svelte";
   import GenerateSection from "./generate.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { window: win } = get_app_context();
 
   const active_preset = $derived(
     THEME_PRESETS.find(({ theme }) => Object.entries(theme).every(([token, value]) => settings.theme[token as ThemeToken] === value))
   );
+
+  const is_active = (theme: Theme) => Object.entries(theme).every(([token, value]) => settings.theme[token as ThemeToken] === value);
+  const active_saved = $derived(active_preset ? undefined : settings.saved_themes.find(({ theme }) => is_active(theme)));
+
+  async function saved_menu(event: MouseEvent, entry: SavedTheme) {
+    event.preventDefault();
+    const choice = await dialogs.menu(
+      [
+        { id: "apply", label: "Apply" },
+        { id: "rename", label: "Rename…", icon: PencilSimpleIcon },
+        { separator: true },
+        { id: "delete", label: "Delete…", icon: TrashIcon, danger: true },
+      ],
+      { anchor: { x: event.clientX, y: event.clientY } }
+    );
+    if (choice === "apply") settings.theme = { ...entry.theme };
+    else if (choice === "rename") {
+      const name = await ask_theme_name(win, settings.saved_themes, { message: "Rename theme", confirm_label: "Rename", current: entry.name });
+      if (name) settings.saved_themes = renamed_saved(settings.saved_themes, entry.name, name);
+    } else if (choice === "delete") {
+      if (await win.confirm(`Delete “${entry.name}”?`, { confirm_label: "Delete", danger: true })) {
+        settings.saved_themes = without_saved(settings.saved_themes, entry.name);
+      }
+    }
+  }
 
   const presets_in = (group: ThemeGroup) => THEME_PRESETS.filter((preset) => preset.group === group);
 
@@ -43,7 +72,20 @@
 </script>
 
 <div class="flex flex-col gap-8">
-  <Section title="Theme" description={active_preset ? `${active_preset.name} is active.` : "A customised theme is active."} flush>
+  {#if settings.saved_themes.length > 0}
+    <Section title="Your themes" description="Saved from Generate. Right-click one to rename or delete it." flush>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
+        {#each settings.saved_themes as entry (entry.name)}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="contents" oncontextmenu={(event) => saved_menu(event, entry)}>
+            <ThemeCard preset={{ ...entry, group: ThemeGroup.WEBOS }} active={entry === active_saved} onselect={() => (settings.theme = { ...entry.theme })} />
+          </div>
+        {/each}
+      </div>
+    </Section>
+  {/if}
+
+  <Section title="Theme" description={active_preset ? `${active_preset.name} is active.` : active_saved ? `${active_saved.name} is active.` : "A customised theme is active."} flush>
     <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
       {#each presets_in(ThemeGroup.WEBOS) as preset (preset.name)}
         <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />

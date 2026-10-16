@@ -21,6 +21,19 @@ Random themes shipped in 1.11.0 as a Shuffle button and `theme random` ([earlier
 - One pure generator, `generate_theme(options, rand?)`, replaces `random_theme`. Locks are inputs: locked colours keep their value, and the generated ones are placed around them so the gaps still hold.
 - No persistence change: Apply writes an ordinary customised `settings.theme`, as Shuffle did.
 
+## Saved themes
+
+The owner tried the generator and wanted to keep results: "Keep like 3 recent and a way to save them."
+
+| Question | Decision | Rejected |
+|---|---|---|
+| Recent | **3**, still session only | 8 |
+| Storage | **`saved_themes` in `/etc/settings.json`**, travels in backups | Own `/etc/themes.json` |
+| Save UI | **Save… asks a name**; a **"Your themes" grid** above the presets with right-click Apply, Rename…, Delete… | One-click save with auto names |
+| Shell | **`theme list` / `theme set` / completer include saved; `theme save <name>`, `theme delete <name>`** | List and set only; nothing |
+
+Not asked, decided in building: names are unique (case ignored) and can't be a preset's; the UI blocks a taken name, while `theme save` replaces it. About › Reset settings keeps saved themes, like files.
+
 ## Notes from building
 
 - A locked colour from the other mode stays as given, so the gap can break (a dark theme's primary locked into a Light generation sits too close to a white background). Locks win, as decided.

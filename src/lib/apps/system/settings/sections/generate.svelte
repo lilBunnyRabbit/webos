@@ -9,14 +9,20 @@
     type SettingsService,
     type ThemeBase,
     type ThemeMode,
+    type DialogsService,
+    with_saved,
   } from "$lib/core/api";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { ask_theme_name } from "../theme-name";
   import { Button, IconButton, Section, Segmented, Select, SettingRow, Slider } from "$lib/core/components/ui";
   import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
-  import { LockSimple as LockIcon, LockSimpleOpen as LockOpenIcon, MagicWand as MagicWandIcon } from "phosphor-svelte";
+  import { FloppyDisk as FloppyDiskIcon, LockSimple as LockIcon, LockSimpleOpen as LockOpenIcon, MagicWand as MagicWandIcon } from "phosphor-svelte";
   import { cn } from "$lib/core/utils";
   import { generator, remember } from "../generator.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { window: win } = get_app_context();
 
   const TOKENS: { token: keyof ThemeBase; label: string }[] = [
     { token: "background", label: "Background" },
@@ -61,9 +67,27 @@
   }
 
   const apply = () => (settings.theme = derive_theme(preview));
+
+  async function save(base: ThemeBase) {
+    const name = await ask_theme_name(win, settings.saved_themes, { message: "Save theme", confirm_label: "Save" });
+    if (name) settings.saved_themes = with_saved(settings.saved_themes, name, derive_theme(base));
+  }
+
+  async function recent_menu(event: MouseEvent, base: ThemeBase) {
+    event.preventDefault();
+    const choice = await dialogs.menu(
+      [
+        { id: "apply", label: "Apply" },
+        { id: "save", label: "Save…", icon: FloppyDiskIcon },
+      ],
+      { anchor: { x: event.clientX, y: event.clientY } }
+    );
+    if (choice === "apply") settings.theme = derive_theme(base);
+    else if (choice === "save") void save(base);
+  }
 </script>
 
-<Section title="Generate" description="New colours from a few rules. Text always stays readable; lock a colour to keep it." flush>
+<Section title="Generate" description="New colours from a few rules. Text always stays readable; lock a colour to keep it, save the ones you like." flush>
   <div class="@container flex flex-col gap-4">
     <div class="grid gap-4 @xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div class="flex flex-col gap-1 rounded-xl bg-background-light ring-1 ring-foreground/8">
@@ -91,9 +115,10 @@
 
       <div class="flex flex-col gap-2">
         <ThemeCard preset={preview_preset} active={applied} onselect={apply} />
-        <div class="flex gap-2">
-          <Button class="flex-1" onclick={generate}><MagicWandIcon weight="bold" /> Generate</Button>
-          <Button class="flex-1" variant="secondary" disabled={applied} onclick={apply}>Apply</Button>
+        <div class="grid grid-cols-2 gap-2">
+          <Button class="col-span-2" onclick={generate}><MagicWandIcon weight="bold" /> Generate</Button>
+          <Button variant="secondary" disabled={applied} onclick={apply}>Apply</Button>
+          <Button variant="secondary" onclick={() => void save(preview)}><FloppyDiskIcon weight="bold" /> Save…</Button>
         </div>
       </div>
     </div>
@@ -121,11 +146,14 @@
         <h3 class="px-0.5 text-ui font-medium text-foreground/80">Recent</h3>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
           {#each generator.recent as base, index (index)}
-            <ThemeCard
-              preset={{ name: `#${index + 1}`, theme: derive_theme(base), group: ThemeGroup.WEBOS }}
-              active={TOKENS.every(({ token }) => preview[token] === base[token])}
-              onselect={() => (preview = base)}
-            />
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="contents" oncontextmenu={(event) => recent_menu(event, base)}>
+              <ThemeCard
+                preset={{ name: `#${index + 1}`, theme: derive_theme(base), group: ThemeGroup.WEBOS }}
+                active={TOKENS.every(({ token }) => preview[token] === base[token])}
+                onselect={() => (preview = base)}
+              />
+            </div>
           {/each}
         </div>
       </div>

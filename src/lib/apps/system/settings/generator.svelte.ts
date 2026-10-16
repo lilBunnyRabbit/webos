@@ -1,6 +1,6 @@
 import type { ThemeBase } from "$lib/core/api";
 
-const RECENT_CAP = 8;
+const RECENT_CAP = 3;
 
 /** The last generated themes, newest first. Module state on purpose (owner): they outlive the Settings window, not a reload. */
 export const generator = $state({ recent: [] as ThemeBase[] });

@@ -178,7 +178,7 @@
   </Section>
 
   <Section title="Reset">
-    <SettingRow label="Reset settings" description="Brand Dark theme, grid wallpaper, taskbar at the bottom, default apps forgotten. Files are kept.">
+    <SettingRow label="Reset settings" description="Brand Dark theme, grid wallpaper, taskbar at the bottom, default apps forgotten. Saved themes and files are kept.">
       <Button variant="danger" onclick={reset_settings}>
         <ArrowCounterClockwiseIcon /> Reset
       </Button>

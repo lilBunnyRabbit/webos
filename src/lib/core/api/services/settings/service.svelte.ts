@@ -1,4 +1,4 @@
-import type { FileDefaults, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
+import type { FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
 import type { FilesService, Kernel } from "$lib/core/api";
@@ -31,6 +31,7 @@ export class SettingsService implements ISettingsService {
   public theme = $state<Theme>({ ...BRAND_DARK });
   public file_defaults = $state<FileDefaults>({});
   public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);
+  public saved_themes = $state<SavedTheme[]>([]);
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -52,6 +53,7 @@ export class SettingsService implements ISettingsService {
       this.taskbar = saved.taskbar;
       this.file_defaults = saved.file_defaults;
       this.wallpaper = saved.wallpaper;
+      this.saved_themes = saved.saved_themes;
     }
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
@@ -72,6 +74,7 @@ export class SettingsService implements ISettingsService {
             taskbar: this.taskbar,
             file_defaults: this.file_defaults,
             wallpaper: this.wallpaper,
+            saved_themes: this.saved_themes,
           })
         );
       });

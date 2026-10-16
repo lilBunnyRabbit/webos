@@ -8,6 +8,8 @@ export interface SettingsService extends IService {
   file_defaults: FileDefaults;
   /** Desktop and phone home background (ADR-011 revision). Assign a preset directly; images go through `set_wallpaper_image`. */
   wallpaper: Wallpaper;
+  /** Themes the user named, in the order saved. Change it through `with_saved` / `without_saved` / `renamed_saved`. */
+  saved_themes: SavedTheme[];
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
 }
@@ -48,6 +50,11 @@ export type ThemeToken =
   | "info";
 
 export type ThemeBase = Record<ThemeBaseToken, string>;
+
+export interface SavedTheme {
+  name: string;
+  theme: Theme;
+}
 export type Theme = Record<ThemeToken, string>;
 
 export const WallpaperPreset = {

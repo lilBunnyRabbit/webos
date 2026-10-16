@@ -9,18 +9,19 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
+| `saved-themes.ts` | `find_saved()`, `with_saved()`, `without_saved()`, `renamed_saved()`: pure helpers over `saved_themes`, names compared trimmed and case-insensitive. Saving an existing name replaces it in place; renaming onto another saved name returns the list unchanged |
 | `random-theme.ts` | `generate_theme()`, `DEFAULT_GENERATE`, `Harmony`, `ThemeMode`, `GenerateOptions`, `parse_oklch()`, `is_dark()`, `oklch_lightness()`, `MIN_TEXT_CONTRAST`, `MIN_COLOUR_CONTRAST` (ADR-015 revisions) |
 | `shell.ts` | `settings_shell()`, see [Shell](#shell) |
 
-`index.ts` exports `type.ts`, `themes.ts`, `taskbar.ts` and `random-theme.ts`. `persistence.ts` stays private to the service.
+`index.ts` exports `type.ts`, `themes.ts`, `taskbar.ts`, `random-theme.ts` and `saved-themes.ts`. `persistence.ts` stays private to the service.
 
 ## Purpose
 
-Owns the user's persisted OS preferences: theme colour tokens, taskbar position, per-extension default apps, and the wallpaper. It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
+Owns the user's persisted OS preferences: theme colour tokens, saved themes, taskbar position, per-extension default apps, and the wallpaper. It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
 
 ## Public API
 
-The API is four plain reactive fields, which consumers assign to directly, plus one method for wallpaper images, which need a file copied.
+The API is five plain reactive fields, which consumers assign to directly, plus one method for wallpaper images, which need a file copied.
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
@@ -28,6 +29,7 @@ The API is four plain reactive fields, which consumers assign to directly, plus 
 | `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition, pinned: AppId[] }` | Read by `os.svelte`, `taskbar.svelte`, `window-manager.svelte`. The Settings app mutates `taskbar.position`. `pinned` is the quick launch in order ([taskbar](../shell/taskbar.md#quick-launch)); assign `with_pin(pinned, id, index?)` / `without_pin(pinned, id)`. Written by the quick launch, the start menu, App Library, the window item menu, the `taskbar` commands (AppsService) and `apps.uninstall()`. |
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
 | `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`. Assign a preset, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
+| `saved_themes` | `saved_themes: SavedTheme[]` (`{ name, theme: Theme }`) | Themes the user named, in the order saved. Change through the `saved-themes.ts` helpers and assign the result. Written by Settings › Appearance (Save…, Rename…, Delete…) and `theme save` / `theme delete`. Kept by About › Reset settings |
 | `set_wallpaper_image` | `(source: string \| File) => Promise<void>` | Copies a path or a device file (ADR-031 `string \| File`) to `/var/lib/wallpaper/{base36 time}-{name}`, sets `wallpaper` to it keeping the previous image's fit, dim and blur (else fill, 0, 0), then prunes the folder. Throws when the path doesn't exist. Callers: Settings › Appearance, `set_wallpaper()` in `file-actions.ts` (Explorer, desktop, Media Preview) |
 | `init` | `init(): Promise<void>` | See Lifecycle. |
 | `destroy` | `destroy(): void` | Disposes the effect root. |
@@ -121,7 +123,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 
 ## Shell
 
-Contributes `theme get|list|set|random`, the `theme` completer and value type (`settings/shell.ts`). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(generate_theme({ ...DEFAULT_GENERATE, mode }))` and yields the five base colours. The `taskbar pin|unpin|list` commands live in AppsService's shell, since they need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
+Contributes `theme get|list|set|random|save|delete`, the `theme` completer and value type (`settings/shell.ts`). `theme list` yields presets then saved themes (columns name, saved, active), and the `theme` completer lists both (detail `active` or `saved`). `theme get` and `theme set` take either; a preset wins a name clash. `theme save <name…>` saves the current theme (a preset's name is refused; the same saved name replaces it). `theme delete <name…>` removes a saved theme (available while any exist). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(generate_theme({ ...DEFAULT_GENERATE, mode }))` and yields the five base colours. The `taskbar pin|unpin|list` commands live in AppsService's shell, since they need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
 
 ## Known gaps
 

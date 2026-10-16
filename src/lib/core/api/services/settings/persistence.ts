@@ -4,6 +4,7 @@ import {
   WallpaperFit,
   WallpaperPreset,
   type FileDefaults,
+  type SavedTheme,
   type Taskbar,
   type Theme,
   type ThemeToken,
@@ -44,6 +45,7 @@ export interface PersistedSettings {
   taskbar: Taskbar;
   file_defaults: FileDefaults;
   wallpaper: Wallpaper;
+  saved_themes: SavedTheme[];
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -65,11 +67,26 @@ export function parse_settings(raw: string): PersistedSettings | null {
       },
       file_defaults: sanitize_file_defaults(data.file_defaults),
       wallpaper: parse_wallpaper(data.wallpaper),
+      saved_themes: parse_saved_themes(data.saved_themes),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
     return null;
   }
+}
+
+/** Named entries only, first of each name wins (case ignored); each theme merged like the active one. */
+function parse_saved_themes(saved: unknown): SavedTheme[] {
+  if (!Array.isArray(saved)) return [];
+  const names = new Set<string>();
+  const result: SavedTheme[] = [];
+  for (const entry of saved) {
+    const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+    if (!name || names.has(name.toLowerCase())) continue;
+    names.add(name.toLowerCase());
+    result.push({ name, theme: merge_theme(entry.theme) });
+  }
+  return result;
 }
 
 function merge_theme(saved: unknown): Theme {
