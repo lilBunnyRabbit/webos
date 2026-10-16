@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.17.0",
+    date: "2026-10-16",
+    title: "Make it yours",
+    changes: [
+      { kind: NEW, apps: ["settings"], text: "Settings › Appearance sets how round corners are, how strong shadows are, the text size, and can turn motion off." },
+      { kind: NEW, apps: ["settings"], text: "Export a saved theme to Documents as a .webos-theme file, and open one to preview and import it." },
+      { kind: FIXED, text: "Windows, notifications and the phone's app drawer no longer animate when your device asks for reduced motion." },
+    ],
+  },
+  {
     version: "1.16.0",
     date: "2026-10-16",
     title: "A tidier taskbar",

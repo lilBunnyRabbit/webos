@@ -86,5 +86,5 @@ Picked up block 6 after the generator and saved themes shipped (1.14.x). Radius,
 
 ### Action items
 
-- [ ] Slice 1, slice 2, slice 3 (spike first)
-- [ ] ADR-015 revision; docs/system settings page (also add `saved_themes` to Format, fix the stale "no migration path" gap); ROADMAP
+- [x] Slice 1, slice 2, slice 3 (spike passed: Tailwind keeps the `calc()`)
+- [x] ADR-015 revision; docs/system settings page (also add `saved_themes` to Format, fix the stale "no migration path" gap); ROADMAP
