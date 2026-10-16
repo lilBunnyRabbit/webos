@@ -1,7 +1,7 @@
 # ADR-015: Customization & Theming
 
 **Date:** 2026-02-01
-**Status:** Implemented (colours only)
+**Status:** Implemented (colours, taskbar size and auto-hide)
 
 > **Revision 2026-10-15: what's built.** Only the colour system above, plus the taskbar position that predates this ADR. Radius, shadow, motion speed and export/import were deferred by the owner on 2026-10-13. Fonts, taskbar size and auto-hide, desktop icon settings and sounds aren't built.
 
@@ -137,3 +137,12 @@ Owner, after trying the generator ([brainstorm](../brainstorm/2026-10-16_theme-g
 ## Revision 2026-10-16 (locks pick the mode)
 
 A locked foreground or colour that can only keep its gap in the other mode flips the generated mode, the way a locked background already set it. Locks that fit neither mode keep the asked mode and stay as given.
+
+## Revision 2026-10-16 (taskbar size and auto-hide)
+
+Decided with the owner ([brainstorm](../brainstorm/2026-10-16_taskbar-polish.md)). `Taskbar` gains `size: "small" | "medium" | "large"` (default `medium`) and `auto_hide: boolean` (default `false`), additive in `/etc/settings.json` under the same `SETTINGS_VERSION`. `show_clock` and `show_labels` aren't built.
+
+- **Size** is one CSS variable on the taskbar's `<nav>`: `--taskbar-item` 2rem, 2.5rem or 3rem. The bar, buttons, icons, separators, quick launch and the show desktop sliver derive from it; medium is the bar as it was.
+- **Auto-hide is an overlay revealed with CSS.** The bar leaves its grid track and goes `position: fixed`, slid off its edge but for 4px. `:hover`, `:focus-within` and `:has(:popover-open)` reveal it; `transition-delay: 2s` hides it. One `dragenter` handler sets `data-reveal` so drag to pin works, and a window item sets `data-reveal` while a window minimizes into it, so the bar is in place for the fly-in. Windows and maximize get the full screen, and flush mode is off. Rejected: a reserved 4px track with a JS `revealed` state.
+- Revealing when an app requests attention waits on a `request_attention` API that doesn't exist.
+- Ways in: Settings › Taskbar (a Size segmented control, an Auto-hide switch, both shown in the preview) and `taskbar position|size|autohide` in the shell, which print the current value with no argument.

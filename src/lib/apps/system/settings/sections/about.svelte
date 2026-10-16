@@ -5,6 +5,7 @@
     credits,
     OWNER,
     TaskbarPosition,
+    TaskbarSize,
     WallpaperPreset,
     type AppsService,
     type SettingsService,
@@ -46,7 +47,7 @@
   ]);
 
   function reset_settings() {
-    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [] };
+    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false };
     settings.theme = { ...BRAND_DARK };
     settings.file_defaults = {};
     settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };

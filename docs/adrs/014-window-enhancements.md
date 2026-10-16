@@ -1,7 +1,13 @@
 # ADR-014: Window Enhancements
 
 **Date:** 2026-02-01
-**Status:** Implemented (single-instance and taskbar grouping parked)
+**Status:** Implemented (single-instance parked)
+
+> **Revision 2026-10-16: taskbar grouping built** (owner, [brainstorm](../brainstorm/2026-10-16_taskbar-polish.md))
+> - Always on, no setting (two render paths were rejected). Windows group by app id inside the taskbar, in the order of each app's first window. The quick launch stays a separate zone (ADR-042 unchanged).
+> - A group of one is the plain window item. Several windows: a count pill, a click opens `dialogs.menu` at the item listing the windows by title (else the app name); an entry restores, focuses, or focuses a popped-out window through `extract.focus()`. Right-click: Pin/Unpin, Close all. Focused and PiP marks show when any member qualifies.
+> - Minimize flies into the group button for the most recently minimized member only, since two elements can't share a view-transition name; the others fade.
+> - Still a taskbar UI decision: WindowsService is unchanged.
 
 > **Revision 2026-10-12: placement, motion, reopen** (owner, [brainstorm](../brainstorm/2026-10-12_window-polish.md))
 > - **Cascading positioning is replaced by remembered frames.** An app's last closed window frame is reused, clamped fully on screen. A second window of an open app cascades 28px from that app's frontmost window, wrapping to the top-left when it would overflow. No frame yet: centred at 62% × 70% of the window area within the app's constraints. Frames are recorded on close only, held by WindowsService and saved by SessionService (ADR-023 revision).

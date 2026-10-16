@@ -13,10 +13,10 @@
   <button
     aria-label={label}
     title={label}
-    class="relative grid size-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10"
+    class="relative grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10"
     onclick={() => apps.launch("activity-monitor", { section: "tasks" })}
   >
-    <CircleNotchIcon class="size-4.5 animate-spin text-primary" weight="bold" />
+    <CircleNotchIcon class="size-[calc(var(--taskbar-item)*0.45)] animate-spin text-primary" weight="bold" />
     {#if count > 1}
       <span class="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-background" aria-hidden="true"
         >{count}</span

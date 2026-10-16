@@ -9,6 +9,8 @@
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const position = $derived(settings.taskbar.position);
+  // An auto-hidden taskbar overlays the screen (ADR-015), so the windows and the desktop get all of it.
+  const area = $derived(settings.taskbar.auto_hide ? "overlay" : position);
 </script>
 
 <div
@@ -20,8 +22,9 @@
         bottom: "grid-cols-1 grid-rows-[1fr_auto]",
         left: "grid-cols-[auto_1fr] grid-rows-1",
         right: "grid-cols-[1fr_auto] grid-rows-1",
+        overlay: "grid-cols-1 grid-rows-1",
       },
-      position
+      area
     )
   )}
 >
@@ -34,8 +37,9 @@
           bottom: "[grid-area:1/1]",
           left: "[grid-area:1/2]",
           right: "[grid-area:1/1]",
+          overlay: "[grid-area:1/1]",
         },
-        position
+        area
       )
     )}
   >
@@ -51,8 +55,9 @@
           bottom: "[grid-area:1/1]",
           left: "[grid-area:1/2]",
           right: "[grid-area:1/1]",
+          overlay: "[grid-area:1/1]",
         },
-        position
+        area
       )
     )}
   />
@@ -70,7 +75,8 @@
           right: "[grid-area:1/1] items-end justify-end-safe",
         },
         position
-      )
+      ),
+      settings.taskbar.auto_hide && "[grid-area:1/1]"
     )}
   />
 
