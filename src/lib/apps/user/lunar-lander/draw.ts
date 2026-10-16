@@ -1,5 +1,6 @@
 import { resolve_token } from "$lib/core/utils";
-import { WORLD, type GameState } from "./game";
+import { ground_at, Status, WORLD, type GameState } from "./game";
+import { ParticleKind, type Particle } from "./particles";
 import { ShipId, ThrusterKind, type Point, type ShipDesign } from "./ships";
 
 export interface Palette {
@@ -10,6 +11,9 @@ export interface Palette {
   ship: string;
   detail: string;
   flame: string;
+  core: string;
+  star: string;
+  dust: string;
 }
 
 export function read_palette(probe: HTMLElement): Palette {
@@ -22,6 +26,9 @@ export function read_palette(probe: HTMLElement): Palette {
     ship: token("var(--foreground)"),
     detail: token("light-dark(var(--background-lightest), var(--background-darkest))"),
     flame: token("var(--accent)"),
+    core: token("var(--foreground)"),
+    star: token("var(--foreground)"),
+    dust: token("color-mix(in oklch, var(--foreground) 60%, transparent)"),
   };
 }
 
@@ -157,36 +164,116 @@ const BODIES: Record<ShipId, (ctx: CanvasRenderingContext2D, palette: Palette) =
 };
 
 function draw_flames(ctx: CanvasRenderingContext2D, design: ShipDesign, firing: readonly boolean[], palette: Palette, time: number) {
-  ctx.fillStyle = palette.flame;
   design.thrusters.forEach((thruster, i) => {
     if (!firing[i]) return;
     const main = thruster.kind === ThrusterKind.MAIN;
-    const length = (main ? 9 : 4) * (0.75 + 0.25 * Math.sin(time * 60 + i * 2));
-    const half = main ? 1.6 : 0.7;
+    const flicker = 0.75 + 0.15 * Math.sin(time * 61 + i * 2) + 0.1 * Math.sin(time * 37 + i);
     const { at, dir } = thruster;
     const nx = -dir.y;
     const ny = dir.x;
-    polygon(ctx, [
-      { x: at.x + nx * half, y: at.y + ny * half },
-      { x: at.x - nx * half, y: at.y - ny * half },
-      { x: at.x - dir.x * length, y: at.y - dir.y * length },
-    ]);
+    const cone = (length: number, half: number) =>
+      polygon(ctx, [
+        { x: at.x + nx * half, y: at.y + ny * half },
+        { x: at.x - nx * half, y: at.y - ny * half },
+        { x: at.x - dir.x * length, y: at.y - dir.y * length },
+      ]);
+    ctx.fillStyle = palette.flame;
+    cone((main ? 10 : 4.5) * flicker, main ? 1.7 : 0.8);
+    ctx.fillStyle = palette.core;
+    cone((main ? 4.5 : 2) * flicker, main ? 0.8 : 0.4);
   });
 }
 
+interface Star {
+  x: number;
+  y: number;
+  size: number;
+  phase: number;
+}
+
+// Seeded, so the sky is the same every game and every window.
+const STARS: readonly Star[] = (() => {
+  let seed = 7;
+  const next = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  return Array.from({ length: 90 }, () => ({ x: next() * WORLD.width, y: next() * WORLD.height * 0.8, size: 0.3 + next() * 0.7, phase: next() * Math.PI * 2 }));
+})();
+
+function draw_stars(ctx: CanvasRenderingContext2D, game: GameState, palette: Palette, clock: number) {
+  ctx.fillStyle = palette.star;
+  for (const star of STARS) {
+    if (star.y >= ground_at(game.terrain, star.x) - 2) continue;
+    ctx.globalAlpha = 0.35 + 0.3 * Math.sin(clock * 1.3 + star.phase);
+    ctx.fillRect(star.x, star.y, star.size, star.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function draw_pad(ctx: CanvasRenderingContext2D, game: GameState, palette: Palette, clock: number) {
+  const { pad } = game;
+  ctx.fillStyle = palette.pad;
+  ctx.fillRect(pad.x0, pad.y - 1, pad.x1 - pad.x0, 3);
+  ctx.strokeStyle = palette.ridge;
+  ctx.lineWidth = 0.6;
+  lines(ctx, [
+    [pad.x0 + 1, pad.y - 2, pad.x0 + 1, pad.y - 7],
+    [pad.x1 - 1, pad.y - 2, pad.x1 - 1, pad.y - 7],
+  ]);
+  if (game.status === Status.LANDED || Math.sin(clock * 5) > 0) {
+    ctx.fillStyle = palette.pad;
+    for (const x of [pad.x0 + 1, pad.x1 - 1]) {
+      ctx.beginPath();
+      ctx.arc(x, pad.y - 8, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function draw_particles(ctx: CanvasRenderingContext2D, particles: readonly Particle[], palette: Palette) {
+  for (const p of particles) {
+    const left = 1 - p.age / p.life;
+    if (p.kind === ParticleKind.FLASH) {
+      ctx.globalAlpha = left * 0.8;
+      ctx.fillStyle = palette.flame;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size + (1 - left) * 26, 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+    if (p.kind === ParticleKind.DEBRIS) {
+      ctx.globalAlpha = Math.min(1, left * 3);
+      ctx.fillStyle = palette.ship;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      ctx.restore();
+      continue;
+    }
+    const exhaust = p.kind === ParticleKind.EXHAUST;
+    ctx.globalAlpha = exhaust ? left * 0.7 : left * 0.45;
+    ctx.fillStyle = exhaust ? palette.flame : palette.dust;
+    const size = p.size * (exhaust ? 0.6 + (1 - left) * 1.2 : 1);
+    ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** `clock` is wall time in seconds; it keeps stars and beacons alive after the flight's own time stops. */
 export function draw_scene(
   ctx: CanvasRenderingContext2D,
   game: GameState,
-  width: number,
-  height: number,
-  dpr: number,
-  palette: Palette
+  particles: readonly Particle[],
+  view: { width: number; height: number; dpr: number },
+  palette: Palette,
+  clock: number
 ) {
-  const scale = Math.min(width / WORLD.width, height / WORLD.height);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const scale = Math.min(view.width / WORLD.width, view.height / WORLD.height);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.fillStyle = palette.sky;
-  ctx.fillRect(0, 0, width, height);
-  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  ctx.fillRect(0, 0, view.width, view.height);
+  ctx.setTransform(view.dpr * scale, 0, 0, view.dpr * scale, 0, 0);
+
+  draw_stars(ctx, game, palette, clock);
 
   ctx.beginPath();
   ctx.moveTo(0, WORLD.height);
@@ -203,17 +290,20 @@ export function draw_scene(
   ctx.lineJoin = "round";
   ctx.stroke();
 
-  ctx.fillStyle = palette.pad;
-  ctx.fillRect(game.pad.x0, game.pad.y - 1, game.pad.x1 - game.pad.x0, 3);
+  draw_pad(ctx, game, palette, clock);
 
-  ctx.save();
-  ctx.translate(game.ship.x, game.ship.y);
-  ctx.rotate(game.ship.angle);
-  draw_flames(ctx, game.design, game.firing, palette, game.time);
-  ctx.fillStyle = palette.ship;
-  ctx.strokeStyle = palette.ship;
-  ctx.lineWidth = 1;
-  ctx.lineCap = "round";
-  BODIES[game.design.id](ctx, palette);
-  ctx.restore();
+  if (game.status !== Status.CRASHED) {
+    ctx.save();
+    ctx.translate(game.ship.x, game.ship.y);
+    ctx.rotate(game.ship.angle);
+    draw_flames(ctx, game.design, game.firing, palette, clock);
+    ctx.fillStyle = palette.ship;
+    ctx.strokeStyle = palette.ship;
+    ctx.lineWidth = 1;
+    ctx.lineCap = "round";
+    BODIES[game.design.id](ctx, palette);
+    ctx.restore();
+  }
+
+  draw_particles(ctx, particles, palette);
 }

@@ -12,7 +12,7 @@ export default define_app({
   keywords: ["game", "arcade", "rocket", "space", "physics"],
   defaults: {
     constraints: {
-      width: { min: 620 },
+      width: { min: 440 },
       height: { min: 320 },
     },
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { create_game, GRAVITY, ground_at, set_status, Status, step, wind_speed, type Environment, type GameState } from "./game";
+import { create_game, GRAVITY, ground_at, mode_key, score, set_status, Status, step, to_world, wind_speed, type Environment, type GameState } from "./game";
 import { NO_CONTROLS, SHIPS, ShipId, type Controls } from "./ships";
 
 const DT = 1 / 120;
@@ -86,5 +86,38 @@ describe("step", () => {
     const game = flying();
     const off = 120;
     expect(run(flying(ShipId.PODS, { x: off, y: ground_at(game.terrain, off) - 10, vy: 5 }), 1).status).toBe(Status.CRASHED);
+  });
+});
+
+describe("touchdown", () => {
+  it("keeps the angle in one turn, so a full loop still lands level", () => {
+    const looped = flying(ShipId.PODS, { angle: Math.PI * 2 - 0.01 });
+    expect(Math.abs(step(looped, NO_CONTROLS, DT).ship.angle)).toBeLessThan(0.02);
+  });
+
+  it("leaves the upright feet on the pad after snapping level", () => {
+    const game = above_pad(ShipId.LANDER, 5, -0.2);
+    const edge = { ...game, ship: { ...game.ship, x: game.pad.x0 + 6.6 } };
+    const landed = run(edge, 1);
+    expect(landed.status).toBe(Status.LANDED);
+    for (const foot of landed.design.feet) expect(to_world(landed.ship, foot).x).toBeGreaterThanOrEqual(landed.pad.x0);
+  });
+
+  it("scores a soft centred landing higher than a hard one", () => {
+    const soft = score(run(above_pad(ShipId.PODS, 2), 1))!;
+    const hard = score(run(above_pad(ShipId.PODS, 13), 1))!;
+    expect(soft.total).toBeGreaterThan(hard.total);
+    expect(soft.centre).toBe(200);
+    expect(score(run(above_pad(ShipId.PODS, 40), 1))).toBeNull();
+  });
+
+  it("ignores fuel in the score when it can't run out", () => {
+    const game = above_pad(ShipId.PODS, 2);
+    expect(score(run({ ...game, env: { ...game.env, infinite_fuel: true } }, 1))!.fuel).toBe(0);
+  });
+
+  it("keys bests by ship and setup, ignoring wind without air", () => {
+    expect(mode_key(ShipId.SHUTTLE, MOON)).toBe("shuttle-moon");
+    expect(mode_key(ShipId.PODS, { gravity: "mars", air: false, wind: true, infinite_fuel: true })).toBe("pods-mars-inf");
   });
 });

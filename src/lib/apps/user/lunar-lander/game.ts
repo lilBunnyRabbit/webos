@@ -56,6 +56,14 @@ export interface Ship {
   fuel: number;
 }
 
+export interface Touchdown {
+  vx: number;
+  vy: number;
+  angle: number;
+  /** Feet centre from pad centre, 0 dead centre, 1 at the pad edge. */
+  offset: number;
+}
+
 export interface GameState {
   design: ShipDesign;
   env: Environment;
@@ -66,6 +74,7 @@ export interface GameState {
   wind_dir: number;
   status: Status;
   reason: string | null;
+  touchdown: Touchdown | null;
   time: number;
 }
 
@@ -113,6 +122,7 @@ export function create_game(ship: ShipId, env: Environment = DEFAULT_ENVIRONMENT
     wind_dir: rng() < 0.5 ? -1 : 1,
     status: Status.READY,
     reason: null,
+    touchdown: null,
     time: 0,
   };
 }
@@ -201,14 +211,15 @@ export function step(state: GameState, input: Controls, dt: number): GameState {
   ship.spin += (torque / design.inertia) * dt;
   ship.spin *= Math.max(0, 1 - design.spin_damping * dt);
   ship.angle += ship.spin * dt;
+  ship.angle = Math.atan2(Math.sin(ship.angle), Math.cos(ship.angle));
   ship.vx += ax * dt;
   ship.vy += ay * dt;
   ship.x += ship.vx * dt;
   ship.y += ship.vy * dt;
 
-  const hull = design.hull.map((point) => to_world(ship, point));
-  const xs = hull.map((point) => point.x);
-  const ys = hull.map((point) => point.y);
+  const extent = [...design.hull, ...design.feet, ...design.thrusters.map((thruster) => thruster.at)].map((point) => to_world(ship, point));
+  const xs = extent.map((point) => point.x);
+  const ys = extent.map((point) => point.y);
   const left = Math.min(...xs);
   const right = Math.max(...xs);
   if (left < 0 || right > WORLD.width) {
@@ -236,8 +247,14 @@ export function step(state: GameState, input: Controls, dt: number): GameState {
   if (reason) return { ...next, status: Status.CRASHED, reason, firing: stopped };
 
   const lowest = Math.max(...design.feet.map((foot) => foot.y));
-  const rest = { ...ship, y: state.pad.y - lowest, vx: 0, vy: 0, angle: 0, spin: 0 };
-  return { ...next, ship: rest, status: Status.LANDED, firing: stopped };
+  const local_xs = design.feet.map((foot) => foot.x);
+  // Snapping upright moves the feet; slide the ship so they still stand on the pad it was judged on.
+  const x = Math.min(state.pad.x1 - Math.max(...local_xs), Math.max(state.pad.x0 - Math.min(...local_xs), ship.x));
+  const rest = { ...ship, x, y: state.pad.y - lowest, vx: 0, vy: 0, angle: 0, spin: 0 };
+  const centre = feet.reduce((sum, foot) => sum + foot.x, 0) / feet.length;
+  const half = (state.pad.x1 - state.pad.x0) / 2;
+  const touchdown = { vx: ship.vx, vy: ship.vy, angle: ship.angle, offset: Math.min(1, Math.abs(centre - (state.pad.x0 + half)) / half) };
+  return { ...next, ship: rest, status: Status.LANDED, firing: stopped, touchdown };
 }
 
 export function fixed_steps(
@@ -250,4 +267,32 @@ export function fixed_steps(
   const steps = Math.floor(total / step_ms);
   if (steps > max_steps) return { steps: max_steps, remainder: 0 };
   return { steps, remainder: total - steps * step_ms };
+}
+
+export interface Score {
+  total: number;
+  soft: number;
+  level: number;
+  centre: number;
+  fuel: number;
+}
+
+const unit = (value: number, limit: number) => Math.max(0, 1 - Math.abs(value) / limit);
+
+/** Fuel counts only when it can run out, so infinite-fuel runs score on the touchdown alone. */
+export function score(state: GameState): Score | null {
+  const touchdown = state.touchdown;
+  if (state.status !== Status.LANDED || !touchdown) return null;
+  const soft = Math.round(400 * unit(touchdown.vy, SAFE.vy) + 100 * unit(touchdown.vx, SAFE.vx));
+  const level = Math.round(200 * unit(touchdown.angle, SAFE.angle));
+  const centre = Math.round(200 * (1 - touchdown.offset));
+  const fuel = state.env.infinite_fuel ? 0 : Math.round(4 * state.ship.fuel);
+  return { total: soft + level + centre + fuel, soft, level, centre, fuel };
+}
+
+export const best_scores_schema = z.record(z.string(), z.number().int().nonnegative());
+export type BestScores = z.infer<typeof best_scores_schema>;
+
+export function mode_key(ship: ShipId, env: Environment): string {
+  return [ship, env.gravity, env.air ? "air" : "", env.air && env.wind ? "wind" : "", env.infinite_fuel ? "inf" : ""].filter(Boolean).join("-");
 }
