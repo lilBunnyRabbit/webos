@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.16.0",
+    date: "2026-10-16",
+    title: "A tidier taskbar",
+    changes: [
+      { kind: NEW, text: "Windows of the same app share one taskbar button with a count: click it to pick a window, or right-click to close them all." },
+      { kind: NEW, text: "Choose a small, medium or large taskbar in Settings › Taskbar." },
+      { kind: NEW, text: "The taskbar can hide itself to give windows the whole screen, and comes back when you point at the screen edge." },
+      { kind: NEW, apps: ["terminal"], text: "Type taskbar position, taskbar size or taskbar autohide in the Terminal to change the taskbar from there." },
+    ],
+  },
+  {
     version: "1.15.0",
     date: "2026-10-16",
     title: "Forward in File Explorer",

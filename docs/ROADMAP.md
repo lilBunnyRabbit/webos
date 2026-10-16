@@ -174,10 +174,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Status:** In progress
 - [x] System tray area (notifications; a tasks indicator before it, ADR-013)
 - [-] Context menus for taskbar items: window items have Pin to taskbar / Unpin and Close window; quick launch icons have Open, New window, Unpin (ADR-042)
-- [ ] Window grouping by app (badge count, expand to list)
+- [x] Window grouping by app (2026-10-16, [brainstorm](brainstorm/2026-10-16_taskbar-polish.md)): one button per app with a count, click lists the windows, right-click Close all. Quick launch stays separate; merging them is next
 - [x] Quick launch area ([ADR-042](adrs/042-quick-launch.md)): pinned apps between Start and the windows, focus-else-launch, drag to pin, reorder (icons slide apart) and drag off to unpin, `taskbar pin|unpin|list`
-- [ ] Taskbar auto-hide
-- [ ] Taskbar size options (small/medium/large)
+- [x] Taskbar auto-hide (2026-10-16): overlays the screen, CSS reveal on hover/focus/popover, drag reveals, `taskbar autohide`. Reveal on `request_attention` waits on that API
+- [x] Taskbar size options (2026-10-16): small/medium/large via `--taskbar-item`, `taskbar size`; `taskbar position` too
 - [x] Drag and drop apps to pin (owner, 2026-10-16; [ADR-042](adrs/042-quick-launch.md)): start menu tiles and App Library cards drag onto the desktop (pins at that cell) or the quick launch; mobile keeps its menus
 - [x] Show desktop: a sliver at the far end of the taskbar and Alt+Shift+D (`win desktop`) minimize every visible window; again brings back only those, until another window is focused (2026-10-15, [brainstorm](brainstorm/2026-10-15_show-desktop.md)). Mobile: goes home
 

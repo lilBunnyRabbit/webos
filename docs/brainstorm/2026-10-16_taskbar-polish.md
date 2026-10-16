@@ -36,8 +36,8 @@ Roadmap Taskbar block: grouping by app (ADR-014, parked), auto-hide and size opt
 
 ## Action items
 
-- [ ] Implement grouping, auto-hide, size, the three commands
-- [ ] ADR-014 / ADR-015 revision notes; docs/system taskbar + settings pages; ROADMAP
+- [x] Implement grouping, auto-hide, size, the three commands
+- [x] ADR-014 / ADR-015 revision notes; docs/system taskbar + settings pages; ROADMAP
 
 ## Next session topics
 
