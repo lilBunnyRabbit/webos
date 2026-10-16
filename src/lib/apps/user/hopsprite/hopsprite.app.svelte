@@ -38,7 +38,7 @@
   import { palette_rgba } from "./color";
   import { insert_frame, transform_sprite, Transform } from "./document";
   import { Editor } from "./editor.svelte";
-  import { write_animated_svg, write_frame_svg } from "./export";
+  import { write_animated_svg, write_frame_svg, write_gif } from "./export";
   import { EXTENSION, serialize_sprite } from "./format";
   import HopspriteLayers from "./hopsprite-layers.svelte";
   import HopspriteExportPopover, { type ExportRequest } from "./hopsprite-export-popover.svelte";
@@ -203,18 +203,25 @@
     return file_path && !read_only ? write(file_path) : save_as();
   }
 
-  async function export_svg(request: ExportRequest) {
+  async function export_file(request: ExportRequest) {
     editor.drop();
     playing = false;
+    const gif = request.format === "gif";
+    const extension = gif ? ".gif" : ".svg";
     const path = await win.pick_save({
-      name: `${file_stem(file_name) || "sprite"}.svg`,
-      accept: [".svg", "image/svg+xml"],
+      name: `${file_stem(file_name) || "sprite"}${extension}`,
+      accept: gif ? [".gif", "image/gif"] : [".svg", "image/svg+xml"],
       start_path: file_path && !read_only ? parent_path(file_path) : "/home",
-      title: request.kind === "frame" ? "Export frame as SVG" : "Export animation as SVG",
+      title: `Export ${request.kind === "frame" ? "frame" : "animation"} as ${gif ? "GIF" : "SVG"}`,
     });
     if (!path) return;
-    const target = path.toLowerCase().endsWith(".svg") ? path : `${path}.svg`;
+    const target = path.toLowerCase().endsWith(extension) ? path : `${path}${extension}`;
     const snapshot = editor.sprite;
+    if (gif) {
+      const order = request.kind === "animation" ? frame_sequence(request.range, request.direction) : [editor.frame];
+      await write_gif(app_id, target, snapshot, { scale: request.scale, order, loop: request.kind === "animation" && request.loop });
+      return;
+    }
     if (request.kind === "animation") {
       await write_animated_svg(app_id, target, snapshot, request);
       return;
@@ -542,7 +549,7 @@
 
 <HopspriteNewPopover id="new-{popover}" anchor="--file-{popover}" oncreate={create} />
 <HopspriteSizePopover id="size-{popover}" anchor="--file-{popover}" {editor} />
-<HopspriteExportPopover id="export-{popover}" anchor="--export-{popover}" {editor} onexport={export_svg} />
+<HopspriteExportPopover id="export-{popover}" anchor="--export-{popover}" {editor} onexport={export_file} />
 <HopspriteColorPopover
   id="color-{popover}"
   anchor={palette_in_popover ? `--dock-wells-${popover}` : `--wells-${popover}`}

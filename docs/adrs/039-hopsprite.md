@@ -57,3 +57,7 @@ Hopsprite is a pixel art and animation editor ([brainstorm](../brainstorm/2026-1
 - A big sprite (say 1024×1024) costs 1 MB of history per stroke, so the byte cap shortens its undo history.
 - Two windows on one file don't sync; the last save wins.
 - Adding PNG, sprite sheet or GIF export reuses `composite` and the task pipeline.
+
+## Revision 2026-10-16: GIF export
+
+The owner chose a hand-written encoder over `gifenc`, gifski (AGPL, built for photo quantization) and the rest: `gif.ts` writes GIF89a with its own LZW. Export's popover gains an SVG / GIF switch with the same frame range, direction, loop and scale options; scales whose side passes 4096px are hidden for GIF. It runs on TasksService: one task per frame indexes the composite against one growing palette (`index_pixels`, so the sprite's colours keep their entries and blended layer colours are added, or mapped to the nearest past 256), repeated frames merge their delays, then an encode step writes each frame (full canvas, disposal 2, index 0 transparent) and a write step saves the file. Delays round on a running total to centiseconds, never below 2.

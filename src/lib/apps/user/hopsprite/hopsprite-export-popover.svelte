@@ -4,9 +4,10 @@
   import type { Editor } from "./editor.svelte";
   import { Direction, DIRECTIONS } from "./model";
   import { frame_sequence } from "./sequence";
-  import type { AnimationExport } from "./export";
+  import { gif_scales, type AnimationExport } from "./export";
 
-  export type ExportRequest = { kind: "frame"; scale: number } | ({ kind: "animation" } & AnimationExport);
+  export type ExportFormat = "svg" | "gif";
+  export type ExportRequest = { format: ExportFormat } & ({ kind: "frame"; scale: number } | ({ kind: "animation" } & AnimationExport));
 
   interface Props {
     id: string;
@@ -17,7 +18,10 @@
 
   let { id, anchor, editor, onexport }: Props = $props();
 
+  const SCALES = [1, 2, 4, 8, 16];
+
   let popover = $state<HTMLElement>();
+  let format = $state<ExportFormat>("svg");
   let kind = $state<"frame" | "animation">("animation");
   let scale = $state("4");
   let range = $state("-1");
@@ -30,6 +34,7 @@
   const order = $derived(frame_sequence(frames, direction));
   const total = $derived(order.reduce((sum, frame) => sum + (sprite.frames[frame]?.duration ?? 0), 0));
   const factor = $derived(Number(scale));
+  const scales = $derived(format === "gif" ? gif_scales(sprite, SCALES) : SCALES);
 
   const DIRECTION_LABELS: Record<Direction, string> = { forward: "Forward", reverse: "Reverse", pingpong: "Ping-pong" };
 
@@ -41,13 +46,23 @@
 
   function submit() {
     popover?.hidePopover();
-    if (kind === "frame") onexport({ kind, scale: factor });
-    else onexport({ kind, scale: factor, range: frames, direction, loop });
+    if (kind === "frame") onexport({ format, kind, scale: factor });
+    else onexport({ format, kind, scale: factor, range: frames, direction, loop });
   }
 
   function sync() {
     if (sprite.frames.length === 1) kind = "frame";
     if (Number(range) >= sprite.tags.length) range = "-1";
+    fit_scale();
+  }
+
+  function fit_scale() {
+    if (!scales.includes(factor)) scale = String(scales.at(-1) ?? 1);
+  }
+
+  function pick_format(value: ExportFormat) {
+    format = value;
+    fit_scale();
   }
 </script>
 
@@ -60,7 +75,18 @@
   ontoggle={(event) => event.newState === "open" && sync()}
 >
   <form class="flex flex-col gap-3" onsubmit={(event) => (event.preventDefault(), submit())}>
-    <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Export SVG</p>
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Export</p>
+      <Segmented
+        size="sm"
+        label="Format"
+        options={[
+          { value: "svg", label: "SVG" },
+          { value: "gif", label: "GIF" },
+        ]}
+        bind:value={() => format, pick_format}
+      />
+    </div>
     <Segmented
       size="sm"
       label="What to export"
@@ -72,7 +98,7 @@
     />
     <label class="flex items-center justify-between gap-3 text-ui">
       Scale
-      <Select size="sm" class="w-36" options={[1, 2, 4, 8, 16].map((value) => ({ value: String(value), label: `${value}× · ${sprite.width * value}×${sprite.height * value}` }))} bind:value={scale} />
+      <Select size="sm" class="w-36" options={scales.map((value) => ({ value: String(value), label: `${value}× · ${sprite.width * value}×${sprite.height * value}` }))} bind:value={scale} />
     </label>
     {#if kind === "animation"}
       {#if sprite.tags.length}
@@ -94,9 +120,9 @@
         Loop forever
         <Switch bind:checked={loop} />
       </label>
-      <p class="font-mono text-2xs text-foreground/65 tabular-nums">{order.length} frames · {(total / 1000).toFixed(2)} s · plays anywhere SVG does</p>
+      <p class="font-mono text-2xs text-foreground/65 tabular-nums">{order.length} frames · {(total / 1000).toFixed(2)} s · {format === "gif" ? "GIF, see-through or solid pixels" : "plays anywhere SVG does"}</p>
     {:else}
-      <p class="font-mono text-2xs text-foreground/65 tabular-nums">Frame {editor.frame + 1} · vector, one path per colour</p>
+      <p class="font-mono text-2xs text-foreground/65 tabular-nums">Frame {editor.frame + 1} · {format === "gif" ? "GIF, one image" : "vector, one path per colour"}</p>
     {/if}
     <div class="flex justify-end">
       <Button size="sm" variant="primary" type="submit"><ExportIcon weight="bold" /> Export…</Button>

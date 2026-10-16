@@ -40,7 +40,7 @@ The owner asked for a pixel art editor with animation, in the spirit of Aseprite
 
 Future features, none decided:
 
-- GIF export: hand-written GIF89a (LZW, palette straight from the sprite) or a dependency. Pending the owner's call.
+- ~~GIF export: hand-written GIF89a or a dependency.~~ Decided 2026-10-16: hand-written. Options weighed: hand-written, `gifenc` (MIT, 9 KB), `omggif`, gifski wasm (AGPL, photo quantizer that would dither pixel art), `gif.js`, ffmpeg.wasm, APNG instead. The owner: "if it is that simple to do it by hand do it by hand". APNG stays an idea for full-alpha exports. See the ADR-039 revision.
 - PNG, PNG sequence and sprite sheet + JSON export; APNG (browser PNG chunks plus the core crc32)
 - Linked cels, reference layer, tilemap mode, 9-slice
 - Lasso and polygon selection, gradient fill, outline effect, shading ink, custom brushes from a selection

@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.7.0",
+    date: "2026-10-16",
+    title: "GIF export",
+    changes: [
+      { kind: NEW, apps: ["hopsprite"], text: "Hopsprite exports GIFs: a single frame or the whole animation, with its timing, loop and transparent pixels." },
+    ],
+  },
+  {
     version: "1.6.3",
     date: "2026-10-16",
     title: "Hopsprite fits phones",
