@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { chunks, every_page, flatten_groups, parse_ranges, split_groups } from "./ranges";
+import { chunks, default_ranges, every_page, flatten_groups, parse_ranges, split_groups } from "./ranges";
 
 describe("split_groups", () => {
   test("every page by default", () => {
@@ -52,5 +52,18 @@ describe("groups", () => {
     expect(every_page(3)).toEqual([[1], [2], [3]]);
     expect(chunks(7, 3)).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
     expect(chunks(2, 0)).toEqual([[1], [2]]);
+  });
+});
+
+describe("default_ranges", () => {
+  test("parses for any page count", () => {
+    for (let count = 1; count <= 8; count++) expect(parse_ranges(default_ranges(count), count).ok).toBe(true);
+  });
+
+  test("two files when there are two pages or more", () => {
+    expect(default_ranges(1)).toBe("1");
+    expect(default_ranges(2)).toBe("1, 2");
+    expect(default_ranges(4)).toBe("1-3, 4");
+    expect(default_ranges(12)).toBe("1-3, 5");
   });
 });

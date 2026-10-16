@@ -13,7 +13,7 @@
   import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
-  import { chunks, every_page, flatten_groups, parse_ranges } from "./ranges";
+  import { chunks, default_ranges, every_page, flatten_groups, parse_ranges } from "./ranges";
   import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
@@ -30,7 +30,8 @@
   ];
 
   const mode = storage.window<Mode>("split-mode", Mode.RANGES, z.enum([Mode.RANGES, Mode.EXTRACT, Mode.EACH, Mode.CHUNKS]));
-  let ranges = $state("1-3, 5");
+  /** `null` until typed in: then the default follows the open PDF, so a short one never starts on an error. */
+  let typed_ranges = $state<string | null>(null);
   let size = $state(2);
   let busy = $state(false);
 
@@ -40,6 +41,8 @@
 
   const first = untrack(() => initial_paths[0]);
   if (first) void slot.open(first);
+
+  const ranges = $derived(typed_ranges ?? default_ranges(loaded?.count ?? 0));
 
   const plan = $derived.by((): { groups: number[][]; error: string | null } => {
     if (!loaded) return { groups: [], error: null };
@@ -114,7 +117,7 @@
           {#if mode.value === Mode.RANGES || mode.value === Mode.EXTRACT}
             <SettingRow label="Pages" description={plan.error ?? `1 to ${loaded.count}. Use commas between ranges; “8-” runs to the end.`}>
               {#snippet children({ id, describedby })}
-                <Input {id} aria-describedby={describedby} aria-invalid={!!plan.error} class="w-44 font-mono" bind:value={ranges} placeholder="1-3, 5" />
+                <Input {id} aria-describedby={describedby} aria-invalid={!!plan.error} class="w-44 font-mono" bind:value={() => ranges, (value) => (typed_ranges = value)} placeholder="1-3, 5" />
               {/snippet}
             </SettingRow>
           {:else if mode.value === Mode.CHUNKS}

@@ -29,6 +29,13 @@ export function flatten_groups(groups: number[][]): number[] {
   return [...new Set(groups.flat())];
 }
 
+/** A starting range that parses for `count` pages: the usual example, or two files for short PDFs. */
+export function default_ranges(count: number): string {
+  if (count >= 5) return "1-3, 5";
+  if (count <= 1) return "1";
+  return count === 2 ? "1, 2" : `1-${count - 1}, ${count}`;
+}
+
 export function every_page(count: number): number[][] {
   return Array.from({ length: count }, (_, index) => [index + 1]);
 }
