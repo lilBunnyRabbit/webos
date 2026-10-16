@@ -12,11 +12,14 @@
   import Shortcuts from "./sections/shortcuts.svelte";
   import { SECTIONS, SECTION_IDS, type Section } from "./sections";
 
-  let { section: requested }: { section?: Section } = $props();
+  let { section: requested, path }: { section?: Section; path?: string } = $props();
 
   const { storage } = get_app_context();
   // svelte-ignore state_referenced_locally
-  const section = storage.window<Section>("section", requested ?? "appearance", z.enum(SECTION_IDS));
+  const section = storage.window<Section>("section", path ? "appearance" : (requested ?? "appearance"), z.enum(SECTION_IDS));
+  // A restored window gets its own answer back, so an import done or cancelled doesn't ask again.
+  // svelte-ignore state_referenced_locally
+  const importing = storage.window<string | null>("import", path ?? null, z.string().nullable());
 
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 </script>
@@ -28,7 +31,7 @@
     <div class="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-6">
       <h1 class="text-lg font-semibold">{current.label}</h1>
       {#if section.value === "appearance"}
-        <Appearance />
+        <Appearance bind:import_path={importing.value} />
       {:else if section.value === "taskbar"}
         <Taskbar />
       {:else if section.value === "files"}

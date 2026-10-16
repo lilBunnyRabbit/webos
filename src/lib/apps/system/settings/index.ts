@@ -18,8 +18,12 @@ export default define_app({
       height: { min: 480 },
     },
   },
-  /** `section` opens on that section, e.g. What's new from the update toast (ADR-026). */
-  props: z.object({ section: z.enum(SECTION_IDS) }),
+  associations: [".webos-theme"],
+  /**
+   * `section` opens on that section, e.g. What's new from the update toast (ADR-026). `path`, a `.webos-theme` file,
+   * opens Appearance with its import preview.
+   */
+  props: z.object({ section: z.enum(SECTION_IDS).optional(), path: z.string().optional() }),
   highlights: () => import("./highlights"),
   component: () => import("./settings.app.svelte"),
 });

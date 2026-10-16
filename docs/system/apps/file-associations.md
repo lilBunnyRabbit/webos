@@ -54,6 +54,7 @@ Listing an extension is how an app beats a broader type. A `.ts` file can get th
 | `pdf-viewer` | `application/pdf`, `.pdf` |
 | `html-preview` | `text/html`, `.html`, `.htm` |
 | `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
+| `settings` | `.webos-theme` (a theme file: opens Appearance with an import preview, [Settings](../system-apps.md#settings)) |
 
 HTML and CSV files used to open in Text Viewer (now Text Editor) through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Editor can't be picked for them from File Explorer. Its own Open… still accepts them.
 

@@ -1,7 +1,28 @@
 <script lang="ts">
-  import kernel, { renamed_saved, THEME_PRESETS, without_saved, type DialogsService, type SavedTheme, ThemeGroup, type SettingsService, type Theme, type ThemeToken } from "$lib/core/api";
-  import { Section } from "$lib/core/components/ui";
-  import { CaretRight as CaretRightIcon, PencilSimple as PencilSimpleIcon, Trash as TrashIcon } from "phosphor-svelte";
+  import kernel, {
+    renamed_saved,
+    THEME_PRESETS,
+    without_saved,
+    type AppsService,
+    type DialogsService,
+    type FilesService,
+    type NotificationsService,
+    type SavedTheme,
+    ThemeGroup,
+    type SettingsService,
+    type Theme,
+    type ThemeToken,
+  } from "$lib/core/api";
+  import { PATHS } from "$lib/core/api/services/files/hierarchy";
+  import { Button, Section } from "$lib/core/components/ui";
+  import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
+  import {
+    CaretRight as CaretRightIcon,
+    Export as ExportIcon,
+    FolderOpen as FolderOpenIcon,
+    PencilSimple as PencilSimpleIcon,
+    Trash as TrashIcon,
+  } from "phosphor-svelte";
   import { get_app_context } from "$lib/core/contexts/app";
   import { ask_theme_name } from "../theme-name";
   import { to_hex, to_oklch } from "../color";
@@ -9,9 +30,16 @@
   import WallpaperSection from "./wallpaper.svelte";
   import GenerateSection from "./generate.svelte";
   import InterfaceSection from "./interface.svelte";
+  import ThemeImport from "./theme-import.svelte";
+  import { serialize_theme_file, THEME_FILE_EXTENSION, theme_file_name } from "../theme-file";
+
+  let { import_path = $bindable(null) }: { import_path?: string | null } = $props();
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const files = $derived(kernel.service<FilesService>("files"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const { window: win } = get_app_context();
 
   const active_preset = $derived(
@@ -27,12 +55,14 @@
       [
         { id: "apply", label: "Apply" },
         { id: "rename", label: "Rename…", icon: PencilSimpleIcon },
+        { id: "export", label: "Export", icon: ExportIcon },
         { separator: true },
         { id: "delete", label: "Delete…", icon: TrashIcon, danger: true },
       ],
       { anchor: { x: event.clientX, y: event.clientY } }
     );
     if (choice === "apply") settings.theme = { ...entry.theme };
+    else if (choice === "export") await export_theme(entry);
     else if (choice === "rename") {
       const name = await ask_theme_name(win, settings.saved_themes, { message: "Rename theme", confirm_label: "Rename", current: entry.name });
       if (name) settings.saved_themes = renamed_saved(settings.saved_themes, entry.name, name);
@@ -41,6 +71,26 @@
         settings.saved_themes = without_saved(settings.saved_themes, entry.name);
       }
     }
+  }
+
+  async function export_theme(entry: SavedTheme) {
+    try {
+      const folder = await files.get_directory(PATHS.documents);
+      if (!folder) throw new Error(`${PATHS.documents} doesn't exist`);
+      const handle = await files.create_file(folder, theme_file_name(entry.name), { content: serialize_theme_file(entry) });
+      notifications.notify("settings", {
+        title: `Exported “${entry.name}”`,
+        message: `${PATHS.documents}/${handle.name}`,
+        actions: [{ label: "Show folder", on_click: () => apps.launch("file-explorer", { path: PATHS.documents }) }],
+      });
+    } catch (error) {
+      report_file_error("Couldn't export the theme", error);
+    }
+  }
+
+  async function pick_theme_file() {
+    const chosen = await win.pick_file({ accept: [THEME_FILE_EXTENSION], start_path: PATHS.documents, title: "Import theme" });
+    if (chosen) import_path = chosen;
   }
 
   const presets_in = (group: ThemeGroup) => THEME_PRESETS.filter((preset) => preset.group === group);
@@ -73,8 +123,21 @@
 </script>
 
 <div class="flex flex-col gap-8">
-  {#if settings.saved_themes.length > 0}
-    <Section title="Your themes" description="Saved from Generate. Right-click one to rename or delete it." flush>
+  {#if import_path}
+    <ThemeImport path={import_path} onclose={() => (import_path = null)} />
+  {/if}
+
+  <Section
+    title="Your themes"
+    description={settings.saved_themes.length > 0
+      ? "Saved from Generate or imported. Right-click one to rename, export or delete it."
+      : "Save one from Generate, or import a .webos-theme file."}
+    flush
+  >
+    {#snippet actions()}
+      <Button size="sm" variant="quiet" onclick={pick_theme_file}><FolderOpenIcon /> Import…</Button>
+    {/snippet}
+    {#if settings.saved_themes.length > 0}
       <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
         {#each settings.saved_themes as entry (entry.name)}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -83,8 +146,8 @@
           </div>
         {/each}
       </div>
-    </Section>
-  {/if}
+    {/if}
+  </Section>
 
   <Section title="Theme" description={active_preset ? `${active_preset.name} is active.` : active_saved ? `${active_saved.name} is active.` : "A customised theme is active."} flush>
     <div class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2">
