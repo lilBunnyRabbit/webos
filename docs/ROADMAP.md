@@ -322,6 +322,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Wordle and variants (owner, 2026-10-14): classic, longer words, multi-board (Quordle-style), daily via the `daily` prop. Needs a word list decision (bundled size vs language)
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
+- [x] Lunar Lander: three ships with per-thruster physics, gravity presets, air, wind, infinite fuel (2026-10-16)
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
 
 ### Productivity
