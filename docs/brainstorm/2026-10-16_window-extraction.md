@@ -31,9 +31,30 @@ Roadmap item "Window extraction" (Needs Brainstorm): pop one app out of the page
 - The frame swaps `WindowContent` for an `EmptyState` ("Open in a mini window", Bring back), so the app runs once. The window's destroy closes the PiP window.
 - Titlebar button (Phosphor `PictureInPicture`), pressed while out, disabled while dirty.
 
+## Proper implementation (second session)
+
+Owner's grill answers, recorded as [ADR-043](../adrs/043-window-extraction.md).
+
+| Question | Decision | Rejected |
+|---|---|---|
+| Route | **Document Picture-in-Picture only.** Same realm, one mini window per tab | PiP with a `target` arg for popups later (speculative shape); `window.open` popups (each a separate kernel, needs cross-tab sync first) |
+| Who owns "popped out" | **New `ExtractService`, desktop only** (registered in `platform_services`); shared code checks `kernel.services.has("extract")` | Same service on both platforms with `supported: false`; a `WindowFlag.EXTRACTED` on DesktopWindowsService; local state in `window.svelte` (POC: taskbar, Activity Monitor and shell couldn't see it) |
+| In-page frame while out | **Hidden like minimized**, taskbar item marked; click focuses the mini window, its menu has Bring back | Placeholder in the frame (POC) |
+| Which apps | **Any app**, at its current bounds | Manifest opt-in `mini: { width, height }`; any app with a manifest size hint |
+| Menus, dialogs, sheets, toasts | **Window's own overlays in the mini window**, toasts in the tab. Sheets follow `WindowSheets`; menus and confirms get an `origin` | Everything in the tab (POC: menus open in the other window); bring the app back on any overlay |
+| How a dialog knows its home | **DialogsService infers it**: the anchor's `ownerDocument`, else the focused window when it's the popped-out one | Callers pass `{ origin }` (every app call site changes) |
+| Unsaved work | **Pop out disabled while dirty** ("Save first") | Ask to save first (the await spends the click's user activation, so `requestWindow` would fail); pop anyway with a warning toast |
+| Session | Saved as a normal window. Not a choice: PiP needs user activation, so it can't reopen at boot | |
+| Shell | **`win pop [window]` and `win back`**, Alt+Shift+P runs `win pop`. Enter and shortcut keydowns count as user activation | Commands only; nothing |
+
+### Takeaways
+
+- The owner questioned whether this needs a service at all. The case for: four readers (taskbar, Activity Monitor, shell, session) and one owner for the PiP window's lifecycle (style copy, theme mirror, `pagehide`). The mount itself still happens in `window.svelte` so the app inherits its contexts.
+- Desktop only means no mobile service and no mobile bundle cost, at the price of a `has` check in shared code.
+- Remounting stays: in-memory state of clean apps (a game in progress, a running timer without storage) resets on pop out. Accepted.
+
 ## Next session topics
 
-- Proper implementation: WindowsService-level state (taskbar, session, Activity Monitor), shell command, manifest opt-in or not
-- Dialogs, menus and toasts inside the mini window (they open in the main tab today); shortcuts inside it
-- Keeping in-memory state across the move (dirty windows)
 - `window.open` route for more than one window, after cross-tab sync
+- Keeping in-memory state across the move
+- Shortcuts typed inside the mini window
