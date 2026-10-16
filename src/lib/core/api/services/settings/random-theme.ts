@@ -63,16 +63,29 @@ export function is_dark(theme: Pick<Theme, "background">): boolean {
   return (oklch_lightness(theme.background) ?? 0) < 0.6;
 }
 
+const gap = (token: keyof ThemeBase) => (token === "foreground" ? MIN_TEXT_CONTRAST : MIN_COLOUR_CONTRAST);
+const OTHERS = ["foreground", "primary", "secondary", "accent"] as const;
+
+/** Whether a background exists in that mode that keeps every locked text and colour readable. */
+function fits(locked: Partial<ThemeBase>, dark: boolean): boolean {
+  return OTHERS.every((token) => {
+    const l = locked[token] ? oklch_lightness(locked[token]) : null;
+    return l === null || (dark ? l - gap(token) >= 0 : l + gap(token) <= 1);
+  });
+}
+
 /**
  * Five base colours under rules (ADR-015 revision): one base hue and a harmony place primary, secondary and accent; the
  * background is a tint of the base hue, the foreground a near-neutral of the opposite hue. Generated colours always keep
- * text 0.55+ and colours 0.35+ lightness from the background. Locked colours win: a lock that breaks a gap stays as given.
+ * text 0.55+ and colours 0.35+ lightness from the background. Locked colours win: a lock that only fits the other mode flips
+ * it, and a lock that fits neither stays as given.
  */
 export function generate_theme(options: GenerateOptions, rand: () => number = Math.random): ThemeBase {
   const locked = options.locked ?? {};
   const read = (token: keyof ThemeBase) => (locked[token] ? parse_oklch(locked[token]) : null);
   const locked_background = read("background");
-  const dark = locked_background ? locked_background.l < 0.6 : options.mode === "any" ? rand() < 0.5 : options.mode === "dark";
+  const preferred = options.mode === "any" ? rand() < 0.5 : options.mode === "dark";
+  const dark = locked_background ? locked_background.l < 0.6 : fits(locked, preferred) || !fits(locked, !preferred) ? preferred : !preferred;
 
   const names = Object.keys(HARMONIES) as Harmony[];
   const harmony = options.harmony === "any" ? names[Math.floor(rand() * names.length)] : options.harmony;
@@ -102,12 +115,9 @@ export function generate_theme(options: GenerateOptions, rand: () => number = Ma
     accent: colour(a),
   };
 
-  const gap = (token: keyof ThemeBase) => (token === "foreground" ? MIN_TEXT_CONTRAST : MIN_COLOUR_CONTRAST);
-  const others = ["foreground", "primary", "secondary", "accent"] as const;
-
   // The background moves away from locked text and colours, then the generated ones move away from the background.
   if (!locked_background) {
-    for (const token of others) {
+    for (const token of OTHERS) {
       const kept = read(token);
       if (!kept) continue;
       generated.background.l = dark ? Math.min(generated.background.l, kept.l - gap(token)) : Math.max(generated.background.l, kept.l + gap(token));
@@ -115,7 +125,7 @@ export function generate_theme(options: GenerateOptions, rand: () => number = Ma
     generated.background.l = clamp(generated.background.l, 0, 1);
   }
   const background_l = locked_background?.l ?? generated.background.l;
-  for (const token of others) {
+  for (const token of OTHERS) {
     const value = generated[token];
     value.l = dark ? clamp(Math.max(value.l, background_l + gap(token)), 0, 0.99) : clamp(Math.min(value.l, background_l - gap(token)), 0.02, 1);
   }

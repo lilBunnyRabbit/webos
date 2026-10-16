@@ -36,7 +36,7 @@ Not asked, decided in building: names are unique (case ignored) and can't be a p
 
 ## Notes from building
 
-- A locked colour from the other mode stays as given, so the gap can break (a dark theme's primary locked into a Light generation sits too close to a white background). Locks win, as decided.
+- ~~A locked colour from the other mode stays as given, so the gap can break.~~ Fixed in 1.14.1: when the locks only fit the other mode, the mode flips (a locked background already did this). Locks that fit neither mode (text at L 0.5) keep the asked mode and may break the gap.
 
 ## Action items
 

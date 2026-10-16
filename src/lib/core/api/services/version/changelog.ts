@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.14.1",
+    date: "2026-10-16",
+    title: "Locked colours stay readable",
+    changes: [
+      { kind: FIXED, apps: ["settings"], text: "Locking a colour that only works on a light background no longer makes a dark theme you can't read, and the other way round: the generator switches to the mode that fits." },
+    ],
+  },
+  {
     version: "1.14.0",
     date: "2026-10-16",
     title: "Theme generator",

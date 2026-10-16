@@ -133,3 +133,7 @@ Decided with the owner ([brainstorm](../brainstorm/2026-10-16_theme-generator.md
 ## Revision 2026-10-16 (saved themes)
 
 Owner, after trying the generator ([brainstorm](../brainstorm/2026-10-16_theme-generator.md#saved-themes)): keep 3 recent generations, and save themes. Settings gains `saved_themes: { name, theme }[]` in `/etc/settings.json`, same `SETTINGS_VERSION` (a missing field parses as `[]`). Pure helpers in `saved-themes.ts` change it. Appearance gets Save… (a name prompt) in Generate and on Recent cards, and a "Your themes" grid above the presets with Apply, Rename… and Delete…. The shell's `theme list`, `theme set` and the `theme` completer include saved themes after presets, plus new `theme save <name>` and `theme delete <name>`. About › Reset settings keeps saved themes.
+
+## Revision 2026-10-16 (locks pick the mode)
+
+A locked foreground or colour that can only keep its gap in the other mode flips the generated mode, the way a locked background already set it. Locks that fit neither mode keep the asked mode and stay as given.

@@ -72,6 +72,26 @@ describe("generate_theme", () => {
     }
   });
 
+  test("a lock that only fits the other mode flips it", () => {
+    const rand = seeded(7);
+    for (let run = 0; run < 100; run++) {
+      const dark_text = generate_theme({ mode: "dark", ...DEFAULT_GENERATE, locked: { foreground: "oklch(0.200 0.0100 90.00)" } }, rand);
+      expect(is_dark(dark_text)).toBe(false);
+      expect_readable(dark_text);
+      const pale = generate_theme({ mode: "light", ...DEFAULT_GENERATE, locked: { primary: "oklch(0.900 0.1000 40.00)" } }, rand);
+      expect(is_dark(pale)).toBe(true);
+      expect_readable(pale);
+    }
+  });
+
+  test("a lock that fits neither mode keeps the asked one", () => {
+    const rand = seeded(9);
+    for (let run = 0; run < 20; run++) {
+      const theme = generate_theme({ mode: "light", ...DEFAULT_GENERATE, locked: { foreground: "oklch(0.500 0.0100 90.00)" } }, rand);
+      expect(is_dark(theme)).toBe(false);
+    }
+  });
+
   test("tells the brand themes apart, and reads percent lightness", () => {
     expect(is_dark(BRAND_DARK)).toBe(true);
     expect(is_dark(BRAND_LIGHT)).toBe(false);
