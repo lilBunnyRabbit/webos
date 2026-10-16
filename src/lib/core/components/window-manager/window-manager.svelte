@@ -24,6 +24,8 @@
     $effect(() => {
       // TODO: revisit
       settings.taskbar.position;
+      settings.taskbar.size;
+      settings.taskbar.auto_hide;
       requestAnimationFrame(() => {
         update_bounds();
       });

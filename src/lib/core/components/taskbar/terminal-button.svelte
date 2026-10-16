@@ -27,8 +27,8 @@
 <button
   aria-label="Terminal"
   title="Terminal (Alt+Shift+↵)"
-  class={cn("grid size-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10", focused && "bg-foreground/10")}
+  class={cn("grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10", focused && "bg-foreground/10")}
   onclick={toggle}
 >
-  <TerminalWindowIcon class="size-5" weight={newest ? "fill" : "bold"} />
+  <TerminalWindowIcon class="size-[calc(var(--taskbar-item)*0.5)]" weight={newest ? "fill" : "bold"} />
 </button>

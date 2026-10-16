@@ -15,7 +15,7 @@
   title="Show desktop (Alt+Shift+D)"
   class={cn(
     "group grid shrink-0 place-items-center rounded-md transition-colors duration-150 hover:bg-foreground/10",
-    vertical ? "h-3 w-full" : "h-full w-3"
+    vertical ? "h-[calc(var(--taskbar-item)*0.3)] w-full" : "h-full w-[calc(var(--taskbar-item)*0.3)]"
   )}
   onclick={() => view_transition(() => windows.toggle_desktop())}
 >
@@ -23,7 +23,7 @@
     class={cn(
       "rounded-full transition-colors duration-150",
       windows.showing_desktop ? "bg-primary" : "bg-foreground/20 group-hover:bg-foreground/45",
-      vertical ? "h-px w-5" : "h-5 w-px"
+      vertical ? "h-px w-[calc(var(--taskbar-item)*0.5)]" : "h-[calc(var(--taskbar-item)*0.5)] w-px"
     )}
   ></span>
 </button>

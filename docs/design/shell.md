@@ -25,7 +25,10 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - **One gap everywhere: 8px.** Screen edge to dock, dock to windows, screen edges to snapped windows, and between snapped windows. The dock's strip pads only its screen-edge sides; the side facing the windows takes its 8px from the window area's snap inset.
 - Order: start button (the logo mark in `primary`), a hairline separator, running windows, and the tray at the far end.
 - **App badges:** an app's manifest `badge` count sits on its icon's top-right corner wherever the icon shows (desktop tile, taskbar button, start menu, mobile tiles and drawer). It's a `primary` pill, 16px high, with mono-width digits in `text-background` and a `background-light` ring that cuts it from the tile. The tray's unread count uses the same pill.
-- Window buttons are 40px `rounded-xl`. The focused window gets a `foreground/10` fill, a filled icon and a 16px `primary` bar; other open windows show a small dot; minimized windows dim their icon.
+- Window buttons are 40px `rounded-xl` at the default size. The focused window gets a `foreground/10` fill, a filled icon and a 16px `primary` bar; other open windows show a small dot; minimized windows dim their icon.
+- **Grouping:** one button per app. Several windows of one app add a count pill in the button's bottom-right corner (`foreground` with `text-background` digits and the same `background-light` ring as badges); a click lists the windows in a menu above the button.
+- **Size:** small, medium (default) or large: 32, 40 or 48px buttons. Icons, separators, the bar and the show desktop sliver scale with them; badges and text don't.
+- **Auto-hide:** the dock overlays the screen and slides off its edge, leaving a 4px sliver. Pointing at it, focusing it, opening the start menu or notification center, or dragging over it brings it back at once; it slides away 2s after. It stays a floating dock over a maximized window.
 - The clock shows mono 24-hour `HH:MM` and a short date in `text-2xs`, and ticks on the minute.
 
 ## Start menu

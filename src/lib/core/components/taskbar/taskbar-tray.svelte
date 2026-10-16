@@ -47,8 +47,8 @@
     open && "bg-foreground/10"
   )}
 >
-  <span class="relative grid size-5 place-items-center">
-    <BellIcon class="size-4.5" weight={unread > 0 ? "fill" : "bold"} />
+  <span class="relative grid size-[calc(var(--taskbar-item)*0.5)] place-items-center">
+    <BellIcon class="size-[calc(var(--taskbar-item)*0.45)]" weight={unread > 0 ? "fill" : "bold"} />
     {#if unread > 0}
       <span
         class="absolute -top-1.5 -right-2 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-background"

@@ -164,29 +164,29 @@
             draggable="true"
             aria-label={manifest.name}
             title="{manifest.name} · Shift-click for a new window"
-            class="relative grid size-10 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10"
+            class="relative grid size-(--taskbar-item) place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10"
             onclick={(event) => open(manifest, event.shiftKey)}
             onauxclick={(event) => event.button === 1 && apps.launch(manifest.id)}
             oncontextmenu={(event) => menu(manifest, event)}
             ondragstart={(event) => on_start(manifest, Math.min(index, shown.length), event)}
             ondragend={() => on_end(manifest)}
           >
-            <manifest.icon class="size-5.5" weight="duotone" />
+            <manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight="duotone" />
             <AppBadge app_id={manifest.id} class="top-0.5 right-0.5 ring-background-light" />
             {#if running.has(manifest.id)}
               <span class={cn("absolute size-1 rounded-full bg-foreground/45", vertical ? "top-1/2 -left-0.5 -translate-y-1/2" : "-bottom-0.5 left-1/2 -translate-x-1/2")}></span>
             {/if}
           </button>
         {:else}
-          <div aria-hidden="true" class="size-10 rounded-xl bg-primary/12 ring-1 ring-primary/40 ring-inset"></div>
+          <div aria-hidden="true" class="size-(--taskbar-item) rounded-xl bg-primary/12 ring-1 ring-primary/40 ring-inset"></div>
         {/if}
       </div>
     {/each}
     {#if incoming && slots.length === 0}
-      <div aria-hidden="true" class="grid size-10 place-items-center rounded-xl border border-dashed border-primary/50 text-primary">
+      <div aria-hidden="true" class="grid size-(--taskbar-item) place-items-center rounded-xl border border-dashed border-primary/50 text-primary">
         <PlusIcon class="size-4" weight="bold" />
       </div>
     {/if}
   </div>
-  <div role="separator" class={cn("shrink-0 bg-foreground/12", vertical ? "mx-auto my-0.5 h-px w-6" : "mx-0.5 h-6 w-px")}></div>
+  <div role="separator" class={cn("shrink-0 bg-foreground/12", vertical ? "mx-auto my-0.5 h-px w-[calc(var(--taskbar-item)*0.6)]" : "mx-0.5 h-[calc(var(--taskbar-item)*0.6)] w-px")}></div>
 {/if}

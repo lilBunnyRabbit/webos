@@ -46,3 +46,15 @@ describe("saved themes", () => {
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.saved_themes).toEqual([]);
   });
 });
+
+describe("taskbar size and auto-hide", () => {
+  test("keep valid values", () => {
+    const settings = parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "left", size: "large", auto_hide: true } }));
+    expect(settings?.taskbar).toMatchObject({ position: "left", size: "large", auto_hide: true });
+  });
+
+  test("a save from before they existed, or unknown values, load as medium and always shown", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "top" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false });
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { size: "huge", auto_hide: "yes" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false });
+  });
+});

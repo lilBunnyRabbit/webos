@@ -37,11 +37,11 @@
   popovertarget="start-menu-popover"
   popovertargetaction="toggle"
   class={cn(
-    "grid size-10 shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10",
+    "grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10",
     open && "bg-foreground/10"
   )}
 >
-  <LogoMark class="size-6 text-primary" />
+  <LogoMark class="size-[calc(var(--taskbar-item)*0.6)] text-primary" />
 </button>
 
 <div

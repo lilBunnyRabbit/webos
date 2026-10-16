@@ -11,14 +11,14 @@ That's all it does. It owns no state.
 
 ## Placement
 
-[desktop-shell.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy. Its classes are `relative z-0 pointer-events-none`. Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
+[desktop-shell.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy (the whole screen while the taskbar auto-hides). Its classes are `relative z-0 pointer-events-none`. Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
 
 ## Container measurement
 
 An inline attachment calls `windows.set_container(element)`:
 
 - from a `ResizeObserver` on the element, and
-- from an `$effect` that reads `settings.taskbar.position` and defers the call by one `requestAnimationFrame`. Moving the taskbar changes the element's *offset* without necessarily changing its size, and ResizeObserver only reports size (`// TODO: revisit`).
+- from an `$effect` that reads `settings.taskbar.position`, `size` and `auto_hide` and defers the call by one `requestAnimationFrame`. Moving the taskbar changes the element's *offset* without necessarily changing its size, and ResizeObserver only reports size (`// TODO: revisit`).
 
 The observer disconnects on teardown. Nothing calls `set_container(null)`.
 

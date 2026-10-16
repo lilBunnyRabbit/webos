@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   TaskbarPosition,
+  TaskbarSize,
   WallpaperFit,
   WallpaperPreset,
   type FileDefaults,
@@ -64,6 +65,9 @@ export function parse_settings(raw: string): PersistedSettings | null {
       taskbar: {
         position,
         pinned: Array.isArray(data.taskbar?.pinned) ? [...new Set<string>(data.taskbar.pinned.filter((id: unknown) => typeof id === "string"))] : [],
+        // Added after version 1 shipped, like pinned: a missing or unknown value is the default.
+        size: Object.values(TaskbarSize).includes(data.taskbar?.size) ? data.taskbar.size : TaskbarSize.MEDIUM,
+        auto_hide: data.taskbar?.auto_hide === true,
       },
       file_defaults: sanitize_file_defaults(data.file_defaults),
       wallpaper: parse_wallpaper(data.wallpaper),

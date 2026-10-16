@@ -1,5 +1,5 @@
 import type { FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
-import { TaskbarPosition } from "./type";
+import { TaskbarPosition, TaskbarSize } from "./type";
 import { BRAND_DARK } from "./themes";
 import type { FilesService, Kernel } from "$lib/core/api";
 import { LatestWriter } from "../files/latest-writer";
@@ -27,7 +27,7 @@ export class SettingsService implements ISettingsService {
     return `SettingsService: taskbar ${this.taskbar.position}, theme ${JSON.stringify(this.theme)}`;
   }
 
-  public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM, pinned: [] });
+  public taskbar = $state<Taskbar>({ position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false });
   public theme = $state<Theme>({ ...BRAND_DARK });
   public file_defaults = $state<FileDefaults>({});
   public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);

@@ -6,7 +6,7 @@ import { is_file_value } from "../files/shell";
 import { resolve_path } from "../files/path";
 import type { FilesService } from "../files/type";
 import { with_pin, without_pin } from "../settings/taskbar";
-import type { SettingsService } from "../settings/type";
+import { TaskbarPosition, TaskbarSize, type SettingsService } from "../settings/type";
 import { author_names } from "./authors";
 import { APP_CATEGORY_LABELS } from "./search";
 import type { AppManifest, AppsService } from "./type";
@@ -132,6 +132,36 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         run({ args }) {
           if (!settings().taskbar.pinned.includes(args.id)) throw new ShellError(`${args.id} isn't pinned. Try taskbar list`);
           settings().taskbar.pinned = without_pin(settings().taskbar.pinned, args.id);
+        },
+      }),
+      define_command({
+        id: "taskbar position",
+        description: "Which screen edge the taskbar docks to; no argument prints it",
+        args: z.object({ position: z.enum(Object.values(TaskbarPosition)).optional() }),
+        positional: ["position"],
+        run({ args }) {
+          if (!args.position) return settings().taskbar.position;
+          settings().taskbar.position = args.position;
+        },
+      }),
+      define_command({
+        id: "taskbar size",
+        description: "Taskbar size; no argument prints it",
+        args: z.object({ size: z.enum(Object.values(TaskbarSize)).optional() }),
+        positional: ["size"],
+        run({ args }) {
+          if (!args.size) return settings().taskbar.size;
+          settings().taskbar.size = args.size;
+        },
+      }),
+      define_command({
+        id: "taskbar autohide",
+        description: "Hide the taskbar until the pointer reaches its edge; no argument prints it",
+        args: z.object({ state: z.enum(["on", "off"]).optional() }),
+        positional: ["state"],
+        run({ args }) {
+          if (!args.state) return settings().taskbar.auto_hide ? "on" : "off";
+          settings().taskbar.auto_hide = args.state === "on";
         },
       }),
       define_command({

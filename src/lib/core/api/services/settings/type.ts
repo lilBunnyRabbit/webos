@@ -20,7 +20,18 @@ export interface Taskbar {
   position: TaskbarPosition;
   /** Quick launch, in order (ADR-042). Change it through `with_pin` / `without_pin`. */
   pinned: AppId[];
+  /** Item size; the bar, icons and gaps follow it (ADR-015). */
+  size: TaskbarSize;
+  /** The bar overlays the screen edge, hidden until the pointer reaches it (ADR-015). */
+  auto_hide: boolean;
 }
+
+export const TaskbarSize = {
+  SMALL: "small",
+  MEDIUM: "medium",
+  LARGE: "large",
+} as const;
+export type TaskbarSize = (typeof TaskbarSize)[keyof typeof TaskbarSize];
 
 export const TaskbarPosition = {
   TOP: "top",

@@ -47,8 +47,8 @@ What are the implications of this decision?
 | [011](./011-desktop-enhancements.md) | Desktop Enhancements | 2026-02-01 | Implemented (multi-select, wallpaper, Sort by; icon settings not built) |
 | [012](./012-shortcuts-service.md) | Shortcuts Service | 2026-02-01 | Implemented (global + window scope, no remap) |
 | [013](./013-tasks-service.md) | Tasks Service | 2026-02-01 | Implemented |
-| [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Implemented (single-instance, grouping parked) |
-| [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Implemented (colours only) |
+| [014](./014-window-enhancements.md) | Window Enhancements | 2026-02-01 | Implemented (single-instance parked) |
+| [015](./015-customization-theming.md) | Customization & Theming | 2026-02-01 | Implemented (colours, taskbar size and auto-hide) |
 | [016](./016-mobile-support.md) | Mobile Support | 2026-02-01 | Implemented |
 | [017](./017-keyboard-shortcuts-strategy.md) | Keyboard Shortcuts Strategy | 2026-02-01 | Implemented (tier 1 only; tiers 2-3 not built) |
 | [018](./018-file-associations.md) | File Associations | 2026-10-11 | Implemented |
