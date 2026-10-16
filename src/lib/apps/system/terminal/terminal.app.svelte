@@ -35,7 +35,7 @@
     return created;
   });
 
-  let current = $state<Run | null>(null);
+  let current = $state.raw<Run | null>(null);
   let prompt: PromptInput | undefined = $state();
   let ctrl = $state(false);
   const running = $derived(current?.entry.status === EntryStatus.RUNNING);
