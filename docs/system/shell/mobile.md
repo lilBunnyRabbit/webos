@@ -39,7 +39,7 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 | Home | Closes any layer and goes home |
 | Running apps | Opens the switcher, or closes it (or the notification view of it). A `primary` badge shows the count of running apps; a `primary` dot (ringed in the bar colour) on the other corner means unread notifications |
 
-Escape also closes an open layer. Every change runs through `view_transition()` (`$lib/core/utils/view-transition.ts`, shared with the desktop window motion): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion`. A rejected `ready` (hidden tab, a newer transition) is swallowed.
+Escape also closes an open layer. Every change runs through `view_transition()` (`$lib/core/utils/view-transition.ts`, shared with the desktop window motion): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion` or Motion off (`motion_reduced()`). A rejected `ready` (hidden tab, a newer transition) is swallowed.
 
 ## Windows and switcher
 

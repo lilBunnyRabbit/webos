@@ -1,8 +1,9 @@
 import { flushSync } from "svelte";
+import { motion_reduced } from "./motion";
 
 /** Animates a shell state change with the View Transitions API: the DOM swap happens inside the transition's callback. */
 export function view_transition(change: () => void): void {
-  if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (!document.startViewTransition || motion_reduced()) {
     change();
     return;
   }

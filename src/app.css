@@ -61,12 +61,15 @@
 
   --tracking-heading: -0.011em;
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
-  --radius-2xl: 18px;
+  /* Settings › Appearance › Corners writes --radius-scale on <html>. rounded-full stays a circle at every scale. */
+  --radius: calc(4px * var(--radius-scale, 1));
+  --radius-xs: calc(4px * var(--radius-scale, 1));
+  --radius-sm: calc(6px * var(--radius-scale, 1));
+  --radius-md: calc(8px * var(--radius-scale, 1));
+  --radius-lg: calc(10px * var(--radius-scale, 1));
+  --radius-xl: calc(14px * var(--radius-scale, 1));
+  --radius-2xl: calc(18px * var(--radius-scale, 1));
+  --radius-3xl: calc(24px * var(--radius-scale, 1));
 
   /* Elevation: shadows are cast in the darkest shade, never black, so they stay on-palette in every theme. */
   --shadow-raised: 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) 40%, transparent);
@@ -139,6 +142,16 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+
+  /* Settings › Appearance › Motion off. Only ever removes motion; the OS setting above still applies under "system". */
+  html[data-motion="off"] {
     *,
     ::before,
     ::after {

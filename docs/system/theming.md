@@ -72,7 +72,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 | Fonts | `--font-sans` Inter, `--font-mono` Hack | See Fonts |
 | Type | `text-2xs` (11px / 16px), `text-ui` (13px / 20px) | Added to Tailwind's scale. `text-ui` is the default for controls and dense UI |
 | Tracking | `tracking-heading` (`-0.011em`) | Applied to `h1`–`h3` by the base layer |
-| Radius | `rounded-xs` 4 · `sm` 6 · `md` 8 · `lg` 10 · `xl` 14 · `2xl` 18 (px) | Constants. The old `--radius` root variable is gone |
+| Radius | `rounded` 4 · `xs` 4 · `sm` 6 · `md` 8 · `lg` 10 · `xl` 14 · `2xl` 18 · `3xl` 24 (px) | Each is `calc(<px> * var(--radius-scale, 1))`; SettingsService writes `--radius-scale` (0.4 / 1 / 1.5) from `appearance.radius` ([settings](services/settings.md#behaviour--invariants)). `rounded-full` isn't scaled |
 | Shadows | `shadow-raised`, `shadow-popover`, `shadow-window`, `shadow-window-focused` | Cast in `color-mix(… var(--background-darkest) …)`, never black, so they stay on-palette in light themes. `popover` includes a 1px `foreground/16` hairline |
 | Easing | `ease-out` `cubic-bezier(0.22, 1, 0.36, 1)`, `ease-in-out` `cubic-bezier(0.65, 0, 0.35, 1)` | Override Tailwind's defaults |
 | Animation | `animate-pop-in`, `animate-sheet-in` | `pop-in`: 160ms fade plus `scale: 0.97 → 1`. Menus, dialogs, snap preview. `sheet-in`: 200ms rise from `translate: 0 100%`, for anchored dialogs shown as bottom sheets on mobile (`dialogs-host.svelte` with `anchored="sheet"`) |
@@ -86,7 +86,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 - `::selection`: solid `primary` with `background` text, the primary button pair. A translucent `primary` left the light text unreadable on light fields.
 - `h1`–`h3`: heading tracking, `text-wrap: balance`.
 - Every element: thin scrollbars, thumb `foreground` at 22% on a transparent track.
-- `prefers-reduced-motion: reduce`: every animation and transition collapses to 1ms.
+- `prefers-reduced-motion: reduce`, and `html[data-motion="off"]` (Settings › Appearance › Motion off): every animation and transition collapses to 1ms.
 
 The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (`desktop/wallpaper.svelte`, under the desktop and the mobile home) paint `background-darkest`.
 
@@ -146,7 +146,7 @@ Self-hosted in `src/assets/fonts/`, with licences, and declared with `@font-face
 
 ## Known gaps
 
-- ADR-015's non-colour theming (radius, shadows, animation speed, font choice, export/import) isn't built. Radius, shadows and easing are constants in `app.css`.
+- Font choice isn't built (the brand fixes Inter and Hack). Easing and durations are constants in `app.css`.
 - There's no CSS fallback for the variables. A token can only be missing for the brief window before `SettingsService.init()`'s effect runs, and the splash covers it.
 - Token values aren't validated. An invalid CSS string in `/etc/settings.json` or typed into Settings makes that variable invalid at computed-value time.
 - Theme cards only re-declare the five base variables. `shadow-raised` inside a miniature still uses the active theme's `--background-darkest`, because `<html>` resolves that variable before it's inherited.

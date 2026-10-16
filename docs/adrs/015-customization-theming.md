@@ -3,6 +3,8 @@
 **Date:** 2026-02-01
 **Status:** Implemented (colours only)
 
+> **Revision 2026-10-16: the rest of the theme system** ([brainstorm](../brainstorm/2026-10-13_desktop-theming.md#session-2026-10-16-the-rest-of-the-theme-system)). A separate `appearance` field in `/etc/settings.json`, sibling of `theme`, no version bump; presets, the generator and saved themes stay colour-only. Built so far: corners (`radius: sharp | default | round` → `--radius-scale` 0.4 / 1 / 1.5 inside the `@theme` radii, `rounded-full` excluded) and motion (`system | off`; `off` sets `html[data-motion="off"]`, which reuses the reduced-motion rule, and `motion_reduced()` stops View Transitions and the shell's Svelte transitions; the OS setting always wins). `animation_speed` became this on/off switch, `window_border_radius` the three-step scale.
+
 > **Revision 2026-10-15: what's built.** Only the colour system above, plus the taskbar position that predates this ADR. Radius, shadow, motion speed and export/import were deferred by the owner on 2026-10-13. Fonts, taskbar size and auto-hide, desktop icon settings and sounds aren't built.
 
 > **Revision 2026-10-10: colours follow the lilBunnyRabbit brand** ([brainstorm](../brainstorm/2026-10-10_brand-theming.md))

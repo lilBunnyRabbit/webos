@@ -104,6 +104,8 @@ Tailwind's 4px scale. The common steps:
 
 Nested corners shrink: a `rounded-xl` card holds `rounded-md` controls.
 
+The px values are the Default corners. Settings › Appearance › Corners scales all of them by 0.4 (Sharp) or 1.5 (Round) through `--radius-scale`; `rounded-full` stays a circle. Use the tokens, not arbitrary `rounded-[…]` values, so a surface follows the setting.
+
 ## Elevation
 
 Shadows are cast in `background-darkest`, never black, so they stay on-palette in light themes too.
@@ -123,7 +125,7 @@ Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for d
 - Entrances: `animate-pop-in` (160ms, fade plus 0.97→1 scale) for menus, dialogs and snap previews.
 - Layout moves (snap): 200–250ms.
 - Windows: open 140ms / close 100ms (fade + 0.96→1 scale); minimize, maximize and snap are View Transition morphs (browser default, ~250ms).
-- `prefers-reduced-motion` collapses all of it to 1ms in the base layer.
+- `prefers-reduced-motion`, or Settings › Appearance › Motion off (`html[data-motion="off"]`), collapses all of it to 1ms in the base layer. Script-driven motion (Svelte transitions, View Transitions) checks `motion_reduced()` and skips.
 
 ## Icons
 

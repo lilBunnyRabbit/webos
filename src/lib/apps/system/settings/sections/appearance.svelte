@@ -8,6 +8,7 @@
   import ThemeCard from "$lib/core/components/theme/theme-card.svelte";
   import WallpaperSection from "./wallpaper.svelte";
   import GenerateSection from "./generate.svelte";
+  import InterfaceSection from "./interface.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -143,6 +144,8 @@
     </div>
     {/if}
   </details>
+
+  <InterfaceSection />
 
   <WallpaperSection />
 </div>

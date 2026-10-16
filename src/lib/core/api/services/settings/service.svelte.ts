@@ -1,6 +1,7 @@
-import type { FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
+import type { Appearance, FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { TaskbarPosition } from "./type";
 import { BRAND_DARK } from "./themes";
+import { DEFAULT_APPEARANCE, RADIUS_SCALE } from "./appearance";
 import type { FilesService, Kernel } from "$lib/core/api";
 import { LatestWriter } from "../files/latest-writer";
 import { write_var_lib } from "../desktop/folder.svelte";
@@ -32,6 +33,7 @@ export class SettingsService implements ISettingsService {
   public file_defaults = $state<FileDefaults>({});
   public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);
   public saved_themes = $state<SavedTheme[]>([]);
+  public appearance = $state<Appearance>({ ...DEFAULT_APPEARANCE });
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -54,6 +56,7 @@ export class SettingsService implements ISettingsService {
       this.file_defaults = saved.file_defaults;
       this.wallpaper = saved.wallpaper;
       this.saved_themes = saved.saved_themes;
+      this.appearance = saved.appearance;
     }
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
@@ -67,6 +70,13 @@ export class SettingsService implements ISettingsService {
       });
 
       $effect(() => {
+        const root = document.documentElement;
+        root.style.setProperty("--radius-scale", String(RADIUS_SCALE[this.appearance.radius]));
+        if (this.appearance.motion === "off") root.dataset.motion = "off";
+        else delete root.dataset.motion;
+      });
+
+      $effect(() => {
         this.writer.write(
           serialize_settings({
             version: SETTINGS_VERSION,
@@ -75,6 +85,7 @@ export class SettingsService implements ISettingsService {
             file_defaults: this.file_defaults,
             wallpaper: this.wallpaper,
             saved_themes: this.saved_themes,
+            appearance: this.appearance,
           })
         );
       });
