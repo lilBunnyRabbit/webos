@@ -28,4 +28,4 @@ The intro (ADR-026) covers files, getting around and the theme. Nothing points t
 
 ## Consequences
 - One more system app, one more first-boot duty for VersionService, and bundled sample assets.
-- Each new OS feature should get a card, the same way new apps get a starter group.
+- Each new OS feature should get a card, the same way new apps join an interest in `apps/suggestions.ts`.

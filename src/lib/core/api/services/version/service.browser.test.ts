@@ -10,6 +10,7 @@ import { SessionService } from "../session/service.svelte";
 import { SettingsService } from "../settings/service.svelte";
 import { WindowsService } from "../windows/service.svelte";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
+import { INSTALLED_PATH, serialize_installed } from "../apps/installed";
 import { VersionService } from "./service.svelte";
 
 declare const __VERSION_INFO__: { version: string };
@@ -28,7 +29,11 @@ async function write(path: string, text: string) {
 }
 
 async function boot(seen?: string, { restore }: { restore?: Promise<boolean> } = {}): Promise<Kernel> {
-  if (seen) await write(VERSION_STATE_PATH, serialize_seen(seen));
+  if (seen) {
+    await write(VERSION_STATE_PATH, serialize_seen(seen));
+    // Past the move to installed apps, so AppsService doesn't tidy and toast (ADR-040).
+    await write(INSTALLED_PATH, serialize_installed([]));
+  }
   if (restore) {
     const window = { app_id: "example", props: undefined, bounds: { x: 0, y: 0, width: 400, height: 300 }, flags: [], snap_zone: null, state: undefined };
     await write("/var/lib/session/session.json", serialize_session({ windows: [window], frames: {} }));

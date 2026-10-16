@@ -7,7 +7,10 @@ import type { ShellContribution } from "../shell/type";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
-  /** Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). */
+  /**
+   * Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). An app that isn't
+   * installed gets installed first, with a toast (ADR-040).
+   */
   launch(id: AppId, props?: unknown): WindowId;
   /**
    * The instance `launch()` would open, without opening a window or reporting problems: `null` when the app is unknown
@@ -20,7 +23,25 @@ export interface AppsService extends IService {
    */
   open(path: string, options?: OpenOptions): Promise<WindowId | null>;
   get(id: AppId): AppManifest | undefined;
-  list(): IterableIterator<[AppId, AppManifest]>;
+  /** Every registered app, or only the installed (`true`) or not installed (`false`) ones (ADR-040). */
+  list(filter?: AppsFilter): IterableIterator<[AppId, AppManifest]>;
+  /** System apps always are; unknown ids never. */
+  is_installed(id: AppId): boolean;
+  /** Installs the ones that aren't yet and saves the list. Resolves to the newly installed ids. */
+  install(ids: AppId | AppId[]): AppId[];
+  /**
+   * Takes a user app out of the installed list (system apps throw). With `data`, also deletes its `app.{id}.*`
+   * localStorage and `/var/lib/apps/{id}/`; never anything in `/home`. Windows and desktop entries are the caller's.
+   */
+  uninstall(id: AppId, options?: UninstallOptions): Promise<void>;
+}
+
+export interface AppsFilter {
+  installed?: boolean;
+}
+
+export interface UninstallOptions {
+  data?: boolean;
 }
 
 export type AppId = string;

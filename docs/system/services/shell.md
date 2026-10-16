@@ -49,7 +49,7 @@ define_command({
   positional: ["from", "to"],
   short: { recursive: "r" },
   yields: "file",                              // lets `where` complete fields after it; "input" for filters
-  available: () => true,                       // false: hidden, and running it is an error
+  available: () => true,                       // false or a reason string: hidden from the palette and completion, and running it fails with the reason
   complete: (field, partial) => undefined,     // per-arg override ahead of the kind's completer
   run: async function* ({ args, input, piped, session, signal, elevated }) { … },
 });

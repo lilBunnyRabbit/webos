@@ -1,10 +1,10 @@
 # AppsService
 
-Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
+Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-The app registry. Holds every discovered manifest, launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
+The app registry. Holds every discovered manifest and which user apps are installed, launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
 
 | File | Contents |
 |------|----------|
@@ -15,6 +15,9 @@ The app registry. Holds every discovered manifest, launches an app into a new wi
 | `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
 | `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()`, `group_apps()`, `within_one_edit()`, `APP_CATEGORY_LABELS`, `AppSection` |
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
+| `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
+| `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
+| `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" suggestions |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
 
@@ -25,10 +28,13 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `registry` | `Map<string, AppManifest>` (a `SvelteMap`) | Public on the class, not on the interface. Reactive |
-| `list()` | `(): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. The start menu renders this |
+| `list(filter?)` | `(filter?: { installed?: boolean }): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. `installed: true` only installed apps (the start menu, drawer, `app list`), `false` only the others (search's Get group) |
+| `is_installed(id)` | `(id: AppId): boolean` | System apps always; unknown ids never. Reactive |
+| `install(ids)` | `(ids: AppId \| AppId[]): AppId[]` | Adds the ones not installed yet, saves, returns them. No toast |
+| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`. Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | |
 | `register(manifest)` | `(manifest: AppManifest): void` | `registry.set`. Same id overwrites silently. No `unregister` |
-| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Always opens a new window |
+| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Installs an app that isn't, with an "{App} installed" toast. Always opens a new window |
 | `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
 
@@ -68,7 +74,17 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 
 ## State
 
-Only `registry`. Filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)). The constructor also wires `$derived` references to its five dependencies. There is no `init()` and no `destroy()`.
+- `registry`, filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)).
+- `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
+
+The constructor also wires `$derived` references to its five dependencies. There is no `destroy()`.
+
+### `init()`: the installed list (ADR-040)
+
+1. `/var/lib/apps/installed.json` parses → load it, dropping ids no app has. Done.
+2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → install every app, quietly.
+3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Library**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
+4. Steps 2 and 3 save the list.
 
 ## Lifecycle
 
@@ -78,16 +94,17 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 
 ## Persistence
 
-None of its own. `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
+`/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
 
 ## Behaviour & invariants
 
 ### `launch(id, props?)`
 
 1. Look up the manifest. Missing → `throw`.
-2. Validate props (below).
-3. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
-4. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
+2. Not installed → `install(id)` and an info toast "{App} installed". Every UI way in (a file, a deep link, an announcement, Game Hub, search's Get group) is the intent to have it; the shell checks before calling.
+3. Validate props (below).
+4. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
+5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
 
@@ -153,8 +170,16 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 Contributes `app list|info|launch`, `open`, the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
 
+The shell never installs (ADR-040):
+
+- An app's commands get `available: () => installed ? (own available ?? true) : "{App} isn't installed. Get it in the App Library"`, so an uninstalled app's commands leave the palette and completion, and running one fails with that reason.
+- `app list` and the `app` completer list installed apps only; `app info` takes any app; `app launch` on one that isn't installed fails with the same message.
+- `open` is a file open, so it installs the file's app like any other (through `launch`).
+
 ## Known gaps
 
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.
+- A second tab doesn't see an install or uninstall until it reloads (cross-tab sync is open).
+- Session restore and Alt+Shift+T build instances with `create_instance`, which doesn't install: a window of an app uninstalled in another tab can still come back.
 - Stale `file_defaults` entries (pointing at removed apps) stay in settings until the user forgets them in Settings → Default apps, which flags them as "no longer installed".

@@ -29,6 +29,9 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
     return manifest;
   };
 
+  /** The shell never installs (ADR-040): an app that isn't installed has no commands until the App Library gets it. */
+  const not_installed = (manifest: AppManifest) => `${manifest.name} isn't installed. Get it in the App Library`;
+
   /** Folders open in File Explorer; files in their associated app (ADR-018). */
   async function open_path(path: string): Promise<void> {
     if (await files().get_directory(path)) apps.launch(EXPLORER, { path });
@@ -40,7 +43,7 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
   return {
     completers: {
       ...Object.assign({}, ...contributions.map(({ shell }) => shell.completers)),
-      [ArgKind.APP]: () => [...apps.list()].map(([id, manifest]) => ({ value: id, detail: manifest.name })),
+      [ArgKind.APP]: () => [...apps.list({ installed: true })].map(([id, manifest]) => ({ value: id, detail: manifest.name })),
     },
     values: {
       ...Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
@@ -54,13 +57,19 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
       },
     },
     commands: [
-      ...contributions.flatMap(({ id, shell }) => (shell.commands ?? []).map((command) => ({ ...command, app: id }))),
+      ...contributions.flatMap(({ id, shell }) =>
+        (shell.commands ?? []).map((command) => ({
+          ...command,
+          app: id,
+          available: () => (apps.is_installed(id) ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
+        }))
+      ),
       define_command({
         id: "app list",
         description: "Installed apps",
         yields: "app",
         *run() {
-          for (const [, manifest] of [...apps.list()].sort(([, a], [, b]) => a.name.localeCompare(b.name))) yield app_value(manifest);
+          for (const [, manifest] of [...apps.list({ installed: true })].sort(([, a], [, b]) => a.name.localeCompare(b.name))) yield app_value(manifest);
         },
       }),
       define_command({
@@ -86,7 +95,8 @@ export function apps_shell(apps: AppsService, files: () => FilesService): ShellC
         args: z.object({ id: arg.app() }),
         positional: ["id"],
         run({ args }) {
-          require_app(args.id);
+          const manifest = require_app(args.id);
+          if (!apps.is_installed(args.id)) throw new ShellError(not_installed(manifest));
           apps.launch(args.id);
         },
       }),

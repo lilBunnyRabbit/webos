@@ -46,7 +46,7 @@
   const commands = $derived.by((): Row[] => {
     const needle = line.trim().toLowerCase();
     return shell.commands
-      .filter((command) => command.available?.() !== false)
+      .filter((command) => (command.available?.() ?? true) === true)
       .filter((command) => !needle || command.id.includes(needle) || command.description.toLowerCase().includes(needle))
       .sort((a, b) => Number(!a.id.startsWith(needle)) - Number(!b.id.startsWith(needle)))
       .map((command) => {

@@ -6,15 +6,24 @@
     type AppManifest,
     type AppsService,
     type DesktopService,
+    type DialogsService,
     type ShellService,
     type ShortcutsService,
     type VersionService,
   } from "$lib/core/api";
-  import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+  import {
+    ArrowSquareOut as ArrowSquareOutIcon,
+    DownloadSimple as DownloadSimpleIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    PushPin as PushPinIcon,
+    SquaresFour as SquaresFourIcon,
+    Trash as TrashIcon,
+  } from "phosphor-svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
   import CommandMode from "./command-mode.svelte";
   import { Button, EmptyState, IconButton, Input, Kbd } from "../ui";
   import AppBadge from "../apps/app-badge.svelte";
+  import { uninstall_app } from "../apps/app-actions";
 
   const APP_LIBRARY = "app-library";
 
@@ -23,6 +32,7 @@
   const version = $derived(kernel.service<VersionService>("version"));
   const shell = $derived(kernel.service<ShellService>("shell"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -36,9 +46,12 @@
     search?.focus();
   });
 
-  const manifests = $derived([...apps.list()].map(([, manifest]) => manifest));
-  const matches = $derived(search_apps(manifests, query));
-  const sections = $derived(group_apps(manifests));
+  const installed = $derived([...apps.list({ installed: true })].map(([, manifest]) => manifest));
+  const matches = $derived(search_apps(installed, query));
+  /** Search covers every app: the ones not installed come after, under Get (ADR-040). */
+  const gettable = $derived(query.trim() ? search_apps([...apps.list({ installed: false })].map(([, manifest]) => manifest), query) : []);
+  const best = $derived(matches[0] ?? gettable[0]);
+  const sections = $derived(group_apps(installed));
 
   function close() {
     document.getElementById("start-menu-popover")?.hidePopover();
@@ -53,9 +66,31 @@
     apps.launch(APP_LIBRARY);
     close();
   }
+
+  function pin(manifest: AppManifest) {
+    desktop.pin(manifest.id).catch((error) => console.error(`[StartMenu] Failed to pin ${manifest.id}`, error));
+  }
+
+  async function menu(manifest: AppManifest, event: MouseEvent) {
+    event.preventDefault();
+    const anchor = { x: event.clientX, y: event.clientY };
+    const choice = await dialogs.menu(
+      apps.is_installed(manifest.id)
+        ? [
+            { id: "open", label: "Open", icon: ArrowSquareOutIcon },
+            { id: "pin", label: "Pin to desktop", icon: PushPinIcon },
+            ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
+          ]
+        : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
+      { anchor }
+    );
+    if (choice === "open") launch(manifest);
+    else if (choice === "pin") pin(manifest);
+    else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
+  }
 </script>
 
-{#snippet grid(label: string, list: AppManifest[])}
+{#snippet grid(label: string, list: AppManifest[], get = false)}
   <section>
     <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{label}</p>
     <ul class="grid grid-cols-4 gap-1">
@@ -64,22 +99,26 @@
           <button
             class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
             onclick={() => launch(manifest)}
+            oncontextmenu={(event) => menu(manifest, event)}
           >
             <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
               <manifest.icon class="size-6" weight="duotone" />
               <AppBadge app_id={manifest.id} />
             </span>
             <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
-            {#if manifest === matches[0] && query}<span class="sr-only">(Enter)</span>{/if}
+            {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
+            {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
           </button>
-          <IconButton
-            label="Pin {manifest.name} to desktop"
-            size="sm"
-            class="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-            onclick={() => desktop.pin(manifest.id).catch((error) => console.error(`[StartMenu] Failed to pin ${manifest.id}`, error))}
-          >
-            <PushPinIcon weight="bold" />
-          </IconButton>
+          {#if !get}
+            <IconButton
+              label="Pin {manifest.name} to desktop"
+              size="sm"
+              class="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              onclick={() => pin(manifest)}
+            >
+              <PushPinIcon weight="bold" />
+            </IconButton>
+          {/if}
         </li>
       {/each}
     </ul>
@@ -96,7 +135,7 @@
     aria-label="Search apps, or > for commands"
     onkeydown={(event) => {
       if (commanding) command_mode?.keydown(event);
-      else if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
+      else if (event.key === "Enter" && query.trim() && best) launch(best);
     }}
   >
     {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
@@ -115,10 +154,13 @@
       }}
       onclose={close}
     />
-  {:else if matches.length === 0}
+  {:else if query.trim() && !best}
     <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10" />
   {:else if query.trim()}
-    {@render grid("Results", matches)}
+    <div class="flex flex-col gap-3">
+      {#if matches.length}{@render grid("Results", matches)}{/if}
+      {#if gettable.length}{@render grid("Not installed", gettable, true)}{/if}
+    </div>
   {:else}
     <div class="flex flex-col gap-3">
       {#each sections as section (section.id)}
@@ -132,7 +174,7 @@
   <span class="flex items-center gap-2 text-ui font-semibold"><LogoLockup height={20} /> WebOS</span>
   <div class="flex items-center gap-2 text-2xs text-foreground/80">
     {#if commanding}<span class="flex items-center gap-1"><Kbd>↵</Kbd> run</span>
-    {:else if query && matches[0]}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
+    {:else if query && best}<span class="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
     {:else}
       <button
         type="button"

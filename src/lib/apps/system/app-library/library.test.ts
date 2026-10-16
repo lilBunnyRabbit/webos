@@ -18,7 +18,7 @@ const APPS = [
   app("Diff", { category: AppCategory.DEVELOPER, tools: [".txt"] }),
 ];
 
-const BASE = { query: "", category: LibraryCategory.ALL, filters: [], used: new Set<string>(), sort: LibrarySort.NAME } as const;
+const BASE = { query: "", category: LibraryCategory.ALL, filters: [], used: new Set<string>(), installed: new Set<string>(), sort: LibrarySort.NAME } as const;
 const names = (sections: { apps: AppManifest[] }[]) => sections.flatMap((section) => section.apps.map((manifest) => manifest.name));
 
 describe("category_of", () => {
@@ -30,16 +30,18 @@ describe("category_of", () => {
 
 describe("has_filter", () => {
   const used = new Set(["snake"]);
-  test("widget, files (associations or tools), commands and used", () => {
-    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.WIDGET, used)).map((m) => m.id)).toEqual(["sudoku"]);
-    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.FILES, used)).map((m) => m.id)).toEqual(["text-editor", "diff"]);
-    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.COMMANDS, used)).map((m) => m.id)).toEqual(["quick-notes"]);
-    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.USED, used)).map((m) => m.id)).toEqual(["snake"]);
+  const context = { used, installed: new Set(APPS.map((manifest) => manifest.id).filter((id) => id !== "diff")) };
+  test("widget, files (associations or tools), commands, used and not installed", () => {
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.WIDGET, context)).map((m) => m.id)).toEqual(["sudoku"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.FILES, context)).map((m) => m.id)).toEqual(["text-editor", "diff"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.COMMANDS, context)).map((m) => m.id)).toEqual(["quick-notes"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.USED, context)).map((m) => m.id)).toEqual(["snake"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.NOT_INSTALLED, context)).map((m) => m.id)).toEqual(["diff"]);
   });
 
   test("empty lists don't count", () => {
-    expect(has_filter(app("X", { associations: [], tools: [], shell: { commands: [] } }), LibraryFilter.FILES, used)).toBe(false);
-    expect(has_filter(app("X", { shell: { commands: [] } }), LibraryFilter.COMMANDS, used)).toBe(false);
+    expect(has_filter(app("X", { associations: [], tools: [], shell: { commands: [] } }), LibraryFilter.FILES, context)).toBe(false);
+    expect(has_filter(app("X", { shell: { commands: [] } }), LibraryFilter.COMMANDS, context)).toBe(false);
   });
 });
 

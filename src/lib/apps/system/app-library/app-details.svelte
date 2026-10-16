@@ -14,7 +14,16 @@
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
-  import { ArrowLeft as ArrowLeftIcon, Play as PlayIcon, PushPin as PushPinIcon, Sparkle as SparkleIcon, Sticker as StickerIcon } from "phosphor-svelte";
+  import {
+    ArrowLeft as ArrowLeftIcon,
+    DownloadSimple as DownloadSimpleIcon,
+    Package as PackageIcon,
+    Play as PlayIcon,
+    PushPin as PushPinIcon,
+    Sparkle as SparkleIcon,
+    Sticker as StickerIcon,
+  } from "phosphor-svelte";
+  import { uninstall_app } from "$lib/core/components/apps/app-actions";
   import { format_date } from "$lib/core/utils";
   import { WIDGET_FALLBACK_SIZE } from "$lib/core/api/services/apps/widget";
   import { app_commands, app_file_types, category_label } from "./library";
@@ -50,6 +59,7 @@
   const types = $derived(app_file_types(manifest));
   const commands = $derived(app_commands(manifest));
   const size = $derived(manifest.widget_size);
+  const installed = $derived(apps.is_installed(manifest.id));
 
   async function pin() {
     try {
@@ -113,10 +123,20 @@
   </div>
 
   <div class="flex flex-wrap gap-1.5">
-    <Button variant="primary" onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Launch</Button>
-    <Button onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
-    {#if manifest.widget && !mobile}
-      <Button onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>
+    {#if installed}
+      <Button variant="primary" onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Open</Button>
+      <Button onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
+      {#if manifest.widget && !mobile}
+        <Button onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>
+      {/if}
+      {#if !manifest.system}
+        <Button variant="quiet" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>
+          <PackageIcon weight="bold" /> Uninstall…
+        </Button>
+      {/if}
+    {:else}
+      <Button variant="primary" onclick={() => apps.install(manifest.id)}><DownloadSimpleIcon weight="bold" /> Get</Button>
+      <Button onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Get and open</Button>
     {/if}
   </div>
 

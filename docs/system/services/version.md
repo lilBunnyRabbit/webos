@@ -133,6 +133,7 @@ Both toasts use app id `version`, so they're in the notification history.
 | Install | "Install WebOS first". One highlighted card (`ring-2 ring-primary/40`): why it matters in two lines (own window and offline; installed apps' storage is far less likely to be cleared), then the [install](#install) state: primary "Install WebOS" button, "Installed" in `success`, or the platform hint |
 | Your files | Four cards: stored on this device, one browser one disk, Save to disk, clearing site data deletes them (`warning` tile) |
 | Getting around | Start menu, windows (drag, snap, double-click), right-click menus, the desktop folder. Keyboard line with `Kbd`s |
+| Apps | "What are you into?" (ADR-040). Every app is already installed; four interest toggles (`INTERESTS` in `services/apps/suggestions.ts`: Create, Get things done, Play, Build) list their suggested apps as cards (icon, name, first highlight or the description) with a Pin toggle ("Add" on mobile). Skip and Start both pin the toggled apps to the desktop (`desktop.pin`); nothing is installed or removed |
 | Make it yours | `ThemeCard` grid of `THEME_PRESETS` and a taskbar `Segmented`, both writing `settings` live |
 | Ready | Updates, windows come back, work in progress, replay from About. Button "Start using WebOS" |
 

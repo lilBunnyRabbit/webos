@@ -1,7 +1,8 @@
-import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppProps, OpenOptions } from "./type";
+import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppProps, AppsFilter, OpenOptions, UninstallOptions } from "./type";
 import type {
   DialogsService,
   FilesService,
+  FileSystemItem,
   Kernel,
   NotificationsService,
   SettingsService,
@@ -11,9 +12,16 @@ import type {
 import { best_apps_for, file_extension } from "./associations";
 import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import { parse_widget, WIDGET_EXTENSION } from "./widget";
-import { SvelteMap } from "svelte/reactivity";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { apps } from "$lib/apps";
 import { apps_shell } from "./shell";
+import { LatestWriter } from "../files/latest-writer";
+import { PATHS } from "../files/hierarchy";
+import { VERSION_STATE_PATH } from "../version/persistence";
+import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { used_apps, type UsageSignals } from "./usage";
+import { parse_session, SESSION_PATH } from "../session/persistence";
+import { HISTORY_PATH } from "../shell/service.svelte";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
@@ -22,7 +30,7 @@ export class AppsService implements IAppsService {
   shell = () => apps_shell(this, () => this.files_service);
 
   to_string(): string {
-    return `AppsService: ${this.registry.size} apps registered`;
+    return `AppsService: ${this.registry.size} apps registered, ${[...this.list({ installed: true })].length} installed`;
   }
 
   private windows_service!: WindowsService;
@@ -32,6 +40,9 @@ export class AppsService implements IAppsService {
   private dialogs_service!: DialogsService;
 
   readonly registry: Map<string, AppManifest> = new SvelteMap();
+  /** User apps only: system apps are always installed (ADR-040). */
+  private readonly installed = new SvelteSet<AppId>();
+  private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
@@ -45,8 +56,98 @@ export class AppsService implements IAppsService {
     }
   }
 
-  public list(): IterableIterator<[AppId, AppManifest]> {
-    return this.registry.entries();
+  async init(): Promise<void> {
+    const saved = parse_installed(await this.read(INSTALLED_PATH));
+    if (saved) {
+      for (const id of saved) if (this.registry.has(id)) this.installed.add(id);
+      return;
+    }
+    // No list yet. A first boot gets every app; a device from before installs existed keeps what it ever used, once.
+    const all = [...this.registry.keys()];
+    const first_boot = (await this.read(VERSION_STATE_PATH)) === null;
+    if (first_boot) this.install(all);
+    else this.tidy(all, used_apps(this.registry.values(), await this.usage()));
+    this.writer.write(serialize_installed(this.installed));
+  }
+
+  private tidy(all: AppId[], used: Set<AppId>): void {
+    this.install([...used]);
+    const removed = all.filter((id) => !this.is_installed(id)).length;
+    if (removed === 0) return;
+    this.notifications_service.notify("apps", {
+      title: `Tidied ${removed} apps you never opened`,
+      message: "They're still in the App Library and in search.",
+      actions: [
+        { label: "Undo", on_click: () => void this.install(all) },
+        { label: "App Library", on_click: () => void this.launch("app-library") },
+      ],
+    });
+  }
+
+  private async read(path: string): Promise<string | null> {
+    const file = await this.files_service.get_file(path);
+    return file ? file.text() : null;
+  }
+
+  private async entries(path: string): Promise<FileSystemItem[]> {
+    const directory = await this.files_service.get_directory(path);
+    return directory ? this.files_service.list(directory) : [];
+  }
+
+  private async usage(): Promise<UsageSignals> {
+    const session = parse_session((await this.read(SESSION_PATH)) ?? "");
+    const desktop: AppId[] = [];
+    for (const item of await this.entries(PATHS.desktop)) {
+      if (item.kind !== "file") continue;
+      const extension = file_extension(item.name);
+      if (extension !== SHORTCUT_EXTENSION && extension !== WIDGET_EXTENSION) continue;
+      const text = await (await item.handle.getFile()).text();
+      const target = extension === SHORTCUT_EXTENSION ? parse_shortcut(text)?.app_id : parse_widget(text)?.app;
+      if (target) desktop.push(target);
+    }
+    return {
+      windows: [...Object.keys(session.frames), ...session.windows.map((window) => window.app_id)],
+      desktop,
+      storage_keys: Object.keys(localStorage),
+      data_folders: (await this.entries(`${PATHS.var_lib}/apps`)).filter((item) => item.kind === "directory").map((item) => item.name),
+      history: ((await this.read(HISTORY_PATH)) ?? "").split("\n").filter(Boolean),
+      defaults: Object.values(this.settings_service.file_defaults),
+    };
+  }
+
+  public *list(filter: AppsFilter = {}): IterableIterator<[AppId, AppManifest]> {
+    for (const entry of this.registry.entries()) {
+      if (filter.installed === undefined || this.is_installed(entry[0]) === filter.installed) yield entry;
+    }
+  }
+
+  public is_installed(id: AppId): boolean {
+    const manifest = this.registry.get(id);
+    return manifest !== undefined && (manifest.system === true || this.installed.has(id));
+  }
+
+  public install(ids: AppId | AppId[]): AppId[] {
+    const added = [ids].flat().filter((id) => this.registry.has(id) && !this.is_installed(id));
+    if (added.length === 0) return [];
+    for (const id of added) this.installed.add(id);
+    this.writer.write(serialize_installed(this.installed));
+    return added;
+  }
+
+  public async uninstall(id: AppId, options: UninstallOptions = {}): Promise<void> {
+    const manifest = this.registry.get(id);
+    if (!manifest) throw new Error(`App ${id} not found`);
+    if (manifest.system) throw new Error(`${manifest.name} is part of WebOS and can't be uninstalled`);
+    this.installed.delete(id);
+    this.writer.write(serialize_installed(this.installed));
+    if (!options.data) return;
+
+    const prefix = `app.${id}.`;
+    for (const key of Object.keys(localStorage)) if (key.startsWith(prefix)) localStorage.removeItem(key);
+    const parent = await this.files_service.get_directory(`${PATHS.var_lib}/apps`);
+    if (parent && (await this.files_service.exists(parent, id, "directory"))) {
+      await this.files_service.delete_entry(parent, id, { recursive: true });
+    }
   }
 
   public register(manifest: AppManifest): void {
@@ -61,6 +162,10 @@ export class AppsService implements IAppsService {
     const manifest = this.registry.get(id);
     if (!manifest) {
       throw new Error(`App ${id} not found`);
+    }
+    // Opening an app from the UI (a file, a link, a store tile) is the intent to have it (ADR-040). The shell checks first.
+    if (this.install(id).length > 0) {
+      this.notifications_service.notify("apps", { title: `${manifest.name} installed`, message: "It's in the start menu now." });
     }
 
     return this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));

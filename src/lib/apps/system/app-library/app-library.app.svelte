@@ -16,6 +16,7 @@
     Briefcase as BriefcaseIcon,
     ClockCounterClockwise as ClockCounterClockwiseIcon,
     Code as CodeIcon,
+    DownloadSimple as DownloadSimpleIcon,
     Files as FilesIcon,
     FilmStrip as FilmStripIcon,
     GameController as GameControllerIcon,
@@ -59,6 +60,7 @@
     { id: LibraryFilter.FILES, label: "Opens files", icon: FilesIcon },
     { id: LibraryFilter.COMMANDS, label: "Has commands", icon: TerminalWindowIcon },
     { id: LibraryFilter.USED, label: "Used before", icon: ClockCounterClockwiseIcon },
+    { id: LibraryFilter.NOT_INSTALLED, label: "Not installed", icon: DownloadSimpleIcon },
   ];
 
   const { window: win, storage } = get_app_context();
@@ -87,7 +89,9 @@
     ])
   );
 
-  const filter_query = $derived({ query, filters: filters.value, used });
+  const installed = $derived(new Set([...apps.list({ installed: true })].map(([id]) => id)));
+
+  const filter_query = $derived({ query, filters: filters.value, used, installed });
   const counts = $derived(category_counts(manifests, filter_query));
   const sections = $derived(
     library_sections(manifests, { ...filter_query, category: category.value, sort: sort.value, changelog: version.changelog })
@@ -130,7 +134,9 @@
 {/snippet}
 
 {#snippet freshness(manifest: AppManifest)}
-  {#if fresh.has(manifest.id)}
+  {#if !installed.has(manifest.id)}
+    <Badge tone="primary">Get</Badge>
+  {:else if fresh.has(manifest.id)}
     <Badge tone="primary">New</Badge>
   {:else if updated.has(manifest.id)}
     <Badge tone="info">Updated</Badge>
@@ -188,8 +194,8 @@
             <span class="hidden min-w-0 flex-1 truncate text-ui text-foreground/65 @lg:block">{manifest.description ?? ""}</span>
             <span class="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/65">
               {#each FILTERS.slice(0, 3) as filter (filter.id)}
-                <span title={has_filter(manifest, filter.id, used) ? filter.label : undefined}>
-                  <filter.icon class={cn("size-3.5", !has_filter(manifest, filter.id, used) && "invisible")} aria-label={has_filter(manifest, filter.id, used) ? filter.label : undefined} />
+                <span title={has_filter(manifest, filter.id, filter_query) ? filter.label : undefined}>
+                  <filter.icon class={cn("size-3.5", !has_filter(manifest, filter.id, filter_query) && "invisible")} aria-label={has_filter(manifest, filter.id, filter_query) ? filter.label : undefined} />
                 </span>
               {/each}
               <span class="hidden w-20 truncate text-right text-2xs @md:block">{category_label(manifest)}</span>
@@ -314,7 +320,7 @@
   </div>
 
   <StatusBar>
-    <span>{shown} of {manifests.length} apps</span>
+    <span>{shown} of {manifests.length} apps · {installed.size} installed</span>
     {#if filters.value.length}<span class="hidden @sm:inline">{filters.value.length} filter{filters.value.length === 1 ? "" : "s"}</span>{/if}
     {#if selected}<span class="ml-auto">{selected.id}</span>{/if}
   </StatusBar>

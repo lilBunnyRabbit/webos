@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.8.0",
+    date: "2026-10-16",
+    title: "Installed apps",
+    changes: [
+      { kind: NEW, text: "Apps can be uninstalled: the start menu, the app drawer and the desktop show the apps you have, and search still finds every other one under Get." },
+      { kind: NEW, apps: ["app-library"], text: "The App Library is the store: Get an app, open it, or uninstall it and choose whether its saved data goes too." },
+      { kind: IMPROVED, text: "This update tidies the start menu once: apps you never opened are uninstalled, and Undo in the notification brings them all back." },
+      { kind: IMPROVED, text: "The introduction asks what you're into and suggests apps to pin to the desktop." },
+    ],
+  },
+  {
     version: "1.7.0",
     date: "2026-10-16",
     title: "GIF export",

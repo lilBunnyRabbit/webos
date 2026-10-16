@@ -139,7 +139,7 @@ export class ShellService implements IShellService {
   public complete(input: string, cursor: number, session: ShellSession): Promise<CompletionResult> {
     return complete(input, cursor, session, {
       find: (id) => this.find(id),
-      ids: () => [...this.registry.commands.keys()],
+      ids: () => [...this.registry.commands.values()].filter((command) => (command.available?.() ?? true) === true).map((command) => command.id),
       completer: (kind) => this.completer(kind),
       value_type: (type) => this.value_type(type),
     });

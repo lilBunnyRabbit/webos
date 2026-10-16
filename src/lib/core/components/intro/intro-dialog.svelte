@@ -1,5 +1,16 @@
 <script lang="ts">
-  import kernel, { THEME_PRESETS, TaskbarPosition, type DialogProps, type SettingsService } from "$lib/core/api";
+  import kernel, {
+    Platform,
+    THEME_PRESETS,
+    TaskbarPosition,
+    type AppManifest,
+    type AppsService,
+    type DesktopService,
+    type DialogProps,
+    type SettingsService,
+  } from "$lib/core/api";
+  import { INTERESTS, interest_apps } from "$lib/core/api/services/apps/suggestions";
+  import { SvelteSet } from "svelte/reactivity";
   import type { Component } from "svelte";
   import LogoLockup from "../brand/logo-lockup.svelte";
   import LogoMark from "../brand/logo-mark.svelte";
@@ -26,6 +37,7 @@
     Laptop as LaptopIcon,
     List as ListIcon,
     Monitor as MonitorIcon,
+    PushPin as PushPinIcon,
     Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
     Warning as WarningIcon,
@@ -34,6 +46,24 @@
   let { resolve }: DialogProps<true> = $props();
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const mobile = kernel.platform === Platform.MOBILE;
+
+  const interests = new SvelteSet<string>();
+  const pins = new SvelteSet<string>();
+  const suggested = $derived(interest_apps(interests).flatMap((id) => apps.get(id) ?? []));
+
+  function toggle<T>(set: SvelteSet<T>, value: T) {
+    if (set.has(value)) set.delete(value);
+    else set.add(value);
+  }
+
+  /** Skip and Start both keep the pins picked so far. */
+  function finish() {
+    for (const id of pins) desktop.pin(id).catch((error) => console.error(`[Intro] Failed to pin ${id}`, error));
+    resolve(true);
+  }
 
   interface Point {
     icon: Component;
@@ -42,7 +72,7 @@
     tone?: "warning";
   }
 
-  const PAGES = ["hello", "install", "files", "around", "yours", "ready"] as const;
+  const PAGES = ["hello", "install", "files", "around", "apps", "yours", "ready"] as const;
   let page = $state(0);
   const last = PAGES.length - 1;
 
@@ -99,6 +129,27 @@
   </ul>
 {/snippet}
 
+{#snippet suggestion(manifest: AppManifest)}
+  <li class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
+      <manifest.icon class="size-6" weight="duotone" />
+    </span>
+    <div class="min-w-0 flex-1">
+      <h3 class="text-ui font-semibold">{manifest.name}</h3>
+      <p class="line-clamp-2 text-ui text-foreground/65">{manifest.highlights?.[0]?.text ?? manifest.description ?? ""}</p>
+    </div>
+    <Button
+      variant="quiet"
+      pressed={pins.has(manifest.id)}
+      aria-label="{mobile ? 'Add' : 'Pin'} {manifest.name}"
+      onclick={() => toggle(pins, manifest.id)}
+    >
+      <PushPinIcon weight={pins.has(manifest.id) ? "fill" : "bold"} />
+      {pins.has(manifest.id) ? (mobile ? "Added" : "Pinned") : mobile ? "Add" : "Pin"}
+    </Button>
+  </li>
+{/snippet}
+
 {#snippet heading(step: string, title: string, lead: string)}
   <header class="flex flex-col gap-1.5">
     <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{step}</p>
@@ -122,7 +173,7 @@
   <div class="relative flex items-center justify-between px-6 py-4">
     <LogoLockup height={32} />
     {#if page < last}
-      <Button variant="quiet" onclick={() => resolve(true)}>Skip</Button>
+      <Button variant="quiet" onclick={finish}>Skip</Button>
     {/if}
   </div>
 
@@ -177,6 +228,28 @@
           <p class="text-ui text-foreground/65">
             From the keyboard: <Kbd>Shift</Kbd> + <Kbd>F10</Kbd> opens the menu of a focused file, <Kbd>F2</Kbd> renames it, <Kbd>Del</Kbd> deletes it.
           </p>
+        {:else if PAGES[page] === "apps"}
+          {@render heading(
+            "Apps",
+            "What are you into?",
+            `Every app is already installed. Pick a few interests for suggestions, and ${mobile ? "add the ones you like to the home screen" : "pin the ones you like to the desktop"}.`
+          )}
+          <div class="flex flex-wrap gap-2" role="group" aria-label="Interests">
+            {#each INTERESTS as interest (interest.id)}
+              <Button size="lg" variant="quiet" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
+                {interest.label}
+              </Button>
+            {/each}
+          </div>
+          {#if suggested.length}
+            <ul class="grid gap-2 @xl:grid-cols-2">
+              {#each suggested as manifest (manifest.id)}
+                {@render suggestion(manifest)}
+              {/each}
+            </ul>
+          {:else}
+            <p class="text-ui text-foreground/65">Nothing picked yet. Everything stays in the start menu and the App Library either way.</p>
+          {/if}
         {:else if PAGES[page] === "yours"}
           {@render heading("Make it yours", "Pick a look", "Changes apply right away. Fine-tune every colour later in Settings › Appearance.")}
           <div class="grid grid-cols-2 gap-2 @xl:grid-cols-4">
@@ -218,7 +291,7 @@
         <Button variant="primary" size="lg" autofocus onclick={() => go(page + 1)}>{page === 0 ? "Get started" : "Next"} <ArrowRightIcon /></Button>
       {:else}
         <!-- svelte-ignore a11y_autofocus -->
-        <Button variant="primary" size="lg" autofocus onclick={() => resolve(true)}>Start using WebOS</Button>
+        <Button variant="primary" size="lg" autofocus onclick={finish}>Start using WebOS</Button>
       {/if}
     </div>
   </footer>

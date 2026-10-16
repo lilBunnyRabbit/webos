@@ -17,6 +17,7 @@ export const LibraryFilter = {
   FILES: "files",
   COMMANDS: "commands",
   USED: "used",
+  NOT_INSTALLED: "not-installed",
 } as const;
 export type LibraryFilter = (typeof LibraryFilter)[keyof typeof LibraryFilter];
 
@@ -40,13 +41,15 @@ export interface LibraryQuery {
   filters: readonly LibraryFilter[];
   /** Apps with an open window, a recently closed one, or a remembered window frame. */
   used: ReadonlySet<AppId>;
+  /** Installed apps, system ones included (ADR-040). */
+  installed: ReadonlySet<AppId>;
 }
 
 export function category_of(manifest: AppManifest): Exclude<LibraryCategory, "all"> {
   return manifest.system ? LibraryCategory.SYSTEM : manifest.category;
 }
 
-export function has_filter(manifest: AppManifest, filter: LibraryFilter, used: ReadonlySet<AppId>): boolean {
+export function has_filter(manifest: AppManifest, filter: LibraryFilter, { used, installed }: Pick<LibraryQuery, "used" | "installed">): boolean {
   switch (filter) {
     case LibraryFilter.WIDGET:
       return manifest.widget !== undefined;
@@ -56,11 +59,13 @@ export function has_filter(manifest: AppManifest, filter: LibraryFilter, used: R
       return app_commands(manifest).length > 0;
     case LibraryFilter.USED:
       return used.has(manifest.id);
+    case LibraryFilter.NOT_INSTALLED:
+      return !installed.has(manifest.id);
   }
 }
 
-function matching(apps: Iterable<AppManifest>, { query, filters, used }: Omit<LibraryQuery, "category">): AppManifest[] {
-  return search_apps(apps, query).filter((manifest) => filters.every((filter) => has_filter(manifest, filter, used)));
+function matching(apps: Iterable<AppManifest>, { query, filters, ...context }: Omit<LibraryQuery, "category">): AppManifest[] {
+  return search_apps(apps, query).filter((manifest) => filters.every((filter) => has_filter(manifest, filter, context)));
 }
 
 export function category_counts(apps: Iterable<AppManifest>, query: Omit<LibraryQuery, "category">): Record<LibraryCategory, number> {

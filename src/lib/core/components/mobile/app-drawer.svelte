@@ -1,10 +1,17 @@
 <script lang="ts">
   import kernel, { group_apps, search_apps, type AppManifest, type AppsService, type DesktopService, type DialogsService } from "$lib/core/api";
-  import { MagnifyingGlass as MagnifyingGlassIcon, PushPin as PushPinIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+  import {
+    DownloadSimple as DownloadSimpleIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    PushPin as PushPinIcon,
+    SquaresFour as SquaresFourIcon,
+    Trash as TrashIcon,
+  } from "phosphor-svelte";
   import { fly } from "svelte/transition";
   import { Button, EmptyState, Input } from "../ui";
   import { long_press } from "$lib/core/utils/long-press";
   import AppBadge from "../apps/app-badge.svelte";
+  import { uninstall_app } from "../apps/app-actions";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -15,9 +22,11 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   let query = $state("");
-  const manifests = $derived([...apps.list()].map(([, manifest]) => manifest));
-  const matches = $derived(search_apps(manifests, query));
-  const sections = $derived(group_apps(manifests));
+  const installed = $derived([...apps.list({ installed: true })].map(([, manifest]) => manifest));
+  const matches = $derived(search_apps(installed, query));
+  const gettable = $derived(query.trim() ? search_apps([...apps.list({ installed: false })].map(([, manifest]) => manifest), query) : []);
+  const best = $derived(matches[0] ?? gettable[0]);
+  const sections = $derived(group_apps(installed));
 
   function launch(manifest: AppManifest) {
     apps.launch(manifest.id);
@@ -60,12 +69,22 @@
   }
 
   async function menu(manifest: AppManifest, anchor: { x: number; y: number }) {
-    const choice = await dialogs.menu([{ id: "pin", label: "Add to home screen", icon: PushPinIcon }], { anchor });
+    const choice = await dialogs.menu(
+      apps.is_installed(manifest.id)
+        ? [
+            { id: "pin", label: "Add to home screen", icon: PushPinIcon },
+            ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
+          ]
+        : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
+      { anchor }
+    );
     if (choice === "pin") desktop.pin(manifest.id).catch((error) => console.error(`[AppDrawer] Failed to pin ${manifest.id}`, error));
+    else if (choice === "open") launch(manifest);
+    else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
   }
 </script>
 
-{#snippet grid(label: string, list: AppManifest[])}
+{#snippet grid(label: string, list: AppManifest[], get = false)}
   <section>
     <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{label}</p>
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1">
@@ -81,6 +100,7 @@
               <AppBadge app_id={manifest.id} />
             </span>
             <span class="line-clamp-2 max-w-full text-center text-xs leading-tight font-medium">{manifest.name}</span>
+            {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
           </button>
         </li>
       {/each}
@@ -119,7 +139,7 @@
           aria-label="Search apps"
           enterkeyhint="go"
           onkeydown={(event) => {
-            if (event.key === "Enter" && query.trim() && matches[0]) launch(matches[0]);
+            if (event.key === "Enter" && query.trim() && best) launch(best);
           }}
         >
           {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
@@ -129,10 +149,13 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
-      {#if matches.length === 0}
+      {#if query.trim() && !best}
         <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10" />
       {:else if query.trim()}
-        {@render grid("Results", matches)}
+        <div class="flex flex-col gap-3">
+          {#if matches.length}{@render grid("Results", matches)}{/if}
+          {#if gettable.length}{@render grid("Not installed", gettable, true)}{/if}
+        </div>
       {:else}
         <div class="flex flex-col gap-3">
           {#each sections as section (section.id)}

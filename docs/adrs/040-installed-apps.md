@@ -1,6 +1,6 @@
 # ADR-040: Installed Apps
 **Date:** 2026-10-16
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the start menu, the mobile drawer, `app list`, completion, Open with. A first boot opens on a 52-app wall, and every new app makes it longer. Discussion: [2026-10-16 installed apps and showcasing](../brainstorm/2026-10-16_installed-apps-and-showcasing.md).
@@ -10,7 +10,8 @@ WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the 
 ### State
 - AppsService owns an installed set, persisted in `/var/lib/apps/installed.json` (`{ "version": 1, "installed": AppId[] }`). Package databases live in `/var/lib`; it's backed up with that area (ADR-037).
 - System apps are always installed and can't be uninstalled.
-- Migration: no `installed.json` while `/var/lib/version/state.json` exists (not a first boot) means everything is installed. Nothing disappears on update.
+- No `installed.json` and no `/var/lib/version/state.json` (a first boot): every app is installed.
+- No `installed.json` but the version state exists (a device from before): a one-time tidy. Only apps something points to as used stay installed: window frames and saved windows, desktop shortcuts and widgets, `app.{id}.*` localStorage, `/var/lib/apps/{id}/`, app commands in the shell history, file defaults. A toast says how many went, with Undo and App Library. Nothing records use after that, and nothing is ever uninstalled automatically again.
 
 ### Where it shows
 - Start menu, mobile drawer, desktop pins and `app list` show installed apps only.
@@ -19,7 +20,7 @@ WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the 
 - Game Hub stays the games store: it lists every game, and Play installs.
 
 ### Installing
-- First boot installs the system apps, a curated base and the interest groups picked on a new intro page ("What are you into?"). Skip installs the base only. Both lists are a constant in core (`apps/starter.ts`), not manifest fields and not categories.
+- A new intro page, "What are you into?", turns interests into suggestions: each picked interest lists its apps (a constant in core, `apps/suggestions.ts`, not manifest fields and not categories), and the ones the user marks get pinned to the desktop. It installs nothing.
 - Implicit installs from the UI: opening a file, a deep link, an announcement's Open or a Game Hub Play installs silently, with a quiet "{App} installed" toast.
 
 ### Uninstalling
@@ -36,11 +37,14 @@ WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the 
 - **Uninstall hides only.** Rejected for an explicit "delete its saved data" choice.
 - **Ungated shell** (commands keep working and install on use). Rejected: then "installed" only means "shown".
 - **Asking before an implicit install.** An extra click on every first open, and on a friend's deep link.
+- **A starter set** (system apps, a base and picked interests installed on first boot). Replaced by the owner during the session: everything installed, interests as suggestions.
+- **Tidying on a timer** (unused for 30 days, once or rolling) and a **Tidy up review** in the App Library. The owner wanted one automatic tidy, once, from what the OS already knows.
 - **Interests as categories / a manifest field.** Categories aren't interests (Media would install a dozen apps); a field spreads the curation over 52 files.
 
 ## Consequences
 - New persisted state and an AppsService API change (`installed`, `install`, `uninstall`, `list` filtering).
 - Every `apps.list()` consumer must pick installed or all: start menu, drawer, App Library, Game Hub, Open with, Settings credits, shell completion and contributions.
-- A new app must be added to a starter group in `apps/starter.ts` to reach new users.
-- Existing users keep the full list until they uninstall.
+- A new app should join an interest in `apps/suggestions.ts` to be suggested.
+- New users still start with every app; the install model pays off through uninstall, and for existing users through the one-time tidy.
+- The tidy can miss an app used only before window frames were recorded, or only through the palette; Undo and Get bring it back.
 - Cross-tab: a second tab doesn't see an install until reload (cross-tab sync is open, ROADMAP).

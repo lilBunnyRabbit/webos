@@ -42,7 +42,8 @@ function plan_stage(tokens: Token[], index: number, registry: Registry): Stage {
     if (group.length > 0 && words.length === 1) throw new GroupListing(group);
     throw new ShellError(unknown(words.slice(0, 2).join(" "), registry.ids()));
   }
-  if (match.command.available?.() === false) throw new ShellError(`${match.command.id}: not available right now`);
+  const available = match.command.available?.() ?? true;
+  if (available !== true) throw new ShellError(`${match.command.id}: ${available === false ? "not available right now" : available}`);
 
   return { command: match.command, args: bind(match.command, rest.slice(match.length)), elevated };
 }

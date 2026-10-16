@@ -83,7 +83,7 @@ export class DesktopService implements GridDesktopService {
    */
   private async add_default_widgets(): Promise<void> {
     const applied = parse_additions((await (await this.files_service.get_file(ADDITIONS_PATH))?.text()) ?? null);
-    const defaults = default_widgets(this.apps_service.list());
+    const defaults = default_widgets(this.apps_service.list({ installed: true }));
     const pending = pending_widgets(applied, defaults);
     if (pending.length === 0) return;
 

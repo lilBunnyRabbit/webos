@@ -22,8 +22,16 @@ Two P1 roadmap items, taken together because the install model decides what a to
 - **Implicit installs from the UI:** opening a file, a deep link, an announcement's Open or a Game Hub Play installs silently, with a quiet "Kanban installed" toast. The shell never installs. Rejected: asking first (an extra click on every first open).
 - **No new shell commands.** `app list` shows installed apps; `app launch` on an uninstalled app errors with the App Library hint. Rejected: `app install` / `app uninstall [--data]`.
 - **Uninstall:** hides the app, removes its desktop shortcuts and widgets, and offers "Also delete its saved data" (`app.{id}.*` localStorage and `/var/lib/apps/{id}/`, never `/home`). System apps can't be uninstalled. Entry points: App Library details, start menu / drawer tile menu, desktop icon menu.
-- **Starter set:** system apps plus a curated base, plus interest groups picked on a new intro page ("What are you into?"). Both lists are a constant in core (`apps/starter.ts`), not manifest fields and not categories. Skip = base only.
-- **Migration:** no `installed.json` and the version state exists (not a first boot) = everything installed. Nothing disappears on update.
+- ~~Starter set~~ and ~~migration installs everything~~: changed mid-implementation, see below.
+- **Interests** are a constant in core (`apps/suggestions.ts`), not manifest fields and not categories.
+
+### Revised while building (owner)
+
+- "for new users i would also want to open the apps highlight/suggestions but yea just default to all installed or propose to uninstall unused"
+- **First boot installs everything.** The intro's "What are you into?" page suggests apps per interest, with a Pin toggle; it installs nothing.
+- "what if we just uninstall the ones they havent used we have that info right": partly. Nothing logs app use, but window frames, saved windows, desktop shortcuts and widgets, `app.{id}.*` localStorage, `/var/lib/apps/{id}/`, shell history and file defaults all persist.
+- Options weighed: existing users once plus new users after 30 days; a rolling 30-day tidy; existing users once; a Tidy up review in App Library. Owner: "no after x days. one time thing."
+- **Decision:** one automatic tidy for devices from before installed apps, from those signals, with an Undo toast. No usage record is kept afterwards.
 - **Game Hub** stays the games store: it lists every game and Play installs. The Games interest installs Game Hub plus a few games.
 
 ## Showcasing features
@@ -47,8 +55,8 @@ Two P1 roadmap items, taken together because the install model decides what a to
 
 - [x] [ADR-040](../adrs/040-installed-apps.md) Installed apps
 - [x] [ADR-041](../adrs/041-getting-started.md) Getting started and sample files
-- [ ] Implement ADR-040
-- [ ] Implement ADR-041 (after 040: the interests page and the starter set meet in the intro)
+- [x] Implement ADR-040
+- [ ] Implement ADR-041 (after 040; the intro's interests page is done)
 
 ## Next session topics
 

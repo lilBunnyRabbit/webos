@@ -5,6 +5,7 @@ import kernel, {
   type DesktopItem,
   type DesktopService,
   type DialogsService,
+  type MenuItem,
   type DesktopWindowsService,
   type FilesService,
   type GridDesktopService,
@@ -29,6 +30,7 @@ import {
   SortAscending as SortAscendingIcon,
   TerminalWindow as TerminalWindowIcon,
   Trash as TrashIcon,
+  Package as PackageIcon,
 } from "phosphor-svelte";
 import ConfirmDialog from "../dialogs/confirm-dialog.svelte";
 import PromptDialog from "../dialogs/prompt-dialog.svelte";
@@ -36,6 +38,7 @@ import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
 import { is_image, save_to_disk, set_wallpaper } from "../files/file-actions";
+import { uninstall_app } from "../apps/app-actions";
 
 // The desktop is the shell, not an app window, so its questions are system dialogs (ADR-025).
 const desktop = () => kernel.service<DesktopService>("desktop");
@@ -44,6 +47,14 @@ const apps = () => kernel.service<AppsService>("apps");
 const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
 export const desktop_path = (item: DesktopItem): string => `${PATHS.desktop}/${item.name}`;
+
+/** The "Uninstall {app}…" item for a shortcut or widget of an installed user app, else none (ADR-040). */
+export function uninstall_item(item: DesktopItem): MenuItem[] {
+  if (item.kind !== "shortcut" && item.kind !== "widget") return [];
+  const manifest = apps().get(item.app_id);
+  if (!manifest || manifest.system || !apps().is_installed(item.app_id)) return [];
+  return [{ id: "uninstall", label: `Uninstall ${manifest.name}…`, icon: PackageIcon, danger: true }];
+}
 
 export function copy_items(items: DesktopItem[]): void {
   clipboard().copy_files(items.map(desktop_path));
@@ -188,6 +199,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
         shortcut: "Del",
         danger: true,
       },
+      ...(single ? uninstall_item(item) : []),
       ...(single
         ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }]
         : []),
@@ -202,6 +214,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
   else if (choice === "properties") void show_properties(item);
   else if (choice === "save_to_disk") save_to_disk(desktop_path(item));
   else if (choice === "wallpaper") set_wallpaper(desktop_path(item));
+  else if (choice === "uninstall" && (item.kind === "shortcut" || item.kind === "widget")) void uninstall_app(item.app_id, anchor);
 }
 
 export async function background_menu(anchor: Position): Promise<void> {

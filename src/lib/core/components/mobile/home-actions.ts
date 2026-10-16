@@ -8,7 +8,8 @@ import {
   PencilSimple as PencilSimpleIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
-import { remove_item, rename_item, show_properties } from "../desktop/desktop-actions";
+import { remove_item, rename_item, show_properties, uninstall_item } from "../desktop/desktop-actions";
+import { uninstall_app } from "../apps/app-actions";
 
 const desktop = () => kernel.service<MobileDesktopService>("desktop");
 const dialogs = () => kernel.service<DialogsService>("dialogs");
@@ -25,6 +26,7 @@ export async function home_item_menu(item: DesktopItem, docked: boolean, anchor:
       { separator: true },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon },
       { id: "delete", label: shortcut ? "Remove shortcut" : "Delete", icon: TrashIcon, danger: true },
+      ...uninstall_item(item),
       { separator: true },
       { id: "properties", label: "Properties", icon: InfoIcon },
     ],
@@ -36,4 +38,5 @@ export async function home_item_menu(item: DesktopItem, docked: boolean, anchor:
   else if (choice === "rename") rename_item(item);
   else if (choice === "delete") remove_item(item);
   else if (choice === "properties") show_properties(item);
+  else if (choice === "uninstall" && (item.kind === "shortcut" || item.kind === "widget")) void uninstall_app(item.app_id, anchor);
 }
