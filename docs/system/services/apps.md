@@ -168,7 +168,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Shell
 
-Contributes `app list|info|launch`, `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
+Contributes `app list|info|launch`, `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), `taskbar position [top|bottom|left|right]`, `taskbar size [small|medium|large]` and `taskbar autohide [on|off]` (ADR-015 revision: zod enums, so Tab completes them; with no argument each returns the current value as text), the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also merges every app's manifest `shell` into its contribution, tagging those commands with `app: <id>` (ADR-034). See [shell](shell.md#contributions).
 
 The shell never installs (ADR-040):
 
