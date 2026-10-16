@@ -3,6 +3,7 @@
   import { cn } from "$lib/core/utils";
   import { Check as CheckIcon } from "phosphor-svelte";
   import { fade } from "svelte/transition";
+  import { motion_reduced } from "$lib/core/utils/motion";
   import LogoMark from "../brand/logo-mark.svelte";
   import { Spinner } from "../ui";
 
@@ -24,7 +25,7 @@
     aria-modal="true"
     aria-label="Updating WebOS"
     class="fixed inset-0 z-[10000] grid place-items-center bg-background-darkest text-foreground"
-    transition:fade={{ duration: 150 }}
+    transition:fade={{ duration: motion_reduced() ? 0 : 150 }}
   >
     <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>
     <div class="relative flex w-full max-w-xs flex-col items-center gap-6 px-6">

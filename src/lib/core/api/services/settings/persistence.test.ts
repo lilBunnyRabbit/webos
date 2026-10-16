@@ -1,5 +1,27 @@
 import { describe, expect, test } from "vitest";
-import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_settings, parse_wallpaper } from "./persistence";
+import { DEFAULT_APPEARANCE } from "./appearance";
+import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_appearance, parse_settings, parse_wallpaper } from "./persistence";
+
+describe("parse_appearance", () => {
+  test("keeps valid values", () => {
+    expect(parse_appearance({ radius: "sharp", motion: "off", shadow: "strong", text: "l" })).toEqual({ radius: "sharp", motion: "off", shadow: "strong", text: "l" });
+  });
+
+  test("an unknown value falls back on its own field only", () => {
+    expect(parse_appearance({ radius: "huge", motion: "off" })).toEqual({ ...DEFAULT_APPEARANCE, motion: "off" });
+    expect(parse_appearance({ radius: "round", motion: 3 })).toEqual({ ...DEFAULT_APPEARANCE, radius: "round" });
+    expect(parse_appearance({ shadow: "huge", text: "xl" })).toEqual(DEFAULT_APPEARANCE);
+  });
+
+  test("nothing or garbage is the default", () => {
+    expect(parse_appearance(undefined)).toEqual(DEFAULT_APPEARANCE);
+    expect(parse_appearance("round")).toEqual(DEFAULT_APPEARANCE);
+  });
+
+  test("settings saved before appearance existed load with the default", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.appearance).toEqual(DEFAULT_APPEARANCE);
+  });
+});
 
 describe("parse_wallpaper", () => {
   test("keeps a preset", () => {

@@ -12,10 +12,11 @@
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
   import { cubicOut } from "svelte/easing";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { motion_reduced } from "$lib/core/utils/motion";
 
   /** Open and close (ADR-014 revision): a fade and a small scale. `scale`, not `transform`, so a drag can't fight it. */
   function pop(_: Element, { duration }: { duration: number }) {
-    return { duration, easing: cubicOut, css: (t: number) => `opacity: ${t}; scale: ${0.96 + 0.04 * t};` };
+    return { duration: motion_reduced() ? 0 : duration, easing: cubicOut, css: (t: number) => `opacity: ${t}; scale: ${0.96 + 0.04 * t};` };
   }
 
   let { id }: { id: WindowId } = $props();

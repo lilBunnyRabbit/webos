@@ -1,9 +1,14 @@
 import { z } from "zod";
 import {
+  AppearanceMotion,
+  AppearanceRadius,
+  AppearanceShadow,
+  AppearanceText,
   TaskbarPosition,
   TaskbarSize,
   WallpaperFit,
   WallpaperPreset,
+  type Appearance,
   type FileDefaults,
   type SavedTheme,
   type Taskbar,
@@ -13,6 +18,7 @@ import {
 } from "./type";
 import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
 import { PATHS } from "../files/hierarchy";
+import { DEFAULT_APPEARANCE } from "./appearance";
 
 /** OS config lives in system storage (ADR-021). */
 export const SETTINGS_PATH = `${PATHS.etc}/settings.json`;
@@ -47,6 +53,7 @@ export interface PersistedSettings {
   file_defaults: FileDefaults;
   wallpaper: Wallpaper;
   saved_themes: SavedTheme[];
+  appearance: Appearance;
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -72,6 +79,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
       file_defaults: sanitize_file_defaults(data.file_defaults),
       wallpaper: parse_wallpaper(data.wallpaper),
       saved_themes: parse_saved_themes(data.saved_themes),
+      appearance: parse_appearance(data.appearance),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
@@ -130,6 +138,19 @@ const wallpaper_schema = z.discriminatedUnion("kind", [
 export function parse_wallpaper(saved: unknown): Wallpaper {
   const result = wallpaper_schema.safeParse(saved);
   return result.success ? result.data : DEFAULT_WALLPAPER;
+}
+
+const appearance_schema = z.object({
+  radius: z.enum(Object.values(AppearanceRadius)).catch(DEFAULT_APPEARANCE.radius),
+  motion: z.enum(Object.values(AppearanceMotion)).catch(DEFAULT_APPEARANCE.motion),
+  shadow: z.enum(Object.values(AppearanceShadow)).catch(DEFAULT_APPEARANCE.shadow),
+  text: z.enum(Object.values(AppearanceText)).catch(DEFAULT_APPEARANCE.text),
+});
+
+// Additive like the wallpaper; each field falls back on its own, so one bad value doesn't reset the others.
+export function parse_appearance(saved: unknown): Appearance {
+  const result = appearance_schema.safeParse(typeof saved === "object" && saved !== null ? saved : {});
+  return result.success ? result.data : { ...DEFAULT_APPEARANCE };
 }
 
 export function serialize_settings(settings: PersistedSettings): string {

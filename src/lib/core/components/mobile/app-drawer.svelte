@@ -8,6 +8,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { fly } from "svelte/transition";
+  import { motion_reduced } from "$lib/core/utils/motion";
   import { Button, EmptyState, Input } from "../ui";
   import { long_press } from "$lib/core/utils/long-press";
   import AppBadge from "../apps/app-badge.svelte";
@@ -114,7 +115,7 @@
     role="dialog"
     aria-label="All apps"
     class="mt-[calc(env(safe-area-inset-top)+2rem)] flex min-h-0 flex-1 flex-col rounded-t-3xl bg-background-lighter shadow-popover select-none [-webkit-touch-callout:none]"
-    transition:fly={{ y: 48, duration: 200 }}
+    transition:fly={{ y: 48, duration: motion_reduced() ? 0 : 200 }}
     style:translate={pull?.active ? `0 ${pull.dy}px` : undefined}
     style:transition={pull?.active ? "none" : "translate 200ms var(--ease-out)"}
   >
