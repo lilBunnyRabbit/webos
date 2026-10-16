@@ -28,7 +28,7 @@
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
     const items = [...event.currentTarget.querySelectorAll<HTMLElement>("[data-option]")];
-    const index = items.indexOf(document.activeElement as HTMLElement);
+    const index = items.indexOf(event.currentTarget.ownerDocument.activeElement as HTMLElement);
     // From outside the list (the checkbox), Down goes to the first app and Up to the last.
     const next = index === -1 ? (event.key === "ArrowDown" ? 0 : items.length - 1) : event.key === "ArrowDown" ? index + 1 : index - 1;
     items.at(next % items.length)?.focus();

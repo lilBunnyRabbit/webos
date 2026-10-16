@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-  import kernel, { type DialogsService, type WindowsService, type WindowId, WindowFlag } from "$lib/core/api";
+  import { getAllContexts, mount, untrack, unmount } from "svelte";
+  import kernel, { type DialogsService, type ExtractService, type WindowsService, type WindowId, WindowFlag } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import WindowContent from "./window-content.svelte";
   import WindowTitlebar from "./window-titlebar.svelte";
   import WindowSheets from "./window-sheets.svelte";
+  import WindowMini from "./window-mini.svelte";
   import { create_storage_handle } from "$lib/core/contexts/app";
   import { set_app_context } from "$lib/core/contexts/app/context";
   import { create_window_handle } from "$lib/core/contexts/app/window-handle";
@@ -26,6 +27,8 @@
   const is_focused = $derived(windows.is_focused(id));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const has_sheets = $derived(dialogs.for_window(id).length > 0);
+  const extract = $derived(kernel.services.has("extract") ? kernel.service<ExtractService>("extract") : null);
+  const is_out = $derived(extract?.current === id);
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
 
   // The window manager keys windows by id, so it never changes for this instance.
@@ -42,14 +45,32 @@
       storage: create_storage_handle(app_id, instance.app.state),
     });
   });
+  const contexts = getAllContexts();
 
   // Internal state
   let zoom = $state(1);
   let element: HTMLElement | null = $state(null);
 
+  // Popped out (ADR-043): the app remounts in the mini window, with this window's contexts, and the frame hides.
+  $effect(() => {
+    const target = is_out ? extract?.document : null;
+    if (!target) return;
+    const mini = mount(WindowMini, {
+      target: target.body,
+      props: {
+        window_id: id,
+        get zoom() {
+          return zoom;
+        },
+      },
+      context: contexts,
+    });
+    return () => void unmount(mini);
+  });
+
   // A window that comes to the front takes the keyboard, unless focus is already inside it (a click on a field).
   $effect(() => {
-    if (is_focused && !is_minimized && element && !element.contains(document.activeElement)) {
+    if (is_focused && !is_minimized && !is_out && element && !element.contains(document.activeElement)) {
       element.focus({ preventScroll: true });
     }
   });
@@ -119,7 +140,7 @@
     "rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
     is_focused ? "shadow-window-focused ring-foreground/16" : "shadow-window ring-foreground/8",
     is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
-    is_minimized && "hidden"
+    (is_minimized || is_out) && "hidden"
   )}
   style:left
   style:top
@@ -127,7 +148,7 @@
   style:height
   style:transform
   style:z-index={instance.order}
-  style:view-transition-name={is_minimized ? undefined : `window-${id}`}
+  style:view-transition-name={is_minimized || is_out ? undefined : `window-${id}`}
   style:contain="size layout paint style"
   style:backface-visibility="hidden"
   tabindex={-1}
@@ -153,15 +174,17 @@
     style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
   >
     <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
-    <div class="contents" inert={has_sheets}>
-      <WindowContent window_id={id} {zoom}>
-        <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
-          <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-          <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
-        </div>
-      </WindowContent>
-    </div>
-    <WindowSheets window_id={id} />
+    {#if !is_out}
+      <div class="contents" inert={has_sheets}>
+        <WindowContent window_id={id} {zoom}>
+          <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
+            <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
+            <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
+          </div>
+        </WindowContent>
+      </div>
+      <WindowSheets window_id={id} />
+    {/if}
   </div>
 
   <!-- Resize handles -->

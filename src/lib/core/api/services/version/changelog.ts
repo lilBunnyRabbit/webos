@@ -5,7 +5,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "1.12.0",
+    version: "1.13.0",
     date: "2026-10-16",
     title: "Lunar Lander",
     introduces: ["lunar-lander"],
@@ -13,6 +13,14 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, apps: ["lunar-lander"], text: "Lunar Lander: fly a lander, twin pods or a heavy shuttle down onto the pad, steering with the engine on each side." },
       { kind: NEW, apps: ["lunar-lander"], text: "Pick Zero-G, Moon, Mars or Earth gravity, add air and wind, or turn on infinite fuel to practise." },
       { kind: NEW, apps: ["lunar-lander"], text: "Every landing gets a score for how soft, level and centred it was and the fuel left, with a best for each ship and setup." },
+    ],
+  },
+  {
+    version: "1.12.0",
+    date: "2026-10-16",
+    title: "Mini windows",
+    changes: [
+      { kind: NEW, text: "Pop any window out into a small window that stays on top of your other tabs and apps: use the new button in its title bar, right-click it on the taskbar, press Alt+Shift+P, or type win pop. Close the mini window or type win back to bring it home." },
     ],
   },
   {

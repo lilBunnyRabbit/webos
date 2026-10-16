@@ -33,7 +33,8 @@
 
   function move(delta: number) {
     const buttons = enabled_buttons();
-    const index = buttons.indexOf(document.activeElement as HTMLElement);
+    // The panel's own document: a popped-out window's menu lives in its mini window (ADR-043).
+    const index = buttons.indexOf(panel?.ownerDocument.activeElement as HTMLElement);
     buttons.at((index + delta + buttons.length) % buttons.length)?.focus();
   }
 
@@ -50,7 +51,7 @@
     else if (key.length === 1 && /\S/.test(key)) {
       // Typeahead: the next item starting with that letter.
       const buttons = enabled_buttons();
-      const start = buttons.indexOf(document.activeElement as HTMLElement);
+      const start = buttons.indexOf(panel?.ownerDocument.activeElement as HTMLElement);
       const next = [...buttons.slice(start + 1), ...buttons.slice(0, start + 1)].find((button) =>
         button.dataset.label?.toLowerCase().startsWith(key.toLowerCase())
       );

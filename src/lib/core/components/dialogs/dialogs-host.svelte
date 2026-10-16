@@ -1,11 +1,22 @@
 <script lang="ts">
-  import kernel, { type DialogsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type WindowId } from "$lib/core/api";
   import type { Attachment } from "svelte/attachments";
 
-  /** `sheet`: anchored dialogs (menus, Open with) rise from the bottom of the screen instead (the mobile shell). */
-  let { anchored = "dropdown" }: { anchored?: "dropdown" | "sheet" } = $props();
+  let {
+    anchored = "dropdown",
+    origin = null,
+    view = window,
+  }: {
+    /** `sheet`: anchored dialogs (menus, Open with) rise from the bottom of the screen instead (the mobile shell). */
+    anchored?: "dropdown" | "sheet";
+    /** The popped-out window whose dialogs this host renders in its mini window (ADR-043); `null` for the tab's. */
+    origin?: WindowId | null;
+    /** The window this host renders in: the mini window's, not the tab's, for a popped-out one. */
+    view?: Window;
+  } = $props();
 
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const entries = $derived(origin ? dialogs.for_origin(origin) : dialogs.system);
 
   /** A button is held: a right-click's `contextmenu` fires mid-press. */
   let pressed = false;
@@ -13,13 +24,13 @@
   $effect(() => {
     const down = () => (pressed = true);
     const up = () => (pressed = false);
-    window.addEventListener("pointerdown", down, true);
-    window.addEventListener("pointerup", up, true);
-    window.addEventListener("pointercancel", up, true);
+    view.addEventListener("pointerdown", down, true);
+    view.addEventListener("pointerup", up, true);
+    view.addEventListener("pointercancel", up, true);
     return () => {
-      window.removeEventListener("pointerdown", down, true);
-      window.removeEventListener("pointerup", up, true);
-      window.removeEventListener("pointercancel", up, true);
+      view.removeEventListener("pointerdown", down, true);
+      view.removeEventListener("pointerup", up, true);
+      view.removeEventListener("pointercancel", up, true);
     };
   });
 
@@ -32,18 +43,18 @@
     };
     const release = () => setTimeout(show);
     if (pressed) {
-      window.addEventListener("pointerup", release, { once: true });
-      window.addEventListener("pointercancel", release, { once: true });
+      view.addEventListener("pointerup", release, { once: true });
+      view.addEventListener("pointercancel", release, { once: true });
     } else show();
     return () => {
-      window.removeEventListener("pointerup", release);
-      window.removeEventListener("pointercancel", release);
+      view.removeEventListener("pointerup", release);
+      view.removeEventListener("pointercancel", release);
       if (element.open) element.close();
     };
   };
 </script>
 
-{#each dialogs.system as entry (entry.id)}
+{#each entries as entry (entry.id)}
   {@const sheet = entry.anchored && anchored === "sheet"}
   <div
     class="fixed size-0 pointer-events-none"

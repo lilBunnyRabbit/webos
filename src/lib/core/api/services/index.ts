@@ -14,3 +14,4 @@ export * from "./router";
 export * from "./shell";
 export * from "./backup";
 export * from "./tasks";
+export * from "./extract";

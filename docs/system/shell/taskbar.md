@@ -45,7 +45,9 @@ States:
 
 The indicator sits under the button when horizontal and to its left when vertical, so it's on the same side whether the bar is at the top or the bottom (left or right). It animates between bar and dot over 200ms.
 
-Right-click a window item (ADR-042) for **Pin to taskbar** (or Unpin from taskbar when its app is pinned), then **Close window** (`windows.close`, so the close guard still asks).
+Right-click a window item (ADR-042) for **Pin to taskbar** (or Unpin from taskbar when its app is pinned), then, on desktop with Picture-in-Picture, **Bring back** while the window is popped out or **Pop out** otherwise (disabled while dirty, [extract](../services/extract.md)), then **Close window** (`windows.close`, so the close guard still asks).
+
+A popped-out window's item shows a small filled `PictureInPicture` mark in its bottom-left corner. Clicking it focuses the window and the mini window (`extract.focus()`) instead of minimizing.
 
 ## Quick launch
 
@@ -101,7 +103,7 @@ Contents (`start-menu-popover.svelte`):
 | Click | Quick launch icon | Focus the app's latest window, else launch it; Shift or middle click launches a new one |
 | Drag | App tile / App Library card onto quick launch | Pin at the gap |
 | Drag | Quick launch icon | Reorder within the zone; out of the taskbar unpins |
-| Right-click | Window item | Pin to taskbar / Unpin, Close window |
+| Right-click | Window item | Pin to taskbar / Unpin, Pop out / Bring back, Close window |
 | Click | Start button | Toggle the start menu |
 | Click | Tray | Toggle the notification center |
 | Click | Show desktop sliver | `windows.toggle_desktop()` in a view transition: minimizes every visible window, or brings back the ones it hid |
