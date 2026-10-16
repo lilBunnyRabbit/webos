@@ -415,19 +415,33 @@
   style:--strip="{strip_size}px"
 >
   <Toolbar class="area-bar flex-nowrap gap-1">
-    <Button size="sm" variant="quiet" class="shrink-0 gap-1 pr-1.5" style="anchor-name: --file-{popover}" onclick={file_menu}>
-      File<CaretDownIcon weight="bold" class="size-3 opacity-65" />
-    </Button>
     {#if kernel.platform === Platform.MOBILE}
-      <span class="flex min-w-0 shrink items-center gap-1.5 px-1">
-        <span class="truncate text-ui font-medium" title={file_path ?? "Not saved yet"}>{file_name}</span>
-        {#if editor.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
-      </span>
+      <Button
+        size="sm"
+        variant="quiet"
+        class="max-w-32 min-w-0 shrink-[1000] gap-1 pr-1.5"
+        aria-label="File: {file_name}{editor.dirty ? ', unsaved changes' : ''}"
+        title={file_path ?? "Not saved yet"}
+        style="anchor-name: --file-{popover}"
+        onclick={file_menu}
+      >
+        <span class="min-w-0 truncate font-medium">{file_stem(file_name)}</span>
+        {#if editor.dirty}<span class="size-2 shrink-0 rounded-full bg-primary"></span>{/if}
+        <CaretDownIcon weight="bold" class="size-3 shrink-0 opacity-65" />
+      </Button>
+    {:else}
+      <Button size="sm" variant="quiet" class="shrink-0 gap-1 pr-1.5" style="anchor-name: --file-{popover}" onclick={file_menu}>
+        File<CaretDownIcon weight="bold" class="size-3 opacity-65" />
+      </Button>
     {/if}
     <IconButton label="Undo (Mod+Z)" size="sm" class="shrink-0" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
     <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.redoable} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
     <Separator vertical />
-    <div class="options flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [&>*]:shrink-0" role="group" aria-label="{TOOL_LABELS[prefs.tool.value]} options">
+    <div
+      class={["options flex min-w-0 items-center gap-1 overflow-x-auto [&>*]:shrink-0", kernel.platform === Platform.MOBILE ? "flex-auto" : "flex-1"]}
+      role="group"
+      aria-label="{TOOL_LABELS[prefs.tool.value]} options"
+    >
       <span class="hidden shrink-0 pr-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase @2xl:inline">{TOOL_LABELS[prefs.tool.value]}</span>
       <HopspriteOptions {editor} {prefs} />
     </div>

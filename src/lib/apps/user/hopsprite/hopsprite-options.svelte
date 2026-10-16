@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { IconButton, Select, Separator, Slider } from "$lib/core/components/ui";
+  import kernel, { Platform, type DialogsService } from "$lib/core/api";
+  import { Button, IconButton, Select, Separator, Slider } from "$lib/core/components/ui";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
+    Checkerboard as CheckerboardIcon,
     Circle as CircleIcon,
     FlipHorizontal as FlipHorizontalIcon,
     FlipVertical as FlipVerticalIcon,
@@ -16,8 +18,9 @@
   } from "phosphor-svelte";
   import { Transform } from "./document";
   import type { Editor } from "./editor.svelte";
+  import { below } from "./menu";
   import { MAX_BRUSH, type Prefs } from "./prefs";
-  import { BrushShape, Pattern } from "./raster";
+  import { BrushShape, Pattern, PATTERNS } from "./raster";
   import { is_freehand, paints, Tool, uses_brush } from "./tools";
 
   let { editor, prefs }: { editor: Editor; prefs: Prefs } = $props();
@@ -28,15 +31,61 @@
   const shaped = $derived(tool === Tool.RECTANGLE || tool === Tool.ELLIPSE);
   const sized = $derived(uses_brush(tool) && !(shaped && prefs.filled.value));
 
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const compact = kernel.platform === Platform.MOBILE;
+  const uid = $props.id();
+
   const PATTERN_OPTIONS = [
     { value: Pattern.SOLID, label: "Solid" },
     { value: Pattern.DENSE, label: "Dither 75%" },
     { value: Pattern.CHECKER, label: "Dither 50%" },
     { value: Pattern.SPARSE, label: "Dither 25%" },
   ];
+  const PATTERN_SHORT: Record<Pattern, string> = { [Pattern.SOLID]: "Solid", [Pattern.DENSE]: "75%", [Pattern.CHECKER]: "50%", [Pattern.SPARSE]: "25%" };
+  const pattern_label = $derived(PATTERN_OPTIONS.find((option) => option.value === prefs.pattern.value)?.label ?? "Solid");
+
+  function cycle_pattern() {
+    prefs.pattern.value = PATTERNS[(PATTERNS.indexOf(prefs.pattern.value) + 1) % PATTERNS.length];
+  }
+
+  async function mirror_menu(event: MouseEvent) {
+    const choice = await dialogs.menu(
+      [
+        { id: "x", label: `Mirror left and right${prefs.mirror_x.value ? " ✓" : ""}`, icon: FlipHorizontalIcon },
+        { id: "y", label: `Mirror top and bottom${prefs.mirror_y.value ? " ✓" : ""}`, icon: FlipVerticalIcon },
+      ],
+      { anchor: below(event) }
+    );
+    if (choice === "x") prefs.mirror_x.value = !prefs.mirror_x.value;
+    if (choice === "y") prefs.mirror_y.value = !prefs.mirror_y.value;
+  }
 </script>
 
-{#if sized}
+{#if sized && compact}
+  <Button size="sm" variant="quiet" class="gap-1 px-1.5" aria-label="Brush size: {prefs.size.value}px" popovertarget="brush-{uid}" style="anchor-name: --brush-{uid}">
+    {#if prefs.shape.value === BrushShape.ROUND && prefs.size.value > 2}<CircleIcon weight="fill" />{:else}<SquareIcon weight="fill" />{/if}
+    <span class="font-mono text-2xs tabular-nums">{prefs.size.value}px</span>
+  </Button>
+  <div
+    id="brush-{uid}"
+    popover="auto"
+    class="hs-popover m-0 w-64 rounded-xl bg-background-lighter p-3 text-foreground shadow-popover"
+    style="position-anchor: --brush-{uid}"
+  >
+    <div class="flex items-center gap-2">
+    <Slider size="sm" min={1} max={MAX_BRUSH} class="flex-1" aria-label="Brush size" bind:value={prefs.size.value} />
+    <span class="w-8 font-mono text-2xs tabular-nums">{prefs.size.value}px</span>
+    <IconButton
+      label={prefs.shape.value === BrushShape.ROUND ? "Round brush" : "Square brush"}
+      size="sm"
+      disabled={prefs.size.value <= 2}
+      onclick={() => (prefs.shape.value = prefs.shape.value === BrushShape.ROUND ? BrushShape.SQUARE : BrushShape.ROUND)}
+    >
+      {#if prefs.shape.value === BrushShape.ROUND}<CircleIcon weight="bold" />{:else}<SquareIcon weight="bold" />{/if}
+    </IconButton>
+    </div>
+  </div>
+{:else if sized}
   <label class="flex items-center gap-1.5 text-2xs text-foreground/80" title="Brush size (Shift+, and Shift+.)">
     <span class="sr-only">Brush size</span>
     <Slider size="sm" min={1} max={MAX_BRUSH} class="w-16 @lg:w-24" bind:value={prefs.size.value} />
@@ -76,11 +125,19 @@
   </IconButton>
 {/if}
 
-{#if paints(tool) && tool !== Tool.ERASER}
+{#if paints(tool) && tool !== Tool.ERASER && compact}
+  <Button size="sm" variant="quiet" class="gap-1 px-1.5" aria-label="Pattern: {pattern_label}" title="Pattern: tap for the next one" pressed={prefs.pattern.value !== Pattern.SOLID} onclick={cycle_pattern}>
+    <CheckerboardIcon weight="bold" /><span class="w-7 text-left font-mono text-2xs tabular-nums">{PATTERN_SHORT[prefs.pattern.value]}</span>
+  </Button>
+{:else if paints(tool) && tool !== Tool.ERASER}
   <Select size="sm" class="w-28" aria-label="Pattern" title="Pattern: solid or dithered" options={PATTERN_OPTIONS} bind:value={prefs.pattern.value} />
 {/if}
 
-{#if paints(tool)}
+{#if paints(tool) && compact}
+  <IconButton label="Mirror" size="sm" pressed={prefs.mirror_x.value || prefs.mirror_y.value} onclick={mirror_menu}>
+    {#if prefs.mirror_y.value && !prefs.mirror_x.value}<FlipVerticalIcon weight="bold" />{:else}<FlipHorizontalIcon weight="bold" />{/if}
+  </IconButton>
+{:else if paints(tool)}
   <IconButton label="Mirror left and right" size="sm" pressed={prefs.mirror_x.value} onclick={() => (prefs.mirror_x.value = !prefs.mirror_x.value)}>
     <FlipHorizontalIcon weight="bold" />
   </IconButton>
@@ -102,3 +159,11 @@
     <IconButton label="Delete selected pixels (Delete)" size="sm" onclick={() => editor.delete_selection()}><TrashIcon weight="bold" /></IconButton>
   {/if}
 {/if}
+
+<style>
+  .hs-popover {
+    position-area: bottom span-left;
+    position-try-fallbacks: flip-block, flip-inline;
+    margin-block: 4px;
+  }
+</style>

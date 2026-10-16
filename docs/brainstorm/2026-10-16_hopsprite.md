@@ -67,6 +67,8 @@ Owner feedback on 1.6.0: too little canvas, an Aseprite-style timeline that felt
 
 Resizing: the colour panel and the filmstrip have an app-local `resize-handle.svelte` (ARIA window splitter: arrows, Home folds, End, Enter toggles, double-click toggles, drag past half the minimum folds). Sizes persist in `app.hopsprite.side` / `app.hopsprite.strip`. During a drag only a CSS variable on the root changes, once per frame; the stage refits and never recomposites. The strip is capped at 30% of the window height, 18% below 45rem and 11% below 34rem, so persisted sizes shrink with the window. The owner moved the splitter into the UI kit as `ResizeHandle` (2026-10-16), shown in the Style Guide. Zoom gained a 75% step so a 512px sprite fits a phone at more than 50%.
 
+Phone tool options (owner: compact controls, phone only, desktop unchanged): on `Platform.MOBILE` the brush size is a `3px` button opening a slider popover (with the round/square toggle), the pattern Select becomes one button that cycles Solid, 75%, 50% and 25%, and the two mirror toggles become one Mirror button opening a menu. The file name moved into the File button and gives up width first, so the pencil row fits a 412px phone; the select tool's longer row still scrolls.
+
 Performance, measured on a 512×512 sprite with 8 layers and 30 frames (Chrome, main-thread time per event):
 
 | | Before | After |
