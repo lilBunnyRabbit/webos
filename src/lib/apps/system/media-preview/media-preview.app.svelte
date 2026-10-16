@@ -21,6 +21,7 @@
   import { flushSync, untrack } from "svelte";
   import manifest from "./index";
   import { distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
+  import { find_duration } from "./duration";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
@@ -280,7 +281,7 @@
       {:else if kind === "video"}
         <div class="grid h-full place-items-center p-6">
           <!-- svelte-ignore a11y_media_has_caption -->
-          <video src={url} controls class="max-h-full max-w-full rounded-lg shadow-window"></video>
+          <video src={url} controls {@attach find_duration} class="max-h-full max-w-full rounded-lg shadow-window"></video>
         </div>
       {:else if kind === "audio"}
         <div class="flex h-full flex-col items-center justify-center gap-5 p-8">
@@ -288,7 +289,7 @@
             <MusicNoteIcon class="size-12 text-primary" weight="duotone" />
           </div>
           <p class="max-w-full truncate text-sm font-medium">{file.name}</p>
-          <audio src={url} controls class="w-full max-w-md"></audio>
+          <audio src={url} controls {@attach find_duration} class="w-full max-w-md"></audio>
         </div>
       {:else}
         <EmptyState icon={WarningIcon} title="Can't preview this file" description={file.type || "Unknown type"} />

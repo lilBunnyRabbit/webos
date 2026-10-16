@@ -295,7 +295,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [x] Pinning a widget twice quickly from the shell makes a duplicate (`since pin`, `quno pin`): the desktop list hasn't caught up (`write_widget` lists the entry at once; `quno pin` / `quno t pin` check first)
   - [ ] Widgets: resize from any corner; a Resize item in the widget menu
   - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
-  - [ ] Media Preview: no length for MediaRecorder WebM recordings (no duration header)
+  - [x] Media Preview: no length for MediaRecorder WebM recordings (no duration header): seek past the end once, then back
   - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
   - [-] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, errors show twice from commands (terminal error plus the task's failed toast, as in Archive: owner's call, see 2026-10-16 fixes). Split's default range follows the PDF's page count (done 2026-10-16)
   - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)

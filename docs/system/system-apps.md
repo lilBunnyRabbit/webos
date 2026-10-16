@@ -225,6 +225,8 @@ Below the `@lg` container width the name takes the toolbar's first row (`order-f
 | audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
 | unsupported | "Can't preview this file" empty state with the type | Save to disk… |
 
+Video and audio carry the `find_duration` attachment (`duration.ts`): MediaRecorder WebM has no duration header, so the element reports `Infinity` and the controls show no length. When `loadedmetadata` sees `Infinity` it seeks to `Number.MAX_SAFE_INTEGER`, waits for `durationchange` or `timeupdate` to give a finite duration, then seeks back to 0.
+
 Rotation animates over 200ms; size changes are instant. Because zoom changes the layout size rather than a transform, the scroll area grows with the image and every edge is reachable. The wrapper's `overflow-clip` keeps the image's corners mid-rotation from adding scrollbars. Pure math (`clamp`, `distance`, `midpoint`, `rotated_size`, `fit_scale`) is in `zoom.ts`, tested in `zoom.test.ts`.
 
 Every zoom goes through `zoom_at(scale, anchor)`. It reads the box rect, applies the zoom, `flushSync()`s, and adjusts the stage's `scrollLeft/Top` so the image point under the anchor stays put.
