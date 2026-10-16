@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.15.0",
+    date: "2026-10-16",
+    title: "Forward in File Explorer",
+    changes: [
+      { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor shows activity for each open app on phones too, instead of dashes." },
+    ],
+  },
+  {
     version: "1.14.1",
     date: "2026-10-16",
     title: "Locked colours stay readable",

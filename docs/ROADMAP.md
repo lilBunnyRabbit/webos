@@ -465,7 +465,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Owner's call: a `$docs` alias (Settings › Roadmap and markdown-pdf use long relative imports)
 - [ ] Diff: undo history is lost when the window crosses the split/unified width (keeping it broke the automatic switch)
 - [ ] Minesweeper and Nurikabe have no `daily` command
-- [ ] Activity Monitor's Windows section shows "—" on mobile
+- [x] Activity Monitor's Windows section shows "—" on mobile (the mobile window body had no `data-window-id`)
 - [ ] `state_proxy_equality_mismatch` warning in Terminal and some games
 
 ### 1.0 release (shipped 2026-10-15)

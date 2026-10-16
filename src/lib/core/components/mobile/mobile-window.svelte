@@ -27,7 +27,7 @@
 </script>
 
 <!-- No chrome: the app fills the screen below the device's own status bar. -->
-<div class="flex h-full w-full flex-col bg-background pt-[env(safe-area-inset-top)]">
+<div data-window-id={id} class="flex h-full w-full flex-col bg-background pt-[env(safe-area-inset-top)]">
   <div class="relative min-h-0 flex-1 overflow-hidden [container-type:size]">
     <div class="contents" inert={has_sheets}>
       <WindowContent window_id={id} zoom={1} />

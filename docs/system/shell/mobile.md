@@ -54,7 +54,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - "Close all" under the row; "No running apps" when empty.
 - Each card has `view-transition-name: window-{id}`, so opening and closing the switcher morphs between card and fullscreen.
 
-`mobile-window.svelte` is the window body: sets the app context exactly like the desktop window, renders `WindowContent` (zoom 1, error boundary) and `WindowSheets`, pads the top safe area, and makes the app `inert` while a sheet is open. No titlebar.
+`mobile-window.svelte` is the window body: carries `data-window-id` like the desktop window (Activity Monitor observes it, dialogs anchor to it), sets the app context exactly like the desktop window, renders `WindowContent` (zoom 1, error boundary) and `WindowSheets`, pads the top safe area, and makes the app `inert` while a sheet is open. No titlebar.
 
 ## Home
 
