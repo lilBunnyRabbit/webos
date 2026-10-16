@@ -43,8 +43,10 @@ describe("step", () => {
     }
   });
 
-  it("every ship can climb on Earth", () => {
-    for (const ship of Object.values(ShipId)) {
+  it("the lander and the pods can climb on Earth; the heavy shuttle can't", () => {
+    const earth = { ...MOON, gravity: "earth" as const };
+    expect(run(flying(ShipId.SHUTTLE, {}, earth), 0.5, { up: true }).ship.vy).toBeGreaterThan(0);
+    for (const ship of [ShipId.LANDER, ShipId.PODS]) {
       const next = run(flying(ship, {}, { ...MOON, gravity: "earth" }), 0.5, { up: true });
       expect(next.ship.vy, ship).toBeLessThan(0);
     }
