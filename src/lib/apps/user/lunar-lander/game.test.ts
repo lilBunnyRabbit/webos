@@ -43,6 +43,13 @@ describe("step", () => {
     }
   });
 
+  it("every ship can climb on Earth", () => {
+    for (const ship of Object.values(ShipId)) {
+      const next = run(flying(ship, {}, { ...MOON, gravity: "earth" }), 0.5, { up: true });
+      expect(next.ship.vy, ship).toBeLessThan(0);
+    }
+  });
+
   it("the shuttle's rear engines push it forward", () => {
     const next = run(flying(ShipId.SHUTTLE), 0.5, { boost: true });
     expect(next.ship.vx).toBeGreaterThan(0);

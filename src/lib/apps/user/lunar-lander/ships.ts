@@ -64,7 +64,7 @@ const LANDER: ShipDesign = {
     { x: 8, y: 7 },
   ],
   thrusters: [
-    { at: { x: 0, y: 4 }, dir: { x: 0, y: -1 }, power: 45, burn: 6, kind: ThrusterKind.MAIN, controls: [Control.UP, Control.BOOST] },
+    { at: { x: 0, y: 4 }, dir: { x: 0, y: -1 }, power: 78, burn: 6, kind: ThrusterKind.MAIN, controls: [Control.UP, Control.BOOST] },
     { at: { x: -7.5, y: -5 }, dir: { x: 1, y: 0 }, power: 7, burn: 1, kind: ThrusterKind.LIGHT, controls: [Control.LEFT] },
     { at: { x: 7.5, y: -5 }, dir: { x: -1, y: 0 }, power: 7, burn: 1, kind: ThrusterKind.LIGHT, controls: [Control.RIGHT] },
   ],
@@ -104,7 +104,7 @@ const SHUTTLE: ShipDesign = {
   id: ShipId.SHUTTLE,
   name: "Shuttle",
   mass: 4,
-  inertia: 1100,
+  inertia: 1870,
   spin_damping: 0.6,
   hull: [
     { x: -28, y: -5 },
@@ -118,12 +118,12 @@ const SHUTTLE: ShipDesign = {
     { x: 20, y: 9 },
   ],
   thrusters: [
-    { at: { x: -15, y: 6 }, dir: { x: 0, y: -1 }, power: 85, burn: 5, kind: ThrusterKind.MAIN, controls: [Control.LEFT, Control.UP] },
-    { at: { x: 15, y: 6 }, dir: { x: 0, y: -1 }, power: 85, burn: 5, kind: ThrusterKind.MAIN, controls: [Control.RIGHT, Control.UP] },
+    { at: { x: -15, y: 6 }, dir: { x: 0, y: -1 }, power: 146, burn: 5, kind: ThrusterKind.MAIN, controls: [Control.LEFT, Control.UP] },
+    { at: { x: 15, y: 6 }, dir: { x: 0, y: -1 }, power: 146, burn: 5, kind: ThrusterKind.MAIN, controls: [Control.RIGHT, Control.UP] },
     ...[-3, 0, 3].map((y) => ({
       at: { x: -30, y },
       dir: { x: 1, y: 0 },
-      power: 20,
+      power: 26,
       burn: 2,
       kind: ThrusterKind.MAIN,
       controls: [Control.BOOST],
