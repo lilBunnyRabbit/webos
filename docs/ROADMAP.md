@@ -464,7 +464,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Owner's call: Recorder keeps chunks in RAM (stream to OPFS = persistence decision); QR Reader history into `storage.file`
 - [ ] Owner's call: a `$docs` alias (Settings › Roadmap and markdown-pdf use long relative imports)
 - [ ] Diff: undo history is lost when the window crosses the split/unified width (keeping it broke the automatic switch)
-- [ ] Minesweeper and Nurikabe have no `daily` command
+- [x] Minesweeper and Nurikabe have no `daily` command (`minesweeper daily [day]`, `nurikabe daily [day]`). Sudoku, Kakuro, Futoshiki and Word Search take `daily` too and still have no command
 - [x] Activity Monitor's Windows section shows "—" on mobile (the mobile window body had no `data-window-id`)
 - [-] `state_proxy_equality_mismatch` warning in Terminal and some games: Terminal fixed (the running `Run` held in deep `$state`, compared to the raw handle). Not reproduced in any game on 2026-10-16 (every game fuzzed: board clicks, toolbars and menus, reload, daily)
 
