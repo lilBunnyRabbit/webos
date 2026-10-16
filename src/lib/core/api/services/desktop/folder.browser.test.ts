@@ -36,3 +36,23 @@ test("reloads after a change without reading the layout file again", async () =>
   expect(read_layout).toHaveBeenCalledTimes(1);
   expect(loaded).toHaveBeenCalledTimes(1);
 });
+
+test("lists a pinned widget as soon as the write resolves", async () => {
+  const manifest = { widget: async () => ({}) };
+  folder = new DesktopFolder({
+    files: () => files,
+    apps: () => ({ get: (id: string) => (id === "notes" ? manifest : undefined) }) as unknown as AppsService,
+    read_layout: async () => "{}",
+    seed: async () => {},
+    loaded: () => {},
+  });
+  await folder.init();
+
+  const name = await folder.write_widget("notes", { label: "Sticky", props: { note: "a" } });
+
+  expect(name).toBe("Sticky.widget");
+  expect(folder.get("Sticky.widget")).toMatchObject({ kind: "widget", app_id: "notes", props: { note: "a" } });
+  flushSync();
+  await vi.waitFor(async () => expect((await files.list(await folder.handle())).map((item) => item.name)).toEqual(["Sticky.widget"]));
+  expect(folder.names()).toEqual(["Sticky.widget"]);
+});

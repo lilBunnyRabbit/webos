@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Forward in File Explorer",
     changes: [
       { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor shows activity for each open app on phones too, instead of dashes." },
+      { kind: FIXED, apps: ["quick-notes", "time-since"], text: "Pinning a note, the todo list or a counter to the desktop from the Terminal a second time no longer adds a copy." },
     ],
   },
   {

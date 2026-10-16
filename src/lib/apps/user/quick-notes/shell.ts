@@ -1,4 +1,4 @@
-import kernel, { type AppsService, type DesktopService, type DialogsService, type FilesService, type WindowsService } from "$lib/core/api";
+import kernel, { type AppsService, type DesktopItem, type DesktopService, type DialogsService, type FilesService, type WindowsService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { tilde_path } from "$lib/core/api/services/files/path";
 import CaptureDialog, { type Capture } from "./capture-dialog.svelte";
@@ -163,10 +163,24 @@ export async function pin_todos(): Promise<string> {
   return name;
 }
 
+/** This app's widget showing `note`, or the todo list when `note` is null. */
+function widget_for(note: string | null) {
+  return kernel
+    .service<DesktopService>("desktop")
+    .items()
+    .find(
+      (item): item is Extract<DesktopItem, { kind: "widget" }> =>
+        item.kind === "widget" && item.app_id === APP_ID && (item.props?.note ?? null) === note
+    );
+}
+
 export async function pin({ args }: CommandContext<{ note: string }>): Promise<string> {
-  return `pinned ${await pin_note(await find(args.note))} to the desktop`;
+  const note = await find(args.note);
+  if (widget_for(note.id)) return `${title_of(note.body)} is already on the desktop`;
+  return `pinned ${await pin_note(note)} to the desktop`;
 }
 
 export async function todo_pin(): Promise<string> {
+  if (widget_for(null)) return "the todo list is already on the desktop";
   return `pinned ${await pin_todos()} to the desktop`;
 }

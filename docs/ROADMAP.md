@@ -292,7 +292,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Value types with secondary actions (Diff's "Compare with…" on files had nowhere to go)
   - [ ] `print_html` waits for `document.fonts.ready`
   - [ ] Terminal: wide tables clip on phones (`since`, `alarm ls`, `rec list`)
-  - [ ] Pinning a widget twice quickly from the shell makes a duplicate (`since pin`, `quno pin`): the desktop list hasn't caught up
+  - [x] Pinning a widget twice quickly from the shell makes a duplicate (`since pin`, `quno pin`): the desktop list hasn't caught up (`write_widget` lists the entry at once; `quno pin` / `quno t pin` check first)
   - [ ] Widgets: resize from any corner; a Resize item in the widget menu
   - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
   - [ ] Media Preview: no length for MediaRecorder WebM recordings (no duration header)

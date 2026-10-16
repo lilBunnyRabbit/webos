@@ -183,6 +183,12 @@ export class DesktopFolder {
     await this.options
       .files()
       .create_file(folder, name, { content: serialize_widget({ app: app_id, props: options.props, w, h }) });
+    // Listed at once, like a resize: a caller checking items() right after (pin twice) must see it before the reload lands.
+    const size = clamp_widget_size({ w, h }, manifest.widget_size);
+    this.entries = [
+      ...this.entries.filter((entry) => entry.name !== name),
+      { kind: "widget", name, label: widget_label(name), app_id, props: options.props, size },
+    ];
     return name;
   }
 

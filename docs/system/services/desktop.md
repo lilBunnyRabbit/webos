@@ -83,14 +83,14 @@ Three layers of state turn the folder into a grid:
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
-| `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. Same on mobile, where it's written but not shown |
+| `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. The entry is in `items()` as soon as the promise resolves, before the reload the write triggers, so a caller checking for an existing widget right after (pinning twice from the shell) sees it. Same on mobile, where it's written but not shown |
 | `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" (or "Broken widget") toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
 
 ## State
 
-- `folder.entries`: `$state.raw<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()` (unchanged entries keep their object) and by `write_widget_size()`. Never mutated in place.
+- `folder.entries`: `$state.raw<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()` (unchanged entries keep their object), by `write_widget()` (appends the new widget) and by `write_widget_size()`. Never mutated in place.
 - `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_items()`.
 - `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
