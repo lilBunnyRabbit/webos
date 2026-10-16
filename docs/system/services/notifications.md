@@ -76,7 +76,7 @@ None. History is in memory and gone on reload (ADR-006 revision: actions are fun
 
 ### Notification center
 
-Desktop: the tray popover ([taskbar](../shell/taskbar.md#tray-and-notification-center)). Mobile: a list on top of the switcher ([mobile shell](../shell/mobile.md#windows-and-switcher)). Both render `notification-list.svelte` and open through `ui.overlay === "notifications"` ([UiService](ui.md)). While shown, everything is marked read (`mark_all_read`) and toasts are hidden. An entry's close button and actions call `dismiss`; "Clear all" dismisses every one. The unread badge reads `unread_count`.
+Desktop: the tray popover ([taskbar](../shell/taskbar.md#tray-and-notification-center)). Mobile: a list on top of the switcher ([mobile shell](../shell/mobile.md#windows-and-switcher)). Both render `notification-list.svelte` and open through `ui.overlay === "notifications"` ([UiService](ui.md)). While shown, everything is marked read (`mark_all_read`) and toasts are hidden. An entry's close button and actions call `dismiss`; an action also closes the center (`ui.close()`, through the item's `onaction`), since it usually opens a window under it. So does the "N tasks running · Show" line. "Clear all" dismisses every one. The unread badge reads `unread_count`.
 
 ### Toast area
 

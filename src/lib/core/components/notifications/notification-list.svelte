@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type NotificationsService, type TasksService } from "$lib/core/api";
+  import kernel, { type AppsService, type NotificationsService, type TasksService, type UiService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { BellSimple as BellIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -13,6 +13,7 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const tasks = $derived(kernel.service<TasksService>("tasks"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const ui = $derived(kernel.service<UiService>("ui"));
   const running = $derived(show_tasks ? tasks.active_count : 0);
 
   // Mounted means looked at: everything here counts as read, and toasts would only repeat the list (ADR-006 revision).
@@ -38,7 +39,7 @@
   </header>
 
   {#if running > 0}
-    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => apps.launch("activity-monitor", { section: "tasks" })}>
+    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => (apps.launch("activity-monitor", { section: "tasks" }), ui.close())}>
       <span>{running} {running === 1 ? "task" : "tasks"} running</span>
       <span class="text-primary">Show</span>
     </button>
@@ -50,7 +51,7 @@
     <ul class="flex min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain">
       {#each notifications.all as notification (notification.id)}
         <li animate:flip={{ duration: 150 }}>
-          <NotificationItem {notification} source class={item_class} ondismiss={() => notifications.dismiss(notification.id)} />
+          <NotificationItem {notification} source class={item_class} ondismiss={() => notifications.dismiss(notification.id)} onaction={() => ui.close()} />
         </li>
       {/each}
     </ul>

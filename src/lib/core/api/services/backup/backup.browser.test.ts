@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { clear_opfs } from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { Method } from "$lib/core/utils/zip/format";
-import { write_zip } from "$lib/core/utils/zip/write";
-import { build_backup, open_backup, restore_backup, sizes } from "./backup";
-import { BackupError } from "./type";
+import { write_zip, ZipWriter } from "$lib/core/utils/zip/write";
+import { area_sources, manifest_source, open_backup, sizes, stage_area, swap_staged, STAGE_PATH } from "./backup";
+import { BACKUP_AREAS, BackupError, type BackupArea } from "./type";
 
 const meta = { version: "0.37.0", created: new Date("2026-10-15T09:30:00Z") };
 
@@ -31,8 +31,23 @@ function clear_app_storage(): void {
   for (const key of Object.keys(localStorage)) if (key.startsWith("app.")) localStorage.removeItem(key);
 }
 
+async function build_backup(areas: BackupArea[]): Promise<Blob> {
+  const writer = new ZipWriter(Method.DEFLATE);
+  for (const info of BACKUP_AREAS.filter(({ area }) => areas.includes(area))) {
+    for (const source of await area_sources(await root(), info)) await writer.add(source);
+  }
+  await writer.add(manifest_source(areas, meta, localStorage));
+  return writer.finish();
+}
+
+async function restore_backup(blob: Blob): Promise<() => void> {
+  const opened = await open_backup(blob);
+  for (const area of opened.manifest.areas) await stage_area(await root(), opened, area);
+  return swap_staged(await root(), opened.manifest, localStorage);
+}
+
 async function restore(blob: Blob): Promise<void> {
-  releases.push(await restore_backup(await root(), await open_backup(blob), localStorage));
+  releases.push(await restore_backup(blob));
 }
 
 beforeEach(async () => {
@@ -58,7 +73,7 @@ describe("backup", () => {
     localStorage.setItem("app.notes.font", "mono");
     localStorage.setItem("kernel.test", "outside");
 
-    const blob = await build_backup(await root(), ["files", "settings", "apps"], meta, localStorage);
+    const blob = await build_backup(["files", "settings", "apps"]);
 
     await seed("/home/Documents/a.txt", "changed");
     await seed("/home/Documents/new.txt", "added after the backup");
@@ -75,6 +90,7 @@ describe("backup", () => {
     expect(await read("/etc/settings.json")).toBe('{"theme":"dark"}');
     expect(await read("/var/lib/session/session.json")).toBe("[1]");
     expect(await read("/tmp/scratch.txt")).toBe("temp");
+    expect(await files.get_directory(STAGE_PATH)).toBeNull();
     expect(localStorage.getItem("app.notes.font")).toBe("mono");
     expect(localStorage.getItem("app.later.key")).toBeNull();
     expect(localStorage.getItem("kernel.test")).toBe("outside");
@@ -88,7 +104,7 @@ describe("backup", () => {
     await seed("/home/a.txt", "backed up");
     await seed("/etc/settings.json", "old settings");
     localStorage.setItem("app.notes.font", "mono");
-    const blob = await build_backup(await root(), ["files"], meta, localStorage);
+    const blob = await build_backup(["files"]);
 
     await seed("/home/a.txt", "changed");
     await seed("/etc/settings.json", "new settings");
@@ -105,8 +121,8 @@ describe("backup", () => {
 
   test("holds every FilesService write until released", async () => {
     await seed("/home/a.txt", "a");
-    const blob = await build_backup(await root(), ["files"], meta, localStorage);
-    const release = await restore_backup(await root(), await open_backup(blob), localStorage);
+    const blob = await build_backup(["files"]);
+    const release = await restore_backup(blob);
 
     await expect(seed("/var/lib/session/session.json", "stale")).rejects.toThrow(/on hold/);
     expect(await read("/var/lib/session/session.json")).toBeNull();
@@ -114,6 +130,22 @@ describe("backup", () => {
     release();
     await seed("/var/lib/session/session.json", "fresh");
     expect(await read("/var/lib/session/session.json")).toBe("fresh");
+  });
+
+  test("staging leaves the live areas alone until the swap", async () => {
+    await seed("/home/a.txt", "backed up");
+    const blob = await build_backup(["files"]);
+    await seed("/home/a.txt", "live");
+
+    const opened = await open_backup(blob);
+    await stage_area(await root(), opened, "files");
+    expect(await read("/home/a.txt")).toBe("live");
+    expect(await read(`${STAGE_PATH}/home/a.txt`)).toBe("backed up");
+
+    const controller = new AbortController();
+    controller.abort();
+    await expect(stage_area(await root(), opened, "files", { signal: controller.signal })).rejects.toThrow();
+    expect(await read("/home/a.txt")).toBe("live");
   });
 
   test("rejects a backup from a newer format and changes nothing", async () => {

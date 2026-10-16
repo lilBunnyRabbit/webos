@@ -31,7 +31,7 @@ export function backup_shell(backup: BackupService): ShellContribution {
           const flagged = BACKUP_AREAS.filter(({ area }) => args[area]);
           const areas: BackupArea[] = (flagged.length > 0 ? flagged : BACKUP_AREAS).map(({ area }) => area);
           const saved = await reported("backup create", () => backup.create(areas));
-          return saved ? `saved ${saved.name} · ${format_bytes(saved.size)}` : "cancelled";
+          return saved ? `saved ${saved.name} · ${format_bytes(saved.size)}` : "not saved";
         },
       }),
       define_command({
@@ -40,7 +40,7 @@ export function backup_shell(backup: BackupService): ShellContribution {
         available: idle,
         async run() {
           const restored = await reported("backup restore", () => backup.restore());
-          return restored ? "restored, reloading…" : "cancelled";
+          return restored ? "restored, reloading…" : "not restored";
         },
       }),
     ],

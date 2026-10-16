@@ -33,3 +33,7 @@ The samples are `Welcome.md`, `Bouncing ball.hopsprite`, `Fruit.csv` and `Sunset
 ## Consequences
 - One more system app, one more first-boot duty for VersionService, and bundled sample assets.
 - Each new OS feature should get a card, the same way new apps join an interest in `apps/suggestions.ts`.
+
+## Revision 2026-10-16 (samples for existing devices)
+
+The owner asked that existing devices can get the samples too. Getting started's "Open the samples" runs `seed_samples` when `/home/Documents/Samples` is missing, then opens it. The first boot still seeds them unasked; no other device writes them without that click.

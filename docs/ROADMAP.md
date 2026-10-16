@@ -178,6 +178,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Quick launch area
 - [ ] Taskbar auto-hide
 - [ ] Taskbar size options (small/medium/large)
+- [ ] Drag and drop apps to pin (owner, 2026-10-16): drag an app from the start menu, App Library or desktop onto the taskbar (mobile: the dock) to pin it, and drag pinned ones to reorder or off to unpin
 - [x] Show desktop: a sliver at the far end of the taskbar and Alt+Shift+D (`win desktop`) minimize every visible window; again brings back only those, until another window is focused (2026-10-15, [brainstorm](brainstorm/2026-10-15_show-desktop.md)). Mobile: goes home
 
 ---
@@ -240,7 +241,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Keyboard shortcut: owner said none for now
 - [x] PDF Tools as task groups: a task per page, part, PDF or image, then a write step
 - [ ] Image Tools batches as a task group
-- [ ] Backup create and restore as tasks (owner, 2026-10-16): BackupService zips and restores without TasksService today, so no progress toast, Cancel or Activity Monitor row. A task per area or file, then the write step; restore needs a thought on Cancel halfway (it replaces areas, then reloads)
+- [x] Backup create and restore as tasks (owner, 2026-10-16; [ADR-037 revision](adrs/037-backups.md), [brainstorm](brainstorm/2026-10-16_backup-as-tasks.md)): create is a task per area, then Save to device; restore unpacks each area into `/tmp/restore` (cancellable, nothing changed), then replaces and reloads (ignores Cancel)
 
 ### URL Deep Linking & Share System
 - **ADR:** [ADR-010](adrs/010-url-deep-linking.md)
@@ -262,6 +263,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] CSS custom properties for all theme values
 - [ ] Theme export/import as JSON
 - [ ] Theme sharing via URL
+- [ ] Random theme generator (owner, 2026-10-16): a Randomize button that makes a new theme, not fully random: keep the logic that makes a theme work (contrast between token pairs, a coherent hue relationship such as analogous or complementary, sane lightness for light and dark), randomize within it
 - [ ] Chromatics in WebOS (owner, 2026-10-15). Bring the whole Chromatics API (OKLCH engine, colour DSL, ~100 colour models, WCAG/APCA analysis, schemes, mixer, export) into WebOS, likely as an app plus a core colour layer. Open questions: depend on the `chromatics` package (not published yet: a new dependency) or vendor its source; what lives in core (theme maths, `derive_theme` today) and what stays in an app; shell commands (`color` values, convert, contrast); how it sits next to Culori (style default)
 - [ ] Build WebOS themes with Chromatics: write a theme in the Chromatics DSL or studio, preview it live on the desktop, check contrast of every token pair, save it as a WebOS theme (feeds export/import and sharing above, and may replace `derive_theme`)
 - [ ] Sound effects (window open/close, notifications) — low priority

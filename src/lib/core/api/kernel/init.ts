@@ -106,7 +106,7 @@ export async function register_default_services(kernel: Kernel) {
 
   kernel.register("backup", {
     instance: BackupService,
-    dependencies: ["files", "dialogs", "notifications", "windows"],
+    dependencies: ["files", "dialogs", "notifications", "windows", "tasks"],
   });
 
   kernel.register("router", {

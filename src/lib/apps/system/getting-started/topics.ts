@@ -117,9 +117,12 @@ export const TOPICS: Topic[] = [
     platforms: BOTH,
     action: "Open the samples",
     run: async () => {
-      const samples = `${PATHS.documents}/Samples`;
-      const exists = await kernel.service<FilesService>("files").get_directory(samples);
-      apps().launch("file-explorer", { path: exists ? samples : PATHS.home });
+      const files = kernel.service<FilesService>("files");
+      const { SAMPLES_FOLDER, seed_samples } = await import("$lib/core/api/services/version/samples");
+      const samples = `${PATHS.documents}/${SAMPLES_FOLDER}`;
+      // Only a first boot writes them, so a device from before 1.9.0 (or one that deleted them) gets them here.
+      if (!(await files.get_directory(samples))) await seed_samples(files);
+      apps().launch("file-explorer", { path: (await files.get_directory(samples)) ? samples : PATHS.home });
     },
   },
   {

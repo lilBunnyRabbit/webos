@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.10.0",
+    date: "2026-10-16",
+    title: "Backups you can watch",
+    changes: [
+      { kind: IMPROVED, text: "Backing up and restoring show their progress, can be cancelled, and appear in Activity Monitor's Tasks. Cancelling a restore before it starts replacing leaves your data untouched." },
+      { kind: IMPROVED, apps: ["getting-started"], text: "Open the samples in Getting started adds the sample files if this device doesn't have them yet." },
+      { kind: FIXED, text: "Clicking a button on a notification, like What's new, now closes the notification center." },
+    ],
+  },
+  {
     version: "1.9.0",
     date: "2026-10-16",
     title: "Getting started",

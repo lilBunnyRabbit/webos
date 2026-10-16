@@ -14,6 +14,7 @@
     notification,
     source = false,
     ondismiss,
+    onaction,
     class: class_name,
   }: {
     notification: SystemNotification;
@@ -21,6 +22,8 @@
     source?: boolean;
     /** The close button and every action end with this: a toast hides, a center entry goes away. */
     ondismiss: () => void;
+    /** After an action ran, so the center can close over the window it opened. */
+    onaction?: () => void;
     class?: string;
   } = $props();
 
@@ -102,6 +105,7 @@
           onclick={() => {
             action.on_click();
             ondismiss();
+            onaction?.();
           }}
         >
           {action.label}

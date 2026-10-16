@@ -71,7 +71,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `shell` | `ShellService` | `files`, `dialogs`, `notifications` |
 | `shortcuts` | `ShortcutsService` | `windows`, `dialogs`, `shell` |
 | `tasks` | `TasksService` | `notifications` |
-| `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows` |
+| `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows`, `tasks` |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 
 ### Dependency graph
@@ -85,7 +85,7 @@ windows, apps, files, dialogs, notifications ───────► session
 files, dialogs, notifications ──────────────────────► shell
 windows, dialogs, shell ────────────────────────────► shortcuts
 notifications ──────────────────────────────────────► tasks
-files, dialogs, notifications, windows ─────────────► backup
+files, dialogs, notifications, windows, tasks ──────► backup
 windows, apps, session, clipboard, notifications ───► router
 files, notifications, dialogs, apps, session ───────► version
 ```

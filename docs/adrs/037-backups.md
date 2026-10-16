@@ -43,3 +43,13 @@ webos-backup-YYYY-MM-DD.zip
 - **Create** copies each file into memory while collecting: a zip referencing OPFS `File`s turns unreadable once a file changes (session.json does constantly) before the zip is saved.
 - **Pickers** need a user activation; without one the service throws a `BackupError` instead of a picker that never opens. Restore's fallback picker is `pick_device_files` (`<input type=file>`).
 
+
+## Revision 2026-10-16 (backups as tasks)
+
+Decided with the owner ([brainstorm](../brainstorm/2026-10-16_backup-as-tasks.md)).
+
+- **Dependencies:** add **tasks**. Create and restore run through TasksService: progress toast with Cancel, a row in Activity Monitor › Tasks, Retry.
+- **Pickers and the restore question stay before the job**, since a picker needs the click's user activation. `activity` still gates a second backup until the job settles.
+- **Create:** a sequential group, one task per picked area (copying the area's files, then adding them to one `ZipWriter`), then "Save to device" (adds `backup.json`, finishes, saves).
+- **Restore: stage, then swap.** One task per area unpacks into `/tmp/restore`; Cancel or a failure there clears the stage and nothing live has changed. "Replace and reload" then holds writes, wipes each area, moves the staged files in with native `move()`, applies `app.*` localStorage and reloads from inside the task. It ignores Cancel. It costs the unpacked size in OPFS while it runs; a crash during the swap still leaves a half state, as before.
+- **Shell unchanged** by choice: no Ctrl+C wiring. The yields gained `not saved` / `not restored` for a cancelled or failed task.

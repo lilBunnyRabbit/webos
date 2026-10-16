@@ -1,8 +1,8 @@
 import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import { pick_device_files } from "$lib/core/utils/device-file";
-import { Method } from "$lib/core/utils/zip/format";
+import type { StreamOptions } from "$lib/core/utils/zip/format";
 import { entry_blob, entry_stream, read_zip, readable, type ZipArchive } from "$lib/core/utils/zip/read";
-import { write_zip, type ZipSource } from "$lib/core/utils/zip/write";
+import type { ZipSource } from "$lib/core/utils/zip/write";
 import type { DialogsService } from "../dialogs/type";
 import { get_directory_at, get_directory_size, hold_writes, list_directory } from "../files/opfs";
 import { split_path } from "../files/path";
@@ -16,7 +16,7 @@ import {
   storage_bytes,
   type BackupManifest,
 } from "./manifest";
-import { BACKUP_AREAS, BackupArea, BackupError } from "./type";
+import { BACKUP_AREAS, BackupArea, BackupError, type BackupAreaInfo } from "./type";
 
 export interface OpenedBackup {
   blob: Blob;
@@ -49,12 +49,18 @@ async function walk(directory: FileSystemDirectoryHandle, prefix: string, out: Z
   }
 }
 
-export async function build_backup(
-  root: FileSystemDirectoryHandle,
+export async function area_sources(root: FileSystemDirectoryHandle, info: BackupAreaInfo): Promise<ZipSource[]> {
+  const sources: ZipSource[] = [{ name: info.prefix, directory: true }];
+  const directory = await get_directory_at(root, split_path(info.path));
+  if (directory) await walk(directory, info.prefix, sources);
+  return sources;
+}
+
+export function manifest_source(
   areas: BackupArea[],
   meta: { version: string; created: Date },
   storage: Storage
-): Promise<Blob> {
+): ZipSource {
   const manifest: BackupManifest = {
     format: BACKUP_FORMAT,
     version: meta.version,
@@ -62,16 +68,7 @@ export async function build_backup(
     areas,
     local_storage: areas.includes(BackupArea.APPS) ? app_storage(storage) : {},
   };
-  const sources: ZipSource[] = [
-    { name: MANIFEST_NAME, data: new Blob([serialize_manifest(manifest)]), modified: meta.created },
-  ];
-  for (const { area, path, prefix } of BACKUP_AREAS) {
-    if (!areas.includes(area)) continue;
-    sources.push({ name: prefix, directory: true });
-    const directory = await get_directory_at(root, split_path(path));
-    if (directory) await walk(directory, prefix, sources);
-  }
-  return write_zip(sources, { method: Method.DEFLATE });
+  return { name: MANIFEST_NAME, data: new Blob([serialize_manifest(manifest)]), modified: meta.created };
 }
 
 export async function open_backup(blob: Blob): Promise<OpenedBackup> {
@@ -106,34 +103,69 @@ async function wipe(root: FileSystemDirectoryHandle, path: string): Promise<void
   await parent.getDirectoryHandle(segments.at(-1)!, { create: true });
 }
 
-// The hold stays on after success so the running OS can't save stale state over the restored files before the caller
-// reloads; the release is returned for tests. Native handles here, because FilesService writes are what's held.
-export async function restore_backup(
+export const STAGE_PATH = "/tmp/restore";
+
+export async function clear_stage(root: FileSystemDirectoryHandle): Promise<void> {
+  const segments = split_path(STAGE_PATH);
+  const parent = await folder_at(root, segments.slice(0, -1));
+  try {
+    await parent.removeEntry(segments.at(-1)!, { recursive: true });
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+  }
+}
+
+/** Unpacks one area under `STAGE_PATH`, keeping its zip path. Nothing outside the stage changes, so it can be cancelled. */
+export async function stage_area(
   root: FileSystemDirectoryHandle,
   opened: OpenedBackup,
+  area: BackupArea,
+  stream: StreamOptions = {}
+): Promise<number> {
+  const stage = await folder_at(root, split_path(STAGE_PATH));
+  let files = 0;
+  for (const entry of opened.archive.entries) {
+    if (area_of(entry.path)?.area !== area) continue;
+    if (entry.directory) {
+      await folder_at(stage, entry.path);
+      continue;
+    }
+    const directory = await folder_at(stage, entry.path.slice(0, -1));
+    const file = await directory.getFileHandle(entry.path.at(-1)!, { create: true });
+    await (await entry_stream(opened.blob, entry, stream)).pipeTo(await file.createWritable(), { signal: stream.signal });
+    files++;
+  }
+  return files;
+}
+
+async function move_tree(source: FileSystemDirectoryHandle, target: FileSystemDirectoryHandle): Promise<void> {
+  for (const item of await list_directory(source, { include_metadata: false })) {
+    if (item.kind === "directory") await move_tree(item.handle, await target.getDirectoryHandle(item.name, { create: true }));
+    else await item.handle.move(target, item.name);
+  }
+}
+
+// The hold stays on after success so the running OS can't save stale state over the restored files before the caller
+// reloads; the release is returned for tests. Native handles here, because FilesService writes are what's held.
+export async function swap_staged(
+  root: FileSystemDirectoryHandle,
+  manifest: BackupManifest,
   storage: Storage
 ): Promise<() => void> {
-  const { blob, manifest, archive } = opened;
   const release = await hold_writes();
   try {
-    for (const { area, path } of BACKUP_AREAS) {
-      if (manifest.areas.includes(area)) await wipe(root, path);
-    }
-    for (const entry of archive.entries) {
-      const info = area_of(entry.path);
-      if (!info || !manifest.areas.includes(info.area)) continue;
-      if (entry.directory) {
-        await folder_at(root, entry.path);
-        continue;
-      }
-      const directory = await folder_at(root, entry.path.slice(0, -1));
-      const file = await directory.getFileHandle(entry.path.at(-1)!, { create: true });
-      await (await entry_stream(blob, entry)).pipeTo(await file.createWritable());
+    const stage = await folder_at(root, split_path(STAGE_PATH));
+    for (const { area, path, prefix } of BACKUP_AREAS) {
+      if (!manifest.areas.includes(area)) continue;
+      await wipe(root, path);
+      const staged = await get_directory_at(stage, split_path(prefix));
+      if (staged) await move_tree(staged, await folder_at(root, split_path(path)));
     }
     if (manifest.areas.includes(BackupArea.APPS)) {
       for (const key of Object.keys(app_storage(storage))) storage.removeItem(key);
       for (const [key, value] of Object.entries(manifest.local_storage)) storage.setItem(key, value);
     }
+    await clear_stage(root);
   } catch (error) {
     release();
     throw error;

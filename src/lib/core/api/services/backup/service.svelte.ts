@@ -1,7 +1,9 @@
-import type { DialogsService, FilesService, Kernel, NotificationsService, WindowsService } from "$lib/core/api";
+import type { DialogsService, FilesService, Kernel, NotificationsService, TasksService, WindowsService } from "$lib/core/api";
+import { TaskJobStatus } from "../tasks/type";
 import { format_bytes } from "$lib/core/utils";
 import { backup_shell } from "./shell";
 import {
+  BACKUP_AREAS,
   BackupActivity,
   BackupError,
   type BackupArea,
@@ -13,6 +15,7 @@ declare const __VERSION_INFO__: { version: string };
 
 const logic = () => import("./backup");
 const manifest = () => import("./manifest");
+const work = () => import("./tasks");
 
 export class BackupService implements IBackupService {
   name = "BackupService";
@@ -31,12 +34,14 @@ export class BackupService implements IBackupService {
   private dialogs_service!: DialogsService;
   private notifications_service!: NotificationsService;
   private windows_service!: WindowsService;
+  private tasks_service!: TasksService;
 
   constructor(private kernel: Kernel) {
     this.files_service = $derived(this.kernel.service<FilesService>("files"));
     this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
     this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
+    this.tasks_service = $derived(this.kernel.service<TasksService>("tasks"));
   }
 
   async sizes(): Promise<Record<BackupArea, number>> {
@@ -46,7 +51,7 @@ export class BackupService implements IBackupService {
   async create(areas: BackupArea[]): Promise<BackupSaved | null> {
     this.begin(BackupActivity.CREATING);
     try {
-      const [run, { backup_name, normalize_areas }] = await Promise.all([logic(), manifest()]);
+      const [run, tasks, { backup_name, normalize_areas }] = await Promise.all([logic(), work(), manifest()]);
       const picked = normalize_areas(areas);
       if (picked.length === 0) throw new BackupError("Pick at least one area to back up.");
       const created = new Date();
@@ -54,19 +59,26 @@ export class BackupService implements IBackupService {
       const target = await run.pick_save_target(suggested);
       if (!target) return null;
 
-      const blob = await run.build_backup(
-        await this.files_service.get_root(),
-        picked,
-        { version: __VERSION_INFO__.version, created },
-        localStorage
-      );
-      const name = await run.save_to_device(target, blob, suggested);
-      this.last = { name, size: blob.size, areas: picked, at: created };
-      this.notifications_service.notify("backup", {
-        title: "Backup saved",
-        message: `${name} · ${format_bytes(blob.size)}`,
+      const plan = {
+        root: await this.files_service.get_root(),
+        areas: picked,
+        meta: { version: __VERSION_INFO__.version, created },
+        storage: localStorage,
+        save: async (blob: Blob) => {
+          const name = await run.save_to_device(target, blob, suggested);
+          this.last = { name, size: blob.size, areas: picked, at: created };
+        },
+      };
+      const job = this.tasks_service.run("backup", (context) => tasks.backup_task(plan, context), {
+        title: `Backing up ${picked.length === 1 ? BACKUP_AREAS.find(({ area }) => area === picked[0])!.label.toLowerCase() : `${picked.length} areas`}`,
+        done: () => ({
+          title: "Backup saved",
+          message: this.last ? `${this.last.name} · ${format_bytes(this.last.size)}` : undefined,
+        }),
+        failed: (_error, cancelled) => ({ title: cancelled ? "Backup cancelled" : "Couldn't save the backup" }),
       });
-      return this.last;
+      await job.done;
+      return job.status === TaskJobStatus.DONE ? this.last : null;
     } finally {
       this.activity = null;
     }
@@ -76,16 +88,35 @@ export class BackupService implements IBackupService {
     this.assert_saved();
     this.begin(BackupActivity.RESTORING);
     try {
-      const run = await logic();
+      const [run, tasks] = await Promise.all([logic(), work()]);
       const file = await run.pick_backup_file();
       if (!file) return false;
       const opened = await run.open_backup(file);
       if (!(await run.confirm_restore(this.dialogs_service, opened.manifest))) return false;
       this.assert_saved();
 
-      await run.restore_backup(await this.files_service.get_root(), opened, localStorage);
-      location.reload();
-      return true;
+      const root = await this.files_service.get_root();
+      let swapping = false;
+      const plan = {
+        root,
+        opened,
+        storage: localStorage,
+        check: () => this.assert_saved(),
+        on_swap: () => (swapping = true),
+        reload: () => location.reload(),
+      };
+      const job = this.tasks_service.run("backup", (context) => tasks.restore_task(plan, context), {
+        title: "Restoring backup",
+        done: () => ({ title: "Backup restored", message: "Reloading…" }),
+        failed: (_error, cancelled) => {
+          // Once swapping, the swap owns the stage and finishes on its own; clearing it now would race the moves.
+          if (swapping) return { title: cancelled ? "Too late to stop" : "Couldn't restore the backup", message: cancelled ? "Replacing, then reloading…" : undefined };
+          void run.clear_stage(root).catch((error) => console.error("[BackupService] Couldn't clear the restore stage", error));
+          return { title: cancelled ? "Restore cancelled" : "Couldn't restore the backup", message: cancelled ? "Nothing was changed." : undefined };
+        },
+      });
+      await job.done;
+      return job.status === TaskJobStatus.DONE;
     } finally {
       this.activity = null;
     }
