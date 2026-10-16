@@ -9,11 +9,12 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-16",
     title: "Forward in File Explorer",
     changes: [
+      { kind: NEW, apps: ["file-explorer"], text: "File Explorer has a Forward button next to Back, to return to the folder you just left." },
+      { kind: NEW, apps: ["minesweeper", "nurikabe"], text: "Type minesweeper daily or nurikabe daily in the Terminal to play today's puzzle, or add a past day." },
       { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor shows activity for each open app on phones too, instead of dashes." },
       { kind: FIXED, apps: ["quick-notes", "time-since"], text: "Pinning a note, the todo list or a counter to the desktop from the Terminal a second time no longer adds a copy." },
       { kind: FIXED, apps: ["pdf-tools"], text: "Splitting a short PDF by ranges starts from pages it actually has, instead of an error." },
       { kind: FIXED, apps: ["media-preview"], text: "Media Preview shows the length of recordings made in Recorder, so you can skip around in them." },
-      { kind: NEW, apps: ["minesweeper", "nurikabe"], text: "Type minesweeper daily or nurikabe daily in the Terminal to play today's puzzle, or add a past day." },
     ],
   },
   {

@@ -61,7 +61,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Drag-and-drop file operations: drag onto a folder, the list, the desktop or another Explorer window to move; clashes keep both (`files.move_paths`)
 - [x] Drop real files and folders from the OS onto the list, a folder row or the desktop (`files.import_entries`, 2026-10-12)
 - [ ] Touch selection mode on mobile; arrow-key selection
-- [-] Back/forward navigation buttons (Back done, no Forward)
+- [x] Back/forward navigation buttons (Forward 2026-10-16)
 
 ### Service Lifecycle Hooks
 - **ADR:** [ADR-002](adrs/002-service-lifecycle.md)

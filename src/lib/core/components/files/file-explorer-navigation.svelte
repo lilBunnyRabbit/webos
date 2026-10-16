@@ -4,6 +4,7 @@
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowLeft as ArrowLeftIcon,
+    ArrowRight as ArrowRightIcon,
     CaretRight as CaretRightIcon,
     FolderPlus as FolderPlusIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -21,13 +22,15 @@
     handler: DirectoryHandler;
     can_go_back: boolean;
     onback: () => void;
+    can_go_forward: boolean;
+    onforward: () => void;
     onnavigatepath: (segments: string[]) => void;
     search: string;
     /** The picker shows the same toolbar; a Terminal button makes no sense there. */
     terminal?: boolean;
   }
 
-  let { handler, can_go_back, onback, onnavigatepath, search = $bindable(), terminal = true }: Props = $props();
+  let { handler, can_go_back, onback, can_go_forward, onforward, onnavigatepath, search = $bindable(), terminal = true }: Props = $props();
 
   let creating_folder = $state(false);
   const read_only = $derived(is_system_path(handler.path));
@@ -46,6 +49,9 @@
 <Toolbar>
   <IconButton label="Back" size="sm" disabled={!can_go_back} onclick={onback}>
     <ArrowLeftIcon weight="bold" />
+  </IconButton>
+  <IconButton label="Forward" size="sm" disabled={!can_go_forward} onclick={onforward}>
+    <ArrowRightIcon weight="bold" />
   </IconButton>
   <IconButton label="Reload" size="sm" onclick={() => handler.reload()}>
     <ArrowClockwiseIcon weight="bold" />

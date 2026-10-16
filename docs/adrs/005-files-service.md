@@ -4,6 +4,8 @@
 
 > **Revision 2026-10-15: explorer navigation as built.** §9's state lives in `core/components/files/file-explorer.svelte`, shared by File Explorer and the file picker. `history: DirectoryHandler[]` replaces `path_stack`: Back returns to the newest folder that still `exists`, and the mobile Back walks it through `window.on_back`. `navigate_path(segments)` (breadcrumbs, Places) replaces `navigate_to_index`. Delete asks through the window's confirm sheet (`window.confirm`, ADR-025), not the browser's `confirm()`. Status bar, New folder and Upload shipped as described.
 
+> **Revision 2026-10-16: Forward.** A `forward: DirectoryHandler[]` stack beside `history`: Back pushes the current folder onto it, Forward pops the newest that still `exists`, and any other navigation clears it.
+
 > **Revision 2026-10-12: path-based moves** (owner, [brainstorm](../brainstorm/2026-10-12_multi-select.md))
 > - `move_paths(paths, target, on_conflict?)` and `copy_paths(...)` move or copy entries by absolute path into the folder at `target`. Without `on_conflict` a clash keeps both (`available_name()`), which is what drag and drop uses. Moving a folder into itself throws; moving into the folder it's already in is a no-op.
 > - `clipboard.paste_files` delegates to them with its conflict question, so the rules exist once.

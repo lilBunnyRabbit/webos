@@ -25,10 +25,13 @@
   let handler: DirectoryHandler | null = $state(null);
   /** Folders visited before this one, for Back. They keep watching, so going back shows them fresh. */
   let history: DirectoryHandler[] = $state([]);
+  /** Folders left by Back, nearest last, for Forward. Navigating anywhere new drops them. */
+  let forward: DirectoryHandler[] = $state([]);
   let search = $state("");
   let destroyed = false;
 
   const can_go_back = $derived(history.some((previous) => previous.exists));
+  const can_go_forward = $derived(forward.some((next) => next.exists));
 
   // The start folder is read once; navigating afterwards is the explorer's own state.
   const init_promise = untrack(() => files.directory(split_path(path))).then(show);
@@ -42,6 +45,8 @@
 
   function navigate_to(next: DirectoryHandler) {
     if (handler) history = [...history, handler];
+    for (const dropped of forward) dropped.dispose();
+    forward = [];
     show(next);
   }
 
@@ -56,9 +61,18 @@
     const alive = history.filter((previous) => previous.exists);
     const previous = alive.pop();
     if (!previous) return;
-    handler?.dispose();
+    if (handler) forward = [...forward, handler];
     history = alive;
     show(previous);
+  }
+
+  function navigate_forward() {
+    const alive = forward.filter((next) => next.exists);
+    const next = alive.pop();
+    if (!next) return;
+    if (handler) history = [...history, handler];
+    forward = alive;
+    show(next);
   }
 
   // The mobile Back button walks this explorer's history first (ADR-003 on_back).
@@ -95,6 +109,7 @@
     destroyed = true;
     handler?.dispose();
     for (const previous of history) previous.dispose();
+    for (const next of forward) next.dispose();
   });
 </script>
 
@@ -104,7 +119,7 @@
   {#if handler}
     <!-- minmax(0,1fr): the implicit auto column would grow to the toolbar's min-content and push the footer out of a phone-wide sheet. -->
     <div class="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden">
-      <FileExplorerNavigation {handler} {can_go_back} terminal={!picker} bind:search onback={navigate_back} onnavigatepath={navigate_path} />
+      <FileExplorerNavigation {handler} {can_go_back} {can_go_forward} terminal={!picker} bind:search onback={navigate_back} onforward={navigate_forward} onnavigatepath={navigate_path} />
 
       <div class="flex min-h-0">
         <FileExplorerPlaces current={handler.path} onnavigatepath={navigate_path} />
