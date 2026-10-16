@@ -5,7 +5,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | File | Role |
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
-| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, Copy link, min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
+| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, Copy link, Pop out (desktop, where supported), min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
@@ -39,6 +39,7 @@ Visual states (all theme tokens):
 | maximized (and not mid-gesture) | `rounded-none shadow-none ring-0` |
 | snapped | Same as normal; only the geometry differs |
 | minimized | `hidden` (`display: none`, the app stays mounted) |
+| popped out | `hidden`, and the content area renders neither `WindowContent` nor `WindowSheets`: the app is mounted in the mini window instead, through `window-mini.svelte` ([extract](../services/extract.md#mounting)) |
 
 The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
 
@@ -92,6 +93,7 @@ Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) 
 | App icon (duotone) + title | `instance.title ?? manifest.name`, `text-ui font-medium`; with a title the tooltip is "{title} — {app}". A `primary` dot follows while the window is dirty. The group fades to 80% opacity when the window isn't focused. The icon is always the manifest's (no `set_icon`). |
 | Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.5 to 2 in 0.1 steps (rounded to one decimal). − and + are `IconButton`s (Phosphor `Minus` / `Plus`) that disable at the limits. The % button resets to 1; its accessible name is "Reset zoom, now N%". A quiet pill that's invisible until the titlebar is hovered or something in it has focus, and always visible when zoom isn't 100%. The state is local to `window.svelte`, so it's lost on reload and not saved in the session. |
 | Copy link | Phosphor `Link`. Shown when `router.link_for(id)` isn't `null`, which is every open window: device paths are left out of the link, not the button. Calls `router.copy_link(id)`, which copies the URL and toasts "Link copied" ([router](../services/router.md)). Not on mobile: there's no titlebar there. |
+| Pop out | Phosphor `PictureInPicture`. Shown when the [extract](../services/extract.md) service exists and `supported`. Disabled while dirty, labelled "Save first to pop out": the remount would drop unsaved work. Calls `extract.pop(id)`; the click is the user activation PiP needs |
 | Minimize | `windows.toggle_minimize(id)` |
 | Maximize / Restore | `windows.toggle_maximize(id)`. The icon swaps between `CornersOut` and `CornersIn`; label and title follow. |
 | Close | `windows.close(id)`, guarded (ADR-029): a dirty window asks Save / Don't save / Cancel first. A clean maximized window closes inside a view transition. Hover turns it `bg-error text-background`. |

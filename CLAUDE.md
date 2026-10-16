@@ -45,6 +45,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults run shell commands, Mod+/ cheat sheet (ADR-012, ADR-017, ADR-033) | windows, dialogs, shell |
 | `tasks` | TasksService | Background jobs on `@lilbunnyrabbit/task-manager`: one manager per run, progress toast with Cancel, retry, Activity Monitor Tasks section and taskbar indicator; memory only (ADR-013) | notifications |
 | `backup` | BackupService | Zips `/home`, `/etc`, `/var/lib` and `app.*` localStorage (picked per area) to the device, never OPFS; restore replaces the areas a backup holds and reloads, holding FilesService writes meanwhile; both run as tasks (ADR-037) | files, dialogs, notifications, windows, tasks |
+| `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.

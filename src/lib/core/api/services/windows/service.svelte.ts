@@ -12,6 +12,8 @@ import type {
   WindowSnapshot,
 } from "./type";
 import { WindowFlag } from "./type";
+import type { Kernel } from "../../kernel/kernel.svelte";
+import type { ExtractService } from "../extract/type";
 import type { AppInstance } from "../apps/type";
 import { BaseWindowsService } from "./base.svelte";
 import { windows_shell } from "./shell";
@@ -21,6 +23,10 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
   description = "Window lifecycle, geometry and z-order";
   inspector = () => import("./inspector.svelte");
   shell = () => windows_shell(this);
+
+  constructor(private kernel?: Kernel) {
+    super();
+  }
 
   to_string(): string {
     return Object.entries(this.index)
@@ -68,6 +74,8 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
   }
 
   public is_visible(id: WindowId): boolean {
+    // A popped-out window stays on screen while the tab is hidden (ADR-043); looked up per call, extract depends on us.
+    if ((this.kernel?.services.get("extract") as ExtractService | undefined)?.current === id) return true;
     return !this.page_hidden && !(this.index[id]?.flags.has(WindowFlag.MINIMIZED) ?? true);
   }
 

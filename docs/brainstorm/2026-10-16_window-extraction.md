@@ -21,7 +21,7 @@ Roadmap item "Window extraction" (Needs Brainstorm): pop one app out of the page
 ## Action items
 
 - [x] POC: titlebar Pop out / Bring back, style copy + theme mirroring, placeholder in the frame. Worked in Chrome (Clock and Hopsprite popped out, clicks and live theme inside), then reverted by the owner: the proper version comes after Showcasing features and Installed apps
-- [ ] Proper implementation, starting from the POC's shape below
+- [x] Proper implementation, starting from the POC's shape below: built 2026-10-16 as [ADR-043](../adrs/043-window-extraction.md) (see its revision: dialog origin comes from document focus, since anchors are points)
 
 ## How the POC worked
 

@@ -1,6 +1,6 @@
 # ADR-043: Window Extraction
 **Date:** 2026-10-16
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -19,7 +19,7 @@ interface ExtractService extends IService {
   readonly current: WindowId | null;
   readonly document: Document | null;
   pop(id: WindowId): Promise<boolean>;
-  bring_back(): void;
+  bring_back(): Promise<boolean>;
 }
 ```
 
@@ -67,3 +67,14 @@ Terminal and palette Enter and shortcut keydowns are user activation, so they ca
 - In-memory state that isn't stored (a game in progress, an unsaved timer) resets on pop out and on bring back.
 - OS shortcuts typed inside the mini window don't fire: ShortcutsService listens on the tab's document. Left for later.
 - Mobile has no service, no button and no commands.
+
+## Revision 2026-10-16 (implementation)
+
+- **Dialog origin comes from where the last input happened, not the anchor.** `DialogOptions.anchor` is a viewport point, not an element, so it has no `ownerDocument`. `DialogsService.show` sets `origin` when `extract.input_inside`: the last pointerdown or keydown was in the mini window. A first version used `extract.document.hasFocus()`, but headless Chrome reports both documents focused, and a taskbar menu opened in the tab landed in the mini window. The tab's host renders `system` (origin `null`), the mini window's host `for_origin(id)`. Entries whose origin is no longer out resolve `null`.
+- **`windows.is_visible` returns `true` for the window that's out**, even while the tab is hidden, so apps that pause when hidden keep running in the mini window. `WindowsService` (desktop) now takes the kernel and looks `extract` up per call.
+- **`DialogsHost` gained `origin` and `view` props**: `view` is the window whose pointer events it tracks for the open-on-release rule.
+- **A popped-out window's taskbar item** focuses the mini window on click. Its frame is hidden and its content skipped; no new `WindowFlag`.
+- **Mini window size** is the window's bounds including the titlebar height; the mini window has no titlebar of ours.
+- Browser tests cover only refusals: Vitest runs in an iframe, where Chrome refuses Picture-in-Picture. The popped-out path was checked with Playwright against the dev server.
+- Menu and Open with arrow keys and typeahead read `ownerDocument.activeElement`, not the global `document`'s; found in review. Apps that bind keys through `<svelte:window>` (Calculator) stay a known gap in the mini window.
+- **Unsaved work on the way back** (owner, after review): Bring back, `win back` and popping a second window ask "Discard changes?" (the `confirm_discard` wording, as a window sheet) when the window that's out is dirty. `bring_back()` became `Promise<boolean>`, and ExtractService now depends on `dialogs` and `notifications`. Popping a second window over a dirty one only asks: the question spends the user activation, so on Discard a toast says to pop out again. Closing the mini window itself can't be cancelled and stays a known gap.

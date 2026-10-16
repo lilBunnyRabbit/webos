@@ -73,6 +73,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `tasks` | `TasksService` | `notifications` |
 | `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows`, `tasks` |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
+| `extract` | `ExtractService` | `windows`, `dialogs`, `notifications`. Desktop only: registered by `platform_services` (ADR-043) |
 
 ### Dependency graph
 
@@ -87,6 +88,7 @@ windows, dialogs, shell ──────────────────�
 notifications ──────────────────────────────────────► tasks
 files, dialogs, notifications, windows, tasks ──────► backup
 windows, apps, session, clipboard, notifications ───► router
+windows, dialogs, notifications ────────────────────► extract (desktop)
 files, notifications, dialogs, apps, session ───────► version
 ```
 
@@ -95,10 +97,10 @@ files, notifications, dialogs, apps, session ───────► version
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → notifications → dialogs → apps → desktop → session → clipboard → ui → shell → shortcuts → tasks → backup → router → version
+files → settings → windows → notifications → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → tasks → backup → router → version
 ```
 
-Shutdown runs the reverse: `version → router → backup → tasks → shortcuts → shell → ui → clipboard → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+Shutdown runs the reverse: `version → router → backup → tasks → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → notifications → windows → settings → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
@@ -133,6 +135,7 @@ Which services implement which hooks today:
 | windows (both, in `BaseWindowsService`) | `beforeunload` listener (warns while a window is dirty, ADR-029), `visibilitychange` listener (page hidden state) | remove them |
 | shortcuts | register the OS defaults, global `keydown` listener ([shortcuts](services/shortcuts.md)) | remove the listener, dispose the defaults |
 | apps, clipboard, tasks, backup | none | none |
+| extract | `pointerdown` / `keydown` (capture) listeners on `window` for `input_inside`, an `$effect.root` that closes a closed window's mini window; while one is out, a `pagehide` listener and two `MutationObserver`s ([extract](services/extract.md)) | dispose it, close the mini window |
 
 ### Shell hook
 
@@ -142,7 +145,7 @@ Which services implement which hooks today:
 
 `main.ts` passes `on_step` to `kernel.init()` (ADR-036). The kernel stays serial (ADR-002); the callback only reports.
 
-- **Splash.** `index.html` has `#splash-progress` under the logo: a 160px, 3px track (`#splash-bar`, `transform: scaleX(done / total)`, 150 ms ease-out) and a 12px label (`#splash-label`, `Loading` until the first step). Colours are Brand Dark tokens hardcoded as OKLCH (track `background_lightest`, bar `primary`, label `foreground`), since no theme exists before boot and the brand keeps the splash dark. `main.ts` maps each key to a short label (`files` → "Files", `ui` → "Interface", `tasks` → "Tasks", `backup` → "Backup", `router` → "Links", `version` → "Updates"; an unknown key shows as-is). The splash knows keys only, no service logic.
+- **Splash.** `index.html` has `#splash-progress` under the logo: a 160px, 3px track (`#splash-bar`, `transform: scaleX(done / total)`, 150 ms ease-out) and a 12px label (`#splash-label`, `Loading` until the first step). Colours are Brand Dark tokens hardcoded as OKLCH (track `background_lightest`, bar `primary`, label `foreground`), since no theme exists before boot and the brand keeps the splash dark. `main.ts` maps each key to a short label (`files` → "Files", `ui` → "Interface", `tasks` → "Tasks", `backup` → "Backup", `extract` → "Windows", `router` → "Links", `version` → "Updates"; an unknown key shows as-is). The splash knows keys only, no service logic.
 - **Warm.** On each step `main.ts` runs the warmers whose service is already initialised. The `desktop` warmer `import()`s the widget component of every widget in `desktop.items()` (the mobile home lists no widgets, so nothing). SessionService warms the components of the saved session's apps itself, in its `init()`. Warms are fire-and-forget and ignore errors; the real import retries. Nothing renders before mount.
 - **Shell.** `main.ts` starts `load_shell(kernel.platform)` alongside `kernel.init()` and awaits both, then passes the component to `App` as the `shell` prop (`App` → `web-os` → `os.svelte`). It renders in the same frame the splash goes.
 - **Errors.** A failed shell import rejects `main()` like a failed init: the splash shows the boot error and `#splash-progress` is removed.

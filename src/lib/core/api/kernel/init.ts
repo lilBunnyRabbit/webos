@@ -26,14 +26,15 @@ async function platform_services(platform: Platform) {
       import("../services/windows/mobile.svelte"),
       import("../services/desktop/mobile.svelte"),
     ]);
-    return { windows: windows.MobileWindowsService, desktop: desktop.MobileDesktopService };
+    return { windows: windows.MobileWindowsService, desktop: desktop.MobileDesktopService, extract: null };
   }
 
-  const [windows, desktop] = await Promise.all([
+  const [windows, desktop, extract] = await Promise.all([
     import("../services/windows/service.svelte"),
     import("../services/desktop/service.svelte"),
+    import("../services/extract/service.svelte"),
   ]);
-  return { windows: windows.WindowsService, desktop: desktop.DesktopService };
+  return { windows: windows.WindowsService, desktop: desktop.DesktopService, extract: extract.ExtractService };
 }
 
 export async function register_default_services(kernel: Kernel) {
@@ -78,6 +79,14 @@ export async function register_default_services(kernel: Kernel) {
     instance: SessionService,
     dependencies: ["windows", "apps", "files", "dialogs", "notifications"],
   });
+
+  // Desktop only (ADR-043): phones have no Picture-in-Picture for documents.
+  if (platform.extract) {
+    kernel.register("extract", {
+      instance: platform.extract,
+      dependencies: ["windows", "dialogs", "notifications"],
+    });
+  }
 
   kernel.register("clipboard", {
     instance: ClipboardService,

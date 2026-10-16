@@ -20,6 +20,7 @@ const STEP_LABELS: Record<string, string> = {
   shortcuts: "Shortcuts",
   tasks: "Tasks",
   backup: "Backup",
+  extract: "Windows",
   router: "Links",
   version: "Updates",
 };

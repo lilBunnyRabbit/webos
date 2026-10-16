@@ -75,6 +75,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `window.minimize` | Alt+Shift+↓ | `win minimize` | Minimize | Go home |
 | `window.previous` | Alt+\` | `win previous`: the most recent other window (from home: the newest), un-minimizing it | ✓ | ✓ |
 | `window.cycle` | Alt+Shift+\` | `win cycle`: the least recently used window | ✓ | ✓ |
+| `window.pop` | Alt+Shift+P | `win pop` ([extract](extract.md)); desktop only, available while Picture-in-Picture exists and a window is open | ✓ | |
 | `window.reopen` | Alt+Shift+T | `win reopen` (session); available while something was closed | ✓ | ✓ |
 | `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop; again brings the windows back | Go home |
 | `window.maximize` | Alt+Shift+↑ | `win maximize` | ✓ | — |

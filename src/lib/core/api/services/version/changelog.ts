@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.12.0",
+    date: "2026-10-16",
+    title: "Mini windows",
+    changes: [
+      { kind: NEW, text: "Pop any window out into a small window that stays on top of your other tabs and apps: use the new button in its title bar, right-click it on the taskbar, press Alt+Shift+P, or type win pop. Close the mini window or type win back to bring it home." },
+    ],
+  },
+  {
     version: "1.11.0",
     date: "2026-10-16",
     title: "Quick launch",

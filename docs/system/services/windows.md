@@ -80,7 +80,7 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `focus` | `(id) => boolean` | `order = ++max_order`. Returns `false` if the id is missing **or the window is already on top**. Doesn't un-minimize. |
 | `is_focused` | `(id) => boolean` | `order === max_order`. |
 | `page_hidden` | `boolean` | `document.hidden`, kept by one `visibilitychange` listener (ADR-035). Reactive |
-| `is_visible` | `(id) => boolean` | `!page_hidden` and not minimized; on mobile, `!page_hidden` and on screen (`is_focused`). `WindowHandle.is_visible` reads it |
+| `is_visible` | `(id) => boolean` | Desktop: `true` for the window popped out by [ExtractService](extract.md) (looked up per call through the kernel the constructor takes; `undefined` in tests that build it bare), else `!page_hidden` and not minimized; on mobile, `!page_hidden` and on screen (`is_focused`). `WindowHandle.is_visible` reads it |
 | `get_focused` | `() => WindowId \| null` | Linear scan with `is_focused`. Used by [DialogsService](dialogs.md) to anchor dialogs. |
 | `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. The `win snap` command (and through it the Alt+Shift snap keys) calls it; the drag handler writes `instance.snap_zone` directly. |
 | `add_back_handler` | `(id, handler: () => boolean) => () => void` | Registers a back handler (the window handle's `on_back`). A plain per-window array, newest last; the disposer removes that handler. `close()` drops the window's handlers. Both implementations |

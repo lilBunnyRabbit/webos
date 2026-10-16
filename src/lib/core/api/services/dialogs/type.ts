@@ -9,8 +9,11 @@ export interface DialogsService extends IService {
   /** Every open dialog, system and window-bound, bottom first. */
   readonly stack: DialogEntry[];
 
-  /** System dialogs only: what the top-layer host renders. */
+  /** System dialogs opened in the tab: what the tab's top-layer host renders. */
   readonly system: DialogEntry[];
+
+  /** System dialogs opened from the popped-out window `origin` (ADR-043): what its mini window's host renders. */
+  for_origin(origin: WindowId): DialogEntry[];
 
   /** Sheets bound to `window`, bottom first: what that window renders over its content. */
   for_window(window: WindowId): DialogEntry[];
@@ -63,6 +66,8 @@ export interface DialogEntry {
   dismissible: boolean;
   /** The window this sheet belongs to, or `null` for a system dialog. */
   window: WindowId | null;
+  /** A system dialog opened while the popped-out window's document had focus renders there (ADR-043). */
+  origin: WindowId | null;
   resolve(value: unknown): void;
 }
 

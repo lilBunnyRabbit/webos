@@ -4,10 +4,11 @@
     CornersOut as CornersOutIcon,
     Link as LinkIcon,
     Minus as MinusIcon,
+    PictureInPicture as PictureInPictureIcon,
     Plus as PlusIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import kernel, { type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
+  import kernel, { type ExtractService, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
@@ -19,6 +20,7 @@
   const instance = $derived(windows.get(window_id)!);
   const shareable = $derived(router.link_for(window_id) !== null);
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
+  const extract = $derived(kernel.services.has("extract") ? kernel.service<ExtractService>("extract") : null);
 
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN = 0.5;
@@ -61,6 +63,17 @@
   {#if shareable}
     <IconButton data-window-button label="Copy link" size="sm" onclick={() => void router.copy_link(window_id)}>
       <LinkIcon weight="bold" />
+    </IconButton>
+  {/if}
+  {#if extract?.supported}
+    <IconButton
+      data-window-button
+      label={instance.dirty ? "Save first to pop out" : "Pop out"}
+      size="sm"
+      disabled={instance.dirty}
+      onclick={() => void extract.pop(window_id)}
+    >
+      <PictureInPictureIcon weight="bold" />
     </IconButton>
   {/if}
   <IconButton data-window-button label="Minimize" size="sm" onclick={() => view_transition(() => windows.toggle_minimize(window_id))}>

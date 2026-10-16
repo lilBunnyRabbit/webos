@@ -11,7 +11,8 @@ System dialogs that belong to no window. Any service or component calls `show()`
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `stack` | `DialogEntry[]` | Reactive `$state`, bottom first, system and window-bound together. `readonly` on the interface, mutable on the class |
-| `system` | `DialogEntry[]` | `$derived`: entries with `window === null`. What the top-layer host renders |
+| `system` | `DialogEntry[]` | `$derived`: entries with `window === null` and `origin === null`. What the tab's top-layer host renders |
+| `for_origin(id)` | `(origin: WindowId) => DialogEntry[]` | System dialogs opened from the popped-out window `id` (see [Origin](#origin)). What its mini window's host renders |
 | `for_window(id)` | `(window: WindowId) => DialogEntry[]` | Sheets bound to that window, bottom first. What `window-sheets.svelte` renders (ADR-025) |
 | `menu(items, { anchor })` | `(items: MenuItem[], options: { anchor: Position }) => Promise<string \| null>` | A context menu at `anchor`: `show(ContextMenu, { items }, { anchor })`. Resolves the chosen item's `id`, `null` when dismissed |
 | `show(component, props, options?)` | `<T, P extends object>(component: Component<P & DialogProps<T>>, props: P, options?: DialogOptions): Promise<T \| null>` | Resolves with what the component passes to `resolve`, or `null` when dismissed |
@@ -22,7 +23,7 @@ Types (`type.ts`):
 |------|-------|
 | `DialogProps<T>` | `{ resolve(value: T \| null): void }`. The host injects it; your component declares it in its `Props` |
 | `DialogOptions` | `{ anchor?: Position; dismissible?: boolean; window?: WindowId }`. `anchor`: viewport point, e.g. the click. `dismissible` (default `true`): `false` for a question that must be answered, so Esc and outside clicks do nothing and only the dialog's own buttons close it. `window`: bind the dialog to a window as a sheet |
-| `DialogEntry` | `{ id, component, props, point: Position, anchored: boolean, dismissible: boolean, window: WindowId \| null, resolve(value: unknown): void }` |
+| `DialogEntry` | `{ id, component, props, point: Position, anchored: boolean, dismissible: boolean, window: WindowId \| null, origin: WindowId \| null, resolve(value: unknown): void }` |
 | `DialogId` | `string` (uuid) |
 
 `show()` is typed on the component's props: `P` is everything the component takes except `resolve`, and `T` is what it resolves with.
@@ -33,7 +34,7 @@ Types (`type.ts`):
 
 ## Lifecycle
 
-- `init()` starts an `$effect.root` that watches `windows.list()`: a window-bound entry whose window no longer exists resolves with `null`, like a cancel.
+- `init()` starts an `$effect.root` that watches `windows.list()`: a window-bound entry whose window no longer exists resolves with `null`, like a cancel. The same effect resolves entries whose `origin` is no longer the popped-out window: their document is gone.
 - `init()` also registers the close prompt (ADR-029): `windows.set_close_prompt` imports and shows `SaveChangesDialog` (lazy: boot never needs it) as a non-dismissible window sheet (title, Cancel / Don't save / Save, Save only when the app gave a `save`) and maps `null` to Cancel. `destroy()` unregisters it.
 - `destroy()` disposes that watcher and resolves every open entry with `null`, top first. Each resolve splices its entry, so the host unmounts the dialogs.
 
@@ -86,10 +87,15 @@ One more system dialog: `components/dialogs/shortcuts-dialog.svelte`, the Mod+/ 
 
 Callers: File Explorer rows and background (`components/files/file-list.svelte`), desktop icons and background (`components/desktop/desktop-actions.ts`). Both also open the item menu from the keyboard with the ContextMenu key or Shift+F10.
 
+### Origin
+
+A system dialog (no `window` option) opened when the last pointerdown or keydown happened in the [popped-out window](extract.md)'s mini window (`extract.input_inside`) gets `origin` set to that window. Not `document.hasFocus()`: headless Chrome reports both documents focused, so a taskbar menu in the tab landed in the mini window. It renders in the mini window's host and stays out of `system`. Everything else gets `origin: null`. The service looks `extract` up through the kernel at call time: it's desktop only and depends on windows, so it can't be a dependency. No call site passes anything (ADR-043).
+
 ### Fallback point
 
 Computed once, at `show()` time, and never updated:
 
+0. With an `origin`, the centre of the mini window's viewport.
 1. Centre of the focused window's element (`document.querySelector('[data-window-id="…"]')`).
 2. Else the centre of `windows.container.element`.
 3. Else the viewport centre (`innerWidth / 2`, `innerHeight / 2`).
@@ -98,10 +104,10 @@ The service reads the DOM directly here; it's the only DOM query in a service.
 
 ### Host: `dialogs-host.svelte`
 
-Each shell mounts one: `desktop-shell.svelte` after its grid, `mobile-shell.svelte` with `anchored="sheet"` (ADR-016 apps pass). With `sheet`, anchored entries (menus, Open with) skip anchoring: the `<dialog>` sits at `inset-x-0 bottom-0`, full width, with `animate-sheet-in`, and the component gets `sheet: true` (ContextMenuList: full-width `rounded-t-2xl`, padded by the bottom safe area, submenus expand inline below their item, no shortcut hints; OpenWithDialog: the same surface). Unanchored dialogs stay centred. For each entry:
+Each shell mounts one: `desktop-shell.svelte` after its grid, and `window-mini.svelte` one inside a popped-out window's mini window with `origin` (it renders `for_origin(origin)` instead of `system`) and `view` (the mini window, for the pointer listeners below), `mobile-shell.svelte` with `anchored="sheet"` (ADR-016 apps pass). With `sheet`, anchored entries (menus, Open with) skip anchoring: the `<dialog>` sits at `inset-x-0 bottom-0`, full width, with `animate-sheet-in`, and the component gets `sheet: true` (ContextMenuList: full-width `rounded-t-2xl`, padded by the bottom safe area, submenus expand inline below their item, no shortcut hints; OpenWithDialog: the same surface). Unanchored dialogs stay centred. For each entry:
 
 - A `fixed`, 0×0, `pointer-events-none` div at `point`, with `anchor-name: --dialog-{id}`.
-- A native `<dialog>`, opened with `showModal()` by an attachment. The attachment's cleanup calls `close()` if it's still open. A dialog that appears while a pointer button is held (the host tracks `pointerdown`/`pointerup`/`pointercancel` on `window`, capture) waits for the release, then opens a task later: a right-click's `contextmenu` fires mid-press, and a menu that flips above the pointer (anchored near the bottom, like the taskbar's) would get that release outside itself and light-dismiss at once. Mobile long press already opens on release.
+- A native `<dialog>`, opened with `showModal()` by an attachment. The attachment's cleanup calls `close()` if it's still open. A dialog that appears while a pointer button is held (the host tracks `pointerdown`/`pointerup`/`pointercancel` on its `view`, `window` by default, capture) waits for the release, then opens a task later: a right-click's `contextmenu` fires mid-press, and a menu that flips above the pointer (anchored near the bottom, like the taskbar's) would get that release outside itself and light-dismiss at once. Mobile long press already opens on release.
   - `closedby="any"` when `entry.dismissible`, `closedby="none"` otherwise. A non-dismissible dialog also `preventDefault()`s `cancel`, so Esc can't close it.
   - `onclose` → `entry.resolve(null)`. For a dismissible dialog, Esc and outside click both end up here.
   - `position-anchor: --dialog-{id}`.
