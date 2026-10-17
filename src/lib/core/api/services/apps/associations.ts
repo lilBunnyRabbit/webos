@@ -45,10 +45,14 @@ export function apps_for(apps: Iterable<AppManifest>, file: { name: string; type
     .map(({ app }) => app);
 }
 
+/** `tools` entry for every file, typed or not. Only `tools` reads it, so it can never win a default. */
+export const ANY_FILE = "*";
+
 /** Apps that list `file` under `tools` and aren't already associated with it, by name: the end of the "Open with" list. */
 export function tools_for(apps: Iterable<AppManifest>, file: { name: string; type: string }): AppManifest[] {
   const matches = (entries: string[] | undefined) => (entries ?? []).some((entry) => association_tier(entry, file) > 0);
+  const tool = (entries: string[] | undefined) => (entries ?? []).includes(ANY_FILE) || matches(entries);
   return [...apps]
-    .filter((app) => matches(app.tools) && !matches(app.associations))
+    .filter((app) => tool(app.tools) && !matches(app.associations))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

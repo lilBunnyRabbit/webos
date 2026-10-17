@@ -65,6 +65,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 `tools` on the manifest uses the same syntax as `associations`, for apps that work on a file without being its viewer, such as Image Tools and Image Editor (`tools: ["image/*"]`) or GIF Player (`image/gif`, `.gif`, `video/*`).
 
 - A tool match never counts toward `open()`: it can't win the default, can't cause a tie, and never shows the chooser.
+- `"*"` is valid in `tools` only and offers the app for every file, including files with no MIME type (`ANY_FILE`, read by `tools_for`). `association_tier` doesn't know it, so `"*"` in `associations` matches nothing and can never become a default.
 - File Explorer's "Open with" lists tool apps after the associated apps, behind a separator, by name (`tools_for`). An app that's both associated and a tool for the file appears once, with the associated apps.
 - The submenu still needs two or more entries, so a file with one viewer and one tool now gets "Open with".
 
@@ -78,6 +79,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
+| `hex-viewer` | `*` (every file) |
 
 ## Remembered defaults
 

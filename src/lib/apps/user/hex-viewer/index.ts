@@ -17,6 +17,7 @@ export default define_app({
   description: "Shows the raw bytes of any file, however large, as hex and ASCII side by side.",
   keywords: ["hex", "binary", "bytes", "dump", "xxd", "hexdump", "inspect", "offset"],
   props: z.object({ path: z.string().optional(), offset: offset.optional() }),
+  tools: ["*"],
   defaults: {
     constraints: {
       width: { min: 360 },

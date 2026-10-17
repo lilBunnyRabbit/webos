@@ -80,7 +80,7 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */
   associations?: string[];
-  /** File types this app can work on without being their viewer: listed under "Open with", never the default. Same syntax as `associations`. */
+  /** File types this app can work on without being their viewer: listed under "Open with", never the default. Same syntax as `associations`, plus `"*"` for every file. */
   tools?: string[];
   /** `false` keeps the app out of saved sessions (ADR-023). Defaults to `true`. */
   restore?: boolean;

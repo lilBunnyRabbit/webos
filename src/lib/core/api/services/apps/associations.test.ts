@@ -53,4 +53,16 @@ describe("apps_for and tools_for", () => {
     const apps = [app("viewer", [".txt"], ["text/*"]), app("tool", [], ["text/*"])];
     expect(tools_for(apps, txt).map((a) => a.id)).toEqual(["tool"]);
   });
+
+  test("\"*\" in tools offers the app for every file, typed or not", () => {
+    const apps = [app("hex", [], ["*"])];
+    expect(tools_for(apps, txt).map((a) => a.id)).toEqual(["hex"]);
+    expect(tools_for(apps, { name: "blob.bin", type: "" }).map((a) => a.id)).toEqual(["hex"]);
+  });
+
+  test("\"*\" in associations matches nothing, so it can never become a default", () => {
+    const apps = [app("greedy", ["*"])];
+    expect(best_apps_for(apps, txt)).toEqual([]);
+    expect(apps_for(apps, txt)).toEqual([]);
+  });
 });
