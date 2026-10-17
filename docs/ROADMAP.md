@@ -373,7 +373,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Font Viewer (2026-10-17): native `FontFace`, default for font files. WOFF2 shows no names or axes (Chrome has no Brotli `DecompressionStream`)
 - [x] Image Tools › Patch (2026-10-17): restore marks an edit tool stamped, from the original; diff regions, auto-align offset and scale, colour matching, no shell. Phone layout, pinch zoom and pan, zoom to a change (1.19.1) ([brainstorm](brainstorm/2026-10-17_app-wave-6.md))
 - [x] Test image and test PDF generators in Image Tools and PDF Tools, `testimg` / `testpdf` (2026-10-17). Owner's call: `FilesService.write_stream(path, chunks, { signal })` so multi-GB files stream to disk instead of collecting in Blobs (~2 GB peak memory, double disk use while writing today)
-- Maybe: Web app wrapper
+- [x] Web App (2026-10-17): `.webapp` files (name, URL, optional icon) open a site in a sandboxed iframe; Add web app saves one to the desktop with the favicon as an `<img>`; a site that refuses framing gets a "Not loading?" screen and an Open in a tab hint, since cross-origin can't be detected; `webapp add <url> [-n]`. Desktop icons stay the generic file icon (per-file icons would be a core change)
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
   - [ ] Text chat during a transfer: short messages over the open data channel, shown as a side thread (owner's ideas notes, 2026-10-17)
 
