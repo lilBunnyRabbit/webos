@@ -16,10 +16,11 @@ export default {
   },
   values: {
     card: {
-      columns: ["board", "column", "title", "due", "labels"],
+      columns: ["board", "column", "title", "due", "labels", "path"],
       text: (card) =>
         `${card.id}  ${String(card.column).padEnd(8)} ${card.title}${card.due ? `  due ${card.due}` : ""}`,
-      open: (card) => void logic().then((m) => m.open_card(String(card.board_id), String(card.id))),
+      open: (card) =>
+        void logic().then((m) => (card.path ? m.open_file(String(card.path)) : m.open_card(String(card.board_id), String(card.id)))),
     },
   },
   commands: [
@@ -33,7 +34,7 @@ export default {
     define_command({
       id: "kanban ls",
       description:
-        "Cards on every board, or -b <board>; --due: cards with a due date that aren't done, soonest first",
+        "Cards on every board, or -b <board> (a folder board lists its files); --due: cards with a due date that aren't done, soonest first",
       args: z.object({
         board: z.string().optional().describe("Only this board"),
         due: z.boolean().default(false).describe("Only open cards with a due date"),
@@ -52,7 +53,7 @@ export default {
         title: z.array(z.string()).default([]).describe("The card's title"),
         column: z.string().optional().describe("Column name"),
         due: z.string().optional().describe("Due day, YYYY-MM-DD"),
-        board: z.string().optional().describe("Board name; the first board by default"),
+        board: z.string().optional().describe("Board name; the first board by default. A folder board gets a new file"),
       }),
       positional: ["title"],
       short: { column: "c", due: "d", board: "b" },
@@ -62,9 +63,10 @@ export default {
     }),
     define_command({
       id: "kanban mv",
-      description: "Move a card to another column of its board",
-      args: z.object({ card: card_arg(), column: z.string() }),
+      description: "Move a card to another column of its board; -b <folder board> moves a file, matched by title or file name",
+      args: z.object({ card: card_arg(), column: z.string(), board: z.string().optional().describe("Only this board") }),
       positional: ["card", "column"],
+      short: { board: "b" },
       yields: "card",
       complete: complete_names,
       run: async (context) => (await logic()).mv(context),

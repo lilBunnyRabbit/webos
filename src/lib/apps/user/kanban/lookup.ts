@@ -1,4 +1,5 @@
 import type { Board, Card, Column, KanbanFile } from "./data";
+import type { NoteCard } from "./folder";
 
 export interface FoundCard {
   board: Board;
@@ -37,6 +38,20 @@ export function resolve_card(file: KanbanFile, query: string): FoundCard | strin
       ({ card }, q) => card.title.toLowerCase().includes(q),
     ],
     ({ card }) => `${card.id} ${card.title}`
+  );
+}
+
+export function resolve_note(notes: NoteCard[], query: string): NoteCard | string {
+  return pick(
+    notes,
+    query,
+    "card",
+    [
+      (note, q) => [q, `${q}.md`].includes(note.file.toLowerCase()),
+      (note, q) => note.title.trim().toLowerCase() === q,
+      (note, q) => note.title.toLowerCase().includes(q) || note.file.toLowerCase().includes(q),
+    ],
+    (note) => `${note.file} ${note.title}`
   );
 }
 

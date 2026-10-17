@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { add_board, add_card, default_file, new_board, type Card, type KanbanFile } from "./data";
-import { first_open_column, resolve_board, resolve_card, resolve_column } from "./lookup";
+import { first_open_column, resolve_board, resolve_card, resolve_column, resolve_note } from "./lookup";
 
 const card = (id: string, title: string): Card => ({ id, title, notes: "", labels: [], due: null, checklist: [], created: "2026-10-15T00:00:00.000Z" });
 
@@ -41,6 +41,18 @@ describe("columns and boards", () => {
   test("board by name", () => {
     expect(resolve_board(file(), "work")).toMatchObject({ name: "Work" });
     expect(resolve_board(file(), "li")).toMatchObject({ id: "life" });
+  });
+
+  test("folder board file by name, title or fragment; ambiguous lists the candidates", () => {
+    const notes = [
+      { file: "first-quest.md", title: "First quest", fields: {} },
+      { file: "second.md", title: "Second quest", fields: {} },
+    ];
+    expect(resolve_note(notes, "SECOND")).toMatchObject({ file: "second.md" });
+    expect(resolve_note(notes, "first-quest.md")).toMatchObject({ title: "First quest" });
+    expect(resolve_note(notes, "first QUEST")).toMatchObject({ file: "first-quest.md" });
+    expect(resolve_note(notes, "quest")).toBe('"quest" matches 2 cards: first-quest.md First quest, second.md Second quest');
+    expect(resolve_note(notes, "third")).toBe('no card "third"');
   });
 
   test("first open column skips done ones", () => {
