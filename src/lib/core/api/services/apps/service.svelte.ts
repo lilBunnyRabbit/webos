@@ -8,7 +8,7 @@ import type {
   WindowsService,
   WindowId,
 } from "$lib/core/api";
-import { best_apps_for, file_extension } from "./associations";
+import { best_apps_for, file_extension, has_compound_match } from "./associations";
 import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import { parse_widget, WIDGET_EXTENSION } from "./widget";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
@@ -196,7 +196,8 @@ export class AppsService implements IAppsService {
       return this.launch(widget.app, widget.props);
     }
 
-    const default_id = extension ? this.settings_service.file_defaults[extension] : undefined;
+    // `.form.md` goes to Forms even when `.md` has a remembered default.
+    const default_id = extension && !has_compound_match(this.registry.values(), file) ? this.settings_service.file_defaults[extension] : undefined;
     if (default_id && this.registry.has(default_id)) {
       return this.launch(default_id, { path });
     }

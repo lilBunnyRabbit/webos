@@ -9,6 +9,8 @@
 
 > **Revision 2026-10-11: tools.** Manifest field `tools` (association syntax): matching apps are listed under "Open with" after the associated ones, but never become the default and never tie. Added so the static-utils image tools are reachable from File Explorer without stealing images from Media Preview ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
+> **Revision 2026-10-17: compound extensions.** An `associations` entry with more than one dot (`.form.md`) matches the end of the file name and scores 4, above a plain extension, and a remembered default for the last extension (`.md`) doesn't apply to such a file. Added so `.form.md` opens in Forms while other `.md` files stay with Text Editor ([brainstorm](../brainstorm/2026-10-17_app-wave-7.md)).
+
 > **Revision 2026-10-17: any file.** `tools: ["*"]` offers an app under "Open with" for every file, typed or not, for Hex Viewer. Only `tools_for` reads `"*"`; `association_tier` doesn't, so it matches nothing in `associations` and can never win a default ([brainstorm](../brainstorm/2026-10-17_app-wave-4.md)).
 
 > **Revision 2026-10-11: dotfiles**
