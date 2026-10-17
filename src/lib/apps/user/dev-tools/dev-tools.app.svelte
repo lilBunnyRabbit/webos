@@ -2,9 +2,13 @@
   import { SideNav } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import Base64 from "./sections/base64.svelte";
+  import Cert from "./sections/cert.svelte";
+  import Cron from "./sections/cron.svelte";
   import Hash from "./sections/hash.svelte";
   import Json from "./sections/json.svelte";
+  import Jwt from "./sections/jwt.svelte";
   import Regex from "./sections/regex.svelte";
+  import Time from "./sections/time.svelte";
   import Url from "./sections/url.svelte";
   import Uuid from "./sections/uuid.svelte";
   import { DevToolsState, TOOLS, initial_state, to_stored } from "./tools";
@@ -48,8 +52,16 @@
         <Uuid bind:value={tools.uuid} />
       {:else if tools.tool === "regex"}
         <Regex bind:value={tools.regex} />
-      {:else}
+      {:else if tools.tool === "json"}
         <Json bind:value={tools.json} />
+      {:else if tools.tool === "jwt"}
+        <Jwt bind:value={tools.jwt} />
+      {:else if tools.tool === "time"}
+        <Time bind:value={tools.time} />
+      {:else if tools.tool === "cron"}
+        <Cron bind:value={tools.cron} />
+      {:else}
+        <Cert bind:value={tools.cert} />
       {/if}
     </div>
   </main>

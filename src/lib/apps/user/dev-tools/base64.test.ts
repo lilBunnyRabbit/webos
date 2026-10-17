@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { decode_base64, encode_base64 } from "./base64";
+import { base64_to_bytes, decode_base64, encode_base64 } from "./base64";
 
 describe("encode_base64", () => {
   test("encodes ASCII like btoa", () => {
@@ -43,5 +43,12 @@ describe("decode_base64", () => {
     const result = decode_base64("/w==");
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/UTF-8/);
+  });
+});
+
+describe("base64_to_bytes", () => {
+  test("gives raw bytes, UTF-8 or not", () => {
+    expect(base64_to_bytes("/w")).toEqual(new Uint8Array([255]));
+    expect(base64_to_bytes("a*b=")).toBeNull();
   });
 });
