@@ -7,6 +7,7 @@ export const Section = {
   SPLIT: "split",
   SPRITES: "sprites",
   PATCH: "patch",
+  POSTER: "poster",
   TEST_IMAGE: "test-image",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];

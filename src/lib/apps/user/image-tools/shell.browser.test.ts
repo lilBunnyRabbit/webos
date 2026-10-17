@@ -4,8 +4,10 @@ import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { file_value } from "$lib/core/api/services/files/shell";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
+import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import type { CommandContext, Value } from "$lib/core/api/services/shell/type";
-import { join, split, trim, unbg } from "./shell";
+import { load_pdf } from "$lib/apps/user/pdf-tools/pdf";
+import { join, poster, split, trim, unbg } from "./shell";
 
 let files: FilesService;
 let notifications: NotificationsService;
@@ -15,6 +17,7 @@ beforeAll(() => {
   notifications = new NotificationsService();
   kernel.services.set("files", files);
   kernel.services.set("notifications", notifications);
+  kernel.services.set("tasks", new TasksService(kernel));
 });
 
 beforeEach(async () => {
@@ -26,6 +29,7 @@ afterAll(() => {
   notifications.destroy();
   kernel.services.delete("files");
   kernel.services.delete("notifications");
+  kernel.services.delete("tasks");
 });
 
 function context<T>(args: T, piped: Value[] = []) {
@@ -122,4 +126,21 @@ test("image unbg clears the given colours and refuses missing files", async () =
   expect(await alpha_at(out.path, 0, 0)).toBe(0);
 
   await expect(unbg(context({ path: "nope.png", color: ["#fff"] }))).rejects.toThrow("/home/nope.png: no such file");
+});
+
+test("poster writes a map plus one page per sheet next to the image, or where -o says", async () => {
+  await seed("f.png", 300, 400);
+  const args = { path: "f.png", across: 2, paper: "a4", overlap: "10mm", landscape: false } as const;
+
+  const out = await poster(context(args));
+  expect(out).toMatchObject({ $type: "file", path: "/home/f-poster.pdf" });
+  const document = await load_pdf(new Uint8Array(await (await files.get_file(out.path))!.arrayBuffer()));
+  expect(document.getPageCount()).toBe(1 + 2 * 2);
+  expect(document.getPage(1).getWidth()).toBeCloseTo(595.28, 1);
+
+  const wide = await poster(context({ ...args, paper: "a3", landscape: true, out: "big" }));
+  expect(wide.path).toBe("/home/big.pdf");
+  expect((await load_pdf(new Uint8Array(await (await files.get_file(wide.path))!.arrayBuffer()))).getPage(1).getWidth()).toBeCloseTo(1190.55, 1);
+
+  await expect(poster(context({ ...args, overlap: "lots" }))).rejects.toThrow("10mm");
 });

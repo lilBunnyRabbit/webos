@@ -58,6 +58,12 @@ export class PdfWriter {
     out.addPage([layout.width, layout.height]).drawImage(embedded, layout.image);
   }
 
+  /** Adds a blank page of this size in points and hands it to `draw`, with the document to embed images and fonts in. */
+  async append_page(width: number, height: number, draw: (page: PDFPage, document: PDFDocument) => Promise<void>): Promise<void> {
+    const out = await this.out();
+    await draw(out.addPage([width, height]), out);
+  }
+
   async finish(): Promise<Uint8Array> {
     return save(await this.out());
   }

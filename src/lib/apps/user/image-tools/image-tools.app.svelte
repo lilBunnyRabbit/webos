@@ -7,6 +7,7 @@
     Crop as CropIcon,
     Eraser as EraserIcon,
     FilmStrip as FilmStripIcon,
+    Printer as PrinterIcon,
     Rows as RowsIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
   } from "phosphor-svelte";
@@ -28,6 +29,7 @@
     { value: Section.SPLIT, label: "Split", icon: SquareSplitHorizontalIcon },
     { value: Section.SPRITES, label: "Sprites", icon: FilmStripIcon },
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
+    { value: Section.POSTER, label: "Poster print", icon: PrinterIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
@@ -39,6 +41,7 @@
     [Section.SPLIT]: () => import("./split-section.svelte"),
     [Section.SPRITES]: () => import("./sprites-section.svelte"),
     [Section.PATCH]: () => import("./patch-section.svelte"),
+    [Section.POSTER]: () => import("./poster-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 

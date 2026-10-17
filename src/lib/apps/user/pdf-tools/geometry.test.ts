@@ -31,6 +31,12 @@ describe("image_page", () => {
     expect(page.image.width).toBeCloseTo(792);
   });
 
+  test("A3 is the next size up from A4", () => {
+    const page = image_page(1000, 1400, PageSize.A3, 0);
+    expect(page.width).toBeCloseTo(841.89);
+    expect(page.height).toBeCloseTo(1190.55);
+  });
+
   test("image size uses 96 dpi plus margins", () => {
     const page = image_page(96, 192, PageSize.IMAGE, 10);
     expect(page).toEqual({ width: 92, height: 164, image: { x: 10, y: 10, width: 72, height: 144 } });

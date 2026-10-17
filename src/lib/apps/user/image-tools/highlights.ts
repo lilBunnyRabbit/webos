@@ -1,5 +1,5 @@
 import type { AppHighlight } from "$lib/core/api/services/apps/type";
-import { Bandaids as BandaidsIcon, Crop as CropIcon, Eraser as EraserIcon, FilmStrip as FilmStripIcon, Stack as StackIcon } from "phosphor-svelte";
+import { Bandaids as BandaidsIcon, Crop as CropIcon, Eraser as EraserIcon, FilmStrip as FilmStripIcon, Printer as PrinterIcon, Stack as StackIcon } from "phosphor-svelte";
 
 export default [
   { icon: EraserIcon, title: "Remove background", text: "Pick the colours to drop and get a transparent copy." },
@@ -7,4 +7,5 @@ export default [
   { icon: CropIcon, title: "Trim and split", text: "Trim away transparent borders, or cut an image into square tiles." },
   { icon: FilmStripIcon, title: "Sprite sheets", text: "Slice a sheet into frames, preview the animation and export it." },
   { icon: BandaidsIcon, title: "Patch", text: "Lay the original under an edited copy and paint back the parts an editor stamped over." },
+  { icon: PrinterIcon, title: "Poster print", text: "Print one image across several sheets, with crop marks and a map for putting it together." },
 ] satisfies AppHighlight[];

@@ -1,6 +1,6 @@
 import kernel, { type AppsService, type FilesService } from "$lib/core/api";
 import { available_name } from "$lib/core/api/services/files/opfs";
-import { parent_path, resolve_path } from "$lib/core/api/services/files/path";
+import { base_name, parent_path, resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ArgKind } from "$lib/core/api/services/shell/arg";
 import { error_message, parse_bytes } from "$lib/core/utils";
@@ -24,11 +24,14 @@ import {
   is_image_name,
   joined_name,
   kept_format,
+  poster_name,
   split_folder_name,
   tile_name,
   transparent_name,
   trimmed_name,
 } from "./naming";
+import { MAX_SHEETS, parse_length, poster_layout, type PosterPaper } from "./poster";
+import { write_poster } from "./poster-pdf";
 import { remove_colours } from "./remove-background";
 import { Section } from "./sections";
 import { compute_layout, render_tiles, SplitDirection } from "./split";
@@ -48,6 +51,7 @@ import {
 import { generate_test_image, pictures_folder } from "./test-image-job";
 
 const APP_ID = "image-tools";
+const POSTER_MARGIN = 10;
 
 const files = () => kernel.service<FilesService>("files");
 
@@ -202,6 +206,65 @@ export async function unbg({
     const { format, extension } = kept_format(image.name, true);
     const result = remove_colours(image.bitmap, args.color);
     return await write_beside(path, transparent_name(image.name, extension), result, format, elevated);
+  } finally {
+    image.bitmap.close();
+  }
+}
+
+export interface PosterArgs {
+  path: string;
+  across: number;
+  paper: PosterPaper;
+  overlap: string;
+  landscape: boolean;
+  out?: string;
+}
+
+async function poster_target(source: string, out: string | undefined, cwd: string, elevated: boolean): Promise<string> {
+  const name = poster_name(base_name(source));
+  let path: string;
+  if (out === undefined) path = child_path(parent_path(source), await available_name(await folder_at(parent_path(source)), name));
+  else {
+    const typed = resolve_path(cwd, out);
+    if (await files().get_directory(typed)) path = child_path(typed, await available_name(await folder_at(typed), name));
+    else {
+      await folder_at(parent_path(typed));
+      path = /\.pdf$/i.test(typed) ? typed : `${typed}.pdf`;
+    }
+  }
+  assert_writable(path, elevated);
+  return path;
+}
+
+export async function poster({ args, session, signal, elevated }: CommandContext<PosterArgs>): Promise<FileValue> {
+  const overlap = parse_length(args.overlap);
+  if (overlap === null) throw new ShellError(`${args.overlap}: give the overlap like 10mm, 1cm or 0.5in`);
+  const path = resolve_path(session.cwd, args.path);
+  const image = await decode(path);
+  try {
+    const layout = poster_layout(image.bitmap.width, image.bitmap.height, {
+      paper: args.paper,
+      landscape: args.landscape,
+      across: args.across,
+      overlap,
+      margin: POSTER_MARGIN,
+    });
+    if (layout.sheets.length > MAX_SHEETS)
+      throw new ShellError(`${layout.sheets.length} sheets is too many; use fewer across or bigger paper`);
+    const target = await poster_target(path, args.out, session.cwd, elevated);
+    const done = await write_poster({
+      app_id: APP_ID,
+      bitmap: image.bitmap,
+      name: image.name,
+      paper: args.paper,
+      layout,
+      marks: true,
+      map: true,
+      target,
+      signal,
+    });
+    if (!done) throw new ShellError(signal.aborted ? "stopped" : "couldn't write the poster");
+    return written(target);
   } finally {
     image.bitmap.close();
   }
