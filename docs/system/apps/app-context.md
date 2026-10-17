@@ -81,7 +81,7 @@ count.value++; // saved
 ```
 
 - Initial value: `get(key, schema) ?? initial`. Invalid stored data falls back to `initial`.
-- The cell saves with an `$effect` (inside its own `$effect.root`) on `$state.snapshot(value)`. The effect runs once right away, so the key is written on first use even if it held nothing or held invalid data, which gets replaced by `initial`.
+- The cell saves with an `$effect` (inside its own `$effect.root`) on `$state.snapshot(value)`. Its first run writes nothing when the value still equals what was loaded, so opening a window doesn't rewrite the key: a missing key stays missing, and invalid stored data stays until the first change replaces it. A change made before that first run (during component init) is still saved.
 - Saving is deep: mutating a nested property of an object value is tracked and saved.
 - Saves happen when effects flush (microtask), so a `get()` right after assigning `value` can still read the old string.
 - The calling component registers an `$effect` whose cleanup releases the cell. That's why it must run during init.
