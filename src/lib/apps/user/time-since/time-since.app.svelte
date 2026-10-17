@@ -51,7 +51,7 @@
 
   const clock = new Ticker(
     () => win.is_visible,
-    () => 1000
+    () => (running.length ? 1000 : 60_000)
   );
 
   const can_pin = kernel.platform !== Platform.MOBILE;

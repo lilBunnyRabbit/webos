@@ -65,6 +65,7 @@
   import KanbanColumn from "./kanban-column.svelte";
   import { first_open_column } from "./lookup";
   import { day_key } from "$lib/core/utils/date";
+  import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   const { board: initial_board, card: initial_card }: { board?: string; card?: string } = $props();
 
@@ -78,14 +79,10 @@
 
   const board = $derived(get_board(data.value, board_id.value));
   let composing = $state<string | null>(null);
-  let today = $state(day_key());
+  const clock = new Ticker(() => win.is_visible, 60_000);
+  const today = $derived(day_key(new Date(clock.now)));
   let scroller = $state<HTMLElement | null>(null);
   let root = $state<HTMLElement | null>(null);
-
-  $effect(() => {
-    const timer = setInterval(() => (today = day_key()), 60_000);
-    return () => clearInterval(timer);
-  });
 
   // A `card` prop (Calendar, a link) may point into another board than the one this window shows.
   $effect(() => {
