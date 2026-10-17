@@ -40,6 +40,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `associations` | `string[]` | no | File types this app opens ([file-associations.md](file-associations.md)) |
 | `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
+| `daily_rank` | `DailyRank` (`time`, `score-asc`, `score-desc`) | no, default `time` | How a game's daily results rank in `/var/lib/games/plays.json`: by time, or by the score passed to `tracker.daily(day, ms, score)`, lower or higher first, time breaking a tie (ADR-035). Game Hub shows the score with the time. Import `DailyRank` from `$lib/core/games/daily` |
 | `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |

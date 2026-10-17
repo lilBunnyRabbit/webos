@@ -112,6 +112,14 @@ export function game_value({ game, stats }: GameEntry): Tagged {
 }
 
 export function daily_value(game: GameInfo, plays: Plays, day: string): Tagged {
-  const ms = plays.daily[day]?.[game.id]?.ms ?? null;
-  return { $type: "game-daily", id: game.id, name: game.name, day, solved: ms !== null, time: ms };
+  const result = plays.daily[day]?.[game.id];
+  return {
+    $type: "game-daily",
+    id: game.id,
+    name: game.name,
+    day,
+    solved: result !== undefined,
+    time: result?.ms ?? null,
+    score: result?.score ?? null,
+  };
 }
