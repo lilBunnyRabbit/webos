@@ -1,11 +1,9 @@
 <script lang="ts">
-  import kernel, { NotificationType, type NotificationsService, type SettingsService } from "$lib/core/api";
-  import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import kernel, { type SettingsService } from "$lib/core/api";
+  import { Button, Checkbox, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
-  import { error_message, resolve_token } from "$lib/core/utils";
+  import { resolve_token } from "$lib/core/utils";
   import {
-    ArrowsClockwise as ArrowsClockwiseIcon,
     Bandaids as BandaidsIcon,
     Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -16,34 +14,27 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { parent_path } from "$lib/core/api/services/files/path";
-  import { ImageFormat, has_files, image_files, load_image, load_image_at, paint, read_pixels, save_image, type SourceImage } from "$lib/core/utils/image";
+  import { ImageFormat, has_files, image_files, paint, save_image } from "$lib/core/utils/image";
   import { patched_name } from "./naming";
   import {
     IDENTITY_COLORS,
-    Pyramid,
     RestoreMode,
-    align,
-    compare,
     compose,
-    coverage,
     drag_rect,
     draw_aligned,
     draw_heatmap,
     draw_ops,
-    find_regions,
     is_restored,
     rect_at,
     toggle_rect,
-    type Alignment,
     type Rect,
     type RestoreOp,
   } from "./patch";
+  import { ImagePair, Slot } from "./pair.svelte";
+  import PairAlignment from "./pair-alignment.svelte";
+  import PairSlot from "./pair-slot.svelte";
   import type { SectionProps } from "./sections";
   import { pinch_view, zoom_view, type Point, type View as Camera } from "./sprite-sheet";
-
-  const Slot = { ORIGINAL: "original", EDITED: "edited" } as const;
-  type Slot = (typeof Slot)[keyof typeof Slot];
 
   const View = { EDITED: "edited", RESULT: "result", ORIGINAL: "original", DIFF: "diff" } as const;
   type View = (typeof View)[keyof typeof View];
@@ -85,20 +76,10 @@
 
   const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window: win } = get_app_context();
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
   let root = $state<HTMLElement>();
-  let images = $state.raw<Record<Slot, SourceImage | null>>({ original: null, edited: null });
-  let loading = $state.raw<Record<Slot, boolean>>({ original: false, edited: false });
   let dragging = $state(false);
-
-  let alignment = $state.raw<Alignment | null>(null);
-  let match = $state(0);
-  let aligning = $state(false);
-
-  let match_colors = $state(true);
-  let tolerance = $state(12);
   let feather = $state(2);
   let brush = $state(24);
   let tool = $state<Tool>(Tool.SELECT);
@@ -113,33 +94,29 @@
   let camera = $state.raw<Camera>(FIT);
   let panel = $state<Panel>(Panel.IMAGES);
 
-  const original = $derived(images.original);
-  const edited = $derived(images.edited);
-  const original_pyramid = $derived(original ? new Pyramid(read_pixels(original.bitmap)) : null);
-  const edited_pyramid = $derived(edited ? new Pyramid(read_pixels(edited.bitmap)) : null);
-  const ready = $derived(original && edited && alignment ? { original, edited, alignment } : null);
+  const pair = new ImagePair({
+    app_id,
+    win,
+    titles: { original: "Open the original", edited: "Open the edited copy" },
+    on_load: (slot) => {
+      ops = [];
+      draft = null;
+      if (slot === Slot.EDITED) camera = FIT;
+    },
+    on_aligned: () => {
+      if (panel === Panel.IMAGES) panel = Panel.CHANGES;
+    },
+  });
 
-  const comparison = $derived(
-    original_pyramid && edited_pyramid && alignment ? compare(original_pyramid, edited_pyramid, alignment, match_colors) : null
-  );
-  const all_regions = $derived(comparison ? find_regions(comparison.diff, (tolerance * 255) / 100) : []);
+  const original = $derived(pair.original);
+  const edited = $derived(pair.edited);
+  const ready = $derived(pair.ready);
+  const comparison = $derived(pair.comparison);
+  const all_regions = $derived(pair.regions);
   const too_many = $derived(all_regions.length > MAX_REGIONS);
   const regions = $derived(too_many ? [] : all_regions);
   const restored_count = $derived(ops.filter((op) => op.mode === RestoreMode.ADD).length);
-  const covered = $derived(ready ? coverage(ready.alignment, ready.original.bitmap, ready.edited.bitmap) : null);
-  const hatch = $derived.by(() => {
-    if (!edited || !ready) return [];
-    const { width, height } = edited.bitmap;
-    if (!covered) return [{ x: 0, y: 0, width, height }];
-    const right = covered.x + covered.width;
-    const bottom = covered.y + covered.height;
-    return [
-      { x: 0, y: 0, width, height: covered.y },
-      { x: 0, y: bottom, width, height: height - bottom },
-      { x: 0, y: covered.y, width: covered.x, height: covered.height },
-      { x: right, y: covered.y, width: width - right, height: covered.height },
-    ].filter((rect) => rect.width > 0.5 && rect.height > 0.5);
-  });
+  const hatch = $derived(pair.uncovered);
 
   const preview_scale = $derived(edited ? Math.min(1, PREVIEW_SIDE / Math.max(edited.bitmap.width, edited.bitmap.height)) : 1);
   const preview = $derived.by(() => {
@@ -170,95 +147,9 @@
     return () => cancelAnimationFrame(frame);
   });
 
-  const requests: Record<Slot, number> = { original: 0, edited: 0 };
-  let align_request = 0;
-  let destroyed = false;
+  onDestroy(() => pair.destroy());
 
-  async function load(slot: Slot, task: () => Promise<SourceImage>) {
-    const id = ++requests[slot];
-    loading = { ...loading, [slot]: true };
-    try {
-      const result = await task();
-      if (destroyed || id !== requests[slot]) return result.bitmap.close();
-      const previous = images[slot];
-      images = { ...images, [slot]: result };
-      previous?.bitmap.close();
-      ops = [];
-      draft = null;
-      if (slot === Slot.EDITED) camera = FIT;
-      realign();
-    } catch (reason) {
-      if (id === requests[slot]) {
-        notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the image", message: error_message(reason) });
-      }
-    } finally {
-      if (id === requests[slot]) loading = { ...loading, [slot]: false };
-    }
-  }
-
-  async function realign() {
-    const id = ++align_request;
-    if (!original_pyramid || !edited_pyramid) {
-      alignment = null;
-      return;
-    }
-    aligning = true;
-    // Lets the spinner paint before the search holds the main thread for a moment.
-    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
-    if (id !== align_request) return;
-    if (!original_pyramid || !edited_pyramid) {
-      aligning = false;
-      return;
-    }
-    const result = align(original_pyramid, edited_pyramid);
-    alignment = result.alignment;
-    match = result.match;
-    aligning = false;
-    if (panel === Panel.IMAGES) panel = Panel.CHANGES;
-  }
-
-  function nudge(field: keyof Alignment, value: number | string | null | undefined) {
-    const number = typeof value === "number" ? value : Number.parseFloat(value ?? "");
-    if (!alignment || !Number.isFinite(number) || (field === "scale" && number <= 0)) return;
-    alignment = { ...alignment, [field]: number };
-  }
-
-  onDestroy(() => {
-    destroyed = true;
-    images.original?.bitmap.close();
-    images.edited?.bitmap.close();
-  });
-
-  const initial = untrack(() => initial_paths);
-  if (initial[0]) load(Slot.ORIGINAL, () => load_image_at(initial[0]));
-  if (initial[1]) load(Slot.EDITED, () => load_image_at(initial[1]));
-
-  const start_path = $derived.by(() => {
-    const path = edited?.path ?? original?.path;
-    return path ? parent_path(path) : undefined;
-  });
-
-  async function pick(slot: Slot) {
-    const title = slot === Slot.ORIGINAL ? "Open the original" : "Open the edited copy";
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title });
-    if (chosen) load(slot, () => load_image_at(chosen));
-  }
-
-  async function pick_device(slot?: Slot) {
-    const files = await pick_device_files({ accept: ["image/*"], multiple: !slot });
-    if (slot && files[0]) load(slot, () => load_image(files[0]));
-    else take(files);
-  }
-
-  function take(files: File[]) {
-    if (files.length >= 2) {
-      load(Slot.ORIGINAL, () => load_image(files[0]));
-      load(Slot.EDITED, () => load_image(files[1]));
-      return;
-    }
-    const [file] = files;
-    if (file) load(images.original ? Slot.EDITED : Slot.ORIGINAL, () => load_image(file));
-  }
+  pair.load_paths(untrack(() => initial_paths));
 
   function on_paste(event: ClipboardEvent) {
     if (!active || !win.is_focused) return;
@@ -267,7 +158,7 @@
     const files = image_files(event.clipboardData);
     if (!files.length) return;
     event.preventDefault();
-    take(files);
+    pair.take(files);
   }
 
   function on_dragover(event: DragEvent) {
@@ -284,7 +175,7 @@
     if (!has_files(event)) return;
     event.preventDefault();
     dragging = false;
-    take(image_files(event.dataTransfer));
+    pair.take(image_files(event.dataTransfer));
   }
 
   function image_point(event: PointerEvent): { x: number; y: number; ratio: number } | null {
@@ -471,39 +362,17 @@
       canvas,
       name: patched_name(ready.edited.name),
       format: ImageFormat.PNG,
-      start_path: start_path ?? null,
+      start_path: pair.start_path ?? null,
     });
-  }
-
-  function signed(value: number): string {
-    return value < 0 ? `−${Math.abs(value)}` : `${value}`;
   }
 
   function percent(value: number, total: number): string {
     return `${(value / total) * 100}%`;
   }
 
-  const match_label = $derived(match >= 0.9 ? "Good match" : match >= 0.6 ? "Rough match, check the Original view" : "No clear match, nudge it by hand");
 </script>
 
 <svelte:document onpaste={on_paste} />
-
-{#snippet slot_row(slot: Slot, label: string)}
-  {@const image = images[slot]}
-  <div class="flex h-9 items-center gap-1 rounded-md pl-2 hover:bg-foreground/6">
-    <span class="w-14 shrink-0 text-2xs font-medium text-foreground/65">{label}</span>
-    {#if loading[slot]}
-      <span class="flex-1"><Spinner label="Loading {label.toLowerCase()}" /></span>
-    {:else if image}
-      <span class="min-w-0 flex-1 truncate text-ui" title={image.path ?? image.name}>{image.name}</span>
-      <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{image.bitmap.width}×{image.bitmap.height}</span>
-    {:else}
-      <span class="min-w-0 flex-1 truncate text-ui text-foreground/65">None</span>
-    {/if}
-    <IconButton label="Open {label.toLowerCase()}…" size="sm" onclick={() => pick(slot)}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open {label.toLowerCase()} from device…" size="sm" onclick={() => pick_device(slot)}><DevicesIcon weight="bold" /></IconButton>
-  </div>
-{/snippet}
 
 {#snippet heading(text: string)}
   <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{text}</h3>
@@ -527,15 +396,15 @@
     {/if}
   </Toolbar>
 
-  {#if !original && !edited && !loading.original && !loading.edited}
+  {#if !original && !edited && !pair.loading.original && !pair.loading.edited}
     <EmptyState
       icon={BandaidsIcon}
       title="No images yet"
       description="Takes back what an editor stamped on a picture, like its logo, from the original. Open the original and the edited copy, or drop both here."
     >
       {#snippet actions()}
-        <Button variant="primary" onclick={() => pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the original…</Button>
-        <Button onclick={() => pick_device()}><DevicesIcon weight="bold" /> From device…</Button>
+        <Button variant="primary" onclick={() => pair.pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the original…</Button>
+        <Button onclick={() => pair.pick_device()}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -548,50 +417,25 @@
         {/if}
         <div class={["flex flex-col gap-0.5", original && edited && panel !== Panel.IMAGES && "hidden @2xl:flex"]}>
           {@render heading("Images")}
-          {@render slot_row(Slot.ORIGINAL, "Original")}
-          {@render slot_row(Slot.EDITED, "Edited")}
+          <PairSlot {pair} slot={Slot.ORIGINAL} label="Original" />
+          <PairSlot {pair} slot={Slot.EDITED} label="Edited" />
         </div>
 
         {#if original && edited}
           <div class={["flex flex-col gap-2", panel !== Panel.ALIGN && "hidden @2xl:flex"]}>
-            <div class="flex items-center justify-between">
-              {@render heading("Alignment")}
-              <IconButton label="Align again" size="sm" disabled={aligning} onclick={realign}><ArrowsClockwiseIcon weight="bold" /></IconButton>
-            </div>
-            {#if aligning || !alignment}
-              <div class="flex items-center gap-2 px-0.5 text-ui text-foreground/80"><Spinner label="Aligning" /> Aligning…</div>
-            {:else}
-              <p class="px-0.5 text-ui">
-                Scale {alignment.scale}, offset {signed(alignment.dx)}, {signed(alignment.dy)}
-                <span class={["block text-2xs", match >= 0.9 ? "text-foreground/65" : "text-warning"]}>{match_label}</span>
-              </p>
-              <div class="grid grid-cols-3 gap-1.5">
-                <label class="flex flex-col gap-1 text-2xs text-foreground/65">
-                  Scale
-                  <Input type="number" size="sm" step={0.001} min={0.001} value={alignment.scale} oninput={(event) => nudge("scale", event.currentTarget.value)} class="w-full font-mono tabular-nums" />
-                </label>
-                <label class="flex flex-col gap-1 text-2xs text-foreground/65">
-                  X
-                  <Input type="number" size="sm" step={0.5} value={alignment.dx} oninput={(event) => nudge("dx", event.currentTarget.value)} class="w-full font-mono tabular-nums" />
-                </label>
-                <label class="flex flex-col gap-1 text-2xs text-foreground/65">
-                  Y
-                  <Input type="number" size="sm" step={0.5} value={alignment.dy} oninput={(event) => nudge("dy", event.currentTarget.value)} class="w-full font-mono tabular-nums" />
-                </label>
-              </div>
-            {/if}
+            <PairAlignment {pair} rough="Rough match, check the Original view" />
           </div>
 
           <div class={["flex flex-col gap-2", panel !== Panel.CHANGES && "hidden @2xl:flex"]}>
             {@render heading("Changes")}
             <label class="flex items-center gap-2 text-ui" title="How different a pixel must be to count as changed">
               <span class="w-20 shrink-0">Tolerance</span>
-              <Slider size="sm" min={1} max={60} bind:value={tolerance} class="min-w-0 flex-1" aria-label="Tolerance" />
-              <span class="w-8 text-right font-mono text-2xs text-foreground/80 tabular-nums">{tolerance}%</span>
+              <Slider size="sm" min={1} max={60} bind:value={pair.tolerance} class="min-w-0 flex-1" aria-label="Tolerance" />
+              <span class="w-8 text-right font-mono text-2xs text-foreground/80 tabular-nums">{pair.tolerance}%</span>
             </label>
             <label class="flex items-center justify-between gap-2 text-ui" title="Ignore a colour change across the whole picture, and give restored areas the same change">
               Match colours
-              <Switch bind:checked={match_colors} />
+              <Switch bind:checked={pair.match_colors} />
             </label>
             {#if too_many}
               <p class="px-0.5 text-2xs text-warning">{all_regions.length} changed spots. Raise the tolerance to see them as boxes.</p>
@@ -634,7 +478,7 @@
 
       {#if !edited || !original}
         <div class="stage grid min-h-0 place-items-center">
-          {#if loading.original || loading.edited}
+          {#if pair.loading.original || pair.loading.edited}
             <Spinner label="Loading image" />
           {:else}
             <EmptyState
@@ -643,8 +487,8 @@
               description={original ? "The version an editor exported, with its mark on it." : "The untouched version, from before the edit."}
             >
               {#snippet actions()}
-                <Button variant="primary" onclick={() => pick(original ? Slot.EDITED : Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open…</Button>
-                <Button onclick={() => pick_device(original ? Slot.EDITED : Slot.ORIGINAL)}><DevicesIcon weight="bold" /> From device…</Button>
+                <Button variant="primary" onclick={() => pair.pick(original ? Slot.EDITED : Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open…</Button>
+                <Button onclick={() => pair.pick_device(original ? Slot.EDITED : Slot.ORIGINAL)}><DevicesIcon weight="bold" /> From device…</Button>
               {/snippet}
             </EmptyState>
           {/if}
