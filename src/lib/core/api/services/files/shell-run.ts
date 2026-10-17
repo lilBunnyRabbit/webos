@@ -1,7 +1,9 @@
-import { format_bytes } from "$lib/core/utils";
+import { error_message, format_bytes } from "$lib/core/utils";
 import { ShellError, type CommandContext, type Completion, type ShellSession } from "../shell/type";
 import { is_locked_path } from "./hierarchy";
 import { join_path, resolve_path, split_path } from "./path";
+import { apply_renames } from "./rename-batch";
+import { plan_renames, type RenameRule, type RenameSource } from "./rename-pattern";
 import { assert_writable, file_value, is_file_value, type FileValue } from "./shell";
 import type { FilesService } from "./type";
 
@@ -127,6 +129,51 @@ export async function transfer(
   assert_writable(target, elevated);
   const placed = await (mode === "copy" ? files.copy_paths(sources, target) : files.move_paths(sources, target));
   return Promise.all(placed.map((path) => require_stat(files, path)));
+}
+
+export async function* rename(files: FilesService, context: CommandContext<RenameRule & { paths: string[]; dry: boolean }>) {
+  const { args, elevated } = context;
+  const paths = await paths_from(args.paths, context);
+  if (paths.length === 0) throw new ShellError("rename: nothing to rename");
+
+  const sources: RenameSource[] = [];
+  const siblings = new Map<string, string[]>();
+  for (const path of paths) {
+    const found = await require_stat(files, path);
+    if (!args.dry) {
+      assert_removable(path, elevated);
+      assert_writable(parent_of(path), elevated);
+    }
+    sources.push({ path, modified: found.modified });
+    const parent = parent_of(path);
+    if (!siblings.has(parent)) siblings.set(parent, (await files.list(await require_directory(files, parent), { include_metadata: false })).map((item) => item.name));
+  }
+
+  const plan = plan_renames(sources, args, siblings);
+  if (plan.error) throw new ShellError(`rename: ${plan.error}`);
+  const changed = plan.steps.filter((step) => step.new_name !== step.name || step.problem);
+
+  if (args.dry) {
+    for (const step of changed) yield { $type: "rename", from: step.name, to: step.new_name, problem: step.problem ?? "" };
+    return;
+  }
+
+  const problems = changed.filter((step) => step.problem);
+  if (problems.length > 0) {
+    const lines = problems.slice(0, 5).map((step) => `${step.name} → ${step.new_name}: ${step.problem}`);
+    if (problems.length > 5) lines.push(`and ${problems.length - 5} more (see --dry)`);
+    throw new ShellError(`rename: nothing renamed\n${lines.join("\n")}`);
+  }
+
+  try {
+    for (const step of await apply_renames(files, plan.steps)) {
+      const path = join_path(split_path(parent_of(step.path)), step.new_name);
+      yield await require_stat(files, path);
+    }
+  } catch (error) {
+    if (error instanceof ShellError) throw error;
+    throw new ShellError(`rename: ${error_message(error)}`);
+  }
 }
 
 export async function rm(files: FilesService, context: CommandContext<{ paths: string[]; recursive: boolean }>) {

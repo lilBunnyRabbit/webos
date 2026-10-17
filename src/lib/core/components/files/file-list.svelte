@@ -24,7 +24,7 @@
     save_to_disk,
     set_wallpaper,
     is_image,
-    rename_item,
+    rename_items,
     show_properties,
     upload,
     open_terminal,
@@ -161,7 +161,7 @@
             { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2", disabled: fixed },
             { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
           ]
-        : []),
+        : [{ id: "rename", label: `Rename ${entries.length} items…`, icon: PencilSimpleIcon, shortcut: "F2", disabled: fixed }]),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
       { id: "compress", label: "Compress", icon: FileZipIcon, disabled: read_only },
       ...(single && is_zip(item) ? [{ id: "extract", label: "Extract here", icon: ArrowLineDownIcon, disabled: read_only }] : []),
@@ -172,7 +172,7 @@
 
     const choice = await dialogs.menu(items, { anchor });
     if (choice === "open") open_all(entries, anchor);
-    else if (choice === "rename") rename_item(handler, window, item);
+    else if (choice === "rename") rename_items(handler, window, entries);
     else if (choice === "copy") copy_items(handler, entries);
     else if (choice === "cut") cut_items(handler, entries);
     else if (choice === "delete") delete_items(handler, window, entries);
@@ -312,7 +312,7 @@
             if (event.key === "Enter" && event.altKey) show_properties(handler, window, item);
             else if (event.key === "Enter") open_all(entries, row_anchor(event.currentTarget));
             else if (event.key === "F2") {
-              if (!locked([item])) rename_item(handler, window, item);
+              if (!locked(entries)) rename_items(handler, window, entries);
             } else if (mod(event) && event.key.toLowerCase() === "c") copy_items(handler, entries);
             else if (mod(event) && event.key.toLowerCase() === "x") {
               if (!locked(entries)) cut_items(handler, entries);

@@ -61,6 +61,10 @@ export function files_shell(files: FilesService): ShellContribution {
               : `${file.name}  ${format_bytes(file.size)}`;
         },
       },
+      rename: {
+        columns: ["from", "to", "problem"],
+        text: (value) => `${value.from} → ${value.to}${value.problem ? `  (${value.problem})` : ""}`,
+      },
       storage: {
         columns: ["used", "quota", "free"],
         cell: (value, column) => format_bytes(Number(value[column])),
@@ -123,6 +127,25 @@ export function files_shell(files: FilesService): ShellContribution {
         positional: ["from", "to"],
         yields: "file",
         run: async (context) => (await logic()).transfer(files, "move", context),
+      }),
+      define_command({
+        id: "rename",
+        description: "Rename many files by a pattern",
+        args: z.object({
+          pattern: z.string().describe("{name} {ext} {n} {n:3} {date:yyyy-MM-dd} {parent}, or /regex/replacement/flags"),
+          paths: z.array(arg.path()).default([]).describe("What to rename, or the files piped in"),
+          find: z.string().default("").describe("Text to replace in the new name"),
+          replace: z.string().default("").describe("What replaces --find"),
+          match_case: z.boolean().default(false).describe("--find matches case"),
+          start: z.number().int().default(1).describe("First {n}"),
+          step: z.number().int().default(1).describe("Added to {n} per file"),
+          dry: z.boolean().default(false).describe("Only show the new names"),
+        }),
+        positional: ["pattern", "paths"],
+        yields: "file",
+        async *run(context) {
+          yield* (await logic()).rename(files, context);
+        },
       }),
       define_command({
         id: "rm",
