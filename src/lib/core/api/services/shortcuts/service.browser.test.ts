@@ -70,6 +70,28 @@ describe("ShortcutsService", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  test("a shortcut to an app's command loads the apps' commands, then runs it", async () => {
+    const jot = vi.fn();
+    const booted = await boot_test_kernel({
+      files: stub_service("files", { get_file: async () => null }),
+      notifications: stub_service("notifications", { notify: vi.fn() }),
+      windows: WindowsService,
+      dialogs: dialogs_stub,
+      apps: stub_service("apps", { shell: () => ({ lazy: async () => ({ commands: [{ id: "jot", description: "", app: "jot", run: jot }] }) }) }),
+      shell: ShellService,
+      shortcuts: ShortcutsService,
+    });
+    shutdown = booted.shutdown;
+    const shortcuts = booted.kernel.service<ShortcutsService>("shortcuts");
+    shortcuts.register({ id: "test.jot", keys: "alt+shift+j", category: ShortcutCategory.APP, command: "jot" });
+    expect(shortcuts.list().some((shortcut) => shortcut.id === "test.jot")).toBe(false);
+
+    const event = press("KeyJ", { altKey: true, shiftKey: true });
+    expect(event.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(jot).toHaveBeenCalledTimes(1));
+    expect(shortcuts.list().some((shortcut) => shortcut.id === "test.jot")).toBe(true);
+  });
+
   test("Mod+K toggles the launcher", async () => {
     const kernel = await boot();
     const ui = kernel.service<UiService>("ui");

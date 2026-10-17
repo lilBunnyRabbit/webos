@@ -32,6 +32,7 @@ define_app({
 
 - The same `ShellContribution` shape services return. AppsService merges every app's into its own `shell()`; ShellService is unchanged.
 - Ids, args and descriptions are eager so the palette lists them. `run()` dynamic-imports the logic.
+- *Revised 2026-10-17: `shell` is now `() => import("./commands")`, loaded on first use. See Revisions.*
 - Ids are free (`note`, not `quick-notes note`). If one clashes with a service command, **the service wins** and the app command is dropped with a warning.
 - Commands are global: they run with no window. Window-scoped app commands (shortcuts as commands) are not part of this.
 
@@ -75,6 +76,8 @@ define_app({ widget: () => import("./widget.svelte") }); // Component<{ props, s
 - Window-scoped app commands stay on the ROADMAP.
 
 ## Revisions
+
+- **2026-10-17:** App shell contributions are lazy (owner's decision, app wave 7 brainstorm). Manifests load at boot, and the apps' commands were ~10 KB gz of the ~33 KB they weighed, pushing the entry chunk over its 190 KB budget. `shell` is now `() => import("./commands")`; the module's default export is the `ShellContribution` (`export default { … } satisfies ShellContribution`). The eager object form is gone. `ShellContribution` gains `lazy?: () => Promise<ShellContribution>`, and AppsService puts every app's module behind its own `lazy`. ShellService's `load()` resolves every `lazy` once, through one shared promise; a run and completion await it, and Terminal, the palette, shortcut lists and App Library's details call it when they open. A shortcut bound to a command the shell doesn't know yet holds its key, loads, then picks again. Lazy parts merge first, so a service still wins a command id clash and its completers and values win over an app's. App Library's "Has commands" filter checks for a `shell` loader; the details list reads the shell's registry. The one-time install migration (ADR-040) loads the modules itself to match history lines. Entry chunk: 190.5 → 182.3 KB gz.
 
 - **2026-10-15:** Default widgets come from the manifest. `define_app` gains `default_widget?: boolean`: the app's widget is placed on every desktop once, at `widget_size.default`, on first boot and on desktops set up before; removing it sticks. Core no longer names Game Hub, and a deleted app drops out of the list. The pass runs after boot; `init()` doesn't await it.
 - **2026-10-15:** Widgets resize (owner's decision). `define_app` gains `widget_size: { min, max, default }` (cells, spans 1–8, `min ≤ default ≤ max`, checked at definition). A grip on the widget's bottom-right corner drags the size in whole cells, clamped to the range and refused when it would leave the grid or cover another item; Shift+arrows on a selected widget do the same from the keyboard. The `.widget` file stays the source of truth: release writes `w`/`h` back. A stored size outside the range is clamped when read, without rewriting the file. `pin_widget`'s `size` became optional and defaults to `widget_size.default`; an app without `widget_size` keeps its file's size and gets no grip.

@@ -2,6 +2,7 @@ import { APP_CATEGORY_LABELS, group_apps, search_apps } from "$lib/core/api/serv
 import { AppCategory, type AppId, type AppManifest } from "$lib/core/api/services/apps/type";
 import { recency } from "$lib/core/api/services/version/history";
 import type { Release } from "$lib/core/api/services/version/type";
+import type { Command } from "$lib/core/api/services/shell/type";
 
 export const LibraryCategory = { ALL: "all", ...AppCategory, SYSTEM: "system" } as const;
 export type LibraryCategory = (typeof LibraryCategory)[keyof typeof LibraryCategory];
@@ -56,7 +57,7 @@ export function has_filter(manifest: AppManifest, filter: LibraryFilter, { used,
     case LibraryFilter.FILES:
       return (manifest.associations?.length ?? 0) > 0 || (manifest.tools?.length ?? 0) > 0;
     case LibraryFilter.COMMANDS:
-      return app_commands(manifest).length > 0;
+      return manifest.shell !== undefined;
     case LibraryFilter.USED:
       return used.has(manifest.id);
     case LibraryFilter.NOT_INSTALLED:
@@ -108,8 +109,12 @@ function recent_sections(list: AppManifest[], changelog: readonly Release[]): Li
     });
 }
 
-export function app_commands(manifest: AppManifest): { id: string; description: string }[] {
-  return (manifest.shell?.commands ?? []).map(({ id, description }) => ({ id, description })).sort((a, b) => a.id.localeCompare(b.id));
+/** From the shell's registry, which holds the apps' commands once loaded (ADR-034). */
+export function app_commands(manifest: AppManifest, commands: readonly Command[]): { id: string; description: string }[] {
+  return commands
+    .filter((command) => command.app === manifest.id)
+    .map(({ id, description }) => ({ id, description }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function sort_types(types: string[] | undefined): string[] {

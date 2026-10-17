@@ -40,15 +40,34 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
     else await apps.open(path);
   }
 
-  const contributions = [...apps.list()].flatMap(([id, manifest]) => (manifest.shell ? [{ id, shell: manifest.shell }] : []));
+  // allSettled: an app whose module fails to load loses only its own commands.
+  async function app_contributions(): Promise<ShellContribution> {
+    const loaders = [...apps.list()].flatMap(([id, manifest]) => (manifest.shell ? [{ id, load: manifest.shell }] : []));
+    const settled = await Promise.allSettled(loaders.map(async ({ id, load }) => ({ id, shell: (await load()).default })));
+    const contributions = settled.flatMap((result, index) => {
+      if (result.status === "fulfilled") return [result.value];
+      console.error(`[AppsService] ${loaders[index].id}'s shell commands failed to load`, result.reason);
+      return [];
+    });
+    return {
+      completers: Object.assign({}, ...contributions.map(({ shell }) => shell.completers)),
+      values: Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
+      commands: contributions.flatMap(({ id, shell }) =>
+        (shell.commands ?? []).map((command) => ({
+          ...command,
+          app: id,
+          available: () => (apps.is_installed(id) ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
+        }))
+      ),
+    };
+  }
 
   return {
+    lazy: app_contributions,
     completers: {
-      ...Object.assign({}, ...contributions.map(({ shell }) => shell.completers)),
       [ArgKind.APP]: () => [...apps.list({ installed: true })].map(([id, manifest]) => ({ value: id, detail: manifest.name })),
     },
     values: {
-      ...Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
       app: {
         columns: ["id", "name", "category", "authors"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
@@ -59,13 +78,6 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
       },
     },
     commands: [
-      ...contributions.flatMap(({ id, shell }) =>
-        (shell.commands ?? []).map((command) => ({
-          ...command,
-          app: id,
-          available: () => (apps.is_installed(id) ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
-        }))
-      ),
       define_command({
         id: "app list",
         description: "Installed apps",

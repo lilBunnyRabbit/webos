@@ -23,18 +23,21 @@ export interface UsageSignals {
   defaults: Iterable<AppId>;
 }
 
-function command_apps(manifests: Iterable<AppManifest>): [string, AppId][] {
-  return [...manifests].flatMap((manifest) => (manifest.shell?.commands ?? []).map((command): [string, AppId] => [command.id, manifest.id]));
+/** Each app command's id and its app. Loads every app's shell module, so only for the one-time move. */
+export async function command_apps(manifests: Iterable<AppManifest>): Promise<[string, AppId][]> {
+  const loaded = await Promise.all(
+    [...manifests].map(async (manifest) => ((await manifest.shell?.())?.default.commands ?? []).map((command): [string, AppId] => [command.id, manifest.id]))
+  );
+  return loaded.flat();
 }
 
 /** The registered apps any signal points to. */
-export function used_apps(manifests: Iterable<AppManifest>, signals: UsageSignals): Set<AppId> {
+export function used_apps(manifests: Iterable<AppManifest>, signals: UsageSignals, commands: readonly [string, AppId][]): Set<AppId> {
   const known = new Map([...manifests].map((manifest) => [manifest.id, manifest]));
   const used = new Set<AppId>([...signals.windows, ...signals.desktop, ...signals.data_folders, ...signals.defaults]);
   for (const key of signals.storage_keys) {
     if (key.startsWith("app.")) used.add(key.slice(4).split(".")[0]);
   }
-  const commands = command_apps(known.values());
   for (const line of signals.history) {
     for (const stage of line.split("|")) {
       const words = stage.trim().replace(/^sudo\s+/, "");

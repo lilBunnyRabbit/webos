@@ -8,6 +8,8 @@ export interface SessionHost extends Registry {
   confirm_elevation(line: string): Promise<boolean>;
   /** A command as a value, for `win` listing its group. */
   describe(id: string): Value;
+  /** Resolves once every command is registered; a run plans after it. */
+  load(): Promise<void>;
 }
 
 class EntryState implements Entry {
@@ -78,6 +80,7 @@ export class Session implements ShellSession {
   }
 
   private async execute(input: string, signal: AbortSignal, emit: (value: Value) => void): Promise<void> {
+    await this.host.load();
     let stages;
     try {
       stages = plan(input, this.host);

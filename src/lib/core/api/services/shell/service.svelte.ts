@@ -1,3 +1,4 @@
+import { untrack } from "svelte";
 import type { DialogsService, FilesService, Kernel, NotificationsService } from "$lib/core/api";
 import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
@@ -35,11 +36,17 @@ export class ShellService implements IShellService {
     return list;
   });
 
+  /** First in the merge, so a service's own completers and values win a clash with an app's. */
+  private lazy = $state.raw<{ key: string; contribution: ShellContribution }[]>([]);
+  public loaded = $state(false);
+  private loading: Promise<void> | null = null;
+
   private registry = $derived.by(() => {
     const commands = new Map<string, Command>();
     const completers = new Map<string, Completer>();
     const parts = new Map<string, Partial<ValueType>>();
-    for (const { key, contribution } of this.contributions) {
+    const all = [...this.lazy, ...this.contributions];
+    for (const { key, contribution } of all) {
       for (const command of contribution.commands ?? []) {
         if (command.app) continue;
         if (commands.has(command.id)) console.warn(`[ShellService] "${command.id}" from ${key} replaces an earlier one`);
@@ -48,7 +55,7 @@ export class ShellService implements IShellService {
       for (const [kind, completer] of Object.entries(contribution.completers ?? {})) completers.set(kind, completer);
       for (const [type, value] of Object.entries(contribution.values ?? {})) parts.set(type, { ...parts.get(type), ...value });
     }
-    for (const { contribution } of this.contributions) {
+    for (const { contribution } of all) {
       for (const command of contribution.commands ?? []) {
         if (!command.app) continue;
         const taken = commands.get(command.id);
@@ -101,6 +108,22 @@ export class ShellService implements IShellService {
     return this.own;
   }
 
+  public load(): Promise<void> {
+    this.loading ??= this.load_lazy();
+    return this.loading;
+  }
+
+  private async load_lazy(): Promise<void> {
+    const pending = untrack(() => this.contributions).flatMap(({ key, contribution }) => (contribution.lazy ? [{ key, lazy: contribution.lazy }] : []));
+    const settled = await Promise.allSettled(pending.map(async ({ key, lazy }) => ({ key, contribution: await lazy() })));
+    this.lazy = settled.flatMap((result, index) => {
+      if (result.status === "fulfilled") return [result.value];
+      console.error(`[ShellService] ${pending[index].key}'s lazy commands failed to load`, result.reason);
+      return [];
+    });
+    this.loaded = true;
+  }
+
   public find(id: string): Command | undefined {
     return this.registry.commands.get(id);
   }
@@ -133,12 +156,14 @@ export class ShellService implements IShellService {
         remember: (line) => record && this.remember(line),
         confirm_elevation: (line) => this.confirm_elevation(line),
         describe: (id) => command_value(this.find(id)!),
+        load: () => this.load(),
       },
       cwd
     );
   }
 
-  public complete(input: string, cursor: number, session: ShellSession): Promise<CompletionResult> {
+  public async complete(input: string, cursor: number, session: ShellSession): Promise<CompletionResult> {
+    await this.load();
     return complete(input, cursor, session, {
       find: (id) => this.find(id),
       ids: () => [...this.registry.commands.values()].filter((command) => (command.available?.() ?? true) === true).map((command) => command.id),

@@ -64,9 +64,10 @@ export class AppsService implements IAppsService {
     const first_boot = (await this.read(VERSION_STATE_PATH)) === null;
     if (!first_boot) {
       // Runs once per device, so its readers stay out of the boot chunk.
-      const { read_usage, used_apps } = await import("./usage");
+      const { command_apps, read_usage, used_apps } = await import("./usage");
       const signals = await read_usage(this.files_service, this.settings_service.file_defaults);
-      this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals));
+      const commands = await command_apps(this.registry.values());
+      this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals, commands));
     }
     this.writer.write(serialize_installed(this.installed));
   }

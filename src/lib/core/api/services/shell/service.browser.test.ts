@@ -49,13 +49,43 @@ describe("ShellService", () => {
       files: FilesService,
       notifications: NotificationsService,
       dialogs: stub_service("dialogs", {}),
-      apps: stub_service("apps", { shell: () => ({ commands: [app_command("ls"), app_command("jot")] }) }),
+      apps: stub_service("apps", { shell: () => ({ lazy: async () => ({ commands: [app_command("ls"), app_command("jot")] }) }) }),
       shell: ShellService,
     });
     shutdown = booted.shutdown;
     const shell = booted.kernel.service<ShellService>("shell");
+    await shell.load();
     expect(shell.find("ls")?.app).toBeUndefined();
     expect(shell.find("jot")?.app).toBe("jot");
+  });
+
+  test("lazy parts load once, on first use, and lose a completer or value clash to a service", async () => {
+    const app_path = () => [{ value: "app" }];
+    const lazy = vi.fn(async () => ({
+      commands: [{ id: "jot", description: "", app: "jot", run: () => "jotted" }],
+      completers: { path: app_path },
+      values: { file: { columns: ["app"] }, note: { columns: ["text"], text: () => "note" } },
+    }));
+    const booted = await boot_test_kernel({
+      files: FilesService,
+      notifications: NotificationsService,
+      dialogs: stub_service("dialogs", {}),
+      apps: stub_service("apps", { shell: () => ({ lazy }) }),
+      shell: ShellService,
+    });
+    shutdown = booted.shutdown;
+    const shell = booted.kernel.service<ShellService>("shell");
+    expect(shell.loaded).toBe(false);
+    expect(shell.find("jot")).toBeUndefined();
+
+    const result = await run(shell.session(), "jot");
+    expect(result.values).toEqual(["jotted"]);
+    await Promise.all([shell.load(), shell.complete("ls ", 3, shell.session())]);
+    expect(lazy).toHaveBeenCalledTimes(1);
+    expect(shell.loaded).toBe(true);
+    expect(shell.value_type("note")?.text({ $type: "note" })).toBe("note");
+    expect(shell.value_type("file")?.columns).not.toEqual(["app"]);
+    expect(shell.completer("path")).not.toBe(app_path);
   });
 
   test("files: mkdir, touch, ls through where and sort, cd and pwd", async () => {

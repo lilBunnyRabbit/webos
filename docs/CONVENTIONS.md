@@ -36,6 +36,8 @@ src/lib/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
         ├── index.ts              # define_app manifest (eager)
+        ├── commands.ts           # shell commands, `shell: () => import("./commands")` (lazy, ADR-034)
+        ├── shell.ts              # their bodies, `import()`ed on first run
         └── {id}.app.svelte       # component (lazy)
 ```
 
@@ -98,6 +100,7 @@ export default define_app({
 - Auto-discovered by glob in `src/lib/apps/index.ts`. No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
+- Shell commands: `shell: () => import("./commands")`, never an inline object. `commands.ts` default-exports the `ShellContribution` ([writing an app](system/apps/writing-an-app.md)).
 - A manifest may take only types and functions from `$lib/core/api`. Manifests are evaluated while that barrel is still initializing (AppsService imports the glob), so a `const` from it is in the temporal dead zone. Import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`).
 - Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 190 KB gz (`bun run build && bun run budget`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
