@@ -23,7 +23,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path`, `resolve_path`, `tilde_path`, `base_name`, `parent_path`, `file_stem`, `file_extension` |
 | `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
-| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session, shell history, version state) and `json_file`. `busy` and `idle()` tell whether a write is still on its way |
+| `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session, shell history, version state) and `json_file`, optionally debounced. `busy` and `idle()` tell whether a write is still on its way; `flush_writers()` saves every delayed one now |
 | `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
 | `shell.ts`, `shell-run.ts` | The shell contribution and its lazy bodies, see [Shell](#shell) |
@@ -242,13 +242,17 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 
 ### LatestWriter
 
-`new LatestWriter(files: () => FilesService, path, label)`, then `write(text)`. For state files that change often (ADR-023 revision; used by SettingsService, SessionService, ShellService history, VersionService state and app `storage.file()`).
+`new LatestWriter(files: () => FilesService, path, label, { delay? })`, then `write(text)`. For state files that change often (ADR-023 revision; used by SettingsService, SessionService, ShellService history, VersionService state and app `storage.file()`). Settings, session and `storage.file()` pass `delay: 300`; shell history, version state and installed apps save at once (performance pass, [brainstorm](../../brainstorm/2026-10-17_performance-pass.md)).
 
-- `write(text)` replaces the pending text and starts a flush unless one is running. Never awaits, never throws.
-- The flush loop takes the pending text, walks the parent folders from the root (`exists(dir, name, "directory")` → open it, else `create_directory`), then `create_file(parent, name, { content, overwrite: true })`. It repeats while new text arrived meanwhile, so writes never overlap and only the newest of a burst lands.
+- `write(text)` replaces the pending text. Without a delay it starts a flush unless one is running; with one it (re)starts a `delay` ms timer, so a burst (focus clicks, slider steps, typing) saves once, after the last change. Never awaits, never throws.
+- **Leaving the page.** Writers with a pending timer sit in a module-level set. One `visibilitychange` listener (on `hidden`) and one `pagehide` listener (capture phase, so it runs before `main.ts` shuts the kernel down) flush them all; they're added on the first delayed write. The flush only *starts* the write: OPFS is async, and a tab closed within the delay can still lose that change, since the page is torn down before the write commits (measured: also true without a delay when the tab closes within a few ms). Switching tabs or hiding the window saves normally.
+- `busy` is true while a timer waits, text is queued or a write runs. `idle()` saves a delayed write now and resolves once nothing is queued or being written. `flush()` starts the save at once. `flush_writers()` does `idle()` for every delayed writer; backup calls it before reading areas and restore before `hold_writes()`.
+- `seed(text)` records what the file already holds (settings, session and `json_file` read it first), and the writer remembers the last text it wrote: writing that same text again is skipped, so a boot with unchanged state writes nothing.
+- The flush loop takes the pending text and calls `create_file(parent, name, { content, overwrite: true })`. The parent handle is walked once and cached: one `getDirectoryHandle` per segment, falling back to `create_directory` on `NotFoundError` so creation still bumps the folder's revision. A `NotFoundError` on write (the folder was removed: backup restore, `clear()`) drops the cache, walks again and retries once. It repeats while new text arrived meanwhile (unless a new delay is running), so writes never overlap and only the newest of a burst lands.
 - Errors → `console.error("Failed to save {label}:")`, and the loop continues with the next text.
 - Every write bumps the parent's revision; created folders bump theirs.
-- `create_directory` auto-renames, so a **file** squatting on a folder name makes it create `name (1)` and write there on every flush.
+- `create_directory` auto-renames, so a **file** squatting on a folder name makes it create `name (1)` and write there.
+- Skipping identical text trusts the writer's memory: if something else deletes the file (`clear()`) and the state hasn't changed, it isn't recreated until the next change.
 
 ### Errors
 

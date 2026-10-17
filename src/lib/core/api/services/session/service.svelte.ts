@@ -42,7 +42,7 @@ export class SessionService implements ISessionService {
   private dialogs_service!: DialogsService;
   private notifications_service!: NotificationsService;
 
-  private writer = new LatestWriter(() => this.files_service, SESSION_PATH, "session");
+  private writer = new LatestWriter(() => this.files_service, SESSION_PATH, "session", { delay: 300 });
   private dispose_saving?: () => void;
   private destroyed = false;
 
@@ -57,7 +57,9 @@ export class SessionService implements ISessionService {
   async init(): Promise<void> {
     remove_legacy_view_keys();
     const file = await this.files_service.get_file(SESSION_PATH);
-    const { windows: saved, frames } = file ? parse_session(await file.text()) : { windows: [], frames: {} };
+    const text = file ? await file.text() : null;
+    this.writer.seed(text);
+    const { windows: saved, frames } = text !== null ? parse_session(text) : { windows: [], frames: {} };
     this.saved_count = saved.length;
     // Frames apply whatever the restore answer: Start fresh drops windows, not where apps like to open.
     this.windows_service.load_frames(frames);

@@ -20,7 +20,7 @@ Tailwind utilities  bg-background-dark · text-foreground/65 · border-error …
 
 ### `color-scheme`
 
-After writing the variables, the token effect measures the applied background: a probe `<span>` with `color: oklch(from var(--background) l c h)`, read back through `getComputedStyle` (`background_lightness()` in `service.svelte.ts`). Any syntax works (hex, `oklch(from …)`, `color-mix`). Above 0.6 lightness `<html>` gets `color-scheme: light`, otherwise `dark`. Native scrollbars, date inputs and pickers follow the palette, not the OS preference, and so does CSS `light-dark()`: the kit's field surface is `light-dark(var(--background-lightest), var(--background-darker))`, raised in light themes and recessed in dark ones.
+After writing the variables, the token effect measures the applied background: a probe `<span>` with `color: oklch(from var(--background) l c h)`, read back through `getComputedStyle` (`background_lightness()` in `service.svelte.ts`). Any syntax works (hex, `oklch(from …)`, `color-mix`). Above 0.6 lightness `<html>` gets `color-scheme: light`, otherwise `dark`. The probe runs only when `background` changed or references another token (`var(`). Native scrollbars, date inputs and pickers follow the palette, not the OS preference, and so does CSS `light-dark()`: the kit's field surface is `light-dark(var(--background-lightest), var(--background-darker))`, raised in light themes and recessed in dark ones.
 
 ## Tokens
 

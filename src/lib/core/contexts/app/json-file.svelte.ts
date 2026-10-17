@@ -28,6 +28,7 @@ const cells = new Map<string, JsonFileCell<unknown>>();
 
 const files = () => kernel.service<FilesService>("files");
 const serialize = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
+const is_not_found = (error: unknown) => error instanceof DOMException && error.name === "NotFoundError";
 
 class JsonFileCell<T> {
   value = $state() as T;
@@ -40,6 +41,7 @@ class JsonFileCell<T> {
   private written: string[] = [];
   private load_seq = 0;
   private writer: LatestWriter;
+  private handle: FileSystemFileHandle | null = null;
   private dispose_root: () => void;
 
   constructor(
@@ -50,7 +52,7 @@ class JsonFileCell<T> {
     this.initial = structuredClone(initial);
     this.value = structuredClone(initial);
     this.last = serialize(initial);
-    this.writer = new LatestWriter(files, path, path);
+    this.writer = new LatestWriter(files, path, path, { delay: 300 });
     const directory = join_path(split_path(path).slice(0, -1));
 
     this.dispose_root = detached_root(() => {
@@ -77,12 +79,14 @@ class JsonFileCell<T> {
     }
     let text: string | null;
     try {
-      text = (await (await files().get_file(this.path))?.text()) ?? null;
+      text = await this.read();
     } catch (error) {
       console.error(`Failed to read ${this.path}:`, error);
       text = null;
     }
     if (seq !== this.load_seq) return;
+
+    if (!this.writer.busy) this.writer.seed(text);
 
     if (text !== null && (text === this.last || this.written.includes(text))) {
       this.error = null;
@@ -108,6 +112,28 @@ class JsonFileCell<T> {
     this.ready = true;
   }
 
+  /** Through the handle from an earlier read; the path is walked again only when the file was gone or moved. */
+  private async read(): Promise<string | null> {
+    if (this.handle) {
+      try {
+        return await (await this.handle.getFile()).text();
+      } catch (error) {
+        if (!is_not_found(error)) throw error;
+        this.handle = null;
+      }
+    }
+    const segments = split_path(this.path);
+    const directory = await files().get_directory(join_path(segments.slice(0, -1)));
+    if (!directory) return null;
+    try {
+      this.handle = await directory.getFileHandle(segments.at(-1)!);
+    } catch (error) {
+      if (is_not_found(error)) return null;
+      throw error;
+    }
+    return (await this.handle.getFile()).text();
+  }
+
   private adopt(value: T): void {
     this.last = serialize(value);
     this.value = value;
@@ -117,6 +143,8 @@ class JsonFileCell<T> {
     // A change made right before the last holder lets go would otherwise die with the save effect.
     const text = serialize($state.snapshot(this.value));
     if (this.ready && text !== this.last) this.writer.write(text);
+    // A new holder of this path reads the disk: the save can't wait for its delay.
+    this.writer.flush();
     this.dispose_root();
   }
 }

@@ -6,6 +6,7 @@ import type { ZipSource } from "$lib/core/utils/zip/write";
 import type { DialogsService } from "../dialogs/type";
 import { get_directory_at, get_directory_size, hold_writes, list_directory } from "../files/opfs";
 import { split_path } from "../files/path";
+import { flush_writers } from "../files/latest-writer";
 import {
   BACKUP_FORMAT,
   MANIFEST_NAME,
@@ -152,6 +153,7 @@ export async function swap_staged(
   manifest: BackupManifest,
   storage: Storage
 ): Promise<() => void> {
+  await flush_writers();
   const release = await hold_writes();
   try {
     const stage = await folder_at(root, split_path(STAGE_PATH));
