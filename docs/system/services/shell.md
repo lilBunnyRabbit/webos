@@ -169,6 +169,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | blocks | `blocks daily [day]` | opens the daily sprint |
 | nurikabe | `nurikabe daily [day]` | opens the daily puzzle |
 | sokoban | `sokoban daily [day]` | opens the daily level |
+| wordle | `wordle daily [day]` | opens the daily word |
 | pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values |
 | getting-started | `tour [topic]` | none |
 | clock | `clock [tab]`, `clock pin [-f]`, `time [zone]`, `alarm ls\|add\|on\|off\|rm`, `timer <duration> [label…]`, `timer ls\|stop` | `alarm` / `timer` values, `text`; `zone` completer |
