@@ -297,7 +297,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
   - [x] Media Preview: no length for MediaRecorder WebM recordings (no duration header): seek past the end once, then back
   - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
-  - [-] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16)
+  - [-] PDF Tools: Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16); JPEGs follow their EXIF orientation (done 2026-10-17)
   - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)
   - [ ] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker

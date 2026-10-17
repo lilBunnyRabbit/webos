@@ -1,5 +1,6 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { has_drag_paths, has_os_files, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
+import { orientation } from "$lib/core/utils/exif";
 import { load_image } from "$lib/core/utils/image";
 import type { PdfImage } from "./pdf";
 import { parse_signature_svg, signature_svg, type Signature } from "./stroke";
@@ -92,12 +93,9 @@ export async function prepare_image(source: SourceFile): Promise<PdfImage> {
   const { width, height } = image.bitmap;
   try {
     if (typed.type === "image/png" || typed.type === "image/jpeg") {
-      return {
-        bytes: new Uint8Array(await typed.arrayBuffer()),
-        kind: typed.type === "image/png" ? "png" : "jpg",
-        width,
-        height,
-      };
+      const bytes = new Uint8Array(await typed.arrayBuffer());
+      const jpeg = typed.type === "image/jpeg";
+      return { bytes, kind: jpeg ? "jpg" : "png", width, height, orientation: jpeg ? orientation(bytes) : 1 };
     }
     const canvas = new OffscreenCanvas(width, height);
     canvas.getContext("2d")!.drawImage(image.bitmap, 0, 0);

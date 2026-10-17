@@ -48,6 +48,30 @@ export function image_page(image_width: number, image_height: number, size: Page
   };
 }
 
+export type Matrix = [number, number, number, number, number, number];
+
+// PDF ignores EXIF orientation, so a JPEG embedded as stored needs its turn and flip in the matrix that places it.
+export function oriented_matrix(orientation: number, { x, y, width: w, height: h }: Rect): Matrix {
+  switch (orientation) {
+    case 2:
+      return [-w, 0, 0, h, x + w, y];
+    case 3:
+      return [-w, 0, 0, -h, x + w, y + h];
+    case 4:
+      return [w, 0, 0, -h, x, y + h];
+    case 5:
+      return [0, -h, -w, 0, x + w, y + h];
+    case 6:
+      return [0, -h, w, 0, x, y + h];
+    case 7:
+      return [0, h, w, 0, x, y];
+    case 8:
+      return [0, h, -w, 0, x + w, y];
+    default:
+      return [w, 0, 0, h, x, y];
+  }
+}
+
 export function displayed_size(box: Rect, rotation: Rotation): { width: number; height: number } {
   return rotation % 180 === 0 ? { width: box.width, height: box.height } : { width: box.height, height: box.width };
 }

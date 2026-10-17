@@ -187,6 +187,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
 | pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls`, `testpdf [-n pages] [--page a4\|letter\|a5\|a3\|legal\|mixed\|WxH] [--orientation] [--size 500MB] [--images] [--text] [--grid] [--plain] [-o]` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images; `testpdf` runs as a task and saves to `/home/Documents` |
 | hex-viewer | `hexdump <path> [-l\|--length N] [-s\|--offset N]` (256 bytes by default, like `xxd -l -s`) | `hex-row` values (offset, hex, ascii; open → Hex Viewer at that offset) |
+| metadata | `meta <paths…>`, `meta strip <paths…> [--keep-orientation]` | `meta` values (name, format, camera, date, gps, size; open → Metadata); `file` from `meta strip`; path completion filtered to JPEG, PNG, WebP and PDF |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { PageSize, clamp_placement, display_to_pdf, displayed_size, image_page, page_size_label, stamp_geometry } from "./geometry";
+import { PageSize, clamp_placement, display_to_pdf, displayed_size, image_page, oriented_matrix, page_size_label, stamp_geometry } from "./geometry";
 
 describe("page_size_label", () => {
   test("names common paper, either way round", () => {
@@ -40,6 +40,31 @@ describe("image_page", () => {
   test("image size uses 96 dpi plus margins", () => {
     const page = image_page(96, 192, PageSize.IMAGE, 10);
     expect(page).toEqual({ width: 92, height: 164, image: { x: 10, y: 10, width: 72, height: 144 } });
+  });
+});
+
+describe("oriented_matrix", () => {
+  const rect = { x: 10, y: 20, width: 300, height: 400 };
+  const place = (matrix: number[], u: number, v: number) => [matrix[0] * u + matrix[2] * v + matrix[4], matrix[1] * u + matrix[3] * v + matrix[5]];
+
+  // Where the stored image's top-left and top-right pixels land; PDF image space has (0, 1) at the top-left.
+  test.each([
+    [1, [10, 420], [310, 420]],
+    [2, [310, 420], [10, 420]],
+    [3, [310, 20], [10, 20]],
+    [4, [10, 20], [310, 20]],
+    [5, [10, 420], [10, 20]],
+    [6, [310, 420], [310, 20]],
+    [7, [310, 20], [310, 420]],
+    [8, [10, 20], [10, 420]],
+  ])("orientation %i puts the stored top row where it displays", (orientation, top_left, top_right) => {
+    const matrix = oriented_matrix(orientation, rect);
+    expect(place(matrix, 0, 1)).toEqual(top_left);
+    expect(place(matrix, 1, 1)).toEqual(top_right);
+  });
+
+  test("an unknown orientation draws as stored", () => {
+    expect(oriented_matrix(0, rect)).toEqual(oriented_matrix(1, rect));
   });
 });
 

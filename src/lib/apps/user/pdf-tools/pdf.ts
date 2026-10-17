@@ -1,5 +1,5 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
-import { PageSize, image_page, stamp_geometry, text_origin, displayed_size, type Placement } from "./geometry";
+import { PageSize, image_page, oriented_matrix, stamp_geometry, text_origin, displayed_size, type Placement } from "./geometry";
 import { normalize_rotation, type PageItem } from "./pages";
 import type { Signature } from "./stroke";
 
@@ -55,7 +55,16 @@ export class PdfWriter {
     const out = await this.out();
     const embedded = image.kind === "png" ? await out.embedPng(image.bytes) : await out.embedJpg(image.bytes);
     const layout = image_page(image.width, image.height, size, margin);
-    out.addPage([layout.width, layout.height]).drawImage(embedded, layout.image);
+    const page = out.addPage([layout.width, layout.height]);
+    if ((image.orientation ?? 1) === 1) return void page.drawImage(embedded, layout.image);
+    const { concatTransformationMatrix, drawObject, popGraphicsState, pushGraphicsState } = await pdf_lib();
+    const name = page.node.newXObject("Image", embedded.ref);
+    page.pushOperators(
+      pushGraphicsState(),
+      concatTransformationMatrix(...oriented_matrix(image.orientation ?? 1, layout.image)),
+      drawObject(name),
+      popGraphicsState()
+    );
   }
 
   /** Adds a blank page of this size in points and hands it to `draw`, with the document to embed images and fonts in. */
@@ -181,8 +190,11 @@ export async function sign_pdf(bytes: Uint8Array, stamps: SignStamp[], name?: st
 export interface PdfImage {
   bytes: Uint8Array;
   kind: "png" | "jpg";
+  /** Displayed size: the browser decodes JPEGs upright. */
   width: number;
   height: number;
+  /** EXIF orientation of `bytes`, 1 to 8; the page draws them upright. */
+  orientation?: number;
 }
 
 export async function images_to_pdf(images: PdfImage[], size: PageSize, margin: number): Promise<Uint8Array> {
