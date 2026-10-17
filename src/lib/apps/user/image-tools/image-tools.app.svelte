@@ -6,6 +6,7 @@
     Crosshair as CrosshairIcon,
     Crop as CropIcon,
     Eraser as EraserIcon,
+    EyeSlash as EyeSlashIcon,
     FilmStrip as FilmStripIcon,
     Rows as RowsIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
@@ -28,6 +29,7 @@
     { value: Section.SPLIT, label: "Split", icon: SquareSplitHorizontalIcon },
     { value: Section.SPRITES, label: "Sprites", icon: FilmStripIcon },
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
+    { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
@@ -39,6 +41,7 @@
     [Section.SPLIT]: () => import("./split-section.svelte"),
     [Section.SPRITES]: () => import("./sprites-section.svelte"),
     [Section.PATCH]: () => import("./patch-section.svelte"),
+    [Section.REDACT]: () => import("./redact-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 
