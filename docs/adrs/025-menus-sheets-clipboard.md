@@ -11,6 +11,8 @@
 
 > **Revision 2026-10-11: save picker.** `window.pick_save({ name?, accept?, start_path?, title? })` is the picker with `kind: "save"`: a name field, and a red Replace when the name exists. It returns a path; the app writes. Added for the static-utils ports, whose outputs go into OPFS instead of downloads ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
+> **Revision 2026-10-17: multi-pick.** `window.pick_file({ ..., multiple: true })` takes several files from one folder and resolves `string[]` (`[]` on Cancel); without `multiple` it still resolves one path or `null`. In the sheet, Ctrl/Cmd-click toggles, Shift-click selects a range and Mod+A selects every file `accept` allows; on touch a tap toggles. Double-click or Enter on a selected file chooses the whole selection, and Open shows the count. "This device…" (ADR-044) picks several too and copies them all into `/tmp/device/`. `PickerMode` gained `multiple`, and its `onchoose` takes `string[]` for every kind, one path except a multiple pick. It restores the multi-file device picks the picker took away from Image Tools, PDF Tools, Soundboard and Diff ([brainstorm](../brainstorm/2026-10-17_app-wave-7.md)).
+
 ## Context
 
 File Explorer uses the browser's `prompt()` and `confirm()`. There's no right-click, so rename, copy, move, Open with and properties have no entry point. The desktop can't delete real files without a confirm (ADR-022). ADR-003 planned window-scoped `confirm` / `prompt` / `pick_file`; the owner wants a clear split between system dialogs and window-bound ones, so that a picker can open inside the app that asked for it. Brainstorm: [2026-10-11 Context menus](../brainstorm/2026-10-11_context-menus.md).

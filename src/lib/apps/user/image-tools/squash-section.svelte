@@ -150,8 +150,8 @@
   });
 
   async function pick() {
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Squash" });
-    if (chosen) add([() => entry_at(chosen)]);
+    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Squash", multiple: true });
+    add(chosen.map((path) => () => entry_at(path)));
   }
 
   async function pick_folder() {
@@ -242,7 +242,7 @@
 >
   <Toolbar>
     {@render picker()}
-    <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
+    <IconButton label="Add images…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
     <IconButton label="Add folder…" size="sm" onclick={pick_folder}><FolderPlusIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{entries.length ? `${entries.length} ${entries.length === 1 ? "image" : "images"}` : ""}</span>
     {#if loading}<Spinner label="Loading images" />{/if}
@@ -256,7 +256,7 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
       <EmptyState icon={ArrowsInIcon} title="No images yet" description="Saves smaller WebP or JPEG copies of many images at once. Add images or a folder, drop them here or paste them.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button><Button onclick={pick_folder}><FolderPlusIcon weight="bold" /> Add a folder…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add images…</Button><Button onclick={pick_folder}><FolderPlusIcon weight="bold" /> Add a folder…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}

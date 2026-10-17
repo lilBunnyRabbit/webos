@@ -19,7 +19,7 @@
 
   let { path = PATHS.home, picker }: { path?: string; picker?: PickerMode } = $props();
 
-  let selected = $state<string | null>(null);
+  let selected = $state<string[]>([]);
 
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -51,7 +51,7 @@
     const previous = handler;
     handler = next;
     search = "";
-    selected = null;
+    selected = [];
     if (previous !== next) previous?.dispose();
   }
 

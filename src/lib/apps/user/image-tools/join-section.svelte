@@ -113,8 +113,8 @@
   });
 
   async function pick() {
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Join" });
-    if (chosen) add([() => load_image_at(chosen)]);
+    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add to Join", multiple: true });
+    add(chosen.map((path) => () => load_image_at(path)));
   }
 
   function take(files: File[]) {
@@ -191,7 +191,7 @@
 >
   <Toolbar>
     {@render picker()}
-    <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
+    <IconButton label="Add images…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{images.length ? `${images.length} ${images.length === 1 ? "image" : "images"}` : ""}</span>
     {#if result}
       {#if loading}<Spinner label="Loading images" />{/if}
@@ -214,7 +214,7 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
       <EmptyState icon={RowsIcon} title="No images yet" description="Joins images into one, stacked or side by side. Add them one by one, drop them here or paste them.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add images…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}

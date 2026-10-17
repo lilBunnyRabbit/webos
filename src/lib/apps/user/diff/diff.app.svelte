@@ -246,8 +246,11 @@
   }
 
   async function open_both() {
-    await open_file(left, "original");
-    if (!left.empty) await open_file(right, "changed");
+    if (!(await replace_ok(left)) || !(await replace_ok(right))) return;
+    const [first, second] = await win.pick_file({ accept: DIFF_ACCEPT, title: "Compare two files", multiple: true });
+    if (first) await load_into(left, first);
+    if (second) await load_into(right, second);
+    else if (!left.empty) await open_file(right, "changed");
   }
 
   function start_typing() {

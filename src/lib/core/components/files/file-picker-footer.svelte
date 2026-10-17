@@ -12,7 +12,7 @@
   interface Props {
     handler: DirectoryHandler;
     picker: PickerMode;
-    selected: string | null;
+    selected: string[];
     onnavigatepath: (segments: string[]) => void;
   }
 
@@ -23,10 +23,10 @@
   // Places is hidden below 48rem, which the picker sheet always is, so the other two sources live here.
   async function from_device() {
     try {
-      const [path] = await import_device_files(picker.accept);
-      if (path) picker.onchoose(path);
+      const paths = await import_device_files(picker.accept, picker.multiple);
+      if (paths.length > 0) picker.onchoose(paths);
     } catch (error) {
-      report_file_error("Couldn't read the file", error);
+      report_file_error(picker.multiple ? "Couldn't read the files" : "Couldn't read the file", error);
     }
   }
 
@@ -36,12 +36,13 @@
   }
 
   // A directory picker can take the open folder itself when nothing inside it is selected.
-  const choice = $derived(
-    selected ? join_path(handler.segments, selected) : picker.kind === "directory" ? handler.path : null
+  const choices = $derived(
+    selected.length > 0 ? selected.map((name) => join_path(handler.segments, name)) : picker.kind === "directory" ? [handler.path] : []
   );
+  const empty_label = $derived(picker.kind === "directory" ? "Choose a folder" : picker.multiple ? "Choose files" : "Choose a file");
 
   // Clicking a file takes its name; typing overrides it until the next click.
-  let name = $derived(selected ?? picker.name ?? "");
+  let name = $derived(selected[0] ?? picker.name ?? "");
   const trimmed = $derived(name.trim());
   const existing = $derived(handler.items.find((item) => item.name === trimmed));
   const invalid = $derived(!trimmed || trimmed === "." || trimmed === ".." || trimmed.includes("/"));
@@ -64,7 +65,7 @@
     class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5"
     onsubmit={(event) => {
       event.preventDefault();
-      if (save_path) picker.onchoose(save_path);
+      if (save_path) picker.onchoose([save_path]);
     }}
   >
     {#if files.can_mount}<div class="flex w-full items-center gap-1">{@render sources()}</div>{/if}
@@ -82,12 +83,12 @@
 {:else}
   <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5">
     {#if picker.kind === "file" || files.can_mount}<div class="flex w-full items-center gap-1">{@render sources()}</div>{/if}
-    <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={choice ?? undefined}>
-      {choice ?? (picker.kind === "file" ? "Choose a file" : "Choose a folder")}
+    <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={choices.join("\n") || undefined}>
+      {choices.length > 1 ? `${choices.length} files` : (choices[0] ?? empty_label)}
     </span>
     <Button variant="quiet" onclick={picker.oncancel}>Cancel</Button>
-    <Button variant="primary" disabled={!choice} onclick={() => choice && picker.onchoose(choice)}>
-      {picker.kind === "file" ? "Open" : "Select folder"}
+    <Button variant="primary" disabled={choices.length === 0} onclick={() => picker.onchoose(choices)}>
+      {picker.kind === "directory" ? "Select folder" : choices.length > 1 ? `Open ${choices.length}` : "Open"}
     </Button>
   </div>
 {/if}

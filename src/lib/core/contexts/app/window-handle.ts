@@ -2,7 +2,7 @@ import kernel, { WindowFlag, type DialogsService, type WindowId, type WindowsSer
 import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import PromptDialog from "$lib/core/components/dialogs/prompt-dialog.svelte";
 import type { Bounds } from "$lib/core/utils/type";
-import type { WindowHandle } from "./type";
+import type { PickOptions, WindowHandle } from "./type";
 
 const file_picker = async () => (await import("$lib/core/components/files/file-picker-dialog.svelte")).default;
 
@@ -67,14 +67,17 @@ export function create_window_handle(id: WindowId): WindowHandle {
     prompt(message, options = {}) {
       return dialogs().show(PromptDialog, { message, ...options }, { window: id });
     },
-    async pick_file(options = {}) {
-      return dialogs().show(await file_picker(), { kind: "file" as const, ...options }, { window: id });
-    },
+    pick_file: (async (options: PickOptions & { title?: string; multiple?: boolean } = {}) => {
+      const paths = await dialogs().show(await file_picker(), { kind: "file" as const, ...options }, { window: id });
+      return options.multiple ? (paths ?? []) : (paths?.[0] ?? null);
+    }) as WindowHandle["pick_file"],
     async pick_directory(options = {}) {
-      return dialogs().show(await file_picker(), { kind: "directory" as const, ...options }, { window: id });
+      const paths = await dialogs().show(await file_picker(), { kind: "directory" as const, ...options }, { window: id });
+      return paths?.[0] ?? null;
     },
     async pick_save(options = {}) {
-      return dialogs().show(await file_picker(), { kind: "save" as const, ...options }, { window: id });
+      const paths = await dialogs().show(await file_picker(), { kind: "save" as const, ...options }, { window: id });
+      return paths?.[0] ?? null;
     },
   };
 }

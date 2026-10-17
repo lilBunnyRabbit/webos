@@ -322,6 +322,11 @@ const command_context_members: Members<CommandContext, "args" | "elevated" | "in
 const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "render" | "text"> = true;
 /** An app's commands are a module whose default export is the contribution, loaded on first use (ADR-034 revision). */
 const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
+/** `pick_file` resolves one path or `null`; with `multiple: true`, every chosen path (ADR-025 revision). */
+const pick_file_single: WindowHandle["pick_file"] extends (options?: PickOptions) => Promise<string | null> ? true : false = true;
+const pick_file_multiple: WindowHandle["pick_file"] extends (options: PickOptions & { multiple: true }) => Promise<string[]>
+  ? true
+  : false = true;
 
 type StableTypes = [
   AppConfig,

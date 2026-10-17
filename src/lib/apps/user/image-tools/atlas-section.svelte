@@ -165,8 +165,8 @@
   });
 
   async function pick_image() {
-    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add a frame" });
-    if (chosen) add_paths([chosen]);
+    const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Add frames", multiple: true });
+    if (chosen.length) add_paths(chosen);
   }
 
   async function pick_folder() {
@@ -371,7 +371,7 @@
 >
   <Toolbar>
     {@render picker()}
-    <IconButton label="Add an image…" size="sm" onclick={pick_image}><PlusIcon weight="bold" /></IconButton>
+    <IconButton label="Add images…" size="sm" onclick={pick_image}><PlusIcon weight="bold" /></IconButton>
     <IconButton label="Add a folder…" size="sm" onclick={pick_folder}><FolderOpenIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{frames.length ? `${frames.length} ${frames.length === 1 ? "frame" : "frames"}` : ""}</span>
     {#if loading}<Spinner label="Loading images" />{/if}
@@ -391,7 +391,7 @@
       >
         {#snippet actions()}
           <Button variant="primary" onclick={pick_folder}><FolderOpenIcon weight="bold" /> Add a folder…</Button>
-          <Button onclick={pick_image}><PlusIcon weight="bold" /> Add an image…</Button>
+          <Button onclick={pick_image}><PlusIcon weight="bold" /> Add images…</Button>
         {/snippet}
       </EmptyState>
     {/if}

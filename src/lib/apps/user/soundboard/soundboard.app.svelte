@@ -131,8 +131,8 @@
   }
 
   async function add_from_files() {
-    const chosen = await win.pick_file({ accept: ACCEPT, title: "Add a sound" });
-    if (chosen) await add_paths([chosen]);
+    const chosen = await win.pick_file({ accept: ACCEPT, title: "Add sounds", multiple: true });
+    if (chosen.length) await add_paths(chosen);
   }
 
   // "Open with Soundboard" adds the file once; a restored window keeps the flag and doesn't add it again.
@@ -347,7 +347,7 @@
     <Select size="sm" aria-label="Board" options={board_options} bind:value={active_id.value} class="w-36 overflow-hidden whitespace-nowrap @md:w-44" />
     <IconButton label="Board options" size="sm" onclick={board_menu}><DotsThreeIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
-    <Button size="sm" variant="primary" aria-label="Add sound…" title="Add sound…" onclick={add_from_files}><PlusIcon weight="bold" /><span class="hidden @md:inline">Add sound…</span></Button>
+    <Button size="sm" variant="primary" aria-label="Add sounds…" title="Add sounds…" onclick={add_from_files}><PlusIcon weight="bold" /><span class="hidden @md:inline">Add sounds…</span></Button>
     <Separator vertical class="hidden @md:block" />
     <IconButton label="Stop all (Esc)" size="sm" disabled={playing_count === 0} onclick={() => player.stop_all()}><StopIcon weight="fill" /></IconButton>
     <Segmented size="sm" label="Pressing a playing pad again" options={MODE_OPTIONS} bind:value={mode.value} />
@@ -370,7 +370,7 @@
         description="Add audio from your files or your device, or drop it here. Each sound is copied into the board, so moving the original won't break it."
       >
         {#snippet actions()}
-          <Button variant="primary" onclick={add_from_files}><FolderOpenIcon weight="bold" /> Add sound…</Button>
+          <Button variant="primary" onclick={add_from_files}><FolderOpenIcon weight="bold" /> Add sounds…</Button>
         {/snippet}
       </EmptyState>
     {:else}

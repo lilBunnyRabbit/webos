@@ -12,7 +12,10 @@ export interface PickerMode {
   accept?: string[];
   /** Save mode: the suggested file name. */
   name?: string;
-  onchoose: (path: string) => void;
+  /** File mode: several files from one folder (Ctrl/Shift-click, Mod+A; a tap toggles on touch). */
+  multiple?: boolean;
+  /** One path, except a `multiple` file pick, which may choose several. */
+  onchoose: (paths: string[]) => void;
   oncancel: () => void;
 }
 
@@ -28,10 +31,10 @@ export const DEVICE_PATH = `${PATHS.tmp}/device`;
 
 /**
  * The browser's file chooser, copied into `DEVICE_PATH` so the pick has a path like any other: the picker's
- * `onchoose(path)` stays one shape. Resolves the new paths, `[]` on cancel.
+ * `onchoose(paths)` stays one shape. Resolves the new paths, `[]` on cancel.
  */
-export async function import_device_files(accept?: string[]): Promise<string[]> {
-  return store_device_files(kernel.service<FilesService>("files"), await pick_device_files({ accept }));
+export async function import_device_files(accept?: string[], multiple = false): Promise<string[]> {
+  return store_device_files(kernel.service<FilesService>("files"), await pick_device_files({ accept, multiple }));
 }
 
 export async function store_device_files(files: FilesService, picked: File[]): Promise<string[]> {
