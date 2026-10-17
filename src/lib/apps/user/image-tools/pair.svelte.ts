@@ -4,6 +4,7 @@ import type { WindowHandle } from "$lib/core/contexts/app/type";
 import { pick_device_files } from "$lib/core/utils/device-file";
 import { error_message } from "$lib/core/utils";
 import { load_image, load_image_at, read_pixels, type SourceImage } from "$lib/core/utils/image";
+import { tolerance_level } from "./compare";
 import { Pyramid, align, compare, coverage, find_regions, type Alignment, type Rect } from "./patch";
 
 export const Slot = { ORIGINAL: "original", EDITED: "edited" } as const;
@@ -39,7 +40,7 @@ export class ImagePair {
       ? compare(this.original_pyramid, this.edited_pyramid, this.alignment, this.match_colors)
       : null
   );
-  readonly regions = $derived(this.comparison ? find_regions(this.comparison.diff, (this.tolerance * 255) / 100) : []);
+  readonly regions = $derived(this.comparison ? find_regions(this.comparison.diff, tolerance_level(this.tolerance)) : []);
   readonly covered = $derived(this.ready ? coverage(this.ready.alignment, this.ready.original.bitmap, this.ready.edited.bitmap) : null);
   readonly uncovered = $derived.by((): Rect[] => {
     if (!this.edited || !this.ready) return [];

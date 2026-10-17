@@ -5,7 +5,7 @@ import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { file_value } from "$lib/core/api/services/files/shell";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
 import type { CommandContext, Value } from "$lib/core/api/services/shell/type";
-import { join, split, trim, unbg } from "./shell";
+import { imgdiff, join, split, trim, unbg } from "./shell";
 
 let files: FilesService;
 let notifications: NotificationsService;
@@ -122,4 +122,16 @@ test("image unbg clears the given colours and refuses missing files", async () =
   expect(await alpha_at(out.path, 0, 0)).toBe(0);
 
   await expect(unbg(context({ path: "nope.png", color: ["#fff"] }))).rejects.toThrow("/home/nope.png: no such file");
+});
+
+test("imgdiff reports the changed share and regions, and refuses missing files", async () => {
+  await seed("f.png", 64, 64, { x: 0, y: 0, w: 32, h: 64 }, "#336699");
+  await seed("g.png", 64, 64, { x: 0, y: 0, w: 32, h: 64 }, "#336699");
+
+  const same = await imgdiff(context({ before: "f.png", after: "g.png", tolerance: 12, open: false }));
+  expect(same).toMatchObject({ $type: "image-diff", changed: 0, regions: 0, before: "/home/f.png", after: "/home/g.png" });
+
+  await expect(imgdiff(context({ before: "f.png", after: "nope.png", tolerance: 12, open: false }))).rejects.toThrow(
+    "/home/nope.png: no such file"
+  );
 });
