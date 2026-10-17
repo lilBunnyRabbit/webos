@@ -29,8 +29,8 @@
 <div class={cn("flex h-24 w-full max-w-md items-center justify-center gap-0.5", class_name)} aria-hidden="true">
   {#each levels as level, index (index)}
     <span
-      class={cn("max-w-1 min-w-px flex-1 rounded-full transition-[height] duration-75", running ? "bg-primary" : "bg-foreground/30")}
-      style:height="{Math.max(4, level * 100)}%"
+      class={cn("h-full max-w-1 min-w-px flex-1 transition-[clip-path] duration-75", running ? "bg-primary" : "bg-foreground/30")}
+      style:clip-path="inset({(1 - Math.max(0.04, level)) * 50}% 0 round 9999px)"
     ></span>
   {/each}
 </div>
