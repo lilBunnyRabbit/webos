@@ -13,6 +13,7 @@
     Rows as RowsIcon,
     SquareHalf as SquareHalfIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
+    SquaresFour as SquaresFourIcon,
   } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
@@ -31,6 +32,7 @@
     { value: Section.TRIM, label: "Trim", icon: CropIcon },
     { value: Section.SPLIT, label: "Split", icon: SquareSplitHorizontalIcon },
     { value: Section.SPRITES, label: "Sprites", icon: FilmStripIcon },
+    { value: Section.ATLAS, label: "Atlas", icon: SquaresFourIcon },
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
     { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
     { value: Section.SQUASH, label: "Squash", icon: ArrowsInIcon },
@@ -46,6 +48,7 @@
     [Section.TRIM]: () => import("./trim-section.svelte"),
     [Section.SPLIT]: () => import("./split-section.svelte"),
     [Section.SPRITES]: () => import("./sprites-section.svelte"),
+    [Section.ATLAS]: () => import("./atlas-section.svelte"),
     [Section.PATCH]: () => import("./patch-section.svelte"),
     [Section.REDACT]: () => import("./redact-section.svelte"),
     [Section.SQUASH]: () => import("./squash-section.svelte"),
@@ -66,7 +69,7 @@
 
   const paths_for = (target: Section) => {
     if (launch.section !== target) return [];
-    if (target === Section.JOIN || target === Section.SQUASH) return launch.paths;
+    if (target === Section.JOIN || target === Section.SQUASH || target === Section.ATLAS) return launch.paths;
     return launch.paths.slice(0, target === Section.PATCH || target === Section.COMPARE ? 2 : 1);
   };
 </script>

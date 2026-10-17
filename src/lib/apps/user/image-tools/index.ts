@@ -19,7 +19,7 @@ export default define_app({
   name: "Image Tools",
   icon: ImagesSquareIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
+  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -48,6 +48,9 @@ export default define_app({
     "frames",
     "animation",
     "extract",
+    "atlas",
+    "texture packer",
+    "pack",
     "game assets",
     "pixel art",
     "redact",
