@@ -128,7 +128,7 @@ Boot logs nothing on success. The Kernel system app lists `kernel.services` in t
 
 - `vite.config.ts` sets `base: "/webos/"`: the site is the GitHub Pages project site `lilbunnyrabbit.github.io/webos/`. Dev serves under the same path (`localhost:5173/webos/`). Vite rewrites `index.html` asset URLs, the PWA manifest gets `scope` and `start_url` `/webos/`, and the SW registers at `/webos/sw.js`. Runtime URLs go through `import.meta.env.BASE_URL` (only `version.json` today).
 - `.github/workflows/deploy.yml` runs on every push to `master` (and manually). Job `fork` deletes `src/lib/apps/user`, then runs `bun run check` → `bun run test:unit` → `bun run build`: a fork that keeps only core must still work. Job `deploy` waits for it, then runs Bun install → `bun run check` → `bun run test:unit` → `bun run build` → `bun run budget` → upload `dist/` → `actions/deploy-pages`. A type error, a failing unit test, a broken fork or an entry chunk over budget blocks the deploy.
-- Boot budget: `scripts/boot-budget.ts` gzips the module scripts `dist/index.html` loads and fails over 185 KB gz (166.9 KB at 1.0; raised from 180 on 2026-10-17 for app wave 7).
+- Boot budget: `scripts/boot-budget.ts` gzips the module scripts `dist/index.html` loads and fails over 190 KB gz (166.9 KB at 1.0; raised from 180 on 2026-10-17 for app wave 7).
 - Branches: `master` is this Svelte version. The React version (v0) is frozen on `v0-react`.
 
 ### Upgrading from v0 (React)

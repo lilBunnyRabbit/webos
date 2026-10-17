@@ -484,7 +484,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - **Brainstorm:** [1.0 release](brainstorm/2026-10-15_v1-release.md)
 - [x] Fork test in CI (delete `src/lib/apps/user`, check + build + unit tests)
 - [x] App API frozen: `docs/system/app-api.md` + export pin test
-- [x] Boot budget: entry chunk <= 185 KB gz (was 180 until 2026-10-17), CI gate
+- [x] Boot budget: entry chunk <= 190 KB gz (was 180 until 2026-10-17), CI gate
 - [x] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
 - [x] Tasks service (ADR-013): after 1.0, additive (shipped 1.3.0)
 
