@@ -12,12 +12,14 @@ export const PATHS = {
   /** Persistent state owned by OS components, one folder each (`/var/lib/desktop`). */
   var_lib: "/var/lib",
   tmp: "/tmp",
+  /** Real folders on the disk, one per mount (ADR-044). Its listing comes from the mount table, not OPFS. */
+  mnt: "/mnt",
 } as const;
 
 /** Top-level folders owned by the OS rather than the user. */
 export const SYSTEM_DIRECTORIES: readonly string[] = [PATHS.etc, PATHS.var, PATHS.tmp];
 
-const ROOT_DIRECTORIES = ["home", "etc", "var", "tmp"];
+const ROOT_DIRECTORIES = ["home", "etc", "var", "tmp", "mnt"];
 
 /** Written once the old flat root has been moved into /home, so the migration never runs twice. */
 const MARKER = "hierarchy.json";
@@ -29,9 +31,23 @@ export function is_system_path(path: string): boolean {
 
 const LAYOUT_PATHS: readonly string[] = Object.values(PATHS);
 
-/** Can't be renamed, moved or deleted from the UI: anything under a system folder, and the layout's own folders (`/home/Desktop`). */
+/** The mount point a path sits in (`/mnt/Photos` for `/mnt/Photos/a.png`), or `null` outside `/mnt` (ADR-044). */
+export function mount_point_of(path: string): string | null {
+  const [top, name] = split_path(path);
+  return top === "mnt" && name !== undefined ? `${PATHS.mnt}/${name}` : null;
+}
+
+/** Nothing can be created in `/mnt` itself: its entries are mounts. */
+export function is_read_only_path(path: string): boolean {
+  return is_system_path(path) || path === PATHS.mnt;
+}
+
+/**
+ * Can't be renamed, moved or deleted from the UI: anything under a system folder, the layout's own folders
+ * (`/home/Desktop`), and mount points, which go with Unmount.
+ */
 export function is_locked_path(path: string): boolean {
-  return is_system_path(path) || LAYOUT_PATHS.includes(path);
+  return is_system_path(path) || LAYOUT_PATHS.includes(path) || mount_point_of(path) === path;
 }
 
 async function ensure_directory(root: FileSystemDirectoryHandle, path: string): Promise<FileSystemDirectoryHandle> {
@@ -77,6 +93,7 @@ export async function ensure_hierarchy(root: FileSystemDirectoryHandle): Promise
     ensure_directory(root, PATHS.etc),
     ensure_directory(root, PATHS.tmp),
     ensure_directory(root, PATHS.var_lib),
+    ensure_directory(root, PATHS.mnt),
   ]);
 
   if (!(await has_marker(etc))) {

@@ -4,12 +4,15 @@ import type {
   FileSystemItem,
   ListOptions,
   CreateFileOptions,
+  Mount,
   UploadOptions,
 } from "./type";
+import { MountState } from "./type";
 import { untrack } from "svelte";
 import { createSubscriber, SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
-import { ensure_hierarchy } from "./hierarchy";
+import { ensure_hierarchy, mount_point_of, PATHS } from "./hierarchy";
+import * as mounts_store from "./mounts-store";
 import { join_path, split_path } from "./path";
 import { files_shell } from "./shell";
 
@@ -28,8 +31,95 @@ export class FilesService implements IFilesService {
   // folder re-ran whenever any other folder got its first revision (widgets reloaded when an app opened).
   private revisions = new Map<string, Revision>();
 
+  mounts = $state.raw<Mount[]>([]);
+  readonly can_mount = opfs.can_pick_folders;
+
   async init(): Promise<void> {
     await ensure_hierarchy(await this.get_root());
+    try {
+      const stored = await mounts_store.load_mounts();
+      this.mounts = await Promise.all(stored.map(async ({ name, handle }) => this.mount_entry(name, handle)));
+    } catch (error) {
+      console.error("[FilesService] Couldn't load mounts", error);
+    }
+  }
+
+  private async mount_entry(name: string, handle: FileSystemDirectoryHandle): Promise<Mount> {
+    const permission = await handle.queryPermission({ mode: "readwrite" }).catch(() => "denied" as const);
+    return { name, path: `${PATHS.mnt}/${name}`, handle, state: permission === "granted" ? MountState.CONNECTED : MountState.LOCKED };
+  }
+
+  private mount_at(path: string): Mount | null {
+    const point = mount_point_of(path);
+    return point === null ? null : (this.mounts.find((mount) => mount.path === point) ?? null);
+  }
+
+  async mount(handle: FileSystemDirectoryHandle): Promise<string> {
+    for (const mount of this.mounts) if (await mount.handle.isSameEntry(handle)) return mount.path;
+
+    const taken = new Set(this.mounts.map((mount) => mount.name));
+    let name = handle.name || "Folder";
+    for (let n = 1; taken.has(name); n++) name = `${handle.name || "Folder"} (${n})`;
+
+    if ((await handle.queryPermission({ mode: "readwrite" })) !== "granted") await handle.requestPermission({ mode: "readwrite" });
+    await mounts_store.save_mount({ name, handle });
+    const mount = await this.mount_entry(name, handle);
+    this.mounts = [...this.mounts, mount];
+    this.bump(PATHS.mnt);
+    return mount.path;
+  }
+
+  async pick_mount(): Promise<string | null> {
+    const handle = await opfs.pick_disk_folder();
+    return handle ? this.mount(handle) : null;
+  }
+
+  async unmount(path: string): Promise<void> {
+    const mount = this.mounts.find((entry) => entry.path === join_path(split_path(path)));
+    if (!mount) throw new DOMException(`${path} isn't a mount`, "NotFoundError");
+    await mounts_store.delete_mount(mount.name);
+    this.mounts = this.mounts.filter((entry) => entry !== mount);
+    this.bump(PATHS.mnt);
+    this.bump(mount.path);
+  }
+
+  async reconnect(path: string): Promise<boolean> {
+    const mount = this.mount_at(path);
+    if (!mount) return false;
+    const granted = (await mount.handle.requestPermission({ mode: "readwrite" })) === "granted";
+    this.mounts = this.mounts.map((entry) => (entry === mount ? { ...entry, state: granted ? MountState.CONNECTED : MountState.LOCKED } : entry));
+    if (granted) this.bump(mount.path);
+    return granted;
+  }
+
+  private mount_items(): FileSystemItem[] {
+    return this.mounts.map(({ name, handle }) => ({ name, kind: "directory" as const, handle })).sort(opfs.default_sort);
+  }
+
+  /** Where a path's walk starts: a mount's handle for `/mnt/<name>/…`, else the OPFS root. `null` for an unknown mount. */
+  private async start(segments: string[]): Promise<{ root: FileSystemDirectoryHandle; rest: string[] } | null> {
+    if (segments[0] !== "mnt" || segments.length < 2) return { root: await this.get_root(), rest: segments };
+    const mount = this.mount_at(join_path(segments));
+    return mount ? { root: mount.handle, rest: segments.slice(2) } : null;
+  }
+
+  /** The path of a handle, mounts first: an OPFS folder can stand in for a picked one in tests. */
+  private async path_of(handle: FileSystemHandle): Promise<string[] | null> {
+    for (const mount of this.mounts) {
+      const inside = await mount.handle.resolve(handle).catch(() => null);
+      if (inside) return ["mnt", mount.name, ...inside];
+    }
+    return (await this.get_root()).resolve(handle);
+  }
+
+  private async is_mnt(handle: FileSystemDirectoryHandle): Promise<boolean> {
+    const segments = await (await this.get_root()).resolve(handle).catch(() => null);
+    return segments?.length === 1 && segments[0] === "mnt";
+  }
+
+  /** Which root a path lives under: a mount point, or `/` for OPFS. Moves between two roots are copy plus delete. */
+  private volume_of(path: string): string {
+    return mount_point_of(path) ?? "/";
   }
 
   revision(path: string): number {
@@ -41,12 +131,12 @@ export class FilesService implements IFilesService {
    * every mutation. `resolve()` maps a handle back to its path, since mutations only get handles.
    */
   async changed(directory: FileSystemDirectoryHandle): Promise<void> {
-    const segments = await (await this.get_root()).resolve(directory);
+    const segments = await this.path_of(directory);
     if (segments !== null) this.bump(join_path(segments));
   }
 
   private async changed_file(file: FileSystemFileHandle): Promise<void> {
-    const segments = await (await this.get_root()).resolve(file);
+    const segments = await this.path_of(file);
     if (segments !== null) this.bump(join_path(segments.slice(0, -1)));
   }
 
@@ -87,15 +177,24 @@ export class FilesService implements IFilesService {
   async directory(segments: string[], handle?: FileSystemDirectoryHandle | null): Promise<DirectoryHandler> {
     if (handle) return new DirectoryHandler(this, handle, segments);
 
-    let resolved = await this.get_root();
-    for (const segment of segments) {
+    const start = await this.start(segments);
+    if (!start) throw new DOMException(`${join_path(segments)} isn't mounted`, "NotFoundError");
+    let resolved = start.root;
+    for (const segment of start.rest) {
       resolved = await resolved.getDirectoryHandle(segment);
     }
     return new DirectoryHandler(this, resolved, segments);
   }
 
   async list(handle?: FileSystemDirectoryHandle | null, options?: ListOptions): Promise<FileSystemItem[]> {
-    return opfs.list_directory(await this.resolve(handle ?? null), options);
+    const directory = await this.resolve(handle ?? null);
+    if (await this.is_mnt(directory)) return this.mount_items();
+    return opfs.list_directory(directory, options);
+  }
+
+  /** DirectoryHandler's listing: `/mnt` lists the mount table, everything else the folder itself. */
+  async list_at(path: string, handle: FileSystemDirectoryHandle): Promise<FileSystemItem[]> {
+    return path === PATHS.mnt ? this.mount_items() : opfs.list_directory(handle);
   }
 
   async create_directory(handle: FileSystemDirectoryHandle | null, name: string): Promise<FileSystemDirectoryHandle> {
@@ -122,11 +221,13 @@ export class FilesService implements IFilesService {
   }
 
   async get_file(path: string): Promise<File | null> {
-    return opfs.get_file_at(await this.get_root(), split_path(path));
+    const start = await this.start(split_path(path));
+    return start ? opfs.get_file_at(start.root, start.rest) : null;
   }
 
   async get_directory(path: string): Promise<FileSystemDirectoryHandle | null> {
-    return opfs.get_directory_at(await this.get_root(), split_path(path));
+    const start = await this.start(split_path(path));
+    return start ? opfs.get_directory_at(start.root, start.rest) : null;
   }
 
   async rename_entry(handle: FileSystemDirectoryHandle | null, name: string, new_name: string): Promise<void> {
@@ -254,7 +355,12 @@ export class FilesService implements IFilesService {
       }
 
       let new_name: string;
-      if (directory) {
+      if (mode === "move" && this.volume_of(source_path) !== this.volume_of(target_path)) {
+        // Native moves stay inside one file system; across the OPFS/disk boundary it's copy, then delete.
+        const copied = directory ? await this.copy_directory(directory, target_dir, name) : await this.copy_file(await parent.getFileHandle(name), target_dir, name);
+        await this.delete_entry(parent, name, { recursive: true });
+        new_name = copied.name;
+      } else if (directory) {
         const moved =
           mode === "copy" ? await this.copy_directory(directory, target_dir, name) : await this.move_directory(parent, directory, target_dir, name);
         new_name = moved.name;
@@ -377,7 +483,7 @@ export class DirectoryHandler {
     const id = ++this.reload_id;
     this.loading = true;
     try {
-      const items = await opfs.list_directory(this.handle);
+      const items = await this.service.list_at(this.path, this.handle);
       // An older listing resolving after a newer one would show stale contents.
       if (id === this.reload_id) this.items = opfs.keep_unchanged(this.items, items);
     } finally {

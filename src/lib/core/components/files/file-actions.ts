@@ -14,7 +14,8 @@ import kernel, {
   type SettingsService,
 } from "$lib/core/api";
 import type { FileSystemItem } from "$lib/core/api/services/files";
-import { join_path } from "$lib/core/api/services/files/path";
+import { mount_point_of } from "$lib/core/api/services/files/hierarchy";
+import { base_name, join_path } from "$lib/core/api/services/files/path";
 import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
 import type { WindowHandle } from "$lib/core/contexts/app";
 import { report_file_error } from "./file-explorer.errors";
@@ -39,13 +40,16 @@ export async function create_folder(handler: DirectoryHandler, window: WindowHan
   }
 }
 
-/** One confirmation for the whole selection. */
+/** One confirmation for the whole selection. Inside a mount it names the real folder: the delete hits the disk. */
 export async function delete_items(handler: DirectoryHandler, window: WindowHandle, items: FileSystemItem[]): Promise<void> {
   const [first] = items;
   if (!first) return;
   const single = items.length === 1;
   const folders = items.some((item) => item.kind === "directory");
-  const confirmed = await window.confirm(single ? `Delete “${first.name}”?` : `Delete ${items.length} items?`, {
+  const what = single ? `“${first.name}”` : `${items.length} items`;
+  const mount = mount_point_of(handler.path);
+  const message = mount ? `Delete ${what} from ${base_name(mount)} on your disk?` : `Delete ${what}?`;
+  const confirmed = await window.confirm(message, {
     detail: folders ? "Folders go with everything in them. This can't be undone." : "This can't be undone.",
     confirm_label: "Delete",
     danger: true,
@@ -66,6 +70,45 @@ export async function upload(handler: DirectoryHandler): Promise<void> {
     await handler.upload_files();
   } catch (error) {
     report_file_error("Upload failed", error);
+  }
+}
+
+const upload_folder = () => import("./upload-folder");
+
+export async function upload_folder_into(handler: DirectoryHandler): Promise<void> {
+  try {
+    const { pick_device_folder, copy_folder_in } = await upload_folder();
+    const folder = await pick_device_folder();
+    if (folder) await copy_folder_in(folder, handler.path);
+  } catch (error) {
+    report_file_error("Upload failed", error);
+  }
+}
+
+/** Mounts a real folder (ADR-044) and resolves its path, or `null` when cancelled. */
+export async function mount_folder(): Promise<string | null> {
+  try {
+    return await kernel.service<FilesService>("files").pick_mount();
+  } catch (error) {
+    report_file_error("Couldn't mount the folder", error);
+    return null;
+  }
+}
+
+export async function unmount(path: string): Promise<void> {
+  try {
+    await kernel.service<FilesService>("files").unmount(path);
+  } catch (error) {
+    report_file_error(`Couldn't unmount ${base_name(path)}`, error);
+  }
+}
+
+export async function reconnect(path: string): Promise<boolean> {
+  try {
+    return await kernel.service<FilesService>("files").reconnect(path);
+  } catch (error) {
+    report_file_error(`Couldn't reconnect ${base_name(path)}`, error);
+    return false;
   }
 }
 

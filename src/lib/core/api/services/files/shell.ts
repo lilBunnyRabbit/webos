@@ -4,7 +4,7 @@ import { arg, ArgKind } from "../shell/arg";
 import { define_command } from "../shell/define";
 import { ShellError, type ShellContribution, type Tagged, type Value } from "../shell/type";
 import { is_tagged } from "../shell/values";
-import { is_system_path } from "./hierarchy";
+import { is_read_only_path, is_system_path } from "./hierarchy";
 import { split_path } from "./path";
 import type { FilesService } from "./type";
 
@@ -33,6 +33,7 @@ export function is_file_value(value: Value): value is FileValue {
 
 /** OPFS writes are the OS's in system folders; `sudo` is the way in (ADR-033). */
 export function assert_writable(path: string, elevated: boolean): void {
+  if (is_read_only_path(path) && !is_system_path(path)) throw new ShellError(`${path}: holds mounts only. Use mount to add a folder`);
   if (!elevated && is_system_path(path))
     throw new ShellError(`${path}: system folders are read-only. Use sudo to change them`);
 }
@@ -60,6 +61,10 @@ export function files_shell(files: FilesService): ShellContribution {
               ? file.name
               : `${file.name}  ${format_bytes(file.size)}`;
         },
+      },
+      mount: {
+        columns: ["path", "state"],
+        text: (value) => `${value.path}  ${value.state}`,
       },
       storage: {
         columns: ["used", "quota", "free"],
@@ -130,9 +135,10 @@ export function files_shell(files: FilesService): ShellContribution {
         args: z.object({
           paths: z.array(arg.path()).default([]).describe("What to delete, or the files piped in"),
           recursive: z.boolean().default(false).describe("Delete folders and everything in them"),
+          force: z.boolean().default(false).describe("Needed under /mnt, where deletes hit the real disk"),
         }),
         positional: ["paths"],
-        short: { recursive: "r" },
+        short: { recursive: "r", force: "f" },
         run: async (context) => (await logic()).rm(files, context),
       }),
       define_command({
@@ -167,6 +173,34 @@ export function files_shell(files: FilesService): ShellContribution {
         yields: "file",
         async *run(context) {
           yield* (await logic()).du(files, context);
+        },
+      }),
+      define_command({
+        id: "mount",
+        description: "Mount a folder from your disk at /mnt",
+        available: () => files.can_mount,
+        yields: "file",
+        run: async () => {
+          const path = await files.pick_mount();
+          return path ? file_value(path, "directory") : undefined;
+        },
+      }),
+      define_command({
+        id: "umount",
+        description: "Unmount a folder; the folder on your disk stays",
+        args: z.object({ path: arg.path().describe("The mount, /mnt/<name>") }),
+        positional: ["path"],
+        complete: (field, partial) =>
+          field === "path" ? files.mounts.filter((mount) => mount.path.startsWith(partial)).map((mount) => ({ value: mount.path, detail: mount.state })) : undefined,
+        available: () => files.mounts.length > 0,
+        run: async (context) => (await logic()).umount(files, context),
+      }),
+      define_command({
+        id: "mounts",
+        description: "Mounted folders and whether they're connected",
+        yields: "mount",
+        *run() {
+          for (const mount of files.mounts) yield { $type: "mount", path: mount.path, state: mount.state };
         },
       }),
       define_command({

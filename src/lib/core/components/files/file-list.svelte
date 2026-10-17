@@ -1,9 +1,9 @@
 <script lang="ts">
-  import kernel, { Platform, type AppsService, type ClipboardService, type DialogsService, type MenuItem } from "$lib/core/api";
+  import kernel, { Platform, type AppsService, type ClipboardService, type DialogsService, type FilesService, type MenuItem } from "$lib/core/api";
   import { long_press } from "$lib/core/utils/long-press";
   import type { FileSystemItem } from "$lib/core/api/services/files";
   import { join_path } from "$lib/core/api/services/files/path";
-  import { SYSTEM_DIRECTORIES, is_locked_path, is_system_path } from "$lib/core/api/services/files/hierarchy";
+  import { PATHS, SYSTEM_DIRECTORIES, is_locked_path, is_read_only_path, mount_point_of } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
@@ -27,6 +27,8 @@
     rename_item,
     show_properties,
     upload,
+    upload_folder_into,
+    unmount,
     open_terminal,
     compress_items,
     extract_here,
@@ -53,6 +55,7 @@
     Trash as TrashIcon,
     TerminalWindow as TerminalWindowIcon,
     UploadSimple as UploadSimpleIcon,
+    Eject as EjectIcon,
   } from "phosphor-svelte";
 
   interface Props {
@@ -87,7 +90,7 @@
   });
 
   // System folders are read-only here as in every save dialog: the OS rewrites their files on its own.
-  const read_only = $derived(is_system_path(handler.path));
+  const read_only = $derived(is_read_only_path(handler.path));
   const locked = (entries: FileSystemItem[]) => entries.some((entry) => is_locked_path(join_path(handler.segments, entry.name)));
 
   // Multi-select (ADR-011 revision): this list's own UI state, desktop pointer only. The picker keeps its single
@@ -149,6 +152,7 @@
     if (!item) return;
     const single = entries.length === 1;
     const fixed = locked(entries);
+    const mount_point = single && mount_point_of(join_path(handler.segments, item.name)) === join_path(handler.segments, item.name);
     const with_apps = single ? await open_with_items(item) : [];
     const items: MenuItem[] = [
       { id: "open", label: single ? "Open" : `Open ${entries.length} items`, icon: ArrowSquareOutIcon, shortcut: "↵" },
@@ -166,7 +170,9 @@
       { id: "compress", label: "Compress", icon: FileZipIcon, disabled: read_only },
       ...(single && is_zip(item) ? [{ id: "extract", label: "Extract here", icon: ArrowLineDownIcon, disabled: read_only }] : []),
       { separator: true },
-      { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true, disabled: fixed },
+      mount_point
+        ? { id: "unmount", label: "Unmount", icon: EjectIcon }
+        : { id: "delete", label: single ? "Delete" : `Delete ${entries.length} items`, icon: TrashIcon, shortcut: "Del", danger: true, disabled: fixed },
       ...(single ? [{ separator: true } as const, { id: "properties", label: "Properties", icon: InfoIcon, shortcut: "Alt+↵" }] : []),
     ];
 
@@ -176,6 +182,7 @@
     else if (choice === "copy") copy_items(handler, entries);
     else if (choice === "cut") cut_items(handler, entries);
     else if (choice === "delete") delete_items(handler, window, entries);
+    else if (choice === "unmount") unmount(join_path(handler.segments, item.name));
     else if (choice === "properties") show_properties(handler, window, item);
     else if (choice === "save_to_disk") save_to_disk(join_path(handler.segments, item.name));
     else if (choice === "wallpaper") set_wallpaper(join_path(handler.segments, item.name));
@@ -196,7 +203,8 @@
     const choice = await dialogs.menu(
       [
         { id: "new_folder", label: "New folder", icon: FolderPlusIcon, disabled: read_only },
-        { id: "upload", label: "Upload files", icon: UploadSimpleIcon, disabled: read_only },
+        { id: "upload", label: "Upload files…", icon: UploadSimpleIcon, disabled: read_only },
+        { id: "upload_folder", label: "Upload a folder…", icon: FolderPlusIcon, disabled: read_only },
         { separator: true },
         { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: read_only || !clipboard.content },
         { separator: true },
@@ -207,6 +215,7 @@
     );
     if (choice === "new_folder") create_folder(handler, window);
     else if (choice === "upload") upload(handler);
+    else if (choice === "upload_folder") upload_folder_into(handler);
     else if (choice === "paste") paste(handler, window);
     else if (choice === "reload") handler.reload();
     else if (choice === "terminal") open_terminal(handler.path);
@@ -250,7 +259,13 @@
     <EmptyState
       icon={FolderOpenIcon}
       title="This folder is empty"
-      description={read_only ? "System folders are read-only." : "Upload files or create a folder, from the toolbar or a right-click."}
+      description={handler.path === PATHS.mnt
+        ? kernel.service<FilesService>("files").can_mount
+          ? "Mount a folder from your disk with Upload › Mount a folder."
+          : "This browser can't mount folders from the disk."
+        : read_only
+          ? "System folders are read-only."
+          : "Upload files or create a folder, from the toolbar or a right-click."}
     />
   {:else if filtered_items.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />

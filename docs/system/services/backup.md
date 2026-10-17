@@ -8,6 +8,8 @@ Gets all WebOS data out of the browser in one piece and back in. A backup is one
 
 ## Areas
 
+`/tmp` and `/mnt` are never backed up: mounted folders live on the real disk and their handles in IndexedDB, outside every area (ADR-044).
+
 | Area | `BackupArea` | OPFS folder | In the zip | Also |
 |------|--------------|-------------|------------|------|
 | Files | `files` | `/home` | `home/…` | |
