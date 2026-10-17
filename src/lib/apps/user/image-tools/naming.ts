@@ -21,6 +21,10 @@ export function patched_name(name: string): string {
   return `${file_stem(name)}-patched.png`;
 }
 
+export function squashed_name(name: string, extension: string): string {
+  return `${file_stem(name)}-squashed${extension}`;
+}
+
 export function split_folder_name(name: string): string {
   return `${file_stem(name)}-split`;
 }

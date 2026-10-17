@@ -8,6 +8,7 @@ export const Section = {
   SPRITES: "sprites",
   PATCH: "patch",
   REDACT: "redact",
+  SQUASH: "squash",
   TEST_IMAGE: "test-image",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];

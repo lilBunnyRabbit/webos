@@ -2,6 +2,7 @@
   import { Select, SideNav } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
+    ArrowsIn as ArrowsInIcon,
     Bandaids as BandaidsIcon,
     Crosshair as CrosshairIcon,
     Crop as CropIcon,
@@ -30,6 +31,7 @@
     { value: Section.SPRITES, label: "Sprites", icon: FilmStripIcon },
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
     { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
+    { value: Section.SQUASH, label: "Squash", icon: ArrowsInIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
@@ -42,6 +44,7 @@
     [Section.SPRITES]: () => import("./sprites-section.svelte"),
     [Section.PATCH]: () => import("./patch-section.svelte"),
     [Section.REDACT]: () => import("./redact-section.svelte"),
+    [Section.SQUASH]: () => import("./squash-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 
@@ -57,7 +60,7 @@
 
   const paths_for = (target: Section) => {
     if (launch.section !== target) return [];
-    if (target === Section.JOIN) return launch.paths;
+    if (target === Section.JOIN || target === Section.SQUASH) return launch.paths;
     return launch.paths.slice(0, target === Section.PATCH ? 2 : 1);
   };
 </script>

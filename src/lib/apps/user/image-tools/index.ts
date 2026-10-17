@@ -18,7 +18,7 @@ export default define_app({
   name: "Image Tools",
   icon: ImagesSquareIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, hide parts of an image, and generate test images.",
+  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, hide parts of an image, squash images smaller, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -58,6 +58,12 @@ export default define_app({
     "test pattern",
     "placeholder",
     "large file",
+    "squash",
+    "compress",
+    "shrink",
+    "optimize",
+    "webp",
+    "batch",
   ],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
@@ -133,6 +139,24 @@ export default define_app({
         yields: "file",
         complete: complete_images,
         run: async (context) => (await logic()).join(context),
+      }),
+      define_command({
+        id: "squash",
+        description: "Save smaller WebP or JPEG copies of images, or of every image in a folder",
+        args: z.object({
+          paths: z.array(arg.path()).default([]).describe("Images or folders, or the files piped in"),
+          format: z.enum(["webp", "jpeg"]).default("webp"),
+          quality: z.number().int().min(1).max(100).default(80).describe("Quality, 1–100"),
+          max: z.number().int().min(1).max(16_384).optional().describe("Longest side in px; smaller images stay as they are"),
+          to: arg.path().optional().describe("Output folder, next to each original by default"),
+        }),
+        positional: ["paths"],
+        short: { format: "f", quality: "q" },
+        yields: "file",
+        complete: complete_images,
+        async *run(context) {
+          yield* await (await logic()).squash(context);
+        },
       }),
       define_command({
         id: "testimg",
