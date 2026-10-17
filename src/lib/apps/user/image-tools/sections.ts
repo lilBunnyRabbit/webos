@@ -6,6 +6,7 @@ export const Section = {
   TRIM: "trim",
   SPLIT: "split",
   SPRITES: "sprites",
+  ATLAS: "atlas",
   PATCH: "patch",
   TEST_IMAGE: "test-image",
 } as const;
