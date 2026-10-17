@@ -5,6 +5,7 @@ import { NOTES_DIR, parse_todos } from "./notes";
 import { read_todo } from "./store";
 
 let open = $state<number | null>(null);
+let read_id = 0;
 
 /** Starts when the first icon reads the badge and stops with the last one, so nothing runs while no icon is on screen. */
 const subscribe = createSubscriber(() =>
@@ -12,7 +13,10 @@ const subscribe = createSubscriber(() =>
     $effect(() => {
       const files = kernel.service<FilesService>("files");
       files.revision(NOTES_DIR);
-      void read_todo(files).then((text) => (open = parse_todos(text).filter((todo) => !todo.done).length));
+      const id = ++read_id;
+      void read_todo(files).then((text) => {
+        if (id === read_id) open = parse_todos(text).filter((todo) => !todo.done).length;
+      });
     });
   })
 );

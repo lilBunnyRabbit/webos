@@ -6,18 +6,15 @@
   import { long_press } from "$lib/core/utils/long-press";
   import type { Position } from "$lib/core/utils/type";
   import {
-    Bomb as BombIcon,
     ChartBar as ChartBarIcon,
     Flag as FlagIcon,
     Smiley as SmileyIcon,
     SmileySticker as SmileyWonIcon,
     SmileyXEyes as SmileyLostIcon,
-    X as XIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import {
     activate,
-    Cell,
     clamp_config,
     config_of,
     config_schema,
@@ -40,6 +37,7 @@
     type Game,
     type GameRecord,
   } from "./game";
+  import MineCell from "./mine-cell.svelte";
 
   const DIFFICULTY_LABELS: Record<Difficulty, string> = {
     beginner: "Beginner",
@@ -48,18 +46,6 @@
     custom: "Custom",
   };
   const DIFFICULTY_OPTIONS = DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
-  // Primary stays out: in Brand Dark it's the same green as 2, and it means selection everywhere else.
-  const NUMBER_COLOURS = [
-    "",
-    "text-info",
-    "text-success",
-    "text-error",
-    "text-secondary",
-    "text-accent",
-    "text-tertiary",
-    "text-foreground",
-    "text-foreground/65",
-  ];
 
   const { daily: daily_prop }: { daily?: string } = $props();
   const daily_day = untrack(() => daily_prop);
@@ -83,6 +69,12 @@
 
   const config = $derived(game.config);
   const finished = $derived(game.status === Status.WON || game.status === Status.LOST);
+  const lost = $derived(game.status === Status.LOST);
+  // Each board field on its own: a flag replaces only `cells`, so the per-cell reads of the others stay quiet.
+  const cells = $derived(game.cells);
+  const mines = $derived(game.mines);
+  const counts = $derived(game.counts);
+  const exploded_at = $derived(game.exploded);
   const elapsed = $derived(clock.elapsed);
   const seconds = $derived(Math.min(Math.floor(elapsed / 1000), 999));
   const counter = $derived(mines_left(game));
@@ -153,6 +145,10 @@
     if (target?.dataset.cell) flag_cell(Number(target.dataset.cell));
   }
 
+  function set_active(index: number) {
+    active = index;
+  }
+
   function focus_cell(index: number) {
     active = index;
     cell_elements[index]?.focus();
@@ -178,18 +174,6 @@
       event.preventDefault();
       restart();
     }
-  }
-
-  function cell_label(index: number): string {
-    const row = Math.floor(index / config.width) + 1;
-    const col = (index % config.width) + 1;
-    const cell = game.cells[index];
-    let state: string;
-    if (cell === Cell.FLAGGED) state = "flagged";
-    else if (cell === Cell.HIDDEN) state = finished && game.mines[index] ? "mine" : "hidden";
-    else if (game.mines[index]) state = "mine";
-    else state = game.counts[index] ? `${game.counts[index]} nearby` : "empty";
-    return `Row ${row}, column ${col}, ${state}`;
   }
 
   function format_record(entry: GameRecord, for_difficulty: Difficulty): string {
@@ -324,43 +308,26 @@
             <div role="row" class="contents">
               {#each { length: config.width }, col (col)}
                 {@const index = row * config.width + col}
-                {@const cell = game.cells[index]}
-                {@const mine = game.mines[index] ?? false}
-                {@const count = game.counts[index] ?? 0}
-                {@const shown = cell === Cell.REVEALED}
-                {@const exposed_mine = game.status === Status.LOST && mine && cell === Cell.HIDDEN}
-                {@const wrong_flag = game.status === Status.LOST && cell === Cell.FLAGGED && !mine}
-                <button
-                  bind:this={cell_elements[index]}
-                  type="button"
-                  role="gridcell"
-                  data-cell={index}
-                  tabindex={index === active ? 0 : -1}
-                  aria-label={cell_label(index)}
-                  aria-disabled={finished || (shown && !count)}
-                  onclick={() => open_cell(index)}
-                  onfocus={() => (active = index)}
-                  class={cn(
-                    "grid place-items-center rounded-[18%] font-mono leading-none font-bold transition-[background-color] duration-100",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-                    shown ? "bg-foreground/4" : "bg-foreground/14 shadow-raised",
-                    !shown && !finished && "cursor-pointer hover:bg-foreground/20",
-                    shown && mine && index === game.exploded && "bg-error/30",
-                    shown && !mine && NUMBER_COLOURS[count]
-                  )}
-                >
-                  {#if cell === Cell.FLAGGED}
-                    {#if wrong_flag}
-                      <XIcon weight="bold" class="size-[60%] text-error" />
-                    {:else}
-                      <FlagIcon weight="fill" class="size-[55%] text-error" />
-                    {/if}
-                  {:else if (shown && mine) || exposed_mine}
-                    <BombIcon weight="fill" class={cn("size-[60%]", exposed_mine ? "text-foreground/65" : "text-error")} />
-                  {:else if shown && count}
-                    {count}
-                  {/if}
-                </button>
+                {@const cell = cells[index]}
+                {@const mine = mines[index] ?? false}
+                {@const count = counts[index] ?? 0}
+                {@const is_active = index === active}
+                {@const exploded = index === exploded_at}
+                <MineCell
+                  bind:element={cell_elements[index]}
+                  {index}
+                  {row}
+                  {col}
+                  {cell}
+                  {mine}
+                  {count}
+                  active={is_active}
+                  {finished}
+                  {lost}
+                  {exploded}
+                  onopen={open_cell}
+                  onfocus={set_active}
+                />
               {/each}
             </div>
           {/each}

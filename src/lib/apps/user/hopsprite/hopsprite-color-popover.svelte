@@ -28,10 +28,7 @@
   const hex = $derived(palette[index] ?? "#00000000");
   const transparent = $derived(index === 0);
 
-  let hex_text = $state("");
-  $effect(() => {
-    hex_text = transparent ? "" : hex.slice(1, alpha_of(hex) === 255 ? 7 : 9).toUpperCase();
-  });
+  let hex_text = $derived(transparent ? "" : hex.slice(1, alpha_of(hex) === 255 ? 7 : 9).toUpperCase());
 
   function preview(next: string) {
     if (transparent) return;

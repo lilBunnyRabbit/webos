@@ -51,9 +51,10 @@
   });
   $effect(() => win.set_title(title));
 
-  const today = $derived(new Date(now));
+  const day = $derived(day_key(new Date(now)));
+  const today = $derived(new Date(`${day}T12:00`));
   const stats = $derived(timer.stats.value);
-  const today_stats = $derived(day_stats(stats, day_key(today)));
+  const today_stats = $derived(day_stats(stats, day));
   const days = $derived(last_days(stats, today));
   const day_streak = $derived(streak(stats, today));
   const all_time = $derived(totals(stats));

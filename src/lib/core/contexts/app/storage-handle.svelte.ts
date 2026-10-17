@@ -11,6 +11,7 @@ class PersistedCell<T> {
   value = $state() as T;
   private refs = 0;
   private skip_save = false;
+  private loaded: string | null;
   private dispose: () => void;
 
   private readonly initial: T;
@@ -19,13 +20,19 @@ class PersistedCell<T> {
     // Values are JSON-persisted, so structuredClone is safe; the copy keeps edits to the live value out of the reset target.
     this.initial = structuredClone(initial);
     this.value = stored ?? initial;
+    this.loaded = JSON.stringify(this.value);
     this.dispose = detached_root(() => {
       $effect(() => {
         const snapshot = $state.snapshot(this.value) as T;
+        // The first run only tracks: writing back what was just loaded would rewrite every key on each window open.
+        // Compared, not skipped outright, so a change made before the effect first runs is still saved.
+        const loaded = this.loaded;
+        this.loaded = null;
         if (this.skip_save) {
           this.skip_save = false;
           return;
         }
+        if (loaded !== null && JSON.stringify(snapshot) === loaded) return;
         save(snapshot);
       });
     });
