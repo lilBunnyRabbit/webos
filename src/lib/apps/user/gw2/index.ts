@@ -1,13 +1,13 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Sword as SwordIcon } from "phosphor-svelte";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "gw2",
   name: "GW2 Tracker",
-  icon: SwordIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "Guild Wars 2 Wizard's Vault objectives, your wallet and crafting goals, from your API key.",
   keywords: ["guild wars", "gw2", "wizard's vault", "dailies", "wallet", "gold", "crafting", "goals", "mmo"],

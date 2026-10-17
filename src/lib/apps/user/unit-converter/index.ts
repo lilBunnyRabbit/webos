@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Ruler as RulerIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "unit-converter",
   name: "Unit Converter",
-  icon: RulerIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Convert length, mass, temperature, data size and more.",

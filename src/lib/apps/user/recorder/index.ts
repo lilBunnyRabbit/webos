@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Record as RecordIcon } from "phosphor-svelte";
 import { RECORDER_PROPS } from "./props";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "recorder",
   name: "Recorder",
-  icon: RecordIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
   description: "Record your voice, your screen or your camera, and take photos.",

@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { TerminalWindow as TerminalWindowIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "terminal",
   name: "Terminal",
-  icon: TerminalWindowIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Run commands over files, windows and apps, and pipe their results.",

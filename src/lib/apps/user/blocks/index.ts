@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Stack as StackIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "blocks",
   name: "Blocks",
-  icon: StackIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Falling blocks: fill rows to clear them before the stack reaches the top.",

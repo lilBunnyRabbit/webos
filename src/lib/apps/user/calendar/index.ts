@@ -1,13 +1,13 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { CalendarDots as CalendarDotsIcon } from "phosphor-svelte";
 import { today_badge } from "./badge.svelte";
 import { CALENDAR_PROPS } from "./props";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "calendar",
   name: "Calendar",
-  icon: CalendarDotsIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Your events by month, week or agenda, with reminders, worked hours and due cards.",

@@ -1,15 +1,16 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { FilePdf as FilePdfIcon } from "phosphor-svelte";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "pdf-tools",
   name: "PDF Tools",
-  icon: FilePdfIcon,
+  icon: AppIcon,
   version: "1.0.0",
-  description: "Merge, organize, split and sign PDFs, turn images into a PDF and pages into images, and generate test PDFs.",
+  description:
+    "Merge, organize, split and sign PDFs, turn images into a PDF and pages into images, and generate test PDFs.",
   keywords: [
     "pdf",
     "merge",

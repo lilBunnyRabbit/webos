@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "word-search",
   name: "Word Search",
-  icon: MagnifyingGlassIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Find the hidden words in a grid of letters.",

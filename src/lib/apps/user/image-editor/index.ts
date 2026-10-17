@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { Sliders as SlidersIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "image-editor",
   name: "Image Editor",
-  icon: SlidersIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "Crop, resize, rotate, flip and adjust the colours of an image.",
   keywords: [

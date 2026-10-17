@@ -1,16 +1,17 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Pulse as PulseIcon } from "phosphor-svelte";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "activity-monitor",
   name: "Activity Monitor",
-  icon: PulseIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description: "What's running and how hard it works: windows, widgets, frame rate, network, storage and background tasks.",
+  description:
+    "What's running and how hard it works: windows, widgets, frame rate, network, storage and background tasks.",
   keywords: [
     "task manager",
     "processes",

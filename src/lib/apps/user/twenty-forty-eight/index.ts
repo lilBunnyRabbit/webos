@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "twenty-forty-eight",
   name: "2048",
-  icon: SquaresFourIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Slide and merge tiles to reach 2048",

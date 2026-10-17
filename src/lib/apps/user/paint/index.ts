@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { PaintBrush as PaintBrushIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "paint",
   name: "Paint",
-  icon: PaintBrushIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "Draw and edit images with brushes, shapes and fill.",
   keywords: ["draw", "drawing", "canvas", "brush", "pencil", "sketch", "art", "image", "png", "mspaint"],

@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Timer as TimerIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "pomodoro",
   name: "Pomodoro",
-  icon: TimerIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Focus in timed sessions with short and long breaks, and see how your week went.",

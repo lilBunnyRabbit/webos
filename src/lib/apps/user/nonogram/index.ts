@@ -1,14 +1,14 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Checkerboard as CheckerboardIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export const SIZES = ["5", "10", "15", "20"] as const;
 
 export default define_app({
   id: "nonogram",
   name: "Nonogram",
-  icon: CheckerboardIcon,
+  icon: AppIcon,
   version: "1.1.0",
   category: AppCategory.GAMES,
   description: "Fill the grid from the number clues to reveal a picture, in black and white or colour. Draw your own.",

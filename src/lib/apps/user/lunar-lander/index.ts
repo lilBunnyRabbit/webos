@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { RocketLaunch as RocketLaunchIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "lunar-lander",
   name: "Lunar Lander",
-  icon: RocketLaunchIcon,
+  icon: AppIcon,
   version: "0.1.0",
   category: AppCategory.GAMES,
   description: "Pick a ship and a planet, then set it down on the pad, gently.",

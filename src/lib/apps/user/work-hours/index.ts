@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { ClockUser as ClockUserIcon } from "phosphor-svelte";
 import { WORK_HOURS_PROPS } from "./props";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "work-hours",
   name: "Work Hours",
-  icon: ClockUserIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Clock in and out, see your hours per day, week and month, print a time sheet.",

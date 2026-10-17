@@ -1,15 +1,16 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { ImagesSquare as ImagesSquareIcon } from "phosphor-svelte";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "image-tools",
   name: "Image Tools",
-  icon: ImagesSquareIcon,
+  icon: AppIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
+  description:
+    "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
   keywords: [
     "image",
     "photo",

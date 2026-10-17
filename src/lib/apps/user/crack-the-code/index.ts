@@ -1,13 +1,13 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { DailyRank } from "$lib/core/games/daily";
-import { Detective as DetectiveIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "crack-the-code",
   name: "Crack the Code",
-  icon: DetectiveIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Break a secret code of distinct digits. Each guess only tells you how many sit in the right place.",

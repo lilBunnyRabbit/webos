@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { NotePencil as NotePencilIcon } from "phosphor-svelte";
 import { open_todos } from "./badge.svelte";
+import AppIcon from "./icon.svelte";
 
 export const QUICK_NOTES_PROPS = z.object({
   note: z.string().optional(),
@@ -12,7 +12,7 @@ export const QUICK_NOTES_PROPS = z.object({
 export default define_app({
   id: "quick-notes",
   name: "Quick Notes",
-  icon: NotePencilIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Capture a note or a todo from anywhere, triage it later.",

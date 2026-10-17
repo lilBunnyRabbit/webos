@@ -1,16 +1,32 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { ShareNetwork as ShareNetworkIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "link-preview",
   name: "Link Preview",
-  icon: ShareNetworkIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description: "See how a page's link looks in Slack, X, Facebook, Discord, LinkedIn and iMessage, and what to fix in its meta tags.",
-  keywords: ["open graph", "og", "meta", "twitter card", "unfurl", "share", "social", "seo", "link", "preview", "slack", "discord", "linkedin", "imessage"],
+  description:
+    "See how a page's link looks in Slack, X, Facebook, Discord, LinkedIn and iMessage, and what to fix in its meta tags.",
+  keywords: [
+    "open graph",
+    "og",
+    "meta",
+    "twitter card",
+    "unfurl",
+    "share",
+    "social",
+    "seo",
+    "link",
+    "preview",
+    "slack",
+    "discord",
+    "linkedin",
+    "imessage",
+  ],
   tools: ["text/html", ".html", ".htm"],
   props: z.object({ path: z.string().optional(), url: z.string().optional() }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },

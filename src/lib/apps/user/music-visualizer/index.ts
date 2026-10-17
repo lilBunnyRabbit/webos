@@ -2,12 +2,12 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 // Not via the barrel: manifests load while the barrel is still initializing, so its constants are not yet defined.
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { Equalizer as EqualizerIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "music-visualizer",
   name: "Music Visualizer",
-  icon: EqualizerIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "Plays an audio file and draws it live as bars, a waveform or a circle.",
   keywords: ["audio", "music", "spectrum", "waveform", "oscilloscope", "microphone", "sound", "visualiser"],

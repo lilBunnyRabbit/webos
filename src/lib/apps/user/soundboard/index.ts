@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { MusicNotes as MusicNotesIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "soundboard",
   name: "Soundboard",
-  icon: MusicNotesIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "A grid of pads that play your own sounds, by click or key.",
   keywords: ["sound", "audio", "pads", "sfx", "effects", "board", "music", "meme", "buttons"],

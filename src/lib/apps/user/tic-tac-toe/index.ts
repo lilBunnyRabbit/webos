@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { GridNine as GridNineIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "tic-tac-toe",
   name: "Tic-Tac-Toe",
-  icon: GridNineIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Noughts and crosses against a friend or the computer, with undo and stats.",

@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "app-library",
   name: "App Library",
-  icon: SquaresFourIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Every installed app by category, with filters, details and what each one opens.",

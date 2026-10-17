@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import { TextAa as TextAaIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "font-viewer",
   name: "Font Viewer",
-  icon: TextAaIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
   description: "Previews TTF, OTF and WOFF fonts: sample text, sizes, every character and variable axes.",

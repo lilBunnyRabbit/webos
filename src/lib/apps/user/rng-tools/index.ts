@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { DiceFive as DiceFiveIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "rng-tools",
   name: "RNG Tools",
-  icon: DiceFiveIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Random numbers, lottery-style draws, dice, coin flips, list picks and passwords",

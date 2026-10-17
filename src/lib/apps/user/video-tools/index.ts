@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { FilmSlate as FilmSlateIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "video-tools",
   name: "Video Tools",
-  icon: FilmSlateIcon,
+  icon: AppIcon,
   version: "1.0.0",
   description: "Trim a video to a WebM clip, turn part of it into a GIF, or save its sound.",
   keywords: ["trim", "cut", "clip", "gif", "webm", "audio", "sound"],

@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { GameController as GameControllerIcon } from "phosphor-svelte";
 import { HUB_ID, Tab } from "./labels";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: HUB_ID,
   name: "Game Hub",
-  icon: GameControllerIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Every game in one place, with play time, stats and today's daily puzzles.",

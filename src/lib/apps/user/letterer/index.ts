@@ -1,15 +1,16 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { TextAa as TextAaIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "letterer",
   name: "Letterer",
-  icon: TextAaIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Guess the hidden word in six tries, on up to eight boards at once, against a word that dodges you, with equations or in a survival run.",
+  description:
+    "Guess the hidden word in six tries, on up to eight boards at once, against a word that dodges you, with equations or in a survival run.",
   keywords: [
     "wordle",
     "word",

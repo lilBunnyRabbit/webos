@@ -1,13 +1,14 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Wrench as WrenchIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "dev-tools",
   name: "Dev Tools",
-  icon: WrenchIcon,
+  icon: AppIcon,
   version: "1.0.0",
-  description: "Base64, hashes, URL encoding, UUIDs, regex, JSON, JWTs, timestamps, cron and certificates in one place.",
+  description:
+    "Base64, hashes, URL encoding, UUIDs, regex, JSON, JWTs, timestamps, cron and certificates in one place.",
   keywords: [
     "base64",
     "hash",

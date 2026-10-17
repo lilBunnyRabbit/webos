@@ -129,15 +129,24 @@ Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for d
 - Windows: open 140ms / close 100ms (fade + 0.96→1 scale); minimize, maximize and snap are View Transition morphs (browser default, ~250ms).
 - `prefers-reduced-motion`, or Settings › Appearance › Motion off (`html[data-motion="off"]`), collapses all of it to 1ms in the base layer. Script-driven motion (Svelte transitions, View Transitions) checks `motion_reduced()` and skips.
 
+## App icons
+
+Every app draws its own icon in `icon.svelte` next to its manifest (`icon: AppIcon`). The rules, settled with the owner in [app wave 7](../brainstorm/2026-10-17_app-wave-7.md):
+
+- 24 grid, one 1.5 px line in `currentColor`, round caps and joins, `rx` 2 on rectangles, drawn to fill about 18–20 units.
+- One idea per app, the thing that app is about, in a handful of shapes. No text, tiny details or decoration. Core (system) apps are the plainest: one object in 3–5 strokes, never a scene.
+- Colour is rare (18 of 76): only on the element the app is about (the lander's flame, the dragged card), in `var(--primary)` or `var(--secondary)`, solid with no outline. It stands outside the line drawing: never inside an outline, never touching a line, at least 1.5 units clear. Primary and secondary never touch; accent and state colours never appear.
+- The component takes the same props a Phosphor icon does (`class`, and `weight`, which it ignores), so every place that draws `manifest.icon` keeps working. It sizes at `1em`.
+
 ## Icons
 
-Phosphor only (`phosphor-svelte`), imported with an `Icon` suffix.
+Phosphor (`phosphor-svelte`) for everything that isn't an app icon, imported with an `Icon` suffix.
 
 | Weight | Use |
 |--------|-----|
 | `regular` | Default |
 | `bold` | Small toolbar and control icons (≤16px), so they hold their weight next to `text-ui` |
-| `duotone` | App icons in tiles, empty states, file types |
+| `duotone` | Empty states, file types, feature cards |
 | `fill` | The selected item in a nav or the focused taskbar app |
 
 `thin` and `light` aren't available: a build plugin (`vite-plugin-phosphor.ts`) strips them from every icon component to keep the boot chunk small, and they render as `regular` (ADR-036).

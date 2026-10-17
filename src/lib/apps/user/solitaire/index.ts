@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Cards as CardsIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export const SOLITAIRE_PROPS = z.object({
   daily: z
@@ -15,7 +15,7 @@ export const SOLITAIRE_PROPS = z.object({
 export default define_app({
   id: "solitaire",
   name: "Solitaire",
-  icon: CardsIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Klondike: build each suit from ace to king, drawing one card or three.",

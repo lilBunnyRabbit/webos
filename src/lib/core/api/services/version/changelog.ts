@@ -9,6 +9,7 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-17",
     title: "Wave seven",
     changes: [
+      { kind: IMPROVED, text: "Every app has its own new icon, drawn for what that app does." },
       {
         kind: NEW,
         apps: ["file-explorer"],
@@ -143,7 +144,7 @@ export const CHANGELOG: Release[] = [
       },
       {
         kind: IMPROVED,
-        text: "WebOS starts a little faster: app commands now load the first time you open the Terminal or the command palette.",
+        text: "WebOS starts faster: the new icons are lighter, and app commands load the first time you open the Terminal or the command palette.",
       },
       { kind: IMPROVED, apps: ["pdf-tools"], text: "PDF Tools can make A3 pages." },
       {

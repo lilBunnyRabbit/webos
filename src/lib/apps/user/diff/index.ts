@@ -1,7 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { GitDiff as GitDiffIcon } from "phosphor-svelte";
 import { z } from "zod";
+import AppIcon from "./icon.svelte";
 
 export const DIFF_ACCEPT = [
   "text/*",
@@ -33,7 +33,7 @@ export const DIFF_PROPS = z.object({
 export default define_app({
   id: "diff",
   name: "Diff",
-  icon: GitDiffIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Compare two files or pasted texts side by side or inline.",

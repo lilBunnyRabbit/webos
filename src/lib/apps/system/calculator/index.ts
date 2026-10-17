@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { Calculator as CalculatorIcon } from "phosphor-svelte";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "calculator",
   name: "Calculator",
-  icon: CalculatorIcon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Basic arithmetic with brackets, percent and a history of results.",
