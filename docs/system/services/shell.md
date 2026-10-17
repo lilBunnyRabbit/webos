@@ -187,6 +187,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
 | pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls`, `testpdf [-n pages] [--page a4\|letter\|a5\|a3\|legal\|mixed\|WxH] [--orientation] [--size 500MB] [--images] [--text] [--grid] [--plain] [-o]` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images; `testpdf` runs as a task and saves to `/home/Documents` |
 | hex-viewer | `hexdump <path> [-l\|--length N] [-s\|--offset N]` (256 bytes by default, like `xxd -l -s`) | `hex-row` values (offset, hex, ascii; open → Hex Viewer at that offset) |
+| api-client | `wget <url> [--to dir] [-o name]`, `http <method> <url> [-H "K: V"…] [-d body] [-o path]` | `wget` and `http -o` run the download as a task and yield the `file` (name from Content-Disposition or the URL, never over an existing file); `http` otherwise yields the status line and the body as text (JSON pretty-printed); method completion |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
