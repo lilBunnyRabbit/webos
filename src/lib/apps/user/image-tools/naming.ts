@@ -13,6 +13,10 @@ export function joined_name(extension: string): string {
   return `joined${extension}`;
 }
 
+export function patched_name(name: string): string {
+  return `${file_stem(name)}-patched.png`;
+}
+
 export function split_folder_name(name: string): string {
   return `${file_stem(name)}-split`;
 }
