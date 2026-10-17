@@ -82,6 +82,7 @@ References: `src/lib/apps/user/example/task.ts` (parallel group, logs, `parse()`
 - Pure logic in `.ts`, reactive state in `.svelte.ts`, rendering in `.svelte`.
 - Follow the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/) (see CONVENTIONS, Styling & brand). Use theme tokens only. Tailwind's default palette is disabled, and no colour may be added.
 - Container queries in app UI, not viewport breakpoints.
+- Anything new (app, section, feature, dialog) is built for desktop and mobile alike. Before calling it done, check both: a desktop window (mouse, keyboard, resized narrow and wide) and the mobile shell (`?platform=mobile`, about 390 px wide, touch). Touch targets, pinch and pan, panels that stack, nothing cut off or overflowing, no hover-only actions. Report what was checked and how; "check passes" is not a UI check.
 - UI follows [docs/design](docs/design/README.md) and is built from the UI kit (`$lib/core/components/ui`). A component or pattern two apps need goes into the kit, the design docs and the Style Guide app.
 - No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
 - No backend. GitHub Pages is the host.
