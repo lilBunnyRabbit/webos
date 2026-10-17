@@ -11,12 +11,10 @@
     Warning as WarningIcon,
     FileImage as FileImageIcon,
     FolderOpen as FolderOpenIcon,
-    Devices as DevicesIcon,
     Image as ImageIcon,
   } from "phosphor-svelte";
   import { Button, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { save_to_disk, set_wallpaper } from "$lib/core/components/files/file-actions";
   import { flushSync, untrack } from "svelte";
   import manifest from "./index";
@@ -30,7 +28,7 @@
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  // Starts at the launched file; "Open…" swaps it in place.
   let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
   const path = $derived(typeof source === "string" ? source : null);
   const { window: win } = get_app_context();
@@ -38,11 +36,6 @@
   async function pick() {
     const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in Media Preview" });
     if (chosen) source = chosen;
-  }
-
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: manifest.associations });
-    if (picked) source = picked;
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -198,7 +191,7 @@
 
 {#if !source}
   <EmptyState icon={FileImageIcon} title="Nothing to preview" description="Pick an image, video or audio file, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
   </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
@@ -210,7 +203,6 @@
   <div class="grid h-full grid-rows-[auto_1fr_auto]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <!-- Below @lg the controls don't leave the name room, so it takes the first row of the wrapping toolbar. -->
       <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{file.name}</span>
 

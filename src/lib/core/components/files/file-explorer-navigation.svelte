@@ -16,7 +16,7 @@
   import { report_file_error } from "./file-explorer.errors";
   import { get_app_context } from "$lib/core/contexts/app";
   import { create_folder, open_terminal } from "./file-actions";
-  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
+  import { is_read_only_path } from "$lib/core/api/services/files/hierarchy";
 
   interface Props {
     handler: DirectoryHandler;
@@ -33,7 +33,7 @@
   let { handler, can_go_back, onback, can_go_forward, onforward, onnavigatepath, search = $bindable(), terminal = true }: Props = $props();
 
   let creating_folder = $state(false);
-  const read_only = $derived(is_system_path(handler.path));
+  const read_only = $derived(is_read_only_path(handler.path));
 
   const crumbs = $derived([{ label: "/", segments: [] as string[] }, ...handler.segments.map((name, index) => ({ label: name, segments: handler.segments.slice(0, index + 1) }))]);
 
@@ -93,7 +93,7 @@
     <IconButton label="New folder" size="sm" disabled={creating_folder || read_only} onclick={handle_create_folder}>
       <FolderPlusIcon weight="bold" />
     </IconButton>
-    <FileUploadButton {handler} disabled={read_only} />
+    <FileUploadButton {handler} disabled={read_only} {onnavigatepath} />
     {#if terminal}
       <IconButton label="Open in Terminal" size="sm" onclick={() => open_terminal(handler.path)}>
         <TerminalWindowIcon weight="bold" />

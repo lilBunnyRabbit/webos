@@ -1,7 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
   import { load_language, token_highlight, token_theme, type Language } from "$lib/core/components/code";
@@ -27,7 +26,6 @@
     CaretUp as CaretUpIcon,
     ClipboardText as ClipboardTextIcon,
     Columns as ColumnsIcon,
-    Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     GitDiff as GitDiffIcon,
@@ -236,21 +234,6 @@
     if (chosen) await load_into(side, chosen);
   }
 
-  async function read_device_file(side: DiffSide, file: File) {
-    try {
-      side.set_text(await file.text(), file.name);
-      revision++;
-    } catch (reason) {
-      report("Couldn't read the file", reason);
-    }
-  }
-
-  async function open_device(side: DiffSide) {
-    if (!(await replace_ok(side))) return;
-    const [file] = await pick_device_files({ accept: DIFF_ACCEPT });
-    if (file) await read_device_file(side, file);
-  }
-
   async function paste(side: DiffSide) {
     if (!(await replace_ok(side))) return;
     try {
@@ -265,12 +248,6 @@
   async function open_both() {
     await open_file(left, "original");
     if (!left.empty) await open_file(right, "changed");
-  }
-
-  async function open_both_device() {
-    const [first, second] = await pick_device_files({ accept: DIFF_ACCEPT, multiple: true });
-    if (first) await read_device_file(left, first);
-    if (second) await read_device_file(right, second);
   }
 
   function start_typing() {
@@ -354,7 +331,6 @@
     {#if side.dirty}<span class="size-1.5 shrink-0 rounded-full bg-primary" title="Unsaved changes"></span>{/if}
     {#if side.read_only}<LockSimpleIcon class="size-3.5 shrink-0 text-foreground/65" weight="fill" aria-label="Read-only system file" />{/if}
     <IconButton label="Open the {role.toLowerCase()} file…" size="sm" onclick={() => open_file(side, role)}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open the {role.toLowerCase()} file from device…" size="sm" onclick={() => open_device(side)}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Paste as the {role.toLowerCase()} text" size="sm" onclick={() => paste(side)}><ClipboardTextIcon weight="bold" /></IconButton>
     {#if side.path && !side.read_only}
       <IconButton label="Save {side.name}" size="sm" disabled={!side.dirty} onclick={() => save_side(side)}><FloppyDiskIcon weight="bold" /></IconButton>
@@ -419,7 +395,6 @@
         <EmptyState icon={GitDiffIcon} title="Compare two texts" description="Open two files, or paste the original and the changed text.">
           {#snippet actions()}
             <Button variant="primary" onclick={open_both}><FolderOpenIcon weight="bold" /> Open files…</Button>
-            <Button onclick={open_both_device}><DevicesIcon weight="bold" /> From device…</Button>
             <Button onclick={start_typing}><ClipboardTextIcon weight="bold" /> Paste text</Button>
           {/snippet}
         </EmptyState>

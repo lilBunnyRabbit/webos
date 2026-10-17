@@ -1,10 +1,10 @@
 # FilesService
 
-Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup), [ADR-021](../../adrs/021-file-system-hierarchy.md) (hierarchy, native moves, revisions) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/` · Inspector: `inspector.svelte` (ADR-020)
+Key `files` · Depends on: none · ADR: [ADR-005](../../adrs/005-files-service.md), [ADR-018](../../adrs/018-file-associations.md) (path lookup), [ADR-021](../../adrs/021-file-system-hierarchy.md) (hierarchy, native moves, revisions), [ADR-044](../../adrs/044-folder-mounts-and-sources.md) (mounts, sources) · Source: `src/lib/core/api/services/files/`, UI in `src/lib/core/components/files/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-The filesystem. Everything lives in the browser's Origin Private File System (OPFS). There's no backend and no access to the user's real disk, apart from the upload picker and "Save to disk…" (`export_to_disk`). OPFS itself lives inside the browser profile as numbered blobs, so it can never be shown in Finder or Explorer.
+The filesystem. Everything lives in the browser's Origin Private File System (OPFS), apart from real folders the user mounts at `/mnt/<name>` ([Mounts](#mounts-adr-044)). There's no backend. Besides mounts, the real disk is reached only through the upload pickers and "Save to disk…" (`export_to_disk`). OPFS itself lives inside the browser profile as numbered blobs, so it can never be shown in Finder or Explorer.
 
 It's built in three layers, the reference split from [CONVENTIONS](../../CONVENTIONS.md#three-layers-of-logic):
 
@@ -22,9 +22,10 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 | `type.ts` | `FilesService` interface, `FileSystemItem` union, option types |
 | `opfs.ts` | All OPFS calls, `available_name`, `default_sort`, `move_directory` |
 | `path.ts` | `split_path`, `join_path`, `resolve_path`, `tilde_path`, `base_name`, `parent_path`, `file_stem`, `file_extension` |
-| `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_locked_path`, `ensure_hierarchy` (ADR-021) |
+| `hierarchy.ts` | `PATHS`, `SYSTEM_DIRECTORIES`, `is_system_path`, `is_read_only_path`, `is_locked_path`, `mount_point_of`, `ensure_hierarchy` (ADR-021, ADR-044) |
+| `mounts-store.ts` | `load_mounts`, `save_mount`, `delete_mount`: mounted handles in IndexedDB (database `webos-mounts`, store `mounts`, keyed by name). The only IndexedDB in WebOS (ADR-044) |
 | `latest-writer.ts` | `LatestWriter`: serialized, newest-wins text writes for OS state files (settings, session, shell history, version state) and `json_file`, optionally debounced. `busy` and `idle()` tell whether a write is still on its way; `flush_writers()` saves every delayed one now |
-| `file-system.d.ts` | Declares `FileSystemFileHandle.move()`, which Chrome ships but TypeScript's DOM lib doesn't |
+| `file-system.d.ts` | Declares `FileSystemFileHandle.move()` and `FileSystemHandle.queryPermission()` / `requestPermission()`, which Chrome ships but TypeScript's DOM lib doesn't |
 | `service.svelte.ts` | `FilesService` class and `DirectoryHandler` class |
 | `shell.ts`, `shell-run.ts` | The shell contribution and its lazy bodies, see [Shell](#shell) |
 | `index.ts` | `export * from "./type"` |
@@ -33,7 +34,7 @@ FilesService       caches the root handle, builds the hierarchy at init, tracks 
 
 Handles are what OPFS operates on. Paths exist for identity, display, and anything that has to be JSON (app props, ADR-018).
 
-- Absolute, `/`-separated, rooted at the OPFS root: `/home/Documents/a.txt`. Root is `/`, displayed as `/`.
+- Absolute, `/`-separated, rooted at the OPFS root: `/home/Documents/a.txt`. Root is `/`, displayed as `/`. `/mnt/<name>/…` resolves inside a mounted folder instead.
 - Two forms. `segments: string[]` is primary (`[]` is root, `["home", "Documents"]`). `path` is derived as `"/" + segments.join("/")`.
 - Paths carry no `.`/`..` and no escaping. Names are whatever OPFS accepts. Typed shell input goes through `resolve_path` first.
 
@@ -66,21 +67,24 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 │                additions.json; DesktopService), session/session.json (SessionService),
 │                version/state.json (VersionService), shell/history (ShellService),
 │                wallpaper/ (SettingsService), games/plays.json, apps/{id}/ (app storage.file())
-└ tmp/           emptied at every boot
+├ tmp/           emptied at every boot; device/ holds the picker's "This device…" copies
+└ mnt/           empty in OPFS; lists the mount table, one entry per mounted real folder (ADR-044)
 ```
 
 | Export | What |
 |--------|------|
-| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `var_lib`, `tmp` → the paths above |
+| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `var_lib`, `tmp`, `mnt` → the paths above |
 | `SYSTEM_DIRECTORIES` | `["/etc", "/var", "/tmp"]`, the OS-owned top-level folders |
 | `is_system_path(path)` | `true` for a system directory or anything under one. Plain string prefix check, so pass a normalised path |
-| `is_locked_path(path)` | `is_system_path`, or one of the `PATHS` folders themselves (`/home`, `/home/Desktop`, …). File Explorer won't cut, rename, delete or drag these. UI rule only: the service still writes anywhere |
+| `is_read_only_path(path)` | `is_system_path`, or `/mnt` itself: nothing is created there, its entries are mounts. Explorer's New folder and Upload, drops, the picker's Save and the shell's writes check it |
+| `is_locked_path(path)` | `is_system_path`, one of the `PATHS` folders themselves (`/home`, `/home/Desktop`, `/mnt`, …), or a mount point (`/mnt/Photos`). File Explorer won't cut, rename, delete or drag these; a mount point goes with Unmount. UI rule only: the service still writes anywhere |
+| `mount_point_of(path)` | `/mnt/Photos` for anything at or under it, else `null` |
 | `ensure_hierarchy(root)` | The bootstrap below. Called by `FilesService.init()` and `clear()` |
 
 `ensure_hierarchy(root)`, in order:
 
-1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp` if missing, in parallel.
-2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var` or `tmp` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
+1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp`, `/mnt` if missing, in parallel.
+2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var`, `tmp` or `mnt` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
 3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
 4. Empties `/tmp` (every entry, recursively). Steps 3 and 4 run in parallel, and so do the `/tmp` removals.
 
@@ -110,7 +114,7 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `init` | `() => Promise<void>` | Kernel hook. `ensure_hierarchy(await get_root())`. See [Lifecycle](#lifecycle) |
+| `init` | `() => Promise<void>` | Kernel hook. `ensure_hierarchy(await get_root())`, then loads the mounts. See [Lifecycle](#lifecycle) |
 | `get_root` | `() => Promise<FileSystemDirectoryHandle>` | Cached. See [Lifecycle](#lifecycle) |
 | `revision` | `(path) => number` | Reactive change counter for one directory, `0` until something changes. Path is normalised (`split_path` → `join_path`). See [Revisions](#revisions) |
 | `directory` | `(segments, handle?) => Promise<DirectoryHandler>` | New handler that starts watching and listing straight away. The caller must `dispose()` it. Without `handle`, walks `segments` from the root (`NotFoundError` / `TypeMismatchError` if a segment is missing or a file). With `handle`, wraps it and `segments` is only a label, see [gotchas](#behaviour--invariants) |
@@ -136,6 +140,13 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `get_storage_estimate` | `() => Promise<{ usage; quota }>` | `navigator.storage.estimate()`, missing values become `0`. Covers the whole origin, not only OPFS |
 | `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0. Uncached; `size_tree` is the cached way |
 | `size_tree` | `(path, depth?) => Promise<SizeNode>` | Sizes of the folder at `path` and everything under it in one walk, with `children` `depth` levels down (all by default; `0` gives the total only). Listings are cached per folder by revision, so asking again re-lists only folders changed since ([Size tree](#size-tree)). Throws `NotFoundError` when `path` isn't a folder. Used by `du` and Activity Monitor › Storage |
+| `mounts` | `readonly Mount[]` (`$state.raw`) | `{ name, path, handle, state }`, `state` `MountState.CONNECTED` or `LOCKED`. See [Mounts](#mounts-adr-044) |
+| `can_mount` | `readonly boolean` | `showDirectoryPicker` exists. `false` on Android and iOS: Mount, "Folder on disk…" and `mount` are hidden |
+| `mount` | `(handle) => Promise<string>` | Mounts a directory handle at `/mnt/<name>` (`name (1)` when taken; the same folder again resolves its existing path), asks for `readwrite` if not granted, saves it in IndexedDB, bumps `/mnt` |
+| `pick_mount` | `() => Promise<string \| null>` | `showDirectoryPicker({ mode: "readwrite" })` then `mount`. `null` on cancel. Must run from a click or keypress |
+| `unmount` | `(path) => Promise<void>` | Forgets the mount at its mount point: IndexedDB, table, bumps `/mnt` and the mount path. The real folder is untouched. `NotFoundError` for anything else |
+| `reconnect` | `(path) => Promise<boolean>` | `requestPermission({ mode: "readwrite" })` for the mount holding `path`; updates `state`, bumps the mount path when granted. Needs a click |
+| `list_at` | `(path, handle) => Promise<FileSystemItem[]>` | DirectoryHandler's listing: the mount table at `/mnt`, `opfs.list_directory(handle)` elsewhere. On the class, not the interface |
 | `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), bumps every revision cell, then `/`. No confirmation |
 
 ### Bulk rename
@@ -194,9 +205,10 @@ There's no handler cache. Two handlers on the same directory are independent, bu
 | Directory revisions | `FilesService.revisions`, `Map<path, Revision>` (one reactive cell per path) | Page lifetime. `clear()` bumps every cell. Not persisted |
 | Directory listings | each `DirectoryHandler.items` | Owner's lifetime. Re-read on reload only |
 | Size listings | `FilesService.sizes` (`SizeCache` in `size-tree.ts`, imported on the first `size_tree` call to keep it out of the boot bundle): per folder path, the revision it was read at, its files with sizes and its subfolder handles | Page lifetime. Not reactive, not persisted |
+| Mount table | `FilesService.mounts`, `$state.raw<Mount[]>` | Loaded from IndexedDB at `init()`, replaced on mount, unmount and reconnect |
 | File contents and metadata | never cached | Re-read on every call |
 
-The revision cells are the service's only reactive state.
+The revision cells and the mount table are the service's only reactive state.
 
 ## Lifecycle
 
@@ -211,7 +223,7 @@ The first `get_root()`, which is now the one inside `init()`:
 
 ## Persistence
 
-The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The service itself writes only the migration marker `/etc/hierarchy.json` (`{"version":1}`). Other services write their OS files through it: `/etc/settings.json` and `/var/lib/wallpaper/` ([settings](settings.md#persistence)), `/var/lib/desktop/*.json` and `.desktop` / `.widget` files in `/home/Desktop` ([desktop](desktop.md#persistence)), `/var/lib/session/session.json` ([session](session.md#persistence)), `/var/lib/version/state.json` ([version](version.md)), `/var/lib/shell/history` ([shell](shell.md#persistence)). Apps write `/var/lib/apps/{id}/` through `storage.file()` and games `/var/lib/games/plays.json`. Revisions are in memory. The service writes nothing to localStorage. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
+The data lives in OPFS, so it survives reloads, and with `persist()` granted it's exempt from eviction under storage pressure. `/tmp` is the exception: it's emptied on every boot. The service itself writes only the migration marker `/etc/hierarchy.json` (`{"version":1}`). Other services write their OS files through it: `/etc/settings.json` and `/var/lib/wallpaper/` ([settings](settings.md#persistence)), `/var/lib/desktop/*.json` and `.desktop` / `.widget` files in `/home/Desktop` ([desktop](desktop.md#persistence)), `/var/lib/session/session.json` ([session](session.md#persistence)), `/var/lib/version/state.json` ([version](version.md)), `/var/lib/shell/history` ([shell](shell.md#persistence)). Apps write `/var/lib/apps/{id}/` through `storage.file()` and games `/var/lib/games/plays.json`. Revisions are in memory. The service writes nothing to localStorage. Mounted folder handles live in IndexedDB ([Mounts](#mounts-adr-044)); the folders themselves stay on the disk. Remembered "open with" choices live in settings (`file_defaults`, see [settings](settings.md)), not here.
 
 ## Behaviour & invariants
 
@@ -294,6 +306,18 @@ The service has no error types of its own. Native `DOMException`s and `TypeError
 
 Reporting is the caller's job. File Explorer turns errors into notifications through `report_file_error` (below).
 
+## Mounts (ADR-044)
+
+A folder on the real disk, picked with `showDirectoryPicker`, shown at `/mnt/<name>`. The handle is the same `FileSystemDirectoryHandle` type OPFS hands out, so `opfs.ts` and `DirectoryHandler` work on it unchanged and every path consumer (Explorer, the shell, apps through `get_file` / `get_directory`) reaches it by path.
+
+- **Path walks.** `get_file`, `get_directory` and `directory(segments)` start from the mount's handle for `/mnt/<name>/…` and from the OPFS root otherwise. An unknown mount is `null` (or `NotFoundError` from `directory()`).
+- **`/mnt` itself** is an empty OPFS folder created by `ensure_hierarchy`, so the root lists it. `list()` and DirectoryHandler (`list_at`) list the mount table there instead of OPFS. It's read-only (`is_read_only_path`).
+- **Revisions.** `changed(handle)` maps a handle back to a path by asking each mount's `resolve()` first, then the OPFS root, so writes through FilesService inside a mount bump `/mnt/<name>/…`. Edits made outside the browser bump nothing: a mount is fresh whenever it's listed (opening the folder, Reload).
+- **Moves.** `move_paths` across the OPFS/mount boundary, or between two mounts, is copy plus delete (`copy_file` / `copy_directory`, then `delete_entry`), since native `move()` stays inside one file system. Moves within one mount use the normal path.
+- **Persistence.** Handles go into IndexedDB (`mounts-store.ts`), because a handle survives structured clone but not JSON. `init()` loads them and calls `queryPermission({ mode: "readwrite" })`: granted is `connected`, anything else `locked`. A locked mount keeps its place; Explorer shows a Reconnect screen inside it and a lock in Places, and `reconnect()` from that click asks Chrome again. A store failure at boot is logged and leaves no mounts.
+- **Deletes** under `/mnt` hit the real disk with no undo. Explorer's confirm names the folder ("Delete 3 items from Photos on your disk?"); the shell's `rm` refuses without `-f`.
+- **Not in** backups (they cover `/home`, `/etc`, `/var/lib`, [backup](backup.md)) or the session: a window whose props hold a `/mnt/…` path isn't saved ([session](session.md)).
+
 ## Upload flow
 
 1. `upload_files(target, { multiple = true, accept })` calls `pick_device_files` (`$lib/core/utils/device-file`, ADR-031), which creates a detached `<input type="file">` and `click()`s it.
@@ -302,7 +326,9 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 4. The first failure rejects. Files already written stay written.
 5. It resolves with the stored files (`file_handle.getFile()` after each write), so `.name` is the saved name after any auto-rename.
 
-`DirectoryHandler.upload_files` reloads only when the result isn't empty. If the picker is dismissed in a way that fires neither `change` nor `cancel`, the promise never settles. In File Explorer that leaves the upload button disabled.
+`DirectoryHandler.upload_files` reloads only when the result isn't empty. If the picker is dismissed in a way that fires neither `change` nor `cancel`, the promise never settles.
+
+Explorer's Upload is a menu (ADR-044): **Upload files…** (above), **Upload a folder…** and, where `can_mount`, **Mount a folder (no copy)…** (`pick_mount`, then opens the mount). Upload a folder (`upload-folder.ts`) reads the folder with `showDirectoryPicker({ mode: "read" })`, or a `webkitdirectory` input where there's none (Android; empty folders are lost there), into a flat `PickedFolder` (`folder-tree.ts`). It copies it as a task (ADR-013): a "Create folder" step (the folder's name, `name (1)` on clash), then one task per top-level file or folder, tree kept. The done toast has Show folder.
 
 ---
 
@@ -314,7 +340,7 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 |------|----------------|
 | `file-explorer.svelte` | Root. Owns navigation state: `handler`, `history` and `forward` (paths as `string[][]`, `$state.raw`), `search`. Only the current folder has a live `DirectoryHandler`; a replaced one is disposed. Freshness is the handler's job; the explorer only reacts to `handler.exists` going `false` (see Navigation). It disposes the current handler on destroy, and a handler that resolves after destroy is disposed on arrival. Prop `path` (default `PATHS.home`), read once: `files.directory(split_path(path))`. Layout: `grid-rows-[auto_1fr_auto]` with the toolbar, then Places + list side by side, then the status bar. A centered `Spinner` ("Opening folder") while the start folder resolves; an error `EmptyState` ("Couldn't open this folder" + message) if it fails, for example when the folder or `/home` was deleted this session |
 | `file-explorer-navigation.svelte` | `Toolbar`: Back and Reload `IconButton`s, the breadcrumb, a filter `Input` (`bind:search`, always visible: `w-28`, `w-40` from `@lg`), a vertical `Separator`, New folder, Upload |
-| `file-explorer-places.svelte` | Sidebar, only at `@3xl` and up (`w-44`, `bg-background-light`, hairline right). "Places": Home, Desktop, Documents, Downloads (`PATHS`). "System": every `SYSTEM_DIRECTORIES` entry (`/etc`, `/var`, `/tmp`) by path. The entry equal to the current path is active (`foreground/10` fill, `primary` filled icon, `aria-current="page"`); clicking it does nothing |
+| `file-explorer-places.svelte` | Sidebar, only at `@3xl` and up (`w-44`, `bg-background-light`, hairline right). "Places": Home, Desktop, Documents, Downloads (`PATHS`). "System": every `SYSTEM_DIRECTORIES` entry (`/etc`, `/var`, `/tmp`) by path. "On disk", when anything is mounted: each mount by name, `HardDrives` icon, or `LockSimple` when locked, where a click reconnects first and opens the mount once allowed. The entry equal to the current path is active (`foreground/10` fill, `primary` filled icon, `aria-current="page"`); clicking it does nothing |
 | `file-list.svelte` | The scrolling list: a `role="grid"` with a sticky overline header row (Name, Size, Modified) and a row per item. Filtering, open, menus and keys. Passes `system={is_system_path(path)}` to folder rows. Skeleton, empty and no-match states (below). Rows use `content-visibility: auto` (`contain-intrinsic-size: auto 2rem`, `2.75rem` on coarse pointers), so off-screen rows skip layout and paint. That containment turns subgrid off, so rows carry their own `grid-cols-[0.75rem_1fr_auto_auto]` with `gap-x-3`, matching the header's columns |
 | `file-list.handler.svelte.ts` | `FileListHandler`: the list's selection (names + range anchor), marquee and native drag and drop, exposed as `marquee_attachment()` and `drop_attachment()` like `window.handler.svelte.ts`. Takes getters for the directory, the visible items and the `multi` / accepts-drop flags |
 | `drag.ts` | Native drag and drop shared with the desktop: `PATHS_TYPE` (`application/x-webos-paths`, JSON paths), `set_drag_paths`, `has_drag_paths` (types only, for `dragover`), `read_drag_paths`, `drop_paths(paths, target)` (`files.move_paths`, keep both on clash, error toast "Couldn't move …"). OS drops: `has_os_files` (`Files` type), `read_os_entries` (must run synchronously in `drop`; `getAsFileSystemHandle()` when the browser has it, else `getAsFile()`, so folders need Chromium), `import_dropped(entries, target)` (`files.import_entries`, error toast "Couldn't import the dropped items") |
@@ -322,14 +348,15 @@ Reporting is the caller's job. File Explorer turns errors into notifications thr
 | `shortcut-icon.svelte` | `ShortcutIcon { app_id: AppId \| null, class? }`: the app's manifest icon, or Phosphor `AppWindow` when unknown, with an `ArrowUpRight` badge in the bottom-right corner. Also used by the desktop (ADR-022) |
 | `directory-row.svelte` | Folder cells: `primary` filled folder icon, name, `—` for size, empty date. With `system`, a neutral `Badge` "system" after the name (`/etc`, `/var`, `/tmp` and anything under them) |
 | `file-explorer-status-bar.svelte` | `StatusBar` (single line, `nowrap`, each child truncates): "N items" for the unfiltered directory, plus "· x folders, y files" when both kinds are present (from `@sm`). On the right, from `@md`, a storage meter: a 64px `primary` bar (at least 2% wide) and "{usage} of {quota}", percentage in the `title` |
-| `file-upload-button.svelte` | Upload `IconButton`, calls `handler.upload_files()`, disabled while it runs |
+| `file-upload-button.svelte` | Upload `IconButton` opening the Upload menu: Upload files…, Upload a folder… (both disabled in read-only folders), Mount a folder (no copy)… when `can_mount` |
+| `folder-tree.ts`, `upload-folder.ts` | Upload a folder: `PickedFolder` from a handle or `webkitdirectory` files, `top_level_groups`, and the copy task (`copy_folder_in`). Tested in `folder-tree.test.ts` |
 | `file-explorer.errors.ts` | `report_file_error(title, error)`: `console.error`, then an `error` notification from source `"file-explorer"` ([notifications](notifications.md)) |
-| `file-actions.ts` | The actions rows and menus share: `create_folder`, `delete_items`, `upload`, `rename_item`, `rename_items` (one item → `rename_item`, several → the bulk rename sheet, then `apply_renames`; a failure toasts `Could not rename N items` with the rollback message), `show_properties`, `open_with_items`, `open_with`, `open_terminal(cwd)`, `compress_items`, `extract_here` (zip code imported lazily), `copy_items`, `cut_items`, `paste`, `save_to_disk`, `set_wallpaper` |
+| `file-actions.ts` | The actions rows and menus share: `create_folder`, `delete_items` (permanent wording inside a mount), `upload`, `upload_folder_into`, `mount_folder`, `unmount`, `reconnect`, `rename_item`, `rename_items` (one item → `rename_item`, several → the bulk rename sheet, then `apply_renames`; a failure toasts `Could not rename N items` with the rollback message), `show_properties`, `open_with_items`, `open_with`, `open_terminal(cwd)`, `compress_items`, `extract_here` (zip code imported lazily), `copy_items`, `cut_items`, `paste`, `save_to_disk`, `set_wallpaper` |
 | `bulk-rename-dialog.svelte` | Bulk rename sheet (`{ folder, sources, taken }`, resolves the planned steps or `null`): a mono "New name" pattern field (starts `{name}{ext}`, focused), token chips that insert at the caret (`{name} {ext} {n:3} {date:yyyy-MM-dd} {parent}`), a regex hint or the rule's error, Find and Replace with (side by side from `@md`), Match case, and Start / Step only while the pattern has a counter. Below, a live preview (`plan_renames` on every keystroke): old → new per entry, changed names `font-medium`, problems in `error` under the new name; stacked old over "→ new" below `@md`. Footer: "N of M change · K problems", Cancel, Rename (disabled while blocked or nothing changes; Enter submits). Sized `min(40rem, 100cqw - 2rem)` and at most the window's height: the preview gives up height first down to `min-h-32`, then the fields scroll |
 | `name-rules.ts` | `name_problem(name, taken, except?)`: the error for a new name (empty, `/`, `.`/`..`, taken), or `null`. Tested in `name-rules.test.ts` |
-| `picker.ts` | `PickerMode` and `accepts(picker, item)` for [Picker mode](#picker-mode-adr-025) |
+| `picker.ts` | `PickerMode` and `accepts(picker, item)` for [Picker mode](#picker-mode-adr-025); `DEVICE_PATH` (`/tmp/device`), `import_device_files(accept)` and `store_device_files(files, picked)` for "This device…" |
 | `file-picker-dialog.svelte` | The window sheet behind `pick_file` / `pick_directory` / `pick_save`: File Explorer in picker mode |
-| `file-picker-footer.svelte` | The picker's footer in place of the status bar: chosen path and buttons, or the Save form |
+| `file-picker-footer.svelte` | The picker's footer in place of the status bar: the other sources ("This device…", "Folder on disk…"), chosen path and buttons, or the Save form |
 | `properties-dialog.svelte` | Properties sheet (`{ path, kind }`): kind, size, folder contents, modified, location ([dialogs](dialogs.md#context-menus-adr-025)) |
 | `file-icon.svelte` | Phosphor icon by MIME type first, then extension. Generic fallback |
 
@@ -418,12 +445,13 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - ADR-005 §6 types `FileSystemItem` as a base interface with `kind: "file" | "directory"`. The code uses a discriminated union, which is better and matches CONVENTIONS.
 - ADR-005 §9 specifies `confirm()`/`prompt()`. Superseded by ADR-025: the explorer uses window sheets.
 - ADR-021 §2 triggers the migration when `/home` doesn't exist and creates every `PATHS` folder before it. The code creates the four top-level folders first, keys the migration on the `/etc/hierarchy.json` marker (so an interrupted migration resumes), and creates `Desktop`/`Documents`/`Downloads` after it (so a user's own `Documents` merges in by name).
+- ADR-044 puts "This device…" and "Folder on disk…" in the picker's Places list. Places shows only at `@3xl` (48rem) and the picker sheet is at most 46rem wide, so they sit in the picker footer instead.
 - ADR-021 §4 says a revision is `0` "until something under `path` changes". The code bumps only the directory a mutation touched, not its ancestors, so it's "in `path`", not "under".
 - [CONVENTIONS](../../CONVENTIONS.md#services) says `index.ts` exports types only and that only `init.ts` imports service classes. `type.ts` imports `DirectoryHandler` from the implementation file, so `FilesService.directory()` returns the concrete class, and `DirectoryHandler.service` is the concrete `FilesService`, not the interface. The UI components import the type from `service.svelte` directly. Swapping the files service (ADR-016) would have to keep this exact class.
 
 ## Shell
 
-Contributes `ls cd pwd cat cp mv rename rm mkdir touch du df`, the `path` completer and the `file` / `rename` / `storage` value types (`files/shell.ts`, bodies and the `path` completer in the lazy `files/shell-run.ts`). Writes into system folders need `sudo`. `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` plans with [bulk rename](#bulk-rename) over the paths or the piped files: `--dry` yields `rename` rows (from, to, problem) for changed or blocked entries and touches nothing; otherwise any problem fails the run listing up to five (nothing renamed), and success yields the renamed files as `file` values. A regex needs single quotes (`'/IMG_(\d+)/trip-$1/'`): double quotes eat backslashes. `du [paths…]` yields one `file` value per path with its size (from `size_tree(path, 0)` for a folder); `du -d N` instead yields a row for everything inside each folder down to `N` levels, folders with their total, biggest first per folder, so `du ~ -d 1 | sort size -r` ranks what's in home. It asks `size_tree` for `N + 1` levels, because only a folder within the asked depth carries `children`, which is how a row knows it's a folder. See [shell](shell.md#contributions).
+Contributes `ls cd pwd cat cp mv rename rm mkdir touch du df mount umount mounts`, the `path` completer and the `file` / `rename` / `storage` / `mount` value types (`files/shell.ts`, bodies and the `path` completer in the lazy `files/shell-run.ts`). Writes into system folders need `sudo`. `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` plans with [bulk rename](#bulk-rename) over the paths or the piped files: `--dry` yields `rename` rows (from, to, problem) for changed or blocked entries and touches nothing; otherwise any problem fails the run listing up to five (nothing renamed), and success yields the renamed files as `file` values. A regex needs single quotes (`'/IMG_(\d+)/trip-$1/'`): double quotes eat backslashes. `du [paths…]` yields one `file` value per path with its size (from `size_tree(path, 0)` for a folder); `du -d N` instead yields a row for everything inside each folder down to `N` levels, folders with their total, biggest first per folder, so `du ~ -d 1 | sort size -r` ranks what's in home. It asks `size_tree` for `N + 1` levels, because only a folder within the asked depth carries `children`, which is how a row knows it's a folder. `rm` under `/mnt` needs `-f` (`--force`). `mount` opens the folder chooser from the Enter keypress and yields the mount as a `file`; hidden without `can_mount`. `umount <path>` takes a mount point (completed from the table) and moves the session out of it; hidden with no mounts. `mounts` yields `mount` values (columns `path`, `state`). `mkdir` / `touch` refuse a new entry directly in `/mnt`. See [shell](shell.md#contributions).
 
 ## Known gaps
 
@@ -441,8 +469,9 @@ Contributes `ls cd pwd cat cp mv rename rm mkdir touch du df`, the `path` comple
 
 `<FileExplorer picker={{ kind, accept, name?, onchoose, oncancel }} />` turns the explorer into a picker (`picker.ts`, used by `file-picker-dialog.svelte` for `window.pick_file` / `pick_directory` / `pick_save`). `kind` is `"file"`, `"directory"` or `"save"`:
 
+- Sources (ADR-044): the footer starts with "This device…" (file pickers only) and "Folder on disk…" (when `can_mount`). "This device…" opens the browser's file chooser, copies the pick into `/tmp/device/` (`store_device_files`, free names) and chooses its path, so `onchoose(path)` keeps its shape; `/tmp` is emptied at boot. "Folder on disk…" mounts a folder and opens it in the picker.
 - Click selects (`aria-selected`), double-click or Enter on a file chooses it, folders still navigate on double-click. On mobile a tap on a folder navigates into it and a tap on a file selects it.
 - Files that don't match `accept` (association syntax, checked with `association_tier`) are dimmed and `aria-disabled`; a directory picker disables all files.
 - No context menus, rename, delete or clipboard keys.
 - A footer replaces the status bar: the chosen path, Cancel, and Open / Select folder (a directory picker can take the open folder itself).
-- Save mode: the footer is a form with a name field (autofocused, seeded from `name`), Cancel and Save. Clicking or double-clicking a file copies its name into the field, without choosing it. Typing overrides that name until the next click: the field is a writable `$derived` of the selection. If a file in the open folder has the name, the button becomes a red **Replace** with a "Replaces the existing file" hint. If a folder has it, saving is disabled ("A folder has this name"). An empty name, `.`, `..` or a name with `/` disables it too. Inside a system folder (`is_system_path`: `/etc`, `/var`, `/tmp`) saving is disabled with "System folders are read-only", so no app's Save as can overwrite an OS file. Resolves the full path. The picker writes nothing; the caller writes with `files.get_directory(folder)` + `create_file(dir, name, { content, overwrite: true })`.
+- Save mode: the footer is a form with a name field (autofocused, seeded from `name`), Cancel and Save. Clicking or double-clicking a file copies its name into the field, without choosing it. Typing overrides that name until the next click: the field is a writable `$derived` of the selection. If a file in the open folder has the name, the button becomes a red **Replace** with a "Replaces the existing file" hint. If a folder has it, saving is disabled ("A folder has this name"). An empty name, `.`, `..` or a name with `/` disables it too. Inside a system folder (`is_read_only_path`: `/etc`, `/var`, `/tmp`, and `/mnt` itself with "Open a mounted folder first") saving is disabled with "System folders are read-only", so no app's Save as can overwrite an OS file. Resolves the full path. The picker writes nothing; the caller writes with `files.get_directory(folder)` + `create_file(dir, name, { content, overwrite: true })`.

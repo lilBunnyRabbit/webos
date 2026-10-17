@@ -1,6 +1,6 @@
 import { error_message, format_bytes } from "$lib/core/utils";
 import { ShellError, type CommandContext, type Completion, type ShellSession } from "../shell/type";
-import { is_locked_path } from "./hierarchy";
+import { is_locked_path, mount_point_of, PATHS } from "./hierarchy";
 import { join_path, resolve_path, split_path } from "./path";
 import { apply_renames } from "./rename-batch";
 import { plan_renames, type RenameRule, type RenameSource } from "./rename-pattern";
@@ -12,6 +12,11 @@ const CAT_LIMIT = 1024 * 1024;
 
 const parent_of = (path: string) => join_path(split_path(path).slice(0, -1));
 const name_of = (path: string) => split_path(path).at(-1) ?? "";
+
+/** A new entry right in /mnt would be hidden behind the mount table: mounts come from `mount`. */
+function assert_creatable(path: string, elevated: boolean): void {
+  assert_writable(parent_of(path) === PATHS.mnt ? PATHS.mnt : path, elevated);
+}
 
 function assert_removable(path: string, elevated: boolean): void {
   if (path === "/") throw new ShellError("refusing to touch /");
@@ -176,12 +181,14 @@ export async function* rename(files: FilesService, context: CommandContext<Renam
   }
 }
 
-export async function rm(files: FilesService, context: CommandContext<{ paths: string[]; recursive: boolean }>) {
+export async function rm(files: FilesService, context: CommandContext<{ paths: string[]; recursive: boolean; force: boolean }>) {
   const paths = await paths_from(context.args.paths, context);
   if (paths.length === 0) throw new ShellError("rm: nothing to delete");
   for (const path of paths) {
     const found = await require_stat(files, path);
     assert_removable(path, context.elevated);
+    if (mount_point_of(path) && !context.args.force)
+      throw new ShellError(`rm: ${path} is on your disk and can't be undone (use -f)`);
     if (found.kind === "directory" && !context.args.recursive) throw new ShellError(`rm: ${path} is a folder (use -r)`);
   }
   for (const path of paths) {
@@ -201,14 +208,16 @@ export async function* mkdir(
     for (const [index, segment] of segments.entries()) {
       const here = join_path(segments.slice(0, index + 1));
       const last = index === segments.length - 1;
-      if (await files.exists(directory, segment, "directory")) {
+      // By path, not by handle: /mnt/<name> resolves to the mounted folder.
+      const existing = await files.get_directory(here);
+      if (existing) {
         if (last && !args.parents) throw new ShellError(`mkdir: ${here} already exists`);
-        directory = await directory.getDirectoryHandle(segment);
+        directory = existing;
         continue;
       }
       if (!last && !args.parents)
         throw new ShellError(`mkdir: ${join_path(segments.slice(0, index))} has no ${segment} (use -p)`);
-      assert_writable(here, elevated);
+      assert_creatable(here, elevated);
       directory = await files.create_directory(directory, segment);
     }
     yield file_value(path, "directory");
@@ -223,7 +232,7 @@ export async function* touch(files: FilesService, { args, session, elevated }: C
       yield existing;
       continue;
     }
-    assert_writable(path, elevated);
+    assert_creatable(path, elevated);
     await files.create_file(await require_directory(files, parent_of(path)), name_of(path), { content: "" });
     yield await require_stat(files, path);
   }
@@ -253,4 +262,11 @@ export async function* du(files: FilesService, context: CommandContext<{ paths: 
 export async function df(files: FilesService) {
   const { usage, quota } = await files.get_storage_estimate();
   return { $type: "storage", used: usage, quota, free: Math.max(0, quota - usage) };
+}
+
+export async function umount(files: FilesService, { args, session }: CommandContext<{ path: string }>) {
+  const path = resolve_path(session.cwd, args.path);
+  if (!files.mounts.some((mount) => mount.path === path)) throw new ShellError(`umount: ${path} isn't a mount`);
+  if (session.cwd === path || session.cwd.startsWith(`${path}/`)) session.cwd = PATHS.home;
+  await files.unmount(path);
 }

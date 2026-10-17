@@ -84,6 +84,7 @@ interface WindowSnapshot {
 
 - `windows.sorted_list` by `order` ascending, so oldest-first in z-order and the last entry ends up on top after restore.
 - Drops windows whose manifest has `restore: false`. No app sets it today.
+- Drops windows with a `/mnt/…` path in their props, alone or in an array (`shows_mount`): after a reload the mount is locked until a click reconnects it, so the window couldn't open its file (ADR-044).
 - Per window: `app_id`, `$state.snapshot(props)`, a copy of `bounds` (the restored geometry, even for maximized or snapped windows), flags filtered to `SESSION_FLAGS` (`debug` is dropped), `snap_zone`, and `$state.snapshot(app.state)` when it has keys. A `storage.window()` change therefore rewrites the file.
 - It tracks everything it reads, so any bounds, flag, snap or z-order change rewrites the file. Bounds only change on pointer release, so dragging doesn't write per frame. Focusing a window does write (its `order` changes).
 - Writes `windows.frames` alongside, so a close (which records a frame) rewrites the file.

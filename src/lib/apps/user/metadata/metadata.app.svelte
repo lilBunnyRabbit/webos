@@ -3,12 +3,10 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, Checkbox, EmptyState, IconButton, Section, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
     Binary as BinaryIcon,
     Broom as BroomIcon,
-    Devices as DevicesIcon,
     FileMagnifyingGlass as FileMagnifyingGlassIcon,
     FolderOpen as FolderOpenIcon,
     Warning as WarningIcon,
@@ -70,11 +68,6 @@
     if (chosen) await open_path(chosen);
   }
 
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: ACCEPT });
-    if (picked) await load(picked, null);
-  }
-
   const initial = untrack(() => path);
   if (initial) void open_path(initial);
 
@@ -126,7 +119,6 @@
 
 {#snippet open_actions()}
   <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
-  <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
 {/snippet}
 
 <div
@@ -152,7 +144,6 @@
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
         {#if source}
           <IconButton label="Raw bytes in Hex Viewer" size="sm" onclick={() => open_in_hex(source!)}><BinaryIcon weight="bold" /></IconButton>

@@ -2,10 +2,8 @@
   import kernel, { type SettingsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
   import {
-    Devices as DevicesIcon,
     EyeSlash as EyeSlashIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
@@ -131,8 +129,6 @@
     const chosen = await win.pick_file({ accept: ["image/*"], start_path, title: "Redact an image" });
     if (chosen) load(() => load_image_at(chosen));
   }
-
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
 
   function take(files: File[]) {
     const [file] = files;
@@ -382,7 +378,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{source?.name ?? ""}</span>
     {#if source && !loading && !error}
       <Button variant="primary" size="sm" disabled={!listed.length} onclick={save}><FloppyDiskIcon weight="bold" /> Save…</Button>
@@ -393,7 +388,7 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !preview}
     <EmptyState
@@ -401,7 +396,7 @@
       title="No image open"
       description="Covers names, faces or numbers with a box, pixels or a heavy blur, and saves a fresh copy without the original's metadata. Open an image, drop it here or paste it."
     >
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}
     {@const width = source.bitmap.width}

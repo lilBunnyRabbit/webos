@@ -3,11 +3,9 @@
   import { Button, EmptyState, IconButton, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowLeft as ArrowLeftIcon,
     ArrowRight as ArrowRightIcon,
-    Devices as DevicesIcon,
     DotsSixVertical as DotsSixVerticalIcon,
     FilePdf as FilePdfIcon,
     ImageSquare as ImageSquareIcon,
@@ -22,7 +20,7 @@
   import { run_job } from "./job";
   import { images_pdf_name } from "./naming";
   import { PdfWriter } from "./pdf";
-  import { IMAGE_ACCEPT, device_source, is_image, prepare_image, source_at, write_at, type SourceFile } from "./pdf-files";
+  import { IMAGE_ACCEPT, is_image, prepare_image, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
 
@@ -100,10 +98,6 @@
     if (path) await add_paths([path]);
   }
 
-  async function pick_device() {
-    add((await pick_device_files({ accept: IMAGE_ACCEPT, multiple: true })).map(device_source));
-  }
-
   async function create() {
     if (!items.length || busy) return;
     const path = await win.pick_save({
@@ -156,7 +150,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Add an image…" size="sm" onclick={pick} disabled={busy}><ImageSquareIcon weight="bold" /></IconButton>
-    <IconButton label="Add from device…" size="sm" onclick={pick_device} disabled={busy}><DevicesIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     <Select size="sm" aria-label="Page size" class="w-auto" options={SIZES} bind:value={settings.value.size} />
     <Select size="sm" aria-label="Margin" class="w-auto" options={MARGINS} bind:value={settings.value.margin} />
@@ -171,7 +164,6 @@
       <EmptyState icon={ImagesIcon} title="No images yet" description="Add PNG, JPEG or other images. Each one becomes a page, in the order shown.">
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Add an image…</Button>
-          <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {:else}

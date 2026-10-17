@@ -375,6 +375,19 @@ interface DiskPickers {
 const disk = () => window as unknown as Window & DiskPickers;
 const is_abort = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
 
+/** Android and iOS browsers have no folder picker, so mounting is hidden there (ADR-044). */
+export const can_pick_folders = typeof window !== "undefined" && "showDirectoryPicker" in window;
+
+/** The browser's folder chooser. Must run inside a user gesture. Resolves `null` on cancel. */
+export async function pick_disk_folder(mode: "read" | "readwrite" = "readwrite"): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    return await disk().showDirectoryPicker({ mode });
+  } catch (error) {
+    if (is_abort(error)) return null;
+    throw error;
+  }
+}
+
 /**
  * Copies a file or folder out of OPFS onto the real disk. A file goes through the native Save dialog; a folder is copied
  * whole into a folder the user picks (auto-renamed there on clash). Resolves the name written, or `null` if cancelled.

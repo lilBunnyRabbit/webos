@@ -2,12 +2,10 @@
   import kernel, { AI_REQUIREMENTS, AiAvailability, AiFeature, type AiMessage, type AiService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message } from "$lib/core/utils";
   import { Button, CopyButton, EmptyState, IconButton, Spinner, Textarea, Toolbar } from "$lib/core/components/ui";
   import {
     ChatCircleText as ChatCircleTextIcon,
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     NotePencil as NotePencilIcon,
     PaperPlaneRight as PaperPlaneRightIcon,
@@ -93,11 +91,6 @@
     if (chosen) open_path(chosen);
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: manifest.tools });
-    if (file) open_file(async () => file, null);
-  }
-
   function new_chat() {
     controller?.abort();
     turns = [];
@@ -161,7 +154,6 @@
   <div class="grid h-full grid-rows-[auto_auto_1fr_auto]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={source?.path ?? undefined}>
         {source?.name ?? "No file open"}
       </span>
@@ -207,7 +199,6 @@
           {#snippet actions()}
             {#if !source}
               <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
-              <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
             {/if}
           {/snippet}
         </EmptyState>

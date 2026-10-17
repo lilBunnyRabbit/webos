@@ -1,6 +1,6 @@
 import type { FileSystemItem } from "$lib/core/api/services/files";
 import { join_path } from "$lib/core/api/services/files/path";
-import { is_system_path } from "$lib/core/api/services/files/hierarchy";
+import { is_read_only_path } from "$lib/core/api/services/files/hierarchy";
 import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
 import { click_select, rect_from_points, same_members, type Rect } from "$lib/core/utils/selection";
 import type { Position } from "$lib/core/utils/type";
@@ -254,7 +254,7 @@ export class FileListHandler {
     const directory = this.options.directory();
     const folder = this.folder_under(event);
     const target = folder ? join_path(directory.segments, folder) : directory.path;
-    return is_system_path(target) ? null : target;
+    return is_read_only_path(target) ? null : target;
   }
 }
 

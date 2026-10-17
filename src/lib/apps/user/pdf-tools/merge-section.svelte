@@ -3,11 +3,9 @@
   import { Button, EmptyState, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_bytes, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowDown as ArrowDownIcon,
     ArrowUp as ArrowUpIcon,
-    Devices as DevicesIcon,
     DotsSixVertical as DotsSixVerticalIcon,
     FilePdf as FilePdfIcon,
     FilePlus as FilePlusIcon,
@@ -21,7 +19,7 @@
   import { run_job } from "./job";
   import { merged_name } from "./naming";
   import { PdfWriter, page_count } from "./pdf";
-  import { PDF_ACCEPT, device_source, is_pdf, read_bytes, source_at, write_at, type SourceFile } from "./pdf-files";
+  import { PDF_ACCEPT, is_pdf, read_bytes, source_at, write_at, type SourceFile } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
 
@@ -83,10 +81,6 @@
     if (path) await add_paths([path]);
   }
 
-  async function pick_device() {
-    add((await pick_device_files({ accept: PDF_ACCEPT, multiple: true })).map(device_source));
-  }
-
   async function merge() {
     if (ready.length < 2 || busy) return;
     const path = await win.pick_save({
@@ -132,7 +126,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Add a PDF…" size="sm" onclick={pick} disabled={busy}><FilePlusIcon weight="bold" /></IconButton>
-    <IconButton label="Add from device…" size="sm" onclick={pick_device} disabled={busy}><DevicesIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     {#if items.length}
       <IconButton label="Remove all" size="sm" onclick={() => (items = [])} disabled={busy}><TrashIcon weight="bold" /></IconButton>
@@ -145,7 +138,6 @@
       <EmptyState icon={StackIcon} title="Nothing to merge yet" description="Add two or more PDFs, put them in order, then merge them into one file.">
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><FilePlusIcon weight="bold" /> Add a PDF…</Button>
-          <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {:else}

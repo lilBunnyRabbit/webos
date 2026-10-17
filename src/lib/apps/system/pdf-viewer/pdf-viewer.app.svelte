@@ -2,21 +2,19 @@
   import kernel, { type AppsService, type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import {
-    Devices as DevicesIcon,
     FilePdf as FilePdfIcon,
     FolderOpen as FolderOpenIcon,
     PencilSimple as PencilSimpleIcon,
     Warning as WarningIcon,
   } from "phosphor-svelte";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { untrack } from "svelte";
   import manifest from "./index";
   import { error_message } from "$lib/core/utils";
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  // Starts at the launched file; "Open…" swaps it in place.
   let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
   const path = $derived(typeof source === "string" ? source : undefined);
   const { window: win } = get_app_context();
@@ -24,11 +22,6 @@
   async function pick() {
     const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in PDF Viewer" });
     if (chosen) source = chosen;
-  }
-
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: manifest.associations });
-    if (picked) source = picked;
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -76,7 +69,7 @@
 
 {#if !source}
   <EmptyState icon={FilePdfIcon} title="No PDF open" description="Pick a PDF, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>{/snippet}
   </EmptyState>
 {:else if error}
   <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
@@ -88,7 +81,6 @@
   <div class="grid h-full grid-rows-[auto_1fr]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
       {#if path && apps.get(PDF_TOOLS)}
         <IconButton label="Edit in PDF Tools" size="sm" onclick={() => apps.launch(PDF_TOOLS, { path })}><PencilSimpleIcon weight="bold" /></IconButton>

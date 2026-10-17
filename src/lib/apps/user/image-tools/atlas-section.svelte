@@ -3,10 +3,8 @@
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message } from "$lib/core/utils";
   import {
-    Devices as DevicesIcon,
     Export as ExportIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
@@ -175,8 +173,6 @@
     const chosen = await win.pick_directory({ start_path, title: "Add a folder of frames" });
     if (chosen) add_paths([chosen]);
   }
-
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"], multiple: true }));
 
   function remove(index: number) {
     const removed = frames[index];
@@ -377,7 +373,6 @@
     {@render picker()}
     <IconButton label="Add an image…" size="sm" onclick={pick_image}><PlusIcon weight="bold" /></IconButton>
     <IconButton label="Add a folder…" size="sm" onclick={pick_folder}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Add from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{frames.length ? `${frames.length} ${frames.length === 1 ? "frame" : "frames"}` : ""}</span>
     {#if loading}<Spinner label="Loading images" />{/if}
     {#if frames.length}
@@ -397,7 +392,6 @@
         {#snippet actions()}
           <Button variant="primary" onclick={pick_folder}><FolderOpenIcon weight="bold" /> Add a folder…</Button>
           <Button onclick={pick_image}><PlusIcon weight="bold" /> Add an image…</Button>
-          <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {/if}

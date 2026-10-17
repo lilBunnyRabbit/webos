@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { SnapZone, WindowFlag, type WindowSnapshot } from "../windows/type";
-import { parse_session, serialize_session } from "./persistence";
+import { parse_session, serialize_session, shows_mount } from "./persistence";
 
 const snapshot: WindowSnapshot = {
   app_id: "settings",
@@ -41,5 +41,14 @@ describe("session file", () => {
   test("snap zones survive", () => {
     const snapped = { ...snapshot, snap_zone: Object.values(SnapZone)[0] };
     expect(parse_session(serialize_session({ windows: [snapped], frames: {} })).windows[0].snap_zone).toBe(snapped.snap_zone);
+  });
+});
+
+describe("shows_mount", () => {
+  test("a path prop under /mnt, alone or in a list", () => {
+    expect(shows_mount({ path: "/mnt/Photos/a.png" })).toBe(true);
+    expect(shows_mount({ paths: ["/home/a.txt", "/mnt/Notes/b.md"] })).toBe(true);
+    expect(shows_mount({ path: "/home/mnt/a.png", section: "mnt" })).toBe(false);
+    expect(shows_mount(undefined)).toBe(false);
   });
 });

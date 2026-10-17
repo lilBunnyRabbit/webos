@@ -3,11 +3,9 @@
   import { Button, Checkbox, EmptyState, IconButton, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowLineDown as ArrowLineDownIcon,
     CaretRight as CaretRightIcon,
-    Devices as DevicesIcon,
     File as FileIcon,
     FileZip as FileZipIcon,
     Folder as FolderIcon,
@@ -94,11 +92,6 @@
     if (chosen) open_path(chosen);
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: [".zip"] });
-    if (file) open(async () => ({ blob: file, name: file.name, path: null }));
-  }
-
   function toggle_folder(node: TreeNode) {
     if (expanded.has(node.key)) expanded.delete(node.key);
     else expanded.add(node.key);
@@ -126,7 +119,6 @@
     {@render tabs()}
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={opened?.path ?? opened?.name}>{opened?.name ?? ""}</span>
     <IconButton label="Open a zip…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     {#if opened}
       <Separator vertical class="hidden @lg:block" />
       {#if job}
@@ -151,7 +143,6 @@
       <EmptyState icon={FileZipIcon} title="No archive open" description="Open a zip to see what's inside, preview files and extract them. Or make a new one in Create.">
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a zip…</Button>
-          <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {:else}

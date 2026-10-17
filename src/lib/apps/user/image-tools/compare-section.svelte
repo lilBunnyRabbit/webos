@@ -4,7 +4,6 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { resolve_token } from "$lib/core/utils";
   import {
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
@@ -284,7 +283,6 @@
     >
       {#snippet actions()}
         <Button variant="primary" onclick={() => pair.pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the before…</Button>
-        <Button onclick={() => pair.pick_device()}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -360,7 +358,6 @@
             >
               {#snippet actions()}
                 <Button variant="primary" onclick={() => pair.pick(before ? Slot.EDITED : Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open…</Button>
-                <Button onclick={() => pair.pick_device(before ? Slot.EDITED : Slot.ORIGINAL)}><DevicesIcon weight="bold" /> From device…</Button>
               {/snippet}
             </EmptyState>
           {/if}

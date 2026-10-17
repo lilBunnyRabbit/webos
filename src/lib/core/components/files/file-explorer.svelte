@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onDestroy, untrack } from "svelte";
-  import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { MountState, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { join_path, split_path } from "$lib/core/api/services/files/path";
-  import { EmptyState, Spinner } from "../ui";
-  import { WarningCircle as WarningCircleIcon } from "phosphor-svelte";
+  import { Button, EmptyState, Spinner } from "../ui";
+  import { LockSimple as LockSimpleIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
+  import { reconnect } from "./file-actions";
   import FileExplorerNavigation from "./file-explorer-navigation.svelte";
   import FileExplorerPlaces from "./file-explorer-places.svelte";
   import FileList from "./file-list.svelte";
@@ -34,6 +35,12 @@
   let step_id = 0;
 
   const can_go_back = $derived(history.length > 0);
+  // After a reload a mount keeps its handle but not the permission; the browser asks again only from a click.
+  const locked_mount = $derived.by(() => {
+    const path = handler?.path;
+    if (path === undefined) return null;
+    return files.mounts.find((mount) => mount.state === MountState.LOCKED && (path === mount.path || path.startsWith(`${mount.path}/`))) ?? null;
+  });
   const can_go_forward = $derived(forward.length > 0);
 
   // The start folder is read once; navigating afterwards is the explorer's own state.
@@ -126,11 +133,20 @@
 
       <div class="flex min-h-0">
         <FileExplorerPlaces current={handler.path} onnavigatepath={navigate_path} />
-        <FileList {handler} bind:search bind:selected {picker} onnavigate={navigate_to} />
+        {#if locked_mount}
+          {@const mount = locked_mount}
+          <div class="min-w-0 flex-1">
+            <EmptyState icon={LockSimpleIcon} title="{mount.name} is locked" description="The browser forgets access to folders on your disk between visits. Reconnect to allow it again.">
+              {#snippet actions()}<Button variant="primary" onclick={() => reconnect(mount.path)}>Reconnect</Button>{/snippet}
+            </EmptyState>
+          </div>
+        {:else}
+          <FileList {handler} bind:search bind:selected {picker} onnavigate={navigate_to} />
+        {/if}
       </div>
 
       {#if picker}
-        <FilePickerFooter {handler} {picker} {selected} />
+        <FilePickerFooter {handler} {picker} {selected} onnavigatepath={navigate_path} />
       {:else}
         <FileExplorerStatusBar {handler} {files} />
       {/if}

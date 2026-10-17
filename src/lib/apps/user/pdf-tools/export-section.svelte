@@ -2,14 +2,13 @@
   import kernel, { type AppsService } from "$lib/core/api";
   import { Button, IconButton, Input, Section as Group, Segmented, Select, SettingRow, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
-  import { Devices as DevicesIcon, Export as ExportIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
+  import { Export as ExportIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
   import { page_image_name } from "./naming";
-  import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
+  import { PDF_ACCEPT, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import PdfThumb from "./pdf-thumb.svelte";
@@ -80,11 +79,6 @@
     if (path) await slot.open(path);
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: PDF_ACCEPT });
-    if (file) await slot.open(device_source(file));
-  }
-
   async function export_pages() {
     if (!loaded || !pages.list.length || busy) return;
     const folder = await win.pick_directory({ title: "Save the images into", start_path: loaded.source.path ? parent_path(loaded.source.path) : "/home" });
@@ -118,7 +112,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{loaded?.source.name ?? ""}</span>
     {#if loaded}
       <Button variant="primary" size="sm" onclick={export_pages} disabled={busy || !pages.list.length}><ExportIcon weight="bold" /> Export…</Button>
@@ -127,7 +120,7 @@
 
   <div class="min-h-0 overflow-auto">
     {#if !loaded}
-      <PdfPlaceholder {slot} icon={ExportIcon} title="No PDF open" description="Save pages as PNG or JPEG images, at the resolution you pick." onopen={pick} ondevice={pick_device} />
+      <PdfPlaceholder {slot} icon={ExportIcon} title="No PDF open" description="Save pages as PNG or JPEG images, at the resolution you pick." onopen={pick} />
     {:else}
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-5 @md:px-6 @xl:flex-row @xl:items-start">
         <div class="mx-auto w-40 shrink-0 @xl:mx-0">

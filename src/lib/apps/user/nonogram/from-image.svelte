@@ -2,13 +2,11 @@
   import { Badge, Button, EmptyState, IconButton, Segmented, Slider, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message } from "$lib/core/utils";
-  import { load_image, load_image_at, paint, type SourceImage } from "$lib/core/utils/image";
+  import { load_image_at, paint, type SourceImage } from "$lib/core/utils/image";
   import {
     ArrowLeft as ArrowLeftIcon,
     Check as CheckIcon,
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     Image as ImageIcon,
     Warning as WarningIcon,
@@ -178,11 +176,6 @@
     if (chosen) load(() => load_image_at(chosen));
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: ["image/*"] });
-    if (file) load(() => load_image(file));
-  }
-
   function use() {
     if (!picture || !source) return;
     stop?.();
@@ -206,7 +199,6 @@
   <Toolbar>
     <IconButton size="sm" label="Back to the editor" onclick={on_cancel}><ArrowLeftIcon weight="bold" /></IconButton>
     <IconButton size="sm" label="Open an image…" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton size="sm" label="Open from device…" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{source?.name ?? "From image"}</span>
     <Button size="sm" variant="primary" disabled={!picture || !cells.some((cell) => cell > 0)} onclick={use}>
       <CheckIcon weight="bold" class="size-3.5" />
@@ -238,11 +230,11 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !picture}
     <EmptyState icon={ImageIcon} title="No image yet" description="Turns a picture into a puzzle with one answer, ready to tweak in the editor.">
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}
     {@const bitmap = source.bitmap}

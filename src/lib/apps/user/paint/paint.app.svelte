@@ -11,8 +11,7 @@
   import type { IconComponent } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { pick_device_files } from "$lib/core/utils/device-file";
-  import { load_image, load_image_at, type SourceImage, write_image } from "$lib/core/utils/image";
+  import { load_image_at, type SourceImage, write_image } from "$lib/core/utils/image";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -25,7 +24,6 @@
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     Hand as HandIcon,
     LineSegment as LineSegmentIcon,
@@ -320,12 +318,6 @@
     if (chosen) await open_image(() => load_image_at(chosen));
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: ["image/*"] });
-    if (file) await open_image(() => load_image(file));
-  }
-
   async function write(path: string): Promise<boolean> {
     if (!history) return false;
     const state = current(history);
@@ -582,7 +574,6 @@
       <FilePlusIcon weight="bold" />
     </IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />

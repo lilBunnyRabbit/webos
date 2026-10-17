@@ -44,6 +44,12 @@ export function parse_session(text: string): SessionFile {
   }
 }
 
+/** A path prop under /mnt: after a reload the mount is locked until a click reconnects it, so the window isn't saved (ADR-044). */
+export function shows_mount(props: Record<string, unknown> | undefined): boolean {
+  const is_mount_path = (value: unknown) => typeof value === "string" && value.startsWith(`${PATHS.mnt}/`);
+  return Object.values(props ?? {}).some((value) => (Array.isArray(value) ? value.some(is_mount_path) : is_mount_path(value)));
+}
+
 export function serialize_session({ windows, frames }: SessionFile): string {
   return JSON.stringify({ version: SESSION_VERSION, windows, frames }, null, 2);
 }

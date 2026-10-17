@@ -13,13 +13,11 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState } from "@codemirror/state";
   import { EditorView, keymap } from "@codemirror/view";
   import { basicSetup } from "codemirror";
   import {
-    Devices as DevicesIcon,
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
@@ -264,17 +262,6 @@
     await load(chosen);
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: [".md"] });
-    if (!file) return;
-    try {
-      begin(await file.text(), file.name);
-    } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the file", message: error_message(reason) });
-    }
-  }
-
   async function write_text(target: string, content: string): Promise<void> {
     const directory = await files.get_directory(parent_path(target));
     if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
@@ -467,7 +454,6 @@
   <Toolbar>
     <IconButton label="New form" size="sm" onclick={() => start(NEW_FORM)}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" disabled={!ready} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" disabled={!ready} onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @md:block" />
@@ -536,7 +522,6 @@
               <div class="flex flex-wrap justify-center gap-2">
                 <Button variant="primary" onclick={() => start(NEW_FORM)}><FilePlusIcon weight="bold" /> New form</Button>
                 <Button onclick={open}><FolderOpenIcon weight="bold" /> Open…</Button>
-                <Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>
                 <Button variant="quiet" onclick={() => start(EXAMPLE)}><SparkleIcon weight="bold" /> Example</Button>
               </div>
             {/snippet}

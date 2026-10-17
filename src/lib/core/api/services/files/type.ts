@@ -46,6 +46,21 @@ export interface UploadOptions {
   accept?: string;
 }
 
+export const MountState = {
+  CONNECTED: "connected",
+  /** Remembered from an earlier visit; the browser asks again on Reconnect, which needs a click. */
+  LOCKED: "locked",
+} as const;
+export type MountState = (typeof MountState)[keyof typeof MountState];
+
+/** A real folder on the disk shown at `/mnt/<name>` (ADR-044). */
+export interface Mount {
+  name: string;
+  path: string;
+  handle: FileSystemDirectoryHandle;
+  state: MountState;
+}
+
 export interface FilesService extends IService {
   get_root(): Promise<FileSystemDirectoryHandle>;
   /**
@@ -94,6 +109,21 @@ export interface FilesService extends IService {
   copy_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
   /** Copies the file or folder at `path` onto the real disk (native Save dialog / folder picker). The written name, or `null` if cancelled. */
   export_to_disk(path: string): Promise<string | null>;
+  /** Mounted real folders, reactive. Each one's listing is read fresh: edits made outside the browser bump no revision. */
+  readonly mounts: readonly Mount[];
+  /** `showDirectoryPicker` exists; Android has none, so Mount and "Folder on disk…" are hidden there. */
+  readonly can_mount: boolean;
+  /**
+   * Shows `handle` at `/mnt/<name>`, `name (1)` when taken, and remembers it for the next visit. A folder already
+   * mounted resolves its existing path. Resolves the mount path.
+   */
+  mount(handle: FileSystemDirectoryHandle): Promise<string>;
+  /** Asks for a folder with the browser's chooser and mounts it; `null` when cancelled. Must run from a click or keypress. */
+  pick_mount(): Promise<string | null>;
+  /** Forgets the mount at `path` (its mount point). The folder on the disk is untouched. */
+  unmount(path: string): Promise<void>;
+  /** Asks the browser for access to a locked mount again. Must run from a click. Resolves whether it's connected. */
+  reconnect(path: string): Promise<boolean>;
   get_storage_estimate(): Promise<{ usage: number; quota: number }>;
   get_directory_size(handle: FileSystemDirectoryHandle | null): Promise<number>;
   /** Children `depth` levels down (all by default). Cached per folder by revision (ADR-021): asking again re-reads only changed folders. */

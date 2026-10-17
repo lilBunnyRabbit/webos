@@ -20,7 +20,19 @@
   {#await persisted then is_persisted}
     <InspectorStat label="Storage" value={is_persisted ? "persistent" : "best effort"} />
   {/await}
+  <InspectorStat label="Mounts" value={service.mounts.length} />
 </InspectorStats>
+
+{#if detailed && service.mounts.length > 0}
+  <InspectorTable columns={["Mount", "State"]}>
+    {#each service.mounts as mount (mount.path)}
+      <tr>
+        <td class="font-sans">{mount.path}</td>
+        <td>{mount.state}</td>
+      </tr>
+    {/each}
+  </InspectorTable>
+{/if}
 
 {#if root}
   {#await root}

@@ -12,7 +12,7 @@ import type {
 import { WindowFlag } from "../windows/type";
 import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
-import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session } from "./persistence";
+import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session, shows_mount } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
 import { session_shell } from "./shell";
 
@@ -157,7 +157,7 @@ export class SessionService implements ISessionService {
   private snapshot(): [WindowId, WindowSnapshot][] {
     return this.windows_service
       .sorted_list(([, a], [, b]) => a.order - b.order)
-      .filter(([, instance]) => instance.app.manifest.restore !== false)
+      .filter(([, instance]) => instance.app.manifest.restore !== false && !shows_mount(instance.app.props))
       .map(([id, instance]) => [
         id,
         {
