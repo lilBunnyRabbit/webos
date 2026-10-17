@@ -54,12 +54,27 @@ export const ArchivedCardSchema = CardSchema.extend({
   archived: z.string(),
 });
 
+export const FOLDER_FIELD = "status";
+export const FOLDER_SHOW = ["project", "tags", "created"];
+
+/**
+ * A board whose cards are the markdown files in `path`, one column per value of a frontmatter `field`. Its `columns`
+ * keep only the order, limits and done flags; their `cards` stay empty in the file.
+ */
+export const FolderSchema = z.object({
+  path: z.string().min(1),
+  field: z.string().min(1).default(FOLDER_FIELD),
+  template: z.string().nullable().default(null),
+  show: z.array(z.string()).default(FOLDER_SHOW),
+});
+
 export const BoardSchema = z.object({
   id: Id,
   name: z.string(),
   labels: z.array(LabelSchema).default([]),
   columns: z.array(ColumnSchema),
   archive: z.array(ArchivedCardSchema).default([]),
+  folder: FolderSchema.optional(),
 });
 
 export const KanbanFileSchema = z.object({
@@ -72,6 +87,7 @@ export type Card = z.infer<typeof CardSchema>;
 export type Column = z.infer<typeof ColumnSchema>;
 export type Label = z.infer<typeof LabelSchema>;
 export type ArchivedCard = z.infer<typeof ArchivedCardSchema>;
+export type Folder = z.infer<typeof FolderSchema>;
 export type Board = z.infer<typeof BoardSchema>;
 export type KanbanFile = z.infer<typeof KanbanFileSchema>;
 
@@ -111,6 +127,10 @@ export function new_board(name: string): Board {
     labels,
     columns: board.columns.map((column) => ({ ...column, id: new_id() })),
   };
+}
+
+export function new_folder_board(name: string, path: string): Board {
+  return { id: new_id(), name, labels: [], columns: [], archive: [], folder: FolderSchema.parse({ path }) };
 }
 
 export function new_card(title: string, now = new Date()): Card {

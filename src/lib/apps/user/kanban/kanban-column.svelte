@@ -6,6 +6,7 @@
   import CardFace from "./card-face.svelte";
   import { is_over_wip, type Column, type Label } from "./data";
   import { DragKind, type BoardDrag } from "./drag.svelte";
+  import type { CardField } from "./folder";
 
   interface Props {
     column: Column;
@@ -20,9 +21,10 @@
     onmenu: (point: Position) => void;
     /** Alt+arrows on a focused card: `dx` columns over, `dy` places up or down. */
     onkeymove: (card_id: string, dx: number, dy: number) => void;
+    fields?: (card_id: string) => CardField[];
   }
 
-  let { column, labels, today, drag, composing, oncompose, onadd, onopen, oncardmenu, onmenu, onkeymove }: Props = $props();
+  let { column, labels, today, drag, composing, oncompose, onadd, onopen, oncardmenu, onmenu, onkeymove, fields }: Props = $props();
 
   let title = $state("");
 
@@ -115,7 +117,7 @@
           {@attach drag.mouse(DragKind.CARD, () => card.id)}
           {@attach drag.touch(DragKind.CARD, () => card.id, (point, element) => oncardmenu(card.id, menu_point(point, element)))}
         >
-          <CardFace {card} {labels} {today} done={column.done} />
+          <CardFace {card} {labels} {today} done={column.done} fields={fields?.(card.id)} />
         </button>
       </li>
     {/each}

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { type DialogsService } from "$lib/core/api";
+  import kernel, { NotificationType, type AppsService, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import { base_name, join_path, split_path } from "$lib/core/api/services/files/path";
   import type { MenuItem } from "$lib/core/api/services/dialogs/type";
   import { Button, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -16,7 +17,9 @@
     CheckCircle,
     Columns,
     DotsThree,
+    FolderOpen,
     Gauge,
+    GearSix,
     Kanban,
     PencilSimple,
     Plus,
@@ -49,6 +52,7 @@
     move_column,
     new_board,
     new_card,
+    new_folder_board,
     remove_board,
     remove_card,
     remove_column,
@@ -62,6 +66,9 @@
     type Column,
   } from "./data";
   import { DragKind, BoardDrag } from "./drag.svelte";
+  import FolderSettings from "./folder-settings.svelte";
+  import { card_fields, folder_board, NO_VALUE, pin_columns, type NoteCard } from "./folder";
+  import { create_note, FolderReader, write_card_field } from "./folder-store";
   import KanbanColumn from "./kanban-column.svelte";
   import { first_open_column } from "./lookup";
   import { day_key } from "$lib/core/utils/date";
@@ -69,15 +76,57 @@
 
   const { board: initial_board, card: initial_card }: { board?: string; card?: string } = $props();
 
-  const { window: win, storage } = get_app_context();
+  const { window: win, storage, app_id } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const files = $derived(kernel.service<FilesService>("files"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const data = storage.file(BOARDS_FILE, default_file(), KanbanFileSchema);
   const board_id = storage.window<string>("board", untrack(() => initial_board ?? "life"), z.string());
   const open_card = storage.window<string | null>("card", untrack(() => initial_card ?? null), z.string().nullable());
   const archive_open = storage.window<boolean>("archive", false, z.boolean());
+  const settings_open = storage.window<boolean>("folder-settings", false, z.boolean());
 
-  const board = $derived(get_board(data.value, board_id.value));
+  const stored = $derived(get_board(data.value, board_id.value));
+  const folder = $derived(stored.folder ?? null);
+
+  let notes = $state.raw<NoteCard[]>([]);
+  let notes_path = $state<string | null>(null);
+  let folder_missing = $state(false);
+  const reader = new FolderReader(() => files);
+  let reload_id = 0;
+
+  async function reload(path: string) {
+    const id = ++reload_id;
+    try {
+      const listed = await reader.list(path);
+      if (id !== reload_id) return;
+      folder_missing = listed === null;
+      notes = listed ?? [];
+    } catch (reason) {
+      if (id === reload_id) notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't read ${path}`, message: String(reason) });
+    } finally {
+      if (id === reload_id) notes_path = path;
+    }
+  }
+
+  // Focus re-lists too: edits made outside the browser, in a mounted folder (ADR-044), bump no revision.
+  $effect(() => {
+    const path = folder?.path;
+    if (!path) return;
+    files.revision(path);
+    if (!win.is_focused) return;
+    untrack(() => reload(path));
+  });
+
+  const folder_ready = $derived(!folder || notes_path === folder.path);
+  const board = $derived(folder ? folder_board(stored, folder, folder_ready ? notes : []) : stored);
+  const note_by_file = $derived(new Map(notes.map((note) => [note.file, note])));
+  const fields_of = (file: string) => {
+    const note = note_by_file.get(file);
+    return note && folder ? card_fields(note, folder.show) : [];
+  };
   let composing = $state<string | null>(null);
   const clock = new Ticker(() => win.is_visible, 60_000);
   const today = $derived(day_key(new Date(clock.now)));
@@ -99,12 +148,41 @@
     data.value = update_board(data.value, board.id, update);
   };
 
+  const edit_columns = (update: (board: Board) => Board) => edit((current) => update(folder ? pin_columns(current, board) : current));
+
+  async function move_note(file: string, value: string) {
+    if (!folder) return;
+    const { path, field } = folder;
+    const note = note_by_file.get(file);
+    if (!note || (note.fields[field] ?? "") === value) return;
+    // Order of first appearance follows the files, so a move would reshuffle the columns: it freezes the order first.
+    if (board.columns.some((column) => column.id !== NO_VALUE && !stored.columns.some((other) => other.id === column.id))) edit_columns((board) => board);
+    notes = notes.map((other) => (other.file === file ? { ...other, fields: { ...other.fields, [field]: value } } : other));
+    try {
+      await write_card_field(files, path, file, field, value);
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't move “${note.title}”`, message: String(reason) });
+      void reload(path);
+    }
+  }
+
+  async function add_note(title: string, value: string) {
+    if (!folder) return;
+    const { path, field, template } = folder;
+    try {
+      await create_note(files, path, { title, field, value, template });
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't add the card", message: String(reason) });
+    }
+  }
+
   const drag = new BoardDrag((kind, id, target) => {
     if (kind === DragKind.CARD && target.column) {
       const column = board.columns.find((candidate) => candidate.id === target.column);
-      if (column) edit((board) => move_card(board, id, column.id, index_before(column, target.before, id)));
-    } else if (kind === DragKind.COLUMN) {
-      edit((board) => move_column(board, id, column_index_before(board, target.before, id)));
+      if (column && folder) void move_note(id, column.id);
+      else if (column) edit((board) => move_card(board, id, column.id, index_before(column, target.before, id)));
+    } else if (kind === DragKind.COLUMN && id !== NO_VALUE) {
+      edit_columns((board) => move_column(board, id, column_index_before(board, target.before, id)));
     }
   });
 
@@ -134,6 +212,7 @@
     win.on_back(() => {
       if (open_card.value) open_card.value = null;
       else if (archive_open.value) archive_open.value = false;
+      else if (settings_open.value) settings_open.value = false;
       else return false;
       return true;
     })
@@ -145,7 +224,12 @@
   }
 
   function open(id: string) {
+    if (folder) {
+      apps.launch("text-editor", { path: join_path(split_path(folder.path), id) });
+      return;
+    }
     archive_open.value = false;
+    settings_open.value = false;
     open_card.value = id;
   }
 
@@ -163,6 +247,11 @@
     const column_index = columns.findIndex((column) => column.id === found.column.id);
     const to = columns[column_index + dx];
     if (!to) return;
+    if (folder) {
+      if (dx === 0 || to.id === NO_VALUE) return;
+      void move_note(card_id, to.id).then(() => focus_card(card_id));
+      return;
+    }
     const index = dx === 0 ? found.index + dy : Math.min(found.index, to.cards.length);
     if (dx === 0 && (index < 0 || index >= found.column.cards.length)) return;
     edit((board) => move_card(board, card_id, to.id, index));
@@ -191,6 +280,24 @@
     const found = find_card(board, card_id);
     if (!found) return;
     const { column, index } = found;
+    if (folder) {
+      const choice = await dialogs.menu(
+        [
+          { id: "open", label: "Open in Text Editor", icon: ArrowSquareOut },
+          {
+            label: "Move to",
+            icon: ArrowsLeftRight,
+            items: board.columns
+              .filter((other) => other.id !== NO_VALUE)
+              .map((other) => ({ id: `move:${other.id}`, label: other.name, disabled: other.id === column.id })),
+          },
+        ],
+        { anchor }
+      );
+      if (choice === "open") open(card_id);
+      else if (choice?.startsWith("move:")) await move_note(card_id, choice.slice(5));
+      return;
+    }
     const choice = await dialogs.menu(
       [
         { id: "open", label: "Open", icon: ArrowSquareOut },
@@ -226,23 +333,27 @@
       validate: (text) => (text.trim() === "" || /^\d+$/.test(text.trim()) ? null : "A whole number, or empty"),
     });
     if (value === null) return;
-    edit((board) => set_wip(board, column.id, value.trim() ? Number(value) : null));
+    edit_columns((board) => set_wip(board, column.id, value.trim() ? Number(value) : null));
   }
 
   async function column_menu(column: Column, anchor: Position) {
     const index = board.columns.findIndex((other) => other.id === column.id);
+    if (column.id === NO_VALUE) {
+      if ((await dialogs.menu([{ id: "add", label: "Add card", icon: Plus }], { anchor })) === "add") await compose(column.id);
+      return;
+    }
+    const last = board.columns.filter((other) => other.id !== NO_VALUE).length - 1;
     const choice = await dialogs.menu(
       [
         { id: "add", label: "Add card", icon: Plus },
         { separator: true },
-        { id: "rename", label: "Rename…", icon: PencilSimple },
+        ...(folder ? [] : [{ id: "rename", label: "Rename…", icon: PencilSimple }]),
         { id: "wip", label: column.wip === null ? "Set a limit…" : `Limit: ${column.wip}…`, icon: Gauge },
         { id: "done", label: column.done ? "Not a done column" : "Mark as done column", icon: CheckCircle },
         { id: "left", label: "Move left", icon: ArrowLeft, disabled: index === 0 },
-        { id: "right", label: "Move right", icon: ArrowRight, disabled: index === board.columns.length - 1 },
-        ...(column.done && column.cards.length > 0 ? [{ id: "archive", label: `Archive ${column.cards.length} done`, icon: Archive }] : []),
-        { separator: true },
-        { id: "delete", label: "Delete column", icon: Trash, danger: true },
+        { id: "right", label: "Move right", icon: ArrowRight, disabled: index >= last },
+        ...(!folder && column.done && column.cards.length > 0 ? [{ id: "archive", label: `Archive ${column.cards.length} done`, icon: Archive }] : []),
+        ...(folder ? [] : [{ separator: true } as const, { id: "delete", label: "Delete column", icon: Trash, danger: true }]),
       ] satisfies MenuItem[],
       { anchor }
     );
@@ -251,9 +362,9 @@
       const name = await win.prompt("Rename column", { initial: column.name, confirm_label: "Rename" });
       if (name?.trim()) edit((board) => rename_column(board, column.id, name.trim()));
     } else if (choice === "wip") await ask_wip(column);
-    else if (choice === "done") edit((board) => set_done_column(board, column.id, !column.done));
-    else if (choice === "left") edit((board) => move_column(board, column.id, index - 1));
-    else if (choice === "right") edit((board) => move_column(board, column.id, index + 1));
+    else if (choice === "done") edit_columns((board) => set_done_column(board, column.id, !column.done));
+    else if (choice === "left") edit_columns((board) => move_column(board, column.id, index - 1));
+    else if (choice === "right") edit_columns((board) => move_column(board, column.id, index + 1));
     else if (choice === "archive") edit((board) => archive_done(board));
     else if (choice === "delete") await delete_column(column);
   }
@@ -272,17 +383,38 @@
   }
 
   async function new_column() {
+    if (folder) {
+      const value = await win.prompt("New column", {
+        detail: `A value of “${folder.field}”. Cards dropped here get it.`,
+        confirm_label: "Add",
+        validate: (text) => (board.columns.some((column) => column.id === text.trim()) ? "That column is already there" : null),
+      });
+      if (value?.trim()) edit_columns((board) => add_column(board, value.trim(), value.trim()));
+      return;
+    }
     const name = await win.prompt("New column", { placeholder: "Waiting, Someday…", confirm_label: "Add" });
     if (name?.trim()) edit((board) => add_column(board, name.trim()));
+  }
+
+  function show_board(id: string) {
+    board_id.value = id;
+    open_card.value = null;
+    archive_open.value = false;
+    settings_open.value = false;
+    composing = null;
   }
 
   async function board_menu(anchor: Position) {
     const choice = await dialogs.menu(
       [
         { id: "new", label: "New board…", icon: Kanban },
+        { id: "folder-board", label: "New board from a folder…", icon: FolderOpen },
         { id: "rename", label: "Rename board…", icon: PencilSimple },
+        ...(folder ? [{ id: "settings", label: "Folder settings…", icon: GearSix }] : []),
         { id: "column", label: "Add column…", icon: Columns },
-        { id: "archive", label: finished ? `Archive ${finished} done` : "Archive done cards", icon: Archive, disabled: finished === 0 },
+        ...(folder
+          ? []
+          : [{ id: "archive", label: finished ? `Archive ${finished} done` : "Archive done cards", icon: Archive, disabled: finished === 0 }]),
         { separator: true },
         { id: "delete", label: "Delete board", icon: Trash, danger: true, disabled: data.value.boards.length <= 1 },
       ],
@@ -293,8 +425,17 @@
       if (!name?.trim()) return;
       const created = new_board(name.trim());
       data.value = add_board(data.value, created);
-      board_id.value = created.id;
+      show_board(created.id);
+    } else if (choice === "folder-board") {
+      const path = await win.pick_directory({ title: "Folder of markdown files" });
+      if (!path) return;
+      const created = new_folder_board(base_name(path) || path, path);
+      data.value = add_board(data.value, created);
+      show_board(created.id);
+    } else if (choice === "settings") {
       open_card.value = null;
+      archive_open.value = false;
+      settings_open.value = true;
     } else if (choice === "rename") {
       const name = await win.prompt("Rename board", { initial: board.name, confirm_label: "Rename" });
       if (name?.trim()) data.value = rename_board(data.value, board.id, name.trim());
@@ -302,14 +443,13 @@
     else if (choice === "archive") edit((board) => archive_done(board));
     else if (choice === "delete") {
       const ok = await win.confirm(`Delete the board “${board.name}”?`, {
-        detail: `Its ${total} ${total === 1 ? "card" : "cards"} and its archive are deleted too.`,
+        detail: folder ? `Its files stay in ${folder.path}.` : `Its ${total} ${total === 1 ? "card" : "cards"} and its archive are deleted too.`,
         confirm_label: "Delete",
         danger: true,
       });
       if (!ok) return;
       data.value = remove_board(data.value, board.id);
-      board_id.value = data.value.boards[0].id;
-      open_card.value = null;
+      show_board(data.value.boards[0].id);
     }
   }
 
@@ -321,7 +461,11 @@
   const board_options = $derived(data.value.boards.map((candidate) => ({ value: candidate.id, label: candidate.name })));
   const ghost_card = $derived(drag.kind === DragKind.CARD && drag.id ? find_card(board, drag.id) : null);
   const ghost_column = $derived(drag.kind === DragKind.COLUMN ? board.columns.find((column) => column.id === drag.id) : undefined);
-  const panel = $derived(open_card.value && find_card(board, open_card.value) ? "card" : archive_open.value ? "archive" : null);
+  const panel = $derived.by(() => {
+    if (folder) return settings_open.value ? "settings" : null;
+    if (open_card.value && find_card(board, open_card.value)) return "card";
+    return archive_open.value ? "archive" : null;
+  });
 </script>
 
 <div bind:this={root} class="@container relative grid h-full grid-cols-1 grid-rows-[auto_auto_1fr_auto]">
@@ -331,27 +475,29 @@
       class="w-auto max-w-40 @md:max-w-56"
       aria-label="Board"
       options={board_options}
-      bind:value={() => board.id, (id) => {
-        board_id.value = id;
-        open_card.value = null;
-        composing = null;
-      }}
+      bind:value={() => board.id, show_board}
     />
     <IconButton label="Board actions" size="sm" onclick={(event) => board_menu(below(event))}><DotsThree weight="bold" /></IconButton>
     <span class="flex-1"></span>
-    <Button variant="quiet" size="sm" pressed={panel === "archive"} title="Archived cards" aria-label="Archive ({board.archive.length})" onclick={() => {
+    {#if !folder}<Button variant="quiet" size="sm" pressed={panel === "archive"} title="Archived cards" aria-label="Archive ({board.archive.length})" onclick={() => {
       open_card.value = null;
       archive_open.value = !archive_open.value;
     }}>
       <Archive /><span class="hidden @md:inline">Archive</span>
       {#if board.archive.length > 0}<span class="font-mono text-2xs tabular-nums">{board.archive.length}</span>{/if}
-    </Button>
+    </Button>{/if}
     <Button variant="primary" size="sm" disabled={!data.ready || board.columns.length === 0} onclick={() => compose(first_open_column(board)?.id ?? null)}>
       <Plus weight="bold" /><span class="hidden @sm:inline">Add card</span>
     </Button>
   </Toolbar>
 
-  {#if data.error}
+  {#if folder && folder_missing}
+    <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+      <Warning class="size-4 shrink-0 text-warning" weight="fill" />
+      <span class="min-w-0 flex-1">Couldn't open {folder.path}. A mounted folder may need reconnecting in Files.</span>
+      <Button variant="quiet" size="sm" onclick={() => (settings_open.value = true)}>Change…</Button>
+    </div>
+  {:else if data.error}
     <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
       <Warning class="size-4 shrink-0 text-warning" weight="fill" />
       <span class="min-w-0 flex-1">Couldn't read your boards ({data.error}). The next change replaces the file.</span>
@@ -361,7 +507,7 @@
   {/if}
 
   <div class="relative min-h-0">
-    {#if !data.ready}
+    {#if !data.ready || !folder_ready}
       <div class="grid h-full place-items-center"><Spinner label="Loading boards" /></div>
     {:else}
       <div
@@ -382,11 +528,12 @@
               {drag}
               composing={composing === column.id}
               oncompose={(open) => (composing = open ? column.id : null)}
-              onadd={(title) => edit((board) => add_card(board, column.id, new_card(title)))}
+              onadd={(title) => (folder ? void add_note(title, column.id) : edit((board) => add_card(board, column.id, new_card(title))))}
               onopen={open}
               oncardmenu={card_menu}
               onmenu={(point) => column_menu(column, point)}
               onkeymove={key_move}
+              fields={folder ? fields_of : undefined}
             />
           </div>
         {/each}
@@ -401,9 +548,13 @@
       {#if panel}
         <aside
           class="absolute inset-0 z-10 bg-background @3xl:left-auto @3xl:w-[26rem] @3xl:border-l @3xl:border-foreground/8 @3xl:shadow-popover"
-          aria-label={panel === "card" ? "Card" : "Archive"}
+          aria-label={panel === "card" ? "Card" : panel === "settings" ? "Folder settings" : "Archive"}
         >
-          {#if panel === "card" && open_card.value}
+          {#if panel === "settings" && folder}
+            {#key board.id}
+              <FolderSettings {board} {folder} {edit} onclose={() => (settings_open.value = false)} />
+            {/key}
+          {:else if panel === "card" && open_card.value}
             {#key open_card.value}
               <CardDetail
                 {board}
@@ -439,8 +590,8 @@
   <StatusBar>
     <span>{total} {total === 1 ? "card" : "cards"}</span>
     <span class={cn(due > 0 && "text-warning")}>{due} due</span>
-    <span>{board.archive.length} archived</span>
-    <span class="hidden @lg:inline">{BOARDS_PATH}</span>
+    {#if !folder}<span>{board.archive.length} archived</span>{/if}
+    <span class="hidden min-w-0 truncate @lg:inline">{folder?.path ?? BOARDS_PATH}</span>
     <span class="ml-auto hidden @2xl:inline">Drag to move · Alt+arrows on a card</span>
   </StatusBar>
 
@@ -453,7 +604,7 @@
     >
       {#if ghost_card}
         <div class="rounded-lg bg-background-lighter p-2.5 shadow-popover ring-1 ring-primary/40">
-          <CardFace card={ghost_card.card} labels={board.labels} {today} done={ghost_card.column.done} />
+          <CardFace card={ghost_card.card} labels={board.labels} {today} done={ghost_card.column.done} fields={folder ? fields_of(ghost_card.card.id) : []} />
         </div>
       {:else if ghost_column}
         <div class="flex h-11 items-center gap-2 rounded-xl bg-background-lighter px-3 shadow-popover ring-1 ring-primary/40">
