@@ -12,6 +12,7 @@
   import FileList from "./file-list.svelte";
   import FileExplorerStatusBar from "./file-explorer-status-bar.svelte";
   import { report_file_error } from "./file-explorer.errors";
+  import { open_latest } from "./file-explorer-history";
   import type { PickerMode } from "./picker";
   import FilePickerFooter from "./file-picker-footer.svelte";
 
@@ -23,29 +24,33 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let handler: DirectoryHandler | null = $state(null);
-  /** Folders visited before this one, for Back. They keep watching, so going back shows them fresh. */
-  let history: DirectoryHandler[] = $state([]);
+  /** Folders visited before this one, for Back, as paths: a handler is opened only when the user goes back. */
+  let history: string[][] = $state.raw([]);
   /** Folders left by Back, nearest last, for Forward. Navigating anywhere new drops them. */
-  let forward: DirectoryHandler[] = $state([]);
+  let forward: string[][] = $state.raw([]);
   let search = $state("");
   let destroyed = false;
+  /** Back and Forward resolve async; a newer navigation wins. */
+  let step_id = 0;
 
-  const can_go_back = $derived(history.some((previous) => previous.exists));
-  const can_go_forward = $derived(forward.some((next) => next.exists));
+  const can_go_back = $derived(history.length > 0);
+  const can_go_forward = $derived(forward.length > 0);
 
   // The start folder is read once; navigating afterwards is the explorer's own state.
   const init_promise = untrack(() => files.directory(split_path(path))).then(show);
 
   function show(next: DirectoryHandler) {
     if (destroyed) return next.dispose();
+    const previous = handler;
     handler = next;
     search = "";
     selected = null;
+    if (previous !== next) previous?.dispose();
   }
 
   function navigate_to(next: DirectoryHandler) {
-    if (handler) history = [...history, handler];
-    for (const dropped of forward) dropped.dispose();
+    step_id++;
+    if (handler) history = [...history, handler.segments];
     forward = [];
     show(next);
   }
@@ -57,23 +62,23 @@
       .catch((error) => report_file_error(`Could not open /${segments.join("/")}`, error));
   }
 
-  function navigate_back() {
-    const alive = history.filter((previous) => previous.exists);
-    const previous = alive.pop();
-    if (!previous) return;
-    if (handler) forward = [...forward, handler];
-    history = alive;
-    show(previous);
+  async function step(back: boolean) {
+    const id = ++step_id;
+    const found = await open_latest(files, back ? history : forward);
+    if (id !== step_id || destroyed) return found?.next.dispose();
+    const left = handler ? [handler.segments] : [];
+    if (back) {
+      history = found?.rest ?? [];
+      if (found) forward = [...forward, ...left];
+    } else {
+      forward = found?.rest ?? [];
+      if (found) history = [...history, ...left];
+    }
+    if (found) show(found.next);
   }
 
-  function navigate_forward() {
-    const alive = forward.filter((next) => next.exists);
-    const next = alive.pop();
-    if (!next) return;
-    if (handler) history = [...history, handler];
-    forward = alive;
-    show(next);
-  }
+  const navigate_back = () => void step(true).catch((error) => report_file_error("Could not go back", error));
+  const navigate_forward = () => void step(false).catch((error) => report_file_error("Could not go forward", error));
 
   // The mobile Back button walks this explorer's history first (ADR-003 on_back).
   const { window } = get_app_context();
@@ -108,8 +113,6 @@
   onDestroy(() => {
     destroyed = true;
     handler?.dispose();
-    for (const previous of history) previous.dispose();
-    for (const next of forward) next.dispose();
   });
 </script>
 

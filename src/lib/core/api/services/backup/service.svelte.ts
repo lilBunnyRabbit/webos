@@ -2,6 +2,7 @@ import type { DialogsService, FilesService, Kernel, NotificationsService, TasksS
 import { TaskJobStatus } from "../tasks/type";
 import { format_bytes } from "$lib/core/utils";
 import { backup_shell } from "./shell";
+import { flush_writers } from "../files/latest-writer";
 import {
   BACKUP_AREAS,
   BackupActivity,
@@ -58,6 +59,7 @@ export class BackupService implements IBackupService {
       const suggested = backup_name(created);
       const target = await run.pick_save_target(suggested);
       if (!target) return null;
+      await flush_writers();
 
       const plan = {
         root: await this.files_service.get_root(),

@@ -61,7 +61,7 @@ Read-only state plus `reopen_closed()`.
 | Format | `{ "version": 2, "windows": WindowSnapshot[], "frames": Record<AppId, Bounds> }`, pretty-printed |
 | Version | `SESSION_VERSION = 2` (private). A v1 file (no `frames`) still loads, with no frames |
 | Load | zod discriminated union on `version`. Unknown version, bad shape or bad JSON → no windows and no frames, so no dialog, and the first save overwrites the file. One bad window fails the whole file |
-| Written | Through `LatestWriter` ([files](files.md#latestwriter)): no overlapping writes, newest wins, `/var/lib/session` created on first write. Errors → `console.error("Failed to save session:")` |
+| Written | Through `LatestWriter` with `delay: 300` ([files](files.md#latestwriter)): a burst of window changes (20 focus clicks) saves once, 300 ms after the last; flushed when the tab hides. No overlapping writes, newest wins, `/var/lib/session` created on first write. Seeded with the text read at boot, so a restore that reproduces the file writes nothing. Errors → `console.error("Failed to save session:")` |
 
 ```ts
 interface WindowSnapshot {

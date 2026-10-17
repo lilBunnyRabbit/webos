@@ -3,6 +3,11 @@
 **Date:** 2026-02-01
 **Status:** Implemented (single-instance parked)
 
+> **Revision 2026-10-17: transition names on demand** (owner, [brainstorm](../brainstorm/2026-10-17_performance-pass.md))
+> - Only the focused window carries `view-transition-name: window-{id}` at rest, never a minimized or popped-out one. Every named element is snapshotted on every transition: with all 10 windows named, minimize and restore dropped frames (headless, 10 windows: max frame 117–150 ms before, 50–67 ms after).
+> - A transition acting on windows that may be unfocused (shell `win minimize` / `maximize` / `snap` / `close`, Show desktop, Gather) names them just before the old state is captured and until it finishes, through `window_transition(ids, change)` in the window component layer, so they still morph into and out of the taskbar. `view_transition()`'s signature is unchanged.
+> - Picking a minimized member from a taskbar group menu makes the group button carry that member's name, so the picked window is the one that flies out.
+
 > **Revision 2026-10-16: taskbar grouping built** (owner, [brainstorm](../brainstorm/2026-10-16_taskbar-polish.md))
 > - Always on, no setting (two render paths were rejected). Windows group by app id inside the taskbar, in the order of each app's first window. The quick launch stays a separate zone (ADR-042 unchanged).
 > - A group of one is the plain window item. Several windows: a count pill, a click opens `dialogs.menu` at the item listing the windows by title (else the app name); an entry restores, focuses, or focuses a popped-out window through `extract.focus()`. Right-click: Pin/Unpin, Close all. Focused and PiP marks show when any member qualifies.

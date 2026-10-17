@@ -58,6 +58,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
 5. Runs `restore_task` (`tasks.ts`) through TasksService, title "Restoring backup", a sequential group in two halves:
    - **Stage** (cancellable, nothing live changes): "Clear /tmp/restore" (`clear_stage`), then one task per area the backup holds ("Unpack Files (/home)"): `stage_area` streams every entry of that area (`entry_stream` → `createWritable()`, with the job's signal) into `STAGE_PATH` (`/tmp/restore`) under its zip path. Progress counts uncompressed bytes. A cancel or failure here clears the stage and toasts "Restore cancelled · Nothing was changed".
    - **Replace and reload** (ignores Cancel): checks unsaved windows once more, then `swap_staged`:
+     - `flush_writers()` first, so a debounced `LatestWriter` save (settings, session, app files) lands before the hold. Create does the same before packing the areas.
      - `hold_writes()` (files, [Writes can be held](files.md#behaviour--invariants)): waits for writes under way, then every write through `opfs.ts` (FilesService, DirectoryHandler, `LatestWriter`, `json_file`) rejects.
      - For each area in `areas`: remove the folder recursively and recreate it, then move the staged tree in with native `FileSystemFileHandle.move()` per file (OPFS directories have no `move()`). All through **native handles**, so no revision is bumped and no watcher (desktop, `json_file`, File Explorer) reloads and writes its defaults back.
      - App data: removes every `app.*` key, then sets the backup's `local_storage`.

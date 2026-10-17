@@ -14,6 +14,7 @@ import kernel, {
   DesktopSort,
 } from "$lib/core/api";
 import { view_transition } from "$lib/core/utils/view-transition";
+import { window_transition } from "$lib/core/components/window/window-transition.svelte";
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
@@ -258,7 +259,7 @@ export async function background_menu(anchor: Position): Promise<void> {
   );
   if (choice === "new_folder") create_folder();
   else if (choice === "paste") paste();
-  else if (choice === "gather") view_transition(() => gather?.gather());
+  else if (choice === "gather") window_transition(gather?.list() ?? [], () => gather?.gather());
   else if (choice === "appearance") apps().launch("settings");
   else if (choice === "terminal") apps().launch("terminal", { cwd: PATHS.desktop });
   else if (choice === "sort_name") sort_items(DesktopSort.NAME);

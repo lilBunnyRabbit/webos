@@ -10,7 +10,7 @@ System dialogs that belong to no window. Any service or component calls `show()`
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `stack` | `DialogEntry[]` | Reactive `$state`, bottom first, system and window-bound together. `readonly` on the interface, mutable on the class |
+| `stack` | `DialogEntry[]` | `$state.raw`, replaced on every change, bottom first, system and window-bound together. `readonly` on the interface, mutable on the class |
 | `system` | `DialogEntry[]` | `$derived`: entries with `window === null` and `origin === null`. What the tab's top-layer host renders |
 | `for_origin(id)` | `(origin: WindowId) => DialogEntry[]` | System dialogs opened from the popped-out window `id` (see [Origin](#origin)). What its mini window's host renders |
 | `for_window(id)` | `(window: WindowId) => DialogEntry[]` | Sheets bound to that window, bottom first. What `window-sheets.svelte` renders (ADR-025) |
@@ -30,7 +30,7 @@ Types (`type.ts`):
 
 ## State
 
-`stack`, plus `system` derived from it. An entry is pushed by `show()` and removed by its own `resolve`. Nothing else mutates it.
+`stack`, plus `system` derived from it. `stack` is `$state.raw`: `show()` replaces it with a copy plus the new entry and the entry's own `resolve` replaces it with a copy without it, so entries and their props aren't proxied. Nothing else touches it.
 
 ## Lifecycle
 

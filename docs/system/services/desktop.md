@@ -62,7 +62,7 @@ Three layers of state turn the folder into a grid:
 
 | Layer | What |
 |-------|------|
-| `entries` + `positions` | Raw: what's in the folder and the saved cells |
+| `entries` + `positions` | Raw: what's in the folder and the saved cells (`positions` is `$state.raw`, only ever replaced) |
 | `arranged` | `DesktopHelper.arrange(entries, positions)` → `{ layout, unplaced }` |
 | `grid` | `DesktopHelper.fit(container.grid, layout, unplaced)`, what's shown |
 

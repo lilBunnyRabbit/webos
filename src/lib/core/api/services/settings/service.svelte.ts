@@ -38,7 +38,7 @@ export class SettingsService implements ISettingsService {
   private files_service!: FilesService;
   private dispose_effects?: () => void;
 
-  private writer = new LatestWriter(() => this.files_service, SETTINGS_PATH, "settings");
+  private writer = new LatestWriter(() => this.files_service, SETTINGS_PATH, "settings", { delay: 300 });
 
   constructor(private kernel: Kernel) {
     this.files_service = $derived(this.kernel.service<FilesService>("files"));
@@ -49,7 +49,9 @@ export class SettingsService implements ISettingsService {
     // The legacy copies are consumed either way, so they can't resurrect old values later.
     const legacy = take_legacy_settings();
     const v0 = take_v0_settings();
-    const saved = file ? parse_settings(await file.text()) : (legacy ?? v0);
+    const text = file ? await file.text() : null;
+    this.writer.seed(text);
+    const saved = text !== null ? parse_settings(text) : (legacy ?? v0);
     if (saved) {
       this.theme = saved.theme;
       this.taskbar = saved.taskbar;
@@ -61,11 +63,16 @@ export class SettingsService implements ISettingsService {
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
     this.dispose_effects = $effect.root(() => {
+      let probed: string | null = null;
       $effect(() => {
         for (const [key, value] of Object.entries(this.theme)) {
           document.documentElement.style.setProperty(`--${key.replaceAll("_", "-")}`, value);
         }
         // Native controls (scrollbars, pickers, date inputs) and light-dark() follow the palette, not the OS preference.
+        // The probe forces a style recalc; a background that doesn't reference other tokens can't change without changing here.
+        const background = this.theme.background;
+        if (background === probed && !background.includes("var(")) return;
+        probed = background;
         document.documentElement.style.colorScheme = background_lightness() > 0.6 ? "light" : "dark";
       });
 

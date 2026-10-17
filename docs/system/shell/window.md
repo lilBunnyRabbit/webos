@@ -9,6 +9,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
+| `window-transition.svelte.ts` | `window_transition(ids, change)`: `view_transition()` that names unfocused windows for its duration; `transition_named(id)` |
 
 One `<Window id>` per entry in `windows.list()`, rendered by the [window manager](window-manager.md).
 
@@ -21,14 +22,14 @@ One `<Window id>` per entry in `windows.list()`, rendered by the [window manager
 
 ## Geometry rendering
 
-`window.svelte` derives each of `left`, `top`, `width` and `height` with this precedence:
+`window.svelte` derives one `rect` (`left`, `top`, `width`, `height` as CSS strings) with this precedence:
 
 1. **Drag/resize active**: `move.start.left/top` + `move.width/height`, with `transform: translate3d(dx, dy, 0)` for the movement. During a drag only the transform changes, which keeps it cheap.
 2. **Maximized**: `0, 0, 100%, 100%`.
 3. **Snapped**: `WindowGeometryHandler.get_snap_position(zone)`, which is CSS `calc()` percentages of the container with an 8px gap (`SNAP_PADDING`).
 4. Otherwise `instance.bounds` in px.
 
-`z-index` is `instance.order`. The frame also gets `contain: size layout paint style` and `backface-visibility: hidden`. The content area uses `content-visibility: auto` with `contain-intrinsic-size` set to the bounds.
+`z-index` is `instance.order`. The frame gets `contain: size layout style` and `backface-visibility: hidden`. It holds two children: an inner `size-full` grid with `overflow-hidden rounded-[inherit]` and `contain: paint`, which clips titlebar and content to the rounded corners, and the resize handles beside it. The handles sit outside the clipped element on purpose: inside it, the corner radius clipped the outer pixels of the corner handles, and a click there fell through to the window behind. The content area uses `content-visibility: auto` with `contain-intrinsic-size` set to the bounds.
 
 Visual states (all theme tokens):
 
@@ -41,14 +42,15 @@ Visual states (all theme tokens):
 | minimized | `hidden` (`display: none`, the app stays mounted) |
 | popped out | `hidden`, and the content area renders neither `WindowContent` nor `WindowSheets`: the app is mounted in the mini window instead, through `window-mini.svelte` ([extract](../services/extract.md#mounting)) |
 
-The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
+The inner grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
 
 ## Motion
 
 ADR-014 revision ([brainstorm](../../brainstorm/2026-10-12_window-polish.md)). Reduced motion, or Settings › Appearance › Motion off, turns all of it off: `view_transition()` skips, and `pop` gets duration 0 from `motion_reduced()` (Svelte transitions run on the Web Animations API, which the global 1ms rule doesn't reach).
 
 - **Open / close:** the frame has `in:pop|global` (140ms) and `out:pop|global` (100ms): opacity 0→1 and the CSS `scale` property 0.96→1, `cubicOut`. `scale`, not `transform`, so it never fights the drag `translate3d`. `|global` because the frame is the component root inside the window manager's `{#each}`. A restored session animates in too.
-- **Minimize, restore, maximize, snap:** View Transitions through `view_transition()` (`$lib/core/utils/view-transition`, shared with the mobile shell). The frame carries `view-transition-name: window-{id}` while it's not minimized; its [taskbar button](taskbar.md#window-items) carries the same name while it is (an app's group button carries only its last minimized window's), so minimizing morphs the window into its button and restoring morphs it back out. Maximize and snap morph between the two frames. Wrapped: the titlebar's minimize and maximize buttons, the titlebar double-click, the taskbar button, and the window shortcuts ([shortcuts](../services/shortcuts.md)). Close is wrapped only for a clean maximized window, so it morphs back into the taskbar; any other close plays its outro, and a dirty one asks first. Not wrapped: a drag that drops into a snap zone (the preview already shows the target).
+- **Minimize, restore, maximize, snap:** View Transitions through `view_transition()` (`$lib/core/utils/view-transition`, shared with the mobile shell). Only the **focused** frame carries `view-transition-name: window-{id}` at rest, and never a minimized or popped-out one: every named element is snapshotted on every transition, and naming all of them cost ~50 ms frames with 10 windows open (performance pass, [brainstorm](../../brainstorm/2026-10-17_performance-pass.md)). Its [taskbar button](taskbar.md#window-items) carries the same name while the window is minimized (an app's group button carries only its last minimized window's; picking a minimized member from the group menu makes it that one first), so minimizing morphs the window into its button and restoring morphs it back out; a restored window is focused, so it is named on the way out.
+- **Unfocused targets.** A transition that acts on windows that may not be focused goes through `window_transition(ids, change)` (`window-transition.svelte.ts`): it puts the ids in a module-level `$state.raw` set and `flushSync`s, so those frames are named before the old state is captured, runs `view_transition(change)`, and clears the set when `document.activeViewTransition.finished` settles (a newer `window_transition` replaces the set). `window.svelte` names a frame when it is visible and focused or `transition_named(id)`. Callers: shell `win minimize`, `win maximize`, `win snap`, `win close` (clean maximized), `win gather` and Gather windows on the desktop menu (all windows), Show desktop (the sliver and `win desktop`, all windows, both ways). Titlebar buttons and double-click act on a window the pointer just focused, and taskbar, Terminal button and quick launch restores focus the window, so they keep plain `view_transition()`. Maximize and snap morph between the two frames. Wrapped: the titlebar's minimize and maximize buttons, the titlebar double-click, the taskbar button, and the window shortcuts ([shortcuts](../services/shortcuts.md)). Close is wrapped only for a clean maximized window, so it morphs back into the taskbar; any other close plays its outro, and a dirty one asks first. Not wrapped: a drag that drops into a snap zone (the preview already shows the target).
 - During a view transition the page is a snapshot for ~250ms: live content freezes and clicks land on nothing (accepted cost).
 
 **Keyboard focus.** An effect focuses the frame (`tabindex=-1`, `preventScroll`) whenever the window is focused and visible and DOM focus isn't already inside it, so a new window, a taskbar click or Alt+\` hands it the keyboard. A click on a field keeps that field focused; an app that focuses its own input on mount keeps it.
@@ -62,19 +64,19 @@ There's one handler per window component. It reads the instance as `$derived(win
 | Phase | What happens |
 |-------|--------------|
 | `pointerdown` | Ignored if it hit a `button[data-window-button]` (titlebar buttons). Otherwise `preventDefault` + `stopPropagation`, `windows.focus(id)`, `setPointerCapture`, remember the down event, then `pointermove`/`lostpointercapture` listeners go on the element. Nothing moves yet. |
-| `pointermove` | Until the pointer has travelled `DRAG_THRESHOLD` (4px) from the down point, nothing happens. Crossing it calls `init_move()` with the down event. After that, moves are throttled to one `requestAnimationFrame`: each move cancels the pending frame. Drag updates `move.dx/dy` and `snap_zone`. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
+| `pointermove` | Until the pointer has travelled `DRAG_THRESHOLD` (4px) from the down point, nothing happens. Crossing it calls `init_move()` with the down event. After that, moves are throttled to one `requestAnimationFrame`: each move cancels the pending frame. The frame id lives in the attachment's closure, not in the reactive `move`. Drag updates `move.dx/dy`, and `snap_zone` only when the zone under the pointer changes. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
 | `lostpointercapture` | Fires for every way a gesture ends (`pointerup`, `pointercancel`, element removed). Removes listeners and cancels the pending frame. If a move started, it applies the last pending pointer event first, then `apply_move()`. A plain click therefore changes nothing: a maximized or snapped window stays put. |
 | attachment teardown | Removes every listener and releases capture if still held. |
 
 `init_move()` when the window is **snapped or maximized**:
 
-- It measures the frame (`element.parentElement.getBoundingClientRect()`) and converts it to container space by subtracting `container.x/y`.
+- It measures the frame (`element.closest("[data-window-id]").getBoundingClientRect()`) and converts it to container space by subtracting `container.x/y`.
 - **Resize**: writes that rect into `instance.bounds`, so the window resizes from where it visibly is.
 - **Drag**: keeps the restored `bounds` size. The grab point keeps its relative spot: `grab_offset = (clientX − rect.left) / rect.width × bounds.width`, and the restored window starts at `clientX − container.x − grab_offset`.
 
 `apply_move()`:
 
-- If a snap zone is under the pointer, it sets `instance.snap_zone` and adds a 250ms inline `transition` to the frame, removed on `transitionend`.
+- If a snap zone is under the pointer, it sets `instance.snap_zone` and adds a 250ms inline `transition` to the frame (`closest("[data-window-id]")`), removed on `transitionend`.
 - Otherwise it writes `width/height/x/y` into `instance.bounds` and clears `snap_zone`.
 - **Always** deletes `MAXIMIZED`, then resets `move`.
 
@@ -116,7 +118,7 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 | Input | Target | Result |
 |-------|--------|--------|
 | Pointer drag | Titlebar (not its buttons) | Move. A drop at a container edge or corner snaps. |
-| Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners) | Resize. Handles are hidden when maximized or minimized. |
+| Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners, unclipped by the rounded corner) | Resize. Handles are hidden when maximized or minimized. |
 | Pointer down | Titlebar or resize handle | Focus (raise) |
 | Click (no movement) | Titlebar of a maximized/snapped window | Nothing. The window stays put; only a drag past 4px restores it. |
 | Pointer down (capture phase) | Anywhere in the frame, content included | Focus (raise) |

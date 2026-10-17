@@ -12,6 +12,7 @@
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
   import { cubicOut } from "svelte/easing";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { transition_named } from "./window-transition.svelte";
   import { motion_reduced } from "$lib/core/utils/motion";
 
   /** Open and close (ADR-014 revision): a fade and a small scale. `scale`, not `transform`, so a drag can't fight it. */
@@ -76,43 +77,16 @@
     }
   });
 
-  // TODO: is there a better way
-  const left = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.start.left}px`
-      : is_maximized
-        ? "0px"
-        : snap_position
-          ? snap_position.left
-          : `${instance.bounds.x}px`
-  );
-  const top = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.start.top}px`
-      : is_maximized
-        ? "0px"
-        : snap_position
-          ? snap_position.top
-          : `${instance.bounds.y}px`
-  );
-  const width = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.width}px`
-      : is_maximized
-        ? "100%"
-        : snap_position
-          ? snap_position.width
-          : `${instance.bounds.width}px`
-  );
-  const height = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.height}px`
-      : is_maximized
-        ? "100%"
-        : snap_position
-          ? snap_position.height
-          : `${instance.bounds.height}px`
-  );
+  const rect = $derived.by(() => {
+    const { move } = geometry_handler;
+    if (move.active) return { left: `${move.start.left}px`, top: `${move.start.top}px`, width: `${move.width}px`, height: `${move.height}px` };
+    if (is_maximized) return { left: "0px", top: "0px", width: "100%", height: "100%" };
+    if (snap_position) return snap_position;
+    const { x, y, width, height } = instance.bounds;
+    return { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px` };
+  });
+  // Every named element is snapshotted on each transition: only the focused frame and the ones a transition acts on.
+  const transition_name = $derived(!is_minimized && !is_out && (is_focused || transition_named(id)) ? `window-${id}` : undefined);
   const transform = $derived(geometry_handler.move.active ? `translate3d(${geometry_handler.move.dx}px, ${geometry_handler.move.dy}px, 0)` : "none");
 </script>
 
@@ -137,55 +111,57 @@
   onfocusin={() => windows.focus(id)}
   data-window-id={id}
   class={cn(
-    "absolute overflow-hidden pointer-events-auto grid grid-cols-1 grid-rows-[2.5rem_1fr]",
-    "rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
+    "absolute pointer-events-auto rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
     is_focused ? "shadow-window-focused ring-foreground/16" : "shadow-window ring-foreground/8",
     is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
     (is_minimized || is_out) && "hidden"
   )}
-  style:left
-  style:top
-  style:width
-  style:height
+  style:left={rect.left}
+  style:top={rect.top}
+  style:width={rect.width}
+  style:height={rect.height}
   style:transform
   style:z-index={instance.order}
-  style:view-transition-name={is_minimized || is_out ? undefined : `window-${id}`}
-  style:contain="size layout paint style"
+  style:view-transition-name={transition_name}
+  style:contain="size layout style"
   style:backface-visibility="hidden"
   tabindex={-1}
 >
-  <!-- Window titlebar. Double-click to maximize is a pointer shortcut; the maximize button is the accessible path. -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    {@attach geometry_handler.drag_attachment()}
-    ondblclick={(event) => {
-      if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
-    }}
-    class={cn(
-      "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
-      geometry_handler.move.active && "cursor-grabbing"
-    )}
-  >
-    <WindowTitlebar bind:zoom window_id={id} focused={is_focused} />
-  </div>
+  <!-- Clips to the rounded corners; the resize handles sit outside it so the corners stay grabbable. -->
+  <div class="grid size-full grid-cols-1 grid-rows-[2.5rem_1fr] overflow-hidden rounded-[inherit] [contain:paint]">
+    <!-- Window titlebar. Double-click to maximize is a pointer shortcut; the maximize button is the accessible path. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      {@attach geometry_handler.drag_attachment()}
+      ondblclick={(event) => {
+        if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
+      }}
+      class={cn(
+        "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
+        geometry_handler.move.active && "cursor-grabbing"
+      )}
+    >
+      <WindowTitlebar bind:zoom window_id={id} focused={is_focused} />
+    </div>
 
-  <!-- Window content -->
-  <div
-    class="relative overflow-hidden bg-background [container-type:size] [content-visibility:auto]"
-    style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
-  >
-    <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
-    {#if !is_out}
-      <div class="contents" inert={has_sheets}>
-        <WindowContent window_id={id} {zoom}>
-          <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
-            <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-            <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
-          </div>
-        </WindowContent>
-      </div>
-      <WindowSheets window_id={id} />
-    {/if}
+    <!-- Window content -->
+    <div
+      class="relative overflow-hidden bg-background [container-type:size] [content-visibility:auto]"
+      style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
+    >
+      <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
+      {#if !is_out}
+        <div class="contents" inert={has_sheets}>
+          <WindowContent window_id={id} {zoom}>
+            <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
+              <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
+              <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
+            </div>
+          </WindowContent>
+        </div>
+        <WindowSheets window_id={id} />
+      {/if}
+    </div>
   </div>
 
   <!-- Resize handles -->

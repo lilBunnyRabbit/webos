@@ -1,4 +1,5 @@
 import { view_transition } from "$lib/core/utils/view-transition";
+import { window_transition } from "$lib/core/components/window/window-transition.svelte";
 import { ShellError, type CommandContext, type Completion, type Value } from "../shell/type";
 import { is_tagged } from "../shell/values";
 import { is_desktop, is_mobile, short_id, type WindowValue } from "./shell";
@@ -75,7 +76,7 @@ export async function close(windows: WindowsService, context: CommandContext<{ i
   }
   for (const id of await targets(windows, context.args.ids, context)) {
     const instance = windows.get(id);
-    if (instance?.flags.has(WindowFlag.MAXIMIZED) && !instance.dirty) view_transition(() => void windows.close(id));
+    if (instance?.flags.has(WindowFlag.MAXIMIZED) && !instance.dirty) window_transition([id], () => void windows.close(id));
     else await windows.close(id);
   }
 }
@@ -84,7 +85,7 @@ export const focus = (windows: WindowsService, typed: string) => bring(windows, 
 
 export async function minimize(windows: WindowsService, context: CommandContext<{ ids: string[] }>) {
   const list = await targets(windows, context.args.ids, context);
-  view_transition(() => {
+  window_transition(list, () => {
     for (const id of list) windows.toggle_minimize(id);
   });
 }
@@ -96,15 +97,13 @@ export const previous = (windows: WindowsService) =>
 export const cycle = (windows: WindowsService) => bring(windows, recent(windows).at(-1));
 
 export function show_desktop(windows: WindowsService) {
-  view_transition(() => {
-    if (is_mobile(windows)) windows.go_home();
-    else if (is_desktop(windows)) windows.toggle_desktop();
-  });
+  if (is_mobile(windows)) view_transition(() => windows.go_home());
+  else if (is_desktop(windows)) window_transition(windows.list(), () => windows.toggle_desktop());
 }
 
 export async function maximize(desktop: DesktopWindowsService, context: CommandContext<{ ids: string[] }>) {
   const list = await targets(desktop, context.args.ids, context);
-  view_transition(() => {
+  window_transition(list, () => {
     for (const id of list) desktop.toggle_maximize(id);
   });
 }
@@ -112,7 +111,7 @@ export async function maximize(desktop: DesktopWindowsService, context: CommandC
 export function snap(desktop: DesktopWindowsService, args: { zone: SnapZone | "none"; id?: string }) {
   const id = args.id ? find(desktop, args.id) : desktop.get_focused();
   if (!id) throw new ShellError("no window is focused");
-  view_transition(() => {
+  window_transition([id], () => {
     const instance = desktop.get(id);
     // Maximize wins when rendering, so a snap from maximized has to leave it first.
     if (instance?.flags.has(WindowFlag.MAXIMIZED)) desktop.toggle_maximize(id);
@@ -121,4 +120,4 @@ export function snap(desktop: DesktopWindowsService, args: { zone: SnapZone | "n
   });
 }
 
-export const gather = (desktop: DesktopWindowsService) => view_transition(() => desktop.gather());
+export const gather = (desktop: DesktopWindowsService) => window_transition(desktop.list(), () => desktop.gather());
