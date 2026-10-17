@@ -10,6 +10,9 @@
     Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
+    MagnifyingGlassPlus as MagnifyingGlassPlusIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
@@ -37,6 +40,7 @@
     type RestoreOp,
   } from "./patch";
   import type { SectionProps } from "./sections";
+  import { pinch_view, zoom_view, type Point, type View as Camera } from "./sprite-sheet";
 
   const Slot = { ORIGINAL: "original", EDITED: "edited" } as const;
   type Slot = (typeof Slot)[keyof typeof Slot];
@@ -47,6 +51,15 @@
   const Tool = { SELECT: "select", BOX: "box", BRUSH: "brush", ERASE: "erase" } as const;
   type Tool = (typeof Tool)[keyof typeof Tool];
 
+  const Panel = { IMAGES: "images", ALIGN: "align", CHANGES: "changes", RESTORE: "restore" } as const;
+  type Panel = (typeof Panel)[keyof typeof Panel];
+
+  const PANELS = [
+    { value: Panel.IMAGES, label: "Images" },
+    { value: Panel.ALIGN, label: "Align" },
+    { value: Panel.CHANGES, label: "Changes" },
+    { value: Panel.RESTORE, label: "Restore" },
+  ];
   const VIEWS = [
     { value: View.EDITED, label: "Edited" },
     { value: View.RESULT, label: "Result" },
@@ -62,6 +75,13 @@
   const PREVIEW_SIDE = 1600;
   /** Past this many boxes the tolerance is picking up noise, and a wall of boxes helps nobody. */
   const MAX_REGIONS = 80;
+  const MAX_ZOOM = 32;
+  const ZOOM_STEP = 1.5;
+  const FIT: Camera = { scale: 1, offset_x: 0, offset_y: 0 };
+  /** A press that moves less than this is a tap, not a pan. */
+  const TAP_SLOP = 6;
+  /** Screen pixels around a box that still count as tapping it: a fingertip hides what it's on. */
+  const TAP_REACH = { mouse: 4, touch: 16 };
 
   const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window: win } = get_app_context();
@@ -89,6 +109,9 @@
   let cursor = $state.raw<{ x: number; y: number } | null>(null);
   let primary = $state<string | null>(null);
   let overlay = $state<HTMLElement>();
+  let fit = $state<HTMLElement>();
+  let camera = $state.raw<Camera>(FIT);
+  let panel = $state<Panel>(Panel.IMAGES);
 
   const original = $derived(images.original);
   const edited = $derived(images.edited);
@@ -162,6 +185,7 @@
       previous?.bitmap.close();
       ops = [];
       draft = null;
+      if (slot === Slot.EDITED) camera = FIT;
       realign();
     } catch (reason) {
       if (id === requests[slot]) {
@@ -190,6 +214,7 @@
     alignment = result.alignment;
     match = result.match;
     aligning = false;
+    if (panel === Panel.IMAGES) panel = Panel.CHANGES;
   }
 
   function nudge(field: keyof Alignment, value: number | string | null | undefined) {
@@ -269,19 +294,87 @@
     return { x: (event.clientX - box.left) * ratio, y: (event.clientY - box.top) * ratio, ratio };
   }
 
+  function screen_point(event: { clientX: number; clientY: number }): Point {
+    const box = fit?.getBoundingClientRect();
+    return box ? { x: event.clientX - box.left, y: event.clientY - box.top } : { x: 0, y: 0 };
+  }
+
+  /** Zoomed in, the image always covers the fitted box: no panning it away into the void. */
+  function clamp_camera(next: Camera): Camera {
+    if (!fit) return FIT;
+    const { width, height } = fit.getBoundingClientRect();
+    const scale = Math.min(MAX_ZOOM, Math.max(1, next.scale));
+    return {
+      scale,
+      offset_x: Math.min(0, Math.max(width - width * scale, next.offset_x)),
+      offset_y: Math.min(0, Math.max(height - height * scale, next.offset_y)),
+    };
+  }
+
+  function zoom_by(factor: number) {
+    if (!fit) return;
+    const { width, height } = fit.getBoundingClientRect();
+    camera = clamp_camera(zoom_view(camera, factor, width / 2, height / 2));
+  }
+
+  function focus(rect: Rect) {
+    if (!fit || !edited) return;
+    const { width, height } = fit.getBoundingClientRect();
+    const base = width / edited.bitmap.width;
+    const scale = Math.min(MAX_ZOOM, Math.max(1, 0.8 * Math.min(width / (rect.width * base), height / (rect.height * base))));
+    const center = { x: (rect.x + rect.width / 2) * base, y: (rect.y + rect.height / 2) * base };
+    camera = clamp_camera({ scale, offset_x: width / 2 - center.x * scale, offset_y: height / 2 - center.y * scale });
+  }
+
+  const pointers = new Map<number, Point>();
+  let pinch: { camera: Camera; mid: Point; distance: number } | null = null;
+  let pan: { start: Point; camera: Camera; moved: boolean; tap: boolean } | null = null;
+  /** The touch already pinched: its remaining fingers neither draw nor tap until all lift. */
+  let spent = false;
   let drag_start: { x: number; y: number } | null = null;
 
-  function on_pointerdown(event: PointerEvent) {
-    if (event.button !== 0 || !edited || !ready) return;
+  function spread(): { mid: Point; distance: number } {
+    const [a, b] = [...pointers.values()];
+    return { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
+
+  function toggle_at(event: PointerEvent) {
     const point = image_point(event);
     if (!point) return;
-    if (tool === Tool.SELECT) {
-      const restored_rects = ops.flatMap((op) => (op.kind === "rect" && op.mode === RestoreMode.ADD ? [op.rect] : []));
-      const hit = rect_at([...regions, ...restored_rects], point.x, point.y);
-      if (hit) ops = toggle_rect(ops, hit);
+    const reach = (event.pointerType === "mouse" ? TAP_REACH.mouse : TAP_REACH.touch) * point.ratio;
+    const restored_rects = ops.flatMap((op) => (op.kind === "rect" && op.mode === RestoreMode.ADD ? [op.rect] : []));
+    const grown = [...regions, ...restored_rects].map((rect) => ({
+      x: rect.x - reach,
+      y: rect.y - reach,
+      width: rect.width + reach * 2,
+      height: rect.height + reach * 2,
+      rect,
+    }));
+    const hit = rect_at(grown, point.x, point.y);
+    if (hit) ops = toggle_rect(ops, hit.rect);
+  }
+
+  function on_pointerdown(event: PointerEvent) {
+    if (!edited || !ready || (event.button !== 0 && event.button !== 1)) return;
+    const target = event.currentTarget as HTMLElement;
+    target.setPointerCapture(event.pointerId);
+    const screen = screen_point(event);
+    pointers.set(event.pointerId, screen);
+    if (pointers.size === 2 && event.pointerType !== "mouse") {
+      draft = null;
+      drag_start = null;
+      pan = null;
+      spent = true;
+      pinch = { camera, ...spread() };
       return;
     }
-    overlay?.setPointerCapture(event.pointerId);
+    if (pointers.size > 1 || spent) return;
+    if (tool === Tool.SELECT || event.button === 1) {
+      pan = { start: screen, camera, moved: false, tap: event.button === 0 };
+      return;
+    }
+    const point = image_point(event);
+    if (!point) return;
     drag_start = { x: point.x, y: point.y };
     draft =
       tool === Tool.BOX
@@ -290,9 +383,25 @@
   }
 
   function on_pointermove(event: PointerEvent) {
+    const screen = screen_point(event);
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, screen);
     const point = image_point(event);
     if (!point || !edited) return;
     cursor = { x: (point.x / edited.bitmap.width) * 100, y: (point.y / edited.bitmap.height) * 100 };
+    if (pinch) {
+      if (pointers.size < 2) return;
+      const { mid, distance } = spread();
+      camera = clamp_camera(pinch_view(pinch.camera, pinch.mid, pinch.distance, mid, distance));
+      return;
+    }
+    if (pan) {
+      const dx = screen.x - pan.start.x;
+      const dy = screen.y - pan.start.y;
+      if (!pan.moved && Math.hypot(dx, dy) < TAP_SLOP) return;
+      pan.moved = true;
+      camera = clamp_camera({ scale: pan.camera.scale, offset_x: pan.camera.offset_x + dx, offset_y: pan.camera.offset_y + dy });
+      return;
+    }
     if (!draft || !drag_start) return;
     if (draft.kind === "rect") {
       draft = { ...draft, rect: drag_rect(drag_start.x, drag_start.y, point.x, point.y, edited.bitmap.width, edited.bitmap.height) };
@@ -302,13 +411,37 @@
     }
   }
 
-  function on_lostpointercapture() {
-    const done = draft;
-    draft = null;
-    drag_start = null;
-    if (!done) return;
-    if (done.kind === "rect" && (done.rect.width < 2 || done.rect.height < 2)) return;
-    ops = [...ops, done];
+  function on_pointerend(event: PointerEvent) {
+    const cancelled = event.type === "pointercancel";
+    pointers.delete(event.pointerId);
+    if (pinch) {
+      if (pointers.size < 2) pinch = null;
+    } else if (pan) {
+      if (!pan.moved && pan.tap && !cancelled) toggle_at(event);
+      pan = null;
+    } else if (draft) {
+      const done = draft;
+      draft = null;
+      drag_start = null;
+      if (!cancelled && !(done.kind === "rect" && (done.rect.width < 2 || done.rect.height < 2))) ops = [...ops, done];
+    }
+    if (!pointers.size) spent = false;
+  }
+
+  // Wheel listeners must be non-passive to stop the page from scrolling.
+  function wheel(element: HTMLElement) {
+    const on_wheel = (event: WheelEvent) => {
+      if (!ready) return;
+      event.preventDefault();
+      if (event.ctrlKey || event.metaKey) {
+        const { x, y } = screen_point(event);
+        camera = clamp_camera(zoom_view(camera, Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.05 : 0.0025)), x, y));
+      } else {
+        camera = clamp_camera({ scale: camera.scale, offset_x: camera.offset_x - event.deltaX, offset_y: camera.offset_y - event.deltaY });
+      }
+    };
+    element.addEventListener("wheel", on_wheel, { passive: false });
+    return () => element.removeEventListener("wheel", on_wheel);
   }
 
   function draw_mask(canvas: HTMLCanvasElement) {
@@ -406,16 +539,21 @@
       {/snippet}
     </EmptyState>
   {:else}
-    <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-      <aside class="flex max-h-60 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
-        <div class="flex flex-col gap-0.5">
+    <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
+      <aside
+        class="order-2 flex max-h-64 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
+      >
+        {#if original && edited}
+          <Segmented label="Settings" options={PANELS} bind:value={panel} class="sticky top-0 z-10 w-full shrink-0 *:flex-1 @2xl:hidden" />
+        {/if}
+        <div class={["flex flex-col gap-0.5", original && edited && panel !== Panel.IMAGES && "hidden @2xl:flex"]}>
           {@render heading("Images")}
           {@render slot_row(Slot.ORIGINAL, "Original")}
           {@render slot_row(Slot.EDITED, "Edited")}
         </div>
 
         {#if original && edited}
-          <div class="flex flex-col gap-2">
+          <div class={["flex flex-col gap-2", panel !== Panel.ALIGN && "hidden @2xl:flex"]}>
             <div class="flex items-center justify-between">
               {@render heading("Alignment")}
               <IconButton label="Align again" size="sm" disabled={aligning} onclick={realign}><ArrowsClockwiseIcon weight="bold" /></IconButton>
@@ -444,7 +582,7 @@
             {/if}
           </div>
 
-          <div class="flex flex-col gap-2">
+          <div class={["flex flex-col gap-2", panel !== Panel.CHANGES && "hidden @2xl:flex"]}>
             {@render heading("Changes")}
             <label class="flex items-center gap-2 text-ui" title="How different a pixel must be to count as changed">
               <span class="w-20 shrink-0">Tolerance</span>
@@ -462,23 +600,20 @@
             {:else}
               <ul class="flex flex-col gap-0.5">
                 {#each regions as region, index (`${region.x},${region.y},${region.width},${region.height}`)}
-                  <li>
-                    <label
-                      class="flex h-8 cursor-pointer items-center gap-2 rounded-md px-2 hover:bg-foreground/6"
-                      onpointerenter={() => (hovered = region)}
-                      onpointerleave={() => (hovered = null)}
-                    >
+                  <li class="flex items-center gap-1 rounded-md hover:bg-foreground/6" onpointerenter={() => (hovered = region)} onpointerleave={() => (hovered = null)}>
+                    <label class="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 px-2 pointer-coarse:h-10">
                       <Checkbox checked={is_restored(ops, region)} onchange={() => (ops = toggle_rect(ops, region))} />
                       <span class="w-5 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>
                       <span class="min-w-0 flex-1 truncate font-mono text-2xs tabular-nums">{region.width}×{region.height} at {region.x}, {region.y}</span>
                     </label>
+                    <IconButton label="Zoom to change {index + 1}" size="sm" variant="quiet" onclick={() => focus(region)}><MagnifyingGlassIcon weight="bold" /></IconButton>
                   </li>
                 {/each}
               </ul>
             {/if}
           </div>
 
-          <div class="flex flex-col gap-2">
+          <div class={["flex flex-col gap-2", panel !== Panel.RESTORE && "hidden @2xl:flex"]}>
             <div class="flex items-center justify-between">
               {@render heading("Restore")}
               <IconButton label="Clear restore areas" size="sm" disabled={!ops.length} onclick={() => (ops = [])}><TrashIcon weight="bold" /></IconButton>
@@ -517,65 +652,86 @@
       {:else}
         {@const width = edited.bitmap.width}
         {@const height = edited.bitmap.height}
-        <div class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3 p-3 @xl:p-4">
-          <div class="flex flex-wrap items-center justify-center gap-2">
+        <div class="stage grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2 p-2 @xl:gap-3 @xl:p-4">
+          <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
             <Segmented size="sm" label="View" options={VIEWS} bind:value={view} />
-            <Segmented size="sm" label="Tool" options={TOOLS} bind:value={tool} />
+            <div class="flex items-center gap-1">
+              <Segmented size="sm" label="Tool" options={TOOLS} bind:value={tool} />
+              <IconButton label="Zoom out" size="sm" variant="quiet" disabled={camera.scale <= 1} onclick={() => zoom_by(1 / ZOOM_STEP)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
+              <button
+                type="button"
+                class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-9"
+                title="Fit"
+                onclick={() => (camera = FIT)}>{Math.round(camera.scale * 100)}%</button
+              >
+              <IconButton label="Zoom in" size="sm" variant="quiet" disabled={camera.scale >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>
+            </div>
           </div>
-          <div class="grid min-h-0 place-items-center [container-type:size]">
+          <div
+            class={[
+              "grid min-h-0 touch-none place-items-center overflow-hidden select-none [container-type:size]",
+              tool === Tool.SELECT ? "cursor-pointer" : tool === Tool.BOX ? "cursor-crosshair" : "cursor-none",
+            ]}
+            role="application"
+            aria-label="Preview. Pinch or Ctrl+scroll to zoom, scroll or drag with Select to pan."
+            onpointerdown={on_pointerdown}
+            onpointermove={on_pointermove}
+            onpointerup={on_pointerend}
+            onpointercancel={on_pointerend}
+            onpointerleave={() => (cursor = null)}
+            {@attach wheel}
+          >
             <div
-              bind:this={overlay}
-              class={[
-                "checker relative touch-none overflow-hidden rounded-xs ring-1 ring-foreground/10 select-none",
-                tool === Tool.SELECT ? "cursor-pointer" : tool === Tool.BOX ? "cursor-crosshair" : "cursor-none",
-              ]}
+              bind:this={fit}
+              class="relative"
               style:aspect-ratio="{width} / {height}"
               style:width="min(100cqw, calc(100cqh * {width / height}))"
-              role="application"
-              aria-label="Preview"
-              onpointerdown={on_pointerdown}
-              onpointermove={on_pointermove}
-              onpointerleave={() => (cursor = null)}
-              onlostpointercapture={on_lostpointercapture}
             >
-              {#if preview}
-                <canvas {@attach paint(preview)} class={["block size-full", view === View.DIFF && "opacity-35"]}></canvas>
-              {/if}
-              {#if heatmap}
-                <canvas {@attach paint(heatmap)} class="pointer-events-none absolute inset-0 size-full"></canvas>
-              {/if}
-              {#if view !== View.RESULT}
-                <canvas {@attach draw_mask} class="pointer-events-none absolute inset-0 size-full opacity-45"></canvas>
-              {/if}
-              {#each hatch as rect (`${rect.x},${rect.y}`)}
-                <div
-                  class="hatch pointer-events-none absolute"
-                  style:left={percent(rect.x, width)}
-                  style:top={percent(rect.y, height)}
-                  style:width={percent(rect.width, width)}
-                  style:height={percent(rect.height, height)}
-                ></div>
-              {/each}
-              {#if view !== View.RESULT}
-                {#each regions as region (`${region.x},${region.y},${region.width},${region.height}`)}
+              <div
+                bind:this={overlay}
+                class="checker absolute inset-0 origin-top-left rounded-xs ring-1 ring-foreground/10"
+                style:transform="translate({camera.offset_x}px, {camera.offset_y}px) scale({camera.scale})"
+                style:--zoom={camera.scale}
+              >
+                {#if preview}
+                  <canvas {@attach paint(preview)} class={["block size-full", view === View.DIFF && "opacity-35", camera.scale > 2 && "[image-rendering:pixelated]"]}></canvas>
+                {/if}
+                {#if heatmap}
+                  <canvas {@attach paint(heatmap)} class="pointer-events-none absolute inset-0 size-full"></canvas>
+                {/if}
+                {#if view !== View.RESULT}
+                  <canvas {@attach draw_mask} class="pointer-events-none absolute inset-0 size-full opacity-45"></canvas>
+                {/if}
+                {#each hatch as rect (`${rect.x},${rect.y}`)}
                   <div
-                    class={["region pointer-events-none absolute", is_restored(ops, region) && "restored", hovered === region && "hovered"]}
-                    style:left={percent(region.x, width)}
-                    style:top={percent(region.y, height)}
-                    style:width={percent(region.width, width)}
-                    style:height={percent(region.height, height)}
+                    class="hatch pointer-events-none absolute"
+                    style:left={percent(rect.x, width)}
+                    style:top={percent(rect.y, height)}
+                    style:width={percent(rect.width, width)}
+                    style:height={percent(rect.height, height)}
                   ></div>
                 {/each}
-              {/if}
-              {#if cursor && (tool === Tool.BRUSH || tool === Tool.ERASE)}
-                <div
-                  class="brush pointer-events-none absolute rounded-full"
-                  style:left="{cursor.x}%"
-                  style:top="{cursor.y}%"
-                  style:width="{brush}px"
-                  style:height="{brush}px"
-                ></div>
-              {/if}
+                {#if view !== View.RESULT}
+                  {#each regions as region (`${region.x},${region.y},${region.width},${region.height}`)}
+                    <div
+                      class={["region pointer-events-none absolute", is_restored(ops, region) && "restored", hovered === region && "hovered"]}
+                      style:left={percent(region.x, width)}
+                      style:top={percent(region.y, height)}
+                      style:width={percent(region.width, width)}
+                      style:height={percent(region.height, height)}
+                    ></div>
+                  {/each}
+                {/if}
+                {#if cursor && (tool === Tool.BRUSH || tool === Tool.ERASE)}
+                  <div
+                    class="brush pointer-events-none absolute rounded-full"
+                    style:left="{cursor.x}%"
+                    style:top="{cursor.y}%"
+                    style:width="{brush / camera.scale}px"
+                    style:height="{brush / camera.scale}px"
+                  ></div>
+                {/if}
+              </div>
             </div>
           </div>
         </div>
@@ -588,7 +744,8 @@
         {#if ready}
           <span>{too_many ? `${all_regions.length}+` : regions.length} {regions.length === 1 ? "change" : "changes"}</span>
           <span>{restored_count} restored</span>
-          {#if hatch.length}<span class="ml-auto truncate">Hatched edges aren't in the original</span>{/if}
+          {#if hatch.length}<span class="ml-auto hidden truncate @xl:inline">Hatched edges aren't in the original</span>{/if}
+          <span class={["truncate", !hatch.length && "ml-auto", "hidden pointer-coarse:inline"]}>Pinch to zoom</span>
         {/if}
       </StatusBar>
     {/if}
@@ -618,9 +775,10 @@
     );
   }
 
+  /* Inside the zoomed layer: divided by the zoom so outlines stay hairlines at any scale. */
   .region {
-    outline: 1.5px dashed var(--primary);
-    outline-offset: 1px;
+    outline: calc(1.5px / var(--zoom)) dashed var(--primary);
+    outline-offset: calc(1px / var(--zoom));
   }
 
   .region.restored {
@@ -628,13 +786,13 @@
   }
 
   .region.hovered {
-    outline: 2.5px solid var(--foreground);
+    outline: calc(2.5px / var(--zoom)) solid var(--foreground);
   }
 
   .brush {
     translate: -50% -50%;
     box-shadow:
-      0 0 0 1px var(--foreground),
-      0 0 0 2px var(--background);
+      0 0 0 calc(1px / var(--zoom)) var(--foreground),
+      0 0 0 calc(2px / var(--zoom)) var(--background);
   }
 </style>

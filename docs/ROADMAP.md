@@ -371,7 +371,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Diff on `@codemirror/merge` (2026-10-14)
 - [x] Hex Viewer (2026-10-17): windowed rows for any size, `hexdump`, in Open with for every file (`tools: ["*"]`, ADR-018 revision)
 - [x] Font Viewer (2026-10-17): native `FontFace`, default for font files. WOFF2 shows no names or axes (Chrome has no Brotli `DecompressionStream`)
-- [x] Image Tools › Patch (2026-10-17): restore marks an edit tool stamped, from the original; diff regions, auto-align offset and scale, colour matching, no shell. Left: zoom and pan for brushing small marks ([brainstorm](brainstorm/2026-10-17_app-wave-6.md))
+- [x] Image Tools › Patch (2026-10-17): restore marks an edit tool stamped, from the original; diff regions, auto-align offset and scale, colour matching, no shell. Phone layout, pinch zoom and pan, zoom to a change (1.19.1) ([brainstorm](brainstorm/2026-10-17_app-wave-6.md))
 - [x] Test image and test PDF generators in Image Tools and PDF Tools, `testimg` / `testpdf` (2026-10-17). Owner's call: `FilesService.write_stream(path, chunks, { signal })` so multi-GB files stream to disk instead of collecting in Blobs (~2 GB peak memory, double disk use while writing today)
 - Maybe: Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
