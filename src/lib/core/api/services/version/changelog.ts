@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.17.1",
+    date: "2026-10-17",
+    title: "Lighter on its feet",
+    changes: [
+      { kind: IMPROVED, text: "Minimizing, restoring and maximizing windows is smoother with many windows open." },
+      { kind: IMPROVED, text: "WebOS saves your windows and settings less often while you work, so clicking around and dragging sliders stays light." },
+      { kind: IMPROVED, apps: ["recorder"], text: "The level meter runs more smoothly while recording." },
+      { kind: IMPROVED, apps: ["lunar-lander"], text: "The status bar costs less while you fly." },
+      { kind: FIXED, text: "The bottom-right corner of a window resizes it again, instead of clicking the window behind." },
+    ],
+  },
+  {
     version: "1.17.0",
     date: "2026-10-16",
     title: "Make it yours",

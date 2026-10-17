@@ -36,11 +36,19 @@ All windows carried `window-{id}`, so every minimize/maximize snapshotted all of
 
 PDF Tools / Archive commands print the reason in the terminal and the job toast offers Retry. **Keep both**: by design.
 
+### Tab close (follow-up)
+
+The `pagehide` flush starts but OPFS writes are async and the page tears down first, so a change made within 300 ms of closing the tab is lost (before: within ~50 ms). Hiding the tab still saves. **Accepted** (owner): same trade-off as the crash case. A localStorage replay at next boot was the alternative.
+
+### Minesweeper
+
+A `MineCell` component stopped per-cell template re-runs, but huge custom boards gain little (1.6 → 1.4 ms per flag on 40×30): every per-cell derived is still visited when the raw board is replaced. Per-cell state would fix it; left as is.
+
 ## Action items
 
-- [ ] Core + shell fixes (writer, settings probe, json_file handle, job progress throttle, Explorer history, raw state, transition names, Terminal button, drag frame id, window.svelte cleanup, resize handle clipped by the corner)
-- [ ] App fixes (Lunar Lander readouts, Minesweeper cells, Recorder meter, Pomodoro stats, Time Since tick, PersistedCell first run, Quick Notes badge guard, Kanban day tick, Hopsprite writable derived)
-- [ ] docs/system updates, ROADMAP, release
+- [x] Core + shell fixes (writer, settings probe, json_file handle, job progress throttle, Explorer history, raw state, transition names, Terminal button, drag frame id, window.svelte cleanup, resize handle clipped by the corner)
+- [x] App fixes (Lunar Lander readouts, Minesweeper cells, Recorder meter, Pomodoro stats, Time Since tick, PersistedCell first run, Quick Notes badge guard, Kanban day tick, Hopsprite writable derived)
+- [x] docs/system updates, ROADMAP, release (1.17.1)
 
 ## Next session topics
 

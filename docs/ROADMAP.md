@@ -297,7 +297,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
   - [x] Media Preview: no length for MediaRecorder WebM recordings (no duration header): seek past the end once, then back
   - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
-  - [-] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, errors show twice from commands (terminal error plus the task's failed toast, as in Archive: owner's call, see 2026-10-16 fixes). Split's default range follows the PDF's page count (done 2026-10-16)
+  - [-] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16)
   - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)
   - [ ] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
@@ -444,7 +444,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Lazy loading for apps (dynamic imports via `component()`), per-platform shell chunks, lazy service shell command bodies and dialogs boot doesn't show ([ADR-036](adrs/036-boot-loading-screen.md))
 - [x] Boot loading screen with progress; the shell, desktop widgets and session apps start loading during boot (ADR-036). Entry chunk 269 → 164 KB gz
 - [ ] Virtual scrolling for large lists (file explorer, game hub). Explorer got `content-visibility` and reused row objects instead (2000 files: add one 170 → 8 ms); windowing is the owner's call
-- [ ] Performance pass (owner, 2026-10-16): after the 1.15–1.17 batch, sweep core, shell and apps for unnecessary logic, effects and re-renders
+- [x] Performance pass (2026-10-17, [brainstorm](brainstorm/2026-10-17_performance-pass.md)): state writes debounced 300 ms and skipped when unchanged (20 focus clicks: 20 → 1 writes), only the focused window named for view transitions (minimize with 10 windows ~130 → 67 ms frames), Recorder meter and Lunar Lander readouts stop forcing layout, persisted cells don't rewrite on open. Left: element-scoped view transitions; Minesweeper per-cell state for huge boards
 - [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
 
 ### Scoped app dependencies
@@ -459,7 +459,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Owner's call: Inter preload costs ~0.8 s on a slow first visit (keep, drop, or `font-display` only)
 - [ ] Owner's call: `<link rel="modulepreload">` for platform chunks (needs a build hook)
 - [ ] Owner's call: windowed rendering for long lists; `getFile` metadata cache for Explorer
-- [ ] Owner's call: session-save cadence; desktop widgets covered by windows keep ticking
+- [x] Owner's call: session-save cadence (debounced 300 ms, 2026-10-17); desktop widgets covered by windows keep ticking (left as is: ~3 ms/s)
 - [ ] Owner's call: `TextDraft` is duplicated in Kanban and Work Hours: move to core?
 - [ ] Owner's call: `CameraScan` lives in core utils; keep there or move to an app-shared spot
 - [ ] Owner's call: Recorder keeps chunks in RAM (stream to OPFS = persistence decision); QR Reader history into `storage.file`
