@@ -39,7 +39,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
 | `app.clock.stopwatch` | `user/clock` | Stopwatch state |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
-| `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped) |
+| `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |

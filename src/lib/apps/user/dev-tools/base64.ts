@@ -14,26 +14,29 @@ function bytes_to_binary(bytes: Uint8Array): string {
   return binary;
 }
 
-export function encode_base64(text: string, url_safe = false): string {
-  const encoded = btoa(bytes_to_binary(new TextEncoder().encode(text)));
+export function bytes_to_base64(bytes: Uint8Array, url_safe = false): string {
+  const encoded = btoa(bytes_to_binary(bytes));
   return url_safe ? encoded.replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "") : encoded;
 }
 
-export function decode_base64(input: string): ConvertResult {
+export function encode_base64(text: string, url_safe = false): string {
+  return bytes_to_base64(new TextEncoder().encode(text), url_safe);
+}
+
+export function base64_to_bytes(input: string): Uint8Array<ArrayBuffer> | null {
   const compact = input.replace(/\s+/g, "").replaceAll("-", "+").replaceAll("_", "/");
   const body = compact.replace(/=+$/, "");
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact) || body.length % 4 === 1) {
-    return { ok: false, value: "", error: "Not valid Base64" };
-  }
-
-  let binary: string;
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(compact) || body.length % 4 === 1) return null;
   try {
-    binary = atob(body.padEnd(Math.ceil(body.length / 4) * 4, "="));
+    return Uint8Array.from(atob(body.padEnd(Math.ceil(body.length / 4) * 4, "=")), (char) => char.charCodeAt(0));
   } catch {
-    return { ok: false, value: "", error: "Not valid Base64" };
+    return null;
   }
+}
 
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+export function decode_base64(input: string): ConvertResult {
+  const bytes = base64_to_bytes(input);
+  if (!bytes) return { ok: false, value: "", error: "Not valid Base64" };
   try {
     return { ok: true, value: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
   } catch {
