@@ -180,12 +180,12 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | soundboard | `sb`, `sb ls [-b]`, `sb play <pad> [-b]`, `sb stop`, `sb add <path…> [-b]` | `pad` values (open plays); `pad` completer |
 | recorder | `rec list`, `rec start [-s mic\|screen\|camera]` | `recording` values (open → Media Preview) |
 | image-editor | `image edit <path>`, `image convert <path> -f [-q]`, `image resize <path> <w> [h]`, `image rotate <path> <deg>` | `file` |
-| image-tools | `image tools [section] [path]`, `image trim [path…] [--alpha]`, `image split <path> -c\|-r <n>`, `image join [path…] [-d row\|column] [-g] [--align] [--fit] [--background] [--opacity]`, `image unbg <path> [-c <hex>…]` | `file`; path completion filtered to images |
+| image-tools | `image tools [section] [path]`, `image trim [path…] [--alpha]`, `image split <path> -c\|-r <n>`, `image join [path…] [-d row\|column] [-g] [--align] [--fit] [--background] [--opacity]`, `image unbg <path> [-c <hex>…]`, `testimg [WxH] [-p pattern] [--pixel] [-f png\|jpeg\|webp\|svg\|bmp] [-q] [--size 2GB] [--label] [--grid] [--plain] [-o]` | `file`; path completion filtered to images; `testimg` runs as a task and saves to `/home/Pictures` |
 | archive | `zip [paths…] [--to] [--store]`, `zip list <path>`, `unzip <path> [--to]` | `file`; `zip-entry` values (open → Archive) |
 | example | `example task [--fail]`: starts the example background task (about 20 s; `--fail` fails its first run) | |
 | diff | `diff <left> <right> [--stat]` | opens Diff; `diff-stat` with `--stat` |
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
-| pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images |
+| pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls`, `testpdf [-n pages] [--page a4\|letter\|a5\|a3\|legal\|mixed\|WxH] [--orientation] [--size 500MB] [--images] [--text] [--grid] [--plain] [-o]` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images; `testpdf` runs as a task and saves to `/home/Documents` |
 | hex-viewer | `hexdump <path> [-l\|--length N] [-s\|--offset N]` (256 bytes by default, like `xxd -l -s`) | `hex-row` values (offset, hex, ascii; open → Hex Viewer at that offset) |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.

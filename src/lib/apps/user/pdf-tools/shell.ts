@@ -28,7 +28,9 @@ import { SIGNATURES_DIR, is_image, prepare_image, read_bytes, write_at, type Sou
 import { flatten_groups, parse_ranges, split_groups } from "./ranges";
 import { canvas_blob, open_document, render_page } from "./render";
 import { Section } from "./sections";
-import { error_message, format_bytes } from "$lib/core/utils";
+import { error_message, format_bytes, parse_bytes } from "$lib/core/utils";
+import { DEFAULT_PDF, parse_page, test_pdf_name, type Orientation, type TestPdfOptions } from "./test-pdf";
+import { documents_folder, generate_test_pdf } from "./test-pdf-job";
 
 const APP_ID = "pdf-tools";
 const IMAGE_MARGIN = 36;
@@ -336,6 +338,44 @@ export async function export_pages({
   } finally {
     void document.loadingTask.destroy();
   }
+}
+
+export interface TestPdfArgs {
+  pages: number;
+  page: string;
+  orientation: Orientation;
+  size?: string;
+  images: number;
+  text: number;
+  grid: number;
+  plain: boolean;
+  to?: string;
+}
+
+export async function testpdf({ args, session, signal, elevated }: CommandContext<TestPdfArgs>): Promise<FileValue> {
+  const paper = parse_page(args.page);
+  if (!paper) throw new ShellError(`${args.page}: give a4, letter, a5, a3, legal, mixed, or WxH in mm`);
+  const target = args.size === undefined ? null : parse_bytes(args.size);
+  if (target === null && args.size !== undefined) throw new ShellError(`${args.size}: give a size like 500MB or 2GB`);
+  const options: TestPdfOptions = {
+    ...DEFAULT_PDF,
+    ...paper,
+    pages: args.pages,
+    orientation: args.orientation,
+    images: args.images,
+    text: args.text,
+    grid: args.grid,
+    ...(args.plain ? { rulers: false, margin: 0, crosshair: false, corners: false, tint: false, label: "", grid: 0 } : {}),
+  };
+  const name = test_pdf_name(options, target);
+  const path =
+    args.to === undefined
+      ? await free_path(await checked(documents_folder()), name)
+      : await output_path(session, args.to, parent_path(resolve_path(session.cwd, args.to)), name, elevated);
+  assert_writable(path, elevated);
+  const result = await checked(generate_test_pdf(APP_ID, options, target, path, signal));
+  if (!result.ok) throw new ShellError(result.error);
+  return written(path);
 }
 
 export async function tools({ args, session }: CommandContext<{ section?: Section; path?: string }>): Promise<void> {

@@ -8,6 +8,7 @@ export const Section = {
   IMAGES: "images",
   EXPORT: "export",
   SIGNATURES: "signatures",
+  TEST_PDF: "test-pdf",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];
 

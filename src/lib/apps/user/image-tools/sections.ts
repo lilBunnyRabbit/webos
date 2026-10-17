@@ -6,6 +6,7 @@ export const Section = {
   TRIM: "trim",
   SPLIT: "split",
   SPRITES: "sprites",
+  TEST_IMAGE: "test-image",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];
 

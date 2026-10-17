@@ -20,7 +20,7 @@ export default define_app({
   name: "PDF Tools",
   icon: FilePdfIcon,
   version: "1.0.0",
-  description: "Merge, organize, split and sign PDFs, turn images into a PDF and pages into images.",
+  description: "Merge, organize, split and sign PDFs, turn images into a PDF and pages into images, and generate test PDFs.",
   keywords: [
     "pdf",
     "merge",
@@ -36,6 +36,9 @@ export default define_app({
     "convert",
     "document",
     "ilovepdf",
+    "test pdf",
+    "sample",
+    "large file",
   ],
   category: AppCategory.PRODUCTIVITY,
   tools: [".pdf", "application/pdf"],
@@ -160,6 +163,24 @@ export default define_app({
         async *run(context) {
           yield* await (await logic()).export_pages(context);
         },
+      }),
+      define_command({
+        id: "testpdf",
+        description: "Generate a test PDF with numbered, ruled pages; --size makes one of an exact file size",
+        args: z.object({
+          pages: z.number().int().min(1).max(50_000).default(10),
+          page: z.string().default("a4").describe("a4, letter, a5, a3, legal, mixed, or WxH in mm"),
+          orientation: z.enum(["portrait", "landscape", "mixed"]).default("portrait"),
+          size: z.string().optional().describe("Exact file size, like 500MB or 2GB: random data spread over the pages"),
+          images: z.number().int().min(0).max(16).default(0).describe("Test images on every page"),
+          text: z.number().int().min(0).max(50).default(0).describe("Paragraphs of filler text on every page"),
+          grid: z.number().min(0).max(500).default(0).describe("Grid lines every N mm"),
+          plain: z.boolean().default(false).describe("Only the page number: no rulers, margins, marks, tint or label"),
+          to: arg.path().optional().describe("Output file or folder, /home/Documents by default"),
+        }),
+        short: { pages: "n", to: "o" },
+        yields: "file",
+        run: async (context) => (await logic()).testpdf(context),
       }),
       define_command({
         id: "signature ls",

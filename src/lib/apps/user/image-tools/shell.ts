@@ -3,6 +3,7 @@ import { available_name } from "$lib/core/api/services/files/opfs";
 import { parent_path, resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ArgKind } from "$lib/core/api/services/shell/arg";
+import { error_message, parse_bytes } from "$lib/core/utils";
 import {
   ShellError,
   type CommandContext,
@@ -32,6 +33,19 @@ import { remove_colours } from "./remove-background";
 import { Section } from "./sections";
 import { compute_layout, render_tiles, SplitDirection } from "./split";
 import { crop, find_crop_bounds } from "./trim";
+import {
+  DEFAULT_OUTPUT,
+  DEFAULT_SPEC,
+  extension_of,
+  parse_dimensions,
+  plan_output,
+  test_image_name,
+  TEST_FORMATS,
+  type Pattern,
+  type TestFormat,
+  type TestImageSpec,
+} from "./test-image";
+import { generate_test_image, pictures_folder } from "./test-image-job";
 
 const APP_ID = "image-tools";
 
@@ -191,6 +205,65 @@ export async function unbg({
   } finally {
     image.bitmap.close();
   }
+}
+
+function format_from_name(path: string): TestFormat | null {
+  const extension = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
+  if (extension === "jpg") return "jpeg";
+  return TEST_FORMATS.find((format) => format === extension) ?? null;
+}
+
+export interface TestImgArgs {
+  dimensions?: string;
+  pattern: Pattern;
+  pixel: number;
+  format?: TestFormat;
+  quality: number;
+  size?: string;
+  to?: string;
+  label?: string;
+  grid: boolean;
+  plain: boolean;
+}
+
+export async function testimg({ args, session, signal, elevated }: CommandContext<TestImgArgs>): Promise<FileValue> {
+  const dimensions = args.dimensions === undefined ? DEFAULT_SPEC : parse_dimensions(args.dimensions);
+  if (!dimensions) throw new ShellError(`${args.dimensions}: give the size as WxH, like 1920x1080`);
+  const target = args.size === undefined ? null : parse_bytes(args.size);
+  if (target === null && args.size !== undefined) throw new ShellError(`${args.size}: give a size like 500MB or 2GB`);
+  const typed = args.to === undefined ? null : resolve_path(session.cwd, args.to);
+  const into = typed !== null && (await files().get_directory(typed)) ? typed : null;
+  const format = args.format ?? (typed && !into ? format_from_name(typed) : null) ?? DEFAULT_OUTPUT.format;
+
+  const spec: TestImageSpec = {
+    ...DEFAULT_SPEC,
+    width: dimensions.width,
+    height: dimensions.height,
+    pattern: args.pattern,
+    cell: args.pixel,
+    grid: args.grid,
+    label: args.label ?? DEFAULT_SPEC.label,
+    ...(args.plain ? { border: 0, rulers: 0, grid: false, crosshair: false, corners: false, label: "" } : {}),
+  };
+  const output = { format, quality: args.quality, target };
+  const plan = plan_output(spec, output);
+  if (!plan.ok) throw new ShellError(plan.error);
+
+  let path: string;
+  if (typed === null || into !== null) {
+    const folder = into ?? (await pictures_folder());
+    path = child_path(folder, await available_name(await folder_at(folder), test_image_name(spec, plan.width, plan.height, format)));
+  } else {
+    await folder_at(parent_path(typed));
+    path = format_from_name(typed) ? typed : `${typed}.${extension_of(format)}`;
+  }
+  assert_writable(path, elevated);
+
+  const result = await generate_test_image(APP_ID, spec, output, path, signal).catch((error: unknown) => {
+    throw new ShellError(error_message(error));
+  });
+  if (!result.ok) throw new ShellError(result.error);
+  return written(path);
 }
 
 export async function complete_images(partial: string, context: { session: ShellSession }): Promise<Completion[]> {
