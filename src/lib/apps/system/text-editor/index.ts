@@ -13,7 +13,7 @@ export default define_app({
   description: "Edit text and code files, with highlighting for common formats.",
   keywords: ["text", "code", "notepad", "editor", "viewer", "markdown", "json", "write", "document"],
   associations: ["text/*", ".md", ".json", ".ts", ".js", ".svelte", ".yaml", ".yml", ".toml", ".ini", ".log", ".env"],
-  tools: [".http", ".rest", ".cook"],
+  tools: [".http", ".rest", ".cook", ".fdsl"],
   props: FILE_PROPS,
   component: () => import("./text-editor.app.svelte"),
 });
