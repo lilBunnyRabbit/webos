@@ -5,6 +5,7 @@ import type {
   ListOptions,
   CreateFileOptions,
   UploadOptions,
+  SizeNode,
 } from "./type";
 import { untrack } from "svelte";
 import { createSubscriber, SvelteMap } from "svelte/reactivity";
@@ -12,6 +13,7 @@ import * as opfs from "./opfs";
 import { ensure_hierarchy } from "./hierarchy";
 import { join_path, split_path } from "./path";
 import { files_shell } from "./shell";
+import type { SizeCache } from "./size-tree";
 
 export class FilesService implements IFilesService {
   name = "FilesService";
@@ -27,6 +29,9 @@ export class FilesService implements IFilesService {
   // One cell per folder: reading a missing key of a SvelteMap subscribes to the whole map, so every watcher of an untouched
   // folder re-ran whenever any other folder got its first revision (widgets reloaded when an app opened).
   private revisions = new Map<string, Revision>();
+  // Lazy: the boot bundle is at its budget. Reads without subscribing, so a walk started in an effect doesn't track every
+  // folder it passes; making the cell lets clear(), which bumps only existing cells, invalidate the listing.
+  private sizes: Promise<SizeCache> | null = null;
 
   async init(): Promise<void> {
     await ensure_hierarchy(await this.get_root());
@@ -284,6 +289,13 @@ export class FilesService implements IFilesService {
 
   async get_directory_size(handle: FileSystemDirectoryHandle | null): Promise<number> {
     return opfs.get_directory_size(await this.resolve(handle ?? null));
+  }
+
+  async size_tree(path: string, depth?: number): Promise<SizeNode> {
+    const handle = await this.get_directory(path);
+    if (!handle) throw new DOMException(`"${path}" isn't a folder`, "NotFoundError");
+    this.sizes ??= import("./size-tree").then(({ SizeCache }) => new SizeCache((at) => this.cell(at).value));
+    return (await this.sizes).tree(handle, path, depth);
   }
 
   /** Wipes OPFS, then rebuilds the empty hierarchy so the OS keeps its folders. */

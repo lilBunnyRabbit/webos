@@ -207,3 +207,58 @@ describe("import_entries", () => {
     await expect(files.import_entries("/home/nope", [new File(["x"], "x.txt")])).rejects.toThrow("doesn't exist");
   });
 });
+
+describe("size_tree", () => {
+  async function seed() {
+    const home = (await files.get_directory("/home"))!;
+    const docs = await files.create_directory(home, "docs");
+    await files.create_file(home, "big.bin", { content: "x".repeat(10) });
+    await files.create_file(docs, "a.txt", { content: "abc" });
+    const deep = await files.create_directory(docs, "deep");
+    await files.create_file(deep, "b.txt", { content: "12345" });
+    return { home, deep };
+  }
+
+  test("sums every file and keeps children only within the depth, biggest first", async () => {
+    await seed();
+    const full = await files.size_tree("/home");
+    expect(full).toMatchObject({ name: "home", path: "/home", size: 18 });
+    expect(full.children!.slice(0, 2).map((child) => [child.path, child.size])).toEqual([
+      ["/home/big.bin", 10],
+      ["/home/docs", 8],
+    ]);
+    expect(full.children![0].children).toBeUndefined();
+
+    const shallow = await files.size_tree("/home", 1);
+    const docs = shallow.children!.find((child) => child.name === "docs")!;
+    expect(docs.size).toBe(8);
+    expect(docs.children).toBeUndefined();
+    expect((await files.size_tree("/home", 0)).children).toBeUndefined();
+  });
+
+  test("asking again re-lists only the folders that changed", async () => {
+    const { deep } = await seed();
+    const listings = count_listings("docs");
+    await files.size_tree("/home");
+    expect(listings()).toBe(1);
+    await files.size_tree("/home");
+    expect(listings()).toBe(1);
+
+    await files.write_file(await deep.getFileHandle("b.txt"), "1234567890");
+    expect((await files.size_tree("/home")).size).toBe(23);
+    expect(listings()).toBe(1);
+  });
+
+  test("a folder deleted and made again under the same name isn't served from the cache", async () => {
+    const { home } = await seed();
+    await files.size_tree("/home");
+    await files.delete_entry(home, "docs", { recursive: true });
+    await files.create_directory(home, "docs");
+    const docs = (await files.size_tree("/home")).children!.find((child) => child.name === "docs")!;
+    expect(docs).toMatchObject({ size: 0, children: [] });
+  });
+
+  test("a path that isn't a folder throws", async () => {
+    await expect(files.size_tree("/home/nope")).rejects.toThrow("isn't a folder");
+  });
+});
