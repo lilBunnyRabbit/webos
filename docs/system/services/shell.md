@@ -166,6 +166,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | solitaire | `solitaire [--draw]`, `solitaire daily [day]`, `solitaire stats` | opens a deal; `solitaire-stats` values |
 | nonogram | `nonogram new [--size] [--colour]`, `nonogram daily [day]`, `nonogram edit [path]`, `nonogram check <path>` | opens; `text` verdict |
 | minesweeper | `minesweeper daily [day]` | opens the daily board |
+| blocks | `blocks daily [day]` | opens the daily sprint |
 | nurikabe | `nurikabe daily [day]` | opens the daily puzzle |
 | pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values |
 | getting-started | `tour [topic]` | none |
