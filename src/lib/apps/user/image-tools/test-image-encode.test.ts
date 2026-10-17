@@ -100,7 +100,8 @@ describe("PngStoredEncoder", () => {
     expect(png.length).toBe(png_stored_size(width, height));
     const decoded = await decode_png(png);
     expect(decoded.chunks.filter((chunk) => chunk.type === "IDAT").length).toBe(2);
-    expect(decoded.rgb).toEqual(band(width, 0, height));
+    // toEqual walks 1.26 MB element by element: seconds on CI.
+    expect(Buffer.compare(decoded.rgb, band(width, 0, height))).toBe(0);
   });
 
   test("pads to an exact size with a chunk decoders skip", async () => {
