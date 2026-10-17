@@ -1,4 +1,4 @@
-import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import kernel, { TaskJobStatus, type AppsService, type FilesService } from "$lib/core/api";
 import { available_name } from "$lib/core/api/services/files/opfs";
 import { parent_path, resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
@@ -46,6 +46,8 @@ import {
   type TestImageSpec,
 } from "./test-image";
 import { generate_test_image, pictures_folder } from "./test-image-job";
+import { images_in, squash_images, type SquashSource } from "./squash-job";
+import { SQUASH_FORMAT_NAMES, type SquashFormatName } from "./squash";
 
 const APP_ID = "image-tools";
 
@@ -270,4 +272,47 @@ export async function complete_images(partial: string, context: { session: Shell
   const completer = kernel.service<ShellService>("shell").completer(ArgKind.PATH);
   if (!completer) return [];
   return (await completer(partial, context)).filter((item) => item.final === false || is_image_name(item.value));
+}
+
+export interface SquashArgs {
+  paths: string[];
+  format: SquashFormatName;
+  quality: number;
+  max?: number;
+  to?: string;
+}
+
+export async function squash(context: CommandContext<SquashArgs>): Promise<FileValue[]> {
+  const { args, session, signal, elevated } = context;
+  const typed = await input_paths(args.paths, context);
+  if (typed.length === 0) throw new ShellError("squash needs at least one image or folder");
+  const paths: string[] = [];
+  for (const path of typed.map((item) => resolve_path(session.cwd, item))) {
+    if (await files().get_directory(path)) paths.push(...(await images_in(path)));
+    else paths.push(path);
+  }
+  if (paths.length === 0) throw new ShellError("no images to squash");
+
+  const sources: SquashSource[] = [];
+  for (const path of paths) {
+    const file = await files().get_file(path);
+    if (!file) throw new ShellError(`${path}: no such file`);
+    if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
+    sources.push({ name: file.name, path, file });
+  }
+  const folder = args.to === undefined ? null : resolve_path(session.cwd, args.to);
+  if (folder !== null) await folder_at(folder);
+  for (const target of new Set(folder === null ? paths.map(parent_path) : [folder]))
+    assert_writable(child_path(target, "x"), elevated);
+
+  const outcome = await squash_images({
+    app_id: APP_ID,
+    sources,
+    options: { format: SQUASH_FORMAT_NAMES[args.format], quality: args.quality, max: args.max ?? null },
+    folder,
+    signal,
+  });
+  if (outcome.status !== TaskJobStatus.DONE)
+    throw new ShellError(outcome.status === TaskJobStatus.CANCELLED ? "stopped" : (outcome.error ?? "failed"));
+  return Promise.all(outcome.results.flatMap((result) => (result ? [written(result.path)] : [])));
 }
