@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.19.0",
+    date: "2026-10-17",
+    title: "Patch it up",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["image-tools"],
+        text: "Patch in Image Tools removes a mark an editor stamped on your picture by restoring that spot from the original, even when the export was resized or cropped.",
+      },
+    ],
+  },
+  {
     version: "1.18.1",
     date: "2026-10-17",
     title: "Room to breathe",
