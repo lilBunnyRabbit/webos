@@ -361,7 +361,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim. Waits on chromatics as an npm package
 - [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios (Kubelka–Munk). Waits on the Chromatics decision; overlaps its mixer
-- [ ] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to]`. Only CORS-enabled hosts work. The owner may have an old local prototype
+- [x] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to] [-o name]`. Only CORS-enabled hosts work. Owned by API Client (2026-10-17)
+- [x] API Client (app wave 7, 2026-10-17): request builder (method, query, headers, JSON/text/form body), response view (status, time, size, headers, pretty/raw, images), Cancel, `.http` files (REST Client format) with Open with, download to files as a task, `http` and `wget` in the shell
 - [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
