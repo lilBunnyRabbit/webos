@@ -12,6 +12,7 @@
   <InspectorStat label="Registered" value={shortcuts.length} />
   <InspectorStat label="Window" value={window_scoped} />
   <InspectorStat label="Keys" value={service.mac ? "macOS" : "PC"} />
+  <InspectorStat label="Dispatch" value={service.suspended ? "suspended" : "on"} />
 </InspectorStats>
 
 {#if detailed}

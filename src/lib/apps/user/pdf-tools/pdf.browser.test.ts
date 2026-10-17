@@ -4,6 +4,8 @@ import { PageSize } from "./geometry";
 import { initial_pages, insert_blank, move_page, remove_page, rotate_page } from "./pages";
 import { EncryptedPdfError, images_to_pdf, load_pdf, merge_pdfs, organize_pdf, page_count, sign_pdf, split_pdf } from "./pdf";
 import { build_signature } from "./stroke";
+import { device_source, prepare_image } from "./pdf-files";
+import { concat, latin1, tiff } from "$lib/core/utils/exif/fixtures";
 
 async function make_pdf(labels: string[], size: [number, number] = [200, 300]): Promise<Uint8Array> {
   const document = await PDFDocument.create();
@@ -88,6 +90,20 @@ describe("pdf operations", () => {
     const document = await load_pdf(pdf);
     expect(document.getPageCount()).toBe(2);
     expect(document.getPage(0).getWidth()).toBeCloseTo(841.89);
+  });
+
+  test("a turned JPEG is decoded upright and placed on a page of that shape", async () => {
+    const canvas = new OffscreenCanvas(40, 20);
+    canvas.getContext("2d")!.fillRect(0, 0, 40, 20);
+    const stored = new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg" })).arrayBuffer());
+    const exif = concat(latin1("Exif\0\0"), tiff([{ tag: 0x0112, type: 3, values: [6] }]));
+    const app1 = concat([0xff, 0xe1, (exif.length + 2) >> 8, (exif.length + 2) & 0xff], exif);
+    const turned = concat(stored.subarray(0, 2), app1, stored.subarray(2));
+
+    const image = await prepare_image(device_source(new File([turned as BlobPart], "turned.jpg", { type: "image/jpeg" })));
+    expect(image).toMatchObject({ kind: "jpg", width: 20, height: 40, orientation: 6 });
+    const document = await load_pdf(await images_to_pdf([image], PageSize.A4, 0));
+    expect(document.getPage(0).getWidth()).toBeCloseTo(595.28);
   });
 
   test("an encrypted PDF is reported as such", async () => {

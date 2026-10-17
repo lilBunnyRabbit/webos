@@ -9,6 +9,7 @@
     ArrowUUpRight as RedoIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
+    Image as ImageIcon,
     Play as PlayIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
@@ -20,6 +21,7 @@
   import { BW_PALETTE, differences, from_solution, INKS, MAX_COLORS, Verdict } from "./puzzle";
   import { resize, sides_for, to_editor } from "./drawing";
   import Swatches from "./swatches.svelte";
+  import FromImage from "./from-image.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
   interface Props {
@@ -52,6 +54,7 @@
   let tool = $state<Mark>(Mark.FILLED);
   let undo_stack = $state.raw<(readonly number[])[]>([]);
   let redo_stack = $state.raw<(readonly number[])[]>([]);
+  let importing = $state(false);
 
   const current = $derived<Drawing>({ ...(title ? { title } : {}), width, height, palette: INKS, cells });
   const text = $derived(serialize_nonogram(current));
@@ -106,7 +109,7 @@
   $effect(() => () => win.set_dirty(false));
 
   $effect(() => {
-    if (testing) return;
+    if (testing || importing) return;
     const scoped = (id: string, keys: string, label: string, run: () => void) =>
       shortcuts.register({ id: `nonogram.editor.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
     const disposers = [
@@ -190,7 +193,7 @@
     return !dirty || confirm_discard(win, name);
   }
 
-  function load(drawing: Drawing, at: string | null) {
+  function load(drawing: Drawing, at: string | null): Drawing {
     const next = to_editor(drawing);
     path = at;
     title = next.title;
@@ -200,7 +203,13 @@
     mode = next.cells.some((cell) => cell > 1) ? Mode.COLOR : Mode.BW;
     undo_stack = [];
     redo_stack = [];
-    saved_text = serialize_nonogram(next);
+    return next;
+  }
+
+  async function use_image(drawing: Drawing) {
+    if (!(await discard_ok())) return;
+    load(drawing, null);
+    importing = false;
   }
 
   async function open() {
@@ -212,7 +221,7 @@
       if (!file) throw new Error(`Not found: ${chosen}`);
       const parsed = parse_nonogram(await file.text());
       if (!parsed.ok) throw new Error(parsed.error);
-      load(parsed.drawing, chosen);
+      saved_text = serialize_nonogram(load(parsed.drawing, chosen));
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the puzzle", message: error_message(reason) });
     }
@@ -249,6 +258,10 @@
   }
 
   export async function close() {
+    if (importing) {
+      importing = false;
+      return;
+    }
     if (!(await discard_ok())) return;
     on_close(path && !dirty ? { path, drawing: compact(current) } : null);
   }
@@ -276,59 +289,64 @@
   </div>
 {/snippet}
 
-<div class="grid h-full grid-rows-[auto_auto_1fr_auto_auto] @5xl:grid-rows-[auto_auto_1fr_auto]">
-  <Toolbar>
-    <IconButton size="sm" label="Back to playing" onclick={close}><ArrowLeftIcon weight="bold" /></IconButton>
-    <div class="hidden items-center gap-2 @2xl:flex">{@render shape()}</div>
-    <div class="hidden items-center gap-2 @5xl:flex">{@render tools("sm")}</div>
-    <div class="flex-1"></div>
-    <IconButton size="sm" label="Open a puzzle (Ctrl+O)" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton size="sm" label="Save (Ctrl+S)" onclick={save}><FloppyDiskIcon weight={dirty ? "fill" : "bold"} /></IconButton>
-    <Button size="sm" variant="primary" disabled={empty} onclick={test}>
-      <PlayIcon weight="fill" class="size-3.5" />
-      <span class="hidden @md:inline">Play-test</span>
-      <span class="@md:hidden">Test</span>
-    </Button>
-  </Toolbar>
+{#if importing}
+  <FromImage on_cancel={() => (importing = false)} on_use={use_image} />
+{:else}
+  <div class="grid h-full grid-rows-[auto_auto_1fr_auto_auto] @5xl:grid-rows-[auto_auto_1fr_auto]">
+    <Toolbar>
+      <IconButton size="sm" label="Back to playing" onclick={close}><ArrowLeftIcon weight="bold" /></IconButton>
+      <div class="hidden items-center gap-2 @2xl:flex">{@render shape()}</div>
+      <div class="hidden items-center gap-2 @5xl:flex">{@render tools("sm")}</div>
+      <div class="flex-1"></div>
+      <IconButton size="sm" label="From an image…" onclick={() => (importing = true)}><ImageIcon weight="bold" /></IconButton>
+      <IconButton size="sm" label="Open a puzzle (Ctrl+O)" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
+      <IconButton size="sm" label="Save (Ctrl+S)" onclick={save}><FloppyDiskIcon weight={dirty ? "fill" : "bold"} /></IconButton>
+      <Button size="sm" variant="primary" disabled={empty} onclick={test}>
+        <PlayIcon weight="fill" class="size-3.5" />
+        <span class="hidden @md:inline">Play-test</span>
+        <span class="@md:hidden">Test</span>
+      </Button>
+    </Toolbar>
 
-  <div class="flex min-h-9 items-center justify-center gap-2 border-b border-foreground/8 px-3 py-1.5 text-center" aria-live="polite">
-    {#if empty}
-      <span class="text-ui text-foreground/65">Draw a picture; its clues build around it as you go.</span>
-    {:else if checking}
-      <Badge>Checking…</Badge>
-    {:else if shown}
-      <Badge tone={shown.tone}>{shown.badge}</Badge>
-      <span class="truncate text-ui text-foreground/80">{shown.detail}</span>
-    {/if}
+    <div class="flex min-h-9 items-center justify-center gap-2 border-b border-foreground/8 px-3 py-1.5 text-center" aria-live="polite">
+      {#if empty}
+        <span class="text-ui text-foreground/65">Draw a picture; its clues build around it as you go.</span>
+      {:else if checking}
+        <Badge>Checking…</Badge>
+      {:else if shown}
+        <Badge tone={shown.tone}>{shown.badge}</Badge>
+        <span class="truncate text-ui text-foreground/80">{shown.detail}</span>
+      {/if}
+    </div>
+
+    <div class="flex min-h-0 overflow-auto p-2 [container-type:size] @md:p-4">
+      <Board
+        {width}
+        {height}
+        rows={clues.rows}
+        cols={clues.cols}
+        palette={INKS}
+        colored={mode === Mode.COLOR}
+        marks={cells}
+        label="Drawing, {width} by {height}. Arrows move, Space paints, X erases, Shift with arrows paints a line"
+        flagged={shown && check.verdict === Verdict.MULTIPLE ? check.flagged : undefined}
+        overwrite
+        {pick}
+        on_change={(next) => (cells = next)}
+        on_commit={(next, base) => commit(next, base)}
+      />
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-foreground/8 px-3 py-2 @5xl:hidden">
+      <div class="flex items-center gap-2 @2xl:hidden">{@render shape()}</div>
+      {@render tools("md")}
+    </div>
+
+    <StatusBar class="hidden @md:flex">
+      <span class="shrink-0 font-mono tabular-nums">{width}×{height}</span>
+      <span class={cn("truncate", !path && "text-foreground/65")}>{path ?? "Not saved yet"}{dirty ? " · edited" : ""}</span>
+      <span class="hidden shrink-0 @2xl:inline">{mode === Mode.COLOR ? `${used.size}/${MAX_COLORS} colours` : "Black and white"}</span>
+      <span class="hidden @4xl:inline">Right-click erases · drag to paint a line</span>
+    </StatusBar>
   </div>
-
-  <div class="flex min-h-0 overflow-auto p-2 [container-type:size] @md:p-4">
-    <Board
-      {width}
-      {height}
-      rows={clues.rows}
-      cols={clues.cols}
-      palette={INKS}
-      colored={mode === Mode.COLOR}
-      marks={cells}
-      label="Drawing, {width} by {height}. Arrows move, Space paints, X erases, Shift with arrows paints a line"
-      flagged={shown && check.verdict === Verdict.MULTIPLE ? check.flagged : undefined}
-      overwrite
-      {pick}
-      on_change={(next) => (cells = next)}
-      on_commit={(next, base) => commit(next, base)}
-    />
-  </div>
-
-  <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-foreground/8 px-3 py-2 @5xl:hidden">
-    <div class="flex items-center gap-2 @2xl:hidden">{@render shape()}</div>
-    {@render tools("md")}
-  </div>
-
-  <StatusBar class="hidden @md:flex">
-    <span class="shrink-0 font-mono tabular-nums">{width}×{height}</span>
-    <span class={cn("truncate", !path && "text-foreground/65")}>{path ?? "Not saved yet"}{dirty ? " · edited" : ""}</span>
-    <span class="hidden shrink-0 @2xl:inline">{mode === Mode.COLOR ? `${used.size}/${MAX_COLORS} colours` : "Black and white"}</span>
-    <span class="hidden @4xl:inline">Right-click erases · drag to paint a line</span>
-  </StatusBar>
-</div>
+{/if}

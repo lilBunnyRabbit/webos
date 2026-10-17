@@ -1,12 +1,17 @@
 import {
   Binary as BinaryIcon,
   BracketsCurly as BracketsCurlyIcon,
+  CalendarDots as CalendarDotsIcon,
+  Certificate as CertificateIcon,
+  Clock as ClockIcon,
   Fingerprint as FingerprintIcon,
   Hash as HashIcon,
+  Key as KeyIcon,
   Link as LinkIcon,
   MagnifyingGlass as MagnifyingGlassIcon,
 } from "phosphor-svelte";
 import { z } from "zod";
+import { DEFAULT_RUNS, MAX_RUNS } from "./cron";
 import { JsonIndent } from "./json";
 import { UrlScope } from "./url";
 import { UuidVersion } from "./uuid";
@@ -18,6 +23,10 @@ export const TOOLS = [
   { value: "uuid", label: "UUID", icon: FingerprintIcon },
   { value: "regex", label: "Regex", icon: MagnifyingGlassIcon },
   { value: "json", label: "JSON", icon: BracketsCurlyIcon },
+  { value: "jwt", label: "JWT", icon: KeyIcon },
+  { value: "time", label: "Time", icon: ClockIcon },
+  { value: "cron", label: "Cron", icon: CalendarDotsIcon },
+  { value: "cert", label: "Certificate", icon: CertificateIcon },
 ] as const;
 
 export type Tool = (typeof TOOLS)[number]["value"];
@@ -60,6 +69,13 @@ export const DevToolsState = z.object({
     input: "",
     indent: JsonIndent.TWO,
   }),
+  jwt: z.object({ input: text }).catch({ input: "" }),
+  // An empty zone follows the device's own.
+  time: z.object({ input: text, zone: text }).catch({ input: "", zone: "" }),
+  cron: z
+    .object({ input: text, count: z.number().int().min(1).max(MAX_RUNS).catch(DEFAULT_RUNS) })
+    .catch({ input: "", count: DEFAULT_RUNS }),
+  cert: z.object({ input: text }).catch({ input: "" }),
 });
 export type DevToolsState = z.infer<typeof DevToolsState>;
 
@@ -79,5 +95,9 @@ export function to_stored(state: DevToolsState): DevToolsState {
     url: { ...state.url, input: cap(state.url.input), parse_input: cap(state.url.parse_input) },
     regex: { ...state.regex, pattern: cap(state.regex.pattern), text: cap(state.regex.text) },
     json: { ...state.json, input: cap(state.json.input) },
+    jwt: { input: cap(state.jwt.input) },
+    time: { ...state.time, input: cap(state.time.input) },
+    cron: { ...state.cron, input: cap(state.cron.input) },
+    cert: { input: cap(state.cert.input) },
   };
 }

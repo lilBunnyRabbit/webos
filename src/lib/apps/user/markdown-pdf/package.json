@@ -1,0 +1,7 @@
+{
+  "name": "@webos/markdown-pdf",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.1.1"
+  }
+}

@@ -139,7 +139,7 @@ export default define_app({
         args: z.object({
           paths: z.array(arg.path()).default([]).describe("Images, or the files piped in"),
           out: arg.path().optional().describe("Output file or folder, next to the first image by default"),
-          size: z.enum([PageSize.A4, PageSize.LETTER, PageSize.IMAGE]).default(PageSize.A4).describe("Page size; image fits the page to each image"),
+          size: z.enum([PageSize.A4, PageSize.LETTER, PageSize.A3, PageSize.IMAGE]).default(PageSize.A4).describe("Page size; image fits the page to each image"),
         }),
         positional: ["paths"],
         short: { out: "o" },

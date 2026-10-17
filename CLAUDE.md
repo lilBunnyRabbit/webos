@@ -46,6 +46,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `tasks` | TasksService | Background jobs on `@lilbunnyrabbit/task-manager`: one manager per run, progress toast with Cancel, retry, Activity Monitor Tasks section and taskbar indicator; memory only (ADR-013) | notifications |
 | `backup` | BackupService | Zips `/home`, `/etc`, `/var/lib` and `app.*` localStorage (picked per area) to the device, never OPFS; restore replaces the areas a backup holds and reloads, holding FilesService writes meanwhile; both run as tasks (ADR-037) | files, dialogs, notifications, windows, tasks |
 | `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
+| `ai` | AiService | Chrome's on-device AI (Gemini Nano): availability per feature, summarize, translate, detect, streaming prompt; sessions kept and reused, model downloads as tasks. `MobileAiService` answers "no" on mobile (ADR-046) | files, tasks, notifications |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
@@ -82,6 +83,7 @@ References: `src/lib/apps/user/example/task.ts` (parallel group, logs, `parse()`
 - Pure logic in `.ts`, reactive state in `.svelte.ts`, rendering in `.svelte`.
 - Follow the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/brand/) (see CONVENTIONS, Styling & brand). Use theme tokens only. Tailwind's default palette is disabled, and no colour may be added.
 - Container queries in app UI, not viewport breakpoints.
+- Anything new (app, section, feature, dialog) is built for desktop and mobile alike. Before calling it done, check both: a desktop window (mouse, keyboard, resized narrow and wide) and the mobile shell (`?platform=mobile`, about 390 px wide, touch). Touch targets, pinch and pan, panels that stack, nothing cut off or overflowing, no hover-only actions. Report what was checked and how; "check passes" is not a UI check.
 - UI follows [docs/design](docs/design/README.md) and is built from the UI kit (`$lib/core/components/ui`). A component or pattern two apps need goes into the kit, the design docs and the Style Guide app.
 - No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
 - No backend. GitHub Pages is the host.

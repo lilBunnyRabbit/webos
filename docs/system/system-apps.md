@@ -9,7 +9,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `file-explorer` | File Explorer | none | `FILE_PROPS` (a folder path) | none | files, apps, notifications (through the shared components) | none |
 | `settings` | Settings | `.webos-theme` | `{ section?, path? }` (a section id; a `.webos-theme` file to import) | min 640×480 | settings, version, apps, backup, notifications, files, dialogs | window: `section`, `import` |
 | `kernel` | Kernel | none | none | none | the kernel itself | window: `expanded` |
-| `text-editor` | Text Editor | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env` | `FILE_PROPS` | none | files, notifications, shortcuts, settings | window: `wrap`, `markdown` |
+| `text-editor` | Text Editor | `text/*` + `.md .json .ts .js .svelte .yaml .yml .toml .ini .log .env`; tool for `.http .rest .cook` | `FILE_PROPS` | none | files, notifications, shortcuts, settings | window: `wrap`, `markdown` |
 | `media-preview` | Media Preview | `image/*`, `video/*`, `audio/*` | `FILE_PROPS` | min 400×300 | files | none |
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files, apps (Edit in PDF Tools) | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
@@ -177,7 +177,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 **Purpose.** Edit text and code files. Replaced Text Viewer on 2026-10-13 (id renamed, no alias: old `text-viewer` session entries are skipped on restore, a `text-viewer` file default falls back to the built-in).
 
-**Associations.** `text/*` (tier 1) plus explicit extensions (tier 3). The extensions win over any MIME-wildcard app, for example `.ts` even if the browser reports a `video/` type for it.
+**Associations.** `text/*` (tier 1) plus explicit extensions (tier 3). The extensions win over any MIME-wildcard app, for example `.ts` even if the browser reports a `video/` type for it. `tools: [".http", ".rest", ".cook"]` puts it in Open with for API Client's request files and Recipe Box's Cooklang recipes, which have no MIME type and open in their own app by default.
 
 **Engine.** CodeMirror 6 (`basicSetup`: line numbers, folding, history, search on Mod+F, bracket matching; Tab indents). The editor setup lives in core at `$lib/core/components/code` so Diff and Markdown to PDF share it: `editor.ts` holds the theme (`token_theme`) and highlight style (`token_highlight`), both written against the raw theme variables (`--primary`, `--background`, …), so any theme, derived ones included, applies without rebuilding the editor. `@theme inline` doesn't emit font or text-size variables at runtime, so the editor's font stack and size are literal. Syntax colours: keywords and tags `primary`, strings `secondary`, numbers and literals `accent`, types `tertiary`, comments `foreground/55` italic; state colours only for invalid tokens. `language.ts` (`language_for`, `load_language`) maps the extension to a language package (`javascript`/`typescript`, `json`, `markdown`, `css`, `html`, `yaml`), each loaded on first use; anything else is plain text.
 

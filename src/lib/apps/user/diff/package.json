@@ -1,0 +1,7 @@
+{
+  "name": "@webos/diff",
+  "private": true,
+  "dependencies": {
+    "@codemirror/merge": "^6.12.2"
+  }
+}

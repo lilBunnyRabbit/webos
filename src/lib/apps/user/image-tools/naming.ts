@@ -13,8 +13,16 @@ export function joined_name(extension: string): string {
   return `joined${extension}`;
 }
 
+export function redacted_name(name: string, extension: string): string {
+  return `${file_stem(name)}-redacted${extension}`;
+}
+
 export function patched_name(name: string): string {
   return `${file_stem(name)}-patched.png`;
+}
+
+export function squashed_name(name: string, extension: string): string {
+  return `${file_stem(name)}-squashed${extension}`;
 }
 
 export function split_folder_name(name: string): string {
@@ -34,4 +42,8 @@ export function kept_format(name: string, alpha: boolean): { format: ImageFormat
 
 export function is_image_name(name: string): boolean {
   return /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(name);
+}
+
+export function poster_name(name: string): string {
+  return `${file_stem(name)}-poster.pdf`;
 }

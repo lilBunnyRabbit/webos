@@ -39,6 +39,7 @@
   const SIZES = [
     { value: PageSize.A4, label: "A4" },
     { value: PageSize.LETTER, label: "Letter" },
+    { value: PageSize.A3, label: "A3" },
     { value: PageSize.IMAGE, label: "Image size" },
   ];
   const MARGINS = [
@@ -51,7 +52,7 @@
   const settings = storage.persisted(
     "images",
     { size: PageSize.A4 as PageSize, margin: "36" },
-    z.object({ size: z.enum([PageSize.A4, PageSize.LETTER, PageSize.IMAGE]), margin: z.enum(["0", "18", "36", "72"]) })
+    z.object({ size: z.enum([PageSize.A4, PageSize.LETTER, PageSize.A3, PageSize.IMAGE]), margin: z.enum(["0", "18", "36", "72"]) })
   );
 
   let items = $state.raw<ImageItem[]>([]);

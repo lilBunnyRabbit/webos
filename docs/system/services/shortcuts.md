@@ -40,6 +40,8 @@ interface RunShortcut {       // apps, until they can register commands
 |--------|-----------|-------|
 | `register` | `(shortcut) => () => void` | Normalizes `keys`, appends, returns the disposer (made for `$effect`). Both run untracked, so an effect that registers doesn't subscribe to the list it writes (that looped forever: Paint, 0.19.0). Same keys in the same scope: `console.warn` and the newer one wins |
 | `list` | `() => ListedShortcut[]` | Everything registered whose command exists, labels resolved, for the cheat sheet and the inspector. A command the platform lacks (`win snap` on mobile) drops out |
+| `suspend` | `() => () => void` | Stops the dispatcher and returns resume. A counter, so nested suspends each resume their own and dispatch stays off until the last; calling a resume twice counts once. Untracked like `register`, so suspending from an effect doesn't loop. For a key tester that must see every key (Keyboard & HID Lab): suspend while its capture area is focused, resume on blur, unmount and when the window hides. Browser-reserved keys (Cmd+W, Cmd+T, Cmd+Q and similar) never reach the page either way |
+| `suspended` | `readonly boolean` | True while any suspend is unresumed. The inspector shows it as Dispatch |
 | `mac` | `readonly boolean` | `is_mac()` once: `userAgentData.platform` (else `navigator.platform`) matching mac, iOS, iPhone or iPad. Decides what `mod` means and how keys display |
 
 ### Keys
@@ -50,6 +52,8 @@ interface RunShortcut {       // apps, until they can register commands
 
 `shortcuts`: `$state.raw<KeyShortcut[]>`, replaced on every register and dispose. Raw on purpose: a deep proxy would hand out copies, and the disposer finds its entry by identity.
 
+`suspends`: `$state` counter of unresumed `suspend()` calls; `suspended` reads it.
+
 ## Lifecycle
 
 `init()`: registers `DEFAULT_SHORTCUTS` (keeping their disposers) and adds the `keydown` listener. `destroy()`: removes the listener and disposes the defaults.
@@ -58,7 +62,7 @@ interface RunShortcut {       // apps, until they can register commands
 
 On every `keydown`, in order:
 
-1. Skip if `defaultPrevented` (a local handler took it) or `isComposing` (IME).
+1. Skip if `defaultPrevented` (a local handler took it), `isComposing` (IME), or suspended.
 2. Skip if a system dialog is open (`dialogs.system.length > 0`): it's modal.
 3. `event_keys(event, mac)`; skip a lone modifier.
 4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten.

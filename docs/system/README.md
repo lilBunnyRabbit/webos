@@ -45,6 +45,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/backup.md](services/backup.md) | `backup` |
 | [services/tasks.md](services/tasks.md) | `tasks` |
 | [services/extract.md](services/extract.md) | `extract` (desktop only) |
+| [services/ai.md](services/ai.md) | `ai` |
 
 ### Shell
 
@@ -55,6 +56,14 @@ The reference is part of the code. A change isn't finished until the page that d
 | [shell/desktop.md](shell/desktop.md) | Desktop surface and icons |
 | [shell/taskbar.md](shell/taskbar.md) | Taskbar dock, items, tray + notification center, start menu |
 | [shell/mobile.md](shell/mobile.md) | Phone and tablet shell: home pages, dock, app drawer, switcher, nav bar |
+
+### Core utils
+
+Most utils are listed in the [overview's source map](overview.md#source-map); the ones with real behaviour of their own get a page.
+
+| Page | Covers |
+|------|--------|
+| [utils/exif.md](utils/exif.md) | `core/utils/exif`: EXIF, XMP and PNG text from JPEG, PNG and WebP bytes; `orientation()` |
 
 ### Apps
 

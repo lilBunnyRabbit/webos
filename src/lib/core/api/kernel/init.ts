@@ -1,6 +1,10 @@
 import type { Kernel } from "./kernel.svelte";
 import { Platform } from "./platform";
-import type { DesktopService as IDesktopService, WindowsService as IWindowsService } from "../services";
+import type {
+  AiService as IAiService,
+  DesktopService as IDesktopService,
+  WindowsService as IWindowsService,
+} from "../services";
 // App manifests load with AppsService and read WindowFlag through the barrel, which is still mid-cycle here. The windows
 // service used to load it first; now that it's lazy, this keeps that order.
 import "../services/windows/type";
@@ -19,22 +23,25 @@ import { ShellService } from "../services/shell/service.svelte";
 import { BackupService } from "../services/backup/service.svelte";
 import { TasksService } from "../services/tasks/service.svelte";
 
-// Phones and tablets get their own windows and desktop (ADR-016); the other platform's code is never downloaded (ADR-036).
+// Phones and tablets get their own windows, desktop and an AI service that answers "no" (ADR-016, ADR-046); the other
+// platform's code is never downloaded (ADR-036).
 async function platform_services(platform: Platform) {
   if (platform === Platform.MOBILE) {
-    const [windows, desktop] = await Promise.all([
+    const [windows, desktop, ai] = await Promise.all([
       import("../services/windows/mobile.svelte"),
       import("../services/desktop/mobile.svelte"),
+      import("../services/ai/mobile"),
     ]);
-    return { windows: windows.MobileWindowsService, desktop: desktop.MobileDesktopService, extract: null };
+    return { windows: windows.MobileWindowsService, desktop: desktop.MobileDesktopService, extract: null, ai: ai.MobileAiService };
   }
 
-  const [windows, desktop, extract] = await Promise.all([
+  const [windows, desktop, extract, ai] = await Promise.all([
     import("../services/windows/service.svelte"),
     import("../services/desktop/service.svelte"),
     import("../services/extract/service.svelte"),
+    import("../services/ai/service.svelte"),
   ]);
-  return { windows: windows.WindowsService, desktop: desktop.DesktopService, extract: extract.ExtractService };
+  return { windows: windows.WindowsService, desktop: desktop.DesktopService, extract: extract.ExtractService, ai: ai.AiService };
 }
 
 export async function register_default_services(kernel: Kernel) {
@@ -116,6 +123,11 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register("backup", {
     instance: BackupService,
     dependencies: ["files", "dialogs", "notifications", "windows", "tasks"],
+  });
+
+  kernel.register<IAiService>("ai", {
+    instance: platform.ai,
+    dependencies: ["files", "tasks", "notifications"],
   });
 
   kernel.register("router", {

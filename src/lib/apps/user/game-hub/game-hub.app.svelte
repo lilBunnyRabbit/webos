@@ -155,7 +155,7 @@
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-ui font-medium">{game.name}</p>
                     {#if solved}
-                      <p class="flex items-center gap-1 text-2xs text-success"><CheckCircleIcon class="size-3.5" weight="fill" />Solved in <span class="font-mono tabular-nums">{format_time(solved.ms)}</span></p>
+                      <p class="flex items-center gap-1 text-2xs text-success"><CheckCircleIcon class="size-3.5" weight="fill" />Solved in <span class="font-mono tabular-nums">{format_time(solved.ms)}</span>{#if solved.score !== undefined}<span aria-hidden="true">·</span>Score <span class="font-mono tabular-nums">{solved.score}</span>{/if}</p>
                     {:else}
                       <p class="text-2xs text-foreground/65">Not solved yet</p>
                     {/if}

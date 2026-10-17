@@ -297,7 +297,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Activity Monitor: highlight a widget on the desktop; counts of shared clocks and app-data cells
   - [x] Media Preview: no length for MediaRecorder WebM recordings (no duration header): seek past the end once, then back
   - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
-  - [-] PDF Tools: JPEG EXIF orientation, Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16)
+  - [-] PDF Tools: Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16); JPEGs follow their EXIF orientation (done 2026-10-17)
   - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)
   - [ ] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, `write_image(path)` in core, regex tester in a worker
@@ -361,7 +361,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim. Waits on chromatics as an npm package
 - [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios (Kubelka–Munk). Waits on the Chromatics decision; overlaps its mixer
-- [ ] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to]`. Only CORS-enabled hosts work. The owner may have an old local prototype
+- [x] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to] [-o name]`. Only CORS-enabled hosts work. Owned by API Client (2026-10-17)
+- [x] API Client (app wave 7, 2026-10-17): request builder (method, query, headers, JSON/text/form body), response view (status, time, size, headers, pretty/raw, images), Cancel, `.http` files (REST Client format) with Open with, download to files as a task, `http` and `wget` in the shell
 - [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
@@ -373,7 +374,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Font Viewer (2026-10-17): native `FontFace`, default for font files. WOFF2 shows no names or axes (Chrome has no Brotli `DecompressionStream`)
 - [x] Image Tools › Patch (2026-10-17): restore marks an edit tool stamped, from the original; diff regions, auto-align offset and scale, colour matching, no shell. Phone layout, pinch zoom and pan, zoom to a change (1.19.1) ([brainstorm](brainstorm/2026-10-17_app-wave-6.md))
 - [x] Test image and test PDF generators in Image Tools and PDF Tools, `testimg` / `testpdf` (2026-10-17). Owner's call: `FilesService.write_stream(path, chunks, { signal })` so multi-GB files stream to disk instead of collecting in Blobs (~2 GB peak memory, double disk use while writing today)
-- Maybe: Web app wrapper
+- [x] Web App (2026-10-17): `.webapp` files (name, URL, optional icon) open a site in a sandboxed iframe; Add web app saves one to the desktop with the favicon as an `<img>`; a site that refuses framing gets a "Not loading?" screen and an Open in a tab hint, since cross-origin can't be detected; `webapp add <url> [-n]`. Desktop icons stay the generic file icon (per-file icons would be a core change)
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
   - [ ] Text chat during a transfer: short messages over the open data channel, shown as a side thread (owner's ideas notes, 2026-10-17)
 
@@ -456,9 +457,13 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Virtual scrolling for large lists (file explorer, game hub). Explorer got `content-visibility` and reused row objects instead (2000 files: add one 170 → 8 ms); windowing is the owner's call
 - [x] Performance pass (2026-10-17, [brainstorm](brainstorm/2026-10-17_performance-pass.md)): state writes debounced 300 ms and skipped when unchanged (20 focus clicks: 20 → 1 writes), only the focused window named for view transitions (minimize with 10 windows ~130 → 67 ms frames), Recorder meter and Lunar Lander readouts stop forcing layout, persisted cells don't rewrite on open. Left: element-scoped view transitions; Minesweeper per-cell state for huge boards
 - [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
+- [ ] Lazy app metadata (owner's call, needs an ADR revising ADR-008/ADR-034). Every `index.ts` loads eagerly (`apps/index.ts` glob, `eager: true`), so all manifests sit in the boot chunk: ~33 KB gz of the 186 KB entry (2026-10-17 estimate, 62 of 64 manifests bundled alone with core, zod, svelte and icons external; icons come on top). `shell` blocks are ~10 KB gz of that (27 apps); the rest is descriptions, keywords, zod `props`, defaults and module code manifests import. Boot itself needs only id, name, icon, category, associations/tools, defaults, restore, widget and badge. Options: (a) `shell: () => import("./commands")`, loaded when the Terminal or palette first opens (~10 KB, smallest change; `apps help` and completion wait for it); (b) split each app into an eager `index.ts` plus a lazy `meta.ts` (description, keywords, authors, props, shell) fetched after first paint, with launch, deep links, session restore and search awaiting it (~20–25 KB, every sync reader of `props`/`keywords` becomes async: `apps.launch` validation, desktop widget props, router, launcher search); (c) a build step that writes the eager fields to one generated registry (same saving as b, more tooling). Budget gate counts the entry chunk only, so a lazy chunk fetched right after boot still costs network time
 
 ### Scoped app dependencies
-- [ ] Scoped node modules for apps: an app can use an npm package without adding it to the core `package.json` (needs an ADR: where the manifest lives, how it's installed and bundled, how the boot budget stays clean)
+- [x] Scoped node modules for apps: an app declares its packages in its own `package.json`, Bun workspaces with the isolated linker keep them out of core and other apps ([ADR-045](adrs/045-scoped-app-dependencies.md))
+
+### Custom app icons
+- [ ] A skill (or script) that generates a custom icon per app in the lilBunnyRabbit brand style instead of a stock Phosphor glyph (owner, 2026-10-17). Open questions: output format (Svelte SVG component like the logo, sized for 16–64 px and the mobile home grid), theme tokens or fixed brand colours, how it fits the manifest `icon` field and the boot budget (every manifest icon ships in the boot chunk: Crack the Code's Phosphor icon alone is ~0.7 KB gz), and whether Style Guide shows the set
 
 ### Code quality pass (2026-10-15, 0.37.0)
 - **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)
@@ -483,7 +488,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - **Brainstorm:** [1.0 release](brainstorm/2026-10-15_v1-release.md)
 - [x] Fork test in CI (delete `src/lib/apps/user`, check + build + unit tests)
 - [x] App API frozen: `docs/system/app-api.md` + export pin test
-- [x] Boot budget: entry chunk <= 180 KB gz, CI gate
+- [x] Boot budget: entry chunk <= 190 KB gz (was 180 until 2026-10-17), CI gate
 - [x] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
 - [x] Tasks service (ADR-013): after 1.0, additive (shipped 1.3.0)
 

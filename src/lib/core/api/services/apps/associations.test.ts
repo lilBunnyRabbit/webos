@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { AppManifest } from "./type";
-import { apps_for, association_tier, best_apps_for, file_extension, tools_for } from "./associations";
+import { apps_for, association_tier, best_apps_for, file_extension, has_compound_match, tools_for } from "./associations";
 
 const app = (id: string, associations: string[] = [], tools: string[] = []) =>
   ({ id, name: id, associations, tools }) as unknown as AppManifest;
@@ -27,8 +27,25 @@ describe("association_tier", () => {
     expect(association_tier("image/*", txt)).toBe(0);
   });
 
+  test("a compound extension matches the end of the name and outranks a plain one", () => {
+    const form = { name: "Survey.Form.md", type: "text/markdown" };
+    expect(association_tier(".form.md", form)).toBe(4);
+    expect(association_tier(".md", form)).toBe(3);
+    expect(association_tier(".form.md", { name: "notes.md", type: "text/markdown" })).toBe(0);
+    expect(association_tier(".form.md", { name: "form.md", type: "text/markdown" })).toBe(0);
+  });
+
   test("MIME patterns never match a file without a type", () => {
     expect(association_tier("text/*", { name: "x", type: "" })).toBe(0);
+  });
+});
+
+describe("has_compound_match", () => {
+  test("only a compound entry that matches counts", () => {
+    const apps = [app("editor", [".md", "text/*"]), app("forms", [".form.md"])];
+    expect(has_compound_match(apps, { name: "a.form.md", type: "" })).toBe(true);
+    expect(has_compound_match(apps, { name: "a.md", type: "" })).toBe(false);
+    expect(best_apps_for(apps, { name: "a.form.md", type: "text/markdown" }).map((a) => a.id)).toEqual(["forms"]);
   });
 });
 

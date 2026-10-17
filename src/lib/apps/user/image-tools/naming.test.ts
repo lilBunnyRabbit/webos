@@ -5,6 +5,8 @@ import {
   joined_name,
   kept_format,
   patched_name,
+  redacted_name,
+  poster_name,
   split_folder_name,
   tile_name,
   transparent_name,
@@ -18,7 +20,9 @@ describe("output names", () => {
     expect(joined_name(".png")).toBe("joined.png");
     expect(split_folder_name("photo.jpeg")).toBe("photo-split");
     expect(tile_name("photo.jpeg", 3)).toBe("photo_3.png");
+    expect(poster_name("map.webp")).toBe("map-poster.pdf");
     expect(patched_name("export.jpg")).toBe("export-patched.png");
+    expect(redacted_name("scan.jpg", ".jpg")).toBe("scan-redacted.jpg");
   });
 
   test("kept_format keeps the source format and spelling", () => {

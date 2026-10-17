@@ -117,7 +117,20 @@ describe("shell values", () => {
   });
 
   it("marks a daily solved with its best time", () => {
-    expect(daily_value(alpha, data, "2026-10-14")).toEqual({ $type: "game-daily", id: "a", name: "Alpha", day: "2026-10-14", solved: true, time: 61_000 });
-    expect(daily_value(bravo, data, "2026-10-14")).toMatchObject({ solved: false, time: null });
+    expect(daily_value(alpha, data, "2026-10-14")).toEqual({
+      $type: "game-daily",
+      id: "a",
+      name: "Alpha",
+      day: "2026-10-14",
+      solved: true,
+      time: 61_000,
+      score: null,
+    });
+    expect(daily_value(bravo, data, "2026-10-14")).toMatchObject({ solved: false, time: null, score: null });
+  });
+
+  it("carries a scored daily's score", () => {
+    const scored = plays({ daily: { "2026-10-14": { a: { ms: 61_000, score: 5 } } } });
+    expect(daily_value(alpha, scored, "2026-10-14")).toMatchObject({ solved: true, time: 61_000, score: 5 });
   });
 });

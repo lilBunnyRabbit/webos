@@ -33,6 +33,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$lib/core/components/ui` | The whole UI kit | |
 | `$lib/core/games` | The whole games kit | Import from the barrel in components and lazy files |
 | `$lib/core/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
+| `$lib/core/games/daily` | `DailyRank`, `better_daily`, `DailyResult` | Stable path (1.20), same reason as `games/time`: manifests set `daily_rank` |
 | `$lib/core/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 
@@ -50,6 +51,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
 | `props` | yes | A zod object schema |
+| `daily_rank` | yes (1.20) | `DailyRank`: `time` (default), `score-asc`, `score-desc`. How the game's daily results rank, time breaking a tie |
 | `restore` | yes | `false` keeps windows out of saved sessions |
 | `shell` | yes | [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
@@ -135,7 +137,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 | `notifications` | `notify` (21), `request_system` (3), `update` (1; a `progress` notification is useless without it) | `hide_toast` (Pomodoro), `dismiss`, `mark_read`, `mark_all_read`, `all`, `toasts`, `unread_count` |
 | `desktop` | `items` (5), `pin_widget` (7), `remove_item` (7) | `pin`, `open`, `rename_item`, `create_folder`, `names` and the grid/mobile variants |
 | `dialogs` | `menu` (7), `show` (3) | `for_window` (Soundboard), `stack`, `system` |
-| `shortcuts` | `register` (15) | `list`, `mac` (Quick Notes) |
+| `shortcuts` | `register` (15) | `list`, `mac` (Quick Notes); `suspend`, `suspended` (Keyboard & HID Lab) |
 | `windows` | `page_hidden` (5) | `get`, `get_focused` (Quick Notes); everything else. Inside a window, use `WindowHandle` |
 | `settings` | `theme` (read) (6) | All writes and every other field |
 | `shell`, `session`, `clipboard`, `ui`, `router`, `version` | nothing | Apps reach the shell through their manifest; the rest are OS-only |
@@ -157,11 +159,11 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`code`,
 | Area | Names |
 |------|-------|
 | Time | `format_time`, `FormatTimeOptions`, `Stopwatch` |
-| Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`. `day_key` comes from `$lib/core/utils/date` |
+| Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`, `DailyRank`, `DailyResult`, `better_daily`. `day_key` comes from `$lib/core/utils/date` |
 | Play tracking | `track_play`, `PlayTracker`, `use_plays`, `Plays`, `GameStats`, `PlaysSchema`, `EMPTY_PLAYS`, `PLAYS_PATH` |
 | Input | `Direction`, `key_direction`, `swipe_direction`, `grid_key_move`, `stroke_axis`, `stroke_end`, `stroke_cells`, `Axis` |
 
-`/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it.
+`/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?)` keeps the better result by the manifest's `daily_rank`.
 
 ## Utilities
 
@@ -182,7 +184,7 @@ The rule: generic helpers used by three or more user apps are stable.
 | `$lib/core/utils/print` | `print_html` (ADR-035) |
 | `$lib/core/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` |
 
-Internal, though bundled apps use them: `utils/image`'s `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality`; `utils/history` (Paint, Image Editor); `utils/qr`, `utils/qr-scan.svelte` (QR Reader, P2P Transfer); `utils/zip/*` (Archive); `utils/install.svelte`; `utils/image-format` directly; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `components/code`; `settings/themes`. An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
+Internal, though bundled apps use them: `utils/image`'s `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality`; `utils/history` (Paint, Image Editor); `utils/qr`, `utils/qr-scan.svelte` (QR Reader, P2P Transfer); `utils/zip/*` (Archive); `utils/exif` (Metadata, PDF Tools); `utils/install.svelte`; `utils/image-format` directly; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `components/code`; `settings/themes`. An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
 
 ## Storage locations
 

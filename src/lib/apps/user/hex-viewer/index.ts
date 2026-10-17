@@ -2,6 +2,7 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { arg } from "$lib/core/api/services/shell/arg";
 import { define_command } from "$lib/core/api/services/shell/define";
+import { format_bytes } from "$lib/core/utils";
 import { Binary as BinaryIcon } from "phosphor-svelte";
 import { z } from "zod";
 
@@ -15,7 +16,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Shows the raw bytes of any file, however large, as hex and ASCII side by side.",
-  keywords: ["hex", "binary", "bytes", "dump", "xxd", "hexdump", "inspect", "offset"],
+  keywords: ["hex", "binary", "bytes", "dump", "xxd", "hexdump", "inspect", "offset", "file", "magic", "entropy", "binwalk"],
   props: z.object({ path: z.string().optional(), offset: offset.optional() }),
   tools: ["*"],
   defaults: {
@@ -32,6 +33,24 @@ export default define_app({
         text: (row) => `${Number(row.offset).toString(16).padStart(8, "0")}: ${row.hex}  ${row.ascii}`,
         open: (row) => void logic().then((m) => m.open_at(String(row.path), Number(row.offset))),
       },
+      "file-type": {
+        columns: ["name", "type", "details", "size", "entropy"],
+        cell(value, column) {
+          if (column === "size") return value.size === null ? "—" : format_bytes(Number(value.size));
+          if (column === "entropy") return value.entropy === null ? "—" : Number(value.entropy).toFixed(2);
+          return String(value[column] ?? "");
+        },
+        text: (value) => `${value.name}: ${[value.type, value.details].filter(Boolean).join(", ")}`,
+        open(value) {
+          if (value.type !== "directory") void logic().then((m) => m.open_at(String(value.path), 0));
+        },
+      },
+      "file-hit": {
+        columns: ["name", "offset", "type", "details"],
+        cell: (hit, column) => (column === "offset" ? Number(hit.offset).toString(16).padStart(8, "0") : String(hit[column] ?? "")),
+        text: (hit) => `${hit.name} ${Number(hit.offset).toString(16).padStart(8, "0")}: ${[hit.type, hit.details].filter(Boolean).join(", ")}`,
+        open: (hit) => void logic().then((m) => m.open_at(String(hit.path), Number(hit.offset))),
+      },
     },
     commands: [
       define_command({
@@ -47,6 +66,19 @@ export default define_app({
         yields: "hex-row",
         async *run(context) {
           yield* (await logic()).hexdump(context);
+        },
+      }),
+      define_command({
+        id: "file",
+        description: "What files are by their bytes, with entropy; --scan lists files embedded inside them",
+        args: z.object({
+          paths: z.array(arg.path()).default([]),
+          scan: z.boolean().default(false).describe("List embedded signatures by offset; click one to open Hex Viewer there"),
+        }),
+        positional: ["paths"],
+        yields: "file-type",
+        async *run(context) {
+          yield* (await logic()).file(context);
         },
       }),
     ],

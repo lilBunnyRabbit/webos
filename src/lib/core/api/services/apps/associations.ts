@@ -3,9 +3,13 @@ import type { AppManifest } from "./type";
 
 export { file_extension };
 
-/** Exact extension 3, exact MIME 2, MIME wildcard 1, no match 0 (ADR-018). */
+/** An extension with more than one dot (`.form.md`): matched against the end of the name, above a plain extension. */
+export const is_compound_extension = (entry: string): boolean => entry.startsWith(".") && entry.indexOf(".", 1) > 0;
+
+/** Compound extension 4, exact extension 3, exact MIME 2, MIME wildcard 1, no match 0 (ADR-018). */
 export function association_tier(entry: string, file: { name: string; type: string }): number {
   const pattern = entry.toLowerCase();
+  if (is_compound_extension(pattern)) return file.name.toLowerCase().endsWith(pattern) ? 4 : 0;
   if (pattern.startsWith(".")) return pattern === file_extension(file.name) ? 3 : 0;
 
   const type = file.type.toLowerCase();
@@ -31,6 +35,11 @@ export function best_apps_for(apps: Iterable<AppManifest>, file: { name: string;
   }
 
   return best;
+}
+
+/** Some app claims `file` by a compound extension, which outranks a remembered default for its last extension. */
+export function has_compound_match(apps: Iterable<AppManifest>, file: { name: string; type: string }): boolean {
+  return [...apps].some((app) => (app.associations ?? []).some((entry) => is_compound_extension(entry) && association_tier(entry, file) > 0));
 }
 
 /** Every app that can open `file`, most specific match first: the "Open with" list. */

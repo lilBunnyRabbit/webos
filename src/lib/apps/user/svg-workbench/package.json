@@ -1,0 +1,8 @@
+{
+  "name": "@webos/svg-workbench",
+  "private": true,
+  "dependencies": {
+    "@codemirror/merge": "^6.12.2",
+    "svgo": "^4.1.0"
+  }
+}

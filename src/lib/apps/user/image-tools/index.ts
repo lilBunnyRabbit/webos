@@ -5,11 +5,12 @@ import { define_command } from "$lib/core/api/services/shell/define";
 import type { ShellSession } from "$lib/core/api/services/shell/type";
 import { ImagesSquare as ImagesSquareIcon } from "phosphor-svelte";
 import { z } from "zod";
+import { PageSize } from "$lib/apps/user/pdf-tools/kinds";
 import { SECTION_IDS } from "./sections";
 
 const logic = () => import("./shell");
 
-const image_fields = new Set(["path", "paths"]);
+const image_fields = new Set(["path", "paths", "before", "after"]);
 const complete_images = (field: string, partial: string, context: { session: ShellSession }) =>
   image_fields.has(field) ? logic().then((m) => m.complete_images(partial, context)) : undefined;
 
@@ -18,7 +19,7 @@ export default define_app({
   name: "Image Tools",
   icon: ImagesSquareIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, and generate test images.",
+  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -47,12 +48,35 @@ export default define_app({
     "frames",
     "animation",
     "extract",
+    "atlas",
+    "texture packer",
+    "pack",
     "game assets",
     "pixel art",
+    "redact",
+    "censor",
+    "blur",
+    "pixelate",
+    "privacy",
+    "poster",
+    "print",
+    "tile print",
+    "rasterbate",
+    "large format",
     "test image",
     "test pattern",
     "placeholder",
     "large file",
+    "squash",
+    "compress",
+    "shrink",
+    "optimize",
+    "webp",
+    "batch",
+    "compare",
+    "difference",
+    "before after",
+    "onion skin",
   ],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
@@ -63,6 +87,15 @@ export default define_app({
   }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   shell: {
+    values: {
+      "image-diff": {
+        columns: ["changed", "regions", "dx", "dy", "scale"],
+        cell: (stats, column) => (column === "changed" ? `${stats.changed}%` : String(stats[column] ?? "")),
+        text: (stats) =>
+          `${stats.changed}% changed, ${stats.regions} ${stats.regions === 1 ? "region" : "regions"}, offset ${stats.dx}, ${stats.dy}, scale ${stats.scale}`,
+        open: (stats) => void logic().then((m) => m.open_compare(String(stats.before), String(stats.after))),
+      },
+    },
     commands: [
       define_command({
         id: "image tools",
@@ -128,6 +161,56 @@ export default define_app({
         yields: "file",
         complete: complete_images,
         run: async (context) => (await logic()).join(context),
+      }),
+      define_command({
+        id: "squash",
+        description: "Save smaller WebP or JPEG copies of images, or of every image in a folder",
+        args: z.object({
+          paths: z.array(arg.path()).default([]).describe("Images or folders, or the files piped in"),
+          format: z.enum(["webp", "jpeg"]).default("webp"),
+          quality: z.number().int().min(1).max(100).default(80).describe("Quality, 1–100"),
+          max: z.number().int().min(1).max(16_384).optional().describe("Longest side in px; smaller images stay as they are"),
+          to: arg.path().optional().describe("Output folder, next to each original by default"),
+        }),
+        positional: ["paths"],
+        short: { format: "f", quality: "q" },
+        yields: "file",
+        complete: complete_images,
+        async *run(context) {
+          yield* await (await logic()).squash(context);
+        },
+      }),
+      define_command({
+        id: "imgdiff",
+        description: "Compare two images: how much changed, in how many regions, and the offset and scale between them",
+        args: z.object({
+          before: arg.path(),
+          after: arg.path(),
+          tolerance: z.number().min(1).max(60).default(12).describe("How different a pixel must be to count as changed, 1–60%"),
+          open: z.boolean().default(false).describe("Open both in Image Tools' Compare section instead"),
+        }),
+        positional: ["before", "after"],
+        short: { tolerance: "t" },
+        yields: "image-diff",
+        complete: complete_images,
+        run: async (context) => (await logic()).imgdiff(context),
+      }),
+      define_command({
+        id: "poster",
+        description: "Print an image across several sheets as one PDF next to it, with crop marks and an assembly map",
+        args: z.object({
+          path: arg.path(),
+          across: z.number().int().min(1).max(20).default(3).describe("Sheets across; rows follow from the image"),
+          paper: z.enum([PageSize.A4, PageSize.LETTER, PageSize.A3]).default(PageSize.A4),
+          overlap: z.string().default("10mm").describe("What neighbouring sheets share, like 10mm, 1cm or 0.5in"),
+          landscape: z.boolean().default(false).describe("Turn every sheet sideways"),
+          out: arg.path().optional().describe("Output PDF or folder, next to the image by default"),
+        }),
+        positional: ["path"],
+        short: { across: "x", out: "o" },
+        yields: "file",
+        complete: complete_images,
+        run: async (context) => (await logic()).poster(context),
       }),
       define_command({
         id: "testimg",

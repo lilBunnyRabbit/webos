@@ -63,7 +63,7 @@ import type {
   WindowHandle,
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
-import type { Axis, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$lib/core/games";
+import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$lib/core/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
 import type { SourceImage } from "$lib/core/utils/image";
 import type { Rng } from "$lib/core/utils/random";
@@ -136,11 +136,13 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     "$lib/core/games",
     () => import("$lib/core/games"),
     [
+      "DailyRank",
       "Direction",
       "EMPTY_PLAYS",
       "PLAYS_PATH",
       "PlaysSchema",
       "Stopwatch",
+      "better_daily",
       "daily_seed",
       "format_time",
       "grid_key_move",
@@ -203,6 +205,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     ["assert_writable", "file_value", "is_file_value"],
   ],
   ["$lib/core/games/time", () => import("$lib/core/games/time"), ["daily_seed", "format_time", "parse_day"]],
+  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), ["DailyRank", "better_daily"]],
   ["$lib/core/games/direction", () => import("$lib/core/games/direction"), ["Direction", "key_direction", "swipe_direction"]],
   ["$lib/core/utils/date", () => import("$lib/core/utils/date"), ["day_key", "parse_time", "resolve_day"]],
   ["$lib/core/utils/detached-root.svelte", () => import("$lib/core/utils/detached-root.svelte"), ["detached_root"]],
@@ -258,6 +261,7 @@ const manifest_fields: Members<
   | "badge"
   | "category"
   | "component"
+  | "daily_rank"
   | "default_widget"
   | "defaults"
   | "description"
@@ -382,6 +386,7 @@ type StableTypes = [
   FieldVariants,
   IconComponent,
   Axis,
+  DailyResult,
   FormatTimeOptions,
   GameStats,
   ParsedDay,

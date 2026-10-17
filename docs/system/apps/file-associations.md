@@ -20,7 +20,8 @@ define_app({
 
 | Entry | Meaning | Example |
 |-------|---------|---------|
-| Starts with `.` | Extension, compared with `file_extension(name)` | `".md"` |
+| Starts with `.`, one dot | Extension, compared with `file_extension(name)` | `".md"` |
+| Starts with `.`, more dots | Compound extension, the end of the name (case-insensitive) | `".form.md"` |
 | Ends with `/*` | MIME wildcard, prefix match on `File.type` | `"text/*"` |
 | Anything else | Exact MIME | `"application/pdf"` |
 
@@ -36,12 +37,15 @@ Each app scores its best entry against the file:
 
 | Tier | Match |
 |------|-------|
+| 4 | Compound extension (`.form.md`) |
 | 3 | Exact extension |
 | 2 | Exact MIME |
 | 1 | MIME wildcard |
 | 0 | No match |
 
 Only the apps on the highest tier are candidates. One → launch it. Several → the Open-with dropdown. None → toast.
+
+A compound extension is how an app claims a kind of file inside a common type: Forms lists `.form.md`, so `survey.form.md` opens in Forms while every other `.md` stays with Text Editor, and Text Editor still shows under "Open with" for it.
 
 Listing an extension is how an app beats a broader type. A `.ts` file can get the MIME `video/mp2t` (MPEG transport stream), so Media Preview (`video/*`) scores 1 and Text Editor (`.ts`) scores 3: Text Editor opens it with no prompt.
 
@@ -54,6 +58,7 @@ Listing an extension is how an app beats a broader type. A `.ts` file can get th
 | `pdf-viewer` | `application/pdf`, `.pdf` |
 | `html-preview` | `text/html`, `.html`, `.htm` |
 | `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
+| `forms` | `.form.md`, `.answers` |
 | `settings` | `.webos-theme` (a theme file: opens Appearance with an import preview, [Settings](../system-apps.md#settings)) |
 
 HTML and CSV files used to open in Text Viewer (now Text Editor) through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Editor can't be picked for them from File Explorer. Its own Open… still accepts them.
@@ -78,14 +83,20 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `diff` | `text/*`, `.txt`, `.md`, … (`DIFF_ACCEPT`) |
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
+| `ask` | `text/*`, `.txt`, `.md`, `.json`, `.csv`, code and config files (`ASK_ACCEPT`) |
+| `link-preview` | `text/html`, `.html`, `.htm` (HTML Preview stays the default) |
+| `metadata` | `image/jpeg`, `image/png`, `image/webp`, `.jpg`, `.jpeg`, `.png`, `.webp`, `application/pdf`, `.pdf` |
+| `svg-workbench` | `.svg`, `image/svg+xml` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 | `hex-viewer` | `*` (every file) |
+| `text-editor` | `.http`, `.rest` (API Client's request files, which API Client opens by default), `.cook` (Recipe Box's Cooklang recipes, which Recipe Box opens by default) |
 
 ## Remembered defaults
 
 `settings.file_defaults: Record<string, AppId>`: extension (`".svg"`) → app id. Persisted in `/etc/settings.json` ([settings.md](../services/settings.md)); on load, entries whose key doesn't start with `.` or whose value isn't a string are dropped.
 
 - Checked before tiers. If the file has an extension and its default names a registered app, that app opens, even if it no longer lists the extension.
+- Skipped when an app claims the file by a compound extension (`has_compound_match`): a default for `.md` doesn't take `.form.md` files from Forms.
 - A default naming a missing app is ignored (and left in settings).
 - Written only by the dropdown's "Always use" checkbox.
 - Viewed and cleared in Settings → Default apps: one row per extension with its app (or "no longer installed"), Forget per entry, Forget all. Settings → About → Reset clears them too, along with theme and taskbar.

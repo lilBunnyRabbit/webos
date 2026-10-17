@@ -1,6 +1,6 @@
-import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import kernel, { TaskJobStatus, type AppsService, type FilesService } from "$lib/core/api";
 import { available_name } from "$lib/core/api/services/files/opfs";
-import { parent_path, resolve_path } from "$lib/core/api/services/files/path";
+import { base_name, parent_path, resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ArgKind } from "$lib/core/api/services/shell/arg";
 import { error_message, parse_bytes } from "$lib/core/utils";
@@ -10,6 +10,7 @@ import {
   type Completion,
   type ShellService,
   type ShellSession,
+  type Tagged,
 } from "$lib/core/api/services/shell/type";
 import {
   ImageFormat,
@@ -19,16 +20,20 @@ import {
   write_image,
   type SourceImage,
 } from "$lib/core/utils/image";
+import { compare_images } from "./compare";
 import { concat_images, type Align, type Direction } from "./join";
 import {
   is_image_name,
   joined_name,
   kept_format,
+  poster_name,
   split_folder_name,
   tile_name,
   transparent_name,
   trimmed_name,
 } from "./naming";
+import { MAX_SHEETS, parse_length, poster_layout, type PosterPaper } from "./poster";
+import { write_poster } from "./poster-pdf";
 import { remove_colours } from "./remove-background";
 import { Section } from "./sections";
 import { compute_layout, render_tiles, SplitDirection } from "./split";
@@ -46,8 +51,11 @@ import {
   type TestImageSpec,
 } from "./test-image";
 import { generate_test_image, pictures_folder } from "./test-image-job";
+import { images_in, squash_images, type SquashSource } from "./squash-job";
+import { SQUASH_FORMAT_NAMES, type SquashFormatName } from "./squash";
 
 const APP_ID = "image-tools";
+const POSTER_MARGIN = 10;
 
 const files = () => kernel.service<FilesService>("files");
 
@@ -98,14 +106,52 @@ async function write_beside(
   return written(target);
 }
 
+async function assert_image(path: string): Promise<void> {
+  const file = await files().get_file(path);
+  if (!file) throw new ShellError(`${path}: no such file`);
+  if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
+}
+
 export async function tools({ args, session }: CommandContext<{ section?: Section; path?: string }>): Promise<void> {
   const path = args.path === undefined ? undefined : resolve_path(session.cwd, args.path);
-  if (path !== undefined) {
-    const file = await files().get_file(path);
-    if (!file) throw new ShellError(`${path}: no such file`);
-    if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
-  }
+  if (path !== undefined) await assert_image(path);
   kernel.service<AppsService>("apps").launch(APP_ID, { section: args.section, path });
+}
+
+export function open_compare(before: string, after: string): void {
+  kernel.service<AppsService>("apps").launch(APP_ID, { section: Section.COMPARE, paths: [before, after] });
+}
+
+export async function imgdiff({
+  args,
+  session,
+}: CommandContext<{ before: string; after: string; tolerance: number; open: boolean }>): Promise<Tagged | void> {
+  const before = resolve_path(session.cwd, args.before);
+  const after = resolve_path(session.cwd, args.after);
+  if (args.open) {
+    await assert_image(before);
+    await assert_image(after);
+    return open_compare(before, after);
+  }
+  const images: SourceImage[] = [];
+  try {
+    images.push(await decode(before), await decode(after));
+    const stats = compare_images(read_pixels(images[0].bitmap), read_pixels(images[1].bitmap), args.tolerance);
+    const { scale, dx, dy } = stats.alignment;
+    return {
+      $type: "image-diff",
+      changed: stats.changed,
+      regions: stats.regions,
+      dx,
+      dy,
+      scale,
+      match: Math.round(stats.match * 100) / 100,
+      before,
+      after,
+    };
+  } finally {
+    for (const image of images) image.bitmap.close();
+  }
 }
 
 export async function trim(context: CommandContext<{ paths: string[]; alpha: number }>): Promise<FileValue[]> {
@@ -207,6 +253,65 @@ export async function unbg({
   }
 }
 
+export interface PosterArgs {
+  path: string;
+  across: number;
+  paper: PosterPaper;
+  overlap: string;
+  landscape: boolean;
+  out?: string;
+}
+
+async function poster_target(source: string, out: string | undefined, cwd: string, elevated: boolean): Promise<string> {
+  const name = poster_name(base_name(source));
+  let path: string;
+  if (out === undefined) path = child_path(parent_path(source), await available_name(await folder_at(parent_path(source)), name));
+  else {
+    const typed = resolve_path(cwd, out);
+    if (await files().get_directory(typed)) path = child_path(typed, await available_name(await folder_at(typed), name));
+    else {
+      await folder_at(parent_path(typed));
+      path = /\.pdf$/i.test(typed) ? typed : `${typed}.pdf`;
+    }
+  }
+  assert_writable(path, elevated);
+  return path;
+}
+
+export async function poster({ args, session, signal, elevated }: CommandContext<PosterArgs>): Promise<FileValue> {
+  const overlap = parse_length(args.overlap);
+  if (overlap === null) throw new ShellError(`${args.overlap}: give the overlap like 10mm, 1cm or 0.5in`);
+  const path = resolve_path(session.cwd, args.path);
+  const image = await decode(path);
+  try {
+    const layout = poster_layout(image.bitmap.width, image.bitmap.height, {
+      paper: args.paper,
+      landscape: args.landscape,
+      across: args.across,
+      overlap,
+      margin: POSTER_MARGIN,
+    });
+    if (layout.sheets.length > MAX_SHEETS)
+      throw new ShellError(`${layout.sheets.length} sheets is too many; use fewer across or bigger paper`);
+    const target = await poster_target(path, args.out, session.cwd, elevated);
+    const done = await write_poster({
+      app_id: APP_ID,
+      bitmap: image.bitmap,
+      name: image.name,
+      paper: args.paper,
+      layout,
+      marks: true,
+      map: true,
+      target,
+      signal,
+    });
+    if (!done) throw new ShellError(signal.aborted ? "stopped" : "couldn't write the poster");
+    return written(target);
+  } finally {
+    image.bitmap.close();
+  }
+}
+
 function format_from_name(path: string): TestFormat | null {
   const extension = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
   if (extension === "jpg") return "jpeg";
@@ -270,4 +375,47 @@ export async function complete_images(partial: string, context: { session: Shell
   const completer = kernel.service<ShellService>("shell").completer(ArgKind.PATH);
   if (!completer) return [];
   return (await completer(partial, context)).filter((item) => item.final === false || is_image_name(item.value));
+}
+
+export interface SquashArgs {
+  paths: string[];
+  format: SquashFormatName;
+  quality: number;
+  max?: number;
+  to?: string;
+}
+
+export async function squash(context: CommandContext<SquashArgs>): Promise<FileValue[]> {
+  const { args, session, signal, elevated } = context;
+  const typed = await input_paths(args.paths, context);
+  if (typed.length === 0) throw new ShellError("squash needs at least one image or folder");
+  const paths: string[] = [];
+  for (const path of typed.map((item) => resolve_path(session.cwd, item))) {
+    if (await files().get_directory(path)) paths.push(...(await images_in(path)));
+    else paths.push(path);
+  }
+  if (paths.length === 0) throw new ShellError("no images to squash");
+
+  const sources: SquashSource[] = [];
+  for (const path of paths) {
+    const file = await files().get_file(path);
+    if (!file) throw new ShellError(`${path}: no such file`);
+    if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
+    sources.push({ name: file.name, path, file });
+  }
+  const folder = args.to === undefined ? null : resolve_path(session.cwd, args.to);
+  if (folder !== null) await folder_at(folder);
+  for (const target of new Set(folder === null ? paths.map(parent_path) : [folder]))
+    assert_writable(child_path(target, "x"), elevated);
+
+  const outcome = await squash_images({
+    app_id: APP_ID,
+    sources,
+    options: { format: SQUASH_FORMAT_NAMES[args.format], quality: args.quality, max: args.max ?? null },
+    folder,
+    signal,
+  });
+  if (outcome.status !== TaskJobStatus.DONE)
+    throw new ShellError(outcome.status === TaskJobStatus.CANCELLED ? "stopped" : (outcome.error ?? "failed"));
+  return Promise.all(outcome.results.flatMap((result) => (result ? [written(result.path)] : [])));
 }

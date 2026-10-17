@@ -7,6 +7,12 @@
 > - There's no `record_daily`. `track_play(app_id, visible)` returns a `PlayTracker`; a solved daily calls `tracker.daily(day, ms)`, which keeps the best time. `use_plays()` gives Game Hub the whole `plays.json`. Daily games take a `daily` prop (`YYYY-MM-DD`) and seed from `daily_seed(day, app_id)` themselves; there's no `seed` prop.
 > - The ZIP code moved from Archive to `$lib/core/utils/zip` (read, write, extract and the progress-toast job), so File Explorer's Compress and Extract here no longer import a user app.
 
+> **Revision 2026-10-17: score dailies** (owner, [brainstorm](../brainstorm/2026-10-17_app-wave-7.md))
+> - A daily entry in `plays.json` is `{ ms, score? }`. `score` is optional, so files written before stay valid and the format stays version 1.
+> - A game's manifest declares how its daily ranks: `daily_rank: DailyRank.TIME` (the default, as before), `SCORE_ASC` (fewer is better, Crack the Code's guesses) or `SCORE_DESC`. Time breaks a tie. `DailyRank` and the comparison `better_daily` live in the kernel-free `$lib/core/games/daily`, so a manifest can import them without pulling the kit into boot.
+> - `tracker.daily(day, ms, score?)` keeps the better result by that rank, read from the app's manifest when it writes. Ranked by score, a scored result beats an unscored one.
+> - Game Hub shows the score next to the time (Today, the widget's tooltip, a `score` column on `games daily`).
+
 > **Revision 2026-10-15: `live_file` and `confirm_discard` in core** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))
 > - `live_file(path, initial, schema)` moves from Kanban to `$lib/core/contexts/app/live-file.svelte.ts`. Shell code reads and edits an app file through it: it takes the shared `json_file` cell, waits for `ready`, refuses an invalid file with a `ShellError`, and releases the cell after `LINGER_MS` so the save effect lands first. Calendar no longer imports Kanban; Time Since and Game Hub commands use it too.
 > - `confirm_discard(win, name)` in `$lib/core/contexts/app` is the one "Discard changes to …?" sheet document apps show before New or Open.
