@@ -89,8 +89,18 @@
   const animating = $derived(!blocked && (game.status === Status.FLYING || settling));
   const can_pause = $derived(game.status === Status.FLYING || game.status === Status.PAUSED);
   const over = $derived(game.status === Status.LANDED || game.status === Status.CRASHED);
-  const height = $derived(altitude(game));
-  const wind = $derived(wind_speed(game));
+  const format = (value: number) => (Math.abs(value) < 0.05 ? "0.0" : value.toFixed(1));
+  // Rounded and formatted, so a frame that doesn't change a readout doesn't touch the status bar.
+  const fuel = $derived(Math.round(game.ship.fuel));
+  const fuel_low = $derived(game.ship.fuel < 20);
+  const height = $derived(altitude(game).toFixed(0));
+  const vertical = $derived(format(game.ship.vy));
+  const horizontal = $derived(format(game.ship.vx));
+  const tilt = $derived(Math.round((game.ship.angle * 180) / Math.PI));
+  const wind = $derived.by(() => {
+    const speed = wind_speed(game);
+    return `${speed > 0 ? "→" : "←"} ${Math.abs(speed).toFixed(0)}`;
+  });
   const too_fast = $derived(game.ship.vy > SAFE.vy);
   const drifting = $derived(Math.abs(game.ship.vx) > SAFE.vx);
   const tilted = $derived(Math.abs(game.ship.angle) > SAFE.angle);
@@ -282,8 +292,6 @@
   function release(event: PointerEvent) {
     touches.delete(event.pointerId);
   }
-
-  const format = (value: number) => (Math.abs(value) < 0.05 ? "0.0" : value.toFixed(1));
 </script>
 
 <!-- On the window, so a key let go after focus left the board (title bar, another window) still lets go. -->
@@ -398,16 +406,16 @@
   <StatusBar>
     <span class="flex items-center gap-1.5">
       Fuel
-      <span class="h-1.5 w-12 overflow-hidden rounded-full bg-foreground/10" role="meter" aria-label="Fuel" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(game.ship.fuel)}>
-        <span class="block h-full rounded-full {game.ship.fuel < 20 ? 'bg-warning' : 'bg-primary'}" style:width="{game.ship.fuel}%"></span>
+      <span class="h-1.5 w-12 overflow-hidden rounded-full bg-foreground/10" role="meter" aria-label="Fuel" aria-valuemin={0} aria-valuemax={100} aria-valuenow={fuel}>
+        <span class="block h-full origin-left rounded-full {fuel_low ? 'bg-warning' : 'bg-primary'}" style:transform="scaleX({fuel / 100})"></span>
       </span>
-      <span class="w-8 tabular-nums">{env.infinite_fuel ? "∞" : `${Math.round(game.ship.fuel)}%`}</span>
+      <span class="w-8 tabular-nums">{env.infinite_fuel ? "∞" : `${fuel}%`}</span>
     </span>
-    <span class="tabular-nums">Alt {height.toFixed(0)}</span>
-    <span class="tabular-nums {too_fast ? 'text-warning' : ''}">V {format(game.ship.vy)}</span>
-    <span class="tabular-nums {drifting ? 'text-warning' : ''}">H {format(game.ship.vx)}</span>
-    <span class="tabular-nums {tilted ? 'text-warning' : ''}">Tilt {Math.round((game.ship.angle * 180) / Math.PI)}°</span>
-    {#if env.air && env.wind}<span class="tabular-nums">Wind {wind > 0 ? "→" : "←"} {Math.abs(wind).toFixed(0)}</span>{/if}
+    <span class="tabular-nums">Alt {height}</span>
+    <span class="tabular-nums {too_fast ? 'text-warning' : ''}">V {vertical}</span>
+    <span class="tabular-nums {drifting ? 'text-warning' : ''}">H {horizontal}</span>
+    <span class="tabular-nums {tilted ? 'text-warning' : ''}">Tilt {tilt}°</span>
+    {#if env.air && env.wind}<span class="tabular-nums">Wind {wind}</span>{/if}
     <span class="hidden tabular-nums @md:inline">Best {best}</span>
     <span class="hidden @2xl:inline">{game.design.help}</span>
   </StatusBar>
