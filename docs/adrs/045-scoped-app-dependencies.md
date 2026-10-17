@@ -24,3 +24,17 @@ Every package sits in the root `package.json`, so a dependency one app needs bec
 - Removing an app's folder removes its dependencies with it.
 - Tooling that assumes a hoisted `node_modules` (svelte-check, Vitest, Vite) has to work with the isolated layout; if it doesn't, fall back to the hoisted linker and record a revision note here.
 - The first scoped package is `svgo` in SVG Workbench, loaded from `svgo/browser` on demand.
+
+## Revision 2026-10-17: app-only packages moved
+
+The isolated linker works with svelte-check, Vitest (both projects) and Vite as is; no fallback was needed. Packages that only apps imported left the root `package.json`:
+
+| Package | Now declared by |
+|---------|-----------------|
+| `@codemirror/merge` | `user/diff` |
+| `pdf-lib`, `pdfjs-dist` | `user/pdf-tools` |
+| `marked` | `system/text-editor`, `user/markdown-pdf` |
+
+- Image Tools' Poster Print uses pdf-lib through PDF Tools' `pdf.ts` (`pdf_lib()` and re-exported types) instead of declaring it. A cross-app import resolves the package from the file that imports it, so another app's module carries its own packages.
+- Root keeps what core imports: `codemirror` and the other `@codemirror/*`, `@lezer/highlight`, `uqr`, `jsqr`, `uuid`, `zod`, `@lilbunnyrabbit/task-manager`. `@lilbunnyrabbit/utils` is imported nowhere; it stays until the owner decides.
+- Moving a package out of the root leaves its old link in `node_modules` on an incremental `bun install`, so a stray import still resolves locally. `rm -rf node_modules && bun install` shows the real layout; CI always installs fresh.

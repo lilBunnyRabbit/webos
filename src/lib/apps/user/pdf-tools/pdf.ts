@@ -1,4 +1,7 @@
 import type { PDFDocument, PDFPage } from "pdf-lib";
+
+// pdf-lib resolves only from this app (ADR-045); other apps take its types from here.
+export type { PDFDocument, PDFFont, PDFPage } from "pdf-lib";
 import { PageSize, image_page, stamp_geometry, text_origin, displayed_size, type Placement } from "./geometry";
 import { normalize_rotation, type PageItem } from "./pages";
 import type { Signature } from "./stroke";

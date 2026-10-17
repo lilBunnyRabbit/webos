@@ -1,6 +1,5 @@
-import type { PDFDocument, PDFFont, PDFPage } from "pdf-lib";
 import { run_job, type JobUnit } from "$lib/apps/user/pdf-tools/job";
-import { PdfWriter, pdf_lib } from "$lib/apps/user/pdf-tools/pdf";
+import { PdfWriter, pdf_lib, type PDFDocument, type PDFFont, type PDFPage } from "$lib/apps/user/pdf-tools/pdf";
 import { write_at } from "$lib/apps/user/pdf-tools/pdf-files";
 import kernel, { type AppsService } from "$lib/core/api";
 import type { AppId } from "$lib/core/api/services/apps/type";
