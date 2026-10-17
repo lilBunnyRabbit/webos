@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Button, Textarea, Toolbar } from "$lib/core/components/ui";
+  import { Button, Separator, Textarea, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes } from "$lib/core/utils";
   import type { Snippet } from "svelte";
+  import ArchiveHowHuffman from "./archive-how-huffman.svelte";
   import { lz77, lz77_segments, lz77_stats, source_range, type Lz77Match } from "./lz77";
   import { HOW_LIMIT, SAMPLE_TEXT } from "./views";
   import { deflate_raw } from "$lib/core/utils/zip/format";
@@ -61,7 +62,7 @@
         <h1 class="text-lg font-medium">How zip makes files smaller</h1>
         <p class="text-ui text-foreground/80">
           Zip's Deflate does two things. First <strong class="font-medium text-foreground">LZ77</strong> replaces text it has already seen with a short
-          back-reference: “go back 23, copy 9”. Then Huffman coding gives common symbols shorter codes. Below is the first half, run on your text.
+          back-reference: “go back 23, copy 9”. Then <strong class="font-medium text-foreground">Huffman</strong> coding gives common symbols shorter codes. Both run below on your text.
         </p>
       </div>
 
@@ -115,6 +116,10 @@
         A real encoder searches a 32 KB window and sometimes waits one character for a longer match, so the browser's Deflate may pick slightly different
         repeats. Short or random text barely shrinks: there's nothing to repeat, and the format has a few bytes of overhead.
       </p>
+
+      <Separator />
+
+      <ArchiveHowHuffman {tokens} bytes={bytes.length} />
     </div>
   </div>
 </div>
