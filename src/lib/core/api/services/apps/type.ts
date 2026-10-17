@@ -4,6 +4,7 @@ import type { IService } from "../../type";
 import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
+import type { DailyRank } from "$lib/core/games/daily";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -86,6 +87,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   restore?: boolean;
   /** Without a schema the app never receives props. */
   props?: ZodType<TProps>;
+  /**
+   * How Game Hub ranks the app's daily results (ADR-035): `time` (the default), or a score passed to
+   * `tracker.daily(day, ms, score)`, lower (`score-asc`) or higher (`score-desc`) first. Time breaks a tie.
+   */
+  daily_rank?: DailyRank;
   /** Commands, completers and value types that work with no window open (ADR-034). Service commands win an id clash. */
   shell?: ShellContribution;
   /**

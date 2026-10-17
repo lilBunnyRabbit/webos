@@ -37,12 +37,13 @@ export default define_app({
         open: (game) => void logic().then((m) => m.launch(String(game.id))),
       },
       "game-daily": {
-        columns: ["id", "name", "solved", "time"],
+        columns: ["id", "name", "solved", "time", "score"],
         text: (daily) =>
-          `${String(daily.name).padEnd(14)} ${daily.solved ? `solved in ${format_time(Number(daily.time))}` : "not solved"}`,
+          `${String(daily.name).padEnd(14)} ${daily.solved ? `solved in ${format_time(Number(daily.time))}${daily.score === null ? "" : `, score ${daily.score}`}` : "not solved"}`,
         cell: (daily, column) => {
           if (column === "solved") return daily.solved ? "yes" : "no";
           if (column === "time") return daily.time === null ? "" : format_time(Number(daily.time));
+          if (column === "score") return daily.score === null ? "" : String(daily.score);
           return String(daily[column]);
         },
         open: (daily) => void logic().then((m) => m.launch(String(daily.id), { daily: String(daily.day) })),

@@ -52,7 +52,7 @@
         <li>
           <button
             class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
-            title={solved ? `${game.name}: solved in ${format_time(solved.ms)}` : `${game.name}: today's puzzle`}
+            title={solved ? `${game.name}: solved in ${format_time(solved.ms)}${solved.score === undefined ? "" : `, score ${solved.score}`}` : `${game.name}: today's puzzle`}
             onclick={() => apps.launch(game.id, { daily: today.value })}
           >
             <span class={cn("relative grid size-9 place-items-center rounded-lg ring-1", solved ? "bg-success/12 ring-success/40" : "bg-background ring-foreground/10 shadow-raised")}>

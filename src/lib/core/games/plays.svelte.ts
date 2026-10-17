@@ -1,15 +1,17 @@
+import kernel, { type AppsService } from "$lib/core/api";
 import { json_file, type JsonFile } from "$lib/core/contexts/app/json-file.svelte";
 import { z } from "zod";
+import { better_daily, type DailyResult } from "./daily";
 
 export const PLAYS_PATH = "/var/lib/games/plays.json";
 
 const GameStatsSchema = z.object({ ms: z.number(), sessions: z.number(), last: z.string() });
-const DailySchema = z.object({ ms: z.number() });
+const DailySchema = z.object({ ms: z.number(), score: z.number().optional() });
 
 export const PlaysSchema = z.object({
   version: z.literal(1),
   games: z.record(z.string(), GameStatsSchema),
-  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id → best time. */
+  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id → best result, ranked by the manifest's `daily_rank`. */
   daily: z.record(z.string(), z.record(z.string(), DailySchema)),
 });
 export type Plays = z.infer<typeof PlaysSchema>;
@@ -28,8 +30,8 @@ export function use_plays(): Omit<JsonFile<Plays>, "release"> {
 }
 
 export interface PlayTracker {
-  /** Records a solved daily puzzle; keeps the best time. */
-  daily(day: string, ms: number): void;
+  /** Records a solved daily puzzle; keeps the better result by the manifest's `daily_rank`. */
+  daily(day: string, ms: number, score?: number): void;
 }
 
 /**
@@ -40,7 +42,7 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
   const plays = json_file(PLAYS_PATH, EMPTY_PLAYS, PlaysSchema);
   let pending_ms = $state(0);
   let pending_session = $state(false);
-  let pending_daily = $state<{ day: string; ms: number }[]>([]);
+  let pending_daily = $state<(DailyResult & { day: string })[]>([]);
   let since: number | null = null;
 
   const fold = () => {
@@ -71,9 +73,10 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
       sessions: stats.sessions,
       last: new Date().toISOString(),
     };
-    for (const { day, ms } of pending_daily) {
-      const best = data.daily[day]?.[app_id]?.ms;
-      data.daily[day] = { ...data.daily[day], [app_id]: { ms: best === undefined ? ms : Math.min(best, ms) } };
+    const rank = kernel.service<AppsService>("apps").get(app_id)?.daily_rank;
+    for (const { day, ...result } of pending_daily) {
+      const best = data.daily[day]?.[app_id];
+      data.daily[day] = { ...data.daily[day], [app_id]: best ? better_daily(best, result, rank) : result };
     }
     pending_ms = 0;
     pending_daily = [];
@@ -98,8 +101,8 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
   });
 
   return {
-    daily(day, ms) {
-      pending_daily = [...pending_daily, { day, ms }];
+    daily(day, ms, score) {
+      pending_daily = [...pending_daily, score === undefined ? { day, ms } : { day, ms, score }];
     },
   };
 }
