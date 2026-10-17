@@ -7,8 +7,8 @@ import { z } from "zod";
 const logic = () => import("./shell");
 
 export default define_app({
-  id: "wordhop",
-  name: "Wordhop",
+  id: "letterer",
+  name: "Letterer",
   icon: TextAaIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
@@ -44,7 +44,7 @@ export default define_app({
   shell: {
     commands: [
       define_command({
-        id: "wordhop daily",
+        id: "letterer daily",
         description: "Play the daily word: today, or a past day (YYYY-MM-DD, yesterday, -N)",
         args: z.object({ day: z.string().optional() }),
         positional: ["day"],
@@ -53,5 +53,5 @@ export default define_app({
     ],
   },
   highlights: () => import("./highlights"),
-  component: () => import("./wordhop.app.svelte"),
+  component: () => import("./letterer.app.svelte"),
 });

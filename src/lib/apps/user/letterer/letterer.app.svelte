@@ -38,8 +38,8 @@
     type Variant,
   } from "./game";
   import { display, key_of, LETTER_ROWS, NERDLE_ROWS } from "./tiles";
-  import WordhopBoard from "./wordhop-board.svelte";
-  import WordhopKeyboard from "./wordhop-keyboard.svelte";
+  import LettererBoard from "./letterer-board.svelte";
+  import LettererKeyboard from "./letterer-keyboard.svelte";
   import { LENGTHS, load_words, type Length, type Words } from "./words";
 
   const MODE_LABELS: Record<Mode, string> = {
@@ -156,7 +156,7 @@
 
   $effect(() => {
     const scoped = (id: string, keys: string, label: string, run: () => void) =>
-      shortcuts.register({ id: `wordhop.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
+      shortcuts.register({ id: `letterer.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
     const dispose = scoped("new", "f2", "New game", () => start_over());
     return () => dispose();
   });
@@ -262,7 +262,8 @@
   function on_keydown(event: KeyboardEvent) {
     if (event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
     const target = event.target as HTMLElement;
-    if (target.closest("input, select, textarea")) return;
+    // Segmented and Switch are radio and checkbox inputs: typing after a click on them still guesses.
+    if (target.closest("input:not([type=radio], [type=checkbox]), select, textarea")) return;
     const key = key_of(event, nerdle);
     if (!key) return;
     if (key === "enter" && target.closest("button")) return;
@@ -365,7 +366,7 @@
             style:--rows={visible_rows}
           >
             {#each game.boards as board, index (index)}
-              <WordhopBoard
+              <LettererBoard
                 rows={board.rows}
                 current={!finished && !board.solved ? typed : null}
                 {length}
@@ -387,7 +388,7 @@
       <p class="min-h-5 shrink-0 truncate text-center text-ui" aria-live="polite">{status}</p>
 
       <div class="relative flex w-full shrink-0 justify-center">
-        <WordhopKeyboard rows={nerdle ? NERDLE_ROWS : LETTER_ROWS} boards={keyboard_boards} disabled={!game || finished} onkey={press} />
+        <LettererKeyboard rows={nerdle ? NERDLE_ROWS : LETTER_ROWS} boards={keyboard_boards} disabled={!game || finished} onkey={press} />
         {#if overlay}
           <BoardOverlay class="rounded-lg" title={overlay.title} detail={overlay.detail}>
             <Button size="sm" variant="primary" onclick={() => start_over()}>{daily ? "Play a new game" : "Play again"}</Button>
