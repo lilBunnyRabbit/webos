@@ -9,6 +9,7 @@
     Eraser as EraserIcon,
     EyeSlash as EyeSlashIcon,
     FilmStrip as FilmStripIcon,
+    Printer as PrinterIcon,
     Rows as RowsIcon,
     SquareHalf as SquareHalfIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
@@ -34,6 +35,7 @@
     { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
     { value: Section.SQUASH, label: "Squash", icon: ArrowsInIcon },
     { value: Section.COMPARE, label: "Compare", icon: SquareHalfIcon },
+    { value: Section.POSTER, label: "Poster print", icon: PrinterIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
@@ -48,6 +50,7 @@
     [Section.REDACT]: () => import("./redact-section.svelte"),
     [Section.SQUASH]: () => import("./squash-section.svelte"),
     [Section.COMPARE]: () => import("./compare-section.svelte"),
+    [Section.POSTER]: () => import("./poster-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 

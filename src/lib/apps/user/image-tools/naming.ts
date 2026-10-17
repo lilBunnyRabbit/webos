@@ -43,3 +43,7 @@ export function kept_format(name: string, alpha: boolean): { format: ImageFormat
 export function is_image_name(name: string): boolean {
   return /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(name);
 }
+
+export function poster_name(name: string): string {
+  return `${file_stem(name)}-poster.pdf`;
+}

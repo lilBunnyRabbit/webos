@@ -10,6 +10,7 @@ export const Section = {
   REDACT: "redact",
   SQUASH: "squash",
   COMPARE: "compare",
+  POSTER: "poster",
   TEST_IMAGE: "test-image",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];

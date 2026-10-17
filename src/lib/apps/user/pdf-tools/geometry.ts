@@ -4,9 +4,11 @@ import { PageSize } from "./kinds";
 
 export { PageSize };
 
-const PAPER: Record<Exclude<PageSize, "image">, [number, number]> = {
+/** Short and long edge in points. */
+export const PAPER: Record<Exclude<PageSize, "image">, [number, number]> = {
   a4: [595.28, 841.89],
   letter: [612, 792],
+  a3: [841.89, 1190.55],
 };
 
 const PX_TO_PT = 72 / 96;

@@ -6,6 +6,7 @@ import {
   Eraser as EraserIcon,
   EyeSlash as EyeSlashIcon,
   FilmStrip as FilmStripIcon,
+  Printer as PrinterIcon,
   SquareHalf as SquareHalfIcon,
   Stack as StackIcon,
 } from "phosphor-svelte";
@@ -19,4 +20,5 @@ export default [
   { icon: EyeSlashIcon, title: "Redact", text: "Cover names and faces with a box, pixels or a heavy blur, and save a copy without metadata." },
   { icon: ArrowsInIcon, title: "Squash", text: "Save smaller WebP or JPEG copies of many images at once and see what each one saves." },
   { icon: SquareHalfIcon, title: "Compare", text: "Wipe or fade between two versions of a picture, or see exactly what changed." },
+  { icon: PrinterIcon, title: "Poster print", text: "Print one image across several sheets, with crop marks and a map for putting it together." },
 ] satisfies AppHighlight[];

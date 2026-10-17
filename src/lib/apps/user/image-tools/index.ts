@@ -5,6 +5,7 @@ import { define_command } from "$lib/core/api/services/shell/define";
 import type { ShellSession } from "$lib/core/api/services/shell/type";
 import { ImagesSquare as ImagesSquareIcon } from "phosphor-svelte";
 import { z } from "zod";
+import { PageSize } from "$lib/apps/user/pdf-tools/kinds";
 import { SECTION_IDS } from "./sections";
 
 const logic = () => import("./shell");
@@ -18,7 +19,7 @@ export default define_app({
   name: "Image Tools",
   icon: ImagesSquareIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, compare two versions, hide parts of an image, squash images smaller, and generate test images.",
+  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -54,6 +55,11 @@ export default define_app({
     "blur",
     "pixelate",
     "privacy",
+    "poster",
+    "print",
+    "tile print",
+    "rasterbate",
+    "large format",
     "test image",
     "test pattern",
     "placeholder",
@@ -185,6 +191,23 @@ export default define_app({
         yields: "image-diff",
         complete: complete_images,
         run: async (context) => (await logic()).imgdiff(context),
+      }),
+      define_command({
+        id: "poster",
+        description: "Print an image across several sheets as one PDF next to it, with crop marks and an assembly map",
+        args: z.object({
+          path: arg.path(),
+          across: z.number().int().min(1).max(20).default(3).describe("Sheets across; rows follow from the image"),
+          paper: z.enum([PageSize.A4, PageSize.LETTER, PageSize.A3]).default(PageSize.A4),
+          overlap: z.string().default("10mm").describe("What neighbouring sheets share, like 10mm, 1cm or 0.5in"),
+          landscape: z.boolean().default(false).describe("Turn every sheet sideways"),
+          out: arg.path().optional().describe("Output PDF or folder, next to the image by default"),
+        }),
+        positional: ["path"],
+        short: { across: "x", out: "o" },
+        yields: "file",
+        complete: complete_images,
+        run: async (context) => (await logic()).poster(context),
       }),
       define_command({
         id: "testimg",
