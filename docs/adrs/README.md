@@ -77,6 +77,7 @@ What are the implications of this decision?
 | [041](./041-getting-started.md) | Getting Started and Sample Files | 2026-10-16 | Implemented |
 | [042](./042-quick-launch.md) | Taskbar Quick Launch and Drag to Pin | 2026-10-16 | Implemented |
 | [043](./043-window-extraction.md) | Window Extraction | 2026-10-16 | Implemented |
+| [044](./044-folder-mounts-and-sources.md) | Folder Mounts and One Picker for Every Source | 2026-10-17 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
