@@ -99,7 +99,7 @@ export default define_app({
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
 - A manifest may take only types and functions from `$lib/core/api`. Manifests are evaluated while that barrel is still initializing (AppsService imports the glob), so a `const` from it is in the temporal dead zone. Import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`).
-- Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 180 KB gz (`bun run build && bun run budget`).
+- Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 185 KB gz (`bun run build && bun run budget`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
 - Apps use `@container` queries (`@sm:`, `@md:`) for responsiveness, never viewport breakpoints. That's what makes mobile free (ADR-016).
 
@@ -254,7 +254,7 @@ Ask before adding one. The bar: browser-native API first, then own package (`@li
 | `bun run build` | Production build (also writes `version.json`) |
 | `bun run test` | Vitest, both projects: `unit` (Node) and `browser` (Chromium through Playwright). First run needs `bunx playwright install chromium` |
 | `bun run test:unit` | Node project only. CI runs this before `build` |
-| `bun run budget` | After a build: entry chunk gz size against the 180 KB budget. CI runs it after `build` |
+| `bun run budget` | After a build: entry chunk gz size against the 185 KB budget. CI runs it after `build` |
 | `bun run og` | Renders `scripts/og/og.html` to `public/og.png` (the 1200×630 link preview card) through Playwright |
 
 Prettier: 120 cols, double quotes, semicolons, ES5 trailing commas. 
