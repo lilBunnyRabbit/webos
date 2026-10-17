@@ -135,7 +135,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["kanban"],
-        text: "Kanban can show a folder of markdown files as a board, moving a card rewrites its status.",
+        text: "Kanban can show a folder of markdown files as a board, where moving a card rewrites its status, from the board or the Terminal.",
       },
       {
         kind: NEW,
