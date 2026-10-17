@@ -1,6 +1,6 @@
 # ADR-045: Scoped App Dependencies
 **Date:** 2026-10-17
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 

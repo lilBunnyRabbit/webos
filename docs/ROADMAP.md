@@ -458,7 +458,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Performance targets: <100ms interaction, <3s initial load. Throttled cold first visit is ~3.2 s, ~0.8 s of it the Inter preload
 
 ### Scoped app dependencies
-- [ ] Scoped node modules for apps: an app can use an npm package without adding it to the core `package.json` (needs an ADR: where the manifest lives, how it's installed and bundled, how the boot budget stays clean)
+- [x] Scoped node modules for apps: an app declares its packages in its own `package.json`, Bun workspaces with the isolated linker keep them out of core and other apps ([ADR-045](adrs/045-scoped-app-dependencies.md))
 
 ### Code quality pass (2026-10-15, 0.37.0)
 - **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)
