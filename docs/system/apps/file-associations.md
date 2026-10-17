@@ -59,6 +59,7 @@ Listing an extension is how an app beats a broader type. A `.ts` file can get th
 | `html-preview` | `text/html`, `.html`, `.htm` |
 | `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
 | `forms` | `.form.md`, `.answers` |
+| `funky` | `.fdsl` |
 | `settings` | `.webos-theme` (a theme file: opens Appearance with an import preview, [Settings](../system-apps.md#settings)) |
 
 HTML and CSV files used to open in Text Viewer (now Text Editor) through `text/*`. Now the dedicated viewers win, and since "Open with" only appears when two or more apps qualify, Text Editor can't be picked for them from File Explorer. Its own Open… still accepts them.
@@ -87,9 +88,10 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `link-preview` | `text/html`, `.html`, `.htm` (HTML Preview stays the default) |
 | `metadata` | `image/jpeg`, `image/png`, `image/webp`, `.jpg`, `.jpeg`, `.png`, `.webp`, `application/pdf`, `.pdf` |
 | `svg-workbench` | `.svg`, `image/svg+xml` |
+| `funky` | `.xml` (imports a SimplePlanes craft save) |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 | `hex-viewer` | `*` (every file) |
-| `text-editor` | `.http`, `.rest` (API Client's request files, which API Client opens by default), `.cook` (Recipe Box's Cooklang recipes, which Recipe Box opens by default) |
+| `text-editor` | `.http`, `.rest` (API Client's request files, which API Client opens by default), `.cook` (Recipe Box's Cooklang recipes, which Recipe Box opens by default), `.fdsl` (Funky DSL's files) |
 
 ## Remembered defaults
 
