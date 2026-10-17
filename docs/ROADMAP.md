@@ -461,6 +461,9 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### Scoped app dependencies
 - [ ] Scoped node modules for apps: an app can use an npm package without adding it to the core `package.json` (needs an ADR: where the manifest lives, how it's installed and bundled, how the boot budget stays clean)
 
+### Custom app icons
+- [ ] A skill (or script) that generates a custom icon per app in the lilBunnyRabbit brand style instead of a stock Phosphor glyph (owner, 2026-10-17). Open questions: output format (Svelte SVG component like the logo, sized for 16–64 px and the mobile home grid), theme tokens or fixed brand colours, how it fits the manifest `icon` field and the boot budget (every manifest icon ships in the boot chunk: Crack the Code's Phosphor icon alone is ~0.7 KB gz), and whether Style Guide shows the set
+
 ### Code quality pass (2026-10-15, 0.37.0)
 - **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)
 - [x] Fork test: deleting `src/lib/apps/user` leaves check at 0 errors, a working build, passing tests and a booting desktop and mobile. Zip engine moved to `core/utils/zip`, default widgets come from the `default_widget` manifest flag, core tests use a test-only app
