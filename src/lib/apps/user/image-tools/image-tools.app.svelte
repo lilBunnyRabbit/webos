@@ -10,6 +10,7 @@
     EyeSlash as EyeSlashIcon,
     FilmStrip as FilmStripIcon,
     Rows as RowsIcon,
+    SquareHalf as SquareHalfIcon,
     SquareSplitHorizontal as SquareSplitHorizontalIcon,
   } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
@@ -32,6 +33,7 @@
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
     { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
     { value: Section.SQUASH, label: "Squash", icon: ArrowsInIcon },
+    { value: Section.COMPARE, label: "Compare", icon: SquareHalfIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
@@ -45,6 +47,7 @@
     [Section.PATCH]: () => import("./patch-section.svelte"),
     [Section.REDACT]: () => import("./redact-section.svelte"),
     [Section.SQUASH]: () => import("./squash-section.svelte"),
+    [Section.COMPARE]: () => import("./compare-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 
@@ -61,7 +64,7 @@
   const paths_for = (target: Section) => {
     if (launch.section !== target) return [];
     if (target === Section.JOIN || target === Section.SQUASH) return launch.paths;
-    return launch.paths.slice(0, target === Section.PATCH ? 2 : 1);
+    return launch.paths.slice(0, target === Section.PATCH || target === Section.COMPARE ? 2 : 1);
   };
 </script>
 

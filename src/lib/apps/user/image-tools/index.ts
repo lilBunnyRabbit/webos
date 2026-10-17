@@ -9,7 +9,7 @@ import { SECTION_IDS } from "./sections";
 
 const logic = () => import("./shell");
 
-const image_fields = new Set(["path", "paths"]);
+const image_fields = new Set(["path", "paths", "before", "after"]);
 const complete_images = (field: string, partial: string, context: { session: ShellSession }) =>
   image_fields.has(field) ? logic().then((m) => m.complete_images(partial, context)) : undefined;
 
@@ -18,7 +18,7 @@ export default define_app({
   name: "Image Tools",
   icon: ImagesSquareIcon,
   version: "1.0.0",
-  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, hide parts of an image, squash images smaller, and generate test images.",
+  description: "Remove a background, join, trim and split images, slice sprite sheets into frames, compare two versions, hide parts of an image, squash images smaller, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -64,6 +64,10 @@ export default define_app({
     "optimize",
     "webp",
     "batch",
+    "compare",
+    "difference",
+    "before after",
+    "onion skin",
   ],
   category: AppCategory.MEDIA,
   tools: ["image/*"],
@@ -74,6 +78,15 @@ export default define_app({
   }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   shell: {
+    values: {
+      "image-diff": {
+        columns: ["changed", "regions", "dx", "dy", "scale"],
+        cell: (stats, column) => (column === "changed" ? `${stats.changed}%` : String(stats[column] ?? "")),
+        text: (stats) =>
+          `${stats.changed}% changed, ${stats.regions} ${stats.regions === 1 ? "region" : "regions"}, offset ${stats.dx}, ${stats.dy}, scale ${stats.scale}`,
+        open: (stats) => void logic().then((m) => m.open_compare(String(stats.before), String(stats.after))),
+      },
+    },
     commands: [
       define_command({
         id: "image tools",
@@ -157,6 +170,21 @@ export default define_app({
         async *run(context) {
           yield* await (await logic()).squash(context);
         },
+      }),
+      define_command({
+        id: "imgdiff",
+        description: "Compare two images: how much changed, in how many regions, and the offset and scale between them",
+        args: z.object({
+          before: arg.path(),
+          after: arg.path(),
+          tolerance: z.number().min(1).max(60).default(12).describe("How different a pixel must be to count as changed, 1–60%"),
+          open: z.boolean().default(false).describe("Open both in Image Tools' Compare section instead"),
+        }),
+        positional: ["before", "after"],
+        short: { tolerance: "t" },
+        yields: "image-diff",
+        complete: complete_images,
+        run: async (context) => (await logic()).imgdiff(context),
       }),
       define_command({
         id: "testimg",

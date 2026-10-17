@@ -10,6 +10,7 @@ import {
   type Completion,
   type ShellService,
   type ShellSession,
+  type Tagged,
 } from "$lib/core/api/services/shell/type";
 import {
   ImageFormat,
@@ -19,6 +20,7 @@ import {
   write_image,
   type SourceImage,
 } from "$lib/core/utils/image";
+import { compare_images } from "./compare";
 import { concat_images, type Align, type Direction } from "./join";
 import {
   is_image_name,
@@ -100,14 +102,52 @@ async function write_beside(
   return written(target);
 }
 
+async function assert_image(path: string): Promise<void> {
+  const file = await files().get_file(path);
+  if (!file) throw new ShellError(`${path}: no such file`);
+  if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
+}
+
 export async function tools({ args, session }: CommandContext<{ section?: Section; path?: string }>): Promise<void> {
   const path = args.path === undefined ? undefined : resolve_path(session.cwd, args.path);
-  if (path !== undefined) {
-    const file = await files().get_file(path);
-    if (!file) throw new ShellError(`${path}: no such file`);
-    if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
-  }
+  if (path !== undefined) await assert_image(path);
   kernel.service<AppsService>("apps").launch(APP_ID, { section: args.section, path });
+}
+
+export function open_compare(before: string, after: string): void {
+  kernel.service<AppsService>("apps").launch(APP_ID, { section: Section.COMPARE, paths: [before, after] });
+}
+
+export async function imgdiff({
+  args,
+  session,
+}: CommandContext<{ before: string; after: string; tolerance: number; open: boolean }>): Promise<Tagged | void> {
+  const before = resolve_path(session.cwd, args.before);
+  const after = resolve_path(session.cwd, args.after);
+  if (args.open) {
+    await assert_image(before);
+    await assert_image(after);
+    return open_compare(before, after);
+  }
+  const images: SourceImage[] = [];
+  try {
+    images.push(await decode(before), await decode(after));
+    const stats = compare_images(read_pixels(images[0].bitmap), read_pixels(images[1].bitmap), args.tolerance);
+    const { scale, dx, dy } = stats.alignment;
+    return {
+      $type: "image-diff",
+      changed: stats.changed,
+      regions: stats.regions,
+      dx,
+      dy,
+      scale,
+      match: Math.round(stats.match * 100) / 100,
+      before,
+      after,
+    };
+  } finally {
+    for (const image of images) image.bitmap.close();
+  }
 }
 
 export async function trim(context: CommandContext<{ paths: string[]; alpha: number }>): Promise<FileValue[]> {

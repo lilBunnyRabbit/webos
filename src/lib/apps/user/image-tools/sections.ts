@@ -9,6 +9,7 @@ export const Section = {
   PATCH: "patch",
   REDACT: "redact",
   SQUASH: "squash",
+  COMPARE: "compare",
   TEST_IMAGE: "test-image",
 } as const;
 export type Section = (typeof Section)[keyof typeof Section];
