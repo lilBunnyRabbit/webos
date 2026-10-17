@@ -379,7 +379,7 @@
           onkeydown={on_keydown}
           onscroll={on_scroll} {@attach fine_wheel}>
           <div class="sticky top-0 w-max min-w-full overflow-hidden" style:height="{viewport_height}px">
-            <div class="flex items-center gap-4 border-b border-foreground/8 bg-background-light px-3 text-foreground/65" style:height="{ROW}px">
+            <div class="flex items-center gap-4 border-b border-foreground/8 bg-background-light px-3 whitespace-nowrap text-foreground/65 *:shrink-0" style:height="{ROW}px">
               <span style:width="{digits}ch">Offset</span>
               <span>
                 {#each COLUMNS as column (column)}<span class={cn("inline-block w-[2.5ch] text-center", column === 8 && "ml-[1ch]")}>{hex_byte(column)}</span>{/each}
@@ -398,7 +398,7 @@
                 {#each rows as row (row)}
                   {@const start = row * BYTES_PER_ROW}
                   {@const count = Math.min(BYTES_PER_ROW, size - start)}
-                  <div class={cn("flex items-center gap-4 px-3", Math.floor(cursor / BYTES_PER_ROW) === row && "bg-foreground/6")} style:height="{ROW}px">
+                  <div class={cn("flex items-center gap-4 px-3 whitespace-nowrap *:shrink-0", Math.floor(cursor / BYTES_PER_ROW) === row && "bg-foreground/6")} style:height="{ROW}px">
                     <span class="text-foreground/65 tabular-nums" style:width="{digits}ch">{format_offset(start, digits)}</span>
                     <span>
                       {#each COLUMNS.slice(0, count) as column (column)}

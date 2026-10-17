@@ -68,10 +68,10 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
 | `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
 | `app.word-search.{stats,daily,game,difficulty}` | `user/word-search` | Stats; daily puzzle; game in progress; last difficulty |
-| `app.wordle.{stats,variant,game,daily}` | `user/wordle` | Stats per mode and length; last mode, length, boards and hard mode; game in progress; daily word |
+| `app.wordhop.{stats,variant,game,daily}` | `user/wordhop` | Stats per mode and length; last mode, length, boards and hard mode; game in progress; daily word |
 | `app.work-hours.last_target` | `user/work-hours` | Last monthly target, offered as the default |
 
-Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Image Tools Sprites, RNG Tools section, the puzzle games' size, difficulty and saved game, Wordle's mode and saved game, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
+Keys read through `storage.persisted()` share one live value across every window of the app. Keys read once with `get` and written with `set` (Dev Tools, Unit Converter, Image Tools Sprites, RNG Tools section, the puzzle games' size, difficulty and saved game, Wordhop's mode and saved game, Maze prefs, Minesweeper and Snake picks) seed a new window from the last one but don't sync open windows. Per-window state (`storage.window()`) is saved with the session, not here.
 
 ## App storage handle
 

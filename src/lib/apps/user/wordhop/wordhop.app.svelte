@@ -38,19 +38,19 @@
     type Variant,
   } from "./game";
   import { display, key_of, LETTER_ROWS, NERDLE_ROWS } from "./tiles";
-  import WordleBoard from "./wordle-board.svelte";
-  import WordleKeyboard from "./wordle-keyboard.svelte";
+  import WordhopBoard from "./wordhop-board.svelte";
+  import WordhopKeyboard from "./wordhop-keyboard.svelte";
   import { LENGTHS, load_words, type Length, type Words } from "./words";
 
   const MODE_LABELS: Record<Mode, string> = {
     classic: "Classic",
     multi: "Multi",
     survival: "Survival",
-    absurdle: "Absurdle",
-    nerdle: "Nerdle",
+    absurdle: "Dodge",
+    nerdle: "Math",
   };
   const MODE_OPTIONS = MODES.map((value) => ({ value, label: MODE_LABELS[value] }));
-  const BOARD_LABELS: Record<BoardCount, string> = { 2: "Dordle", 4: "Quordle", 8: "Octordle" };
+  const BOARD_LABELS: Record<BoardCount, string> = { 2: "2 boards", 4: "4 boards", 8: "8 boards" };
   const BOARD_OPTIONS = BOARD_COUNTS.map((value) => ({ value: String(value), label: BOARD_LABELS[value] }));
   const LENGTH_OPTIONS = LENGTHS.map((value) => ({ value: String(value), label: String(value) }));
   const RULES: Record<Mode, string> = {
@@ -106,7 +106,7 @@
   const title = $derived.by(() => {
     if (daily) return `Daily · ${daily}`;
     if (variant.mode === Mode.MULTI) return `${BOARD_LABELS[variant.boards]} · ${variant.length} letters`;
-    if (nerdle) return "Nerdle";
+    if (nerdle) return "Math";
     return `${MODE_LABELS[variant.mode]} · ${variant.length} letters`;
   });
 
@@ -156,7 +156,7 @@
 
   $effect(() => {
     const scoped = (id: string, keys: string, label: string, run: () => void) =>
-      shortcuts.register({ id: `wordle.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
+      shortcuts.register({ id: `wordhop.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
     const dispose = scoped("new", "f2", "New game", () => start_over());
     return () => dispose();
   });
@@ -365,7 +365,7 @@
             style:--rows={visible_rows}
           >
             {#each game.boards as board, index (index)}
-              <WordleBoard
+              <WordhopBoard
                 rows={board.rows}
                 current={!finished && !board.solved ? typed : null}
                 {length}
@@ -387,7 +387,7 @@
       <p class="min-h-5 shrink-0 truncate text-center text-ui" aria-live="polite">{status}</p>
 
       <div class="relative flex w-full shrink-0 justify-center">
-        <WordleKeyboard rows={nerdle ? NERDLE_ROWS : LETTER_ROWS} boards={keyboard_boards} disabled={!game || finished} onkey={press} />
+        <WordhopKeyboard rows={nerdle ? NERDLE_ROWS : LETTER_ROWS} boards={keyboard_boards} disabled={!game || finished} onkey={press} />
         {#if overlay}
           <BoardOverlay class="rounded-lg" title={overlay.title} detail={overlay.detail}>
             <Button size="sm" variant="primary" onclick={() => start_over()}>{daily ? "Play a new game" : "Play again"}</Button>

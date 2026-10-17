@@ -5,16 +5,16 @@ export default [
   {
     icon: TextAaIcon,
     title: "Five, six or seven letters",
-    text: "Classic Wordle at three lengths, with hard mode and a daily word.",
+    text: "The classic word guess at three lengths, with hard mode and a daily word.",
   },
   {
     icon: SquaresFourIcon,
     title: "More boards",
-    text: "Dordle, Quordle and Octordle: every guess goes on every board.",
+    text: "Two, four or eight boards: every guess goes on every board.",
   },
   {
     icon: CalculatorIcon,
     title: "Twists",
-    text: "Nerdle's equations, Absurdle's dodging word and Survival's run of words.",
+    text: "Math equations, a Dodge word that changes to escape you, and Survival's run of words.",
   },
 ] satisfies AppHighlight[];

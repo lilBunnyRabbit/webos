@@ -7,13 +7,14 @@ import { z } from "zod";
 const logic = () => import("./shell");
 
 export default define_app({
-  id: "wordle",
-  name: "Wordle",
+  id: "wordhop",
+  name: "Wordhop",
   icon: TextAaIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Guess the hidden word in six tries, or take on Quordle, Absurdle, Nerdle and Survival.",
+  description: "Guess the hidden word in six tries, on up to eight boards at once, against a word that dodges you, with equations or in a survival run.",
   keywords: [
+    "wordle",
     "word",
     "words",
     "guess",
@@ -43,7 +44,7 @@ export default define_app({
   shell: {
     commands: [
       define_command({
-        id: "wordle daily",
+        id: "wordhop daily",
         description: "Play the daily word: today, or a past day (YYYY-MM-DD, yesterday, -N)",
         args: z.object({ day: z.string().optional() }),
         positional: ["day"],
@@ -52,5 +53,5 @@ export default define_app({
     ],
   },
   highlights: () => import("./highlights"),
-  component: () => import("./wordle.app.svelte"),
+  component: () => import("./wordhop.app.svelte"),
 });

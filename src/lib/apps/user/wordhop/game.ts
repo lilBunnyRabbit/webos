@@ -172,7 +172,7 @@ export function replay(variant: Variant, seed: number, guesses: readonly string[
 export const DAILY_VARIANT: Omit<Variant, "hard"> = { mode: Mode.CLASSIC, length: 5, boards: 4 };
 
 export function daily_seed_of(day: string): number {
-  return daily_seed(day, "wordle");
+  return daily_seed(day, "wordhop");
 }
 
 export function variant_key(variant: Variant): string {

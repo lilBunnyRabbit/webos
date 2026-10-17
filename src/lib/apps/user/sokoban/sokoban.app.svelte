@@ -288,7 +288,7 @@
               class={cn(
                 "grid place-items-center",
                 tile === Tile.WALL && "rounded-[12%] bg-foreground/22",
-                tile === Tile.FLOOR && "bg-background-light"
+                tile === Tile.FLOOR && "bg-foreground/7"
               )}
             >
               {#if goal_set.has(index)}
