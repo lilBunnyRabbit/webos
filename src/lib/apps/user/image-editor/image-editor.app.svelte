@@ -3,7 +3,6 @@
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     FORMAT_OPTIONS,
     ImageFormat,
@@ -25,7 +24,6 @@
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     Check as CheckIcon,
     CornersOut as CornersOutIcon,
-    Devices as DevicesIcon,
     FlipHorizontal as FlipHorizontalIcon,
     FlipVertical as FlipVerticalIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -308,12 +306,6 @@
     if (chosen) await open_image(() => load_image_at(chosen));
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: ["image/*"] });
-    if (file) await open_image(() => load_image(file));
-  }
-
   async function take(files: File[]) {
     const [file] = files;
     if (file && (await discard_ok())) await open_image(() => load_image(file));
@@ -491,7 +483,6 @@
 
 {#snippet open_actions(primary: boolean)}
   <Button variant={primary ? "primary" : "secondary"} onclick={open}><FolderOpenIcon weight="bold" /> Open an image…</Button>
-  <Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>
 {/snippet}
 
 {#snippet value_label(text: string)}
@@ -524,7 +515,6 @@
     <div class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-        <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
         <IconButton label="Save" size="sm" onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
         <IconButton label="Save as…" size="sm" onclick={show_save_sheet} style="anchor-name: --image-editor-save-{window_id}">
           <FloppyDiskBackIcon weight="bold" />

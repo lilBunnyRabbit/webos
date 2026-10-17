@@ -2,15 +2,14 @@
   import kernel, { type AppsService } from "$lib/core/api";
   import { Button, IconButton, Input, Section as Group, Segmented, SettingRow, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
-  import { ArrowsSplit as ArrowsSplitIcon, Devices as DevicesIcon, FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
+  import { ArrowsSplit as ArrowsSplitIcon, FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
   import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
   import { part_name } from "./naming";
   import { PdfSplitter } from "./pdf";
-  import { PDF_ACCEPT, device_source, write_into } from "./pdf-files";
+  import { PDF_ACCEPT, write_into } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import { chunks, default_ranges, every_page, flatten_groups, parse_ranges } from "./ranges";
@@ -65,11 +64,6 @@
     if (path) await slot.open(path);
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: PDF_ACCEPT });
-    if (file) await slot.open(device_source(file));
-  }
-
   async function split() {
     if (!loaded || !plan.groups.length || busy) return;
     const folder = await win.pick_directory({ title: "Save the parts into", start_path: loaded.source.path ? parent_path(loaded.source.path) : "/home" });
@@ -100,7 +94,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{loaded?.source.name ?? ""}</span>
     {#if loaded}
       <Button variant="primary" size="sm" onclick={split} disabled={busy || !!plan.error || !plan.groups.length}><ArrowsSplitIcon weight="bold" /> Split…</Button>
@@ -109,7 +102,7 @@
 
   <div class="min-h-0 overflow-auto">
     {#if !loaded}
-      <PdfPlaceholder {slot} icon={ArrowsSplitIcon} title="No PDF open" description="Split a PDF by page ranges, extract pages, or give every page its own file." onopen={pick} ondevice={pick_device} />
+      <PdfPlaceholder {slot} icon={ArrowsSplitIcon} title="No PDF open" description="Split a PDF by page ranges, extract pages, or give every page its own file." onopen={pick} />
     {:else}
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-5 @md:px-6">
         <Group title="How to split" description={DESCRIPTIONS[mode.value]}>

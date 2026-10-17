@@ -3,11 +3,9 @@
   import { Button, IconButton, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
-    Devices as DevicesIcon,
     DotsSixVertical as DotsSixVerticalIcon,
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -18,7 +16,7 @@
   import { untrack, type Snippet } from "svelte";
   import { initial_pages, insert_blank, is_unchanged, move_page, move_to_slot, remove_page, rotate_page, type PageItem } from "./pages";
   import { organize_pdf } from "./pdf";
-  import { PDF_ACCEPT, device_source, write_at, type SourceFile } from "./pdf-files";
+  import { PDF_ACCEPT, write_at, type SourceFile } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import PdfThumb from "./pdf-thumb.svelte";
@@ -89,11 +87,6 @@
   async function pick() {
     const path = await win.pick_file({ accept: PDF_ACCEPT, title: "Organize a PDF", start_path: loaded?.source.path ? parent_path(loaded.source.path) : undefined });
     if (path) await open(path);
-  }
-
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: PDF_ACCEPT });
-    if (file) await open(device_source(file));
   }
 
   async function write(path: string): Promise<boolean> {
@@ -217,7 +210,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     {#if loaded}
       <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @lg:block" title={loaded.source.path ?? loaded.source.name}>{loaded.source.name}</span>
       <span class="flex-1 @lg:hidden"></span>
@@ -241,7 +233,6 @@
         title="No PDF open"
         description="Reorder, rotate and delete pages, or add blank ones. Drag pages to move them."
         onopen={pick}
-        ondevice={pick_device}
       />
     {:else}
       <div

@@ -3,9 +3,8 @@
   import { Badge, Button, CopyButton, IconButton, Section, Spinner, Textarea } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_datetime } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { Devices as DevicesIcon, FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
+  import { FolderOpen as FolderOpenIcon, X as XIcon } from "phosphor-svelte";
   import { CertState, cert_state, read_certificates, type CertParse, type Certificate } from "../cert";
   import type { DevToolsState } from "../tools";
 
@@ -15,7 +14,6 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const clock = new Ticker(() => win.is_visible, 60_000);
 
-  const CERT_FILES = [".pem", ".crt", ".cer", ".der"];
   const STATE_TONES = { [CertState.VALID]: "success", [CertState.EXPIRED]: "error", [CertState.NOT_YET]: "warning" } as const;
 
   interface PickedFile {
@@ -47,11 +45,6 @@
     }
   }
 
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: CERT_FILES });
-    if (file) read(file, file.name);
-  }
-
   function rows(cert: Certificate): { label: string; value: string; copy?: boolean }[] {
     return [
       { label: "Subject", value: cert.subject, copy: true },
@@ -72,7 +65,6 @@
 <Section title="Certificate" flush>
   {#snippet actions()}
     <Button size="sm" onclick={pick}><FolderOpenIcon weight="bold" />Choose file</Button>
-    <Button size="sm" onclick={pick_device}><DevicesIcon weight="bold" />From device</Button>
   {/snippet}
   {#if picked}
     <div class="flex min-w-0 items-center gap-2 text-ui">

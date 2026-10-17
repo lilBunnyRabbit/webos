@@ -1,10 +1,9 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Section, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Devices as DevicesIcon, FolderOpen as FolderOpenIcon, TextAa as TextAaIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, FolderOpen as FolderOpenIcon, TextAa as TextAaIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { CHARACTER_GROUPS, FONT_ACCEPT, detect_format, empty_info, WATERFALL_SIZES, code_label, read_font, variation_settings, type FontInfo } from "./font";
 
@@ -89,11 +88,6 @@
     if (chosen) await open_path(chosen);
   }
 
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: FONT_ACCEPT });
-    if (picked) void load(picked);
-  }
-
   const initial_path = untrack(() => path);
   if (initial_path) void open_path(initial_path);
 
@@ -145,19 +139,18 @@
 >
   {#if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the font" description={error}>
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a font…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a font…</Button>{/snippet}
     </EmptyState>
   {:else if !font}
     {#if !loading}
       <EmptyState icon={TextAaIcon} title="No font open" description="Open a TTF, OTF, WOFF or WOFF2 font to preview it. You can also drop one here.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a font…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a font…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}
     <div class="grid h-full grid-rows-[auto_1fr_auto]">
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-        <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
         <Input size="sm" class="min-w-0 flex-1" placeholder={DEFAULT_SAMPLE} aria-label="Sample text" bind:value={sample} />
         <div class="flex items-center gap-2">
           <Slider size="sm" class="w-24 @md:w-36" aria-label="Size" min={8} max={160} step={1} bind:value={size} />

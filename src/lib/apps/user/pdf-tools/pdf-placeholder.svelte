@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, EmptyState, Spinner, type IconComponent } from "$lib/core/components/ui";
-  import { Devices as DevicesIcon, FolderOpen as FolderOpenIcon, LockKey as LockKeyIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { FolderOpen as FolderOpenIcon, LockKey as LockKeyIcon, Warning as WarningIcon } from "phosphor-svelte";
   import type { PdfSlot } from "./pdf-slot.svelte";
 
   const {
@@ -9,13 +9,11 @@
     title,
     description,
     onopen,
-    ondevice,
-  }: { slot: PdfSlot; icon: IconComponent; title: string; description: string; onopen: () => void; ondevice: () => void } = $props();
+  }: { slot: PdfSlot; icon: IconComponent; title: string; description: string; onopen: () => void } = $props();
 </script>
 
 {#snippet actions()}
   <Button variant="primary" onclick={onopen}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>
-  <Button onclick={ondevice}><DevicesIcon weight="bold" /> From device…</Button>
 {/snippet}
 
 {#if slot.loading}

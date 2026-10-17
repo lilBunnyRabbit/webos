@@ -20,13 +20,11 @@
   } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files } from "$lib/core/utils/image";
   import {
     ArrowsClockwise as ArrowsClockwiseIcon,
     ArrowsOut as ArrowsOutIcon,
     BezierCurve as BezierCurveIcon,
-    Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
@@ -153,11 +151,6 @@
     const start_path = source?.path ? parent_path(source.path) : undefined;
     const chosen = await win.pick_file({ accept: ACCEPT, start_path, title: "Open an SVG" });
     if (chosen) load(() => read_at(chosen));
-  }
-
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: ACCEPT });
-    if (file) load(async () => ({ name: file.name, path: null, text: await file.text() }));
   }
 
   let optimize_run = 0;
@@ -425,7 +418,6 @@
 >
   <Toolbar>
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium" title={source?.path ?? undefined}>{source?.name ?? ""}</span>
     {#if source}
       <Select size="sm" aria-label="View" class="w-auto @2xl:hidden" options={VIEWS} bind:value={view.value} />
@@ -440,11 +432,11 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading the SVG" /></div>
   {:else if load_error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the SVG" description={load_error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source}
     <EmptyState icon={BezierCurveIcon} title="No SVG open" description="Optimises an SVG with SVGO, exports PNGs and makes Svelte components. Open one, drop it here or paste its markup.">
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an SVG…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an SVG…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid min-h-0 grid-cols-[minmax(0,1fr)] @2xl:grid-cols-[15rem_minmax(0,1fr)]">

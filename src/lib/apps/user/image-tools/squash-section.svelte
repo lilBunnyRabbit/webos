@@ -4,11 +4,9 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { encode_image, has_files, image_files, load_image } from "$lib/core/utils/image";
   import {
     ArrowsIn as ArrowsInIcon,
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     FolderPlus as FolderPlusIcon,
     Plus as PlusIcon,
@@ -170,8 +168,6 @@
     }
   }
 
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"], multiple: true }));
-
   function take(files: File[]) {
     add(files.map((file) => () => entry_from(file, null)));
   }
@@ -248,7 +244,6 @@
     {@render picker()}
     <IconButton label="Add image…" size="sm" onclick={pick}><PlusIcon weight="bold" /></IconButton>
     <IconButton label="Add folder…" size="sm" onclick={pick_folder}><FolderPlusIcon weight="bold" /></IconButton>
-    <IconButton label="Add from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{entries.length ? `${entries.length} ${entries.length === 1 ? "image" : "images"}` : ""}</span>
     {#if loading}<Spinner label="Loading images" />{/if}
     {#if entries.length}
@@ -261,7 +256,7 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
       <EmptyState icon={ArrowsInIcon} title="No images yet" description="Saves smaller WebP or JPEG copies of many images at once. Add images or a folder, drop them here or paste them.">
-        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button><Button onclick={pick_folder}><FolderPlusIcon weight="bold" /> Add a folder…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add an image…</Button><Button onclick={pick_folder}><FolderPlusIcon weight="bold" /> Add a folder…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}

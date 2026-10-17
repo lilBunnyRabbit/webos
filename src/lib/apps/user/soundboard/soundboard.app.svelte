@@ -3,14 +3,12 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files } from "$lib/core/utils/image";
   import type { Position } from "$lib/core/utils/type";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowLeft as ArrowLeftIcon,
     ArrowRight as ArrowRightIcon,
-    Devices as DevicesIcon,
     DotsThree as DotsThreeIcon,
     FolderOpen as FolderOpenIcon,
     PencilSimple as PencilIcon,
@@ -135,10 +133,6 @@
   async function add_from_files() {
     const chosen = await win.pick_file({ accept: ACCEPT, title: "Add a sound" });
     if (chosen) await add_paths([chosen]);
-  }
-
-  async function add_from_device() {
-    await add_files(await pick_device_files({ accept: ACCEPT, multiple: true }));
   }
 
   // "Open with Soundboard" adds the file once; a restored window keeps the flag and doesn't add it again.
@@ -354,7 +348,6 @@
     <IconButton label="Board options" size="sm" onclick={board_menu}><DotsThreeIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     <Button size="sm" variant="primary" aria-label="Add sound…" title="Add sound…" onclick={add_from_files}><PlusIcon weight="bold" /><span class="hidden @md:inline">Add sound…</span></Button>
-    <IconButton label="Add from device…" size="sm" onclick={add_from_device}><DevicesIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @md:block" />
     <IconButton label="Stop all (Esc)" size="sm" disabled={playing_count === 0} onclick={() => player.stop_all()}><StopIcon weight="fill" /></IconButton>
     <Segmented size="sm" label="Pressing a playing pad again" options={MODE_OPTIONS} bind:value={mode.value} />
@@ -378,7 +371,6 @@
       >
         {#snippet actions()}
           <Button variant="primary" onclick={add_from_files}><FolderOpenIcon weight="bold" /> Add sound…</Button>
-          <Button onclick={add_from_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {:else}

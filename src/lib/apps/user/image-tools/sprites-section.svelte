@@ -1,7 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     Button,
     Checkbox,
@@ -35,7 +34,6 @@
     Tag as TagIcon,
     Trash as TrashIcon,
     WarningCircle as WarningCircleIcon,
-    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { has_files, image_files, load_image } from "$lib/core/utils/image";
@@ -151,11 +149,6 @@
   async function pick() {
     const chosen = await win.pick_file({ accept: ["image/*"], title: "Open a sprite sheet", start_path });
     if (chosen) open_path(chosen);
-  }
-
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: ["image/*"] });
-    if (file) await open_file(file, null);
   }
 
   const initial = untrack(() => initial_paths[0]);
@@ -350,7 +343,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     {#if source}
       <span class="hidden min-w-0 flex-1 truncate px-1 text-ui font-medium @md:block" title={source.path ?? source.name}>{source.name}</span>
       <span class="flex-1 @md:hidden"></span>
@@ -375,7 +367,7 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
     {:else if load_error}
       <EmptyState icon={WarningCircleIcon} tone="error" title={load_error.title} description={load_error.description}>
-        {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+        {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
       </EmptyState>
     {:else}
       <EmptyState
@@ -383,7 +375,7 @@
         title="No sprite sheet open"
         description="Slice a sheet into frames, fix what doesn't line up, preview the animation and export. Open one, or drop or paste it here."
       >
-        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a sheet…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+        {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a sheet…</Button>{/snippet}
       </EmptyState>
     {/if}
   {:else}

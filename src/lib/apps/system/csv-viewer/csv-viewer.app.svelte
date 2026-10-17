@@ -1,10 +1,9 @@
 <script lang="ts">
   import kernel, { file_extension, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { format_bytes, error_message } from "$lib/core/utils";
-  import { Devices as DevicesIcon, FileCsv as FileCsvIcon, FolderOpen as FolderOpenIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
+  import { FileCsv as FileCsvIcon, FolderOpen as FolderOpenIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { column_label, delimiter_for, parse_csv } from "./csv";
   import manifest from "./index";
@@ -12,7 +11,7 @@
 
   const { path: initial_path }: { path?: string } = $props();
 
-  // Starts at the launched file; "Open…" swaps it in place. A file from the device has no path.
+  // Starts at the launched file; "Open…" swaps it in place.
   let source = $state.raw<string | File | undefined>(untrack(() => initial_path));
   const path = $derived(typeof source === "string" ? source : undefined);
   let has_header = $state(true);
@@ -32,11 +31,6 @@
   async function pick() {
     const chosen = await win.pick_file({ accept: manifest.associations, title: "Open in CSV Viewer" });
     if (chosen) show(chosen);
-  }
-
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: manifest.associations });
-    if (picked) show(picked);
   }
 
   const files = $derived(kernel.service<FilesService>("files"));
@@ -69,7 +63,7 @@
 
 {#if !loading}
   <EmptyState icon={FileCsvIcon} title="No file open" description="Pick a CSV or TSV file, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
   </EmptyState>
 {:else}
   {#await loading}
@@ -86,7 +80,6 @@
       <div class="grid h-full grid-rows-[auto_1fr_auto_auto]">
         <Toolbar>
           <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-          <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
           <span class="min-w-24 flex-1 truncate font-mono text-2xs text-foreground/80" title={path}>{path ?? name}</span>
           <label class="flex shrink-0 items-center gap-2 px-1 text-ui">
             <span class="@md:hidden">Header row</span><span class="hidden @md:inline">First row is header</span>

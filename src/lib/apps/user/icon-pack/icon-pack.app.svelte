@@ -5,13 +5,11 @@
   import { Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files } from "$lib/core/utils/image";
   import { write_at } from "$lib/core/utils/zip/files";
   import {
     AppWindow as AppWindowIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
-    Devices as DevicesIcon,
     FileZip as FileZipIcon,
     FolderOpen as FolderOpenIcon,
     Warning as WarningIcon,
@@ -101,8 +99,6 @@
     if (chosen) load(() => load_at(chosen));
   }
 
-  const pick_device = async () => take(await pick_device_files({ accept: ACCEPT }));
-
   function take(files: File[]) {
     const file = files.find((item) => item.type.startsWith("image/") || is_svg(item));
     if (file) load(() => load_icon_source(file));
@@ -185,7 +181,6 @@
 >
   <Toolbar>
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-16 flex-1 truncate px-1 text-ui font-medium">{source?.name ?? ""}</span>
     {#if source && !loading && !error}
       <Button variant="primary" size="sm" disabled={saving} onclick={save}><FileZipIcon weight="bold" /> Save pack…</Button>
@@ -196,7 +191,7 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !icons}
     <EmptyState
@@ -204,7 +199,7 @@
       title="No icon open"
       description="Makes favicons, app icons and a social card from an SVG or a big image, and zips them with the manifest and head tags. Open one, drop it here or paste it."
     >
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an SVG or image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an SVG or image…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">

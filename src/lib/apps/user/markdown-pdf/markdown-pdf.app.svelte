@@ -9,7 +9,6 @@
   } from "$lib/core/api";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { print_html } from "$lib/core/utils/print";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_date, error_message } from "$lib/core/utils";
@@ -19,7 +18,6 @@
   import { EditorView, keymap } from "@codemirror/view";
   import { basicSetup } from "codemirror";
   import {
-    Devices as DevicesIcon,
     FilePdf as FilePdfIcon,
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -220,17 +218,6 @@
     if (chosen) await load(chosen);
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: ACCEPT });
-    if (!file) return;
-    try {
-      start(file.name, await file.text());
-    } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the file", message: error_message(reason) });
-    }
-  }
-
   async function write(target: string): Promise<boolean> {
     try {
       if (target === path) {
@@ -378,7 +365,6 @@
   <Toolbar>
     <IconButton label="New" size="sm" onclick={new_doc}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" disabled={!ready} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" disabled={!ready} onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @md:block" />
@@ -428,7 +414,6 @@
             {#snippet actions()}
               <div class="flex flex-wrap justify-center gap-2">
                 <Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>
-                <Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>
                 <Button onclick={new_doc}><FilePlusIcon weight="bold" /> Blank</Button>
                 <Button variant="quiet" onclick={sample}><SparkleIcon weight="bold" /> Sample</Button>
               </div>
@@ -445,7 +430,6 @@
           >
             {#snippet actions()}
               <Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>
-              <Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>
             {/snippet}
           </EmptyState>
         {/if}

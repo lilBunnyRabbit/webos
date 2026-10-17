@@ -4,11 +4,9 @@
   import { Button, EmptyState, IconButton, Input, Segmented, Spinner, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     Code as CodeIcon,
-    Devices as DevicesIcon,
     FileHtml as FileHtmlIcon,
     FolderOpen as FolderOpenIcon,
     Globe as GlobeIcon,
@@ -163,13 +161,6 @@
     if (chosen) await open_path(chosen);
   }
 
-  async function pick_device() {
-    const [picked] = await pick_device_files({ accept: manifest.tools });
-    if (!picked) return;
-    source.value = Source.FILE;
-    await read(picked, picked.name);
-  }
-
   function switch_source(next: Source) {
     source.value = next;
     loaded = null;
@@ -187,7 +178,6 @@
 
 {#snippet file_actions()}
   <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
-  <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
 {/snippet}
 
 <div class="grid h-full grid-rows-[auto_1fr_auto]">
@@ -205,7 +195,6 @@
     <div class="flex-1"></div>
     {#if source.value === Source.FILE}
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     {:else if source.value === Source.URL && loaded}
       <IconButton label="Fetch again" size="sm" disabled={controller !== null} onclick={fetch_url}><ArrowClockwiseIcon weight="bold" /></IconButton>
     {/if}

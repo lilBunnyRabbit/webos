@@ -4,10 +4,9 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { available_name } from "$lib/core/api/services/files/opfs";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { error_message } from "$lib/core/utils";
   import { has_files, image_files, load_image, load_image_at, paint, type SourceImage } from "$lib/core/utils/image";
-  import { Devices as DevicesIcon, FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Printer as PrinterIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Printer as PrinterIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { z } from "zod";
   import { poster_name } from "./naming";
@@ -145,8 +144,6 @@
     if (chosen) load(() => load_image_at(chosen));
   }
 
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
-
   function take(list: File[]) {
     const [file] = list;
     if (file) load(() => load_image(file));
@@ -248,7 +245,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium" title={source?.path ?? source?.name}>{source?.name ?? ""}</span>
     {#if source && layout && !loading && !error}
       <Button variant="primary" size="sm" disabled={busy || too_many} onclick={make}><FilePdfIcon weight="bold" /> Make PDF</Button>
@@ -259,7 +255,7 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error && !source}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !preview || !layout}
     <EmptyState
@@ -267,7 +263,7 @@
       title="No image open"
       description="Prints one image across several sheets as a PDF, with crop marks and a map for putting it together. Open one, drop it here or paste it."
     >
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}
     {@const grid = layout.grid}

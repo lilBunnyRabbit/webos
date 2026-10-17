@@ -4,9 +4,8 @@
   import { Button, Section, Segmented, SettingRow, Slider } from "$lib/core/components/ui";
   import WallpaperView from "$lib/core/components/desktop/wallpaper.svelte";
   import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { cn } from "$lib/core/utils";
-  import { Check as CheckIcon, Devices as DevicesIcon, Image as ImageIcon } from "phosphor-svelte";
+  import { Check as CheckIcon, Image as ImageIcon } from "phosphor-svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const { window: win } = get_app_context();
@@ -42,11 +41,6 @@
   async function choose() {
     const path = await win.pick_file({ accept: ["image/*"], title: "Choose a wallpaper" });
     if (path) await set_image(path);
-  }
-
-  async function choose_device() {
-    const [file] = await pick_device_files({ accept: ["image/*"] });
-    if (file) await set_image(file);
   }
 
   function update(change: Partial<Extract<Wallpaper, { kind: "image" }>>) {
@@ -99,9 +93,6 @@
 
     <div class="flex flex-wrap gap-2">
       <Button variant="secondary" size="sm" onclick={choose} disabled={busy}>Choose image…</Button>
-      <Button variant="quiet" size="sm" onclick={choose_device} disabled={busy}>
-        <DevicesIcon class="size-4" /> From device…
-      </Button>
     </div>
 
     {#if image}

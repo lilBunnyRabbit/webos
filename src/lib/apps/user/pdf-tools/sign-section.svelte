@@ -3,13 +3,11 @@
   import { Button, IconButton, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
     Check as CheckIcon,
-    Devices as DevicesIcon,
     Eraser as EraserIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
@@ -23,7 +21,7 @@
   import { clamp_placement, type Placement } from "./geometry";
   import { signed_name, signature_file_name } from "./naming";
   import { DATE_SCALE, Ink, ink_css, sign_pdf } from "./pdf";
-  import { PDF_ACCEPT, device_source, save_signature, write_at } from "./pdf-files";
+  import { PDF_ACCEPT, save_signature, write_at } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import { page_info, release_canvas, render_width, type PageInfo } from "./render";
@@ -150,11 +148,6 @@
   async function pick() {
     const path = await win.pick_file({ accept: PDF_ACCEPT, title: "Sign a PDF" });
     if (path) await slot.open(path);
-  }
-
-  async function pick_device() {
-    const [file] = await pick_device_files({ accept: PDF_ACCEPT });
-    if (file) await slot.open(device_source(file));
   }
 
   function default_width(sig: Signature): number {
@@ -308,7 +301,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{loaded?.source.name ?? ""}</span>
     {#if loaded}
       <IconButton label="Previous page" size="sm" disabled={page === 0} onclick={() => (page = Math.max(0, page - 1))}><CaretLeftIcon weight="bold" /></IconButton>
@@ -326,7 +318,6 @@
         title="No PDF open"
         description="Place a signature you drew on any page, then save a signed copy."
         onopen={pick}
-        ondevice={pick_device}
       />
     </div>
   {:else}

@@ -5,7 +5,6 @@
   import { resolve_token } from "$lib/core/utils";
   import {
     Bandaids as BandaidsIcon,
-    Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -404,7 +403,6 @@
     >
       {#snippet actions()}
         <Button variant="primary" onclick={() => pair.pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the original…</Button>
-        <Button onclick={() => pair.pick_device()}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -488,7 +486,6 @@
             >
               {#snippet actions()}
                 <Button variant="primary" onclick={() => pair.pick(original ? Slot.EDITED : Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open…</Button>
-                <Button onclick={() => pair.pick_device(original ? Slot.EDITED : Slot.ORIGINAL)}><DevicesIcon weight="bold" /> From device…</Button>
               {/snippet}
             </EmptyState>
           {/if}

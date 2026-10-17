@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
@@ -11,7 +10,6 @@
     Plus as PlusIcon,
     Warning as WarningIcon,
     X as XIcon,
-    Devices as DevicesIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { remove_colours } from "./remove-background";
@@ -89,8 +87,6 @@
     if (chosen) load(() => load_image_at(chosen));
   }
 
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
-
   function take(files: File[]) {
     const [file] = files;
     if (file) load(() => load_image(file));
@@ -166,7 +162,6 @@
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{source?.name ?? ""}</span>
     {#if source && result && !loading && !error}
       <Select size="sm" class="w-auto" options={FORMATS} bind:value={format} aria-label="Format" />
@@ -178,11 +173,11 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
   {:else if error}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the image" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !result}
     <EmptyState icon={EraserIcon} title="No image open" description="Makes chosen colours transparent. Open an image, drop it here or paste it.">
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[15rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">

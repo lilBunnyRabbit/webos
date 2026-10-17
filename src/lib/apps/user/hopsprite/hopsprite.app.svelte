@@ -13,13 +13,11 @@
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     CaretDown as CaretDownIcon,
     CornersOut as CornersOutIcon,
-    Devices as DevicesIcon,
     Export as ExportIcon,
     FilePlus as FilePlusIcon,
     FlipHorizontal as FlipHorizontalIcon,
@@ -51,7 +49,7 @@
   import HopspriteSwatches from "./hopsprite-swatches.svelte";
   import HopspriteToolbox from "./hopsprite-toolbox.svelte";
   import HopspriteWells from "./hopsprite-wells.svelte";
-  import { read_file, read_path, sprite_name_for, write_text, type Opened } from "./io";
+  import { read_path, sprite_name_for, write_text, type Opened } from "./io";
   import { below } from "./menu";
   import { create_sprite, Direction, type Point } from "./model";
   import { DEFAULT_PRESET, preset_by_id } from "./palettes";
@@ -158,12 +156,6 @@
     if (chosen) await load(() => read_path(chosen), chosen, base_name(chosen));
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: [EXTENSION, "image/png", "image/gif", "image/*"] });
-    if (file) await load(() => read_file(file), null, file.name);
-  }
-
   async function create(width: number, height: number, preset: string) {
     if (!(await discard_ok())) return;
     playing = false;
@@ -245,7 +237,6 @@
       [
         { id: "new", label: "New sprite…", icon: FilePlusIcon },
         { id: "open", label: "Open…", icon: FolderOpenIcon, shortcut: "Mod+O" },
-        { id: "device", label: "Open from device…", icon: DevicesIcon },
         { id: "save", label: "Save", icon: FloppyDiskIcon, shortcut: "Mod+S" },
         { id: "save-as", label: "Save as…", icon: FloppyDiskBackIcon, shortcut: "Mod+Shift+S" },
         { separator: true },
@@ -272,7 +263,6 @@
     if (!choice) return;
     if (choice === "new") document.getElementById(`new-${popover}`)?.showPopover();
     else if (choice === "open") void open();
-    else if (choice === "device") void open_device();
     else if (choice === "save") void save();
     else if (choice === "save-as") void save_as();
     else if (choice === "size") document.getElementById(`size-${popover}`)?.showPopover();

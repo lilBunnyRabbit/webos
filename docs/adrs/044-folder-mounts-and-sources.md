@@ -1,6 +1,8 @@
 # ADR-044: Folder Mounts and One Picker for Every Source
 **Date:** 2026-10-17
-**Status:** Accepted
+**Status:** Implemented (2026-10-17)
+
+> **Revision 2026-10-17: as built.** The picker's two new sources sit in its footer, not its Places list: Places only shows at 48rem and the picker sheet is at most 46rem wide. "This device…" is offered in file pickers only (not folder or save pickers) and picks one file, since `onchoose(path)` takes one path. `/mnt` is an empty OPFS folder whose listing is the mount table; mount points can't be renamed, moved or deleted, only unmounted. Moves between two different mounts are copy plus delete too, like OPFS and a mount. The session skips a window whose props hold a `/mnt/…` path. Explorer also shows a locked mount as a Reconnect screen when it's opened. Some apps keep their own device button: P2P Transfer, Archive (Create), Dev Tools › Hash and Hex Viewer hold device files in memory, which a copy into `/tmp` would double for big files; Recipe Box and Brackets import device files into their own library folder rather than open them. Several apps lose multi-file device picks (Image Tools Squash, Atlas, Join, Compare and Patch; PDF Tools Merge and Images; Soundboard; Diff): the picker takes one file, so several come in by drop.
 
 ## Context
 

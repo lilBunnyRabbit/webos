@@ -1,7 +1,6 @@
 import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
 import { parent_path } from "$lib/core/api/services/files/path";
 import type { WindowHandle } from "$lib/core/contexts/app/type";
-import { pick_device_files } from "$lib/core/utils/device-file";
 import { error_message } from "$lib/core/utils";
 import { load_image, load_image_at, read_pixels, type SourceImage } from "$lib/core/utils/image";
 import { tolerance_level } from "./compare";
@@ -127,12 +126,6 @@ export class ImagePair {
   async pick(slot: Slot) {
     const chosen = await this.options.win.pick_file({ accept: ["image/*"], start_path: this.start_path, title: this.options.titles[slot] });
     if (chosen) this.load(slot, () => load_image_at(chosen));
-  }
-
-  async pick_device(slot?: Slot) {
-    const files = await pick_device_files({ accept: ["image/*"], multiple: !slot });
-    if (slot && files[0]) this.load(slot, () => load_image(files[0]));
-    else this.take(files);
   }
 
   take(files: File[]) {

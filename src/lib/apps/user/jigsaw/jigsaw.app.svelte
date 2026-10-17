@@ -4,12 +4,10 @@
   import { format_time, Stopwatch, track_play } from "$lib/core/games";
   import { BoardOverlay, Button, EmptyState, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files, image_files } from "$lib/core/utils/image";
   import { random_seed } from "$lib/core/utils/random";
   import {
     CornersOut as FitIcon,
-    Devices as DevicesIcon,
     Eye as EyeIcon,
     FrameCorners as FrameCornersIcon,
     ImageSquare as ImageSquareIcon,
@@ -187,8 +185,6 @@
     const file = list[0];
     if (file && (await confirm_restart("Open another picture?"))) await open(file, file.name, null);
   }
-
-  const pick_device = async () => take(await pick_device_files({ accept: ["image/*"] }));
 
   async function set_pieces(next: PieceCount) {
     if (next === pieces) return;
@@ -432,9 +428,6 @@
     <IconButton size="sm" label="Open picture…" class="@md:hidden" onclick={pick}>
       <ImageSquareIcon weight="bold" />
     </IconButton>
-    <IconButton size="sm" label="From device…" onclick={pick_device}>
-      <DevicesIcon weight="bold" />
-    </IconButton>
     <Select class="w-32" size="sm" aria-label="Pieces" options={count_options} bind:value={() => String(pieces), (value) => set_pieces(pieces_schema.parse(Number(value)))} />
     <div class="flex-1"></div>
     <IconButton size="sm" label="Edge pieces only" pressed={edge_only} disabled={!board || solved} onclick={() => (edge_only = !edge_only)}>
@@ -478,7 +471,6 @@
       >
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Open picture…</Button>
-          <Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>
         {/snippet}
       </EmptyState>
     {:else if solved}

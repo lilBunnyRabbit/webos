@@ -9,7 +9,6 @@
   } from "$lib/core/api";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes, error_message } from "$lib/core/utils";
   import { indentWithTab } from "@codemirror/commands";
@@ -20,7 +19,6 @@
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FloppyDiskBack as FloppyDiskBackIcon,
-    Devices as DevicesIcon,
     FolderOpen as FolderOpenIcon,
     LockSimple as LockSimpleIcon,
     TextAlignLeft as TextAlignLeftIcon,
@@ -193,17 +191,6 @@
     if (chosen) await load(chosen);
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: manifest.associations });
-    if (!file) return;
-    try {
-      open_untitled(file.name, await file.text());
-    } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the file", message: error_message(reason) });
-    }
-  }
-
   async function write(target: string): Promise<boolean> {
     saving = true;
     try {
@@ -340,7 +327,6 @@
   <Toolbar>
     <IconButton label="New" size="sm" onclick={new_file}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" disabled={read_only} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />
@@ -400,11 +386,11 @@
           <div class="grid place-items-center"><Spinner label="Reading file" /></div>
         {:else if status === Status.MISSING}
           <EmptyState icon={WarningCircleIcon} tone="error" title="File not found" description={path ?? ""}>
-            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
           </EmptyState>
         {:else}
           <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the file" description={error}>
-            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={open_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+            {#snippet actions()}<Button variant="primary" onclick={open}><FolderOpenIcon weight="bold" /> Open a file…</Button>{/snippet}
           </EmptyState>
         {/if}
       </div>
