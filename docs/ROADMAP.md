@@ -16,13 +16,13 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
    - [x] Mobile groundwork only (ADR-016): `kernel.platform`, `WindowsService` / `DesktopWindowsService` split. Done 2026-10-12. Was: platform detection and the `IWindowsService` interface extraction. The mobile shell stays in block 8
 2. [x] **Shortcuts service** (ADR-012, ADR-017, [brainstorm](brainstorm/2026-10-12_shortcuts.md)). Alt+Shift window keys, Mod+K launcher, Mod+/ cheat sheet, `ui` service (ADR-028). Not built: remapping. Reopen closed window landed in block 3 as Alt+Shift+T
 3. [x] **Notification center + system tray** (ADR-006, [brainstorm](brainstorm/2026-10-12_notification-center.md)): done 2026-10-12 (tray button + panel, mobile list in the switcher, toasts follow the tray, history cap 50, Alt+Shift+N). Then **window polish** (ADR-014, [brainstorm](brainstorm/2026-10-12_window-polish.md)): done 2026-10-12 (remembered frames per app, cascade from the app's window, open/close/minimize/maximize motion, focus on open, Alt+Shift+T reopen)
-4. [ ] ~~**Tasks service** (ADR-013)~~ parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)): built with its first consumer (terminal or zip)
+4. [x] **Tasks service** (ADR-013): parked 2026-10-12 ([brainstorm](brainstorm/2026-10-12_tasks-parked.md)), built 2026-10-16 with Archive and PDF Tools as its first consumers ([brainstorm](brainstorm/2026-10-15_tasks-service.md))
 5. [x] **Shell + Terminal + Command palette** (ADR-033, supersedes ADR-007): decided 2026-10-14 ([brainstorm](brainstorm/2026-10-14_shell-terminal.md)). Structured-value pipes, service `shell()` hook, Tab completion, Mod+K `>` mode, shortcuts run commands
 6. [-] **Desktop** (ADR-011): multi-select shared with File Explorer done 2026-10-12 ([brainstorm](brainstorm/2026-10-12_multi-select.md)); wallpaper and Sort by done 2026-10-13 ([brainstorm](brainstorm/2026-10-13_desktop-theming.md)). **Theming** (ADR-015): corners, shadows, text size, motion off and `.webos-theme` export/import done 2026-10-16; font family not now
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. File links, workspace, demo presets, embed and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
 
-**Parked** (no consumer or nothing breaks without it; revisit only on demand): Tasks service (ADR-013, until its first consumer), single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
+**Parked** (no consumer or nothing breaks without it; revisit only on demand): single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
 
 ---
 
@@ -287,8 +287,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [-] Wave 2 follow-ups ([triage log](brainstorm/2026-10-14_app-triage.md#wave-2-results)). Done 2026-10-15: shell commands for every new app, File Explorer Compress / Extract here, shared CodeMirror module (`$lib/core/components/code`), core `write_image`, shared `Ticker` (one wall-clock-aligned clock per interval), widget resizing (`widget_size`), App Library, PWA install, word + typo app search, keyword pass. Left: kit additions (colour swatch picker, stat tile, tree list, `Segmented` disabled / icon-only / controlled, `format_date` without year, `NotificationType.SUCCESS`), `print_html` waiting for fonts
 - [ ] Wave 3 follow-ups (agents' reports, 2026-10-15):
   - [ ] Kit: colour swatch picker (Soundboard, Nonogram), stat tile (Game Hub), tree list (Archive), pointer reorder for lists and grids (Kanban, PDF Tools, Soundboard), `Segmented` disabled / icon-only / controlled, `format_date` without the year, `NotificationType.SUCCESS`, `EmptyState` actions wrapping; Style Guide demo for `SideNav` counts
-  - [ ] Core: a `live_file` helper next to `json_file` for shell commands (today in Kanban, used by Calendar); shared day/time/duration parsers (today in `calendar/parse.ts`, imported by Work Hours and Kanban); `FilesService.ensure_directory(path)`; a progress-toast job helper (Archive and PDF Tools each have one)
-  - [ ] Core → user-app import: File Explorer's Compress / Extract here load Archive's code. Decide whether zip moves into core
+  - [-] Core: `live_file` in the app context and shared day/time parsers in `$lib/core/utils/date` done; the progress-toast job helper is replaced by Tasks (Archive and PDF Tools run on it). Left: a public `FilesService.ensure_directory(path)`
+  - [x] Core → user-app import: zip moved into core (`$lib/core/utils/zip`); File Explorer and Archive both use it
   - [ ] Value types with secondary actions (Diff's "Compare with…" on files had nowhere to go)
   - [ ] `print_html` waits for `document.fonts.ready`
   - [ ] Terminal: wide tables clip on phones (`since`, `alarm ls`, `rec list`)
@@ -361,7 +361,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
-- [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Moves onto Tasks once built
+- [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Runs on Tasks since 2026-10-16
 - [x] PDF Tools — merge, organize, split, sign (vector signatures from a signature pad), images ↔ PDF; pdf-lib + pdf.js, lazy (2026-10-15). pdf.js worker not precached yet
 - [x] Diff on `@codemirror/merge` (2026-10-14)
 - Maybe: Hex Viewer, Font Viewer, Web app wrapper
