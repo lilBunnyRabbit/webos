@@ -357,6 +357,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim. Waits on chromatics as an npm package
+- [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios (Kubelka–Munk). Waits on the Chromatics decision; overlaps its mixer
+- [ ] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to]`. Only CORS-enabled hosts work. The owner may have an old local prototype
 - [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
@@ -366,6 +368,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Diff on `@codemirror/merge` (2026-10-14)
 - Maybe: Hex Viewer, Font Viewer, Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
+  - [ ] Text chat during a transfer: short messages over the open data channel, shown as a side thread (owner's ideas notes, 2026-10-17)
 
 ### static-utils Ports
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
@@ -536,6 +539,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
 - [ ] **Background scheduler** (owner, 2026-10-14). Alarms, timers, Pomodoro phases and Calendar reminders only fire while that app's window or widget is alive. An OS-level scheduler (service) that holds due times and fires `notify({ system })` with no app open. Open: who owns the schedule (apps register `{ at, title, action }`?), persistence in `/var/lib`, dedupe across tabs, how the app is told on click.
+- [ ] **Forms by link** (owner's ideas notes "Auto Savable", 2026-10-17). Build a checklist or form, Copy link puts it in the URL; the other person fills it in and sends back a reply link; opening it merges the answers into your `.form` file. Open: compressed deep-link props (CompressionStream + base64url) and link length limits change the router's prop shape (ADR-010)
 - [x] **Window extraction** (owner, 2026-10-16). Done as [ADR-043](adrs/043-window-extraction.md) ([brainstorm](brainstorm/2026-10-16_window-extraction.md)): Document Picture-in-Picture only, desktop-only `ExtractService`, any app, frame hidden and taskbar item marked, the window's sheets, menus and dialogs inside the mini window, disabled while dirty, `win pop` / `win back` + Alt+Shift+P. Built 2026-10-16. Left: OS shortcuts inside the mini window, keeping in-memory state across the move, `window.open` popups after cross-tab sync
 - [x] **Backup system** (owner, 2026-10-14). Done as [ADR-037](adrs/037-backups.md): one zip of `/home`, `/etc`, `/var/lib` and `app.*` localStorage, picked per area, saved to the device; restore replaces the areas it holds and reloads ([brainstorm](brainstorm/2026-10-15_v1-release.md)).
 - [x] **New-app announcements and app history** (owner, 2026-10-16). Done as [ADR-038](adrs/038-app-announcements.md): changelog lines tagged with app ids and an `introduces` list per release (backfilled for every app), a new-app announcement after the Restore answer, manifest `highlights` / `preview`, App Library History section, Recently added / updated sort and session-only New / Updated badges, `changelog --apps` ([brainstorm](brainstorm/2026-10-16_app-announcements.md)).
