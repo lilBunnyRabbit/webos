@@ -2,6 +2,7 @@
   import { Select, SideNav } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
+    Crosshair as CrosshairIcon,
     Crop as CropIcon,
     Eraser as EraserIcon,
     FilmStrip as FilmStripIcon,
@@ -25,6 +26,7 @@
     { value: Section.TRIM, label: "Trim", icon: CropIcon },
     { value: Section.SPLIT, label: "Split", icon: SquareSplitHorizontalIcon },
     { value: Section.SPRITES, label: "Sprites", icon: FilmStripIcon },
+    { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
   ];
 
   type SectionModule = Promise<{ default: Component<SectionProps> }>;
@@ -34,6 +36,7 @@
     [Section.TRIM]: () => import("./trim-section.svelte"),
     [Section.SPLIT]: () => import("./split-section.svelte"),
     [Section.SPRITES]: () => import("./sprites-section.svelte"),
+    [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
   };
 
   // A section loads on its first visit and then stays mounted, so switching back keeps its image and settings.

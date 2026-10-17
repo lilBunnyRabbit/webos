@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clamp, error_message, escape_html, pad2 } from "./utils";
+import { clamp, error_message, escape_html, pad2, parse_bytes } from "./utils";
 
 describe("utils", () => {
   test("error_message reads an Error, stringifies anything else", () => {
@@ -22,5 +22,17 @@ describe("utils", () => {
 
   test("escape_html escapes the five special characters", () => {
     expect(escape_html(`<a href="x">Tom & Jerry's</a>`)).toBe("&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/a&gt;");
+  });
+});
+
+describe("parse_bytes", () => {
+  test("sizes use binary units", () => {
+    expect(parse_bytes("2GB")).toBe(2 * 1024 ** 3);
+    expect(parse_bytes("1.5 g")).toBe(1.5 * 1024 ** 3);
+    expect(parse_bytes("500mb")).toBe(500 * 1024 ** 2);
+    expect(parse_bytes("4096")).toBe(4096);
+    expect(parse_bytes("10kb")).toBe(10240);
+    expect(parse_bytes("lots")).toBeNull();
+    expect(parse_bytes("0")).toBeNull();
   });
 });

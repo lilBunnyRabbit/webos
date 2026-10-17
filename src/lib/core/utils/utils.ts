@@ -36,6 +36,16 @@ export function format_bytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
+const BYTE_UNITS: Record<string, number> = { "": 1, b: 1, k: 1024, kb: 1024, m: 1024 ** 2, mb: 1024 ** 2, g: 1024 ** 3, gb: 1024 ** 3, t: 1024 ** 4, tb: 1024 ** 4 };
+
+/** `2GB`, `1.5 g`, `500mb`, `4096`: binary units, the inverse of `format_bytes`. `null` when it isn't a size. */
+export function parse_bytes(text: string): number | null {
+  const match = /^\s*(\d+(?:\.\d+)?)\s*([kmgt]?b?)\s*$/i.exec(text);
+  if (!match) return null;
+  const bytes = Math.round(Number(match[1]) * BYTE_UNITS[match[2].toLowerCase()]);
+  return bytes >= 1 && Number.isSafeInteger(bytes) ? bytes : null;
+}
+
 /** Dates everywhere in the UI: "Oct 11, 2026" (docs/design/patterns.md). */
 export function format_date(date: Date | number): string {
   return new Date(date).toLocaleDateString([], { dateStyle: "medium" });

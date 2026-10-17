@@ -44,6 +44,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
+| `app.image-tools.test-image` | `user/image-tools` | Test image section: pattern, markings, size and format |
 | `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
 | `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
 | `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
@@ -52,7 +53,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
 | `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
 | `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
-| `app.pdf-tools.{sign,export,images}` | `user/pdf-tools` | Sign ink and date option; Export and Images section settings |
+| `app.pdf-tools.{sign,export,images,test-pdf}` | `user/pdf-tools` | Sign ink and date option; Export, Images and Test PDF section settings |
 | `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
 | `app.quick-notes.notes-status` | `user/quick-notes` | Notes status filter |
 | `app.recorder.{screen_mic,photo_format}` | `user/recorder` | Mic with screen recording; photo format |

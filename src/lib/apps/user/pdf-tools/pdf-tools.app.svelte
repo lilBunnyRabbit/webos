@@ -6,6 +6,7 @@
     Export as ExportIcon,
     Images as ImagesIcon,
     PenNib as PenNibIcon,
+    Ruler as RulerIcon,
     Signature as SignatureIcon,
     SquaresFour as SquaresFourIcon,
     Stack as StackIcon,
@@ -20,6 +21,7 @@
   import SignSection from "./sign-section.svelte";
   import SignaturesSection from "./signatures-section.svelte";
   import SplitSection from "./split-section.svelte";
+  import TestPdfSection from "./test-pdf-section.svelte";
 
   const props: LaunchProps = $props();
   const { storage, window: win } = get_app_context();
@@ -35,6 +37,7 @@
     { value: Section.IMAGES, label: "Images to PDF", icon: ImagesIcon },
     { value: Section.EXPORT, label: "Export images", icon: ExportIcon },
     { value: Section.SIGNATURES, label: "Signatures", icon: SignatureIcon },
+    { value: Section.TEST_PDF, label: "Test PDF", icon: RulerIcon },
   ];
 
   const paths_for = (target: Section) => (launch.section === target ? launch.paths : []);
@@ -92,6 +95,9 @@
     </div>
     <div class="h-full" hidden={section.value !== Section.SIGNATURES}>
       <SignaturesSection {picker} on_use={use_signature} />
+    </div>
+    <div class="h-full" hidden={section.value !== Section.TEST_PDF}>
+      <TestPdfSection {picker} active={section.value === Section.TEST_PDF} />
     </div>
   </div>
 </div>
