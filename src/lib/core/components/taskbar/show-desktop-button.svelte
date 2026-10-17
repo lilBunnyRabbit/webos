@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type DesktopWindowsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
-  import { view_transition } from "$lib/core/utils/view-transition";
+  import { window_transition } from "$lib/core/components/window/window-transition.svelte";
 
   let { vertical }: { vertical: boolean } = $props();
 
@@ -17,7 +17,7 @@
     "group grid shrink-0 place-items-center rounded-md transition-colors duration-150 hover:bg-foreground/10",
     vertical ? "h-[calc(var(--taskbar-item)*0.3)] w-full" : "h-full w-[calc(var(--taskbar-item)*0.3)]"
   )}
-  onclick={() => view_transition(() => windows.toggle_desktop())}
+  onclick={() => window_transition(windows.list(), () => windows.toggle_desktop())}
 >
   <span
     class={cn(

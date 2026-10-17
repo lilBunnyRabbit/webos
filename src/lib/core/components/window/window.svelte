@@ -12,6 +12,7 @@
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
   import { cubicOut } from "svelte/easing";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { transition_named } from "./window-transition.svelte";
   import { motion_reduced } from "$lib/core/utils/motion";
 
   /** Open and close (ADR-014 revision): a fade and a small scale. `scale`, not `transform`, so a drag can't fight it. */
@@ -84,6 +85,8 @@
     const { x, y, width, height } = instance.bounds;
     return { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px` };
   });
+  // Every named element is snapshotted on each transition: only the focused frame and the ones a transition acts on.
+  const transition_name = $derived(!is_minimized && !is_out && (is_focused || transition_named(id)) ? `window-${id}` : undefined);
   const transform = $derived(geometry_handler.move.active ? `translate3d(${geometry_handler.move.dx}px, ${geometry_handler.move.dy}px, 0)` : "none");
 </script>
 
@@ -119,7 +122,7 @@
   style:height={rect.height}
   style:transform
   style:z-index={instance.order}
-  style:view-transition-name={is_minimized || is_out ? undefined : `window-${id}`}
+  style:view-transition-name={transition_name}
   style:contain="size layout style"
   style:backface-visibility="hidden"
   tabindex={-1}

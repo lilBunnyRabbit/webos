@@ -14,6 +14,7 @@
   import { ArrowSquareIn as ArrowSquareInIcon, PictureInPicture as PictureInPictureIcon, PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
   import { cn } from "$lib/core/utils";
   import type { Position } from "$lib/core/utils/type";
+  import { flushSync } from "svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import AppBadge from "../apps/app-badge.svelte";
 
@@ -110,6 +111,9 @@
       windows.focus(instance.id);
       extract.focus();
     } else if (minimized(instance)) {
+      // The button carries only one member's name; the picked one is the one that flies out.
+      last_minimized = instance.id;
+      flushSync();
       view_transition(() => windows.toggle_minimize(instance.id));
     } else {
       windows.focus(instance.id);
