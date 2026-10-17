@@ -19,6 +19,11 @@ export class ShortcutsService implements IShortcutsService {
 
   /** Raw and replaced on change: a deep proxy would hand out copies, and the disposer must find its own entry. */
   private shortcuts = $state.raw<KeyShortcut[]>([]);
+  private suspends = $state(0);
+
+  public get suspended(): boolean {
+    return this.suspends > 0;
+  }
 
   private windows_service!: WindowsService;
   private dialogs_service!: DialogsService;
@@ -58,6 +63,17 @@ export class ShortcutsService implements IShortcutsService {
       });
   }
 
+  /** Untracked for the same reason as `register`: callers suspend from `$effect`. */
+  public suspend(): () => void {
+    untrack(() => this.suspends++);
+    let resumed = false;
+    return () => {
+      if (resumed) return;
+      resumed = true;
+      untrack(() => this.suspends--);
+    };
+  }
+
   public list(): ListedShortcut[] {
     const listed: ListedShortcut[] = [];
     for (const shortcut of this.shortcuts) {
@@ -80,7 +96,7 @@ export class ShortcutsService implements IShortcutsService {
   /** Arrow function: it's the listener itself. */
   private on_keydown = (event: KeyboardEvent) => {
     // Local handlers (a focused row, a menu) run first and claim their keys with preventDefault.
-    if (event.defaultPrevented || event.isComposing) return;
+    if (event.defaultPrevented || event.isComposing || this.suspends > 0) return;
     // A system dialog is modal: nothing behind it reacts to keys.
     if (this.dialogs_service.system.length > 0) return;
 

@@ -137,7 +137,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 | `notifications` | `notify` (21), `request_system` (3), `update` (1; a `progress` notification is useless without it) | `hide_toast` (Pomodoro), `dismiss`, `mark_read`, `mark_all_read`, `all`, `toasts`, `unread_count` |
 | `desktop` | `items` (5), `pin_widget` (7), `remove_item` (7) | `pin`, `open`, `rename_item`, `create_folder`, `names` and the grid/mobile variants |
 | `dialogs` | `menu` (7), `show` (3) | `for_window` (Soundboard), `stack`, `system` |
-| `shortcuts` | `register` (15) | `list`, `mac` (Quick Notes) |
+| `shortcuts` | `register` (15) | `list`, `mac` (Quick Notes); `suspend`, `suspended` (Keyboard & HID Lab) |
 | `windows` | `page_hidden` (5) | `get`, `get_focused` (Quick Notes); everything else. Inside a window, use `WindowHandle` |
 | `settings` | `theme` (read) (6) | All writes and every other field |
 | `shell`, `session`, `clipboard`, `ui`, `router`, `version` | nothing | Apps reach the shell through their manifest; the rest are OS-only |

@@ -196,6 +196,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | web-app | `webapp add <url> [-n\|--name]`: writes `{name}.webapp` to `/home/Desktop` | `file` |
 | svg-workbench | `svg optimize <path> [-o] [-p precision]`, `svg png <path> [-s size]`, `svg component <path> [-o] [-s size] [--colors]` | `file`; path completion filtered to `.svg`; output next to the SVG (`name.min.svg`, `name-512.png`, `Name.svelte`) under a free name, or `-o` a file to replace or a folder; `component` makes a one-colour SVG follow its `color` prop unless `--colors` |
 | gw2 | `gw2 daily`: today's Wizard's Vault objectives, with the key saved in GW2 Tracker | `gw2-objective` values (name, progress, done; open → GW2 Tracker) |
+| hid-lab | `hid ls` (unavailable without WebHID) | `hid-device` values (name, ids, usage, collections, opened; open → Keyboard & HID Lab, HID section) |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

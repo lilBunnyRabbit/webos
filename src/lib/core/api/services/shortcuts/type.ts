@@ -7,6 +7,13 @@ export interface ShortcutsService extends IService {
   register(shortcut: KeyShortcut): () => void;
   /** Every registered shortcut whose command exists, for the cheat sheet and the palette. */
   list(): ListedShortcut[];
+  /**
+   * Stops dispatching until the returned resume runs, so a key tester sees every key. Counted: nested suspends each
+   * resume their own, and the dispatcher stays off until the last one does. Resume is idempotent.
+   */
+  suspend(): () => void;
+  /** True while any `suspend()` is unresumed. */
+  readonly suspended: boolean;
   /** Display: Cmd/Option symbols on macOS. */
   readonly mac: boolean;
 }
