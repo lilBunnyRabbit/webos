@@ -143,4 +143,36 @@ describe("ShortcutsService", () => {
     press("KeyJ", { shiftKey: true });
     expect(run).toHaveBeenCalledTimes(1);
   });
+
+  test("suspend stops dispatch until every suspend has resumed", async () => {
+    const kernel = await boot();
+    const shortcuts = kernel.service<ShortcutsService>("shortcuts");
+    const run = vi.fn();
+    shortcuts.register({ id: "test.suspend", keys: "alt+j", label: "", category: ShortcutCategory.APP, run });
+
+    const outer = shortcuts.suspend();
+    const inner = shortcuts.suspend();
+    expect(press("KeyJ", { altKey: true }).defaultPrevented).toBe(false);
+
+    inner();
+    inner();
+    expect(shortcuts.suspended).toBe(true);
+    press("KeyJ", { altKey: true });
+    expect(run).not.toHaveBeenCalled();
+
+    outer();
+    expect(shortcuts.suspended).toBe(false);
+    press("KeyJ", { altKey: true });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  test("suspending from an effect runs the effect once", async () => {
+    const kernel = await boot();
+    const shortcuts = kernel.service<ShortcutsService>("shortcuts");
+    const effect = run_in_effect(() => shortcuts.suspend());
+    expect(effect.runs()).toBe(1);
+    expect(shortcuts.suspended).toBe(true);
+    effect.stop();
+    expect(shortcuts.suspended).toBe(false);
+  });
 });
