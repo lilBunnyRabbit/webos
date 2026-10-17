@@ -187,7 +187,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | clock | `clock [tab]`, `clock pin [-f]`, `time [zone]`, `alarm ls\|add\|on\|off\|rm`, `timer <duration> [label…]`, `timer ls\|stop` | `alarm` / `timer` values, `text`; `zone` completer |
 | time-since | `since`, `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>` | `counter` values; `counter` completer |
 | work-hours | `wh in [desc…]`, `wh out`, `wh status`, `wh ls [month]`, `wh add <date> <start> <end> [desc…]`, `wh report [month]`, `wh target <hours\|none> [month]` | `workday` values (open → `{ day }`), `text` |
-| kanban | `kanban [card]`, `kanban ls [-b] [--due]`, `kanban add <title…> [-c] [-d] [-b]`, `kanban mv <card> <column>`, `kanban done <card>`, `kanban archive [card]` | `card` values (open → `{ board, card }`); `card` completer |
+| kanban | `kanban [card]`, `kanban ls [-b] [--due]`, `kanban add <title…> [-c] [-d] [-b]`, `kanban mv <card> <column> [-b]`, `kanban done <card>`, `kanban archive [card]`; with `-b` on a folder board, `ls` lists its files, `mv` rewrites one file's column field (card by title or file name) and `add` writes a new file from the board's template | `card` values (`path` set for a folder board's file; open → `{ board, card }`, or the file in Text Editor); `card` completer |
 | calendar | `cal [day]`, `cal add <title…> --day [--at] [--until] [--repeat] [--remind]`, `cal agenda [--days N]`, `cal open [date]` | `event` values (open → `{ day }`) |
 | soundboard | `sb`, `sb ls [-b]`, `sb play <pad> [-b]`, `sb stop`, `sb add <path…> [-b]` | `pad` values (open plays); `pad` completer |
 | recorder | `rec list`, `rec start [-s mic\|screen\|camera]` | `recording` values (open → Media Preview) |
