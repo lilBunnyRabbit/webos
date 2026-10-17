@@ -112,7 +112,7 @@ Each shell mounts one: `desktop-shell.svelte` after its grid, and `window-mini.s
   - `onclose` → `entry.resolve(null)`. For a dismissible dialog, Esc and outside click both end up here.
   - `position-anchor: --dialog-{id}`.
   - Anchored: `position-area: bottom span-right`, `position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline`. A dropdown below-right of the point that flips at the viewport edges.
-  - Unanchored: `position-area: center`, centred on the fallback point.
+  - Unanchored: `position-area: span-all` with `place-self: anchor-center`, centred on the fallback point. The fallback point is the focused window's or the window container's centre, off the screen's centre by the taskbar or nav bar, so a tall dialog would run off an edge; spanning the screen lets `anchor-center` shift it back on. Margins of 1rem plus the top and bottom safe areas keep it clear of the edges and a phone's status bar. Tall dialogs cap their height at `100dvh` minus 2rem and both safe areas.
   - The `<dialog>` itself is unstyled (transparent, no padding, no border). The `::backdrop` is the shared scrim `--overlay` (`background-darkest` at 60%, defined on `html` in `app.css`) for every dialog; unanchored ones (centred questions) also blur it 2px. The component draws its own surface and must give it one (floating layers use `bg-background-lighter`, see [docs/design/patterns.md](../../design/patterns.md#dialogs-and-menus)) and its own entrance (`animate-pop-in`).
 - Renders `<entry.component {...entry.props} resolve={entry.resolve} />`.
 

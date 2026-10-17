@@ -100,7 +100,7 @@
   {onkeydown}
   aria-label={listed ? `${apps.length} new apps` : `New app: ${current.manifest.name}`}
   class={cn(
-    "@container relative flex max-h-[calc(100dvh-2rem)] w-[36rem] max-w-[calc(100vw-2rem)] animate-pop-in flex-col overflow-hidden rounded-2xl bg-background-lighter shadow-popover ring-1 ring-foreground/8",
+    "@container relative flex max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-[36rem] max-w-[calc(100vw-2rem)] animate-pop-in flex-col overflow-hidden rounded-2xl bg-background-lighter shadow-popover ring-1 ring-foreground/8",
     class_name
   )}
 >

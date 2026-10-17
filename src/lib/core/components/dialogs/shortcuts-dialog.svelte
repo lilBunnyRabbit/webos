@@ -32,7 +32,7 @@
   );
 </script>
 
-<div class="flex max-h-[min(36rem,calc(100dvh-2rem))] w-[min(28rem,calc(100vw-2rem))] flex-col rounded-2xl bg-background-lighter shadow-popover animate-pop-in">
+<div class="flex max-h-[min(36rem,calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] w-[min(28rem,calc(100vw-2rem))] flex-col rounded-2xl bg-background-lighter shadow-popover animate-pop-in">
   <header class="flex items-center gap-3 px-5 pt-4 pb-3">
     <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary"><KeyboardIcon class="size-5" weight="bold" /></span>
     <h2 class="flex-1 text-sm font-semibold">Keyboard shortcuts</h2>

@@ -74,12 +74,16 @@
     class={[
       "m-0 p-0 max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none",
       sheet ? "inset-x-0 top-auto bottom-0 w-full animate-sheet-in" : "inset-auto",
+      // A centered question spans the screen so anchor-center can shift it back on screen: its point is the focused
+      // window's center, which sits off the screen's center (taskbar, nav bar).
+      !entry.anchored &&
+        "[place-self:anchor-center] mx-4 mt-[calc(1rem+env(safe-area-inset-top))] mb-[calc(1rem+env(safe-area-inset-bottom))]",
       // Every dialog, anchored menu or centered question, sits on the shared scrim; questions also blur what's behind.
       "backdrop:bg-(--overlay)",
       !entry.anchored && "backdrop:backdrop-blur-[2px]",
     ]}
     style:position-anchor={sheet ? undefined : `--dialog-${entry.id}`}
-    style:position-area={sheet ? undefined : entry.anchored ? "bottom span-right" : "center"}
+    style:position-area={sheet ? undefined : entry.anchored ? "bottom span-right" : "span-all"}
     style:position-try-fallbacks={!sheet && entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
   >
     <entry.component {...entry.props} {...sheet && { sheet: true }} resolve={entry.resolve} />
