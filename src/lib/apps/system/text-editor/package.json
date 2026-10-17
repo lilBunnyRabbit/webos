@@ -1,0 +1,7 @@
+{
+  "name": "@webos/text-editor",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.1.1"
+  }
+}

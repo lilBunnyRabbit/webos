@@ -242,6 +242,16 @@ No error strategy yet (roadmap P4). Current de-facto rules:
 
 Ask before adding one. The bar: browser-native API first, then own package (`@lilbunnyrabbit/*`), then small focused library. Approved: `zod` (ADR-008), `@lilbunnyrabbit/task-manager` (ADR-013, installed 1.0.1: any app, service or util with long work uses it through TasksService, see [tasks](system/services/tasks.md#writing-a-task)). Hosting is GitHub Pages, so anything needing a server is out unless an ADR says otherwise.
 
+**Where a package goes (ADR-045).** Core (`src/lib/core`, `src/lib/components`, the shell) uses a package: the root `package.json`. Only apps use it: each app that imports it declares it in its own `package.json`, next to `index.ts`:
+
+```json
+{ "name": "@webos/svg-workbench", "private": true, "dependencies": { "svgo": "^4.1.0" } }
+```
+
+The root lists `"workspaces": ["src/lib/apps/*/*"]` and `bunfig.toml` sets `linker = "isolated"`, so `bun install` at the root installs every app's packages and a package resolves only from the workspace that declares it: core and other apps can't import it by accident. Apps without packages have no `package.json`. Import an app's packages only from lazy code (the component and what it imports), never from `index.ts`; `bun run budget` catches a slip. Deleting the app's folder deletes its packages with it.
+
+Another app's packages are reached through that app's module, not by importing the package: Image Tools calls PDF Tools' `pdf_lib()` and takes pdf-lib's types from `pdf-tools/pdf`, and the import resolves from PDF Tools' folder. Declare the package yourself only when no such module fits. After moving a package out of the root, `rm -rf node_modules && bun install`: an incremental install leaves the old root link and hides a stray import. Today: `@codemirror/merge` (Diff), `pdf-lib` and `pdfjs-dist` (PDF Tools), `marked` (Text Editor, Markdown PDF), `svgo` and `@codemirror/merge` (SVG Workbench, which takes the merge colours from Diff's `theme.ts`).
+
 ---
 
 ## Tooling

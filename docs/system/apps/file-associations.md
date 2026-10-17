@@ -79,6 +79,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
 | `metadata` | `image/jpeg`, `image/png`, `image/webp`, `.jpg`, `.jpeg`, `.png`, `.webp`, `application/pdf`, `.pdf` |
+| `svg-workbench` | `.svg`, `image/svg+xml` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 | `hex-viewer` | `*` (every file) |
 | `text-editor` | `.http`, `.rest` (API Client's request files, which API Client opens by default) |
