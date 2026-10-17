@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { PDFDocument } from "pdf-lib";
 import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
@@ -7,6 +6,7 @@ import { file_value } from "$lib/core/api/services/files/shell";
 import type { CommandContext, Tagged, Value } from "$lib/core/api/services/shell/type";
 import { read_metadata } from "$lib/core/utils/exif";
 import { jpeg, png, tiff } from "$lib/core/utils/exif/fixtures";
+import { pdf_lib } from "$lib/apps/user/pdf-tools/pdf";
 import { meta, strip } from "./shell";
 
 let files: FilesService;
@@ -65,7 +65,7 @@ async function collect(source: AsyncGenerator<Tagged>): Promise<Tagged[]> {
 test("meta yields one record per file, images and PDFs, from args or a pipe", async () => {
   await seed("photo.jpg", PHOTO);
   await seed("plain.png", png());
-  const document = await PDFDocument.create();
+  const document = await (await pdf_lib()).PDFDocument.create();
   document.setTitle("Report");
   document.addPage();
   await seed("report.pdf", await document.save());
