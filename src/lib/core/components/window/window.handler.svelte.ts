@@ -29,7 +29,6 @@ interface MovingState {
     top: number;
   };
   container: Bounds;
-  animation_frame: number;
 }
 
 export class WindowGeometryHandler {
@@ -55,7 +54,6 @@ export class WindowGeometryHandler {
       x: 0,
       y: 0,
     },
-    animation_frame: 0,
   });
 
   public snap_zone = $state<SnapZone | null>(null);
@@ -183,7 +181,8 @@ export class WindowGeometryHandler {
       const { x: cx, y: cy, width: cw, height: ch } = this.move.container;
       const { client_x: sx, client_y: sy, top: st } = this.move.start;
 
-      this.snap_zone = this.get_snap_zone(event.clientX, event.clientY);
+      const zone = this.get_snap_zone(event.clientX, event.clientY);
+      if (zone !== this.snap_zone) this.snap_zone = zone;
 
       // optimized calculations (extracted sx and sy)
       this.move.dx = Math.round(Math.max(cx, Math.min(cw + cx, event.clientX)) - sx);
@@ -250,6 +249,7 @@ export class WindowGeometryHandler {
       let pointer_id: number | null = null;
       let down_event: PointerEvent | null = null;
       let pending_event: PointerEvent | null = null;
+      let frame = 0;
 
       const cleanup = () => {
         element.removeEventListener("pointerdown", on_down);
@@ -273,8 +273,8 @@ export class WindowGeometryHandler {
         }
 
         pending_event = event;
-        cancelAnimationFrame(this.move.animation_frame);
-        this.move.animation_frame = requestAnimationFrame(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
           pending_event = null;
           handle_move(event);
         });
@@ -285,7 +285,8 @@ export class WindowGeometryHandler {
         element.removeEventListener("pointermove", on_move);
         element.removeEventListener("lostpointercapture", on_end);
 
-        cancelAnimationFrame(this.move.animation_frame);
+        cancelAnimationFrame(frame);
+        frame = 0;
 
         if (this.move.active) {
           if (pending_event) handle_move(pending_event);
@@ -440,7 +441,6 @@ export class WindowGeometryHandler {
         x: 0,
         y: 0,
       },
-      animation_frame: 0,
     });
     this.snap_zone = null;
   }

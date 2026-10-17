@@ -40,7 +40,7 @@ Progress is the package's own: work calls `this.setProgress()` inside `execute`,
 2. **The result** is the root task's `result`. A root group gives `undefined`.
 3. **Cancel** aborts the job's `AbortController` and calls `manager.stop()`. Package 1.0.1 has no cancel of its own, so the work has to watch `context.signal`. A run that fails after the abort counts as `cancelled`. Work that ignores the signal and finishes counts as `done`.
 4. **Toasts.**
-   - Every run notifies a `progress` toast with Cancel. Progress and message updates reach the toast at most every 150 ms.
+   - Every run notifies a `progress` toast with Cancel. Progress and message updates reach the toast, and the job's reactive `progress`, at most every 150 ms; an update inside the window is sent at its end, so the last one is never lost. The package's raw progress is kept in a plain field, and the final value is set on success (1), failure and cancel.
    - At the end, the toast becomes one of three:
      - **done** (`info`): the `done` report, or the title with "Done";
      - **failed** (`error`): `<title> failed` and the error;

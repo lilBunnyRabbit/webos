@@ -67,7 +67,7 @@ export class DesktopService implements GridDesktopService {
   });
 
   /** Where the user put each entry. The folder is the source of truth (ADR-022). */
-  private positions = $state<Positions>({});
+  private positions = $state.raw<Positions>({});
   private arranged = $derived(DesktopHelper.arrange(this.folder.entries, this.positions));
   private grid = $derived(DesktopHelper.fit(this.container.grid, this.arranged.layout, this.arranged.unplaced));
 

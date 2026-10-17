@@ -15,7 +15,7 @@ export class DialogsService implements IDialogsService {
     return `DialogsService: ${this.stack.length} open`;
   }
 
-  public stack = $state<DialogEntry[]>([]);
+  public stack = $state.raw<DialogEntry[]>([]);
   public system = $derived(this.stack.filter((entry) => entry.window === null && entry.origin === null));
 
   private windows_service!: WindowsService;
@@ -102,13 +102,12 @@ export class DialogsService implements IDialogsService {
         window: options.window ?? null,
         origin,
         resolve: (value) => {
-          const index = this.stack.findIndex((item) => item.id === id);
-          if (index === -1) return;
-          this.stack.splice(index, 1);
+          if (!this.stack.some((item) => item.id === id)) return;
+          this.stack = this.stack.filter((item) => item.id !== id);
           settle(value as T | null);
         },
       };
-      this.stack.push(entry);
+      this.stack = [...this.stack, entry];
       // A question in a background window brings that window forward, so it's never answered blind.
       if (entry.window) this.windows_service.focus(entry.window);
     });

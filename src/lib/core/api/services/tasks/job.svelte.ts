@@ -38,6 +38,8 @@ export class Job<T> implements TaskJob<T> {
   private controller = new AbortController();
   private toast: NotificationId | null = null;
   private last_update = 0;
+  private latest_progress = 0;
+  private trailing: ReturnType<typeof setTimeout> | null = null;
   private slice_start = 0;
 
   constructor(
@@ -58,6 +60,7 @@ export class Job<T> implements TaskJob<T> {
     this.controller = new AbortController();
     this.status = TaskJobStatus.RUNNING;
     this.progress = 0;
+    this.latest_progress = 0;
     this.message = null;
     this.error = null;
     this.finished_at = null;
@@ -97,7 +100,7 @@ export class Job<T> implements TaskJob<T> {
     const manager = new module.TaskManager();
     let failure: unknown = null;
     manager.on("progress", (progress) => {
-      this.progress = progress;
+      this.latest_progress = progress;
       this.report();
     });
     manager.on("fail", (error) => {
@@ -117,10 +120,18 @@ export class Job<T> implements TaskJob<T> {
   }
 
   private report(): void {
-    const now = performance.now();
-    if (this.toast === null || now - this.last_update < UPDATE_MS) return;
-    this.last_update = now;
-    this.notifications.update(this.toast, { message: this.message ?? undefined, progress: this.progress });
+    const wait = this.last_update + UPDATE_MS - performance.now();
+    if (wait > 0) {
+      // The last update inside a gated window would otherwise be lost while a long step runs.
+      this.trailing ??= setTimeout(() => {
+        this.trailing = null;
+        this.report();
+      }, wait);
+      return;
+    }
+    this.last_update = performance.now();
+    this.progress = this.latest_progress;
+    if (this.toast !== null) this.notifications.update(this.toast, { message: this.message ?? undefined, progress: this.progress });
   }
 
   private async pace(): Promise<void> {
@@ -129,7 +140,13 @@ export class Job<T> implements TaskJob<T> {
     this.slice_start = performance.now();
   }
 
+  private stop_reporting(): void {
+    if (this.trailing !== null) clearTimeout(this.trailing);
+    this.trailing = null;
+  }
+
   private succeed(result: T): T {
+    this.stop_reporting();
     this.finished_at = Date.now();
     this.progress = 1;
     this.status = TaskJobStatus.DONE;
@@ -139,8 +156,10 @@ export class Job<T> implements TaskJob<T> {
   }
 
   private fail(error: unknown): null {
+    this.stop_reporting();
     const cancelled = this.controller.signal.aborted;
     this.finished_at = Date.now();
+    this.progress = this.latest_progress;
     this.status = cancelled ? TaskJobStatus.CANCELLED : TaskJobStatus.FAILED;
     this.error = cancelled ? "cancelled" : error_message(error);
     if (!cancelled) console.error(`[${this.app_id}] ${this.title}`, error);

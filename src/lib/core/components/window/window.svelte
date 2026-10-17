@@ -76,43 +76,14 @@
     }
   });
 
-  // TODO: is there a better way
-  const left = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.start.left}px`
-      : is_maximized
-        ? "0px"
-        : snap_position
-          ? snap_position.left
-          : `${instance.bounds.x}px`
-  );
-  const top = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.start.top}px`
-      : is_maximized
-        ? "0px"
-        : snap_position
-          ? snap_position.top
-          : `${instance.bounds.y}px`
-  );
-  const width = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.width}px`
-      : is_maximized
-        ? "100%"
-        : snap_position
-          ? snap_position.width
-          : `${instance.bounds.width}px`
-  );
-  const height = $derived(
-    geometry_handler.move.active
-      ? `${geometry_handler.move.height}px`
-      : is_maximized
-        ? "100%"
-        : snap_position
-          ? snap_position.height
-          : `${instance.bounds.height}px`
-  );
+  const rect = $derived.by(() => {
+    const { move } = geometry_handler;
+    if (move.active) return { left: `${move.start.left}px`, top: `${move.start.top}px`, width: `${move.width}px`, height: `${move.height}px` };
+    if (is_maximized) return { left: "0px", top: "0px", width: "100%", height: "100%" };
+    if (snap_position) return snap_position;
+    const { x, y, width, height } = instance.bounds;
+    return { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px` };
+  });
   const transform = $derived(geometry_handler.move.active ? `translate3d(${geometry_handler.move.dx}px, ${geometry_handler.move.dy}px, 0)` : "none");
 </script>
 
@@ -143,10 +114,10 @@
     is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
     (is_minimized || is_out) && "hidden"
   )}
-  style:left
-  style:top
-  style:width
-  style:height
+  style:left={rect.left}
+  style:top={rect.top}
+  style:width={rect.width}
+  style:height={rect.height}
   style:transform
   style:z-index={instance.order}
   style:view-transition-name={is_minimized || is_out ? undefined : `window-${id}`}

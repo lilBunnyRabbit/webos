@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { WindowFlag, type AppsService, type WindowsService } from "$lib/core/api";
+  import kernel, { WindowFlag, type AppsService, type WindowId, type WindowsService } from "$lib/core/api";
   import { view_transition } from "$lib/core/utils/view-transition";
   import { cn } from "$lib/core/utils";
   import { TerminalWindow as TerminalWindowIcon } from "phosphor-svelte";
@@ -8,11 +8,14 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   /** The most recently used Terminal window, if any. */
-  const newest = $derived(
-    windows
-      .sorted_list(([, a], [, b]) => b.order - a.order)
-      .find(([, instance]) => instance.app.id === "terminal")?.[0] ?? null
-  );
+  const newest = $derived.by(() => {
+    let best: { id: WindowId; order: number } | null = null;
+    for (const id of windows.list()) {
+      const instance = windows.get(id);
+      if (instance?.app.id === "terminal" && (best === null || instance.order > best.order)) best = { id, order: instance.order };
+    }
+    return best?.id ?? null;
+  });
   const focused = $derived(newest !== null && windows.is_focused(newest));
 
   /** Toggles like a taskbar item: brings the newest Terminal forward, hides it when it's already in front, opens one when none is running. */

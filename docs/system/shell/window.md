@@ -21,7 +21,7 @@ One `<Window id>` per entry in `windows.list()`, rendered by the [window manager
 
 ## Geometry rendering
 
-`window.svelte` derives each of `left`, `top`, `width` and `height` with this precedence:
+`window.svelte` derives one `rect` (`left`, `top`, `width`, `height` as CSS strings) with this precedence:
 
 1. **Drag/resize active**: `move.start.left/top` + `move.width/height`, with `transform: translate3d(dx, dy, 0)` for the movement. During a drag only the transform changes, which keeps it cheap.
 2. **Maximized**: `0, 0, 100%, 100%`.
@@ -62,7 +62,7 @@ There's one handler per window component. It reads the instance as `$derived(win
 | Phase | What happens |
 |-------|--------------|
 | `pointerdown` | Ignored if it hit a `button[data-window-button]` (titlebar buttons). Otherwise `preventDefault` + `stopPropagation`, `windows.focus(id)`, `setPointerCapture`, remember the down event, then `pointermove`/`lostpointercapture` listeners go on the element. Nothing moves yet. |
-| `pointermove` | Until the pointer has travelled `DRAG_THRESHOLD` (4px) from the down point, nothing happens. Crossing it calls `init_move()` with the down event. After that, moves are throttled to one `requestAnimationFrame`: each move cancels the pending frame. Drag updates `move.dx/dy` and `snap_zone`. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
+| `pointermove` | Until the pointer has travelled `DRAG_THRESHOLD` (4px) from the down point, nothing happens. Crossing it calls `init_move()` with the down event. After that, moves are throttled to one `requestAnimationFrame`: each move cancels the pending frame. The frame id lives in the attachment's closure, not in the reactive `move`. Drag updates `move.dx/dy`, and `snap_zone` only when the zone under the pointer changes. Resize updates `move.width/height` plus `dx/dy` for `n`/`w` edges. |
 | `lostpointercapture` | Fires for every way a gesture ends (`pointerup`, `pointercancel`, element removed). Removes listeners and cancels the pending frame. If a move started, it applies the last pending pointer event first, then `apply_move()`. A plain click therefore changes nothing: a maximized or snapped window stays put. |
 | attachment teardown | Removes every listener and releases capture if still held. |
 
