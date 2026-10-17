@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.18.0",
+    date: "2026-10-17",
+    title: "Game night",
+    introduces: ["letterer", "sokoban", "blocks", "brackets", "hex-viewer", "font-viewer"],
+    changes: [
+      { kind: NEW, apps: ["letterer"], text: "Letterer: guess the hidden word in five, six or seven letters, on up to eight boards at once, against a word that dodges you, with equations, or in a survival run, plus a daily word." },
+      { kind: NEW, apps: ["sokoban"], text: "Sokoban: push every crate onto a goal in levels made fresh for you at three difficulties, with a daily level." },
+      { kind: NEW, apps: ["blocks"], text: "Blocks: the falling-blocks classic with hold, a next queue and a ghost piece, in Marathon, a 40-line sprint and a daily sprint." },
+      { kind: NEW, apps: ["brackets"], text: "Brackets: run a knockout, double elimination, round robin or race-points cup for game night, saved as a file in Documents." },
+      { kind: NEW, apps: ["hex-viewer"], text: "Hex Viewer shows the bytes of any file, however large, and is in Open with for every file. Type hexdump in the Terminal for a quick look." },
+      { kind: NEW, apps: ["font-viewer"], text: "Font Viewer opens .ttf, .otf, .woff and .woff2 fonts with a sample, a size waterfall, the character set and variable-font sliders." },
+      { kind: NEW, apps: ["image-tools"], text: "Image Tools makes test images with rulers, corner coordinates and a crosshair for checking crops, up to several gigabytes. Also as testimg in the Terminal." },
+      { kind: NEW, apps: ["pdf-tools"], text: "PDF Tools makes test PDFs with numbered, ruled pages in any paper size, or of an exact file size. Also as testpdf in the Terminal." },
+      { kind: IMPROVED, apps: ["archive"], text: "How it works in Archive now shows the Huffman step too: how often each symbol appears, its code, the code tree and the bits saved." },
+    ],
+  },
+  {
     version: "1.17.1",
     date: "2026-10-17",
     title: "Lighter on its feet",

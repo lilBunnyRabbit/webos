@@ -318,8 +318,11 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Solitaire (Klondike) (2026-10-14)
 - [x] Daily puzzles: `daily` prop in 8 games, Game Hub Today tab (2026-10-14)
 - [x] Games on the kit: Stopwatch pauses when unseen, play time, Sudoku timer fix (2026-10-14)
-- Later: Chess, Sokoban, Blocks
-- [ ] Wordle and variants (owner, 2026-10-14): classic, longer words, multi-board (Quordle-style), daily via the `daily` prop. Needs a word list decision (bundled size vs language)
+- Later: Chess
+- [x] Letterer, Wordle and variants (owner, 2026-10-14; built 2026-10-17, [brainstorm](brainstorm/2026-10-17_app-wave-4.md)): classic at 5/6/7 letters, 2/4/8 boards, Dodge (Absurdle), Math (Nerdle), hard mode, Survival, daily. English lists from ENABLE, filtered by frequency; renamed from Wordle (trademark)
+- [x] Sokoban (2026-10-17): generated levels, solvable by construction, solver-checked minimum pushes, daily. Left: Hint (the solver can power it), tap-to-walk
+- [x] Blocks (2026-10-17): falling blocks, Marathon and Sprint 40; the daily is a 40-line sprint because Game Hub's daily record keeps the lowest time. Recording a score instead changes `plays.json` (owner's call)
+- [x] Brackets (2026-10-17, owner's ideas notes): knockout, double elimination, round robin, race-points cup, `.bracket` files
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
 - [x] Lunar Lander: three ships with per-thruster physics, gravity presets, air, wind, infinite fuel (2026-10-16)
@@ -363,10 +366,13 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Dev Tools — base64, hashes, URL, UUID, regex, JSON (2026-10-12)
 - [x] Unit Converter (2026-10-12)
 - [x] QR Code Scanner — camera + image file scanning (QR Reader, static-utils port)
-- [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Runs on Tasks since 2026-10-16
+- [x] Archive: zip read/write on native streams, "How it works" LZ77 view (2026-10-14). Runs on Tasks since 2026-10-16. Huffman stage in How it works (2026-10-17)
 - [x] PDF Tools — merge, organize, split, sign (vector signatures from a signature pad), images ↔ PDF; pdf-lib + pdf.js, lazy (2026-10-15). pdf.js worker not precached yet
 - [x] Diff on `@codemirror/merge` (2026-10-14)
-- Maybe: Hex Viewer, Font Viewer, Web app wrapper
+- [x] Hex Viewer (2026-10-17): windowed rows for any size, `hexdump`, in Open with for every file (`tools: ["*"]`, ADR-018 revision)
+- [x] Font Viewer (2026-10-17): native `FontFace`, default for font files. WOFF2 shows no names or axes (Chrome has no Brotli `DecompressionStream`)
+- [x] Test image and test PDF generators in Image Tools and PDF Tools, `testimg` / `testpdf` (2026-10-17). Owner's call: `FilesService.write_stream(path, chunks, { signal })` so multi-GB files stream to disk instead of collecting in Blobs (~2 GB peak memory, double disk use while writing today)
+- Maybe: Web app wrapper
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
   - [ ] Text chat during a transfer: short messages over the open data channel, shown as a side thread (owner's ideas notes, 2026-10-17)
 
