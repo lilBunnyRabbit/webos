@@ -77,8 +77,13 @@
   if (initial.length) void add_paths(initial);
 
   async function pick() {
-    const path = await win.pick_file({ accept: PDF_ACCEPT, title: "Add a PDF to merge", start_path: start_path ? parent_path(start_path) : undefined });
-    if (path) await add_paths([path]);
+    const paths = await win.pick_file({
+      accept: PDF_ACCEPT,
+      title: "Add PDFs to merge",
+      start_path: start_path ? parent_path(start_path) : undefined,
+      multiple: true,
+    });
+    if (paths.length) await add_paths(paths);
   }
 
   async function merge() {
@@ -125,7 +130,7 @@
 <DropZone label="Drop PDFs to add them" class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={add}>
   <Toolbar>
     {@render picker()}
-    <IconButton label="Add a PDF…" size="sm" onclick={pick} disabled={busy}><FilePlusIcon weight="bold" /></IconButton>
+    <IconButton label="Add PDFs…" size="sm" onclick={pick} disabled={busy}><FilePlusIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     {#if items.length}
       <IconButton label="Remove all" size="sm" onclick={() => (items = [])} disabled={busy}><TrashIcon weight="bold" /></IconButton>
@@ -137,7 +142,7 @@
     {#if !items.length}
       <EmptyState icon={StackIcon} title="Nothing to merge yet" description="Add two or more PDFs, put them in order, then merge them into one file.">
         {#snippet actions()}
-          <Button variant="primary" onclick={pick}><FilePlusIcon weight="bold" /> Add a PDF…</Button>
+          <Button variant="primary" onclick={pick}><FilePlusIcon weight="bold" /> Add PDFs…</Button>
         {/snippet}
       </EmptyState>
     {:else}

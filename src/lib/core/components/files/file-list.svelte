@@ -5,6 +5,7 @@
   import { join_path } from "$lib/core/api/services/files/path";
   import { PATHS, SYSTEM_DIRECTORIES, is_locked_path, is_read_only_path, mount_point_of } from "$lib/core/api/services/files/hierarchy";
   import type { Position } from "$lib/core/utils/type";
+  import { click_select } from "$lib/core/utils/selection";
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import FileRow from "./file-row.svelte";
   import DirectoryRow from "./directory-row.svelte";
@@ -67,10 +68,11 @@
      * opens it and a tap on a file selects it.
      */
     picker?: PickerMode;
-    selected?: string | null;
+    /** Picker mode: the chosen names in this folder, at most one unless `picker.multiple`. */
+    selected?: string[];
   }
 
-  let { handler, search = $bindable(), selected = $bindable(null), picker, onnavigate }: Props = $props();
+  let { handler, search = $bindable(), selected = $bindable([]), picker, onnavigate }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -93,7 +95,7 @@
   const read_only = $derived(is_read_only_path(handler.path));
   const locked = (entries: FileSystemItem[]) => entries.some((entry) => is_locked_path(join_path(handler.segments, entry.name)));
 
-  // Multi-select (ADR-011 revision): this list's own UI state, desktop pointer only. The picker keeps its single
+  // Multi-select (ADR-011 revision): this list's own UI state, desktop pointer only. The picker keeps its own
   // `selected`, and mobile keeps tap to open.
   const multi = $derived(!picker && !mobile);
   const list_handler = new FileListHandler({
@@ -105,6 +107,30 @@
   });
   const selection = $derived(list_handler.selection);
   const targets = (item: FileSystemItem) => list_handler.targets(item);
+
+  // A multiple picker selects among the files it accepts only; Shift ranges skip the rest.
+  const pickable = $derived(picker?.multiple ? filtered_items.filter((item) => accepts(picker, item)).map((item) => item.name) : []);
+  let pick_anchor: string | null = null;
+
+  function pick_select(item: FileSystemItem, event: MouseEvent) {
+    if (!picker) return;
+    if (!accepts(picker, item)) {
+      if (!picker.multiple) selected = [];
+      return;
+    }
+    if (!picker.multiple) {
+      selected = [item.name];
+      return;
+    }
+    const next = click_select(
+      { selection: new Set(selected), anchor: pick_anchor },
+      item.name,
+      { toggle: mobile || mod(event), range: !mobile && event.shiftKey },
+      pickable
+    );
+    pick_anchor = next.anchor;
+    selected = pickable.filter((name) => next.selection.has(name));
+  }
 
   // A new folder starts with nothing selected.
   $effect(() => {
@@ -128,8 +154,11 @@
   function open(item: FileSystemItem, anchor: Position) {
     if (picker && item.kind === "file") {
       // Saving over a file goes through the footer, which asks before replacing.
-      if (picker.kind === "save") selected = item.name;
-      else if (accepts(picker, item)) picker.onchoose(join_path(handler.segments, item.name));
+      if (picker.kind === "save") selected = [item.name];
+      else if (accepts(picker, item)) {
+        const names = picker.multiple && selected.includes(item.name) ? selected : [item.name];
+        picker.onchoose(names.map((name) => join_path(handler.segments, name)));
+      }
       return;
     }
 
@@ -228,7 +257,13 @@
   {@attach mobile && !picker && long_press({ on_menu: background_menu, ignore: "[role=row]" })}
   class="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
   onkeydown={(event) => {
-    if (picker) return;
+    if (picker) {
+      if (picker.multiple && mod(event) && event.key.toLowerCase() === "a" && !(event.target as Element).closest("input")) {
+        event.preventDefault();
+        selected = pickable;
+      }
+      return;
+    }
     if (mod(event) && event.key.toLowerCase() === "v" && clipboard.content && !read_only) {
       event.preventDefault();
       paste(handler, window);
@@ -270,7 +305,7 @@
   {:else if filtered_items.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />
   {:else}
-    <div role="grid" aria-label="Folder contents" class="grid grid-cols-[1.25rem_1fr_auto_auto] gap-x-3 px-2 pb-2">
+    <div role="grid" aria-label="Folder contents" aria-multiselectable={picker ? picker.multiple : multi} class="grid grid-cols-[1.25rem_1fr_auto_auto] gap-x-3 px-2 pb-2">
       <div role="row" class="sticky top-0 z-10 col-span-4 grid grid-cols-subgrid border-b border-foreground/8 bg-background px-2 pt-2 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
         <div role="columnheader" class="col-span-2">Name</div>
         <div role="columnheader" class="w-16 text-right">Size</div>
@@ -286,12 +321,12 @@
           data-entry-kind={item.kind}
           draggable={multi && !locked([item])}
           aria-disabled={!choosable && item.kind === "file"}
-          aria-selected={picker ? selected === item.name : multi ? selection.has(item.name) : undefined}
+          aria-selected={picker ? selected.includes(item.name) : multi ? selection.has(item.name) : undefined}
           onclick={(event) => {
             const anchor = { x: event.clientX, y: event.clientY };
             if (picker) {
               if (mobile && item.kind === "directory") open(item, anchor);
-              else selected = choosable ? item.name : null;
+              else pick_select(item, event);
             } else if (mobile) open(item, anchor);
             else list_handler.select(item.name, event);
           }}
@@ -299,11 +334,11 @@
           role="row"
           class={cn(
             "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-[0.75rem_1fr_auto_auto] items-center gap-x-3 [contain-intrinsic-size:auto_2rem] [content-visibility:auto] pointer-coarse:[contain-intrinsic-size:auto_2.75rem] rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-            !multi && "focus:bg-primary/12",
+            !multi && !picker?.multiple && "focus:bg-primary/12",
             clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50",
             list_handler.dragging.has(item.name) && "opacity-40",
             !choosable && item.kind === "file" && "opacity-38",
-            picker && selected === item.name && "bg-primary/15 hover:bg-primary/15",
+            picker && selected.includes(item.name) && "bg-primary/15 hover:bg-primary/15",
             selection.has(item.name) && "bg-primary/14 hover:bg-primary/18",
             list_handler.drop_folder === item.name && "bg-primary/18 ring-2 ring-primary/70 ring-inset"
           )}

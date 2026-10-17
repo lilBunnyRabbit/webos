@@ -45,8 +45,13 @@ export interface WindowHandle {
   confirm(message: string, options?: ConfirmOptions): Promise<boolean>;
   /** A text prompt sheet over this window. Resolves `null` on Cancel, Esc or if the window closes. */
   prompt(message: string, options?: PromptOptions): Promise<string | null>;
-  /** A file picker sheet (File Explorer in picker mode) over this window. Resolves the chosen path, or `null`. */
-  pick_file(options?: PickOptions & { title?: string }): Promise<string | null>;
+  /**
+   * A file picker sheet (File Explorer in picker mode) over this window. Resolves the chosen path, or `null`. With
+   * `multiple: true` it takes several files from one folder (and several from "This device…") and resolves their paths,
+   * `[]` on Cancel.
+   */
+  pick_file(options: PickOptions & { title?: string; multiple: true }): Promise<string[]>;
+  pick_file(options?: PickOptions & { title?: string; multiple?: false }): Promise<string | null>;
   /** The same picker for folders. */
   pick_directory(options?: Omit<PickOptions, "accept"> & { title?: string }): Promise<string | null>;
   /** The picker in save mode: a folder plus a file name. Resolves the full path, or `null`. Writing is the caller's job. */

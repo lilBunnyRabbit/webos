@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge, Button, CopyButton, EmptyState } from "$lib/core/components/ui";
-  import { Devices as DevicesIcon, FileArrowUp as FileArrowUpIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
+  import { FileArrowUp as FileArrowUpIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
   import type { Craft } from "./craft";
 
   interface Props {
@@ -8,11 +8,10 @@
     source_name: string | null;
     notes: string[];
     onpick: () => void;
-    onpickdevice: () => void;
     onopen: () => void;
   }
 
-  let { craft, source_name, notes, onpick, onpickdevice, onopen }: Props = $props();
+  let { craft, source_name, notes, onpick, onopen }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-3 p-3">
@@ -24,7 +23,6 @@
     >
       {#snippet actions()}
         <Button variant="primary" onclick={onpick}><FolderOpenIcon weight="bold" /> Open a craft…</Button>
-        <Button onclick={onpickdevice}><DevicesIcon weight="bold" /> From device…</Button>
       {/snippet}
     </EmptyState>
   {:else}

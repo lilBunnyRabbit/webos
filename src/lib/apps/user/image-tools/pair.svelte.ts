@@ -124,8 +124,20 @@ export class ImagePair {
   }
 
   async pick(slot: Slot) {
-    const chosen = await this.options.win.pick_file({ accept: ["image/*"], start_path: this.start_path, title: this.options.titles[slot] });
-    if (chosen) this.load(slot, () => load_image_at(chosen));
+    const chosen = await this.options.win.pick_file({
+      accept: ["image/*"],
+      start_path: this.start_path,
+      title: this.options.titles[slot],
+      multiple: true,
+    });
+    // Two picked at once fill both slots, in the order the folder lists them.
+    if (chosen.length >= 2) {
+      this.load(Slot.ORIGINAL, () => load_image_at(chosen[0]));
+      this.load(Slot.EDITED, () => load_image_at(chosen[1]));
+      return;
+    }
+    const [path] = chosen;
+    if (path) this.load(slot, () => load_image_at(path));
   }
 
   take(files: File[]) {

@@ -94,8 +94,13 @@
   if (initial.length) void add_paths(initial);
 
   async function pick() {
-    const path = await win.pick_file({ accept: IMAGE_ACCEPT, title: "Add an image", start_path: start_path ? parent_path(start_path) : undefined });
-    if (path) await add_paths([path]);
+    const paths = await win.pick_file({
+      accept: IMAGE_ACCEPT,
+      title: "Add images",
+      start_path: start_path ? parent_path(start_path) : undefined,
+      multiple: true,
+    });
+    if (paths.length) await add_paths(paths);
   }
 
   async function create() {
@@ -149,7 +154,7 @@
 <DropZone label="Drop images to add them" class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={add}>
   <Toolbar>
     {@render picker()}
-    <IconButton label="Add an image…" size="sm" onclick={pick} disabled={busy}><ImageSquareIcon weight="bold" /></IconButton>
+    <IconButton label="Add images…" size="sm" onclick={pick} disabled={busy}><ImageSquareIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     <Select size="sm" aria-label="Page size" class="w-auto" options={SIZES} bind:value={settings.value.size} />
     <Select size="sm" aria-label="Margin" class="w-auto" options={MARGINS} bind:value={settings.value.margin} />
@@ -163,7 +168,7 @@
     {#if !items.length}
       <EmptyState icon={ImagesIcon} title="No images yet" description="Add PNG, JPEG or other images. Each one becomes a page, in the order shown.">
         {#snippet actions()}
-          <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Add an image…</Button>
+          <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Add images…</Button>
         {/snippet}
       </EmptyState>
     {:else}

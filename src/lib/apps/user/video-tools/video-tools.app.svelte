@@ -4,7 +4,6 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files } from "$lib/core/utils/image";
   import {
     ArrowLineLeft as ArrowLineLeftIcon,
@@ -12,7 +11,6 @@
     BracketsSquare as BracketsSquareIcon,
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
-    Devices as DevicesIcon,
     FilmSlate as FilmSlateIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
@@ -163,8 +161,6 @@
     if (chosen) await load_path(chosen);
   }
 
-  const pick_device = async () => take(await pick_device_files({ accept: VIDEO_ACCEPT }));
-
   function take(list: File[]) {
     const file = list.find((item) => item.type.startsWith("video/") || is_video_name(item.name));
     if (file) void load(file, null);
@@ -309,7 +305,6 @@
 >
   <Toolbar>
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={pick_device}><DevicesIcon weight="bold" /></IconButton>
     <span class="min-w-20 flex-1 truncate px-1 text-ui font-medium">{loaded?.source.name ?? ""}</span>
     {#if loaded}
       {#if running}
@@ -326,7 +321,7 @@
     <div class="grid h-full place-items-center"><Spinner label="Loading video" /></div>
   {:else if error && !loaded}
     <EmptyState icon={WarningIcon} tone="error" title="Couldn't open the video" description={error}>
-      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !loaded}
     <EmptyState
@@ -334,7 +329,7 @@
       title="No video open"
       description="Trim a video to a WebM clip, turn part of it into a GIF, or save its sound. Open one or drop it here."
     >
-      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a video…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a video…</Button>{/snippet}
     </EmptyState>
   {:else}
     <div class="grid min-h-0 grid-rows-[minmax(13rem,1fr)_minmax(0,18rem)] @2xl:grid-cols-[minmax(0,1fr)_17rem] @2xl:grid-rows-[minmax(0,1fr)]">
