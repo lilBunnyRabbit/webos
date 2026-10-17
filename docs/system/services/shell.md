@@ -192,6 +192,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | api-client | `wget <url> [--to dir] [-o name]`, `http <method> <url> [-H "K: V"…] [-d body] [-o path]` | `wget` and `http -o` run the download as a task and yield the `file` (name from Content-Disposition or the URL, never over an existing file); `http` otherwise yields the status line and the body as text (JSON pretty-printed); method completion |
 | dev-tools | `jwt [token] [-s secret]`, `ts [value…] [-z zone]`, `cron [expr…] [-n N]`, `cert [path…]`, `b64 [text…] [-d] [-u]`, `hash [path\|text…] [-a sha1\|sha256\|sha384\|sha512]`, `uuid [-n N] [-v v4\|v7]`. With no positional, each reads what's piped in: text, or `file` values (`cert`, `hash`, `b64` read the file's bytes) | Plain records: `jwt` (status, signature, time claims, header, payload), `ts` (unix, ms, iso, utc, zone, local, weekday, relative), `cert` (subject, issuer, validity, names, key, fingerprints), `hash` (algorithm, hash, of), `cron` runs (at, in, iso) after a text description; `b64` and `uuid` yield text |
 | qr-studio | `qr [text…] [-e L\|M\|Q\|H] [-o out.png\|out.svg\|folder]` | `file`; text from the args or piped strings; ECC M by default; writes `qr.png` (free name) in the current folder unless `-o` names a .png, .svg or a folder |
+| web-app | `webapp add <url> [-n\|--name]`: writes `{name}.webapp` to `/home/Desktop` | `file` |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
