@@ -78,6 +78,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `diff` | `text/*`, `.txt`, `.md`, … (`DIFF_ACCEPT`) |
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
+| `svg-workbench` | `.svg`, `image/svg+xml` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 | `hex-viewer` | `*` (every file) |
 
