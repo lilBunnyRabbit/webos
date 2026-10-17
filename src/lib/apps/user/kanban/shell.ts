@@ -85,6 +85,7 @@ export async function add({
   let placed: FoundCard | null = null;
   await boards.edit((file) => {
     const board = args.board ? found(resolve_board(file, args.board)) : get_board(file, null);
+    if (board.folder) throw new ShellError(`${board.name} is a folder board: its cards are the files in ${board.folder.path}`);
     const column = args.column ? found(resolve_column(board, args.column)) : first_open_column(board);
     if (!column) throw new ShellError(`board ${board.name} has no columns`);
     const next = update_board(file, board.id, (current) => add_card(current, column.id, card));

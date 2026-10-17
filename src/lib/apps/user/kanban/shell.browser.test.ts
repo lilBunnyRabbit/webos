@@ -3,7 +3,7 @@ import kernel from "$lib/core/api";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { json_file } from "$lib/core/contexts/app";
-import { BOARDS_PATH, default_file, KanbanFileSchema } from "./data";
+import { add_board, BOARDS_PATH, default_file, KanbanFileSchema, new_folder_board } from "./data";
 import { LINGER_MS } from "$lib/core/contexts/app/live-file.svelte";
 import { add, archive, done, list, mv } from "./shell";
 import { read_boards } from "./store";
@@ -70,4 +70,12 @@ test("works with no window open, and back to back", async () => {
   const titles = (await collect(list(context({ due: false })))).map((card) => card.title);
   expect(titles).toEqual(["One", "Two"]);
   await vi.waitFor(async () => expect((await read_boards(files))?.boards[0].columns[1].cards[0]?.title).toBe("Two"));
+});
+
+test("a folder board takes no cards from the shell", async () => {
+  const cell = json_file(BOARDS_PATH, default_file(), KanbanFileSchema);
+  await vi.waitFor(() => expect(cell.ready).toBe(true));
+  cell.value = add_board(cell.value, new_folder_board("Quests", "/home/quests"));
+  await expect(add(context({ title: ["x"], board: "quests" }))).rejects.toThrow("Quests is a folder board");
+  cell.release();
 });

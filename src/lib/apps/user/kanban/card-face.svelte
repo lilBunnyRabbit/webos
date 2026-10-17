@@ -3,9 +3,18 @@
   import { cn } from "$lib/core/utils";
   import { CalendarBlank, CheckSquare, TextAlignLeft } from "phosphor-svelte";
   import { checklist_progress, due_state, type Card, type Label } from "./data";
+  import type { CardField } from "./folder";
   import { describe_due, DUE_TONE, LABEL_CHIP } from "./view";
 
-  let { card, labels, today, done = false }: { card: Card; labels: Label[]; today: string; done?: boolean } = $props();
+  interface Props {
+    card: Card;
+    labels: Label[];
+    today: string;
+    done?: boolean;
+    fields?: CardField[];
+  }
+
+  let { card, labels, today, done = false, fields = [] }: Props = $props();
 
   const card_labels = $derived(labels.filter((label) => card.labels.includes(label.id)));
   const progress = $derived(checklist_progress(card));
@@ -20,6 +29,13 @@
     </span>
   {/if}
   <span class={cn("text-ui leading-snug break-words", done && "text-foreground/60")}>{card.title || "Untitled"}</span>
+  {#if fields.length > 0}
+    <span class="flex flex-wrap gap-1">
+      {#each fields as field (field.key)}
+        <Badge tone="neutral" class="max-w-full min-w-0"><span class="truncate">{field.text}</span></Badge>
+      {/each}
+    </span>
+  {/if}
   {#if card.due || progress.total > 0 || card.notes.trim()}
     <span class="flex flex-wrap items-center gap-1.5 text-foreground/60">
       {#if card.due}
