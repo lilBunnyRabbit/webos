@@ -1,12 +1,10 @@
 <script lang="ts">
-  import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+  import kernel, { type AppsService } from "$lib/core/api";
   import { Button, Section, Spinner } from "$lib/core/components/ui";
   import { format_bytes, error_message } from "$lib/core/utils";
   import { local_storage_usage, type LocalStorageGroup, type StorageEstimateWithDetails } from "../browser";
+  import DiskUsage from "./disk-usage.svelte";
 
-  const FOLDERS = ["/home", "/etc", "/var", "/tmp"];
-
-  const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   interface Quota {
@@ -25,7 +23,6 @@
   let quota = $state<Promise<Quota>>(load_quota());
   let worker = $state<Promise<Worker>>(load_worker());
   let local = $state.raw<LocalStorageGroup[]>(local_storage_usage());
-  let folders = $state<Promise<{ path: string; bytes: number | null }[]> | null>(null);
 
   const local_total = $derived(local.reduce((sum, group) => sum + group.bytes, 0));
 
@@ -44,16 +41,6 @@
       waiting: registration?.waiting?.state ?? null,
       installing: registration?.installing?.state ?? null,
     };
-  }
-
-  // Walks every file under each folder, so it only runs on request.
-  function measure_folders() {
-    folders = Promise.all(
-      FOLDERS.map(async (path) => {
-        const handle = await files.get_directory(path);
-        return { path, bytes: handle ? await files.get_directory_size(handle) : null };
-      })
-    );
   }
 
   function refresh() {
@@ -103,26 +90,7 @@
   {/await}
 </Section>
 
-<Section title="File system" description="Size of each top-level folder. Measuring reads every file, so it runs on request.">
-  {#snippet actions()}
-    <Button size="sm" variant="quiet" onclick={measure_folders}>{folders ? "Measure again" : "Measure"}</Button>
-  {/snippet}
-  {#if folders === null}
-    {#each FOLDERS as path (path)}
-      {@render row(path, "—")}
-    {/each}
-  {:else}
-    {#await folders}
-      {@render loading()}
-    {:then sizes}
-      {#each sizes as { path, bytes } (path)}
-        {@render row(path, bytes === null ? "Missing" : format_bytes(bytes))}
-      {/each}
-    {:catch error}
-      {@render row("Couldn't measure the folders", error_message(error), false)}
-    {/await}
-  {/if}
-</Section>
+<DiskUsage />
 
 <Section title="App storage" description="localStorage per app, {format_bytes(local_total)} in total.">
   {#if local.length === 0}
