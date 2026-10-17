@@ -79,6 +79,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
 | `ask` | `text/*`, `.txt`, `.md`, `.json`, `.csv`, code and config files (`ASK_ACCEPT`) |
+| `link-preview` | `text/html`, `.html`, `.htm` (HTML Preview stays the default) |
 | `metadata` | `image/jpeg`, `image/png`, `image/webp`, `.jpg`, `.jpeg`, `.png`, `.webp`, `application/pdf`, `.pdf` |
 | `svg-workbench` | `.svg`, `image/svg+xml` |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
