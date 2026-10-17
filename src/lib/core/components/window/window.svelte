@@ -108,8 +108,7 @@
   onfocusin={() => windows.focus(id)}
   data-window-id={id}
   class={cn(
-    "absolute overflow-hidden pointer-events-auto grid grid-cols-1 grid-rows-[2.5rem_1fr]",
-    "rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
+    "absolute pointer-events-auto rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
     is_focused ? "shadow-window-focused ring-foreground/16" : "shadow-window ring-foreground/8",
     is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
     (is_minimized || is_out) && "hidden"
@@ -121,42 +120,45 @@
   style:transform
   style:z-index={instance.order}
   style:view-transition-name={is_minimized || is_out ? undefined : `window-${id}`}
-  style:contain="size layout paint style"
+  style:contain="size layout style"
   style:backface-visibility="hidden"
   tabindex={-1}
 >
-  <!-- Window titlebar. Double-click to maximize is a pointer shortcut; the maximize button is the accessible path. -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    {@attach geometry_handler.drag_attachment()}
-    ondblclick={(event) => {
-      if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
-    }}
-    class={cn(
-      "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
-      geometry_handler.move.active && "cursor-grabbing"
-    )}
-  >
-    <WindowTitlebar bind:zoom window_id={id} focused={is_focused} />
-  </div>
+  <!-- Clips to the rounded corners; the resize handles sit outside it so the corners stay grabbable. -->
+  <div class="grid size-full grid-cols-1 grid-rows-[2.5rem_1fr] overflow-hidden rounded-[inherit] [contain:paint]">
+    <!-- Window titlebar. Double-click to maximize is a pointer shortcut; the maximize button is the accessible path. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      {@attach geometry_handler.drag_attachment()}
+      ondblclick={(event) => {
+        if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
+      }}
+      class={cn(
+        "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
+        geometry_handler.move.active && "cursor-grabbing"
+      )}
+    >
+      <WindowTitlebar bind:zoom window_id={id} focused={is_focused} />
+    </div>
 
-  <!-- Window content -->
-  <div
-    class="relative overflow-hidden bg-background [container-type:size] [content-visibility:auto]"
-    style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
-  >
-    <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
-    {#if !is_out}
-      <div class="contents" inert={has_sheets}>
-        <WindowContent window_id={id} {zoom}>
-          <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
-            <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
-            <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
-          </div>
-        </WindowContent>
-      </div>
-      <WindowSheets window_id={id} />
-    {/if}
+    <!-- Window content -->
+    <div
+      class="relative overflow-hidden bg-background [container-type:size] [content-visibility:auto]"
+      style:contain-intrinsic-size={`${instance.bounds.width}px ${instance.bounds.height}px`}
+    >
+      <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
+      {#if !is_out}
+        <div class="contents" inert={has_sheets}>
+          <WindowContent window_id={id} {zoom}>
+            <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
+              <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
+              <pre><span class="font-bold">move:</span> {JSON.stringify(geometry_handler.move, null, 2)}</pre>
+            </div>
+          </WindowContent>
+        </div>
+        <WindowSheets window_id={id} />
+      {/if}
+    </div>
   </div>
 
   <!-- Resize handles -->

@@ -329,7 +329,7 @@ export class WindowGeometryHandler {
     const container = windows.container.bounds;
 
     if (this.instance.snap_zone || this.instance.flags.has(WindowFlag.MAXIMIZED)) {
-      const rect = element.parentElement!.getBoundingClientRect();
+      const rect = element.closest("[data-window-id]")!.getBoundingClientRect();
       // Window bounds are relative to the container; the rect is relative to the viewport.
       const bounds: Bounds = {
         width: Math.round(rect.width),
@@ -399,7 +399,7 @@ export class WindowGeometryHandler {
 
   private apply_move(element: HTMLDivElement) {
     if (this.snap_zone) {
-      const parent = element.parentElement!;
+      const parent = element.closest<HTMLElement>("[data-window-id]");
       if (parent) {
         parent.style.transition = "all 0.25s cubic-bezier(0.4,0,0.2,1)";
       }

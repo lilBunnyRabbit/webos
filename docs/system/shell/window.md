@@ -28,7 +28,7 @@ One `<Window id>` per entry in `windows.list()`, rendered by the [window manager
 3. **Snapped**: `WindowGeometryHandler.get_snap_position(zone)`, which is CSS `calc()` percentages of the container with an 8px gap (`SNAP_PADDING`).
 4. Otherwise `instance.bounds` in px.
 
-`z-index` is `instance.order`. The frame also gets `contain: size layout paint style` and `backface-visibility: hidden`. The content area uses `content-visibility: auto` with `contain-intrinsic-size` set to the bounds.
+`z-index` is `instance.order`. The frame gets `contain: size layout style` and `backface-visibility: hidden`. It holds two children: an inner `size-full` grid with `overflow-hidden rounded-[inherit]` and `contain: paint`, which clips titlebar and content to the rounded corners, and the resize handles beside it. The handles sit outside the clipped element on purpose: inside it, the corner radius clipped the outer pixels of the corner handles, and a click there fell through to the window behind. The content area uses `content-visibility: auto` with `contain-intrinsic-size` set to the bounds.
 
 Visual states (all theme tokens):
 
@@ -41,7 +41,7 @@ Visual states (all theme tokens):
 | minimized | `hidden` (`display: none`, the app stays mounted) |
 | popped out | `hidden`, and the content area renders neither `WindowContent` nor `WindowSheets`: the app is mounted in the mini window instead, through `window-mini.svelte` ([extract](../services/extract.md#mounting)) |
 
-The grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
+The inner grid is `2.5rem` titlebar + `1fr` content. The titlebar strip is `bg-background-light` with a `foreground/8` hairline below; the content area is `bg-background`.
 
 ## Motion
 
@@ -68,13 +68,13 @@ There's one handler per window component. It reads the instance as `$derived(win
 
 `init_move()` when the window is **snapped or maximized**:
 
-- It measures the frame (`element.parentElement.getBoundingClientRect()`) and converts it to container space by subtracting `container.x/y`.
+- It measures the frame (`element.closest("[data-window-id]").getBoundingClientRect()`) and converts it to container space by subtracting `container.x/y`.
 - **Resize**: writes that rect into `instance.bounds`, so the window resizes from where it visibly is.
 - **Drag**: keeps the restored `bounds` size. The grab point keeps its relative spot: `grab_offset = (clientX − rect.left) / rect.width × bounds.width`, and the restored window starts at `clientX − container.x − grab_offset`.
 
 `apply_move()`:
 
-- If a snap zone is under the pointer, it sets `instance.snap_zone` and adds a 250ms inline `transition` to the frame, removed on `transitionend`.
+- If a snap zone is under the pointer, it sets `instance.snap_zone` and adds a 250ms inline `transition` to the frame (`closest("[data-window-id]")`), removed on `transitionend`.
 - Otherwise it writes `width/height/x/y` into `instance.bounds` and clears `snap_zone`.
 - **Always** deletes `MAXIMIZED`, then resets `move`.
 
@@ -116,7 +116,7 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 | Input | Target | Result |
 |-------|--------|--------|
 | Pointer drag | Titlebar (not its buttons) | Move. A drop at a container edge or corner snaps. |
-| Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners) | Resize. Handles are hidden when maximized or minimized. |
+| Pointer drag | 8 resize handles (`n s e w ne nw se sw`, 8px edges / 12px corners, unclipped by the rounded corner) | Resize. Handles are hidden when maximized or minimized. |
 | Pointer down | Titlebar or resize handle | Focus (raise) |
 | Click (no movement) | Titlebar of a maximized/snapped window | Nothing. The window stays put; only a drag past 4px restores it. |
 | Pointer down (capture phase) | Anywhere in the frame, content included | Focus (raise) |
