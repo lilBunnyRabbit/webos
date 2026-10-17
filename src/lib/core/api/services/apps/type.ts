@@ -92,8 +92,12 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * `tracker.daily(day, ms, score)`, lower (`score-asc`) or higher (`score-desc`) first. Time breaks a tie.
    */
   daily_rank?: DailyRank;
-  /** Commands, completers and value types that work with no window open (ADR-034). Service commands win an id clash. */
-  shell?: ShellContribution;
+  /**
+   * Commands, completers and value types that work with no window open (ADR-034), as `import("./commands")`: the
+   * module's default export is the contribution. Lazy: the shell loads every app's the first time it needs commands.
+   * Service commands win an id clash.
+   */
+  shell?: () => Promise<{ default: ShellContribution }>;
   /**
    * A count on the app's icon wherever it shows, even with no window open (ADR-034). Read inside the shell UI's
    * reactive scope: back it with `createSubscriber` so the app only checks while an icon is on screen. `null` or `0`

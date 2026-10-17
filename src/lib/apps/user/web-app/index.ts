@@ -1,10 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { define_command } from "$lib/core/api/services/shell/define";
 import { Globe as GlobeIcon } from "phosphor-svelte";
 import { z } from "zod";
-
-const logic = () => import("./shell");
 
 export default define_app({
   id: "web-app",
@@ -17,22 +14,7 @@ export default define_app({
   associations: [".webapp"],
   props: z.object({ path: z.string().optional() }),
   defaults: { constraints: { width: { min: 320 }, height: { min: 300 } } },
-  shell: {
-    commands: [
-      define_command({
-        id: "webapp add",
-        description: "Save a website as a web app on the desktop",
-        args: z.object({
-          url: z.string().describe("The address; https:// is added when missing"),
-          name: z.string().optional().describe("Name on the icon and the window, from the address by default"),
-        }),
-        positional: ["url"],
-        short: { name: "n" },
-        yields: "file",
-        run: async (context) => (await logic()).add(context),
-      }),
-    ],
-  },
+  shell: () => import("./commands"),
   highlights: () => import("./highlights"),
   component: () => import("./web-app.app.svelte"),
 });

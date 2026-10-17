@@ -15,6 +15,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   // One session while the palette is open; typed lines join the shared history (ADR-033).
   const session = untrack(() => shell.session());
+  untrack(() => void shell.load());
 
   interface Row {
     label: string;
@@ -146,6 +147,6 @@
       </button>
     </li>
   {:else}
-    <li class="px-2 py-6 text-center text-ui text-foreground/65">{naming ? "No commands match" : "Enter runs it"}</li>
+    <li class="px-2 py-6 text-center text-ui text-foreground/65">{naming ? (shell.loaded ? "No commands match" : "Loading commands…") : "Enter runs it"}</li>
   {/each}
 </ul>

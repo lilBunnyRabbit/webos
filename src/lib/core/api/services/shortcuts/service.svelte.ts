@@ -74,18 +74,25 @@ export class ShortcutsService implements IShortcutsService {
     };
   }
 
+  /** A command's shortcut is listed once its command is known, so the first list loads the apps' commands. */
   public list(): ListedShortcut[] {
+    void this.shell_service.load();
     const listed: ListedShortcut[] = [];
     for (const shortcut of this.shortcuts) {
       if (!("command" in shortcut)) {
         listed.push(shortcut);
         continue;
       }
-      const words = shortcut.command.split(" ");
-      const command = words.map((_, index) => this.shell_service.find(words.slice(0, words.length - index).join(" "))).find(Boolean);
+      const command = this.command_of(shortcut.command);
       if (command) listed.push({ ...shortcut, label: shortcut.label ?? command.description });
     }
     return listed;
+  }
+
+  /** The longest run of leading words that names a command: the rest are its args. */
+  private command_of(line: string) {
+    const words = line.split(" ");
+    return words.map((_, index) => this.shell_service.find(words.slice(0, words.length - index).join(" "))).find(Boolean);
   }
 
   private live(shortcut: KeyShortcut): boolean {
@@ -107,15 +114,28 @@ export class ShortcutsService implements IShortcutsService {
     const focused = this.windows_service.get_focused();
     // Newest first, window scope ahead of global: the most specific, latest registration wins.
     const candidates = this.shortcuts.filter((shortcut) => shortcut.keys === keys).reverse();
-    const match =
+    const pick = () =>
       candidates.find((shortcut) => focused !== null && scope(shortcut) === focused && this.live(shortcut)) ??
       candidates.find((shortcut) => scope(shortcut) === undefined && this.live(shortcut));
-    if (!match) return;
-
+    const match = pick();
+    if (match) {
+      event.preventDefault();
+      this.fire(match);
+      return;
+    }
+    // An app's command isn't known until the apps' commands load: hold the key, load, then pick again.
+    if (this.shell_service.loaded || !candidates.some((shortcut) => "command" in shortcut && !this.command_of(shortcut.command))) return;
     event.preventDefault();
-    if ("command" in match) void this.shell_service.execute(match.command);
-    else match.run();
+    void this.shell_service.load().then(() => {
+      const late = pick();
+      if (late) this.fire(late);
+    });
   };
+
+  private fire(shortcut: KeyShortcut): void {
+    if ("command" in shortcut) void this.shell_service.execute(shortcut.command);
+    else shortcut.run();
+  }
 }
 
 function scope(shortcut: KeyShortcut) {

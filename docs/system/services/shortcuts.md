@@ -39,7 +39,7 @@ interface RunShortcut {       // apps, until they can register commands
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `register` | `(shortcut) => () => void` | Normalizes `keys`, appends, returns the disposer (made for `$effect`). Both run untracked, so an effect that registers doesn't subscribe to the list it writes (that looped forever: Paint, 0.19.0). Same keys in the same scope: `console.warn` and the newer one wins |
-| `list` | `() => ListedShortcut[]` | Everything registered whose command exists, labels resolved, for the cheat sheet and the inspector. A command the platform lacks (`win snap` on mobile) drops out |
+| `list` | `() => ListedShortcut[]` | Everything registered whose command exists, labels resolved, for the cheat sheet and the inspector. A command the platform lacks (`win snap` on mobile) drops out. Calls `shell.load()`, so the apps' commands (`quno q`) list once they load |
 | `suspend` | `() => () => void` | Stops the dispatcher and returns resume. A counter, so nested suspends each resume their own and dispatch stays off until the last; calling a resume twice counts once. Untracked like `register`, so suspending from an effect doesn't loop. For a key tester that must see every key (Keyboard & HID Lab): suspend while its capture area is focused, resume on blur, unmount and when the window hides. Browser-reserved keys (Cmd+W, Cmd+T, Cmd+Q and similar) never reach the page either way |
 | `suspended` | `readonly boolean` | True while any suspend is unresumed. The inspector shows it as Dispatch |
 | `mac` | `readonly boolean` | `is_mac()` once: `userAgentData.platform` (else `navigator.platform`) matching mac, iOS, iPhone or iPad. Decides what `mod` means and how keys display |
@@ -68,6 +68,7 @@ On every `keydown`, in order:
 4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten.
 5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one. A command shortcut must have `shell.available(command)`, a run shortcut `when()`.
 6. `preventDefault()` synchronously, then `run()` or `shell.execute(command)` (async; a failure becomes an error toast).
+7. No match, the apps' commands not loaded yet, and a candidate's command unknown to the shell (an app's, like `quno q`): `preventDefault()`, await `shell.load()`, then pick again and fire the match, if any ([shell](shell.md#lazy-parts)).
 
 ## Default shortcuts
 

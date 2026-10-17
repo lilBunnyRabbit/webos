@@ -28,7 +28,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$lib/core/api` | Default export `kernel`, the names in the tables below, every type listed here | The barrel also re-exports a lot of OS-only helpers; only what's listed here is promised |
 | `$lib/core/api/services/apps/type` | `AppCategory` | Manifests import constants from their own module ([the import rule](apps/manifest.md#the-import-rule)), so this path is part of the promise |
 | `$lib/core/api/services/apps/helpers` | `FILE_PROPS`, `define_app` | Same reason |
-| `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: app manifests build their commands eagerly |
+| `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: each app's `commands.ts` builds its commands |
 | `$lib/core/contexts/app` | See [App context and data](#app-context-and-data) | Import from the barrel. The files behind it are internal paths |
 | `$lib/core/components/ui` | The whole UI kit | |
 | `$lib/core/games` | The whole games kit | Import from the barrel in components and lazy files |
@@ -53,7 +53,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `props` | yes | A zod object schema |
 | `daily_rank` | yes (1.20) | `DailyRank`: `time` (default), `score-asc`, `score-desc`. How the game's daily results rank, time breaking a tie |
 | `restore` | yes | `false` keeps windows out of saved sessions |
-| `shell` | yes | [Shell contributions](#shell-contributions) |
+| `shell` | yes | `() => import("./commands")`, the module default-exporting a `ShellContribution`. [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
 | `system` | no | Set by discovery for `src/lib/apps/system/`, never written by an app |
@@ -109,11 +109,11 @@ The barrel exports nothing else. The window frame builds the context with `set_a
 
 ## Shell contributions
 
-An app adds commands through `define_app({ shell })` ([ADR-034](../adrs/034-app-extension-points.md)). Stable:
+An app adds commands through `define_app({ shell: () => import("./commands") })` ([ADR-034](../adrs/034-app-extension-points.md), revised 2026-10-17): a sibling `commands.ts` whose default export is the contribution, loaded by the shell on first use ([manifest](apps/manifest.md#shell-adr-034)). The eager object form was removed (owner's decision, app wave 7): a break of the stable surface, so a major by the rule above. Stable:
 
 | Name | Members / values |
 |------|------------------|
-| `ShellContribution` | `commands`, `completers`, `values` |
+| `ShellContribution` | `commands`, `completers`, `values`. `lazy` is OS-only: AppsService uses it to hold the apps' modules back |
 | `Command` (via `define_command`) | `id`, `description`, `args`, `positional`, `short`, `yields`, `complete`, `available`, `run`. `app` is set by AppsService, not by you |
 | `CommandContext` | `args`, `input`, `piped`, `session`, `signal`, `elevated` |
 | `ValueType` | `columns`, `text`, `cell`, `render`, `open` |

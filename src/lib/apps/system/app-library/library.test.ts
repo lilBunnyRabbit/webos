@@ -7,14 +7,15 @@ import { app_commands, app_file_types, category_counts, category_of, has_filter,
 const app = (name: string, extra: Partial<AppManifest> = {}) =>
   ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppManifest;
 
-const command = (id: string) => ({ id, description: id, run() {} }) as Command;
+const command = (id: string, app?: string) => ({ id, description: id, app, run() {} }) as Command;
+const COMMANDS = [command("note add", "quick-notes"), command("note", "quick-notes"), command("ls")];
 
 const APPS = [
   app("Snake", { category: AppCategory.GAMES }),
   app("Sudoku", { category: AppCategory.GAMES, widget: async () => ({ default: (() => {}) as never }) }),
   app("Calculator"),
   app("Text Editor", { system: true, category: AppCategory.DEVELOPER, associations: ["text/*", ".md"] }),
-  app("Quick Notes", { category: AppCategory.PRODUCTIVITY, shell: { commands: [command("note add"), command("note")] } }),
+  app("Quick Notes", { category: AppCategory.PRODUCTIVITY, shell: async () => ({ default: {} }) }),
   app("Diff", { category: AppCategory.DEVELOPER, tools: [".txt"] }),
 ];
 
@@ -40,8 +41,7 @@ describe("has_filter", () => {
   });
 
   test("empty lists don't count", () => {
-    expect(has_filter(app("X", { associations: [], tools: [], shell: { commands: [] } }), LibraryFilter.FILES, context)).toBe(false);
-    expect(has_filter(app("X", { shell: { commands: [] } }), LibraryFilter.COMMANDS, context)).toBe(false);
+    expect(has_filter(app("X", { associations: [], tools: [] }), LibraryFilter.FILES, context)).toBe(false);
   });
 });
 
@@ -102,9 +102,9 @@ describe("category_counts", () => {
 });
 
 describe("details", () => {
-  test("commands sorted by id", () => {
-    expect(app_commands(APPS[4]).map((command) => command.id)).toEqual(["note", "note add"]);
-    expect(app_commands(APPS[0])).toEqual([]);
+  test("the app's commands from the registry, sorted by id", () => {
+    expect(app_commands(APPS[4], COMMANDS).map((command) => command.id)).toEqual(["note", "note add"]);
+    expect(app_commands(APPS[0], COMMANDS)).toEqual([]);
   });
 
   test("file types split into opens and works on, extensions first", () => {

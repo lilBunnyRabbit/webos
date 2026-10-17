@@ -4,8 +4,15 @@ import type { IService } from "../../type";
 
 /** Commands, completion and value types contributed by services; the terminal, the palette and shortcuts run them (ADR-033). */
 export interface ShellService extends IService {
-  /** Every command of every initialised service, by id. */
+  /** Every command of every initialised service, by id; app commands once `load()` has run (ADR-034). */
   readonly commands: Command[];
+  /** Whether the contributions' lazy parts (the apps' commands) are in. */
+  readonly loaded: boolean;
+  /**
+   * Loads every contribution's lazy part, once: one shared promise. Runs and completion await it themselves; UIs that
+   * list commands (Terminal, the palette, shortcut lists) call it when they open.
+   */
+  load(): Promise<void>;
   find(id: string): Command | undefined;
   value_type(type: string): ValueType | undefined;
   completer(kind: string): Completer | undefined;
@@ -31,6 +38,11 @@ export interface ShellContribution {
    * a value and the one that opens it can differ (files renders `file`, apps opens it).
    */
   values?: Record<string, Partial<ValueType>>;
+  /**
+   * The part that stays out of the boot chunk: the shell calls it once, on first use, and merges what it resolves to
+   * under this contribution's own (ADR-034 revision). Apps' commands come this way.
+   */
+  lazy?: () => Promise<ShellContribution>;
 }
 
 export type Value = string | number | boolean | null | Value[] | { [key: string]: Value };

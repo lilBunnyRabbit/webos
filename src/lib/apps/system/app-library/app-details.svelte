@@ -9,11 +9,13 @@
     type DesktopService,
     type NotificationsService,
     type SettingsService,
+    type ShellService,
     type VersionService,
     with_pin,
     without_pin,
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { untrack } from "svelte";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
@@ -64,7 +66,9 @@
 
   const mobile = kernel.platform === Platform.MOBILE;
   const types = $derived(app_file_types(manifest));
-  const commands = $derived(app_commands(manifest));
+  const shell = $derived(kernel.service<ShellService>("shell"));
+  untrack(() => void shell.load());
+  const commands = $derived(app_commands(manifest, shell.commands));
   const size = $derived(manifest.widget_size);
   const installed = $derived(apps.is_installed(manifest.id));
 

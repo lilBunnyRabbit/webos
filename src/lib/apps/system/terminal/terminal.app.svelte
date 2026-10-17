@@ -34,6 +34,7 @@
     created.restore(scrollback.value);
     return created;
   });
+  untrack(() => void shell.load());
 
   let current = $state.raw<Run | null>(null);
   let prompt: PromptInput | undefined = $state();

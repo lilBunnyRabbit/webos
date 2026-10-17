@@ -41,7 +41,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |
 | `props` | `ZodType<TProps>` | no | Launch props schema. No schema = the app never receives props |
 | `daily_rank` | `DailyRank` (`time`, `score-asc`, `score-desc`) | no, default `time` | How a game's daily results rank in `/var/lib/games/plays.json`: by time, or by the score passed to `tracker.daily(day, ms, score)`, lower or higher first, time breaking a tie (ADR-035). Game Hub shows the score with the time. Import `DailyRank` from `$lib/core/games/daily` |
-| `shell` | `ShellContribution` | no | Commands, completers and value types that work with no window open (ADR-034) |
+| `shell` | `() => import("./commands")` | no | Commands, completers and value types that work with no window open, loaded on first use (ADR-034) |
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
@@ -79,7 +79,31 @@ File-opening apps use `FILE_PROPS` (`z.object({ path: z.string() })`) or extend 
 
 ### `shell` (ADR-034)
 
-The same `ShellContribution` a service returns from `shell()`. AppsService merges every app's into its own contribution and tags each command with `app: <id>`. It's read eagerly, so ids, args and descriptions show in the palette and in `help`. Keep `run()` light and dynamic-import the logic.
+`shell: () => import("./commands")`. The sibling `commands.ts` default-exports the same `ShellContribution` a service returns from `shell()`; zod schemas and `define_command` calls live there, out of the boot chunk:
+
+```ts
+// commands.ts
+import { z } from "zod";
+import { define_command } from "$lib/core/api/services/shell/define";
+import type { ShellContribution } from "$lib/core/api/services/shell/type";
+
+const logic = () => import("./shell");
+
+export default {
+  values: { note: { columns: ["id", "text"], text: (note) => String(note.text) } },
+  commands: [
+    define_command({
+      id: "note",
+      description: "Add a note",
+      args: z.object({ text: z.array(z.string()) }),
+      positional: ["text"],
+      run: async (context) => (await logic()).note(context),
+    }),
+  ],
+} satisfies ShellContribution;
+```
+
+AppsService puts every app's module behind its contribution's `lazy` and tags each command with `app: <id>`. ShellService loads them all on first use (Terminal, the palette, a run, completion, a shortcut to an app command, shortcut lists; see [shell](../services/shell.md#lazy-parts)). Keep `run()` light and dynamic-import the logic: the commands module is loaded for every app at once. Something both `index.ts` and `commands.ts` need (a props schema, an enum) is exported from `index.ts` and imported by `commands.ts`, never the other way round.
 
 - Ids are free (`note`, not `quick-notes note`).
 - **A service wins an id clash.** The app command is dropped with a warning. When two apps clash, the later one discovered wins, again with a warning.

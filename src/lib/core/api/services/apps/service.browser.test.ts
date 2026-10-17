@@ -117,8 +117,9 @@ describe("AppsService installed apps", () => {
   test("an app's shell commands need it installed", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();
-    const commands = apps(kernel).shell!().commands ?? [];
-    const command = commands.find((candidate) => candidate.app === "quick-notes")!;
+    const contribution = apps(kernel).shell!();
+    const commands = contribution.commands ?? [];
+    const command = ((await contribution.lazy!()).commands ?? []).find((candidate) => candidate.app === "quick-notes")!;
     expect(command.available?.()).toBe("Quick Notes isn't installed. Get it in the App Library");
     apps(kernel).install("quick-notes");
     expect(command.available?.() ?? true).toBe(true);

@@ -312,7 +312,7 @@ const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = 
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
-const shell_contribution_members: Members<ShellContribution, "commands" | "completers" | "values"> = true;
+const shell_contribution_members: Members<ShellContribution, "commands" | "completers" | "lazy" | "values"> = true;
 const command_members: Members<
   Command,
   "app" | "args" | "available" | "complete" | "description" | "id" | "positional" | "run" | "short" | "yields"
@@ -320,6 +320,8 @@ const command_members: Members<
 const command_context_members: Members<CommandContext, "args" | "elevated" | "input" | "piped" | "session" | "signal"> =
   true;
 const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "render" | "text"> = true;
+/** An app's commands are a module whose default export is the contribution, loaded on first use (ADR-034 revision). */
+const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
 
 type StableTypes = [
   AppConfig,
