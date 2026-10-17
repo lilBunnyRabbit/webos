@@ -183,6 +183,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | diff | `diff <left> <right> [--stat]` | opens Diff; `diff-stat` with `--stat` |
 | markdown-pdf | `md2pdf <path> [--template] [--size] [--landscape] [--toc]` | opens and prints |
 | pdf-tools | `pdf tools [section] [path]`, `pdf merge <path…> [-o]`, `pdf split <path> [--ranges\|--every] [-d]`, `pdf rotate <path> <deg> [--pages] [-o]`, `pdf pages <path>`, `pdf images <path…> [-o] [--size]`, `pdf export <path> [-f] [--scale] [-d]`, `signature ls` | `file`; `pdf-page` and `signature` values; path completion filtered to PDFs / images |
+| hex-viewer | `hexdump <path> [-l\|--length N] [-s\|--offset N]` (256 bytes by default, like `xxd -l -s`) | `hex-row` values (offset, hex, ascii; open → Hex Viewer at that offset) |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 
