@@ -6,14 +6,12 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
-  import { pick_device_files } from "$lib/core/utils/device-file";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState, Text } from "@codemirror/state";
   import { EditorView, keymap } from "@codemirror/view";
   import { basicSetup } from "codemirror";
   import {
     Books as BooksIcon,
-    Devices as DevicesIcon,
     FileArrowUp as FileArrowUpIcon,
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
@@ -188,21 +186,6 @@
     else await load(chosen);
   }
 
-  async function open_device() {
-    if (!(await discard_ok())) return;
-    const [file] = await pick_device_files({ accept: [EXTENSION, ".xml"] });
-    if (!file) return;
-    try {
-      if (is_craft_path(file.name)) show_craft(file.name, await file.text());
-      else {
-        example = null;
-        open_untitled(file.name, await file.text(), DEFAULT_SETUP);
-      }
-    } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the file", message: error_message(reason) });
-    }
-  }
-
   async function write(target: string): Promise<boolean> {
     try {
       const directory = await files.get_directory(parent_path(target));
@@ -268,16 +251,6 @@
     if (chosen) await open_craft(chosen);
   }
 
-  async function pick_craft_device() {
-    const [file] = await pick_device_files({ accept: [".xml"] });
-    if (!file) return;
-    try {
-      show_craft(file.name, await file.text());
-    } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the craft", message: error_message(reason) });
-    }
-  }
-
   async function open_craft_as_code() {
     if (!craft || !(await discard_ok())) return;
     example = null;
@@ -322,7 +295,6 @@
   <Toolbar>
     <IconButton label="New" size="sm" onclick={new_file}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
-    <IconButton label="Open from device…" size="sm" onclick={open_device}><DevicesIcon weight="bold" /></IconButton>
     <IconButton label="Save" size="sm" disabled={read_only} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
     <IconButton label="Save as…" size="sm" onclick={save_as}><FloppyDiskBackIcon weight="bold" /></IconButton>
     <Separator vertical />
@@ -386,7 +358,7 @@
         {:else if panel === View.PROBLEMS}
           <FunkyProblems diagnostics={result.diagnostics} source={text} onreveal={show_span} />
         {:else if panel === View.IMPORT}
-          <FunkyImport {craft} source_name={craft_name} notes={craft_notes} onpick={pick_craft} onpickdevice={pick_craft_device} onopen={open_craft_as_code} />
+          <FunkyImport {craft} source_name={craft_name} notes={craft_notes} onpick={pick_craft} onopen={open_craft_as_code} />
         {/if}
       </div>
     </div>
