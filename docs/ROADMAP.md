@@ -355,7 +355,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Image Editor — crop, resize, rotate, flip, adjustments, save as (2026-10-14)
 - [x] Recorder: mic, screen, camera and photos in one app (2026-10-14). Real microphone untested by the agents
 - [x] Soundboard (user-loaded sounds) (2026-10-14)
-- Later: Video Tools (trim, merge, audio extraction), Video → GIF
+- [x] Video Tools: trim to WebM, Video → GIF, audio extraction, by play-and-capture with its own WebM muxer and colour quantizer; `video trim|gif|audio` (2026-10-17). Merge not built
 
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

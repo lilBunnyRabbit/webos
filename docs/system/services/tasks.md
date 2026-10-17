@@ -4,7 +4,7 @@ Key `tasks` · Depends on: `notifications` · ADR: [ADR-013](../../adrs/013-task
 
 ## Purpose
 
-Background work with progress, Cancel and retry, on `@lilbunnyrabbit/task-manager` 1.0.1. A job outlives the window that started it and gets a progress toast, a row in Activity Monitor › Tasks, and a taskbar indicator. Archive (zip and unzip, including File Explorer's Compress and Extract here), PDF Tools, Image Tools Poster print, the Image Tools and PDF Tools test file generators, and backups (create and restore) run on it.
+Background work with progress, Cancel and retry, on `@lilbunnyrabbit/task-manager` 1.0.1. A job outlives the window that started it and gets a progress toast, a row in Activity Monitor › Tasks, and a taskbar indicator. Archive (zip and unzip, including File Explorer's Compress and Extract here), PDF Tools, Image Tools Poster print, the Image Tools and PDF Tools test file generators, Video Tools exports, and backups (create and restore) run on it.
 
 ## Public API
 
