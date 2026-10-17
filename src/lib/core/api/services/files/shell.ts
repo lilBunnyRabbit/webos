@@ -162,8 +162,12 @@ export function files_shell(files: FilesService): ShellContribution {
       define_command({
         id: "du",
         description: "Size of files and folders",
-        args: z.object({ paths: z.array(arg.path()).default([]) }),
+        args: z.object({
+          paths: z.array(arg.path()).default([]),
+          depth: z.number().int().min(1).optional().describe("List what's inside, this many levels down: du ~ -d 1 | sort size -r"),
+        }),
         positional: ["paths"],
+        short: { depth: "d" },
         yields: "file",
         async *run(context) {
           yield* (await logic()).du(files, context);

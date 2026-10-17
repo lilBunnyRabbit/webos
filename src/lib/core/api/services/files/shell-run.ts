@@ -3,7 +3,7 @@ import { ShellError, type CommandContext, type Completion, type ShellSession } f
 import { is_locked_path } from "./hierarchy";
 import { join_path, resolve_path, split_path } from "./path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "./shell";
-import type { FilesService } from "./type";
+import type { FilesService, SizeNode } from "./type";
 
 /** Text files print, anything with a NUL in its first 8 KB is binary. Bigger than this prints as a file value. */
 const CAT_LIMIT = 1024 * 1024;
@@ -182,14 +182,24 @@ export async function* touch(files: FilesService, { args, session, elevated }: C
   }
 }
 
-export async function* du(files: FilesService, context: CommandContext<{ paths: string[] }>) {
+function* size_rows(node: SizeNode, depth: number): Generator<FileValue> {
+  for (const child of node.children ?? []) {
+    yield file_value(child.path, child.children ? "directory" : "file", child.size);
+    if (depth > 1) yield* size_rows(child, depth - 1);
+  }
+}
+
+export async function* du(files: FilesService, context: CommandContext<{ paths: string[]; depth?: number }>) {
   const given = await paths_from(context.args.paths, context);
   const paths = given.length > 0 ? given : [context.session.cwd];
+  const depth = context.args.depth;
   for (const path of paths) {
     context.signal.throwIfAborted();
     const found = await require_stat(files, path);
     if (found.kind === "file") yield found;
-    else yield { ...found, size: await files.get_directory_size(await require_directory(files, path)) };
+    // One level deeper than shown: only a folder within the asked depth has `children`, which tells it from a file.
+    else if (depth) yield* size_rows(await files.size_tree(path, depth + 1), depth);
+    else yield { ...found, size: (await files.size_tree(path, 0)).size };
   }
 }
 

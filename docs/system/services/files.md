@@ -97,7 +97,10 @@ interface FileSystemDirectoryItem { name; kind: "directory"; handle: FileSystemD
 interface ListOptions { include_metadata?: boolean /* default true */; sort?: (a, b) => number /* default default_sort */ }
 interface CreateFileOptions { content?: string | Blob | BufferSource; overwrite?: boolean }
 interface UploadOptions { multiple?: boolean /* default true */; accept?: string }
+interface SizeNode { name; path; size: number /* bytes */; children?: SizeNode[] }
 ```
+
+`SizeNode` is what `size_tree` returns. Within the asked depth a folder always has `children` (biggest first, possibly empty) and a file never does, so `children !== undefined` tells them apart there; past the depth a folder has only its `size`.
 
 `size`, `last_modified` and `type` come from `handle.getFile()` and are missing when `include_metadata` is false or the read failed (logged with `console.warn`, the item stays in the list).
 
@@ -131,7 +134,8 @@ Every directory parameter typed `FileSystemDirectoryHandle | null` means the roo
 | `copy_paths` | same | Same rules through `copy_file` / `copy_directory`, except copying into the entry's own folder always keeps both |
 | `export_to_disk` | `(path) => Promise<string \| null>` | Copies the entry at `path` onto the real disk with the File System Access pickers. A file goes through `showSaveFilePicker` (suggested name, starts in Downloads) and `write_file`. A folder goes through `showDirectoryPicker({ mode: "readwrite" })` and `copy_directory`, which works on disk handles too and auto-renames on clash. Resolves the written name; `null` when the picker is cancelled (`AbortError`). Throws `NotFoundError` for a missing path. Bumps no revision: nothing in OPFS changes |
 | `get_storage_estimate` | `() => Promise<{ usage; quota }>` | `navigator.storage.estimate()`, missing values become `0`. Covers the whole origin, not only OPFS |
-| `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0 |
+| `get_directory_size` | `(handle) => Promise<number>` | Recursive byte sum. Sequential, so slow on deep trees. Files whose metadata failed count as 0. Uncached; `size_tree` is the cached way |
+| `size_tree` | `(path, depth?) => Promise<SizeNode>` | Sizes of the folder at `path` and everything under it in one walk, with `children` `depth` levels down (all by default; `0` gives the total only). Listings are cached per folder by revision, so asking again re-lists only folders changed since ([Size tree](#size-tree)). Throws `NotFoundError` when `path` isn't a folder. Used by `du` and Activity Monitor › Storage |
 | `clear` | `() => Promise<void>` | Deletes every entry under root, recursively, then runs `ensure_hierarchy` again (so it also writes a fresh marker), bumps every revision cell, then `/`. No confirmation |
 
 `changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
@@ -178,6 +182,7 @@ There's no handler cache. Two handlers on the same directory are independent, bu
 | Root handle promise | `FilesService._root` | Until a rejection clears it |
 | Directory revisions | `FilesService.revisions`, `Map<path, Revision>` (one reactive cell per path) | Page lifetime. `clear()` bumps every cell. Not persisted |
 | Directory listings | each `DirectoryHandler.items` | Owner's lifetime. Re-read on reload only |
+| Size listings | `FilesService.sizes` (`SizeCache` in `size-tree.ts`, imported on the first `size_tree` call to keep it out of the boot bundle): per folder path, the revision it was read at, its files with sizes and its subfolder handles | Page lifetime. Not reactive, not persisted |
 | File contents and metadata | never cached | Re-read on every call |
 
 The revision cells are the service's only reactive state.
@@ -235,6 +240,15 @@ Exact-name writes exist only through `create_file({ overwrite: true })` and `opf
 - The bump happens after the OPFS call resolves. A failed mutation bumps nothing.
 - Readers today: DesktopService watches `/home/Desktop` ([desktop](desktop.md#lifecycle)). Every live `DirectoryHandler` watches its own folder and its ancestors.
 - Raw `opfs.*` calls, including `ensure_hierarchy` at boot, bump nothing.
+
+### Size tree
+
+`size_tree(path, depth)` resolves `path` with `get_directory`, then `SizeCache.tree` walks from that handle: subfolders in parallel, each through its child handles, so it works on any `FileSystemDirectoryHandle` a path resolves to (mounts included, once `get_directory` knows them). The walk always goes to the bottom to sum sizes; `depth` only decides where `children` stop.
+
+- **Cache.** One entry per folder path: the folder's revision when it was listed, its files as `SizeNode`s and its subfolder handles. A walk reuses an entry while `revision(path)` still equals it and re-lists otherwise, so an unchanged tree costs no OPFS reads, and a file written in `/home/Documents` re-lists only that folder.
+- **Reading revisions.** The cache reads the cell's value directly, without subscribing, so a walk started in an effect doesn't track every folder it passes. It creates the cell when missing, so `clear()` (which bumps existing cells) invalidates every walked folder.
+- **Re-listing drops descendants.** Deleting or moving a folder bumps only its parent, and a folder made again under the same name keeps its old revision (`isSameEntry` compares OPFS paths too, so it can't tell them apart). So when a folder is re-listed, every cached entry below it is dropped. The cost: a change directly in `/home` re-lists all of `/home` on the next walk.
+- **Staleness.** Same limits as revisions: changes from other tabs, from raw `opfs.*` calls or through a handle outside FilesService aren't seen until the folder's revision moves.
 
 **Sort.** Directories first, then `localeCompare` with `numeric: true, sensitivity: "base"`, so `file2` sorts before `file10` and case is ignored.
 
@@ -396,7 +410,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 
 ## Shell
 
-Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and the `file` / `storage` value types (`files/shell.ts`, bodies and the `path` completer in the lazy `files/shell-run.ts`). Writes into system folders need `sudo`. See [shell](shell.md#contributions).
+Contributes `ls cd pwd cat cp mv rm mkdir touch du df`, the `path` completer and the `file` / `storage` value types (`files/shell.ts`, bodies and the `path` completer in the lazy `files/shell-run.ts`). Writes into system folders need `sudo`. `du [paths…]` yields one `file` value per path with its size (from `size_tree(path, 0)` for a folder); `du -d N` instead yields a row for everything inside each folder down to `N` levels, folders with their total, biggest first per folder, so `du ~ -d 1 | sort size -r` ranks what's in home. It asks `size_tree` for `N + 1` levels, because only a folder within the asked depth carries `children`, which is how a row knows it's a folder. See [shell](shell.md#contributions).
 
 ## Known gaps
 

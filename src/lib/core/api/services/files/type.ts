@@ -33,6 +33,14 @@ export interface CreateFileOptions {
   overwrite?: boolean;
 }
 
+/** Within the asked depth a folder always has `children` (biggest first, maybe empty) and a file never does. */
+export interface SizeNode {
+  name: string;
+  path: string;
+  size: number;
+  children?: SizeNode[];
+}
+
 export interface UploadOptions {
   multiple?: boolean;
   accept?: string;
@@ -88,5 +96,7 @@ export interface FilesService extends IService {
   export_to_disk(path: string): Promise<string | null>;
   get_storage_estimate(): Promise<{ usage: number; quota: number }>;
   get_directory_size(handle: FileSystemDirectoryHandle | null): Promise<number>;
+  /** Children `depth` levels down (all by default). Cached per folder by revision (ADR-021): asking again re-reads only changed folders. */
+  size_tree(path: string, depth?: number): Promise<SizeNode>;
   clear(): Promise<void>;
 }

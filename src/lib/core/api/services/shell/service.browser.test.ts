@@ -73,6 +73,25 @@ describe("ShellService", () => {
     expect((await run(session, "cd ../nope")).error).toMatch(/no such folder/);
   });
 
+  test("du sizes a folder, and -d lists what's inside it to sort", async () => {
+    const kernel = await boot();
+    const files = kernel.service<FilesService>("files");
+    const session = kernel.service<ShellService>("shell").session();
+    await run(session, "mkdir -p ~/Du/sub");
+    await files.create_file(await files.get_directory("/home/Du"), "a.txt", { content: "abc" });
+    await files.create_file(await files.get_directory("/home/Du/sub"), "b.txt", { content: "12345" });
+
+    expect((await run(session, "du ~/Du")).values).toMatchObject([{ path: "/home/Du", kind: "directory", size: 8 }]);
+    expect((await run(session, "du ~/Du -d 1 | sort size -r")).values).toMatchObject([
+      { path: "/home/Du/sub", kind: "directory", size: 5 },
+      { path: "/home/Du/a.txt", kind: "file", size: 3 },
+    ]);
+    expect((await run(session, "du ~/Du -d 2 | where kind == file | sort size")).values).toMatchObject([
+      { path: "/home/Du/a.txt" },
+      { path: "/home/Du/sub/b.txt" },
+    ]);
+  });
+
   test("piped files feed cp and rm", async () => {
     const kernel = await boot();
     const session = kernel.service<ShellService>("shell").session();
