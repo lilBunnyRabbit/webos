@@ -17,7 +17,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["file-explorer"],
-        text: "Every Open dialog now also offers files from this device and folders on your disk, and Upload can copy in a whole folder.",
+        text: "Every Open dialog now also offers files from this device and folders on your disk, picks several files at once, and Upload can copy in a whole folder.",
       },
       {
         kind: NEW,
