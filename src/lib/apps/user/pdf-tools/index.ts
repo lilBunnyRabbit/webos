@@ -6,7 +6,7 @@ import type { ShellSession } from "$lib/core/api/services/shell/type";
 import { format_bytes, format_datetime } from "$lib/core/utils";
 import { FilePdf as FilePdfIcon } from "phosphor-svelte";
 import { z } from "zod";
-import { PageSize } from "./geometry";
+import { PageSize } from "./kinds";
 import { SECTION_IDS } from "./sections";
 
 const logic = () => import("./shell");

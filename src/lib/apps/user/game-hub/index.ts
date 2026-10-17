@@ -4,7 +4,7 @@ import { AppCategory } from "$lib/core/api/services/apps/type";
 import { define_command } from "$lib/core/api/services/shell/define";
 import { format_time } from "$lib/core/games/time";
 import { GameController as GameControllerIcon } from "phosphor-svelte";
-import { format_duration, format_last_played, HUB_ID, Tab } from "./hub";
+import { format_duration, format_last_played, HUB_ID, Tab } from "./labels";
 
 const logic = () => import("./shell");
 

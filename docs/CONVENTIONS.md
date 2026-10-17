@@ -99,6 +99,7 @@ export default define_app({
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
 - A manifest may take only types and functions from `$lib/core/api`. Manifests are evaluated while that barrel is still initializing (AppsService imports the glob), so a `const` from it is in the temporal dead zone. Import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`).
+- Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 180 KB gz (`bun run build && bun run budget`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
 - Apps use `@container` queries (`@sm:`, `@md:`) for responsiveness, never viewport breakpoints. That's what makes mobile free (ADR-016).
 

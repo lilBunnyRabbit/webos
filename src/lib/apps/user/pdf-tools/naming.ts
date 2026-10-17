@@ -59,6 +59,4 @@ export function is_pdf_name(name: string): boolean {
   return name.toLowerCase().endsWith(".pdf");
 }
 
-export function is_image_name(name: string): boolean {
-  return /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(name);
-}
+export { is_image_name } from "./kinds";

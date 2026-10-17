@@ -1,7 +1,8 @@
 import type { Rotation } from "./pages";
 
-export const PageSize = { A4: "a4", LETTER: "letter", IMAGE: "image" } as const;
-export type PageSize = (typeof PageSize)[keyof typeof PageSize];
+import { PageSize } from "./kinds";
+
+export { PageSize };
 
 const PAPER: Record<Exclude<PageSize, "image">, [number, number]> = {
   a4: [595.28, 841.89],

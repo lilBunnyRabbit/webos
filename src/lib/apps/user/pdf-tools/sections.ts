@@ -1,4 +1,4 @@
-import { is_image_name } from "./naming";
+import { is_image_name } from "./kinds";
 
 export const Section = {
   MERGE: "merge",

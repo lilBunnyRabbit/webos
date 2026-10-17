@@ -2,11 +2,9 @@ import type { GameStats, Plays } from "$lib/core/games";
 import type { Tagged } from "$lib/core/api/services/shell/type";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z, type ZodType } from "zod";
+import { format_duration, format_last_played, HUB_ID, Tab } from "./labels";
 
-export const HUB_ID = "game-hub";
-
-export const Tab = { LIBRARY: "library", TODAY: "today", STATS: "stats" } as const;
-export type Tab = (typeof Tab)[keyof typeof Tab];
+export { format_duration, format_last_played, HUB_ID, Tab };
 
 export const Sort = { RECENT: "recent", NAME: "name", MOST_PLAYED: "most-played" } as const;
 export type Sort = (typeof Sort)[keyof typeof Sort];
@@ -89,29 +87,6 @@ export function totals(plays: Plays): Totals {
     played: games.filter((stats) => stats.sessions > 0 || stats.ms > 0).length,
     dailies: Object.values(plays.daily).reduce((sum, day) => sum + Object.keys(day).length, 0),
   };
-}
-
-export function format_duration(ms: number): string {
-  const minutes = Math.floor(Math.max(0, ms) / 60_000);
-  if (minutes === 0) return `${Math.floor(Math.max(0, ms) / 1000)}s`;
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  return minutes % 60 ? `${hours}h ${minutes % 60}m` : `${hours}h`;
-}
-
-export function format_last_played(iso: string, now = new Date()): string {
-  const then = new Date(iso);
-  if (!iso || Number.isNaN(then.getTime())) return "";
-  const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  const days = Math.round((midnight(now) - midnight(then)) / 86_400_000);
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return then.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: then.getFullYear() === now.getFullYear() ? undefined : "numeric",
-  });
 }
 
 /** The few dailies a small view shows: unsolved first, recently played first, then A–Z. */
