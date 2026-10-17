@@ -1,6 +1,6 @@
 # ADR-046: On-Device AI Service
 **Date:** 2026-10-17
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
