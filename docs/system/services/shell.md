@@ -142,7 +142,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 | Service | Commands | Completers | Value types |
 |---------|----------|------------|-------------|
 | shell | `help clear history echo sudo where sort select first last count get kernel services` | | `command`, `history`, `service` |
-| files | `ls cd pwd cat cp mv rm mkdir touch du [-d N] df` | `path` | `file`, `storage` |
+| files | `ls cd pwd cat cp mv rm mkdir touch du [-d N] df`, `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` (piped files; `--dry` previews) | `path` | `file`, `rename`, `storage` |
 | apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, plus every app's `shell` (ADR-034) | `app` | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | extract (desktop) | `win pop`, `win back` | | |

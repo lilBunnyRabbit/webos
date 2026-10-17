@@ -22,6 +22,7 @@ import { name_problem } from "./name-rules";
 
 const conflict_dialog = async () => (await import("../dialogs/conflict-dialog.svelte")).default;
 const properties_dialog = async () => (await import("./properties-dialog.svelte")).default;
+const bulk_rename_dialog = async () => (await import("./bulk-rename-dialog.svelte")).default;
 
 /** File Explorer actions shared by the toolbar, keyboard shortcuts and context menus, so each exists once. */
 export async function create_folder(handler: DirectoryHandler, window: WindowHandle): Promise<void> {
@@ -82,6 +83,26 @@ export async function rename_item(handler: DirectoryHandler, window: WindowHandl
     await handler.rename_entry(item.name, name);
   } catch (error) {
     report_file_error(`Could not rename "${item.name}"`, error);
+  }
+}
+
+export async function rename_items(handler: DirectoryHandler, window: WindowHandle, items: FileSystemItem[]): Promise<void> {
+  if (items.length === 1) return rename_item(handler, window, items[0]);
+  const sources = items.map((item) => ({
+    path: join_path(handler.segments, item.name),
+    modified: item.kind === "file" ? (item.last_modified ?? null) : null,
+  }));
+  const taken = handler.items.map((item) => item.name);
+  const steps = await kernel
+    .service<DialogsService>("dialogs")
+    .show(await bulk_rename_dialog(), { folder: handler.path, sources, taken }, { window: window.id });
+  if (!steps) return;
+
+  try {
+    const { apply_renames } = await import("$lib/core/api/services/files/rename-batch");
+    await apply_renames(kernel.service<FilesService>("files"), steps);
+  } catch (error) {
+    report_file_error(`Could not rename ${items.length} items`, error);
   }
 }
 

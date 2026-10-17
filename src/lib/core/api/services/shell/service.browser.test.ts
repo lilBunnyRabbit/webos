@@ -105,6 +105,27 @@ describe("ShellService", () => {
     expect((await run(session, "ls ~/Out")).values).toEqual([]);
   });
 
+  test("rename takes piped files, previews with --dry and blocks clashes", async () => {
+    const kernel = await boot();
+    const session = kernel.service<ShellService>("shell").session();
+    await run(session, "mkdir ~/Trip");
+    await run(session, "touch ~/Trip/b.jpg ~/Trip/a.jpg ~/Trip/notes.txt");
+
+    const dry = await run(session, 'ls ~/Trip | where name =~ .jpg | sort name | rename "trip-{n:3}{ext}" --dry');
+    expect(dry.values).toEqual([
+      { $type: "rename", from: "a.jpg", to: "trip-001.jpg", problem: "" },
+      { $type: "rename", from: "b.jpg", to: "trip-002.jpg", problem: "" },
+    ]);
+    expect(names((await run(session, "ls ~/Trip | sort name")).values)).toEqual(["a.jpg", "b.jpg", "notes.txt"]);
+
+    expect((await run(session, 'rename "notes{ext}" ~/Trip/a.jpg ~/Trip/b.jpg')).error).toMatch(/same name/);
+    expect((await run(session, 'rename "{size}" ~/Trip/a.jpg')).error).toMatch(/Unknown token/);
+
+    const done = await run(session, "rename '/(\\w)\\.jpg/$1-photo.jpg/' ~/Trip/a.jpg ~/Trip/b.jpg");
+    expect(names(done.values)).toEqual(["a-photo.jpg", "b-photo.jpg"]);
+    expect(names((await run(session, "ls ~/Trip | sort name")).values)).toEqual(["a-photo.jpg", "b-photo.jpg", "notes.txt"]);
+  });
+
   test("system folders need sudo, and sudo needs a yes", async () => {
     const kernel = await boot();
     const session = kernel.service<ShellService>("shell").session();
