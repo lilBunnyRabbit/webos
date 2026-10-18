@@ -100,7 +100,10 @@ describe("shell", () => {
       dialogs: stub_service("dialogs", { show: async () => true as never }),
       shell: ShellService,
     });
-    const session = booted.kernel.service<ShellService>("shell").session();
+    const shell = booted.kernel.service<ShellService>("shell");
+    // A history save is fire-and-forget and can outlive the test; the next clear_opfs then hits its open writable.
+    vi.spyOn(shell, "remember").mockImplementation(() => {});
+    const session = shell.session();
     const folder = await disk_folder("Photos");
     await booted.kernel.service<FilesService>("files").mount(folder);
     const run = async (line: string) => {
