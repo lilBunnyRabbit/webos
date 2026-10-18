@@ -29,9 +29,13 @@ src/lib/
 │   │       ├── persistence.ts    # parse/serialize for its files, when it persists
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
-│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; code (shared CodeMirror setup); ui (the kit)
+│   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; ui (the UI kit)
+│   ├── games/, utils/image.ts    # re-export shims to $kit, until 3.0 (ADR-048)
+│   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types, zip
+├── kit/                          # $kit, the app kit (ADR-048): helpers only apps use
+│   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── games/                    # shared game helpers: play tracking, stopwatch (ADR-035)
-│   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types
+│   └── utils/                    # image, image-format, history, qr, qr-scan, exif
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
@@ -40,6 +44,8 @@ src/lib/
         ├── shell.ts              # their bodies, `import()`ed on first run
         └── {id}.app.svelte       # component (lazy)
 ```
+
+**Core or kit.** Core is what the OS itself runs on: services, the shell UI, system plumbing, and helpers a service or shell component imports (zip backs File Explorer and Backup, so it's core). A helper only apps use goes in `src/lib/kit` and is imported as `$kit/…`. Core never imports `$kit`, and `src/lib/core/kit-boundary.test.ts` fails if it does. If core later needs a kit helper, the helper moves to core and the kit path re-exports it. Kit stability follows [app-api.md](system/app-api.md#app-kit-kit), same rules as core.
 
 ### Three layers of logic
 
@@ -245,7 +251,7 @@ No error strategy yet (roadmap P4). Current de-facto rules:
 
 Ask before adding one. The bar: browser-native API first, then own package (`@lilbunnyrabbit/*`), then small focused library. Approved: `zod` (ADR-008), `@lilbunnyrabbit/task-manager` (ADR-013, installed 1.0.1: any app, service or util with long work uses it through TasksService, see [tasks](system/services/tasks.md#writing-a-task)). Hosting is GitHub Pages, so anything needing a server is out unless an ADR says otherwise.
 
-**Where a package goes (ADR-045).** Core (`src/lib/core`, `src/lib/components`, the shell) uses a package: the root `package.json`. Only apps use it: each app that imports it declares it in its own `package.json`, next to `index.ts`:
+**Where a package goes (ADR-045).** Core (`src/lib/core`, `src/lib/components`, the shell) or the app kit (`src/lib/kit`) uses a package: the root `package.json`. Only apps use it: each app that imports it declares it in its own `package.json`, next to `index.ts`:
 
 ```json
 { "name": "@webos/svg-workbench", "private": true, "dependencies": { "svgo": "^4.1.0" } }

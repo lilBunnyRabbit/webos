@@ -2,7 +2,7 @@
   import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
-  import { Language } from "$lib/core/components/code";
+  import { Language } from "$kit/components/code";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
@@ -18,7 +18,7 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { CodeView } from "$lib/core/components/code";
+  import { CodeView } from "$kit/components/code";
   import { download, downloads_folder } from "./download";
   import { empty_request, parse_http, serialize_http, type HttpDocument, type HttpRequest, type Pair } from "./http-file";
   import { APP_ID, HTTP_FILES, METHODS } from "./methods";

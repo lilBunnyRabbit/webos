@@ -1,4 +1,4 @@
-import { daily_seed } from "$lib/core/games/time";
+import { daily_seed } from "$kit/games/time";
 import { create_rng, pick, shuffle } from "$lib/core/utils/random";
 import { z } from "zod";
 import { absurdle_step, hard_mode_error, score, solved, type Row } from "./feedback";

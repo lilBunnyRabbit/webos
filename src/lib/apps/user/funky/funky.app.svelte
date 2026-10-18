@@ -2,7 +2,7 @@
   import kernel, { NotificationType, ShortcutCategory, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { diagnostics_gutter, reveal, show_diagnostics, symbol_assist, token_highlight, token_theme } from "$lib/core/components/code";
+  import { diagnostics_gutter, reveal, show_diagnostics, symbol_assist, token_highlight, token_theme } from "$kit/components/code";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";

@@ -14,8 +14,8 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { create_qr_detector, detect_qr } from "$lib/core/utils/qr";
-  import { CameraScan } from "$lib/core/utils/qr-scan.svelte";
+  import { create_qr_detector, detect_qr } from "$kit/utils/qr";
+  import { CameraScan } from "$kit/utils/qr-scan.svelte";
   import { HISTORY_LIMIT, QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
 
   const { path }: { path?: string } = $props();

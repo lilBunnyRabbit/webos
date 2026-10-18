@@ -1,4 +1,4 @@
-import { fit_within } from "$lib/core/utils/qr";
+import { fit_within } from "$kit/utils/qr";
 import { z } from "zod";
 
 export const QrEntry = z.object({

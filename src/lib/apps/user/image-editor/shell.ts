@@ -3,7 +3,7 @@ import { available_name } from "$lib/core/api/services/files/opfs";
 import { resolve_path, base_name, parent_path } from "$lib/core/api/services/files/path";
 import { file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ShellError, type CommandContext } from "$lib/core/api/services/shell/type";
-import { extension_for, format_of, ImageFormat, write_image } from "$lib/core/utils/image";
+import { extension_for, format_of, ImageFormat, write_image } from "$kit/utils/image";
 import { DEFAULT_ADJUSTMENTS, name_for_format, OperationType, resize_size, type Operation, type Size } from "./edit";
 import { render_final } from "./render";
 

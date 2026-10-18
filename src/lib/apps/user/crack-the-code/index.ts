@@ -1,6 +1,6 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { DailyRank } from "$lib/core/games/daily";
+import { DailyRank } from "$kit/games/daily";
 import { z } from "zod";
 import AppIcon from "./icon.svelte";
 

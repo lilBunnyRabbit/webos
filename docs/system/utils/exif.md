@@ -1,6 +1,6 @@
 # EXIF reader
 
-Core util · Source: `src/lib/core/utils/exif/` · Decided in [app wave 7](../../brainstorm/2026-10-17_app-wave-7.md#decided-metadata-inspector-new-app) · Used by: Metadata, PDF Tools
+App kit util ([ADR-048](../../adrs/048-app-kit-layer.md)) · Source: `src/lib/kit/utils/exif/` · Decided in [app wave 7](../../brainstorm/2026-10-17_app-wave-7.md#decided-metadata-inspector-new-app) · Used by: Metadata, PDF Tools
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Reads image metadata from bytes, by hand, with no dependency: EXIF (camera, capt
 
 ## Public API
 
-`$lib/core/utils/exif` (`index.ts`):
+`$kit/utils/exif` (`index.ts`):
 
 | Export | Does |
 |--------|------|

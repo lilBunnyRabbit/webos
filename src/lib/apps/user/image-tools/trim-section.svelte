@@ -25,7 +25,7 @@
     read_pixels,
     save_image,
     type SourceImage,
-  } from "$lib/core/utils/image";
+  } from "$kit/utils/image";
   import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths, active }: SectionProps = $props();

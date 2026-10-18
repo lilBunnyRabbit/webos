@@ -1,4 +1,4 @@
-import type { Plays } from "$lib/core/games";
+import type { Plays } from "$kit/games";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { daily_value, entries, format_duration, format_last_played, game_value, highlight_dailies, Sort, sort_entries, streak, supports_daily, totals } from "./hub";

@@ -36,7 +36,7 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { has_files, image_files, load_image } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image } from "$kit/utils/image";
   import { ANCHORS, frame_file_name, frames_metadata, render_frames, render_sheet, type ExportOptions } from "./sprite-export";
   import { SpriteExtractState } from "./sprite-extract.svelte";
   import { count_overrides, DEFAULT_SETTINGS, format_sequence, GridMode, parse_sequence, SETTINGS_SCHEMA } from "./sprite-model";

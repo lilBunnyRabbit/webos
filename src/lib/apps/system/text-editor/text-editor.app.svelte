@@ -27,7 +27,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { Language, language_for, load_language, token_highlight, token_theme } from "$lib/core/components/code";
+  import { Language, language_for, load_language, token_highlight, token_theme } from "$kit/components/code";
   import { preview_document, render_markdown, SCROLL_MESSAGE } from "./markdown-preview";
   import manifest from "./index";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";

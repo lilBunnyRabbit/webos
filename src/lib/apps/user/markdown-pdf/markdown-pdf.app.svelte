@@ -12,7 +12,7 @@
   import { print_html } from "$lib/core/utils/print";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_date, error_message } from "$lib/core/utils";
-  import { Language, load_language, token_highlight, token_theme } from "$lib/core/components/code";
+  import { Language, load_language, token_highlight, token_theme } from "$kit/components/code";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState } from "@codemirror/state";
   import { EditorView, keymap } from "@codemirror/view";

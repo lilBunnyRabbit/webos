@@ -1,4 +1,4 @@
-import { daily_seed } from "$lib/core/games/time";
+import { daily_seed } from "$kit/games/time";
 import { z } from "zod";
 import { Cell, create_board, generate, is_valid, propagate, type Board, type Puzzle } from "./puzzle";
 

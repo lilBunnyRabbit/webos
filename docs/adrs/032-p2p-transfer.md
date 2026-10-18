@@ -2,6 +2,8 @@
 **Date:** 2026-10-13
 **Status:** Implemented
 
+> **Revision 2026-10-18:** `qr.ts` and `qr-scan.svelte.ts` moved to the app kit, `$kit/utils/qr` ([ADR-048](./048-app-kit-layer.md)).
+
 ## Context
 
 The roadmap lists P2P file transfer (ADR-009, Utilities). WebRTC data channels move bytes directly between browsers, but the peers must first exchange an offer and an answer, normally through a signaling server. WebOS is a static site with no backend. Discussion: [brainstorm](../brainstorm/2026-10-13_p2p-transfer.md).

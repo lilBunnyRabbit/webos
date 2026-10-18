@@ -27,7 +27,7 @@
     paint,
     save_image,
     type SourceImage,
-  } from "$lib/core/utils/image";
+  } from "$kit/utils/image";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
 

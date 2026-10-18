@@ -90,6 +90,7 @@ export default defineConfig({
   resolve: {
     alias: {
       $lib: path.resolve("./src/lib"),
+      $kit: path.resolve("./src/lib/kit"),
     },
   },
   // ADR-027. Browser tests run on the Vitest server's own origin, so their OPFS never sees real WebOS data.

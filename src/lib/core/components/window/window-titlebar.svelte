@@ -2,7 +2,7 @@
   import {
     CornersIn as CornersInIcon,
     CornersOut as CornersOutIcon,
-    AppWindow as AppWindowIcon,
+    Browser as BrowserIcon,
     Link as LinkIcon,
     Minus as MinusIcon,
     PictureInPicture as PictureInPictureIcon,
@@ -35,7 +35,7 @@
     const kind = await dialogs.menu(
       [
         { id: RouteKind.APP, label: "Copy link", icon: LinkIcon },
-        { id: RouteKind.SOLO, label: "Copy solo link", icon: AppWindowIcon },
+        { id: RouteKind.SOLO, label: "Copy solo link", icon: BrowserIcon },
       ],
       { anchor: { x: rect.left, y: rect.bottom + 4 } }
     );

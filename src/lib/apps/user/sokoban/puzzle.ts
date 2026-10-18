@@ -1,4 +1,4 @@
-import { Direction } from "$lib/core/games/direction";
+import { Direction } from "$kit/games/direction";
 import { create_rng, random_int, shuffle, type Rng } from "$lib/core/utils/random";
 
 export const Tile = { VOID: 0, WALL: 1, FLOOR: 2 } as const;

@@ -1,4 +1,4 @@
-import { format_time } from "$lib/core/games/time";
+import { format_time } from "$kit/games/time";
 import { z } from "zod";
 
 export const APP_ID = "pomodoro";

@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
-  import { load_image_at, paint, type SourceImage } from "$lib/core/utils/image";
+  import { load_image_at, paint, type SourceImage } from "$kit/utils/image";
   import {
     ArrowLeft as ArrowLeftIcon,
     Check as CheckIcon,

@@ -4,7 +4,6 @@ import type { IService } from "../../type";
 import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
-import type { DailyRank } from "$lib/core/games/daily";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -60,6 +59,11 @@ export const AppCategory = {
   GAMES: "games",
 } as const;
 export type AppCategory = (typeof AppCategory)[keyof typeof AppCategory];
+
+/** How a game's daily results rank (ADR-035). Time always breaks a tie. Re-exported by the games kit. */
+export const DailyRank = { TIME: "time", SCORE_ASC: "score-asc", SCORE_DESC: "score-desc" } as const;
+export type DailyRank = (typeof DailyRank)[keyof typeof DailyRank];
+
 export type AppProps = Record<string, unknown>;
 
 /** Resolved app manifest with normalized fields */

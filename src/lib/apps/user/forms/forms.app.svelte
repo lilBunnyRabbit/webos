@@ -9,7 +9,7 @@
   } from "$lib/core/api";
   import { is_system_path, PATHS } from "$lib/core/api/services/files/hierarchy";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
-  import { Language, load_language, token_highlight, token_theme } from "$lib/core/components/code";
+  import { Language, load_language, token_highlight, token_theme } from "$kit/components/code";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";

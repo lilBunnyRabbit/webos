@@ -13,7 +13,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { ImageFormat, has_files, image_files, paint, save_image } from "$lib/core/utils/image";
+  import { ImageFormat, has_files, image_files, paint, save_image } from "$kit/utils/image";
   import { patched_name } from "./naming";
   import {
     IDENTITY_COLORS,

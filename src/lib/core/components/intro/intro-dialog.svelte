@@ -198,7 +198,7 @@
           <section class="flex flex-col gap-5 rounded-2xl bg-background-light p-6 ring-2 ring-primary/40">
             <div class="flex gap-4">
               <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-                <DownloadSimpleIcon class="size-6" weight="duotone" />
+                <DownloadSimpleIcon class="size-6" weight="bold" />
               </span>
               <div class="flex min-w-0 flex-col gap-1">
                 <h2 class="text-base font-semibold">Why it matters</h2>
@@ -238,7 +238,7 @@
           )}
           <div class="flex flex-wrap gap-2" role="group" aria-label="Interests">
             {#each INTERESTS as interest (interest.id)}
-              <Button size="lg" variant="quiet" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
+              <Button size="lg" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
                 {interest.label}
               </Button>
             {/each}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, Stopwatch, track_play } from "$kit/games";
   import { BoardOverlay, Button, IconButton, Section, Select, Segmented, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";

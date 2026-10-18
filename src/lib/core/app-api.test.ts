@@ -64,13 +64,50 @@ import type {
   WindowHandle,
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
-import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$lib/core/games";
+import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
+import type * as legacy_games from "$lib/core/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
-import type { SourceImage } from "$lib/core/utils/image";
+import type { SourceImage } from "$kit/utils/image";
+import type * as legacy_image from "$lib/core/utils/image";
 import type { Rng } from "$lib/core/utils/random";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 
 const DOC = "docs/system/app-api.md";
+
+const GAMES = [
+  "DailyRank",
+  "Direction",
+  "EMPTY_PLAYS",
+  "PLAYS_PATH",
+  "PlaysSchema",
+  "Stopwatch",
+  "better_daily",
+  "daily_seed",
+  "format_time",
+  "grid_key_move",
+  "key_direction",
+  "parse_day",
+  "stroke_axis",
+  "stroke_cells",
+  "stroke_end",
+  "swipe_direction",
+  "track_play",
+  "use_plays",
+];
+const GAMES_TIME = ["daily_seed", "format_time", "parse_day"];
+const GAMES_DAILY = ["DailyRank", "better_daily"];
+const GAMES_DIRECTION = ["Direction", "key_direction", "swipe_direction"];
+const IMAGE = [
+  "FORMAT_OPTIONS",
+  "ImageFormat",
+  "extension_for",
+  "has_files",
+  "image_files",
+  "load_image",
+  "load_image_at",
+  "paint",
+  "save_image",
+];
 
 // `$lib/core/api` builds the kernel singleton on import (it reads `location` and `matchMedia`), and app discovery
 // imports every manifest back through the half-initialized barrel, which only native ESM tolerates.
@@ -133,30 +170,16 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "field",
     ],
   ],
-  [
-    "$lib/core/games",
-    () => import("$lib/core/games"),
-    [
-      "DailyRank",
-      "Direction",
-      "EMPTY_PLAYS",
-      "PLAYS_PATH",
-      "PlaysSchema",
-      "Stopwatch",
-      "better_daily",
-      "daily_seed",
-      "format_time",
-      "grid_key_move",
-      "key_direction",
-      "parse_day",
-      "stroke_axis",
-      "stroke_cells",
-      "stroke_end",
-      "swipe_direction",
-      "track_play",
-      "use_plays",
-    ],
-  ],
+  ["$kit/games", () => import("$kit/games"), GAMES],
+  ["$kit/games/time", () => import("$kit/games/time"), GAMES_TIME],
+  ["$kit/games/daily", () => import("$kit/games/daily"), GAMES_DAILY],
+  ["$kit/games/direction", () => import("$kit/games/direction"), GAMES_DIRECTION],
+  ["$kit/utils/image", () => import("$kit/utils/image"), IMAGE],
+  ["$lib/core/games", () => import("$lib/core/games"), GAMES],
+  ["$lib/core/games/time", () => import("$lib/core/games/time"), GAMES_TIME],
+  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), GAMES_DAILY],
+  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), GAMES_DIRECTION],
+  ["$lib/core/utils/image", () => import("$lib/core/utils/image"), IMAGE],
   [
     "$lib/core/utils",
     () => import("$lib/core/utils"),
@@ -172,7 +195,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "resolve_token",
     ],
   ],
-  ["$lib/core/api/services/apps/type", () => import("$lib/core/api/services/apps/type"), ["AppCategory"]],
+  ["$lib/core/api/services/apps/type", () => import("$lib/core/api/services/apps/type"), ["AppCategory", "DailyRank"]],
   [
     "$lib/core/api/services/apps/helpers",
     () => import("$lib/core/api/services/apps/helpers"),
@@ -205,27 +228,9 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     () => import("$lib/core/api/services/files/shell"),
     ["assert_writable", "file_value", "is_file_value"],
   ],
-  ["$lib/core/games/time", () => import("$lib/core/games/time"), ["daily_seed", "format_time", "parse_day"]],
-  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), ["DailyRank", "better_daily"]],
-  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), ["Direction", "key_direction", "swipe_direction"]],
   ["$lib/core/utils/date", () => import("$lib/core/utils/date"), ["day_key", "parse_time", "resolve_day"]],
   ["$lib/core/utils/detached-root.svelte", () => import("$lib/core/utils/detached-root.svelte"), ["detached_root"]],
   ["$lib/core/utils/device-file", () => import("$lib/core/utils/device-file"), ["pick_device_files"]],
-  [
-    "$lib/core/utils/image",
-    () => import("$lib/core/utils/image"),
-    [
-      "FORMAT_OPTIONS",
-      "ImageFormat",
-      "extension_for",
-      "has_files",
-      "image_files",
-      "load_image",
-      "load_image_at",
-      "paint",
-      "save_image",
-    ],
-  ],
   ["$lib/core/utils/long-press", () => import("$lib/core/utils/long-press"), ["long_press"]],
   ["$lib/core/utils/print", () => import("$lib/core/utils/print"), ["print_html"]],
   [
@@ -409,4 +414,12 @@ type StableTypes = [
   Bounds,
   Dimensions,
   Position,
+  legacy_games.Axis,
+  legacy_games.DailyResult,
+  legacy_games.FormatTimeOptions,
+  legacy_games.GameStats,
+  legacy_games.ParsedDay,
+  legacy_games.PlayTracker,
+  legacy_games.Plays,
+  legacy_image.SourceImage,
 ];

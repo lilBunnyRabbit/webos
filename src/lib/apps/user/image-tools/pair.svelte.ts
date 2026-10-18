@@ -2,7 +2,7 @@ import kernel, { NotificationType, type NotificationsService } from "$lib/core/a
 import { parent_path } from "$lib/core/api/services/files/path";
 import type { WindowHandle } from "$lib/core/contexts/app/type";
 import { error_message } from "$lib/core/utils";
-import { load_image, load_image_at, read_pixels, type SourceImage } from "$lib/core/utils/image";
+import { load_image, load_image_at, read_pixels, type SourceImage } from "$kit/utils/image";
 import { tolerance_level } from "./compare";
 import { Pyramid, align, compare, coverage, find_regions, type Alignment, type Rect } from "./patch";
 

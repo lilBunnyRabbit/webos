@@ -26,7 +26,7 @@
     paint,
     save_image,
     type SourceImage,
-  } from "$lib/core/utils/image";
+  } from "$kit/utils/image";
   import { parent_path } from "$lib/core/api/services/files/path";
 
   // JPEG has no alpha channel, so the removed pixels would come back black.

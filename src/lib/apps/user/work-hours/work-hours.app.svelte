@@ -4,7 +4,7 @@
   import { get_app_context, type JsonFile } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { print_html } from "$lib/core/utils/print";
-  import { format_time } from "$lib/core/games";
+  import { format_time } from "$kit/games";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { CaretLeft, CaretRight, PencilSimple, Play, Printer, Sticker, Stop, Target, Trash } from "phosphor-svelte";
   import { untrack } from "svelte";

@@ -2,7 +2,7 @@
   import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
-  import { track_play } from "$lib/core/games";
+  import { track_play } from "$kit/games";
   import { cn, error_message } from "$lib/core/utils";
   import { WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import { untrack } from "svelte";

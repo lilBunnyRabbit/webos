@@ -1,4 +1,4 @@
-import { canvas_to_blob } from "$lib/core/utils/image";
+import { canvas_to_blob } from "$kit/utils/image";
 
 export const SplitDirection = { COLUMNS: "x", ROWS: "y" } as const;
 export type SplitDirection = (typeof SplitDirection)[keyof typeof SplitDirection];

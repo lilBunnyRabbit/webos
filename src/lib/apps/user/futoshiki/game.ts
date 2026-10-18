@@ -1,4 +1,4 @@
-import { daily_seed } from "$lib/core/games/time";
+import { daily_seed } from "$kit/games/time";
 import { z } from "zod";
 import {
   across_cells,

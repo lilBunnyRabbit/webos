@@ -1,5 +1,5 @@
 import { define_command } from "$lib/core/api/services/shell/define";
-import { format_time } from "$lib/core/games/time";
+import { format_time } from "$kit/games/time";
 import { format_duration, format_last_played } from "./labels";
 import type { ShellContribution } from "$lib/core/api/services/shell/type";
 

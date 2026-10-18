@@ -2,7 +2,7 @@
   import { cn } from "$lib/core/utils";
   import { X as XIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { grid_key_move, stroke_axis, stroke_cells, stroke_end, type Axis } from "$lib/core/games";
+  import { grid_key_move, stroke_axis, stroke_cells, stroke_end, type Axis } from "$kit/games";
   import { Mark, paint } from "./game";
   import type { Clue, Ink } from "./puzzle";
 

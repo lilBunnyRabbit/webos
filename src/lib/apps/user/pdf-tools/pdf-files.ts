@@ -1,7 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { has_drag_paths, has_os_files, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
-import { orientation } from "$lib/core/utils/exif";
-import { load_image } from "$lib/core/utils/image";
+import { orientation } from "$kit/utils/exif";
+import { load_image } from "$kit/utils/image";
 import type { PdfImage } from "./pdf";
 import { parse_signature_svg, signature_svg, type Signature } from "./stroke";
 import { child_path, is_image_name } from "./naming";

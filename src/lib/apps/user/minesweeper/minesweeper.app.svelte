@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, Stopwatch, track_play } from "$kit/games";
   import { Button, IconButton, Input, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";

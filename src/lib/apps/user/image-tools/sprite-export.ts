@@ -1,4 +1,4 @@
-import { canvas_to_blob } from "$lib/core/utils/image";
+import { canvas_to_blob } from "$kit/utils/image";
 import { frame_size, round_rect, type Rect } from "./sprite-model";
 
 export const Anchor = {

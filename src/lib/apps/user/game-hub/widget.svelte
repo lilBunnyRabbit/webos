@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService, type WidgetProps } from "$lib/core/api";
-  import { format_time, use_plays } from "$lib/core/games";
+  import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,

@@ -58,13 +58,13 @@ The reference is part of the code. A change isn't finished until the page that d
 | [shell/mobile.md](shell/mobile.md) | Phone and tablet shell: home pages, dock, app drawer, switcher, nav bar |
 | [shell/solo.md](shell/solo.md) | Solo shell: one app full page from a `#/solo/` link, Open WebOS bar |
 
-### Core utils
+### Core and app kit utils
 
 Most utils are listed in the [overview's source map](overview.md#source-map); the ones with real behaviour of their own get a page.
 
 | Page | Covers |
 |------|--------|
-| [utils/exif.md](utils/exif.md) | `core/utils/exif`: EXIF, XMP and PNG text from JPEG, PNG and WebP bytes; `orientation()` |
+| [utils/exif.md](utils/exif.md) | `kit/utils/exif` (app kit, ADR-048): EXIF, XMP and PNG text from JPEG, PNG and WebP bytes; `orientation()` |
 
 ### Apps
 

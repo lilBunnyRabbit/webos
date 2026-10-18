@@ -1,7 +1,7 @@
 import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StringStream } from "@codemirror/language";
 import type { Extension } from "@codemirror/state";
 import { tags } from "@lezer/highlight";
-import { SymbolKind, type SymbolDoc } from "$lib/core/components/code";
+import { SymbolKind, type SymbolDoc } from "$kit/components/code";
 import { BUILTIN_CONSTANTS, BUILTIN_FUNCTIONS, BUILTIN_VARIABLES, FUNCTIONS_BY_NAME, VARIABLES_BY_NAME } from "./builtins";
 import type { Scope } from "./resolve";
 import { format_dsl } from "./emit";
