@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils";
   import type { GridView } from "../engine/step";
-  import { TONE_TEXT, TONE_TINT } from "./tones";
+  import { TONE_BG, TONE_TEXT, TONE_TINT } from "./tones";
 
   let { view }: { view: GridView } = $props();
 
@@ -10,10 +10,10 @@
   const labelled = $derived(Boolean(view.row_labels?.length));
 </script>
 
-<div class="max-w-full overflow-x-auto overscroll-x-contain pb-1">
+<div class={cn("max-w-full pb-1", view.board ? "mx-auto w-full" : "overflow-x-auto overscroll-x-contain")} style:max-width={view.board ? `min(100%, ${columns * 2.25}rem, 34rem)` : undefined}>
   <div
-    class={cn("grid w-max", view.board ? "gap-0 ring-1 ring-foreground/20" : "gap-1")}
-    style:grid-template-columns="{labelled ? "auto " : ""}repeat({columns}, {view.board ? "minmax(1.5rem, 2.25rem)" : "minmax(2rem, auto)"})"
+    class={cn("grid", view.board ? "w-full gap-0 ring-1 ring-foreground/20" : "w-max gap-1")}
+    style:grid-template-columns="{labelled ? "auto " : ""}repeat({columns}, {view.board ? "minmax(0, 1fr)" : "minmax(2rem, auto)"})"
   >
     {#if view.pointers?.length}
       {#if labelled}<span></span>{/if}
@@ -38,8 +38,8 @@
           <span
             class={cn(
               "grid min-h-8 place-items-center px-1.5 font-mono text-ui tabular-nums whitespace-nowrap ring-1 transition-colors duration-150 ring-inset",
-              view.board ? "aspect-square min-h-0 px-0" : "rounded-md",
-              cell.tone ? TONE_TINT[cell.tone] : view.board ? "bg-background-light ring-foreground/10" : "bg-background-light ring-foreground/12"
+              view.board ? "aspect-square min-h-0 px-0 text-[clamp(0.7rem,3cqw,1.05rem)]" : "rounded-md",
+              cell.tone && view.board && cell.tone !== "muted" ? `${TONE_BG[cell.tone]} text-background ring-background/20` : cell.tone ? TONE_TINT[cell.tone] : view.board ? "bg-background-light ring-foreground/10" : "bg-background-light ring-foreground/12"
             )}>{cell.text}</span
           >
         {:else}

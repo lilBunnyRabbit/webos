@@ -50,6 +50,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms fills dynamic programming tables cell by cell: longest common subsequence, knapsack, coin change, longest increasing subsequence and matrix chain order.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms backtracks through puzzles: N-queens, a Sudoku solver, mazes built three ways and solved, and flood fill.",
+      },
     ],
   },
   {

@@ -7,6 +7,7 @@ export const Group = {
   STRINGS: "strings",
   SEARCHING: "searching",
   DP: "dp",
+  BACKTRACKING: "backtracking",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -19,6 +20,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.STRINGS]: "Strings",
   [Group.SEARCHING]: "Searching",
   [Group.DP]: "Dynamic programming",
+  [Group.BACKTRACKING]: "Backtracking & puzzles",
 };
 
 export interface Complexity {
@@ -124,6 +126,12 @@ export const CATALOG: CatalogEntry[] = [
   entry("coin-change", "Coin change", Group.DP, "The fewest coins for an amount", ["O(a·c)", "O(a·c)", "O(a·c)", "O(a)"]),
   entry("lis", "Longest increasing subsequence", Group.DP, "The longest run that keeps going up", ["O(n²)", "O(n²)", "O(n²)", "O(n)"]),
   entry("matrix-chain", "Matrix chain order", Group.DP, "The cheapest way to bracket a product", ["O(n³)", "O(n³)", "O(n³)", "O(n²)"]),
+
+  entry("n-queens", "N-queens", Group.BACKTRACKING, "Place queens that can't attack each other", ["–", "exponential", "O(n!)", "O(n)"]),
+  entry("sudoku", "Sudoku solver", Group.BACKTRACKING, "Most constrained cell first, backtrack on dead ends", ["O(1)", "fast in practice", "O(9^k)", "O(81)"]),
+  entry("maze-generation", "Maze generation", Group.BACKTRACKING, "Random spanning trees: backtracker, Prim, Kruskal", ["O(n)", "O(n)", "O(n log n)", "O(n)"]),
+  entry("maze-solving", "Maze solving", Group.BACKTRACKING, "Flood from the entrance, follow it back", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+  entry("flood-fill", "Flood fill", Group.BACKTRACKING, "Paint a connected region with a queue or a stack", ["O(n)", "O(n)", "O(n)", "O(n)"]),
 ];
 
 export type AlgorithmId = string;

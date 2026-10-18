@@ -13,6 +13,7 @@
     Graph as GraphIcon,
     LinkSimple as LinkSimpleIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
+    PuzzlePiece as PuzzlePieceIcon,
     SortAscending as SortAscendingIcon,
     Stack as StackIcon,
     Table as TableIcon,
@@ -45,6 +46,7 @@
     [Group.STRINGS]: TextAaIcon,
     [Group.SEARCHING]: MagnifyingGlassIcon,
     [Group.DP]: TableIcon,
+    [Group.BACKTRACKING]: PuzzlePieceIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

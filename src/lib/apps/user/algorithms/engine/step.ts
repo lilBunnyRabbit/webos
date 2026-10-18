@@ -6,6 +6,7 @@ export const Tone = {
   WARN: "warn",
   BAD: "bad",
   MUTED: "muted",
+  WALL: "wall",
 } as const;
 export type Tone = (typeof Tone)[keyof typeof Tone];
 

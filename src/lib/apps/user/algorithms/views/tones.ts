@@ -1,6 +1,6 @@
 import { Tone, type Step, type View } from "../engine/step";
 
-export const TONE_ORDER: Tone[] = [Tone.ACTIVE, Tone.COMPARE, Tone.WARN, Tone.MARK, Tone.DONE, Tone.BAD, Tone.MUTED];
+export const TONE_ORDER: Tone[] = [Tone.ACTIVE, Tone.COMPARE, Tone.WARN, Tone.MARK, Tone.DONE, Tone.BAD, Tone.MUTED, Tone.WALL];
 
 export const TONE_LABEL: Record<Tone, string> = {
   [Tone.ACTIVE]: "Current",
@@ -10,6 +10,7 @@ export const TONE_LABEL: Record<Tone, string> = {
   [Tone.DONE]: "Final",
   [Tone.BAD]: "Rejected",
   [Tone.MUTED]: "Out of play",
+  [Tone.WALL]: "Wall",
 };
 
 export const TONE_BG: Record<Tone, string> = {
@@ -20,6 +21,7 @@ export const TONE_BG: Record<Tone, string> = {
   [Tone.DONE]: "bg-success",
   [Tone.BAD]: "bg-error",
   [Tone.MUTED]: "bg-foreground/7",
+  [Tone.WALL]: "bg-foreground/70",
 };
 
 export const TONE_TINT: Record<Tone, string> = {
@@ -30,6 +32,7 @@ export const TONE_TINT: Record<Tone, string> = {
   [Tone.DONE]: "bg-success/15 ring-success/70",
   [Tone.BAD]: "bg-error/15 ring-error",
   [Tone.MUTED]: "bg-transparent ring-foreground/10 text-foreground/45",
+  [Tone.WALL]: "bg-foreground/70 ring-foreground/70 text-background",
 };
 
 export const TONE_FILL: Record<Tone, string> = {
@@ -40,6 +43,7 @@ export const TONE_FILL: Record<Tone, string> = {
   [Tone.DONE]: "fill-success",
   [Tone.BAD]: "fill-error",
   [Tone.MUTED]: "fill-foreground/12",
+  [Tone.WALL]: "fill-foreground/70",
 };
 
 export const TONE_STROKE: Record<Tone, string> = {
@@ -50,6 +54,7 @@ export const TONE_STROKE: Record<Tone, string> = {
   [Tone.DONE]: "stroke-success",
   [Tone.BAD]: "stroke-error",
   [Tone.MUTED]: "stroke-foreground/15",
+  [Tone.WALL]: "stroke-foreground/70",
 };
 
 export const TONE_TEXT: Record<Tone, string> = {
@@ -60,6 +65,7 @@ export const TONE_TEXT: Record<Tone, string> = {
   [Tone.DONE]: "text-success",
   [Tone.BAD]: "text-error",
   [Tone.MUTED]: "text-foreground/45",
+  [Tone.WALL]: "text-foreground/70",
 };
 
 function view_tones(view: View, into: Set<Tone>) {
