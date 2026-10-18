@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "2.2.0",
+    date: "2026-10-18",
+    title: "Watch it think",
+    introduces: ["algorithms"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms: watch ten sorting algorithms work step by step, each step explained, with the pseudocode lit as it runs and a race between any two.",
+      },
+    ],
+  },
+  {
     version: "2.1.1",
     date: "2026-10-18",
     title: "Clearly clickable",
