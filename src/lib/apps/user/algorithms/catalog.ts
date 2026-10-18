@@ -8,6 +8,7 @@ export const Group = {
   SEARCHING: "searching",
   DP: "dp",
   BACKTRACKING: "backtracking",
+  MATH: "math",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -19,8 +20,9 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.COMPRESSION]: "Compression",
   [Group.STRINGS]: "Strings",
   [Group.SEARCHING]: "Searching",
-  [Group.DP]: "Dynamic programming",
-  [Group.BACKTRACKING]: "Backtracking & puzzles",
+  [Group.DP]: "Dyn. programming",
+  [Group.BACKTRACKING]: "Backtracking",
+  [Group.MATH]: "Math",
 };
 
 export interface Complexity {
@@ -132,6 +134,13 @@ export const CATALOG: CatalogEntry[] = [
   entry("maze-generation", "Maze generation", Group.BACKTRACKING, "Random spanning trees: backtracker, Prim, Kruskal", ["O(n)", "O(n)", "O(n log n)", "O(n)"]),
   entry("maze-solving", "Maze solving", Group.BACKTRACKING, "Flood from the entrance, follow it back", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("flood-fill", "Flood fill", Group.BACKTRACKING, "Paint a connected region with a queue or a stack", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+
+  entry("euclid", "Euclid's GCD", Group.MATH, "Swap for the remainder until it's zero", ["O(1)", "O(log n)", "O(log n)", "O(1)"]),
+  entry("sieve", "Sieve of Eratosthenes", Group.MATH, "Cross out multiples; the rest are prime", ["O(n log log n)", "O(n log log n)", "O(n log log n)", "O(n)"]),
+  entry("fast-power", "Fast exponentiation", Group.MATH, "Square and multiply, one bit at a time", ["O(log e)", "O(log e)", "O(log e)", "O(1)"]),
+  entry("fisher-yates", "Fisher–Yates shuffle", Group.MATH, "An unbiased shuffle in one pass", ["O(n)", "O(n)", "O(n)", "O(1)"]),
+  entry("reservoir-sampling", "Reservoir sampling", Group.MATH, "A fair sample from a stream of unknown length", ["O(n)", "O(n)", "O(n)", "O(k)"]),
+  entry("crc32", "CRC32", Group.MATH, "A checksum by polynomial division with XOR", ["O(n)", "O(n)", "O(n)", "O(1)"]),
 ];
 
 export type AlgorithmId = string;

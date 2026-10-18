@@ -13,6 +13,7 @@ const LOADERS: Record<Group, () => GroupModule> = {
   [Group.SEARCHING]: () => import("./groups/searching"),
   [Group.DP]: () => import("./groups/dp"),
   [Group.BACKTRACKING]: () => import("./groups/backtracking"),
+  [Group.MATH]: () => import("./groups/math"),
 };
 
 const loaded: Partial<Record<Group, GroupModule>> = {};

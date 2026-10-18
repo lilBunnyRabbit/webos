@@ -55,6 +55,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms backtracks through puzzles: N-queens, a Sudoku solver, mazes built three ways and solved, and flood fill.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms does number tricks: Euclid's GCD, the sieve of Eratosthenes, fast exponentiation, Fisher–Yates, reservoir sampling and CRC32.",
+      },
     ],
   },
   {
