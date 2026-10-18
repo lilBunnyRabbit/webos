@@ -1,23 +1,7 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { json_file, type JsonFile } from "$lib/core/contexts/app/json-file.svelte";
-import { z } from "zod";
 import { better_daily, type DailyResult } from "./daily";
-
-export const PLAYS_PATH = "/var/lib/games/plays.json";
-
-const GameStatsSchema = z.object({ ms: z.number(), sessions: z.number(), last: z.string() });
-const DailySchema = z.object({ ms: z.number(), score: z.number().optional() });
-
-export const PlaysSchema = z.object({
-  version: z.literal(1),
-  games: z.record(z.string(), GameStatsSchema),
-  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id → best result, ranked by the manifest's `daily_rank`. */
-  daily: z.record(z.string(), z.record(z.string(), DailySchema)),
-});
-export type Plays = z.infer<typeof PlaysSchema>;
-export type GameStats = z.infer<typeof GameStatsSchema>;
-
-export const EMPTY_PLAYS: Plays = { version: 1, games: {}, daily: {} };
+import { EMPTY_PLAYS, PLAYS_PATH, PlaysSchema, type Plays } from "./plays";
 
 // Flushed this often while playing, so closing the tab loses at most this much.
 const FLUSH_MS = 30_000;
