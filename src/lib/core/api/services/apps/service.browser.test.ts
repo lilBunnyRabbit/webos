@@ -126,3 +126,16 @@ describe("AppsService installed apps", () => {
     expect(() => commands.find((candidate) => candidate.id === "app launch")!.run({ args: { id: "clock" } } as never)).toThrow(/isn't installed/);
   });
 });
+
+describe("AppsService meta (ADR-049)", () => {
+  test("every app's meta loads once; an app without one, or an unknown id, resolves {}", async () => {
+    const kernel = await boot();
+    const service = apps(kernel);
+    service.register({ ...service.get("example")!, id: "no-meta", meta: undefined });
+    expect(service.meta_ready).toBe(service.meta_ready);
+    expect(await service.meta("example")).toEqual({ description: "Test app" });
+    expect((await service.meta("settings")).description).toBeTruthy();
+    expect(await service.meta("no-meta")).toEqual({});
+    expect(await service.meta("nope")).toEqual({});
+  });
+});

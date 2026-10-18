@@ -9,9 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Clear the board without hitting a mine.",
-  pitch: { problem: "You want a classic that's quick to start and hard to master.", solution: "Clear the board without hitting a mine." },
-  keywords: ["mines", "bombs", "puzzle", "logic", "game", "classic"],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 320 },

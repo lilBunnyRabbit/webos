@@ -4,7 +4,7 @@
     ChangeKind,
     NotificationType,
     Platform,
-    type AppManifest,
+    type AppListing,
     type AppsService,
     type DesktopService,
     type NotificationsService,
@@ -36,7 +36,7 @@
   import { app_commands, app_file_types, category_label } from "./library";
 
   interface Props {
-    manifest: AppManifest;
+    manifest: AppListing;
     /** From this session's unseen releases. */
     freshness: "new" | "updated" | null;
     onback: () => void;

@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
-  description: "Keep a website on the desktop and open it in its own window.",
-  pitch: {
-    problem: "Sites you use every day get lost among browser tabs.",
-    solution: "Keep a website on the desktop and open it in its own window.",
-  },
-  keywords: ["website", "web", "url", "link", "bookmark", "browser", "iframe", "shortcut", "pwa"],
+  meta: () => import("./meta"),
   associations: [".webapp"],
   props: z.object({ path: z.string().optional() }),
   defaults: { constraints: { width: { min: 320 }, height: { min: 300 } } },

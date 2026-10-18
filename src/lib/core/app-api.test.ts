@@ -6,6 +6,7 @@ import type {
   AppHighlight,
   AppId,
   AppManifest,
+  AppMeta,
   AppPitch,
   AppProps,
   AppsService,
@@ -248,7 +249,7 @@ describe("app API 1.0", () => {
       const exported = Object.keys(await load());
       expect(
         names.filter((name) => exported.includes(name)),
-        `${path} lost a stable export. Removing or renaming one breaks ${DOC}: that's 2.0`
+        `${path} lost a stable export. Removing or renaming one breaks ${DOC}: that's 4.0`
       ).toEqual(names);
     },
     60_000
@@ -263,21 +264,18 @@ const manifest_fields: Members<
   AppConfig,
   | "associations"
   | "author"
-  | "authors"
   | "badge"
   | "category"
   | "component"
   | "daily_rank"
   | "default_widget"
   | "defaults"
-  | "description"
   | "highlights"
   | "icon"
   | "id"
-  | "keywords"
   | "license"
+  | "meta"
   | "name"
-  | "pitch"
   | "preview"
   | "props"
   | "repository"
@@ -317,6 +315,7 @@ const app_context_members: Members<AppContext, "app_id" | "storage" | "window" |
 const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
+const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -330,6 +329,8 @@ const command_context_members: Members<CommandContext, "args" | "elevated" | "in
 const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "render" | "text"> = true;
 /** An app's commands are a module whose default export is the contribution, loaded on first use (ADR-034 revision). */
 const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
+/** Display text is a module whose default export is the `AppMeta` (ADR-049). */
+const app_meta_form: NonNullable<AppConfig["meta"]> extends () => Promise<{ default: AppMeta }> ? true : false = true;
 /** `pick_file` resolves one path or `null`; with `multiple: true`, every chosen path (ADR-025 revision). */
 const pick_file_single: WindowHandle["pick_file"] extends (options?: PickOptions) => Promise<string | null> ? true : false = true;
 const pick_file_multiple: WindowHandle["pick_file"] extends (options: PickOptions & { multiple: true }) => Promise<string[]>
@@ -343,6 +344,7 @@ type StableTypes = [
   AppHighlight,
   AppId,
   AppManifest,
+  AppMeta,
   AppPitch,
   AppProps,
   AppsService,

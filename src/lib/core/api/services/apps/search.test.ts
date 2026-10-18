@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { AppCategory, type AppManifest } from "./type";
+import { AppCategory, type AppListing } from "./type";
 import { group_apps, search_apps, within_one_edit } from "./search";
 
-const app = (name: string, extra: Partial<AppManifest> = {}) =>
-  ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppManifest;
+const app = (name: string, extra: Partial<AppListing> = {}) =>
+  ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppListing;
 
-const names = (apps: AppManifest[]) => apps.map((manifest) => manifest.name);
+const names = (apps: AppListing[]) => apps.map((manifest) => manifest.name);
 
 describe("search_apps", () => {
   test("an empty query lists every app by name", () => {

@@ -34,6 +34,12 @@ export interface AppsService extends IService {
    * localStorage and `/var/lib/apps/{id}/`; never anything in `/home`. Windows and desktop entries are the caller's.
    */
   uninstall(id: AppId, options?: UninstallOptions): Promise<void>;
+  /**
+   * Settles once every app's `meta` has loaded (ADR-049). Loading starts when the desktop is idle after boot, or as soon
+   * as something awaits this. An app whose `meta` fails to load counts as having none.
+   */
+  readonly meta_ready: Promise<void>;
+  meta(id: AppId): Promise<AppMeta>;
 }
 
 export interface AppsFilter {
@@ -72,19 +78,10 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   name: string;
   version: string;
   icon: Component;
-  description?: string;
-  /**
-   * The problem the app solves and how, one short sentence each: the App Library's showcase tells each app's story with
-   * it, and falls back to `description` without it. Eager like `description`, so keep it short.
-   */
-  pitch?: AppPitch;
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;
-  keywords?: string[];
   author?: string;
-  /** Who made the app, credited in the App Library, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
-  authors?: AppAuthor[];
   license?: string;
   repository?: string;
   defaults?: WindowOptions;
@@ -132,9 +129,29 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   highlights?: () => Promise<{ default: AppHighlight[] }>;
   /** A picture of the app for the announcement, `import("./preview.webp?url")`. Lazy, so it never weighs on boot. */
   preview?: () => Promise<{ default: string }>;
+  /**
+   * Display text boot never needs, as `import("./meta")` (ADR-049). AppsService loads every app's, in one chunk, once
+   * the desktop is idle; read it through `meta(id)`.
+   */
+  meta?: () => Promise<{ default: AppMeta }>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
 }
+
+/** An app's display text, default-exported by its `meta.ts` (ADR-049). */
+export interface AppMeta {
+  description?: string;
+  keywords?: string[];
+  /**
+   * The problem the app solves and how, one short sentence each: the App Library's showcase tells each app's story with
+   * it, and falls back to `description` without it.
+   */
+  pitch?: AppPitch;
+  /** Who made the app, credited in the App Library, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
+  authors?: AppAuthor[];
+}
+
+export type AppListing = AppManifest & AppMeta;
 
 export interface AppAuthor {
   name: string;

@@ -8,12 +8,7 @@ export default define_app({
   name: "Video Tools",
   icon: AppIcon,
   version: "1.0.0",
-  description: "Trim a video to a WebM clip, turn part of it into a GIF, or save its sound.",
-  pitch: {
-    problem: "Cutting a clip or making a GIF usually needs a video editor.",
-    solution: "Trim a video, turn part of it into a GIF, or save its sound.",
-  },
-  keywords: ["trim", "cut", "clip", "gif", "webm", "audio", "sound"],
+  meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["video/*"],
   props: z.object({ path: z.string().optional() }),

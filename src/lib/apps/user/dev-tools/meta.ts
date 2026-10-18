@@ -1,0 +1,40 @@
+import type { AppMeta } from "$lib/core/api";
+
+export default {
+  description:
+    "Base64, hashes, URL encoding, UUIDs, regex, JSON, JWTs, timestamps, cron and certificates in one place.",
+  keywords: [
+    "base64",
+    "hash",
+    "sha",
+    "url",
+    "uuid",
+    "regex",
+    "json",
+    "jwt",
+    "token",
+    "timestamp",
+    "unix",
+    "epoch",
+    "time zone",
+    "cron",
+    "crontab",
+    "schedule",
+    "certificate",
+    "x509",
+    "pem",
+    "ssl",
+    "tls",
+    "fingerprint",
+    "encode",
+    "decode",
+    "format",
+    "developer",
+    "programming",
+    "tools",
+  ],
+  pitch: {
+    problem: "Decoding a JWT or a Base64 string sends you to a random website.",
+    solution: "Base64, hashes, UUIDs, regex, JSON, JWTs, timestamps and cron, offline in one place.",
+  },
+} satisfies AppMeta;

@@ -18,12 +18,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Klondike: build each suit from ace to king, drawing one card or three.",
-  pitch: {
-    problem: "A quiet card game makes the best short break.",
-    solution: "Klondike: build each suit from ace to king, drawing one card or three.",
-  },
-  keywords: ["klondike", "patience", "cards", "card game", "game", "classic"],
+  meta: () => import("./meta"),
   props: SOLITAIRE_PROPS,
   defaults: {
     constraints: {

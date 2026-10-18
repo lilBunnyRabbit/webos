@@ -4,10 +4,14 @@
     BRAND_DARK,
     DEFAULT_APPEARANCE,
     credits,
+    load_metas,
     OWNER,
     TaskbarPosition,
     TaskbarSize,
     WallpaperPreset,
+    with_meta,
+    type AppId,
+    type AppMeta,
     type AppsService,
     type SettingsService,
     type VersionService,
@@ -34,7 +38,9 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   const CREDIT_PREVIEW = 12;
-  const credit_list = $derived(credits([...apps.list()].map(([, manifest]) => manifest)));
+  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
+  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
+  const credit_list = $derived(credits([...apps.list()].map(([, manifest]) => with_meta(manifest, metas))));
   let expanded = $state<string[]>([]);
 
   const DEV = import.meta.env.DEV;

@@ -1,8 +1,8 @@
-import type { AppAuthor, AppManifest } from "./type";
+import type { AppAuthor, AppListing, AppMeta } from "./type";
 
 export const OWNER: AppAuthor = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" };
 
-export function app_authors(manifest: Pick<AppManifest, "authors">): AppAuthor[] {
+export function app_authors(manifest: Pick<AppMeta, "authors">): AppAuthor[] {
   return manifest.authors?.length ? manifest.authors : [OWNER];
 }
 
@@ -11,7 +11,7 @@ export function author_link(author: AppAuthor): string | null {
   return author.url ?? null;
 }
 
-export function author_names(manifest: Pick<AppManifest, "authors">): string {
+export function author_names(manifest: Pick<AppMeta, "authors">): string {
   return app_authors(manifest)
     .map((author) => author.name)
     .join(", ");
@@ -19,11 +19,11 @@ export function author_names(manifest: Pick<AppManifest, "authors">): string {
 
 export interface Credit {
   author: AppAuthor;
-  apps: AppManifest[];
+  apps: AppListing[];
 }
 
 /** One entry per author, the owner first, then by app count; apps by name. */
-export function credits(manifests: Iterable<AppManifest>): Credit[] {
+export function credits(manifests: Iterable<AppListing>): Credit[] {
   const by_key = new Map<string, Credit>();
   for (const manifest of manifests) {
     for (const author of app_authors(manifest)) {

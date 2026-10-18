@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AppManifest } from "$lib/core/api";
+  import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import { Badge, Button, EmptyState } from "$lib/core/components/ui";
   import { ArrowRight as ArrowRightIcon, MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
@@ -15,7 +15,7 @@
     query: string;
     fresh: ReadonlySet<string>;
     updated: ReadonlySet<string>;
-    onselect: (manifest: AppManifest) => void;
+    onselect: (manifest: AppListing) => void;
     onclear: () => void;
   }
 

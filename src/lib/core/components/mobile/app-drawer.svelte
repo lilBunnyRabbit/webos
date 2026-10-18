@@ -1,5 +1,16 @@
 <script lang="ts">
-  import kernel, { group_apps, search_apps, type AppManifest, type AppsService, type DesktopService, type DialogsService } from "$lib/core/api";
+  import kernel, {
+    group_apps,
+    load_metas,
+    search_apps,
+    with_meta,
+    type AppId,
+    type AppManifest,
+    type AppMeta,
+    type AppsService,
+    type DesktopService,
+    type DialogsService,
+  } from "$lib/core/api";
   import {
     DownloadSimple as DownloadSimpleIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -23,9 +34,12 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   let query = $state("");
-  const installed = $derived([...apps.list({ installed: true })].map(([, manifest]) => manifest));
+  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
+  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
+
+  const installed = $derived([...apps.list({ installed: true })].map(([, manifest]) => with_meta(manifest, metas)));
   const matches = $derived(search_apps(installed, query));
-  const gettable = $derived(query.trim() ? search_apps([...apps.list({ installed: false })].map(([, manifest]) => manifest), query) : []);
+  const gettable = $derived(query.trim() ? search_apps([...apps.list({ installed: false })].map(([, manifest]) => with_meta(manifest, metas)), query) : []);
   const best = $derived(matches[0] ?? gettable[0]);
   const sections = $derived(group_apps(installed));
 

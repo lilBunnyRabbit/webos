@@ -9,6 +9,7 @@ import type {
 } from "$lib/core/api";
 import { untrack } from "svelte";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
+import { load_metas, with_meta } from "../apps/meta";
 import { LatestWriter } from "../files/latest-writer";
 import { SessionStatus } from "../session/type";
 import { introduced_apps } from "./history";
@@ -109,8 +110,8 @@ export class VersionService implements IVersionService {
       void import("./samples")
         .then(({ seed_samples }) => seed_samples(this.files_service))
         .catch((error) => console.error("[VersionService] Failed to add sample files", error));
-      // Loaded during boot, so the introduction is already up when the splash goes.
-      await intro_dialog();
+      // Loaded during boot, so the introduction is already up when the splash goes. Only a first boot waits for the meta.
+      await Promise.all([intro_dialog(), this.apps_service.meta_ready]);
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
       this.show_intro().then(() => {
         if (!this.destroyed) this.writer.write(serialize_seen(this.info.version));
@@ -211,7 +212,8 @@ export class VersionService implements IVersionService {
   }
 
   async show_intro(): Promise<void> {
-    await this.dialogs_service.show((await intro_dialog()).default, {}, { dismissible: false });
+    const [{ default: component }] = await Promise.all([intro_dialog(), this.apps_service.meta_ready]);
+    await this.dialogs_service.show(component, {}, { dismissible: false });
   }
 
   // Like RouterService's links: after the Restore answer, so an app opened from it lands above the restored windows.
@@ -227,11 +229,11 @@ export class VersionService implements IVersionService {
   }
 
   private async show_announcement(): Promise<void> {
+    const [{ default: component }, metas] = await Promise.all([announcement_dialog(), load_metas(this.apps_service)]);
     const apps = this.announced.flatMap(({ app, release }) => {
       const manifest = this.apps_service.get(app);
-      return manifest ? [{ manifest, version: release.version }] : [];
+      return manifest ? [{ manifest: with_meta(manifest, metas), version: release.version }] : [];
     });
-    const component = (await announcement_dialog()).default;
     if (this.destroyed || apps.length === 0) return;
     await this.dialogs_service.show(component, { apps });
   }

@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
-  description: "Previews TTF, OTF and WOFF fonts: sample text, sizes, every character and variable axes.",
-  pitch: {
-    problem: "You can't tell what a font file looks like from its name.",
-    solution: "Preview any TTF, OTF or WOFF font with sample text, every character and its axes.",
-  },
-  keywords: ["font", "typeface", "ttf", "otf", "woff", "woff2", "glyph", "type", "specimen", "variable"],
+  meta: () => import("./meta"),
   associations: [".ttf", ".otf", ".woff", ".woff2", "font/ttf", "font/otf", "font/woff", "font/woff2"],
   props: z.object({ path: z.string().optional() }),
   defaults: {

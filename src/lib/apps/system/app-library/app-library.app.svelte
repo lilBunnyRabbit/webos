@@ -2,7 +2,11 @@
   import kernel, {
     introduced_apps,
     updated_apps,
-    type AppManifest,
+    load_metas,
+    with_meta,
+    type AppId,
+    type AppListing,
+    type AppMeta,
     type AppsService,
     type SessionService,
     type VersionService,
@@ -81,8 +85,11 @@
 
   let query = $state("");
 
-  const manifests = $derived([...apps.list()].map(([, manifest]) => manifest));
-  const selected = $derived(selected_id.value ? (apps.get(selected_id.value) ?? null) : null);
+  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
+  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
+
+  const manifests = $derived([...apps.list()].map(([, manifest]) => with_meta(manifest, metas)));
+  const selected = $derived(selected_id.value ? (manifests.find((manifest) => manifest.id === selected_id.value) ?? null) : null);
 
   // No usage log exists; an open window, a recently closed one or a remembered window frame is what the OS already knows.
   const used = $derived(
@@ -114,7 +121,7 @@
     filters.value = filters.value.includes(filter) ? filters.value.filter((value) => value !== filter) : [...filters.value, filter];
   }
 
-  function select(manifest: AppManifest) {
+  function select(manifest: AppListing) {
     selected_id.value = manifest.id;
   }
 
@@ -127,7 +134,7 @@
   );
 </script>
 
-{#snippet icon_tile(manifest: AppManifest, size: "sm" | "md")}
+{#snippet icon_tile(manifest: AppListing, size: "sm" | "md")}
   <span
     class={cn(
       "relative grid shrink-0 place-items-center bg-background-light shadow-raised ring-1 ring-foreground/10",
@@ -139,7 +146,7 @@
   </span>
 {/snippet}
 
-{#snippet freshness(manifest: AppManifest)}
+{#snippet freshness(manifest: AppListing)}
   {#if !installed.has(manifest.id)}
     <Badge tone="primary">Get</Badge>
   {:else if fresh.has(manifest.id)}
@@ -149,7 +156,7 @@
   {/if}
 {/snippet}
 
-{#snippet tiles(list: AppManifest[])}
+{#snippet tiles(list: AppListing[])}
   {#if view.value === ViewMode.GRID}
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
       {#each list as manifest (manifest.id)}

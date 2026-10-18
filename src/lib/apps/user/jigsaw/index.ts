@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Cut any picture into a jigsaw puzzle and put it back together.",
-  pitch: {
-    problem: "A favourite photo deserves more than sitting in a folder.",
-    solution: "Cut any picture into a jigsaw puzzle and put it back together.",
-  },
-  keywords: ["jigsaw", "puzzle", "pieces", "picture", "photo", "image", "game"],
+  meta: () => import("./meta"),
   tools: ["image/*"],
   props: z.object({ path: z.string().optional() }),
   defaults: {

@@ -1,4 +1,4 @@
-import { AppCategory, type AppManifest } from "./type";
+import { AppCategory, type AppListing, type AppManifest } from "./type";
 
 export const APP_CATEGORY_LABELS: Record<AppCategory, string> = {
   [AppCategory.PRODUCTIVITY]: "Productivity",
@@ -8,10 +8,10 @@ export const APP_CATEGORY_LABELS: Record<AppCategory, string> = {
   [AppCategory.GAMES]: "Games",
 };
 
-export interface AppSection {
+export interface AppSection<T extends AppManifest = AppManifest> {
   id: AppCategory | "system";
   label: string;
-  apps: AppManifest[];
+  apps: T[];
 }
 
 function by_name(a: AppManifest, b: AppManifest): number {
@@ -39,7 +39,7 @@ export function within_one_edit(a: string, b: string): boolean {
 const words_of = (text: string) => text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
 /** Lower is better, `null` is no match. One query word against one app. */
-function rank_word(manifest: AppManifest, needle: string): number | null {
+function rank_word(manifest: AppListing, needle: string): number | null {
   const name = manifest.name.toLowerCase();
   if (name.startsWith(needle)) return 0;
   if (name.split(/[\s-]+/).some((word) => word.startsWith(needle))) return 1;
@@ -57,7 +57,7 @@ function rank_word(manifest: AppManifest, needle: string): number | null {
 }
 
 /** Every query word must match; the app ranks by its weakest word, then by the sum. */
-function rank(manifest: AppManifest, needles: string[]): { worst: number; total: number } | null {
+function rank(manifest: AppListing, needles: string[]): { worst: number; total: number } | null {
   let worst = 0;
   let total = 0;
   for (const needle of needles) {
@@ -75,21 +75,21 @@ function rank(manifest: AppManifest, needles: string[]): { worst: number; total:
  * description or category. Words of five letters or more also match a word one typo away, ranked last. Ties sort by
  * name.
  */
-export function search_apps(apps: Iterable<AppManifest>, query: string): AppManifest[] {
+export function search_apps<T extends AppListing>(apps: Iterable<T>, query: string): T[] {
   const needles = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (needles.length === 0) return [...apps].sort(by_name);
   const whole = query.trim().toLowerCase();
   return [...apps]
     .map((manifest) => ({ manifest, rank: whole.includes(" ") && manifest.name.toLowerCase().startsWith(whole) ? { worst: -1, total: -1 } : rank(manifest, needles) }))
-    .filter((entry): entry is { manifest: AppManifest; rank: { worst: number; total: number } } => entry.rank !== null)
+    .filter((entry): entry is { manifest: T; rank: { worst: number; total: number } } => entry.rank !== null)
     .sort((a, b) => a.rank.worst - b.rank.worst || a.rank.total - b.rank.total || by_name(a.manifest, b.manifest))
     .map((entry) => entry.manifest);
 }
 
 /** Apps grouped for the launcher: one section per category in declaration order, system apps last. Empty ones are left out. */
-export function group_apps(apps: Iterable<AppManifest>): AppSection[] {
-  const sections: AppSection[] = [
-    ...Object.values(AppCategory).map((id) => ({ id, label: APP_CATEGORY_LABELS[id], apps: [] as AppManifest[] })),
+export function group_apps<T extends AppManifest>(apps: Iterable<T>): AppSection<T>[] {
+  const sections: AppSection<T>[] = [
+    ...Object.values(AppCategory).map((id) => ({ id, label: APP_CATEGORY_LABELS[id], apps: [] as T[] })),
     { id: "system", label: "System", apps: [] },
   ];
   for (const manifest of [...apps].sort(by_name)) {

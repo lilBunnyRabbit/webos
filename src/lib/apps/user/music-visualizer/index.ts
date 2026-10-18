@@ -9,12 +9,7 @@ export default define_app({
   name: "Music Visualizer",
   icon: AppIcon,
   version: "1.0.0",
-  description: "Plays an audio file and draws it live as bars, a waveform or a circle.",
-  pitch: {
-    problem: "Music sounds good, but you want to see it too.",
-    solution: "Play an audio file and watch it drawn live as bars, a waveform or a circle.",
-  },
-  keywords: ["audio", "music", "spectrum", "waveform", "oscilloscope", "microphone", "sound", "visualiser"],
+  meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["audio/*"],
   props: FILE_PROPS,

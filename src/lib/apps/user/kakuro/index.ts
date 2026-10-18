@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Fill the grid with digits so every run adds up to its clue, no digit twice.",
-  pitch: {
-    problem: "You like number puzzles with a bit more arithmetic.",
-    solution: "Fill the grid so every run adds up to its clue, no digit twice.",
-  },
-  keywords: ["cross sums", "kakro", "number crossword", "puzzle", "logic", "sum", "numbers", "game", "brain"],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 340 },

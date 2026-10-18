@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { app_authors, author_link, type AppManifest } from "$lib/core/api";
+  import { app_authors, author_link, type AppMeta } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
 
-  let { manifest, class: class_name }: { manifest: Pick<AppManifest, "authors">; class?: string } = $props();
+  let { manifest, class: class_name }: { manifest: Pick<AppMeta, "authors">; class?: string } = $props();
 
   const authors = $derived(app_authors(manifest));
 </script>

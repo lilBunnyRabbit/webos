@@ -3,7 +3,11 @@
     Platform,
     THEME_PRESETS,
     TaskbarPosition,
-    type AppManifest,
+    load_metas,
+    with_meta,
+    type AppId,
+    type AppListing,
+    type AppMeta,
     type AppsService,
     type DesktopService,
     type DialogProps,
@@ -52,7 +56,9 @@
 
   const interests = new SvelteSet<string>();
   const pins = new SvelteSet<string>();
-  const suggested = $derived(interest_apps(interests).flatMap((id) => apps.get(id) ?? []));
+  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
+  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
+  const suggested = $derived(interest_apps(interests).flatMap((id) => apps.get(id) ?? []).map((manifest) => with_meta(manifest, metas)));
 
   function toggle<T>(set: SvelteSet<T>, value: T) {
     if (set.has(value)) set.delete(value);
@@ -131,7 +137,7 @@
   </ul>
 {/snippet}
 
-{#snippet suggestion(manifest: AppManifest)}
+{#snippet suggestion(manifest: AppListing)}
   <li class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
     <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
       <manifest.icon class="size-6" weight="duotone" />

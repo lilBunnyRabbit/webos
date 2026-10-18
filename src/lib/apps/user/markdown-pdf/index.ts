@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
-  description: "Lay out a Markdown file as pages and save it as a PDF.",
-  pitch: {
-    problem: "Turning notes into a clean printable document takes a word processor.",
-    solution: "Lay a Markdown file out as pages and save it as a PDF.",
-  },
-  keywords: ["markdown", "pdf", "print", "export", "document", "md", "write", "report", "convert"],
+  meta: () => import("./meta"),
   tools: [".md", ".markdown", "text/markdown"],
   props: MARKDOWN_PDF_PROPS,
   defaults: { constraints: { width: { min: 340 }, height: { min: 320 } } },

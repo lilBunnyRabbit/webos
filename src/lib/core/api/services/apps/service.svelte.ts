@@ -1,4 +1,14 @@
-import type { AppsService as IAppsService, AppId, AppInstance, AppManifest, AppProps, AppsFilter, OpenOptions, UninstallOptions } from "./type";
+import type {
+  AppsService as IAppsService,
+  AppId,
+  AppInstance,
+  AppManifest,
+  AppMeta,
+  AppProps,
+  AppsFilter,
+  OpenOptions,
+  UninstallOptions,
+} from "./type";
 import type {
   DialogsService,
   FilesService,
@@ -40,6 +50,8 @@ export class AppsService implements IAppsService {
   /** User apps only: system apps are always installed (ADR-040). */
   private readonly installed = new SvelteSet<AppId>();
   private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
+  private readonly metas = new Map<AppId, AppMeta>();
+  private meta_loading: Promise<void> | null = null;
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
@@ -54,6 +66,7 @@ export class AppsService implements IAppsService {
   }
 
   async init(): Promise<void> {
+    requestIdleCallback(() => void this.meta_ready);
     const saved = parse_installed(await this.read(INSTALLED_PATH));
     if (saved) {
       for (const id of saved) if (this.registry.has(id)) this.installed.add(id);
@@ -125,6 +138,25 @@ export class AppsService implements IAppsService {
     if (parent && (await this.files_service.exists(parent, id, "directory"))) {
       await this.files_service.delete_entry(parent, id, { recursive: true });
     }
+  }
+
+  public get meta_ready(): Promise<void> {
+    this.meta_loading ??= this.load_metas();
+    return this.meta_loading;
+  }
+
+  public async meta(id: AppId): Promise<AppMeta> {
+    await this.meta_ready;
+    return this.metas.get(id) ?? {};
+  }
+
+  private async load_metas(): Promise<void> {
+    const loaders = [...this.registry.values()].flatMap((manifest) => (manifest.meta ? [{ id: manifest.id, load: manifest.meta }] : []));
+    const settled = await Promise.allSettled(loaders.map(({ load }) => load()));
+    settled.forEach((result, index) => {
+      if (result.status === "fulfilled") this.metas.set(loaders[index].id, result.value.default);
+      else console.error(`[AppsService] ${loaders[index].id}'s meta failed to load`, result.reason);
+    });
   }
 
   public register(manifest: AppManifest): void {
