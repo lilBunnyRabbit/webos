@@ -7,6 +7,7 @@ export const CHANGELOG: Release[] = [
   {
     version: "2.0.1",
     date: "2026-10-18",
+    title: "Any picture will do",
     changes: [{ kind: FIXED, apps: ["hopsprite"], text: "Hopsprite opens JPG, WebP and any other picture again." }],
   },
   {
