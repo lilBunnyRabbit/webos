@@ -174,6 +174,8 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
 | `$kit/utils/codecs` (and its kernel-free `codecs/formats`) | | Image codecs in a worker (Format Lab, Media Preview): `encode(format, image, options, { signal })` → `{ blob, ms }` for JPEG, WebP, PNG (OffscreenCanvas) and AVIF, JPEG XL (jSquash wasm); `decode(blob)` → `ImageData` (the browser's decoder, jSquash for JPEG XL and for AVIF where the browser can't); `compare(a, b)` → SSIM with its window map; `supported(format)`. Up to 4 workers, an idle one ends after 30 s, and aborting a call ends its worker, so a wasm encode stops at once. The wasm loads on first use only. See [codecs](#image-codecs-kitutilscodecs) |
 | `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |
+| `$kit/components/swipe-compare` | | `SwipeCompare`: two snippets under a wipe divider with zoom, pan and pinch (Format Lab, Image Tools › Compare, Style Guide). See [components](../design/components.md#app-kit) |
+| `$kit/utils/view` | | 2D camera math: `View`, `Point`, `to_screen`, `to_image`, `clamp_scale`, `fit_view`, `zoom_view`, `pinch_view` (`SwipeCompare`, Image Tools, Jigsaw) |
 
 The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 

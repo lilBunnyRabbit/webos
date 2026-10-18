@@ -21,7 +21,7 @@
   import { draw_sheet, export_atlas, type SheetFrame } from "./atlas-render";
   import { is_image_name } from "./naming";
   import type { SectionProps } from "./sections";
-  import { pinch_view, zoom_view, type Point, type View as Camera } from "./sprite-sheet";
+  import { pinch_view, zoom_view, type Point, type View as Camera } from "$kit/utils/view";
   import { find_crop_bounds, type CropBounds } from "./trim";
 
   interface Frame {

@@ -20,7 +20,7 @@
   import { RestoreMode, drag_rect, draw_ops, type Rect, type RestoreOp } from "./patch";
   import { Effect, MIN_BLOCK, MIN_BLUR, area_at, area_bounds, redact, type RedactArea } from "./redact";
   import type { SectionProps } from "./sections";
-  import { pinch_view, zoom_view, type Point, type View as Camera } from "./sprite-sheet";
+  import { pinch_view, zoom_view, type Point, type View as Camera } from "$kit/utils/view";
 
   const Tool = { SELECT: "select", BOX: "box", BRUSH: "brush", ERASE: "erase" } as const;
   type Tool = (typeof Tool)[keyof typeof Tool];

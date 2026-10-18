@@ -34,6 +34,7 @@
     CursorClick as CursorClickIcon,
     Eraser as EraserIcon,
     Folder as FolderIcon,
+    Mountains as MountainsIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     PaperPlaneTilt as PaperPlaneTiltIcon,
     PencilSimple as PencilSimpleIcon,
@@ -42,9 +43,11 @@
     Stack as StackIcon,
     Swatches as SwatchesIcon,
     TextAa as TextAaIcon,
+    Toolbox as ToolboxIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
+  import { SwipeCompare } from "$kit/components/swipe-compare";
 
   const SECTIONS = [
     { value: "colour", label: "Colour", icon: SwatchesIcon },
@@ -53,6 +56,7 @@
     { value: "actions", label: "Actions", icon: CursorClickIcon },
     { value: "inputs", label: "Inputs", icon: SquaresFourIcon },
     { value: "feedback", label: "Feedback", icon: BellIcon },
+    { value: "kit", label: "App kit", icon: ToolboxIcon },
   ] as const;
   type SectionId = (typeof SECTIONS)[number]["value"];
 
@@ -90,6 +94,7 @@
   let tool = $state<"pencil" | "eraser">("pencil");
   let speed = $state<"slow" | "normal" | "fast">("normal");
   let pane = $state({ size: 160, collapsed: false });
+  let split = $state(50);
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -128,6 +133,15 @@
     </span>
   </div>
 {/snippet}
+
+{#snippet scene(blurred: boolean)}
+  <div class={["grid size-full place-items-center bg-background-light text-primary", blurred && "blur-[3px]"]}>
+    <MountainsIcon weight="duotone" class="size-1/2" />
+  </div>
+{/snippet}
+
+{#snippet sharp()}{@render scene(false)}{/snippet}
+{#snippet blurred()}{@render scene(true)}{/snippet}
 
 {#snippet specimen(label: string)}
   <span class="font-mono text-2xs text-foreground/80">{label}</span>
@@ -346,6 +360,16 @@
           <div class="flex flex-col gap-3 p-4">
             <Textarea bind:value={notes} rows={3} aria-label="Notes" placeholder="Notes" />
             <Textarea mono value={'{ "name": "Notes", "size": 1420 }'} rows={3} readonly aria-label="JSON" />
+          </div>
+        </Section>
+      {:else if section.value === "kit"}
+        <Section
+          title="Swipe compare"
+          description="Two versions of a picture under one divider, from $kit: drag or use the slider to wipe, pinch or Ctrl+scroll to zoom, drag to pan when zoomed in."
+          flush
+        >
+          <div class="flex h-72 flex-col overflow-hidden rounded-xl bg-background-darker ring-1 ring-foreground/10">
+            <SwipeCompare width={320} height={200} left={sharp} right={blurred} left_label="Sharp" right_label="Blurred" bind:split class="flex-1" />
           </div>
         </Section>
       {:else}

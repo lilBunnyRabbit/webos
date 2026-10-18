@@ -33,7 +33,7 @@
   import PairAlignment from "./pair-alignment.svelte";
   import PairSlot from "./pair-slot.svelte";
   import type { SectionProps } from "./sections";
-  import { pinch_view, zoom_view, type Point, type View as Camera } from "./sprite-sheet";
+  import { pinch_view, zoom_view, type Point, type View as Camera } from "$kit/utils/view";
 
   const View = { EDITED: "edited", RESULT: "result", ORIGINAL: "original", DIFF: "diff" } as const;
   type View = (typeof View)[keyof typeof View];

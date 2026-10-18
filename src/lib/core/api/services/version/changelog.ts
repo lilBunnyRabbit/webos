@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Tidy labels",
     changes: [
       { kind: FIXED, apps: ["format-lab"], text: "The \"Settings changed\" label in Format Lab stays on one line instead of spilling out of its box." },
+      { kind: IMPROVED, apps: ["image-tools"], text: "In Image Tools › Compare, dragging anywhere on the picture moves the divider, like in Format Lab." },
     ],
   },
   {

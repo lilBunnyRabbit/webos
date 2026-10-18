@@ -1,25 +1,42 @@
 <script lang="ts">
   import { IconButton, Slider } from "$lib/core/components/ui";
-  import { paint } from "$kit/utils/image";
+  import { cn } from "$lib/core/utils";
   import { MagnifyingGlassMinus as MagnifyingGlassMinusIcon, MagnifyingGlassPlus as MagnifyingGlassPlusIcon } from "phosphor-svelte";
-  import { pinch_view, zoom_view, type Point, type View as Camera } from "../image-tools/sprite-sheet";
+  import type { Snippet } from "svelte";
+  import { pinch_view, zoom_view, type Point, type View as Camera } from "$kit/utils/view";
 
-  interface HeatmapLayer {
-    canvas: OffscreenCanvas;
-    /** Where the map sits over the image, in % of its size: the windows don't reach the right and bottom edge. */
-    box: { left: number; top: number; width: number; height: number };
+  interface Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
   }
 
   interface Props {
-    left: ImageBitmap;
-    right: ImageBitmap | null;
-    left_label: string;
-    right_label: string;
-    heatmap: HeatmapLayer | null;
-    split: number;
+    width: number;
+    height: number;
+    left: Snippet<[pixelated: boolean]>;
+    right?: Snippet<[pixelated: boolean]> | null;
+    left_label?: string;
+    right_label?: string;
+    split?: number;
+    controls?: Snippet;
+    label?: string;
+    class?: string;
   }
 
-  let { left, right, left_label, right_label, heatmap, split = $bindable() }: Props = $props();
+  let {
+    width,
+    height,
+    left,
+    right = null,
+    left_label,
+    right_label,
+    split = $bindable(50),
+    controls,
+    label = "Comparison",
+    class: class_name,
+  }: Props = $props();
 
   const MAX_ZOOM = 32;
   const ZOOM_STEP = 1.5;
@@ -29,9 +46,26 @@
   let layer = $state<HTMLElement>();
   let camera = $state.raw<Camera>(FIT);
 
-  const width = $derived(left.width);
-  const height = $derived(left.height);
   const pixelated = $derived(camera.scale > 2);
+  const hint = $derived(
+    right
+      ? "Drag to move the divider, pinch or Ctrl+scroll to zoom, drag to pan when zoomed in."
+      : "Pinch or Ctrl+scroll to zoom, scroll or drag to pan when zoomed in."
+  );
+
+  export function reset() {
+    camera = FIT;
+  }
+
+  /** Zooms to `rect`, in the compared image's pixels. */
+  export function focus(rect: Rect) {
+    if (!fit) return;
+    const box = fit.getBoundingClientRect();
+    const base = box.width / width;
+    const scale = Math.min(MAX_ZOOM, Math.max(1, 0.8 * Math.min(box.width / (rect.width * base), box.height / (rect.height * base))));
+    const center = { x: (rect.x + rect.width / 2) * base, y: (rect.y + rect.height / 2) * base };
+    camera = clamp_camera({ scale, offset_x: box.width / 2 - center.x * scale, offset_y: box.height / 2 - center.y * scale });
+  }
 
   function screen_point(event: { clientX: number; clientY: number }): Point {
     const box = fit?.getBoundingClientRect();
@@ -40,19 +74,19 @@
 
   function clamp_camera(next: Camera): Camera {
     if (!fit) return FIT;
-    const { width: box_width, height: box_height } = fit.getBoundingClientRect();
+    const box = fit.getBoundingClientRect();
     const scale = Math.min(MAX_ZOOM, Math.max(1, next.scale));
     return {
       scale,
-      offset_x: Math.min(0, Math.max(box_width - box_width * scale, next.offset_x)),
-      offset_y: Math.min(0, Math.max(box_height - box_height * scale, next.offset_y)),
+      offset_x: Math.min(0, Math.max(box.width - box.width * scale, next.offset_x)),
+      offset_y: Math.min(0, Math.max(box.height - box.height * scale, next.offset_y)),
     };
   }
 
   function zoom_by(factor: number) {
     if (!fit) return;
-    const { width: box_width, height: box_height } = fit.getBoundingClientRect();
-    camera = clamp_camera(zoom_view(camera, factor, box_width / 2, box_height / 2));
+    const box = fit.getBoundingClientRect();
+    camera = clamp_camera(zoom_view(camera, factor, box.width / 2, box.height / 2));
   }
 
   const pointers = new Map<number, Point>();
@@ -143,8 +177,9 @@
   }
 </script>
 
-<div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2 p-2 @xl:gap-3 @xl:p-4">
+<div class={cn("grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-2 p-2 @xl:gap-3 @xl:p-4", class_name)}>
   <div class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+    {@render controls?.()}
     {#if right}
       <Slider size="sm" min={0} max={100} step={0.5} bind:value={split} class="w-36 pointer-coarse:h-11" aria-label="Divider position" />
     {/if}
@@ -156,7 +191,7 @@
         type="button"
         class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-11"
         title="Fit"
-        onclick={() => (camera = FIT)}>{Math.round(camera.scale * 100)}%</button
+        onclick={reset}>{Math.round(camera.scale * 100)}%</button
       >
       <IconButton label="Zoom in" size="sm" disabled={camera.scale >= MAX_ZOOM} onclick={() => zoom_by(ZOOM_STEP)} class="pointer-coarse:size-11">
         <MagnifyingGlassPlusIcon weight="bold" />
@@ -164,9 +199,12 @@
     </div>
   </div>
   <div
-    class="grid min-h-0 touch-none place-items-center overflow-hidden select-none [container-type:size]"
+    class={[
+      "grid min-h-0 touch-none place-items-center overflow-hidden select-none [container-type:size]",
+      camera.scale > 1 ? "cursor-grab" : right && "cursor-ew-resize",
+    ]}
     role="application"
-    aria-label="Comparison. Drag to move the divider, pinch or Ctrl+scroll to zoom, drag to pan when zoomed in."
+    aria-label="{label}. {hint}"
     onpointerdown={on_pointerdown}
     onpointermove={on_pointermove}
     onpointerup={on_pointerend}
@@ -180,28 +218,22 @@
         style:transform="translate({camera.offset_x}px, {camera.offset_y}px) scale({camera.scale})"
         style:--zoom={camera.scale}
       >
-        <canvas {@attach paint(left)} class={["block size-full", pixelated && "[image-rendering:pixelated]"]}></canvas>
+        <div class="absolute inset-0" style:clip-path={right ? `inset(0 ${100 - split}% 0 0)` : undefined}>
+          {@render left(pixelated)}
+        </div>
         {#if right}
           <div class="pointer-events-none absolute inset-0" style:clip-path="inset(0 0 0 {split}%)">
-            <canvas {@attach paint(right)} class={["block size-full", pixelated && "[image-rendering:pixelated]"]}></canvas>
-            {#if heatmap}
-              <canvas
-                {@attach paint(heatmap.canvas)}
-                class="absolute"
-                style:left="{heatmap.box.left}%"
-                style:top="{heatmap.box.top}%"
-                style:width="{heatmap.box.width}%"
-                style:height="{heatmap.box.height}%"
-              ></canvas>
-            {/if}
+            {@render right(pixelated)}
           </div>
           <div data-wipe class="wipe absolute inset-y-0 cursor-ew-resize" style:left="{split}%">
             <div class="grip absolute top-1/2 left-1/2 rounded-full"></div>
           </div>
         {/if}
       </div>
-      {#if right}
+      {#if right && left_label}
         <span class="pointer-events-none absolute top-2 left-2 rounded-sm bg-background-light/85 px-2 py-0.5 text-2xs font-medium">{left_label}</span>
+      {/if}
+      {#if right && right_label}
         <span class="pointer-events-none absolute top-2 right-2 rounded-sm bg-background-light/85 px-2 py-0.5 text-2xs font-medium">{right_label}</span>
       {/if}
     </div>

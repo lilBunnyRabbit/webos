@@ -26,7 +26,7 @@
     Warning as WarningIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import CompareStage from "./compare-stage.svelte";
+  import { SwipeCompare } from "$kit/components/swipe-compare";
   import { write_free } from "./convert-job";
   import { run_lab, settings_key, type LabResult } from "./encode-job";
   import FormatCard from "./format-card.svelte";
@@ -104,6 +104,7 @@
     const inset = (SSIM_WINDOW - SSIM_STEP) / 2;
     return {
       canvas: draw_heatmap(ssim, heat_color),
+      // In % of the image: the SSIM windows don't reach the right and bottom edge.
       box: {
         left: (inset / width) * 100,
         top: (inset / height) * 100,
@@ -320,6 +321,28 @@
 
 <svelte:document onpaste={on_paste} />
 
+{#snippet left_side(pixelated: boolean)}
+  {#if left_bitmap}
+    <canvas {@attach paint(left_bitmap)} class={["block size-full", pixelated && "[image-rendering:pixelated]"]}></canvas>
+  {/if}
+{/snippet}
+
+{#snippet right_side(pixelated: boolean)}
+  {#if right_result}
+    <canvas {@attach paint(right_result.bitmap)} class={["block size-full", pixelated && "[image-rendering:pixelated]"]}></canvas>
+  {/if}
+  {#if heatmap}
+    <canvas
+      {@attach paint(heatmap.canvas)}
+      class="absolute"
+      style:left="{heatmap.box.left}%"
+      style:top="{heatmap.box.top}%"
+      style:width="{heatmap.box.width}%"
+      style:height="{heatmap.box.height}%"
+    ></canvas>
+  {/if}
+{/snippet}
+
 <div
   bind:this={root}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
@@ -400,12 +423,13 @@
           </label>
         </div>
         {#if left_bitmap}
-          <CompareStage
-            left={left_bitmap}
-            right={right_result?.bitmap ?? null}
+          <SwipeCompare
+            width={left_bitmap.width}
+            height={left_bitmap.height}
+            left={left_side}
+            right={right_result ? right_side : null}
             left_label={left_result ? CODECS[left_result.format].label : "Source"}
             right_label={CODECS[right].label}
-            {heatmap}
             bind:split
           />
         {/if}

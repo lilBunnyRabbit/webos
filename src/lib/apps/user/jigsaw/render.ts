@@ -1,5 +1,5 @@
 import { resolve_token } from "$lib/core/utils";
-import type { View } from "../image-tools/sprite-sheet";
+import type { View } from "$kit/utils/view";
 import type { Board } from "./board";
 import { piece_path, tab_margin, type Cuts } from "./cuts";
 
