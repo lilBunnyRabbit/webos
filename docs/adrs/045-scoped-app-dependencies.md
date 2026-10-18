@@ -37,5 +37,5 @@ The isolated linker works with svelte-check, Vitest (both projects) and Vite as 
 | `svgo`, `@codemirror/merge` | `user/svg-workbench` (new) |
 
 - Image Tools' Poster Print uses pdf-lib through PDF Tools' `pdf.ts` (`pdf_lib()` and re-exported types) instead of declaring it. A cross-app import resolves the package from the file that imports it, so another app's module carries its own packages.
-- Root keeps what core imports: `codemirror` and the other `@codemirror/*`, `@lezer/highlight`, `uqr`, `jsqr`, `uuid`, `zod`, `@lilbunnyrabbit/task-manager`. `@lilbunnyrabbit/utils` is imported nowhere; it stays until the owner decides.
+- Root keeps what core imports: `codemirror` and the other `@codemirror/*`, `@lezer/highlight`, `uqr`, `jsqr`, `uuid`, `zod`, `@lilbunnyrabbit/task-manager`. `@lilbunnyrabbit/utils` was imported nowhere and was removed on 2026-10-18.
 - Moving a package out of the root leaves its old link in `node_modules` on an incremental `bun install`, so a stray import still resolves locally. `rm -rf node_modules && bun install` shows the real layout; CI always installs fresh.
