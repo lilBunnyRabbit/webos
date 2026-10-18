@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -19,7 +19,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `changelog` | `Release[]` | `$state.raw`, empty until `load_changelog()` resolves, then `CHANGELOG` from `changelog.ts`, newest first |
 | `load_changelog` | `(): Promise<Release[]>` | Imports `changelog.ts` once (the promise is kept) and fills `changelog`. `init()` awaits it only after an update; Settings › What's new, App Library and the `changelog` command call it themselves. It's the largest module WebOS has and grows every release, so it stays out of the boot chunk |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
-| `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to installed apps: what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
+| `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to registered apps (installed or not; Open installs through `launch`): what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
 | `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte`, then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits that import, so the introduction is up when the splash goes (ADR-036). Resolves when it closes. Doesn't write the seen marker |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
@@ -60,7 +60,7 @@ The bundle and `version.json` always carry the same `buildTimestamp`. Only a new
 
 ## State
 
-Six `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`, `announced`) and private `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `poll_interval`, `destroyed`. Nothing derived.
+Six `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`, `announced`), `changelog` as `$state.raw`, and private `loading` (the kept `load_changelog()` promise), `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `update_toast`, `poll_interval`, `destroyed`, `dispose_announcement`, `writer` (`LatestWriter` for the seen marker). Nothing derived.
 
 ## Lifecycle
 
@@ -185,10 +185,11 @@ If the browser already installed the new worker before the click, `installing` a
 
 - ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above.
 - ADR-004 calls for a `CHANGELOG.md` fetched at runtime. ADR-026 replaced it with the bundled, typed `changelog.ts` (ADR-004 revision note).
+- ADR-038 limits `announced` to installed apps. The code keeps every introduced app that is still registered, installed or not, so Open installs it (ADR-040). Revision note 2026-10-18; the `announced` JSDoc in `type.ts` still says "Installed apps".
 
 ## Shell
 
-Contributes `version`, `changelog`, `install` and the `release` and `new-app` value types (`version/shell.ts`). `changelog --apps` yields one `new-app` row per introduced, installed app (id, name, added, date), newest release first; clicking a row launches the app. `new-app` is its own type because `app`'s columns (id, name, category) would hide when it came; the command's `yields` stays `release`, so `where` after `--apps` completes release columns. `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
+Contributes `version`, `changelog`, `install` and the `release` and `new-app` value types (`version/shell.ts`). `changelog --changes` (`-c`) yields one untagged row per change (version, kind, text). `changelog --apps` yields one `new-app` row per introduced app that is still registered (id, name, added, date), newest release first; clicking a row launches the app. `new-app` is its own type because `app`'s columns (id, name, category) would hide when it came; the command's `yields` stays `release`, so `where` after `--apps` completes release columns. `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
 
 ## Known gaps
 

@@ -94,8 +94,8 @@ Contributed by `shell.ts` through `IService.shell()`; bodies call the service, w
 
 | Command | Does | Yields |
 |---------|------|--------|
-| `backup create [--files] [--settings] [--apps]` | Opens the save picker and saves the flagged areas; no flags = every area | `saved webos-backup-2026-10-15.zip · 48 MB`, `cancelled` (picker), or `not saved` (task cancelled or failed; the toast says why) |
-| `backup restore` | Opens the device file picker, validates, asks, replaces, reloads | `restored, reloading…`, `cancelled`, or `not restored` |
+| `backup create [--files] [--settings] [--apps]` | Opens the save picker and saves the flagged areas; no flags = every area | `saved webos-backup-2026-10-15.zip · 48 MB`, or `not saved` (picker cancelled, or the task cancelled or failed; the toast says why) |
+| `backup restore` | Opens the device file picker, validates, asks, replaces, reloads | `restored, reloading…`, or `not restored` (picker or question cancelled, or the task cancelled or failed) |
 
 No OPFS path arguments: a backup lives on the device. A `BackupError` comes out as `backup create: <message>`. See [shell](shell.md#contributions).
 

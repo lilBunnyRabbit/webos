@@ -1,6 +1,6 @@
 # DesktopService
 
-Key `desktop` · Depends on: `files`, `apps` · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts; implemented, see its revision note), [ADR-011](../../adrs/011-desktop-enhancements.md) (accepted, not built; only the `fit()` revision is) · Source: `src/lib/core/api/services/desktop/` · Inspector: `inspector.svelte` (ADR-020)
+Key `desktop` · Depends on: `files`, `apps` · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts; implemented, see its revision note), [ADR-011](../../adrs/011-desktop-enhancements.md) (`fit()`, multi-select moves, Sort by; icon settings not built), [ADR-034](../../adrs/034-app-extension-points.md) (widgets) · Source: `src/lib/core/api/services/desktop/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -24,8 +24,8 @@ Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/short
 
 Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)):
 
-- **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
-- **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_items(moves)`. The desktop shell (`desktop.svelte`) and this inspector use it.
+- **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `pin_widget`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
+- **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_items(moves)`, `resize_target`, `resize_widget`. The desktop shell (`desktop.svelte`) and this inspector use it.
 - **`MobileDesktopService`**: the mobile home: ordered pages and a dock. See [Mobile home](#mobile-home).
 
 Both implementations own a `DesktopFolder` (composition, not a base class). It holds `entries`, the revision watch, reload, seeding trigger, and the file operations. The owner passes `read_layout`, `seed` and `loaded` callbacks, so each layout file stays with its service.
@@ -197,7 +197,7 @@ Keyboard: with the widget's title strip focused, Shift+→/← grows or shrinks 
 
 ADR-022's body puts positions in `/home/Desktop/.layout.json` and writes back the cell of every unplaced entry. The code uses `/var/lib/desktop/layout.json` and saves only on move; the ADR's 2026-10-11 revision note records both, plus the seed condition, broken-shortcut handling, `ShortcutIcon`, File Explorer's `{ path }` and Enter to open. ADR-022 says seeding happens when "the folder was just created"; the code's test is "empty and no layout file".
 
-ADR-011 is still *Accepted* and unbuilt: multi-selection, wallpapers, context menu, auto-arrange, icon settings.
+ADR-011's revisions are built: multi-select (selection is local to the desktop surface, moves go through `move_items`), the wallpaper (on [SettingsService](settings.md)) and the one-shot Sort by. Icon size, label and spacing settings aren't.
 
 ## Shell
 

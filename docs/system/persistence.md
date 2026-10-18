@@ -13,6 +13,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | OPFS | `/home/Desktop/*` | DesktopService (reads), the user, `pin()` and seeding (write) | Any file or folder. `.desktop` files are shortcut JSON `{ app_id, props? }` | none | Shortcut zod-validated on read; invalid → shown as a plain file, "Broken shortcut" on open | Seeding on first boot, "Pin to Desktop", and anything the user saves there. [Details](services/desktop.md#persistence) |
 | OPFS | `/var/lib/session/session.json` | SessionService (`session/persistence.ts`) | JSON `{ version, windows: [{ app_id, props?, bounds, flags, snap_zone, state? }], frames: { [app_id]: bounds } }`, windows oldest-first in z-order, pretty-printed | `2` (v1 loads without frames) | zod; anything invalid → no session (no dialog) and no frames, overwritten on first save. Unknown app or invalid props → that window skipped at restore, one toast | `$effect` on every window change, through `LatestWriter` (300 ms debounce), but only after the boot restore decision. [Details](services/session.md#persistence) |
 | OPFS | `/var/lib/version/state.json` | VersionService (`version/persistence.ts`) | JSON `{ version, seen }`: the last release this device was told about, pretty-printed | `1` | zod; missing or invalid → first boot, the introduction shows | When the introduction closes (first boot), or at boot when `seen` is older than the running version. Through `LatestWriter`. [Details](services/version.md#persistence) |
+| OPFS | `/var/lib/apps/installed.json` | AppsService (`apps/installed.ts`) | JSON `{ version, installed: [app id] }`, sorted, user apps only, pretty-printed | `1` | zod; missing or invalid → not decided yet, so `init()` works out the list again ([apps](services/apps.md#persistence), ADR-040). Unknown ids dropped on load | Every install and uninstall, through `LatestWriter` |
 | OPFS | `/var/lib/shell/history` | ShellService | Plain text, one command line per line, oldest first | n/a | Empty lines dropped; capped at the last 1000 on read | Every line typed into a session (not shortcut or palette runs), through `LatestWriter`. [Details](services/shell.md#persistence) |
 | OPFS | `/var/lib/wallpaper/` | SettingsService (`set_wallpaper_image`) | The current wallpaper image, copied in as `{base36 time}-{name}` | n/a | Anything but the current image is deleted at boot and after each new image | Choosing an image. [Details](services/settings.md) |
 | OPFS | `/var/lib/desktop/additions.json` | DesktopService (`desktop/additions.ts`) | JSON `{ version, applied: [id] }`: default widgets already placed | `1` | zod; invalid → none applied, so the defaults are placed again | After placing default widgets at boot (ADR-034, owner 2026-10-14) |
@@ -20,6 +21,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | OPFS | `/var/lib/desktop/home-layout.json` | MobileDesktopService (`desktop/home-layout.ts`), mobile only | JSON `{ version, order: [entry name], dock: [entry name] }` (dock at most 4), pretty-printed | `1` | zod: wrong version or shape → folder order, empty dock. Stale names pruned on the next change | Seeding on mobile, every reorder, dock change and rename. [Details](services/desktop.md#mobile-home) |
 | localStorage | `app.{app_id}.{key}` | App storage handle (`contexts/app/storage-handle.svelte.ts`), one per window | `JSON.stringify(value)` | none | Optional zod schema on `get()` / `persisted()`. Invalid or corrupt → `null` / `initial`. Without a schema, anything parsed is returned unchecked. | `set()` writes immediately, or updates the live cell. `persisted()` writes via `$effect` on every change, not on creation. |
 | OPFS | root of `navigator.storage.getDirectory()`, whole tree: `/home` (user files, with `Desktop`, `Documents`, `Downloads`), `/etc` (OS config), `/var/lib` (OS component state), `/tmp` (with `/tmp/device/`, the picker's "This device…" copies), `/mnt` (empty; mounts are listed there) | FilesService (`files/opfs.ts`, layout in `files/hierarchy.ts`) | Files and folders, as is | n/a | Every boot, `FilesService.init()` recreates missing folders and empties `/tmp`. Once, a flat pre-hierarchy root is moved into `/home` | User and app file operations ([services/files.md](services/files.md)) |
+| OPFS | `/tmp/restore/` | BackupService (`backup/backup.ts`, `STAGE_PATH`) | A backup's areas unpacked under their zip paths (`home/`, `etc/`, `var/lib/`) | none | Cleared before staging; a cancel or failure clears it, and the `/tmp` sweep at boot catches anything left | During a restore, before the staged areas are swapped in ([backup](services/backup.md)) |
 | OPFS | `/tmp/p2p-transfer/{size}-{name}.part` | `user/p2p-transfer` (`transfer.ts`) | Raw bytes of a half-received file | none | Its size is the resume offset; bigger than the announced size → restart from 0 | While receiving. Moved to `/home/Downloads` when complete; anything left is removed by the `/tmp` sweep at boot |
 | OPFS | `/var/lib/apps/{app-id}/*.json` | Apps through `storage.file()` / `json_file()` (`contexts/app/json-file.svelte.ts`) | The app's own JSON, pretty-printed | the app's | zod per app; invalid → `initial` + `error`, file kept until the next change | Every change, newest wins via `LatestWriter`, 300 ms debounce (ADR-035). [Details](apps/app-context.md#file-adr-035) |
 | OPFS | `/var/lib/games/plays.json` | Game kit (schema in `kit/games/plays.ts`, tracking in `plays.svelte.ts`) | JSON `{ version, games: { [id]: { ms, sessions, last } }, daily: { [day]: { [id]: { ms, score? } } } }`; `score` only from games whose manifest sets `daily_rank` to a score | `1` | zod; invalid → empty, kept until the next change | While a game is visible: every 30 s and on unmount (ADR-035) |
@@ -28,7 +30,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | Storage persistence | `navigator.storage.persist()` | FilesService, requested on first `get_root()` (during `init()`) | Browser permission | n/a | `false` → `console.warn("[FilesService] Storage not persisted")` | Once per page load |
 | Cache Storage + service worker | Workbox precache (`sw.js`, `workbox-*.js`, `registerSW.js`) | vite-plugin-pwa (`vite.config.ts`, `registerType: "autoUpdate"`), production only | Workbox-managed | Workbox revisions | Workbox handles it | On SW install/update. `VersionService.apply_update()` installs the new worker before reloading ([services/version.md](services/version.md#service-worker)) |
 
-Not used anywhere in OS code: `sessionStorage`, cookies. IndexedDB holds mounted folder handles only (ADR-044). The URL holds no state: RouterService reads a `#/app/{id}?{props}` deep link once and clears the hash ([router](services/router.md)); `?platform=` only overrides platform detection.
+Not used anywhere in OS code: `sessionStorage`, cookies. IndexedDB holds mounted folder handles only (ADR-044). The URL holds no state: RouterService reads a `#/app/{id}?{props}` deep link once and clears the hash ([router](services/router.md)). A `#/solo/{id}?{props}` link is kept, so a reload reopens the same app (ADR-047); `?platform=` only overrides platform detection.
 
 App storage keys in use today (from a grep of `storage.persisted` / `get` / `set` in `src/lib/apps`):
 
@@ -80,7 +82,7 @@ Keys read through `storage.persisted()` share one live value across every window
 
 ## App storage handle
 
-Created per window in `window-content.svelte` (`create_storage_handle(app_id)`) and exposed as `get_app_context().storage` (ADR-003). Every key is prefixed `app.{app_id}.`. The key belongs to the app, not the window.
+Created per window by the window frame (`window.svelte`, `mobile/mobile-window.svelte`, `solo/solo-window.svelte`: `create_storage_handle(app_id, instance.app.state)`) and exposed as `get_app_context().storage` (ADR-003). Every key is prefixed `app.{app_id}.`. The key belongs to the app, not the window.
 
 ```ts
 interface StorageHandle {
@@ -89,6 +91,10 @@ interface StorageHandle {
   remove(key: string): void;
   /** Must be called during component init: it uses `$effect` to save. */
   persisted<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
+  /** This window only; saved with the session, not in localStorage. */
+  window<T>(key: string, initial: T, schema?: ZodType<T>): { value: T };
+  /** `/var/lib/apps/{app_id}/{name}`, shared by every window (ADR-035). */
+  file<T>(name: string, initial: T, schema: ZodType<T>): Omit<JsonFile<T>, "release">;
 }
 ```
 
@@ -99,7 +105,7 @@ interface StorageHandle {
 - `remove(key)` removes the localStorage entry and resets a live cell to a `structuredClone` of its `initial` without writing it, so every window shows `initial` and the key stays absent until the next change. The cell keeps its own clone of `initial` from creation, so edits to the live value never leak into the reset target.
 - Write and remove failures go to `console.error` (`Failed to save app.x.y:` / `Failed to remove app.x.y:`).
 - No cross-tab sync. There's no `storage` event listener.
-- Nothing is cleaned up when an app is removed: its `app.{id}.*` keys stay behind.
+- Uninstalling a user app keeps its `app.{id}.*` keys unless the user also asks to delete its data (`apps.uninstall(id, { data: true })`, ADR-040), which removes them and `/var/lib/apps/{id}/`. Removing an app from the code leaves its keys behind.
 
 ## What survives a reload
 
@@ -125,7 +131,7 @@ interface StorageHandle {
 
 ## Conventions
 
-The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/{layout,home-layout,additions}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
+The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/{layout,home-layout,additions}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/apps/installed.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
 
 ## Backups
 
@@ -138,7 +144,7 @@ BackupService (ADR-037, [backup](services/backup.md)) zips three areas into one 
 | Settings | Delete `/etc/settings.json` in File Explorer + reload, or Settings → About → Reset (theme, taskbar and `file_defaults`, no reload). Settings → Default apps clears `file_defaults` alone (one entry or all). Deleting the file without a reload does nothing: the next change rewrites it. |
 | Session | Start fresh in the boot dialog, which saves an empty session. Deleting `/var/lib/session/session.json` in File Explorer doesn't stick: the next window change rewrites it. |
 | Desktop | Delete shortcuts from the desktop, or anything in `/home/Desktop` from File Explorer. Delete `/var/lib/desktop/layout.json` to forget positions; with an empty `/home/Desktop` too, the next boot seeds the two default shortcuts again. |
-| App data | `localStorage` keys `app.{id}.*` (no UI) |
+| App data | Uninstall a user app with its data (Uninstall… in the App Library, the start menu, the desktop or the phone home and drawer): its `app.{id}.*` keys and `/var/lib/apps/{id}/` ([apps](services/apps.md#public-api)). System apps' keys have no UI |
 | Restore a backup | Settings → Backup → Restore…, or `backup restore`: replaces `/home`, `/etc`, `/var/lib` and the `app.*` keys for each area the backup holds, then reloads ([backup](services/backup.md)) |
 | Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`, then rebuilds the empty hierarchy and marker; no UI caller), or DevTools → Application → Storage (the hierarchy comes back on the next boot) |
 | SW / caches | No UI. DevTools → Application → Storage. `apply_update()` replaces the precache with the new build's, it doesn't wipe it. |

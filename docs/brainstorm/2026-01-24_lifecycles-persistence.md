@@ -16,7 +16,7 @@ Designing service lifecycle hooks and app lifecycle hooks, plus how persistence 
 **DECIDED:** Add `init()`, `destroy()`, `getState()`, `setState()` hooks to IService.
 Kernel triggers all lifecycle hooks.
 
-**See:** [ADR-002: Service Lifecycle](/docs/adrs/002-service-lifecycle.md)
+**See:** [ADR-002: Service Lifecycle](../adrs/002-service-lifecycle.md)
 
 ---
 

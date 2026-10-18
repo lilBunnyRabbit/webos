@@ -1,7 +1,7 @@
 # ADR-010: URL Deep Linking & Share System
 
 **Date:** 2026-02-01
-**Status:** Implemented (app links only)
+**Status:** Implemented (app links; solo links via ADR-047)
 
 > **Revision 2026-10-14: v1 is app links** (owner, [brainstorm](../brainstorm/2026-10-14_deep-linking.md))
 > - Only `#/app/{id}?{props}` ships. File links, workspace, demo presets and embed are deferred: almost every app's props are an OPFS path, which doesn't exist on the receiving machine.

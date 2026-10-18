@@ -9,7 +9,7 @@ The command system behind the OS shortcuts, the [Terminal](../system-apps.md#ter
 | File | Contents |
 |------|----------|
 | `type.ts` | `ShellService`, `ShellContribution`, `Command`, `CommandContext`, `Value` / `Tagged` / `ValueType`, `Completer`, `ShellSession`, `Entry`, `ShellError` |
-| `arg.ts` | `arg.path()`, `arg.app()`, `arg.window()`, `arg.kind(kind)`: zod strings tagged with a completion kind (`meta({ kind })`) |
+| `arg.ts` | `arg.path()`, `arg.app()`, `arg.window()`, `arg.task()`, `arg.kind(kind)`: zod strings tagged with a completion kind (`meta({ kind })`) |
 | `define.ts` | `define_command()`: types `run` from the schema, then erases it |
 | `tokenize.ts` | Pure: tokens with positions, quotes, escapes, `|`; `split_stages`; `escape` |
 | `parse.ts` | Pure: `fields()` reads a zod object, `resolve()` (longest prefix), `bind()`, `usage()` |
@@ -211,6 +211,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | gw2 | `gw2 daily`: today's Wizard's Vault objectives, with the key saved in GW2 Tracker | `gw2-objective` values (name, progress, done; open → GW2 Tracker) |
 | hid-lab | `hid ls` (unavailable without WebHID) | `hid-device` values (name, ids, usage, collections, opened; open → Keyboard & HID Lab, HID section) |
 | forms | `form link <path> [-c]`, `form answer <code>` | `link`: the form's solo link as `text` (`-c` copies it too), stamping the form id into the file first; path completion filtered to `.form.md`. `answer`: saves an answer code (or old answer link) beside its form, found by id under `/home`, and says where |
+| algorithms | `algo list [group]`, `algo <id> [input…]` | `algorithm` values (id, group, average, space; open → Algorithms on it); `algo` checks the input against the algorithm's parser before launching with `{ section, input }`; id completion from the catalog |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

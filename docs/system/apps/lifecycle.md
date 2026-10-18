@@ -28,9 +28,12 @@ Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(pa
 `AppsService.launch(id, props?)`:
 
 1. Unknown id → `throw new Error("App {id} not found")`.
+   A user app that isn't installed yet is installed first, with a "{name} installed" toast (ADR-040).
 2. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)).
 3. Builds the instance (private `instantiate`) and starts the component import: `component()` returns a promise, stored as-is.
 4. `windows.open(app_instance)` with `AppInstance = { id, manifest (without component), component: Promise, props?, state }`. `state` is the window's `storage.window()` values: empty on launch, the saved values on restore.
+
+In solo mode (a `#/solo/` link, ADR-047) `SoloAppsService` replaces this: the first launch opens the one window and installs nothing; every later launch opens nothing, focuses that window and toasts "Open WebOS to use other apps" ([apps](../services/apps.md#solo-mode), [solo shell](../shell/solo.md)).
 
 **Session restore** is the other way in. At boot, if the user picks Restore, [SessionService](../services/session.md) calls `apps.create_instance(app_id, props)` for each saved window (`null` for an unknown app or invalid props, silently) and `windows.restore(snapshots, create)`, which inserts the windows with their saved bounds, flags and snap zone instead of the cascade. Skipped windows get one summary toast. Apps with `restore: false` in the manifest are never saved.
 
@@ -42,7 +45,7 @@ Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(pa
 
 ## 5. Context and component load
 
-`window.svelte` (and `mobile-window.svelte`), during init:
+`window.svelte` (and `mobile-window.svelte`, `solo/solo-window.svelte`), during init:
 
 1. Reads `app_id` from the instance once (`untrack`): a window's app never changes and context can only be set during init.
 2. `set_app_context({ window_id, app_id, window: create_window_handle(window_id), storage: create_storage_handle(app_id, instance.app.state) })`. Set on the frame, not the content, so the window's sheets share it. See [app-context.md](app-context.md).

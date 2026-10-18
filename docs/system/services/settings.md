@@ -4,10 +4,10 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `TaskbarSize`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit`, `Appearance`, `AppearanceRadius`, `AppearanceMotion`, `AppearanceShadow`, `AppearanceText` |
+| `type.ts` | `SettingsService` interface, `Taskbar`, `TaskbarPosition`, `TaskbarSize`, `Theme`, `ThemeToken`, `ThemeBaseToken`, `ThemeSurfaceToken`, `ThemeBase`, `SavedTheme`, `FileDefaults`, `Wallpaper`, `WallpaperPreset`, `WallpaperFit`, `Appearance`, `AppearanceRadius`, `AppearanceMotion`, `AppearanceShadow`, `AppearanceText` |
 | `service.svelte.ts` | The class |
-| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `parse_settings()`, `parse_wallpaper()`, `parse_appearance()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
-| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
+| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `PersistedSettings`, `parse_settings()`, `parse_wallpaper()`, `parse_appearance()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
+| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `WHILE_TRUE`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `appearance.ts` | `DEFAULT_APPEARANCE`, `RADIUS_SCALE` (`sharp` 0.4, `default` 1, `round` 1.5), `SHADOW_STRENGTH` (`none` 0, `subtle` 0.5, `default` 1, `strong` 1.4), `TEXT_SCALE` (`s` 0.9375, `m` 1, `l` 1.0625) |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
 | `saved-themes.ts` | `find_saved()`, `with_saved()`, `without_saved()`, `renamed_saved()`: pure helpers over `saved_themes`, names compared trimmed and case-insensitive. Saving an existing name replaces it in place; renaming onto another saved name returns the list unchanged |
