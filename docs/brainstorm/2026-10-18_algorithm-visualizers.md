@@ -18,7 +18,7 @@ Owner: "algorithm apps - sorting, trees (b/w, dijkstra, etc all the cs trees)". 
 
 ## Action items
 
-- [ ] Build (agent)
+- [x] Build (agent): 90 algorithms and structures in 12 groups, committed per group
 
 ## Owner addition (same day)
 
@@ -45,7 +45,7 @@ LZ77 ports the owner's own gist (`9a8f338a2ce2bf86fa463d5af13a27b6`): (distance,
 - Learn: per algorithm a short idea, when to use it, best / average / worst time and space, traits (stable, in place), real pseudocode with the running line lit.
 - Explain: every step carries a plain-language note; live counters (comparisons, writes, visits, relaxations).
 - Playground: type, randomise, presets including best and worst cases, draw graphs and points; parameters (pivot rule, gap sequence, buckets, window sizes, table size, quantum); interactive operations on structures that animate only what they added.
-- One visual language across groups. One legend: Current (primary), Compared (secondary), Changed (warning), In play (tertiary), Final (success), Rejected (error), Out of play (muted). CSS transitions, so Motion off cuts them.
+- One visual language across groups. One legend: Current (info, moved off primary because primary and success are both green in Brand Dark), Compared (secondary), Changed (warning), In play (tertiary), Final (success), Rejected (error), Out of play (muted), Wall (foreground). CSS transitions, so Motion off cuts them.
 - Quality over breadth.
 
 ## Built (implementation notes)
@@ -53,3 +53,5 @@ LZ77 ports the owner's own gist (`9a8f338a2ce2bf86fa463d5af13a27b6`): (distance,
 - Side nav lists the groups; each group's algorithms are a tab row in the toolbar. One lazy module per group, not per algorithm.
 - Parameters ride along in links and `.algo` files as an optional `params` object next to `input`; values outside an algorithm's ranges or choices are dropped.
 - The app's toolbar has its own link button that copies a solo link with the current input and parameters (the titlebar Copy link carries launch props only).
+- Huffman lives under Trees only; compression links to it in spirit rather than duplicating it.
+- Group names that wrapped in the side nav were shortened (Dyn. programming, Backtracking).
