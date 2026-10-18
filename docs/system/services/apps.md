@@ -1,6 +1,6 @@
 # AppsService
 
-Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
+Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps), [047](../../adrs/047-solo-app-open.md) (solo) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -8,8 +8,9 @@ The app registry. Holds every discovered manifest and which user apps are instal
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppCategory`, `AppProps`, `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
+| `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppsFilter`, `UninstallOptions`, `AppCategory`, `AppProps`, `AppAuthor`, `AppPitch`, `AppHighlight`, `DailyRank` (re-exported by the games kit, ADR-048), `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
+| `authors.ts` | `OWNER`, `app_authors()`, `author_link()`, `author_names()`, `credits()`, `Credit`: who made an app (manifest `authors`, else the owner) |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
 | `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
@@ -20,6 +21,7 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
+| `solo.svelte.ts` | `SoloAppsService`, registered instead in solo mode (see [Solo mode](#solo-mode)) |
 
 Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The full launch path, window included, is in [apps/lifecycle.md](../apps/lifecycle.md).
 

@@ -49,6 +49,7 @@ Sheets come before the app's own back, so an app can't navigate behind its sheet
 | `taskbar/start-menu.svelte` | Mirrors both ways: the popover's `toggle` event writes `open` / `close` (light dismiss and Esc included), and an effect calls `showPopover()` / `hidePopover()` when `overlay` changes. The popover keeps its own open state too, for mounting the contents |
 | `taskbar/taskbar-tray.svelte` | The same two-way mirror for `notifications` and the notification center popover |
 | `mobile/mobile-shell.svelte` | `overlay` is its layer: `launcher` renders the app drawer; `switcher` and `notifications` both show the switcher, which lists notifications above the cards. It closes the overlay when an app comes on screen |
+| `notifications/notification-list.svelte` | `close()` after a notification's action or the Tasks line opens Activity Monitor |
 | ShortcutsService | Mod+K toggles `launcher`, Alt+Shift+N toggles `notifications` |
 | `mobile/nav-bar.svelte` via `mobile-shell.svelte` | Back calls `back()`; Esc with an overlay open too |
 
@@ -59,3 +60,5 @@ Contributes `ui launcher`, `ui notifications`, and `ui switcher` on mobile (`ui/
 ## Known gaps
 
 - Desktop has no switcher; `"switcher"` does nothing there.
+- Solo mode (ADR-047) keeps its `#/solo/…` hash in the URL, so `popstate` always sees a `#/` hash and skips `back()`. The guard still arms on the first gesture and is never reset: the first browser back just pops it, the second leaves. Sheets and an app's `on_back` aren't reachable from the browser's back in a solo tab.
+- The [solo shell](../shell/solo.md) renders no overlay, so `open` / `toggle` there (Mod+K, Alt+Shift+N, `ui launcher`) only flip `overlay` with nothing on screen.

@@ -121,3 +121,4 @@ ADR-012's "app" scope, `unregister(id)`, `get_conflicts`, the `enabled` toggle, 
 - Mod+, on macOS Chrome may open Chrome's own settings before the page sees it; untested on a real Mac keyboard.
 - Window-scoped shortcuts are used by Text Editor, Paint, Image Editor, Soundboard, Diff, Markdown PDF, PDF Tools and most games (Tic-Tac-Toe, Solitaire, Sudoku, Kakuro, Nonogram and others). Some apps still keep local key handlers that don't show in the cheat sheet (Image Tools Sprites, GIF Player).
 - Snap only covers halves; quarters and top/bottom have no keys.
+- In a solo tab (ADR-047) the OS set stays registered: Mod+K and Alt+Shift+N show nothing ([solo](../shell/solo.md#known-gaps)), and `app launch …` keys only focus the one window with an Open WebOS toast ([apps](apps.md)).

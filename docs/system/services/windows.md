@@ -50,7 +50,7 @@ Precedence when the shell renders: active drag/resize > `maximized` > `snap_zone
 
 Two interfaces in `type.ts` (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-groundwork.md)):
 
-- **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap`, `gather` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
+- **`WindowsService`**, the platform-neutral base: everything below except `set_container`, `snap`, `gather`, `toggle_desktop`, `showing_desktop` and `container.bounds`. `container` is `{ element }` only. Code outside the desktop shell types against it: AppsService, DialogsService, SessionService, the app's window handle, Activity Monitor, the taskbar.
 - **`DesktopWindowsService extends WindowsService`** adds `container.bounds`, `set_container`, `snap`, `gather`, `toggle_desktop` and `showing_desktop`. The desktop shell uses it: `window-manager.svelte`, `window.handler.svelte.ts`, and this service's inspector.
 
 The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.ts` registers `MobileWindowsService` (`mobile.svelte.ts`) under the same key instead; see [Mobile](#mobile). Maximize and `bounds` stay in the base because shared callers use them (window handle, session snapshots); mobile treats them as no-ops. Members that are identical on both platforms live once in `BaseWindowsService` (`base.svelte.ts`); everything platform-specific (focus, placement, close, minimize) stays in each class.
@@ -179,7 +179,7 @@ ADR-014's 2026-10-12 revision records the code: remembered frames instead of pla
 
 ## Shell
 
-Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides. See [shell](shell.md#contributions).
+Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides (`is_desktop` / `is_mobile`), and on mobile `win minimize` and `win desktop` describe themselves as "Go home". `win close` takes `--all` (`-a`); `win close|minimize|maximize` take window ids or piped windows, the focused one by default; `win snap <zone|none> [id]` snaps, the same zone again unsnaps. See [shell](shell.md#contributions).
 
 ## Known gaps
 

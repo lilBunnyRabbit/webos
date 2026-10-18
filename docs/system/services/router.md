@@ -57,9 +57,12 @@ Toasts come from the `router` sender, shown as "System".
 | Where | How |
 |-------|-----|
 | `window/window-titlebar.svelte` | Copy link button, shown when `link_for(id)` isn't `null`; opens a menu: Copy link / Copy solo link ([window](../shell/window.md#titlebar)) |
-| `solo/solo-shell.svelte` | `last_link` for the broken-link state, `link_for` for Open WebOS ([solo](../shell/solo.md)) |
+| `solo/solo-shell.svelte` | `parse_hash` for the app and Reopen, `last_link` for the broken-link state, `link_for` (or `route_url` of the hash as an app link) for Open WebOS ([solo](../shell/solo.md)) |
 | `apps/solo.svelte.ts` | `route_url` + `shareable_props` for the Open WebOS toast action |
-| Forms `link.ts` | Shared forms are solo links; answer links stay app links |
+| Getting Started `topics.ts` | "Copy this window's link" runs `copy_link` |
+| App Library `showcase-actions.svelte` | `route_url`: Copy solo link to the app (no props), and an Open link to `#/app/{id}` in a solo tab |
+| Forms `link.ts` | `serialize_route`: shared forms are solo links; answer links stay app links |
+| Algorithms (user app) | Share copies a solo link with the algorithm, input and params as props |
 
 ## Shell
 

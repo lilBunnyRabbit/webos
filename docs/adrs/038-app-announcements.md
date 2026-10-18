@@ -71,3 +71,7 @@ Added the same day (owner):
 ## Revision 2026-10-16: lazy highlights
 
 Ten apps with highlights put the boot chunk 10 KB gz over budget: manifests load at boot, and each card's phosphor icon carries every weight. `highlights` is now `() => Promise<{ default: AppHighlight[] }>`, like `preview`, with the cards in each app's `highlights.ts`. The announcement and the App Library details await it.
+
+## Revision 2026-10-18: "installed" means registered
+
+"Limited to installed apps" was written before ADR-040, when every registered app counted as installed. The code keeps every introduced app that is still registered (`apps.get(app)`), installed or not, so a new app is announced on devices that don't have it yet and its Open installs it through `launch()` (ADR-040's implicit install). `changelog --apps` lists the same set. The `announced` JSDoc in `version/type.ts` still says "Installed apps".
