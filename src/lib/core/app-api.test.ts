@@ -66,10 +66,8 @@ import type {
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
 import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
-import type * as legacy_games from "$lib/core/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
 import type { SourceImage } from "$kit/utils/image";
-import type * as legacy_image from "$lib/core/utils/image";
 import type { Rng } from "$lib/core/utils/random";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 
@@ -176,11 +174,6 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
   ["$kit/games/daily", () => import("$kit/games/daily"), GAMES_DAILY],
   ["$kit/games/direction", () => import("$kit/games/direction"), GAMES_DIRECTION],
   ["$kit/utils/image", () => import("$kit/utils/image"), IMAGE],
-  ["$lib/core/games", () => import("$lib/core/games"), GAMES],
-  ["$lib/core/games/time", () => import("$lib/core/games/time"), GAMES_TIME],
-  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), GAMES_DAILY],
-  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), GAMES_DIRECTION],
-  ["$lib/core/utils/image", () => import("$lib/core/utils/image"), IMAGE],
   [
     "$lib/core/utils",
     () => import("$lib/core/utils"),
@@ -416,12 +409,4 @@ type StableTypes = [
   Bounds,
   Dimensions,
   Position,
-  legacy_games.Axis,
-  legacy_games.DailyResult,
-  legacy_games.FormatTimeOptions,
-  legacy_games.GameStats,
-  legacy_games.ParsedDay,
-  legacy_games.PlayTracker,
-  legacy_games.Plays,
-  legacy_image.SourceImage,
 ];
