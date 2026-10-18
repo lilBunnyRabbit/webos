@@ -14,9 +14,9 @@ const Dummy = (() => {}) as never;
 
 let shutdown: () => void;
 
-async function boot(platform: "desktop" | "mobile" = "desktop"): Promise<Kernel> {
-  // Kernel reads `?platform=` once, at construction.
-  history.replaceState(null, "", `${location.pathname}?platform=${platform}`);
+async function boot(platform: "desktop" | "mobile" = "desktop", hash = ""): Promise<Kernel> {
+  // Kernel reads `?platform=` and the solo hash once, at construction.
+  history.replaceState(null, "", `${location.pathname}?platform=${platform}${hash}`);
   const booted = await boot_test_kernel({
     windows: platform === "mobile" ? MobileWindowsService : DesktopWindows,
     dialogs: DialogsService,
@@ -79,6 +79,13 @@ describe("UiService.back", () => {
     expect(ui(kernel).back()).toBe(true);
     await vi.waitFor(() => expect(windows(kernel).get_focused()).toBeNull());
   });
+
+  test("mobile solo: no home to go to", async () => {
+    const kernel = await boot("mobile", "#/solo/example");
+    const id = windows(kernel).open(app("example"));
+    expect(ui(kernel).back()).toBe(false);
+    expect(windows(kernel).get_focused()).toBe(id);
+  });
 });
 
 describe("back guard", () => {
@@ -94,5 +101,29 @@ describe("back guard", () => {
     history.back();
     await vi.waitFor(() => expect(ui(kernel).armed).toBe(false));
     expect(ui(kernel).overlay).toBeNull();
+  });
+
+  test("solo: back reaches the sheet instead of leaving", async () => {
+    const kernel = await boot("desktop", "#/solo/example");
+    const id = windows(kernel).open(app("example"));
+    const sheet = dialogs(kernel).show(Dummy, {}, { window: id });
+
+    window.dispatchEvent(new PointerEvent("pointerup"));
+    history.back();
+    await expect(sheet).resolves.toBeNull();
+    expect(ui(kernel).armed).toBe(false);
+    expect(location.hash).toBe("#/solo/example");
+  });
+
+  test("solo: a different link is the router's", async () => {
+    history.replaceState(null, "", `${location.pathname}#/solo/other`);
+    history.pushState(null, "", `${location.pathname}?platform=desktop#/solo/example`);
+    const kernel = await boot("desktop", "#/solo/example");
+    const id = windows(kernel).open(app("example"));
+    void dialogs(kernel).show(Dummy, {}, { window: id });
+
+    history.back();
+    await vi.waitFor(() => expect(location.hash).toBe("#/solo/other"));
+    expect(dialogs(kernel).for_window(id)).toHaveLength(1);
   });
 });

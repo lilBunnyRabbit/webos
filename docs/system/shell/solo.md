@@ -26,6 +26,7 @@ The header pads the top safe area. Touch makes it 52 px tall (`pointer-coarse:h-
 | Close the app (its own close, `windows.close`) | Empty state with Reopen, which launches the link's route again |
 | Launch another app, open a file | Opens nothing; toast with Open WebOS ([apps](../services/apps.md#solo-mode)) |
 | Reload | Same app again: the solo hash isn't cleared |
+| Browser back | Closes the top sheet or dialog, else runs the app's back ([ui](../services/ui.md#back)); with nothing to take it, the next back leaves the tab |
 | Change the hash | Reload ([router](../services/router.md#handling-a-link)) |
 
 ## Known gaps
