@@ -23,7 +23,20 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { entries, format_duration, format_last_played, list_games, Sort, SORT_OPTIONS, sort_entries, streak, supports_daily, Tab, totals } from "./hub";
+  import {
+    daily_games,
+    daily_props,
+    entries,
+    format_duration,
+    format_last_played,
+    list_games,
+    Sort,
+    SORT_OPTIONS,
+    sort_entries,
+    streak,
+    Tab,
+    totals,
+  } from "./hub";
   import { use_today } from "./today.svelte";
 
   const { tab: initial_tab }: { tab?: Tab } = $props();
@@ -47,9 +60,17 @@
 
   const games = $derived(list_games(apps.listings()));
   const library = $derived(sort_entries(entries(games, plays.value), sort.value));
-  const dailies = $derived(games.filter((game) => supports_daily(game.props)).sort((a, b) => a.name.localeCompare(b.name)));
+  const dailies = $derived(daily_games(games));
   const solved_today = $derived(plays.value.daily[today.value] ?? {});
-  const solved_count = $derived(dailies.filter((game) => solved_today[game.id]).length);
+  const solved_count = $derived(dailies.filter((entry) => solved_today[entry.key]).length);
+  const daily_state = $derived.by(() => {
+    const state = new Map<string, { total: number; solved: number }>();
+    for (const entry of dailies) {
+      const current = state.get(entry.game.id) ?? { total: 0, solved: 0 };
+      state.set(entry.game.id, { total: current.total + 1, solved: current.solved + Number(entry.key in solved_today) });
+    }
+    return state;
+  });
   const current_streak = $derived(streak(plays.value, today.value));
   const total = $derived(totals(plays.value));
   const by_time = $derived(sort_entries(entries(games, plays.value), Sort.MOST_PLAYED).filter((entry) => entry.stats));
@@ -105,6 +126,7 @@
     {:else if tab.value === Tab.LIBRARY}
       <ul class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3 p-4">
         {#each library as { game, stats } (game.id)}
+          {@const daily = daily_state.get(game.id)}
           <li class="flex">
             <button
               class="flex w-full items-start gap-3 rounded-xl bg-background-light p-3 text-left ring-1 ring-foreground/8 transition-[box-shadow,opacity] duration-150 hover:ring-foreground/20 focus-visible:outline-2 focus-visible:outline-cottontail active:opacity-70"
@@ -122,9 +144,10 @@
                   {:else}
                     <span>Not played yet</span>
                   {/if}
-                  {#if supports_daily(game.props)}
-                    <span class={cn("ml-auto flex items-center gap-1", solved_today[game.id] && "text-success")}>
-                      {#if solved_today[game.id]}<CheckCircleIcon class="size-3.5" weight="fill" />{:else}<CalendarCheckIcon class="size-3.5" />{/if}Daily
+                  {#if daily}
+                    {@const done = daily.solved === daily.total}
+                    <span class={cn("ml-auto flex items-center gap-1", done && "text-success")}>
+                      {#if done}<CheckCircleIcon class="size-3.5" weight="fill" />{:else}<CalendarCheckIcon class="size-3.5" />{/if}{daily.total > 1 ? `Dailies ${daily.solved}/${daily.total}` : "Daily"}
                     </span>
                   {/if}
                 </span>
@@ -156,19 +179,19 @@
 
           <Section title="Puzzles of the day">
             <ul class="divide-y divide-foreground/8">
-              {#each dailies as game (game.id)}
-                {@const solved = solved_today[game.id]}
+              {#each dailies as entry (entry.key)}
+                {@const solved = solved_today[entry.key]}
                 <li class="flex items-center gap-3 px-4 py-2.5">
-                  {@render game_icon(game.icon, "sm")}
+                  {@render game_icon(entry.game.icon, "sm")}
                   <div class="min-w-0 flex-1">
-                    <p class="truncate text-ui font-medium">{game.name}</p>
+                    <p class="truncate text-ui font-medium">{entry.name}</p>
                     {#if solved}
                       <p class="flex items-center gap-1 text-2xs text-success"><CheckCircleIcon class="size-3.5" weight="fill" />Solved in <span class="font-mono tabular-nums">{format_time(solved.ms)}</span>{#if solved.score !== undefined}<span aria-hidden="true">·</span>Score <span class="font-mono tabular-nums">{solved.score}</span>{/if}</p>
                     {:else}
                       <p class="text-2xs text-foreground/65">Not solved yet</p>
                     {/if}
                   </div>
-                  <Button variant={solved ? "secondary" : "primary"} size="sm" onclick={() => apps.launch(game.id, { daily: today.value })}>
+                  <Button variant={solved ? "secondary" : "primary"} size="sm" onclick={() => apps.launch(entry.game.id, daily_props(entry, today.value))}>
                     <PlayIcon weight="fill" />{solved ? "Again" : "Play"}
                   </Button>
                 </li>

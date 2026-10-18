@@ -28,7 +28,8 @@ export default {
         if (column === "score") return daily.score === null ? "" : String(daily.score);
         return String(daily[column]);
       },
-      open: (daily) => void logic().then((m) => m.launch(String(daily.id), { daily: String(daily.day) })),
+      open: (daily) =>
+        void logic().then((m) => m.launch(String(daily.id), { daily: String(daily.day), ...(daily.mode ? { mode: String(daily.mode) } : {}) })),
     },
   },
   commands: [

@@ -1,4 +1,5 @@
 import type { GameStats, Plays } from "$kit/games";
+import { daily_key, type DailyRank, type DailyRanks } from "$kit/games/daily";
 import type { Tagged } from "$lib/core/api/services/shell/type";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z, type ZodType } from "zod";
@@ -28,6 +29,40 @@ export interface GameEntry<T extends GameInfo = GameInfo> {
 /** Daily-puzzle contract: a game offers one when its launch props schema has a `daily` key. */
 export function supports_daily(schema: ZodType | undefined): boolean {
   return schema instanceof z.ZodObject && "daily" in schema.shape;
+}
+
+export interface DailyGame<T extends GameInfo = GameInfo> {
+  key: string;
+  game: T;
+  mode: string | null;
+  name: string;
+  short: string;
+}
+
+export function mode_label(mode: string): string {
+  const words = mode.replaceAll("-", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** One row per daily: a game with a per-mode `daily_rank` gets one per mode, in the record's order (ADR-050). */
+export function daily_games<T extends GameInfo & { props?: ZodType; daily_rank?: DailyRank | DailyRanks }>(games: T[]): DailyGame<T>[] {
+  return games
+    .filter((game) => supports_daily(game.props))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .flatMap((game): DailyGame<T>[] => {
+      if (typeof game.daily_rank !== "object") return [{ key: game.id, game, mode: null, name: game.name, short: game.name }];
+      return Object.keys(game.daily_rank).map((mode) => ({
+        key: daily_key(game.id, mode),
+        game,
+        mode,
+        name: `${game.name} · ${mode_label(mode)}`,
+        short: mode_label(mode),
+      }));
+    });
+}
+
+export function daily_props(entry: DailyGame, day: string): Record<string, string> {
+  return entry.mode ? { daily: day, mode: entry.mode } : { daily: day };
 }
 
 export function list_games<T extends GameInfo & { category: string }>(apps: Iterable<T>): T[] {
@@ -90,11 +125,11 @@ export function totals(plays: Plays): Totals {
 }
 
 /** The few dailies a small view shows: unsolved first, recently played first, then A–Z. */
-export function highlight_dailies<T extends GameInfo>(games: T[], plays: Plays, today: string, max = 3): T[] {
+export function highlight_dailies<T extends DailyGame>(dailies: T[], plays: Plays, today: string, max = 3): T[] {
   const solved = plays.daily[today] ?? {};
-  const last = (game: T) => plays.games[game.id]?.last ?? "";
-  return [...games]
-    .sort((a, b) => Number(a.id in solved) - Number(b.id in solved) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name))
+  const last = (entry: T) => plays.games[entry.game.id]?.last ?? "";
+  return [...dailies]
+    .sort((a, b) => Number(a.key in solved) - Number(b.key in solved) || last(b).localeCompare(last(a)) || a.name.localeCompare(b.name))
     .slice(0, max);
 }
 
@@ -111,12 +146,13 @@ export function game_value({ game, stats }: GameEntry): Tagged {
   };
 }
 
-export function daily_value(game: GameInfo, plays: Plays, day: string): Tagged {
-  const result = plays.daily[day]?.[game.id];
+export function daily_value(entry: DailyGame, plays: Plays, day: string): Tagged {
+  const result = plays.daily[day]?.[entry.key];
   return {
     $type: "game-daily",
-    id: game.id,
-    name: game.name,
+    id: entry.game.id,
+    mode: entry.mode,
+    name: entry.name,
     day,
     solved: result !== undefined,
     time: result?.ms ?? null,

@@ -7,7 +7,7 @@
     CheckCircle as CheckCircleIcon,
     Fire as FireIcon,
   } from "phosphor-svelte";
-  import { format_duration, HUB_ID, highlight_dailies, list_games, streak, supports_daily, totals } from "./hub";
+  import { daily_games, daily_props, format_duration, HUB_ID, highlight_dailies, list_games, streak, totals } from "./hub";
   import { use_today } from "./today.svelte";
 
   const { size }: WidgetProps = $props();
@@ -19,9 +19,9 @@
   const columns = $derived(Math.max(4, size.w));
   const slots = $derived(columns * Math.max(1, size.h - 1) - 1);
 
-  const dailies = $derived(list_games([...apps.list()].map(([, manifest]) => manifest)).filter((game) => supports_daily(game.props)));
+  const dailies = $derived(daily_games(list_games([...apps.list()].map(([, manifest]) => manifest))));
   const solved_today = $derived(plays.value.daily[today.value] ?? {});
-  const solved_count = $derived(dailies.filter((game) => solved_today[game.id]).length);
+  const solved_count = $derived(dailies.filter((entry) => solved_today[entry.key]).length);
   const highlighted = $derived(highlight_dailies(dailies, plays.value, today.value, slots));
   const current_streak = $derived(streak(plays.value, today.value));
   const played = $derived(totals(plays.value).ms);
@@ -46,20 +46,20 @@
 
   {#if size.h >= 2}
     <ul class="grid gap-1" style:grid-template-columns="repeat({columns}, minmax(0, 1fr))" aria-label="Puzzles of the day">
-      {#each highlighted as game (game.id)}
-        {@const solved = solved_today[game.id]}
-        {@const Icon = game.icon}
+      {#each highlighted as entry (entry.key)}
+        {@const solved = solved_today[entry.key]}
+        {@const Icon = entry.game.icon}
         <li>
           <button
             class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
-            title={solved ? `${game.name}: solved in ${format_time(solved.ms)}${solved.score === undefined ? "" : `, score ${solved.score}`}` : `${game.name}: today's puzzle`}
-            onclick={() => apps.launch(game.id, { daily: today.value })}
+            title={solved ? `${entry.name}: solved in ${format_time(solved.ms)}${solved.score === undefined ? "" : `, score ${solved.score}`}` : `${entry.name}: today's puzzle`}
+            onclick={() => apps.launch(entry.game.id, daily_props(entry, today.value))}
           >
             <span class={cn("relative grid size-9 place-items-center rounded-lg ring-1", solved ? "bg-success/12 ring-success/40" : "bg-background ring-foreground/10 shadow-raised")}>
               <Icon class="size-5" weight="duotone" />
               {#if solved}<CheckCircleIcon class="absolute -right-1 -bottom-1 size-3.5 rounded-full bg-background text-success" weight="fill" />{/if}
             </span>
-            <span class="w-full truncate text-center text-2xs">{game.name}</span>
+            <span class="w-full truncate text-center text-2xs">{entry.short}</span>
           </button>
         </li>
       {/each}

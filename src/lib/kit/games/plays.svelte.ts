@@ -1,6 +1,6 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { json_file, type JsonFile } from "$lib/core/contexts/app/json-file.svelte";
-import { better_daily, type DailyResult } from "./daily";
+import { better_daily, daily_key, daily_rank_for, type DailyResult } from "./daily";
 import { EMPTY_PLAYS, PLAYS_PATH, PlaysSchema, type Plays } from "./plays";
 
 // Flushed this often while playing, so closing the tab loses at most this much.
@@ -14,8 +14,11 @@ export function use_plays(): Omit<JsonFile<Plays>, "release"> {
 }
 
 export interface PlayTracker {
-  /** Records a solved daily puzzle; keeps the better result by the manifest's `daily_rank`. */
-  daily(day: string, ms: number, score?: number): void;
+  /**
+   * Records a solved daily puzzle; keeps the better result by the manifest's `daily_rank`. With `mode`, it's that mode's
+   * daily, kept under `{app_id}/{mode}` and ranked by the mode's entry in a per-mode `daily_rank` (ADR-050).
+   */
+  daily(day: string, ms: number, score?: number, mode?: string): void;
 }
 
 /**
@@ -26,7 +29,7 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
   const plays = json_file(PLAYS_PATH, EMPTY_PLAYS, PlaysSchema);
   let pending_ms = $state(0);
   let pending_session = $state(false);
-  let pending_daily = $state<(DailyResult & { day: string })[]>([]);
+  let pending_daily = $state<(DailyResult & { day: string; mode?: string })[]>([]);
   let since: number | null = null;
 
   const fold = () => {
@@ -57,10 +60,11 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
       sessions: stats.sessions,
       last: new Date().toISOString(),
     };
-    const rank = kernel.service<AppsService>("apps").get(app_id)?.daily_rank;
-    for (const { day, ...result } of pending_daily) {
-      const best = data.daily[day]?.[app_id];
-      data.daily[day] = { ...data.daily[day], [app_id]: best ? better_daily(best, result, rank) : result };
+    const ranks = kernel.service<AppsService>("apps").get(app_id)?.daily_rank;
+    for (const { day, mode, ...result } of pending_daily) {
+      const key = daily_key(app_id, mode);
+      const best = data.daily[day]?.[key];
+      data.daily[day] = { ...data.daily[day], [key]: best ? better_daily(best, result, daily_rank_for(ranks, mode)) : result };
     }
     pending_ms = 0;
     pending_daily = [];
@@ -85,8 +89,8 @@ export function track_play(app_id: string, visible: () => boolean): PlayTracker 
   });
 
   return {
-    daily(day, ms, score) {
-      pending_daily = [...pending_daily, score === undefined ? { day, ms } : { day, ms, score }];
+    daily(day, ms, score, mode) {
+      pending_daily = [...pending_daily, { day, ms, ...(score === undefined ? {} : { score }), ...(mode ? { mode } : {}) }];
     },
   };
 }

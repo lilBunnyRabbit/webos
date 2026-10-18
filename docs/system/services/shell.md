@@ -174,7 +174,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | App | Commands | Yields, completers |
 |-----|----------|--------------------|
 | quick-notes | `quno`, `quno q`, `quno ls`, `quno cat\|ready\|done\|drop\|rm`, `quno t`, `quno t done\|clear`, `quno pin`, `quno t pin` | `note` / `todo` values; `note` completer |
-| game-hub | `games`, `games daily`, `games stats` | `game` / `game-daily` values (click launches), stats record |
+| game-hub | `games`, `games daily`, `games stats` | `game` / `game-daily` values (click launches; a per-mode daily is one row per mode, ADR-050), stats record |
 | solitaire | `solitaire [--draw]`, `solitaire daily [day]`, `solitaire stats` | opens a deal; `solitaire-stats` values |
 | nonogram | `nonogram new [--size] [--colour]`, `nonogram daily [day]`, `nonogram edit [path]`, `nonogram check <path>` | opens; `text` verdict |
 | minesweeper | `minesweeper daily [day]` | opens the daily board |

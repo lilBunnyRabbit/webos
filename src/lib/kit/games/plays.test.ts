@@ -11,4 +11,9 @@ describe("PlaysSchema", () => {
     const scored = { version: 1, games: {}, daily: { "2026-10-17": { "crack-the-code": { ms: 90_000, score: 6 } } } };
     expect(PlaysSchema.parse(scored)).toEqual(scored);
   });
+
+  it("keeps mode sub-keys beside app ids", () => {
+    const modes = { version: 1, games: {}, daily: { "2026-10-18": { sudoku: { ms: 1 }, "color-games/recall": { ms: 9, score: 41.5 } } } };
+    expect(PlaysSchema.parse(modes)).toEqual(modes);
+  });
 });

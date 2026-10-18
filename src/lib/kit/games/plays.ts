@@ -8,7 +8,7 @@ const DailySchema = z.object({ ms: z.number(), score: z.number().optional() });
 export const PlaysSchema = z.object({
   version: z.literal(1),
   games: z.record(z.string(), GameStatsSchema),
-  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id → best result, ranked by the manifest's `daily_rank`. */
+  /** Solved daily puzzles: day (`YYYY-MM-DD`) → app id (or `{app_id}/{mode}`, ADR-050) → best result, ranked by the manifest's `daily_rank`. */
   daily: z.record(z.string(), z.record(z.string(), DailySchema)),
 });
 export type Plays = z.infer<typeof PlaysSchema>;

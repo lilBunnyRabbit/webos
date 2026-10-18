@@ -74,6 +74,8 @@ export type AppCategory = (typeof AppCategory)[keyof typeof AppCategory];
 /** How a game's daily results rank (ADR-035). Time always breaks a tie. Re-exported by the games kit. */
 export const DailyRank = { TIME: "time", SCORE_ASC: "score-asc", SCORE_DESC: "score-desc" } as const;
 export type DailyRank = (typeof DailyRank)[keyof typeof DailyRank];
+/** One rank per mode, for a game with a daily per mode (ADR-050): mode id → rank. */
+export type DailyRanks = Record<string, DailyRank>;
 
 export type AppProps = Record<string, unknown>;
 
@@ -103,9 +105,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   props?: ZodType<TProps>;
   /**
    * How Game Hub ranks the app's daily results (ADR-035): `time` (the default), or a score passed to
-   * `tracker.daily(day, ms, score)`, lower (`score-asc`) or higher (`score-desc`) first. Time breaks a tie.
+   * `tracker.daily(day, ms, score)`, lower (`score-asc`) or higher (`score-desc`) first. Time breaks a tie. A record
+   * gives the game one daily per mode (ADR-050): each mode's results rank by its own entry, stored under
+   * `{app_id}/{mode}`, and Game Hub lists one row per mode.
    */
-  daily_rank?: DailyRank;
+  daily_rank?: DailyRank | DailyRanks;
   /**
    * Commands, completers and value types that work with no window open (ADR-034), as `import("./commands")`: the
    * module's default export is the contribution. Lazy: the shell loads every app's the first time it needs commands.

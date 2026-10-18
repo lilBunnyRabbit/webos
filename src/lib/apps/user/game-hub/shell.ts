@@ -4,6 +4,7 @@ import type { Tagged, Value } from "$lib/core/api/services/shell/type";
 import { EMPTY_PLAYS, PLAYS_PATH, PlaysSchema, type Plays } from "$kit/games";
 import { day_key } from "$lib/core/utils/date";
 import {
+  daily_games,
   daily_value,
   entries,
   format_duration,
@@ -12,7 +13,6 @@ import {
   Sort,
   sort_entries,
   streak,
-  supports_daily,
   totals,
 } from "./hub";
 
@@ -33,10 +33,7 @@ const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 export async function* daily(): AsyncGenerator<Tagged | string> {
   const plays = await read_plays();
   const today = day_key();
-  const dailies = games()
-    .filter((game) => supports_daily(game.props))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  for (const game of dailies) yield daily_value(game, plays, today);
+  for (const entry of daily_games(games())) yield daily_value(entry, plays, today);
   yield `streak: ${days(streak(plays, today))}`;
 }
 
