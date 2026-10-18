@@ -149,7 +149,7 @@
   async function open() {
     if (!(await discard_ok())) return;
     const chosen = await win.pick_file({
-      accept: [EXTENSION, "image/png", "image/gif", ".png", ".gif"],
+      accept: [EXTENSION, "image/*"],
       start_path: file_path ? parent_path(file_path) : undefined,
       title: "Open in Hopsprite",
     });
