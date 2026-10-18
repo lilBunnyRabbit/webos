@@ -65,6 +65,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms draws geometry on points you place: convex hulls two ways, the closest pair, and a line sweep that finds crossing segments.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms explains operating system ideas: CPU scheduling on a Gantt chart, page replacement policies side by side, and a producer–consumer buffer with semaphores.",
+      },
     ],
   },
   {

@@ -7,6 +7,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import {
+    Cpu as CpuIcon,
     FileZip as FileZipIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
@@ -51,6 +52,7 @@
     [Group.BACKTRACKING]: PuzzlePieceIcon,
     [Group.MATH]: MathOperationsIcon,
     [Group.GEOMETRY]: PolygonIcon,
+    [Group.OS]: CpuIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

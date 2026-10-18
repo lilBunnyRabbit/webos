@@ -15,6 +15,7 @@ const LOADERS: Record<Group, () => GroupModule> = {
   [Group.BACKTRACKING]: () => import("./groups/backtracking"),
   [Group.MATH]: () => import("./groups/math"),
   [Group.GEOMETRY]: () => import("./groups/geometry"),
+  [Group.OS]: () => import("./groups/os"),
 };
 
 const loaded: Partial<Record<Group, GroupModule>> = {};
