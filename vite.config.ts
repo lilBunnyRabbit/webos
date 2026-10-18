@@ -52,6 +52,14 @@ export default defineConfig({
         // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // The codec wasm (2–3.5 MB each) stays out of the install; cached on first use so AVIF and JPEG XL then work offline.
+        runtimeCaching: [
+          {
+            urlPattern: /\.wasm$/,
+            handler: "CacheFirst",
+            options: { cacheName: "webos-wasm", expiration: { maxEntries: 8 } },
+          },
+        ],
       },
       manifest: {
         name: "WebOS",
