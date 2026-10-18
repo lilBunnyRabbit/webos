@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   description:
     "Optimise SVGs with SVGO, compare them before and after, export PNGs and turn them into Svelte components.",
+  pitch: {
+    problem: "SVGs from design tools are bloated and awkward to use in code.",
+    solution: "Optimise them, compare before and after, export PNGs and turn them into Svelte components.",
+  },
   keywords: [
     "svg",
     "svgo",

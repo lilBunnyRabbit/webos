@@ -11,6 +11,10 @@ export default define_app({
   category: AppCategory.DEVELOPER,
   description:
     "See how a page's link looks in Slack, X, Facebook, Discord, LinkedIn and iMessage, and what to fix in its meta tags.",
+  pitch: {
+    problem: "A shared link can look broken in Slack or on X, and you only find out once it's posted.",
+    solution: "See how it looks in each app and which meta tags to fix.",
+  },
   keywords: [
     "open graph",
     "og",

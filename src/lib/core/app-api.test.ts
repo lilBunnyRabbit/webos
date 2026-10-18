@@ -6,6 +6,7 @@ import type {
   AppHighlight,
   AppId,
   AppManifest,
+  AppPitch,
   AppProps,
   AppsService,
   Command,
@@ -271,6 +272,7 @@ const manifest_fields: Members<
   | "keywords"
   | "license"
   | "name"
+  | "pitch"
   | "preview"
   | "props"
   | "repository"
@@ -309,6 +311,7 @@ const storage_handle_members: Members<StorageHandle, "file" | "get" | "persisted
 const app_context_members: Members<AppContext, "app_id" | "storage" | "window" | "window_id"> = true;
 const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
+const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -335,6 +338,7 @@ type StableTypes = [
   AppHighlight,
   AppId,
   AppManifest,
+  AppPitch,
   AppProps,
   AppsService,
   Command,

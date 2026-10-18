@@ -12,6 +12,10 @@ export default define_app({
   category: AppCategory.DEVELOPER,
   description:
     "Build and send HTTP requests, read the response, save requests as .http files and download to your files.",
+  pitch: {
+    problem: "Testing an API usually means installing a heavy desktop tool.",
+    solution: "Build and send HTTP requests, read the response and save them as .http files.",
+  },
   keywords: ["api", "http", "rest", "request", "fetch", "curl", "wget", "postman", "json", "download", "endpoint"],
   associations: HTTP_FILES,
   props: z.object({ path: z.string().optional() }),

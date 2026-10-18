@@ -9,6 +9,10 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   description: "Draw pixel art and animate it frame by frame, with layers, onion skin and SVG export.",
+  pitch: {
+    problem: "Pixel art tools are either toys or heavy desktop software.",
+    solution: "Draw and animate sprites frame by frame, with layers, onion skin and SVG export.",
+  },
   keywords: [
     "pixel",
     "pixel art",

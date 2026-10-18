@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   description:
     "Makes QR codes for links, text, Wi-Fi, contacts and UPN payments, and shows step by step how one is built.",
+  pitch: {
+    problem: "Making a QR code for Wi-Fi or a payment usually means an ad-filled website.",
+    solution: "Make QR codes for links, Wi-Fi, contacts and payments, and see how one is built.",
+  },
   keywords: [
     "qr",
     "qr code",

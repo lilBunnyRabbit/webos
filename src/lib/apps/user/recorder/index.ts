@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.MEDIA,
   description: "Record your voice, your screen or your camera, and take photos.",
+  pitch: {
+    problem: "Recording a quick voice note or screen clip needs extra software.",
+    solution: "Record your voice, screen or camera, and take photos, straight to your files.",
+  },
   keywords: [
     "voice",
     "microphone",

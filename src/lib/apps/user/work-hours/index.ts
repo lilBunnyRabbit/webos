@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Clock in and out, see your hours per day, week and month, print a time sheet.",
+  pitch: {
+    problem: "Worked hours tracked on paper rarely add up at the end of the month.",
+    solution: "Clock in and out, see hours per day, week and month, and print a time sheet.",
+  },
   keywords: ["time", "tracker", "time tracking", "timesheet", "hours", "clock in", "work", "job", "overtime"],
   props: WORK_HOURS_PROPS,
   defaults: {

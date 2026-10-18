@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   description: "Draw and edit images with brushes, shapes and fill.",
+  pitch: { problem: "Sometimes you just need to sketch or mark up an image.", solution: "Draw and edit with brushes, shapes and fill." },
   keywords: ["draw", "drawing", "canvas", "brush", "pencil", "sketch", "art", "image", "png", "mspaint"],
   category: AppCategory.MEDIA,
   tools: ["image/*"],

@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Watch mazes being built and solved, then race through them yourself.",
+  pitch: {
+    problem: "Maze algorithms are hard to picture from code alone.",
+    solution: "Watch mazes being built and solved, then race through them yourself.",
+  },
   keywords: ["labyrinth", "pathfinding", "a-star", "bfs", "puzzle", "game", "algorithm"],
   defaults: {
     constraints: {

@@ -32,6 +32,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Ask questions about a text file, answered by AI that runs on this device.",
+  pitch: {
+    problem: "Finding one answer in a long document takes a lot of reading.",
+    solution: "Ask questions about a text file, answered by AI that runs on your own device.",
+  },
   keywords: ["ai", "chat", "question", "gemini", "nano", "summarize", "explain", "assistant", "llm", "offline"],
   tools: ASK_ACCEPT,
   props: FILE_PROPS,

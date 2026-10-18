@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Focus in timed sessions with short and long breaks, and see how your week went.",
+  pitch: {
+    problem: "Long work sessions blur together and focus fades.",
+    solution: "Work in timed sessions with breaks, and see how your week went.",
+  },
   keywords: ["timer", "focus", "tomato", "break", "productivity", "pomo", "study", "work"],
   defaults: {
     constraints: {

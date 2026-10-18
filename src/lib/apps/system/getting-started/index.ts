@@ -13,6 +13,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "A tour of what WebOS can do, with a Try it button for each part.",
+  pitch: {
+    problem: "A new desktop is full of features you won't find on your own.",
+    solution: "A short tour with a Try it button that shows each part in action.",
+  },
   keywords: ["tour", "help", "tips", "welcome", "intro", "guide", "how to", "features", "onboarding"],
   props: GETTING_STARTED_PROPS,
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },

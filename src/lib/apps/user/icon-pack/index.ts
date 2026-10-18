@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   description:
     "Turns an SVG or a large image into favicons, app icons and a social card, previewed where they land, zipped with the manifest and head tags.",
+  pitch: {
+    problem: "A website needs a dozen icon sizes and the tags to match.",
+    solution: "Turn one image into favicons, app icons and a social card, zipped with the head tags.",
+  },
   keywords: [
     "favicon",
     "ico",

@@ -69,6 +69,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   version: string;
   icon: Component;
   description?: string;
+  /**
+   * The problem the app solves and how, one short sentence each: the App Library's showcase tells each app's story with
+   * it, and falls back to `description` without it. Eager like `description`, so keep it short.
+   */
+  pitch?: AppPitch;
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;
@@ -133,6 +138,13 @@ export interface AppAuthor {
   github?: string;
   /** Used when there's no `github`. */
   url?: string;
+}
+
+export interface AppPitch {
+  /** What gets in the way without the app, from the user's side. */
+  problem: string;
+  /** What the app does about it. */
+  solution: string;
 }
 
 export interface AppHighlight {

@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Tournament brackets for game night: knockout, double elimination, round robin or a race cup.",
+  pitch: {
+    problem: "Running a game-night tournament on paper gets messy fast.",
+    solution: "Make knockout, double elimination, round robin or race-cup brackets and track every result.",
+  },
   keywords: [
     "tournament",
     "bracket",

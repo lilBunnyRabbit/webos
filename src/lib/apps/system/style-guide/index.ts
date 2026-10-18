@@ -6,6 +6,10 @@ export default define_app({
   id: "style-guide",
   name: "Style Guide",
   description: "Every design token and UI kit component, live in the current theme (docs/design).",
+  pitch: {
+    problem: "Building a new screen means guessing which colours and components exist.",
+    solution: "See every design token and UI component live, in the current theme.",
+  },
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,

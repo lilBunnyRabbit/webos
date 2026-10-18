@@ -2,7 +2,19 @@ import { describe, expect, test } from "vitest";
 import { AppCategory, type AppManifest } from "$lib/core/api/services/apps/type";
 import type { Command } from "$lib/core/api/services/shell/type";
 import { ChangeKind, type Release } from "$lib/core/api/services/version/type";
-import { app_commands, app_file_types, category_counts, category_of, has_filter, library_sections, LibraryCategory, LibraryFilter, LibrarySort } from "./library";
+import {
+  app_commands,
+  app_file_types,
+  app_story,
+  category_counts,
+  category_of,
+  has_filter,
+  library_sections,
+  LibraryCategory,
+  LibraryFilter,
+  LibrarySort,
+  showcase_sections,
+} from "./library";
 
 const app = (name: string, extra: Partial<AppManifest> = {}) =>
   ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppManifest;
@@ -110,5 +122,28 @@ describe("details", () => {
   test("file types split into opens and works on, extensions first", () => {
     expect(app_file_types(APPS[3])).toEqual({ opens: [".md", "text/*"], works_on: [] });
     expect(app_file_types(APPS[5])).toEqual({ opens: [], works_on: [".txt"] });
+  });
+});
+
+describe("showcase_sections", () => {
+  test("one section per category in the nav's order, System last, apps A–Z", () => {
+    const sections = showcase_sections(APPS, { query: "", category: LibraryCategory.ALL });
+    expect(sections.map((section) => section.id)).toEqual([AppCategory.PRODUCTIVITY, AppCategory.UTILITIES, AppCategory.DEVELOPER, AppCategory.GAMES, LibraryCategory.SYSTEM]);
+    expect(sections.find((section) => section.id === AppCategory.GAMES)?.apps.map((manifest) => manifest.name)).toEqual(["Snake", "Sudoku"]);
+    expect(sections[0].label).toBe("Productivity");
+  });
+
+  test("a category keeps only its own section, and the search narrows", () => {
+    expect(names(showcase_sections(APPS, { query: "", category: AppCategory.GAMES }))).toEqual(["Snake", "Sudoku"]);
+    expect(names(showcase_sections(APPS, { query: "sudoku", category: LibraryCategory.ALL }))).toEqual(["Sudoku"]);
+    expect(showcase_sections(APPS, { query: "", category: AppCategory.MEDIA })).toEqual([]);
+  });
+});
+
+describe("app_story", () => {
+  test("the pitch, or the description as the answer", () => {
+    const pitch = { problem: "Sums are slow.", solution: "Type them." };
+    expect(app_story(app("Calculator", { pitch, description: "Basic arithmetic." }))).toEqual(pitch);
+    expect(app_story(app("Calculator", { description: "Basic arithmetic." }))).toEqual({ problem: null, solution: "Basic arithmetic." });
   });
 });

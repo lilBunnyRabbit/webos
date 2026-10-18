@@ -9,6 +9,10 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   description: "Crop, resize, rotate, flip and adjust the colours of an image.",
+  pitch: {
+    problem: "Small photo fixes shouldn't need a full editing suite.",
+    solution: "Crop, resize, rotate, flip and adjust the colours of an image.",
+  },
   keywords: [
     "photo",
     "picture",

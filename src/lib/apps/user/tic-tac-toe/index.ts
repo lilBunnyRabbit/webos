@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Noughts and crosses against a friend or the computer, with undo and stats.",
+  pitch: {
+    problem: "Sometimes you need a quick game to settle something.",
+    solution: "Noughts and crosses against a friend or the computer.",
+  },
   keywords: ["noughts and crosses", "x and o", "xo", "game", "classic", "two player"],
   defaults: {
     constraints: {

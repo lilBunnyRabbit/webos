@@ -12,6 +12,10 @@ export default define_app({
   category: AppCategory.DEVELOPER,
   description:
     "What's running and how hard it works: windows, widgets, frame rate, network, storage and background tasks.",
+  pitch: {
+    problem: "Something feels slow and you can't tell what's doing it.",
+    solution: "See every window, widget, background task and the frame rate live, and close what's heavy.",
+  },
   keywords: [
     "task manager",
     "processes",

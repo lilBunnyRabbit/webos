@@ -11,6 +11,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Your events by month, week or agenda, with reminders, worked hours and due cards.",
+  pitch: {
+    problem: "Plans, reminders and worked hours end up scattered across apps.",
+    solution: "See your events by month, week or agenda, with reminders and due cards in one view.",
+  },
   keywords: ["calendar", "events", "schedule", "agenda", "planner", "reminder", "appointment", "date", "month", "week"],
   props: CALENDAR_PROPS,
   badge: today_badge,

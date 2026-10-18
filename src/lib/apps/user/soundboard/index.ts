@@ -9,6 +9,10 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   description: "A grid of pads that play your own sounds, by click or key.",
+  pitch: {
+    problem: "The right sound at the right moment needs to be one press away.",
+    solution: "A grid of pads that play your own sounds by click or key.",
+  },
   keywords: ["sound", "audio", "pads", "sfx", "effects", "board", "music", "meme", "buttons"],
   category: AppCategory.MEDIA,
   tools: ["audio/*"],

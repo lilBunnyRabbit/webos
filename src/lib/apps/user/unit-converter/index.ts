@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Convert length, mass, temperature, data size and more.",
+  pitch: {
+    problem: "Converting units means searching and trusting a random result.",
+    solution: "Convert length, mass, temperature, data size and more.",
+  },
   keywords: [
     "convert",
     "units",

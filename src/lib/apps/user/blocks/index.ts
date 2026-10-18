@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Falling blocks: fill rows to clear them before the stack reaches the top.",
+  pitch: {
+    problem: "Sometimes you just want a few minutes of something familiar.",
+    solution: "Falling blocks: clear rows before the stack reaches the top.",
+  },
   keywords: ["game", "arcade", "classic", "falling", "blocks", "puzzle", "lines", "sprint"],
   defaults: {
     constraints: {

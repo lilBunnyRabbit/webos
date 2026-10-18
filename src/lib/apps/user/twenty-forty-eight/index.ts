@@ -9,6 +9,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Slide and merge tiles to reach 2048",
+  pitch: { problem: "You want a quick puzzle you can play one-handed.", solution: "Slide and merge tiles to reach 2048." },
   keywords: ["2048", "puzzle", "tiles", "merge", "numbers", "game", "sliding"],
   defaults: {
     constraints: {

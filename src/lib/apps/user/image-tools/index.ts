@@ -11,6 +11,10 @@ export default define_app({
   version: "1.0.0",
   description:
     "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
+  pitch: {
+    problem: "Everyday image chores each send you to a different website.",
+    solution: "Remove backgrounds, join, split, compress and compare images, all on your device.",
+  },
   keywords: [
     "image",
     "photo",
