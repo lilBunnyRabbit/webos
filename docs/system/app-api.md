@@ -2,7 +2,7 @@
 
 ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md) · Pinned by: `src/lib/core/app-api.test.ts`
 
-What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until 2.0. Anything not listed is internal: use it if you want, but it can change in any release.
+What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. 2.0 made one break, removing the eager `shell: {…}` manifest form ([shell contributions](#shell-contributions)); everything else carried over, and it now holds until 3.0. Anything not listed is internal: use it if you want, but it can change in any release.
 
 The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app context](apps/app-context.md), [file associations](apps/file-associations.md), [writing an app](apps/writing-an-app.md)). This page only says what's promised.
 
@@ -12,12 +12,12 @@ The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app 
 |--------|---------|
 | Adding to the stable surface: a new export, an optional manifest field, a new handle member, a new service method marked stable | minor |
 | Fixing behaviour so it matches this page or the detail pages | patch |
-| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (2.0)** |
+| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (next: 3.0)** |
 | Anything internal | any release, no notice |
 
 "Stable" means the name, the signature and the documented behaviour. A stable function can grow an optional parameter in a minor; it can't lose one. A stable interface can grow an optional member; it can't lose one or make one required.
 
-How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is 2.0.
+How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is the next major (3.0).
 
 The test covers names, not signatures or behaviour. Those are still on you.
 
@@ -112,7 +112,7 @@ The barrel exports nothing else. The window frame builds the context with `set_a
 
 ## Shell contributions
 
-An app adds commands through `define_app({ shell: () => import("./commands") })` ([ADR-034](../adrs/034-app-extension-points.md), revised 2026-10-17): a sibling `commands.ts` whose default export is the contribution, loaded by the shell on first use ([manifest](apps/manifest.md#shell-adr-034)). The eager object form was removed (owner's decision, app wave 7): a break of the stable surface, so a major by the rule above. Stable:
+An app adds commands through `define_app({ shell: () => import("./commands") })` ([ADR-034](../adrs/034-app-extension-points.md), revised 2026-10-17): a sibling `commands.ts` whose default export is the contribution, loaded by the shell on first use ([manifest](apps/manifest.md#shell-adr-034)). The eager object form was removed (owner's decision, app wave 7): a break of the stable surface, shipped as 2.0. Stable:
 
 | Name | Members / values |
 |------|------------------|
@@ -151,7 +151,7 @@ Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesSer
 
 `$lib/core/components/ui`, all of it: `Badge`, `BoardOverlay`, `Button`, `Checkbox`, `CopyButton`, `EmptyState`, `IconButton`, `Input`, `Kbd`, `ResizeHandle`, `Section`, `Segmented`, `Select`, `Separator`, `SettingRow`, `SideNav`, `Slider`, `Spinner`, `StatusBar`, `Switch`, `Textarea`, `Toolbar`, the variant functions `button`, `field`, `badge`, and the types `IconComponent`, `ButtonVariants`, `FieldVariants`, `BadgeVariants`. Component names and the props documented in [design/components.md](../design/components.md) are stable; how they look is not.
 
-Theme tokens are part of the surface too: the token names in [CONVENTIONS](../CONVENTIONS.md#themes-and-tokens) (`background` ladder, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, the states) and their Tailwind classes. Renaming one breaks every app's markup, so that's a 2.0. Values change any time.
+Theme tokens are part of the surface too: the token names in [CONVENTIONS](../CONVENTIONS.md#themes-and-tokens) (`background` ladder, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, the states) and their Tailwind classes. Renaming one breaks every app's markup, so that's a major. Values change any time.
 
 Not in the kit, internal: everything else under `$lib/core/components/` (`files`, `dialogs`, `apps/app-badge.svelte`, `brand`, `theme`, `desktop`).
 
@@ -206,7 +206,7 @@ Internal, though bundled apps use them: `utils/zip/*` (Archive); `utils/install.
 
 ## Storage locations
 
-Users' data sits in these, so moving one is a 2.0 even when no code signature changes.
+Users' data sits in these, so moving one is a major even when no code signature changes.
 
 | Location | Written by | Format |
 |----------|------------|--------|

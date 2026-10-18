@@ -31,7 +31,7 @@ On first boot the desktop seeds shortcuts to `getting-started`, `settings`, `fil
 
 ## File Explorer
 
-`file-explorer` · `Folder` icon · source `system/file-explorer/`
+`file-explorer` · own `icon.svelte` · source `system/file-explorer/`
 
 **Purpose.** Browse and manage OPFS.
 
@@ -63,7 +63,7 @@ On first boot the desktop seeds shortcuts to `getting-started`, `settings`, `fil
 
 ## Settings
 
-`settings` · `Gear` icon · source `system/settings/`
+`settings` · own `icon.svelte` · source `system/settings/`
 
 **Purpose.** Edit the theme, taskbar position and remembered default apps, back up and restore WebOS data, read every release's notes, see build info and who made the apps, install WebOS, check for updates, replay the introduction, and reset.
 
@@ -123,7 +123,7 @@ Every write goes straight to service state. Persistence is the settings service'
 
 ## Kernel
 
-`kernel` · `Brain` icon · source `system/kernel/`
+`kernel` · own `icon.svelte` · source `system/kernel/`
 
 **Purpose.** An inspector for the service registry (ADR-020).
 
@@ -175,7 +175,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 ## Text Editor
 
-`text-editor` · `NotePencil` icon · source `system/text-editor/` · [ADR-030](../adrs/030-text-editor.md)
+`text-editor` · own `icon.svelte` · source `system/text-editor/` · [ADR-030](../adrs/030-text-editor.md)
 
 **Purpose.** Edit text and code files. Replaced Text Viewer on 2026-10-13 (id renamed, no alias: old `text-viewer` session entries are skipped on restore, a `text-viewer` file default falls back to the built-in).
 
@@ -191,7 +191,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 - **Close guard:** `set_title(file name)`, `set_dirty(dirty, { save })` (ADR-029).
 - **System files** (`is_system_path`: `/etc`, `/var`, `/tmp`) open read-only: a compartment sets `EditorState.readOnly` and `EditorView.editable` off, Save is disabled, an `info/10` strip says "This is a system file, so it opens read-only" with a Save as… button, and the status bar says Read-only. Save (Mod+S) goes to Save as…, starting in `/home`. The OS rewrites these files on its own, so an edit would be lost or break it.
 - **Disk changes**, like a code editor. `base_modified` is the `lastModified` the buffer is based on. An effect reads `files.revision(parent folder)`; any write there (another window, Explorer) runs `check_disk`. Newer on disk with the same text: adopt it silently. Clean buffer: reload, keeping cursor and scroll. Dirty buffer: a `warning/10` banner, "This file changed on disk", with Keep mine (adopts the disk version as the base, so Save won't ask) and Reload. Save checks again and asks "changed on disk… Overwrite" when the disk is newer and differs. A save in progress is ignored by the watcher.
-- **Markdown preview** (`.md` only): Edit / Split / Preview `Segmented`, per window. Split is side by side at `@2xl`, stacked below. The preview re-renders 250ms after typing stops, with `marked` (GFM) loaded on first use, in an iframe: `srcdoc`, `sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"` (opaque origin: nothing in it can reach WebOS or OPFS) and a CSP of `default-src 'none'; script-src 'nonce-…'; style-src 'unsafe-inline'; img-src data: blob: https:`. Only the editor's own nonce'd script runs (Markdown `<script>` and `on*=` handlers are blocked): it restores the scroll position after a re-render and posts it back (`text-editor:scroll`, checked against the frame's `contentWindow`). Theme variables are written into the frame, so theme changes re-render it. Links open in a new tab (`<base target="_blank">`).
+- **Markdown preview** (`.md` only): Edit / Split / Preview `Segmented`, per window. Split is side by side at `@2xl`, stacked below. The preview re-renders 250ms after typing stops, with `marked` (GFM; declared in the app's own `package.json`, ADR-045) loaded on first use from `markdown-preview.ts`, in an iframe: `srcdoc`, `sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"` (opaque origin: nothing in it can reach WebOS or OPFS) and a CSP of `default-src 'none'; script-src 'nonce-…'; style-src 'unsafe-inline'; img-src data: blob: https:`. Only the editor's own nonce'd script runs (Markdown `<script>` and `on*=` handlers are blocked): it restores the scroll position after a re-render and posts it back (`text-editor:scroll`, checked against the frame's `contentWindow`). Theme variables are written into the frame, so theme changes re-render it. Links open in a new tab (`<base target="_blank">`).
 
 **Persistence.** Per window via `storage.window`: `wrap` (on by default) and `markdown` (`split` by default).
 
@@ -209,7 +209,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 ## Media Preview
 
-`media-preview` · `FileImage` icon · source `system/media-preview/` · ported from v0 (`v0-react`) (ADR-009, ADR-018)
+`media-preview` · own `icon.svelte` · source `system/media-preview/` · ported from v0 (`v0-react`) (ADR-009, ADR-018)
 
 **Purpose.** Show images, play video and audio.
 
@@ -267,7 +267,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## PDF Viewer
 
-`pdf-viewer` · `FilePdf` icon · source `system/pdf-viewer/` (ADR-018 revision: a separate app because it's a different interaction model)
+`pdf-viewer` · own `icon.svelte` · source `system/pdf-viewer/` (ADR-018 revision: a separate app because it's a different interaction model)
 
 **Purpose.** View PDFs with the browser's built-in viewer.
 
@@ -283,7 +283,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## HTML Preview
 
-`html-preview` · `FileHtml` icon · source `system/html-preview/`
+`html-preview` · own `icon.svelte` · source `system/html-preview/`
 
 **Purpose.** Render an HTML file the way a browser would, or read its source.
 
@@ -308,7 +308,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## CSV Viewer
 
-`csv-viewer` · `FileCsv` icon · source `system/csv-viewer/`
+`csv-viewer` · own `icon.svelte` · source `system/csv-viewer/`
 
 **Purpose.** Read CSV and TSV files as a table.
 
@@ -342,7 +342,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## Activity Monitor
 
-`activity-monitor` · `Pulse` icon · source `system/activity-monitor/`
+`activity-monitor` · own `icon.svelte` · source `system/activity-monitor/`
 
 **Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests, storage use and background tasks. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
@@ -408,7 +408,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 
 ## Style Guide
 
-`style-guide` · `Swatches` icon · source `system/style-guide/` (ADR-024)
+`style-guide` · own `icon.svelte` · source `system/style-guide/` (ADR-024)
 
 **Purpose.** Render every design token and UI kit component live in the current theme, as the in-OS companion to [docs/design](../design/README.md). Change the theme in Settings and the Style Guide follows. Its manifest sets `description` and `keywords` (`design`, `components`, `tokens`), so the start menu search finds it by those words.
 
@@ -434,7 +434,7 @@ The controls (and the sample panel's width) are bound to local `$state` and do n
 
 ## Calculator
 
-`calculator` · `Calculator` icon · source `system/calculator/`
+`calculator` · own `icon.svelte` · source `system/calculator/`
 
 **Purpose.** A basic calculator: `+ − × ÷`, percent, sign change, decimals and brackets, with a history of results. Category Utilities; `description` and `keywords` (`math`, `calc`, `arithmetic`) feed launcher search.
 
@@ -476,7 +476,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## App Library
 
-`app-library` · `SquaresFour` icon · source `system/app-library/`
+`app-library` · own `icon.svelte` · source `system/app-library/`
 
 **Purpose.** The store (ADR-040): every app, installed or not, in one browsable window: categories with counts, search, filters, a grid or list, and a details panel per app. Its Showcase view tells each app's story, what it solves, for someone new to WebOS ([brainstorm](../brainstorm/2026-10-18_app-showcase.md)). The start menu's and the app drawer's "All apps" button opens it. Category Utilities. The id is `app-library`, not `apps`, so it can't be mistaken for the `apps` service or the `app list` command.
 
@@ -529,7 +529,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## Terminal
 
-`terminal` · `TerminalWindow` icon · source `system/terminal/` · [ADR-033](../adrs/033-shell.md)
+`terminal` · own `icon.svelte` · source `system/terminal/` · [ADR-033](../adrs/033-shell.md)
 
 A [shell](services/shell.md) session per window (opening it calls `shell.load()`, so app commands highlight and complete from the first keystroke), on the field surface (`light-dark(background-lightest, background-darker)`) in `font-mono text-ui`.
 
@@ -581,7 +581,7 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 
 ## Getting started
 
-`getting-started` · `Compass` icon · source `system/getting-started/` · [ADR-041](../adrs/041-getting-started.md)
+`getting-started` · own `icon.svelte` · source `system/getting-started/` · [ADR-041](../adrs/041-getting-started.md)
 
 **Purpose.** A tour of what WebOS can do, one card per part, each with a Try it button that runs the real thing. On the desktop of every new device (first in `DEFAULT_SHORTCUTS`) and linked from Settings › About.
 

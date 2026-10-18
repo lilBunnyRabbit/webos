@@ -107,7 +107,7 @@ Hardcoded colours outside the token system, all deliberate:
 | `index.html` `#splash-progress` (track, bar, label) | Brand Dark `background_lightest`, `primary`, `foreground` as OKLCH | Same: the boot progress bar shows before any token exists (ADR-036) |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 
-Components that need a token outside a utility read the variable directly: in a `<style>` block (`var(--background-lighter)` for the `<select>` picker in `ui/select.svelte`), in the CodeMirror theme (`components/code/editor.ts`), or in an arbitrary value (`bg-[light-dark(var(--background-lightest),var(--background-darker))]` in the `field` recipe and Segmented). The Style Guide's swatches use `var(--{token})` with the kebab-case names.
+Components that need a token outside a utility read the variable directly: in a `<style>` block (`var(--background-lighter)` for the `<select>` picker in `ui/select.svelte`), in the CodeMirror theme (`$kit/components/code/editor.ts`, ADR-048), or in an arbitrary value (`bg-[light-dark(var(--background-lightest),var(--background-darker))]` in the `field` recipe and Segmented). The Style Guide's swatches use `var(--{token})` with the kebab-case names.
 
 ## Built-in themes (`themes.ts`)
 
