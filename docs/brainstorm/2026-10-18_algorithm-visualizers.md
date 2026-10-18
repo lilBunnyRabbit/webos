@@ -53,5 +53,17 @@ LZ77 ports the owner's own gist (`9a8f338a2ce2bf86fa463d5af13a27b6`): (distance,
 - Side nav lists the groups; each group's algorithms are a tab row in the toolbar. One lazy module per group, not per algorithm.
 - Parameters ride along in links and `.algo` files as an optional `params` object next to `input`; values outside an algorithm's ranges or choices are dropped.
 - The app's toolbar has its own link button that copies a solo link with the current input and parameters (the titlebar Copy link carries launch props only).
-- Huffman lives under Trees only; compression links to it in spirit rather than duplicating it.
+- Huffman lives under Trees only; compression links to it in spirit rather than duplicating it. (Superseded by the follow-ups: Compression now has Huffman coding with bit output, reusing the Trees tree build.)
 - Group names that wrapped in the side nav were shortened (Dyn. programming, Backtracking).
+
+## Follow-ups
+
+Built from the roadmap's follow-up list, inside the existing engine and patterns (no new state, services or dependencies):
+
+- **Red-black delete:** successor copy, then the double-black fixup (red sibling; black sibling with black children; near child red; far child red), each case a pseudocode line and a note. A doubly black nil is narrated as "the empty left of 40".
+- **B-tree delete:** top-down (CLRS): before entering a child with t − 1 keys, borrow through the parent or merge; inner keys swap with predecessor or successor; the root drops a level when it empties. Borrow and merge counters show on the B-tree only.
+- **Boyer–Moore:** strong good-suffix table next to the bad-character table; slide by the larger, and the note says which wins; a full match slides by the period. A Rules parameter (both, bad only, good only) to compare comparisons.
+- **Bentley–Ottmann:** a separate algorithm beside the simple line sweep, which stays as the stepping stone. Event points ordered by x then y; at each point the starting, ending and passing segments are grouped (de Berg), reported, removed and reinserted in their order just right of the point; only new neighbours are tested and crossings ahead are queued. Handles shared endpoints, vertical segments and many segments through one point; tested against all pairs on a coarse grid.
+- **Huffman coding (Compression):** builds the tree with the Trees module's exported `huffman_tree`, `huffman_code_map` and `huffman_snapshot`, then encodes symbol by symbol into a bit stream and bytes, pads, and decodes by walking the tree.
+- **Arithmetic coding:** exact BigInt fractions (input up to 32 characters), the shortest binary fraction inside the final interval as output; decoding narrows the same way. Counters compare against the information content and Huffman. Real coders' integer renormalisation is described, not shown.
+- **Editor keyboard path:** nodes and points are focusable buttons in Tab order; arrows nudge (Shift for 10) and commit on key release, like a drag commits on release; Enter or Space picks and connects; Escape clears; Delete removes and moves focus to the next. Add node / Add point buttons give a keyboard and touch way to add. The stage SVG takes `role="group"` in the editors.
