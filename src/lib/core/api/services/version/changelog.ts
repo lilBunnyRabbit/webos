@@ -11,13 +11,6 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: IMPROVED, text: "WebOS starts faster: app descriptions and search words now load right after the desktop appears instead of before it." },
       { kind: FIXED, apps: ["algorithms"], text: "A link to an algorithm Algorithms doesn't have now says which one is missing, then opens the first algorithm." },
-    ],
-  },
-  {
-    version: "2.4.0",
-    date: "2026-10-18",
-    title: "Taking things out",
-    changes: [
       { kind: NEW, apps: ["algorithms"], text: "Red-black trees in Algorithms now delete too, showing each recolouring and rotation that keeps the tree balanced." },
       { kind: NEW, apps: ["algorithms"], text: "B-trees in Algorithms delete keys as well, borrowing from a neighbour or merging two nodes when one runs short." },
       { kind: IMPROVED, apps: ["algorithms"], text: "Boyer–Moore search adds the good-suffix rule, and you can switch each rule off to see how much it saves." },
