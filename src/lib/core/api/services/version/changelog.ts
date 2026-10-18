@@ -35,6 +35,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms shows how compression works: run-length, LZ77 with its sliding window and bits, LZ78, LZW, Burrows–Wheeler with move-to-front, and Base64.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms searches text five ways, from naive to Knuth–Morris–Pratt and Boyer–Moore, and fills in edit distance and suffix array tables step by step.",
+      },
     ],
   },
   {

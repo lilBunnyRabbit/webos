@@ -14,6 +14,7 @@
     LinkSimple as LinkSimpleIcon,
     SortAscending as SortAscendingIcon,
     Stack as StackIcon,
+    TextAa as TextAaIcon,
     TreeStructure as TreeStructureIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
@@ -39,6 +40,7 @@
     [Group.GRAPHS]: GraphIcon,
     [Group.STRUCTURES]: StackIcon,
     [Group.COMPRESSION]: FileZipIcon,
+    [Group.STRINGS]: TextAaIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

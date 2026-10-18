@@ -4,6 +4,7 @@ export const Group = {
   GRAPHS: "graphs",
   STRUCTURES: "structures",
   COMPRESSION: "compression",
+  STRINGS: "strings",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -13,6 +14,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.GRAPHS]: "Graphs",
   [Group.STRUCTURES]: "Data structures",
   [Group.COMPRESSION]: "Compression",
+  [Group.STRINGS]: "Strings",
 };
 
 export interface Complexity {
@@ -97,6 +99,14 @@ export const CATALOG: CatalogEntry[] = [
   entry("lzw", "LZW", Group.COMPRESSION, "Output codes only; the dictionary rebuilds itself", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("bwt-mtf", "BWT + move-to-front", Group.COMPRESSION, "Sort rotations to group equal characters", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n²)"]),
   entry("base64", "Base64", Group.COMPRESSION, "3 bytes become 4 safe characters", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+
+  entry("naive-search", "Naive search", Group.STRINGS, "Try every position, character by character", ["O(n)", "O(n·m)", "O(n·m)", "O(1)"]),
+  entry("kmp", "Knuth–Morris–Pratt", Group.STRINGS, "A failure table means never backing up", ["O(n + m)", "O(n + m)", "O(n + m)", "O(m)"]),
+  entry("boyer-moore", "Boyer–Moore", Group.STRINGS, "Compare right to left, skip on bad characters", ["O(n / m)", "O(n)", "O(n·m)", "O(σ)"]),
+  entry("rabin-karp", "Rabin–Karp", Group.STRINGS, "A rolling hash picks where to compare", ["O(n + m)", "O(n + m)", "O(n·m)", "O(1)"]),
+  entry("z-algorithm", "Z-algorithm", Group.STRINGS, "How far each position matches the start", ["O(n + m)", "O(n + m)", "O(n + m)", "O(n + m)"]),
+  entry("edit-distance", "Edit distance", Group.STRINGS, "Fewest inserts, deletes and replacements", ["O(n·m)", "O(n·m)", "O(n·m)", "O(n·m)"]),
+  entry("suffix-array", "Suffix array", Group.STRINGS, "Every suffix, sorted, with shared prefixes", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n)"]),
 ];
 
 export type AlgorithmId = string;

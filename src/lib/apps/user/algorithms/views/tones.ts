@@ -82,7 +82,7 @@ function view_tones(view: View, into: Set<Tone>) {
       view.edges.forEach((edge) => add(edge.tone));
       break;
     case "grid":
-      view.rows.forEach((row) => row.forEach((cell) => add(cell.tone)));
+      view.rows.forEach((row) => row.forEach((cell) => add(cell?.tone)));
       break;
     case "ring":
       view.cells.forEach((cell) => add(cell.tone));

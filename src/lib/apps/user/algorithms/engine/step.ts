@@ -73,7 +73,7 @@ export interface Cell {
 export interface GridView {
   kind: "grid";
   title?: string;
-  rows: Cell[][];
+  rows: (Cell | null)[][];
   row_labels?: string[];
   col_labels?: string[];
   pointers?: Pointer[];
