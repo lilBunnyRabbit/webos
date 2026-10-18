@@ -27,7 +27,7 @@
 <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
   <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 pt-6 pb-8 @2xl:px-8 @2xl:pt-10">
     <header class="flex flex-col gap-2">
-      <p class="text-2xs font-medium tracking-wide text-primary uppercase">Showcase</p>
+      <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Showcase</p>
       <h2 class="text-2xl font-semibold @2xl:text-3xl">Every app, and what it solves</h2>
       <p class="max-w-2xl text-sm text-pretty text-foreground/80">
         {total} apps that run right in your browser, each one starting from a small everyday problem. Open one, or copy its solo link to
