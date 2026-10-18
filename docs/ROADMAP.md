@@ -322,6 +322,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Letterer, Wordle and variants (owner, 2026-10-14; built 2026-10-17, [brainstorm](brainstorm/2026-10-17_app-wave-4.md)): classic at 5/6/7 letters, 2/4/8 boards, Dodge (Absurdle), Math (Nerdle), hard mode, Survival, daily. English lists from ENABLE, filtered by frequency; renamed from Wordle (trademark)
 - [x] Sokoban (2026-10-17): generated levels, solvable by construction, solver-checked minimum pushes, daily. Left: Hint (the solver can power it), tap-to-walk
 - [x] Blocks (2026-10-17): falling blocks, Marathon and Sprint 40; the daily is a 40-line sprint because Game Hub's daily record keeps the lowest time. Recording a score instead changes `plays.json` (owner's call)
+- [x] Color Games (2026-10-18, [brainstorm](brainstorm/2026-10-18_color-games.md), [ADR-050](adrs/050-per-mode-dailies.md)): Recall (Dialed), Odd one out, Gradient sort, Hex guess; a daily per mode with its own Game Hub row, practice, share line with a solo challenge link; culori as the app's own dependency
+  - [ ] Swap culori for the chromatics package when published; colour shell commands
 - [x] Brackets (2026-10-17, owner's ideas notes): knockout, double elimination, round robin, race-points cup, `.bracket` files
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)

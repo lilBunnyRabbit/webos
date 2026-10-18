@@ -1,6 +1,6 @@
 # ADR-050: Per-Mode Dailies
 **Date:** 2026-10-18
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -27,3 +27,10 @@ Discussion: [brainstorm](../brainstorm/2026-10-18_color-games.md).
 - The daily map's keys are no longer only app ids; readers that look up a manifest by key split on `/` first.
 - Any future multi-mode game reuses this.
 - The stable surface grows: optional mode argument and the `daily_rank` record (app-api.md, `app-api.test.ts`).
+
+## Revision 2026-10-18: implemented
+
+- Kit: `daily_key(app_id, mode?)`, `split_daily_key(key)`, `daily_rank_for(rank, mode?)` and the `DailyRanks` type in `$kit/games/daily`; `PlayTracker.daily(day, ms, score?, mode?)`.
+- Game Hub keeps the daily contract of ADR-035: a game offers dailies when its props schema has a `daily` key. A per-mode row launches `{ daily, mode }`, and its label is the mode id in sentence case (`odd-one-out` → "Odd one out"), so the manifest needs no label field. The library card shows "Dailies 2/4" for such a game.
+- The shell's `game-daily` value gains a `mode` field; clicking a mode's row opens that mode.
+- First user: Color Games, whose props are `{ mode, seed, daily, level }`: `daily` for Game Hub, `level` so a Hard practice challenge link replays the same puzzle.
