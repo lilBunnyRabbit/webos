@@ -72,6 +72,35 @@ describe("line sweep", () => {
   });
 });
 
+describe("Bentley–Ottmann", () => {
+  const brute = (segments: { a: Point; b: Point }[]) => {
+    const pairs: string[] = [];
+    for (let i = 0; i < segments.length; i++) for (let j = i + 1; j < segments.length; j++) if (intersect(segments[i], segments[j])) pairs.push(`${i}-${j}`);
+    return pairs.sort();
+  };
+  const segment = (scale: number, steps: number) => {
+    const pick = () => ({ x: Math.floor(Math.random() * (steps + 1)) * scale, y: Math.floor(Math.random() * (steps + 1)) * scale });
+    let a = pick();
+    let b = pick();
+    while (a.x === b.x && a.y === b.y) [a, b] = [pick(), pick()];
+    return { a, b };
+  };
+
+  test("finds every crossing pair on spread-out segments", () => {
+    for (let round = 0; round < 80; round++) {
+      const segments = Array.from({ length: 2 + Math.floor(Math.random() * 14) }, () => segment(1, 100));
+      expect(run<{ pairs: string[] }>("bentley-ottmann", segments).pairs).toEqual(brute(segments));
+    }
+  });
+
+  test("handles shared endpoints, vertical segments and many through one point", () => {
+    for (let round = 0; round < 200; round++) {
+      const segments = Array.from({ length: 2 + Math.floor(Math.random() * 10) }, () => segment(20, 5));
+      expect(run<{ pairs: string[] }>("bentley-ottmann", segments).pairs).toEqual(brute(segments));
+    }
+  });
+});
+
 describe("samples run", () => {
   for (const [id, definition] of Object.entries(geometry)) {
     test(id, () => {

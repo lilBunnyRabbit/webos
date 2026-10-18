@@ -150,6 +150,7 @@ export const CATALOG: CatalogEntry[] = [
   entry("jarvis-march", "Jarvis march", Group.GEOMETRY, "Convex hull by wrapping a string around", ["O(n·h)", "O(n·h)", "O(n²)", "O(h)"]),
   entry("closest-pair", "Closest pair", Group.GEOMETRY, "Divide and conquer with a narrow strip", ["O(n log n)", "O(n log n)", "O(n log² n)", "O(n)"]),
   entry("line-sweep", "Line sweep", Group.GEOMETRY, "Test only segments the sweep line crosses", ["O(n log n)", "O(n·k)", "O(n²)", "O(n)"]),
+  entry("bentley-ottmann", "Bentley–Ottmann", Group.GEOMETRY, "Sorted sweep: only neighbours can cross", ["O(n log n)", "O((n + k) log n)", "O(n² log n)", "O(n + k)"]),
 
   entry("cpu-scheduling", "CPU scheduling", Group.OS, "FCFS, shortest job, priority and round robin on a Gantt chart", ["O(n log n)", "O(n log n)", "O(n²)", "O(n)"]),
   entry("page-replacement", "Page replacement", Group.OS, "FIFO, LRU, Clock and Optimal, fault by fault", ["O(1)", "O(1)", "O(n)", "O(frames)"]),
