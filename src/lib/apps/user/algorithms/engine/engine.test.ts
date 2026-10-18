@@ -76,9 +76,9 @@ describe(".algo files", () => {
 });
 
 describe("props", () => {
-  test("a link with an array input validates", () => {
+  test("a link with an array input validates; the app, not the schema, checks the section", () => {
     expect(ALGORITHMS_PROPS.safeParse({ section: "quick-sort", input: [3, 1], params: { pivot: "last" } }).success).toBe(true);
-    expect(ALGORITHMS_PROPS.safeParse({ section: "not-an-algorithm" }).success).toBe(false);
+    expect(ALGORITHMS_PROPS.safeParse({ section: "not-an-algorithm" }).success).toBe(true);
   });
 });
 

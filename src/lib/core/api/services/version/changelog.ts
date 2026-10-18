@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Lighter start",
     changes: [
       { kind: IMPROVED, text: "WebOS starts faster: app descriptions and search words now load right after the desktop appears instead of before it." },
+      { kind: FIXED, apps: ["algorithms"], text: "A link to an algorithm Algorithms doesn't have now says which one is missing, then opens the first algorithm." },
     ],
   },
   {
