@@ -213,13 +213,13 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 **Purpose.** Show images, play video and audio.
 
-**Associations.** MIME wildcards only, so a match depends on the `File.type` the browser reports. A file with an empty type never matches.
+**Associations.** MIME wildcards only, so a match depends on the `File.type` the browser reports. A file with an empty type never matches. Chromium reports `image/jxl` for a `.jxl` and `image/avif` for an `.avif`, so both reach Media Preview through `image/*` with no mapping of our own. Format Lab lists `image/*` as a tool only, so Media Preview stays the default for them.
 
 **Behaviour.**
 
 1. `$effect` on `path`: `files.get_file(path)` sets `file` (`undefined` while loading, `null` if not found) or `error`. The result of an earlier, cancelled path is dropped.
-2. `$effect` on `file`: creates an object URL, and revokes it on cleanup.
-3. `kind` comes from `file.type`: `image` / `video` / `audio` / `unsupported`.
+2. `$effect` on `file`: creates an object URL, and revokes it on cleanup. A JPEG XL (`image/jxl` or a `.jxl` name, `jxl.ts`) is decoded first: Chromium can't decode it, so `jxl_to_png` imports `$kit/utils/codecs` (only then: the codec worker and its wasm never load for other files), decodes in the worker and hands the `<img>` a PNG. A decode failure shows the error state ("Couldn't decode the JPEG XL: …").
+3. `kind` comes from `file.type`: `image` / `video` / `audio` / `unsupported`; a `.jxl` counts as `image` whatever its type.
 
 States before the frame: no path ("Nothing to preview", with Open a file…), error ("Couldn't read the file"), loading (`Spinner`), not found. Then the document frame: a `Toolbar` with the file name and controls, a stage on `background-darker` (a scoped `.stage` style), and a `StatusBar` with type, size and last-modified time (`format_datetime`).
 
@@ -228,7 +228,7 @@ Below the `@lg` container width the name takes the toolbar's first row (`order-f
 | Kind | Rendering | Controls |
 |------|-----------|----------|
 | (every kind) | | Open… at the start of the toolbar ([Open…](#open-in-the-viewers-adr-025-adr-031)) |
-| image | A box sized in layout to the rotated image times the scale, centred in a `min-w-full min-h-full w-max` grid with padding (24px desktop, 8px mobile). The `<img>` inside is absolutely centred at its natural size times the scale and rotated by `transform`. Fit's scale is `fit_scale()` of the rotated size into the stage (`bind:clientWidth/Height`) minus padding, so small images scale up and a 90° turn still fits | Zoom out / level / zoom in (step 0.25 within 0.25 to 5, the limits widened to include the fit scale; zooming leaves fit mode starting from the fit scale; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Save to disk… |
+| image | A box sized in layout to the rotated image times the scale, centred in a `min-w-full min-h-full w-max` grid with padding (24px desktop, 8px mobile). The `<img>` inside is absolutely centred at its natural size times the scale and rotated by `transform`. Fit's scale is `fit_scale()` of the rotated size into the stage (`bind:clientWidth/Height`) minus padding, so small images scale up and a 90° turn still fits | Zoom out / level / zoom in (step 0.25 within 0.25 to 5, the limits widened to include the fit scale; zooming leaves fit mode starting from the fit scale; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Set as wallpaper (not for JPEG XL: the desktop paints wallpapers through CSS, which can't decode it), Save to disk… |
 | video | `<video controls>`, `max-h-full max-w-full` | Save to disk… |
 | audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
 | unsupported | "Can't preview this file" empty state with the type | Save to disk… |
