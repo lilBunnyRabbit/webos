@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { load_metas, with_meta, type AppId, type AppListing, type AppMeta, type AppsService, type DialogsService } from "$lib/core/api";
+  import kernel, { type AppListing, type AppsService, type DialogsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppAnnouncement, { type AnnouncedApp } from "$lib/core/components/announcement/app-announcement.svelte";
   import {
@@ -101,12 +101,7 @@
     { icon: ShapesIcon, title: "Shapes and text", text: "Lines, rectangles, ellipses and text on their own layer until placed." },
     { icon: FloppyDiskIcon, title: "Your files", text: "Opens and saves PNG, JPEG and WebP in your folders." },
   ];
-  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
-  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
-  const pick = (id: string) => {
-    const manifest = apps.get(id);
-    return manifest && with_meta(manifest, metas);
-  };
+  const pick = (id: string) => apps.listings().find((listing) => listing.id === id);
   const sample_apps = $derived.by((): AnnouncedApp[] => {
     const paint = pick("paint");
     const list = [

@@ -11,7 +11,6 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppsFilter`, `UninstallOptions`, `AppCategory`, `AppProps`, `AppMeta`, `AppListing`, `AppAuthor`, `AppPitch`, `AppHighlight`, `DailyRank` (re-exported by the games kit, ADR-048), `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
 | `authors.ts` | `OWNER`, `app_authors()`, `author_link()`, `author_names()`, `credits()`, `Credit`: who made an app (the meta's `authors`, else the owner) |
-| `meta.ts` | `load_metas()`, `with_meta()`: every app's loaded `AppMeta` as a map, and a manifest merged with it (ADR-049) |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
 | `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
@@ -42,6 +41,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
 | `meta_ready` | `Promise<void>` (getter) | Settles once every app's `meta` has loaded; the first read starts the load. [App meta](#app-meta-adr-049) |
 | `meta(id)` | `(id: AppId): Promise<AppMeta>` | After `meta_ready`: the app's meta, `{}` without one |
+| `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every app (or the installed / not installed ones, like `list`), its manifest merged with its meta. Reactive: bare manifests until the metas load. [App meta](#app-meta-adr-049) |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
 
@@ -81,7 +81,8 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 
 - `registry`, filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)).
 - `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
-- `metas`, a private plain `Map<AppId, AppMeta>`, filled once by the meta load ([below](#app-meta-adr-049)). Not reactive: it never changes after it fills, and readers await it.
+- `metas`, a private `$state.raw` `ReadonlyMap<AppId, AppMeta>`, empty until the meta load replaces it once ([below](#app-meta-adr-049)).
+- `all_listings`, a private `$derived` over `registry` and `metas`: each manifest merged with its meta, the bare manifest while it has none. `listings()` returns it, filtered when asked.
 
 The constructor also wires `$derived` references to its five dependencies. There is no `destroy()`.
 
@@ -122,7 +123,7 @@ An app's display text (`description`, `keywords`, `pitch`, `authors`) is in its 
 
 - **Loading.** `meta_ready` is a getter over one memoized promise: the first read starts the load, every later read gets the same promise. `init()` reads it from `requestIdleCallback`, so the load normally runs once the main thread is idle after boot; anything that awaits it sooner (a first-boot intro, a launcher opened at once) starts it then. The load calls every registered app's `meta()` in parallel with `Promise.allSettled`; Vite puts all of them in one `app-meta` chunk, so it's one request. A module that fails logs `[AppsService] {id}'s meta failed to load` and the app counts as having none. It runs once per page: an app registered after the load starts has no meta (only tests register late).
 - **`meta(id)`** awaits `meta_ready` and resolves the app's `AppMeta`, or `{}` for an app without `meta`, one whose module failed, or an unknown id.
-- **Readers.** `load_metas(apps)` (`apps/meta.ts`) awaits `meta_ready` and resolves a `ReadonlyMap<AppId, AppMeta>` for every registered app; `with_meta(manifest, metas)` merges one into an `AppListing` (`AppManifest & AppMeta`), or returns the bare manifest while the map is empty. The start menu, the mobile drawer, the App Library and Showcase, Game Hub, Settings › About › Credits and the Style Guide keep the map in `$state.raw` and derive their lists from it, so they render names at once and the text fills in. `search_apps` and `group_apps` are generic over the listing type. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement only after `meta_ready` ([version](version.md)).
+- **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta`), from a `$derived` over the registry and the loaded metas. Until the load lands it returns bare manifests, so a reader renders names at once and the text fills in when `metas` is replaced; it never awaits. `filter.installed` works as in `list()`. The start menu, the mobile drawer, the first-boot intro's suggestions, the App Library and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `meta_ready` and `meta(id)` stay internal. `search_apps` and `group_apps` are generic over the listing type. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement only after `meta_ready`, then reads `listings()` ([version](version.md)).
 - Static per app, so two windows of one app, the mobile service set and solo mode (`SoloAppsService` inherits it) all share the one load.
 
 ### Solo mode

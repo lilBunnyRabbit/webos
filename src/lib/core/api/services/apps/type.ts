@@ -40,6 +40,11 @@ export interface AppsService extends IService {
    */
   readonly meta_ready: Promise<void>;
   meta(id: AppId): Promise<AppMeta>;
+  /**
+   * Every app, or only the installed (`true`) or not installed (`false`) ones, its manifest merged with its `meta`
+   * (ADR-049). Reactive: bare manifests until the metas load, so names show at once and the text fills in.
+   */
+  listings(filter?: AppsFilter): AppListing[];
 }
 
 export interface AppsFilter {

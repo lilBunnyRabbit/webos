@@ -140,7 +140,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 
 | Key | Stable | Internal (used by) |
 |-----|--------|--------------------|
-| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps); `meta_ready`, `meta` (ADR-049; Game Hub and system UI, through `load_metas` / `with_meta`) |
+| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps); `listings`, `meta_ready`, `meta` (ADR-049; Game Hub and system UI) |
 | `files` | `get_file` (17), `get_directory` (11), `create_file` (9), `create_directory` (7), `revision` (7), `list` (3), `delete_entry` (3), `exists` (2), `get_root` (2) | `read_file`, `rename_entry` (one each); `write_file`, `directory`, `move_*`, `copy_*`, `move_paths`, `copy_paths`, `import_entries`, `upload_files`, `export_to_disk`, `get_storage_estimate`, `get_directory_size`, `clear` |
 | `notifications` | `notify` (21), `request_system` (3), `update` (1; a `progress` notification is useless without it) | `hide_toast` (Pomodoro), `dismiss`, `mark_read`, `mark_all_read`, `all`, `toasts`, `unread_count` |
 | `desktop` | `items` (5), `pin_widget` (7), `remove_item` (7) | `pin`, `open`, `rename_item`, `create_folder`, `names` and the grid/mobile variants |

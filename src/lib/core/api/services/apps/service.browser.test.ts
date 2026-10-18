@@ -138,4 +138,16 @@ describe("AppsService meta (ADR-049)", () => {
     expect(await service.meta("no-meta")).toEqual({});
     expect(await service.meta("nope")).toEqual({});
   });
+
+  test("listings() merges each manifest with its meta once loaded, and filters like list()", async () => {
+    const kernel = await boot();
+    const service = apps(kernel);
+    await service.meta_ready;
+    const listing = (id: string) => service.listings().find((candidate) => candidate.id === id);
+    expect(listing("example")).toMatchObject({ id: "example", name: "Example", description: "Test app" });
+    expect(listing("settings")?.description).toBeTruthy();
+    expect(service.listings().map(({ id }) => id)).toEqual([...service.list()].map(([id]) => id));
+    expect(service.listings({ installed: true }).every(({ id }) => service.is_installed(id))).toBe(true);
+    expect(service.listings({ installed: false }).some(({ id }) => service.is_installed(id))).toBe(false);
+  });
 });

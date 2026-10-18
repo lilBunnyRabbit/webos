@@ -2,6 +2,7 @@ import type {
   AppsService as IAppsService,
   AppId,
   AppInstance,
+  AppListing,
   AppManifest,
   AppMeta,
   AppProps,
@@ -50,8 +51,14 @@ export class AppsService implements IAppsService {
   /** User apps only: system apps are always installed (ADR-040). */
   private readonly installed = new SvelteSet<AppId>();
   private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
-  private readonly metas = new Map<AppId, AppMeta>();
+  private metas: ReadonlyMap<AppId, AppMeta> = $state.raw(new Map());
   private meta_loading: Promise<void> | null = null;
+  private readonly all_listings: AppListing[] = $derived(
+    [...this.registry.values()].map((manifest) => {
+      const meta = this.metas.get(manifest.id);
+      return meta ? { ...manifest, ...meta } : manifest;
+    })
+  );
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
@@ -153,10 +160,17 @@ export class AppsService implements IAppsService {
   private async load_metas(): Promise<void> {
     const loaders = [...this.registry.values()].flatMap((manifest) => (manifest.meta ? [{ id: manifest.id, load: manifest.meta }] : []));
     const settled = await Promise.allSettled(loaders.map(({ load }) => load()));
+    const metas = new Map<AppId, AppMeta>();
     settled.forEach((result, index) => {
-      if (result.status === "fulfilled") this.metas.set(loaders[index].id, result.value.default);
+      if (result.status === "fulfilled") metas.set(loaders[index].id, result.value.default);
       else console.error(`[AppsService] ${loaders[index].id}'s meta failed to load`, result.reason);
     });
+    this.metas = metas;
+  }
+
+  public listings(filter: AppsFilter = {}): AppListing[] {
+    if (filter.installed === undefined) return this.all_listings;
+    return this.all_listings.filter((listing) => this.is_installed(listing.id) === filter.installed);
   }
 
   public register(manifest: AppManifest): void {
