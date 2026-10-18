@@ -1,6 +1,6 @@
-/** Time always breaks a tie. */
-export const DailyRank = { TIME: "time", SCORE_ASC: "score-asc", SCORE_DESC: "score-desc" } as const;
-export type DailyRank = (typeof DailyRank)[keyof typeof DailyRank];
+import { DailyRank } from "$lib/core/api/services/apps/type";
+
+export { DailyRank };
 
 export interface DailyResult {
   ms: number;

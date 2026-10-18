@@ -17,6 +17,8 @@
 > - `live_file(path, initial, schema)` moves from Kanban to `$lib/core/contexts/app/live-file.svelte.ts`. Shell code reads and edits an app file through it: it takes the shared `json_file` cell, waits for `ready`, refuses an invalid file with a `ShellError`, and releases the cell after `LINGER_MS` so the save effect lands first. Calendar no longer imports Kanban; Time Since and Game Hub commands use it too.
 > - `confirm_discard(win, name)` in `$lib/core/contexts/app` is the one "Discard changes to …?" sheet document apps show before New or Open.
 
+> **Revision 2026-10-18: game kit moved to `$kit/games`** ([ADR-048](./048-app-kit-layer.md)). The kit now lives in `src/lib/kit/games`; `$lib/core/games` and its `time`, `daily`, `direction` paths re-export it until 3.0. `DailyRank` moved into core's `apps/type.ts` (the manifest needs it) and `games/daily` re-exports it.
+
 ## Context
 
 The [2026-10-14 app triage](../brainstorm/2026-10-14_app-triage.md) picked the next apps: Work Hours, Pomodoro, Clock, Time Since, Kanban, Calendar, Game Hub (with a daily puzzle), Solitaire, Nonogram colour and editor, Image Editor, Recorder, Soundboard, Archive, Diff and Markdown → PDF. They share needs the core doesn't meet:
