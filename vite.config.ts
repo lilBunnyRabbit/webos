@@ -97,6 +97,10 @@ export default defineConfig({
       },
     },
   },
+  // The codec worker imports jSquash lazily, and a classic worker can't split chunks.
+  worker: { format: "es" },
+  // jSquash finds its wasm with `new URL("x.wasm", import.meta.url)`; pre-bundling moves the module away from the file.
+  optimizeDeps: { exclude: ["@jsquash/avif", "@jsquash/jxl"] },
   resolve: {
     alias: {
       $lib: path.resolve("./src/lib"),

@@ -36,7 +36,7 @@ src/lib/
 ├── kit/                          # $kit, the app kit (ADR-048): helpers only apps use
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
-│   └── utils/                    # image, image-format, history, qr, qr-scan, exif
+│   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), history, qr, qr-scan, exif
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
