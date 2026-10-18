@@ -87,6 +87,16 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
+        manualChunks(id) {
+          if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       $lib: path.resolve("./src/lib"),

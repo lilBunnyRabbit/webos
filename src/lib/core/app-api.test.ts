@@ -6,6 +6,7 @@ import type {
   AppHighlight,
   AppId,
   AppManifest,
+  AppMeta,
   AppPitch,
   AppProps,
   AppsService,
@@ -65,10 +66,8 @@ import type {
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
 import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
-import type * as legacy_games from "$lib/core/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
 import type { SourceImage } from "$kit/utils/image";
-import type * as legacy_image from "$lib/core/utils/image";
 import type { Rng } from "$lib/core/utils/random";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 
@@ -175,11 +174,6 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
   ["$kit/games/daily", () => import("$kit/games/daily"), GAMES_DAILY],
   ["$kit/games/direction", () => import("$kit/games/direction"), GAMES_DIRECTION],
   ["$kit/utils/image", () => import("$kit/utils/image"), IMAGE],
-  ["$lib/core/games", () => import("$lib/core/games"), GAMES],
-  ["$lib/core/games/time", () => import("$lib/core/games/time"), GAMES_TIME],
-  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), GAMES_DAILY],
-  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), GAMES_DIRECTION],
-  ["$lib/core/utils/image", () => import("$lib/core/utils/image"), IMAGE],
   [
     "$lib/core/utils",
     () => import("$lib/core/utils"),
@@ -248,7 +242,7 @@ describe("app API 1.0", () => {
       const exported = Object.keys(await load());
       expect(
         names.filter((name) => exported.includes(name)),
-        `${path} lost a stable export. Removing or renaming one breaks ${DOC}: that's 2.0`
+        `${path} lost a stable export. Removing or renaming one breaks ${DOC}: that's 4.0`
       ).toEqual(names);
     },
     60_000
@@ -263,21 +257,18 @@ const manifest_fields: Members<
   AppConfig,
   | "associations"
   | "author"
-  | "authors"
   | "badge"
   | "category"
   | "component"
   | "daily_rank"
   | "default_widget"
   | "defaults"
-  | "description"
   | "highlights"
   | "icon"
   | "id"
-  | "keywords"
   | "license"
+  | "meta"
   | "name"
-  | "pitch"
   | "preview"
   | "props"
   | "repository"
@@ -317,6 +308,7 @@ const app_context_members: Members<AppContext, "app_id" | "storage" | "window" |
 const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
+const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -330,6 +322,8 @@ const command_context_members: Members<CommandContext, "args" | "elevated" | "in
 const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "render" | "text"> = true;
 /** An app's commands are a module whose default export is the contribution, loaded on first use (ADR-034 revision). */
 const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
+/** Display text is a module whose default export is the `AppMeta` (ADR-049). */
+const app_meta_form: NonNullable<AppConfig["meta"]> extends () => Promise<{ default: AppMeta }> ? true : false = true;
 /** `pick_file` resolves one path or `null`; with `multiple: true`, every chosen path (ADR-025 revision). */
 const pick_file_single: WindowHandle["pick_file"] extends (options?: PickOptions) => Promise<string | null> ? true : false = true;
 const pick_file_multiple: WindowHandle["pick_file"] extends (options: PickOptions & { multiple: true }) => Promise<string[]>
@@ -343,6 +337,7 @@ type StableTypes = [
   AppHighlight,
   AppId,
   AppManifest,
+  AppMeta,
   AppPitch,
   AppProps,
   AppsService,
@@ -414,12 +409,4 @@ type StableTypes = [
   Bounds,
   Dimensions,
   Position,
-  legacy_games.Axis,
-  legacy_games.DailyResult,
-  legacy_games.FormatTimeOptions,
-  legacy_games.GameStats,
-  legacy_games.ParsedDay,
-  legacy_games.PlayTracker,
-  legacy_games.Plays,
-  legacy_image.SourceImage,
 ];

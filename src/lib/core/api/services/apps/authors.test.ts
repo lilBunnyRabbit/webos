@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { app_authors, author_link, author_names, credits, OWNER } from "./authors";
-import type { AppManifest } from "./type";
+import type { AppListing } from "./type";
 
-const app = (id: string, authors?: AppManifest["authors"]) => ({ id, name: id[0].toUpperCase() + id.slice(1), authors }) as AppManifest;
+const app = (id: string, authors?: AppListing["authors"]) => ({ id, name: id[0].toUpperCase() + id.slice(1), authors }) as AppListing;
 
 describe("app_authors", () => {
   test("no authors, or an empty list, means the owner", () => {

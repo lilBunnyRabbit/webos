@@ -10,24 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
-  description: "Theme, wallpaper, taskbar, default apps, backups and what's new.",
-  pitch: {
-    problem: "Everyone wants their desktop to look and behave a little differently.",
-    solution: "Change the theme, wallpaper, taskbar, default apps and backups in one place.",
-  },
-  keywords: [
-    "preferences",
-    "options",
-    "theme",
-    "dark mode",
-    "wallpaper",
-    "taskbar",
-    "configuration",
-    "control panel",
-    "backup",
-    "restore",
-    "export",
-  ],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 640 },

@@ -10,7 +10,7 @@ export const EXAMPLE_APP: AppManifest = {
     name: "Example",
     icon: (() => {}) as never,
     version: "1.0.0",
-    description: "Test app",
+    meta: async () => ({ default: { description: "Test app" } }),
     category: AppCategory.DEVELOPER,
     props: z.object({ count: z.number() }),
     component: () => new Promise<never>(() => {}),

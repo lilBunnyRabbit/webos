@@ -24,7 +24,7 @@
     TreeStructure as TreeStructureIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
-  import { untrack, type Component } from "svelte";
+  import { onMount, untrack, type Component } from "svelte";
   import { z } from "zod";
   import AlgorithmPage from "./algorithm-page.svelte";
   import { CATALOG, entry_for, Group, GROUP_NAMES, in_group } from "./catalog";
@@ -91,10 +91,23 @@
   const input = $derived(definition ? resolve_input(definition, inputs.value[entry.id]).value : undefined);
   const params = $derived(definition ? clean_params(definition.params, all_params.value[entry.id]) : {});
 
+  // The props schema takes any id, so the catalog stays out of the boot chunk (ADR-049).
+  const unknown_section = untrack(() => props.section !== undefined && !entry_for(props.section));
+
   untrack(() => {
-    if (props.input !== undefined) inputs.value = { ...inputs.value, [props.section ?? section.value]: props.input };
-    if (props.params) all_params.value = { ...all_params.value, [props.section ?? section.value]: props.params };
+    if (!unknown_section && props.input !== undefined) inputs.value = { ...inputs.value, [props.section ?? section.value]: props.input };
+    if (!unknown_section && props.params) all_params.value = { ...all_params.value, [props.section ?? section.value]: props.params };
     if (props.path) void open_path(props.path);
+  });
+
+  onMount(() => {
+    if (!unknown_section) return;
+    section.value = CATALOG[0].id;
+    notifications.notify(app_id, {
+      type: NotificationType.WARNING,
+      title: "Algorithm not found",
+      message: `There's no "${props.section}" here, so ${CATALOG[0].name} opened instead.`,
+    });
   });
 
   function change(next_input: unknown, next_params: Params) {

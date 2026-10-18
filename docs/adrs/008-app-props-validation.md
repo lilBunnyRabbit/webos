@@ -9,6 +9,10 @@
 > - `launch(id, props?: unknown)`: input is untrusted until parsed. `AppProps` is `Record<string, unknown>`; the schema is `ZodType<TProps>`, so it must describe an object.
 > - The component type is `Component<Partial<TProps>>`, so the compiler rejects an app component with a required prop.
 
+> **Revision 2026-10-18: props stay eager** ([ADR-049](./049-lazy-app-metadata.md))
+> - Lazy app metadata moved the manifest's display text out of boot but kept `props` in the manifest, so `launch()`, the router, widgets, session restore and deep links keep validating synchronously.
+> - A schema may be looser than the app's real domain when the exact one would pull app code into boot. Algorithms' `section` is `z.string()`, not an enum over its catalog: the app checks the id on mount, toasts an unknown one and opens its first algorithm.
+
 ## Context
 
 Apps receive props when launched programmatically (e.g., opening a file in a media viewer). However, apps must also work with no props since they can be launched from app search. The current system passes props as untyped `Record<string, any>` with no runtime validation — invalid props silently reach the component.

@@ -1,8 +1,8 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `meta.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
 
-Every app is a folder with an `index.ts` that default-exports `define_app({...})`. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
+Every app is a folder with an `index.ts` that default-exports `define_app({...})`, and usually a `meta.ts` with its display text. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
 ## `define_app(config)`
 
@@ -28,13 +28,10 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
 | `system` | `boolean` | set by discovery | `true` for apps in `src/lib/apps/system/`. Puts the app in the launcher's System section; the apps inspector counts it. Not written in `define_app` |
-| `description` | `string` | no | Launcher search (lowest rank, with the category label) |
-| `keywords` | `string[]` | no | Launcher search, ranked with `id` below any name match |
-| `pitch` | `AppPitch` (`{ problem: string; solution: string }`) | no | The App Library's Showcase card and detail: the problem the app solves, from the user's side, and what it does about it, one short sentence each, user-facing (no ADR numbers or service names). Without it the Showcase shows `description` as the answer and no problem line. Plain strings in the manifest, so they ship in the boot chunk; every bundled app has one (2.2) |
+| `meta` | `() => Promise<{ default: AppMeta }>` | no | The app's display text: `description`, `keywords`, `pitch`, `authors`, as `meta: () => import("./meta")` (ADR-049). Lazy and loaded all at once after boot, see [below](#meta-metats) |
 | `highlights` | `() => Promise<{ default: AppHighlight[] }>` (`{ icon: Component; title: string; text: string }`) | no | Three or four cards on what the app does: the new-app announcement and the App Library's "What it does" (ADR-038). Lazy, like `preview`: `highlights: () => import("./highlights")`, with the cards as the default export of `highlights.ts` (`satisfies AppHighlight[]`). Manifests load at boot, and eager cards cost ~1 KB gz each app, mostly their icons. Without them the announcement shows the description only |
 | `preview` | `() => Promise<{ default: string }>` | no | A picture of the app for the announcement, as a lazy URL import (`() => import("./preview.webp?url")`), so it never weighs on boot |
-| `author` | `string` | no | Stored only. Older than `authors`; nothing reads it |
-| `authors` | `AppAuthor[]` (`{ name: string; github?: string; url?: string }`) | no | Who made the app. Omitted or empty means the owner, `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`. `app_authors(manifest)` in `services/apps/authors.ts` resolves it; the credit links to `github.com/{github}`, else `url`. Shown as "By …" in the App Library details and the new-app announcement, in Settings › About › Credits, and as `author` in `app info` and an `authors` column in `app list` |
+| `author` | `string` | no | Stored only. Older than `authors` (now in `meta`); nothing reads it |
 | `license` | `string` | no | Stored only |
 | `repository` | `string` | no | Stored only |
 | `defaults` | `WindowOptions` | no | Initial window state, below |
@@ -50,6 +47,30 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `restore` | `boolean` | no, default `true` | `false` keeps the app's windows out of saved sessions ([session](../services/session.md), ADR-023). No app sets it today |
 
 "Stored only" means the field is on the manifest and visible in code, but no UI or service reads it at the moment.
+
+### `meta` (`meta.ts`)
+
+Display text that boot never reads lives in a sibling `meta.ts`, not in the manifest (ADR-049, 3.0). Manifests are discovered eagerly, so anything in `index.ts` ships in the boot chunk; the text was ~9.5 KB gz of it and grew with every app.
+
+```ts
+// meta.ts
+import type { AppMeta } from "$lib/core/api";
+
+export default {
+  description: "Edit images and stitch them together.",
+  keywords: ["photo", "crop"],
+  pitch: { problem: "…", solution: "…" },
+} satisfies AppMeta;
+```
+
+| `AppMeta` field | Type | Read by |
+|-----------------|------|---------|
+| `description` | `string` | Launcher search (lowest rank, with the category label), the App Library (tile title, list row, details), the Showcase fallback, Game Hub, the intro's suggestions, the new-app announcement, `app info` / `app list` |
+| `keywords` | `string[]` | Launcher and App Library search, ranked with `id` below any name match; the App Library details' Keywords chips |
+| `pitch` | `AppPitch` (`{ problem: string; solution: string }`) | The App Library's Showcase card and detail: the problem the app solves, from the user's side, and what it does about it, one short sentence each, user-facing (no ADR numbers or service names). Without it the Showcase shows `description` as the answer and no problem line. Every bundled app has one (2.2) |
+| `authors` | `AppAuthor[]` (`{ name: string; github?: string; url?: string }`) | Who made the app. Omitted or empty means the owner, `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`. `app_authors(meta)` in `services/apps/authors.ts` resolves it; the credit links to `github.com/{github}`, else `url`. Shown as "By …" in the App Library details and the new-app announcement, in Settings › About › Credits, and as `author` in `app info` and an `authors` column in `app list` |
+
+How it loads: AppsService imports every app's `meta` once, in `requestIdleCallback` after boot, and the readers await it ([apps](../services/apps.md#app-meta-adr-049)). Vite's `manualChunks` puts every `apps/*/*/meta.ts` into one `app-meta` chunk. Until it arrives, the launcher matches names, ids and categories only, and the text fills in; it's one small chunk, so that window is short. Readers combine a manifest with its meta as an `AppListing` (`AppManifest & AppMeta`) through `load_metas(apps)` and `with_meta(manifest, metas)` (`services/apps/meta.ts`).
 
 ### `category` and `system`
 

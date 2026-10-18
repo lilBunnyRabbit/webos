@@ -1,6 +1,6 @@
 # ADR-049: Lazy App Metadata
 **Date:** 2026-10-18
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 

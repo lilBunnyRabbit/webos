@@ -10,12 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
-  description: "Browse, open, move, copy and share your files and folders.",
-  pitch: {
-    problem: "Your files need a home you can actually browse.",
-    solution: "Open, move, copy, rename and share files and folders, like on any desktop.",
-  },
-  keywords: ["files", "folders", "finder", "browse", "explorer", "manager", "directory", "upload", "download"],
+  meta: () => import("./meta"),
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,
   highlights: () => import("./highlights"),

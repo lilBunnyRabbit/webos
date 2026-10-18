@@ -8,12 +8,7 @@ export default define_app({
   name: "Funky DSL",
   icon: AppIcon,
   version: "1.0.0",
-  description: "Write SimplePlanes Funky Trees as code, simulate it, and copy setters and part inputs.",
-  pitch: {
-    problem: "Writing Funky Trees in SimplePlanes is fiddly without feedback.",
-    solution: "Write them as code, simulate the result and copy the setters into the game.",
-  },
-  keywords: ["simpleplanes", "funky trees", "autopilot", "pid", "craft"],
+  meta: () => import("./meta"),
   category: AppCategory.DEVELOPER,
   associations: [".fdsl"],
   tools: [".xml"],

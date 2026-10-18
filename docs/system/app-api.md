@@ -1,8 +1,16 @@
 # App API
 
-ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md) · Pinned by: `src/lib/core/app-api.test.ts`
+ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md), [049](../adrs/049-lazy-app-metadata.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md), [lazy app metadata](../brainstorm/2026-10-18_lazy-app-metadata.md) · Pinned by: `src/lib/core/app-api.test.ts`
 
-What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. 2.0 made one break, removing the eager `shell: {…}` manifest form ([shell contributions](#shell-contributions)); everything else carried over, and it now holds until 3.0. Anything not listed is internal: use it if you want, but it can change in any release.
+What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. Anything not listed is internal: use it if you want, but it can change in any release.
+
+**Stable until 4.0.** Each major so far broke only what's listed here; everything else carried over:
+
+| Major | Break | Moving an app across |
+|-------|-------|----------------------|
+| 2.0 | The eager `shell: {…}` manifest form was removed ([shell contributions](#shell-contributions)) | Move the object into `commands.ts` and point `shell` at it |
+| 3.0 | `description`, `keywords`, `pitch` and `authors` left the manifest for a lazy `meta` module (ADR-049) | Move the four fields into a sibling `meta.ts` (`export default { … } satisfies AppMeta`) and add `meta: () => import("./meta")` |
+| 3.0 | The shims `$lib/core/games` (and `games/time`, `games/daily`, `games/direction`) and `$lib/core/utils/image`, kept by ADR-048, were removed | Import the same names from `$kit/games` (and its `time`, `daily`, `direction`) and `$kit/utils/image` |
 
 The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app context](apps/app-context.md), [file associations](apps/file-associations.md), [writing an app](apps/writing-an-app.md)). This page only says what's promised.
 
@@ -12,12 +20,12 @@ The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app 
 |--------|---------|
 | Adding to the stable surface: a new export, an optional manifest field, a new handle member, a new service method marked stable | minor |
 | Fixing behaviour so it matches this page or the detail pages | patch |
-| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (next: 3.0)** |
+| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (next: 4.0)** |
 | Anything internal | any release, no notice |
 
 "Stable" means the name, the signature and the documented behaviour. A stable function can grow an optional parameter in a minor; it can't lose one. A stable interface can grow an optional member; it can't lose one or make one required.
 
-How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is the next major (3.0).
+How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is the next major (4.0).
 
 The test covers names, not signatures or behaviour. Those are still on you.
 
@@ -37,7 +45,6 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$kit/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 | `$kit/utils/image` | The names in [App kit](#app-kit-kit) | |
-| `$lib/core/games`, `games/time`, `games/daily`, `games/direction`, `$lib/core/utils/image` | Same exports as their `$kit` path | Shims left when the [app kit](#app-kit-kit) moved them. They keep working until 3.0; new code imports `$kit` |
 
 ## Manifest: `define_app`
 
@@ -46,11 +53,9 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | Field | Stable | Notes |
 |-------|--------|-------|
 | `id`, `name`, `version`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
-| `description`, `keywords` | yes | Launcher search |
-| `pitch` | yes (2.2) | `AppPitch` (`{ problem, solution }`, one short sentence each). The App Library's Showcase tells the app's story with it; without it the Showcase falls back to `description`. Eager, so it costs boot weight: keep it short |
 | `highlights`, `preview` | yes (1.5) | The new-app announcement and the App Library details. `highlights: () => import("./highlights")` (a module whose default is `AppHighlight[]`, `{ icon, title, text }`; lazy since 1.9), `preview: () => import("./preview.webp?url")` (ADR-038) |
+| `meta` | yes (3.0) | `meta: () => import("./meta")`, the module default-exporting an `AppMeta` (ADR-049): `description` (one sentence; launcher search and the App Library), `keywords` (launcher search), `pitch` (`AppPitch`, `{ problem, solution }`, one short sentence each: the Showcase tells the app's story with it and falls back to `description`), `authors` (`AppAuthor[]`, `{ name, github?, url? }`; omitted means the owner, `OWNER`; credited in the App Library details, the new-app announcement, Settings › About › Credits and `app info` / `app list`). Every member of `AppMeta` is stable. Loaded after boot, so it costs no boot weight |
 | `author`, `license`, `repository` | yes | Stored only today. `author` predates `authors` and isn't read |
-| `authors` | yes (1.5) | `AppAuthor[]` (`{ name, github?, url? }`). Omitted means the owner (`OWNER`). Credited in the App Library details, the new-app announcement, Settings › About › Credits and `app info` / `app list` |
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
 | `props` | yes | A zod object schema |
@@ -63,7 +68,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 
 `define_app` throws at boot on an invalid `widget_size`. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
-Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
+Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
 
 ## Props and file associations
 
@@ -135,7 +140,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 
 | Key | Stable | Internal (used by) |
 |-----|--------|--------------------|
-| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps) |
+| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps); `meta_ready`, `meta` (ADR-049; Game Hub and system UI, through `load_metas` / `with_meta`) |
 | `files` | `get_file` (17), `get_directory` (11), `create_file` (9), `create_directory` (7), `revision` (7), `list` (3), `delete_entry` (3), `exists` (2), `get_root` (2) | `read_file`, `rename_entry` (one each); `write_file`, `directory`, `move_*`, `copy_*`, `move_paths`, `copy_paths`, `import_entries`, `upload_files`, `export_to_disk`, `get_storage_estimate`, `get_directory_size`, `clear` |
 | `notifications` | `notify` (21), `request_system` (3), `update` (1; a `progress` notification is useless without it) | `hide_toast` (Pomodoro), `dismiss`, `mark_read`, `mark_all_read`, `all`, `toasts`, `unread_count` |
 | `desktop` | `items` (5), `pin_widget` (7), `remove_item` (7) | `pin`, `open`, `rename_item`, `create_folder`, `names` and the grid/mobile variants |
@@ -169,7 +174,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
 | `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |
 
-The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-export these until 3.0. `app-api.test.ts` pins both. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
+The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 
 ## Games kit
 

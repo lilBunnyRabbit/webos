@@ -9,12 +9,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description: "Run commands over files, windows and apps, and pipe their results.",
-  pitch: {
-    problem: "Clicking through windows is slow when you know exactly what you want.",
-    solution: "Type commands over files, windows and apps, and pipe one result into the next.",
-  },
-  keywords: ["shell", "command", "console", "cli", "prompt", "bash", "command line"],
+  meta: () => import("./meta"),
   props: z.object({
     /** The folder to start in; home by default. */
     cwd: z.string().optional(),

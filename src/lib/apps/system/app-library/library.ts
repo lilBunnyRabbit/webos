@@ -1,5 +1,5 @@
 import { APP_CATEGORY_LABELS, group_apps, search_apps } from "$lib/core/api/services/apps/search";
-import { AppCategory, type AppId, type AppManifest } from "$lib/core/api/services/apps/type";
+import { AppCategory, type AppId, type AppListing } from "$lib/core/api/services/apps/type";
 import { recency } from "$lib/core/api/services/version/history";
 import type { Release } from "$lib/core/api/services/version/type";
 import type { Command } from "$lib/core/api/services/shell/type";
@@ -33,7 +33,7 @@ export interface LibrarySection {
   /** A category, or a release version for the recent sort. */
   id: string;
   label: string | null;
-  apps: AppManifest[];
+  apps: AppListing[];
 }
 
 export interface LibraryQuery {
@@ -46,11 +46,11 @@ export interface LibraryQuery {
   installed: ReadonlySet<AppId>;
 }
 
-export function category_of(manifest: AppManifest): Exclude<LibraryCategory, "all"> {
+export function category_of(manifest: AppListing): Exclude<LibraryCategory, "all"> {
   return manifest.system ? LibraryCategory.SYSTEM : manifest.category;
 }
 
-export function has_filter(manifest: AppManifest, filter: LibraryFilter, { used, installed }: Pick<LibraryQuery, "used" | "installed">): boolean {
+export function has_filter(manifest: AppListing, filter: LibraryFilter, { used, installed }: Pick<LibraryQuery, "used" | "installed">): boolean {
   switch (filter) {
     case LibraryFilter.WIDGET:
       return manifest.widget !== undefined;
@@ -65,11 +65,11 @@ export function has_filter(manifest: AppManifest, filter: LibraryFilter, { used,
   }
 }
 
-function matching(apps: Iterable<AppManifest>, { query, filters, ...context }: Omit<LibraryQuery, "category">): AppManifest[] {
+function matching(apps: Iterable<AppListing>, { query, filters, ...context }: Omit<LibraryQuery, "category">): AppListing[] {
   return search_apps(apps, query).filter((manifest) => filters.every((filter) => has_filter(manifest, filter, context)));
 }
 
-export function category_counts(apps: Iterable<AppManifest>, query: Omit<LibraryQuery, "category">): Record<LibraryCategory, number> {
+export function category_counts(apps: Iterable<AppListing>, query: Omit<LibraryQuery, "category">): Record<LibraryCategory, number> {
   const counts = Object.fromEntries(LIBRARY_CATEGORIES.map(({ id }) => [id, 0])) as Record<LibraryCategory, number>;
   for (const manifest of matching(apps, query)) {
     counts[LibraryCategory.ALL]++;
@@ -80,7 +80,7 @@ export function category_counts(apps: Iterable<AppManifest>, query: Omit<Library
 
 /** The search only narrows; the order always comes from `sort`, so tiles keep their order while typing. */
 export function library_sections(
-  apps: Iterable<AppManifest>,
+  apps: Iterable<AppListing>,
   { category, sort, changelog = [], ...rest }: LibraryQuery & { sort: LibrarySort; changelog?: readonly Release[] }
 ): LibrarySection[] {
   const list = matching(apps, rest).filter((manifest) => category === LibraryCategory.ALL || category_of(manifest) === category);
@@ -91,8 +91,8 @@ export function library_sections(
 }
 
 /** One section per release, newest first, holding the apps it last added or changed; apps it never mentions go last. */
-function recent_sections(list: AppManifest[], changelog: readonly Release[]): LibrarySection[] {
-  const groups = new Map<number, AppManifest[]>();
+function recent_sections(list: AppListing[], changelog: readonly Release[]): LibrarySection[] {
+  const groups = new Map<number, AppListing[]>();
   for (const manifest of list) {
     const index = recency(changelog, manifest.id);
     groups.set(index, [...(groups.get(index) ?? []), manifest]);
@@ -109,19 +109,19 @@ function recent_sections(list: AppManifest[], changelog: readonly Release[]): Li
     });
 }
 
-export function showcase_sections(apps: Iterable<AppManifest>, { query, category }: { query: string; category: LibraryCategory }): LibrarySection[] {
+export function showcase_sections(apps: Iterable<AppListing>, { query, category }: { query: string; category: LibraryCategory }): LibrarySection[] {
   const list = search_apps(apps, query);
   return LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL && (category === LibraryCategory.ALL || id === category))
     .map(({ id, label }) => ({ id, label, apps: list.filter((manifest) => category_of(manifest) === id).sort((a, b) => a.name.localeCompare(b.name)) }))
     .filter((section) => section.apps.length > 0);
 }
 
-export function app_story(manifest: AppManifest): { problem: string | null; solution: string } {
+export function app_story(manifest: AppListing): { problem: string | null; solution: string } {
   return manifest.pitch ?? { problem: null, solution: manifest.description ?? "" };
 }
 
 /** From the shell's registry, which holds the apps' commands once loaded (ADR-034). */
-export function app_commands(manifest: AppManifest, commands: readonly Command[]): { id: string; description: string }[] {
+export function app_commands(manifest: AppListing, commands: readonly Command[]): { id: string; description: string }[] {
   return commands
     .filter((command) => command.app === manifest.id)
     .map(({ id, description }) => ({ id, description }))
@@ -132,10 +132,10 @@ function sort_types(types: string[] | undefined): string[] {
   return [...(types ?? [])].sort((a, b) => Number(!a.startsWith(".")) - Number(!b.startsWith(".")) || a.localeCompare(b));
 }
 
-export function app_file_types(manifest: AppManifest): { opens: string[]; works_on: string[] } {
+export function app_file_types(manifest: AppListing): { opens: string[]; works_on: string[] } {
   return { opens: sort_types(manifest.associations), works_on: sort_types(manifest.tools) };
 }
 
-export function category_label(manifest: AppManifest): string {
+export function category_label(manifest: AppListing): string {
   return manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category];
 }

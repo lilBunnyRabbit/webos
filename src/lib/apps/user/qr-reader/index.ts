@@ -10,12 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
-  description: "Scans QR codes and barcodes from your camera or an image.",
-  pitch: {
-    problem: "A QR code on screen or in a photo is hard to read without a phone.",
-    solution: "Scan QR codes and barcodes from your camera or an image.",
-  },
-  keywords: ["qr", "barcode", "scan", "scanner", "camera", "code"],
+  meta: () => import("./meta"),
   tools: ["image/*"],
   props: FILE_PROPS,
   defaults: {

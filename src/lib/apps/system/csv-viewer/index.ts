@@ -10,9 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
-  description: "Opens CSV and TSV files as a table.",
-  pitch: { problem: "A CSV file reads like a wall of commas in a text editor.", solution: "Open it as a clean table, TSV files too." },
-  keywords: ["csv", "tsv", "table", "spreadsheet", "data", "excel", "columns"],
+  meta: () => import("./meta"),
   associations: ["text/csv", "text/tab-separated-values", ".csv", ".tsv"],
   props: FILE_PROPS,
   defaults: {

@@ -9,18 +9,18 @@ import { with_pin, without_pin } from "../settings/taskbar";
 import { TaskbarPosition, TaskbarSize, type SettingsService } from "../settings/type";
 import { author_names } from "./authors";
 import { APP_CATEGORY_LABELS } from "./search";
-import type { AppManifest, AppsService } from "./type";
+import type { AppManifest, AppMeta, AppsService } from "./type";
 
 const EXPLORER = "file-explorer";
 
-function app_value(manifest: AppManifest): Tagged {
+function app_value(manifest: AppManifest, meta: AppMeta): Tagged {
   return {
     $type: "app",
     id: manifest.id,
     name: manifest.name,
     category: manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category],
-    authors: author_names(manifest),
-    description: manifest.description ?? "",
+    authors: author_names(meta),
+    description: meta.description ?? "",
   };
 }
 
@@ -82,8 +82,10 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         id: "app list",
         description: "Installed apps",
         yields: "app",
-        *run() {
-          for (const [, manifest] of [...apps.list({ installed: true })].sort(([, a], [, b]) => a.name.localeCompare(b.name))) yield app_value(manifest);
+        async *run() {
+          for (const [id, manifest] of [...apps.list({ installed: true })].sort(([, a], [, b]) => a.name.localeCompare(b.name))) {
+            yield app_value(manifest, await apps.meta(id));
+          }
         },
       }),
       define_command({
@@ -91,9 +93,9 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         description: "Details of an app",
         args: z.object({ id: arg.app() }),
         positional: ["id"],
-        run({ args }) {
+        async run({ args }) {
           const manifest = require_app(args.id);
-          const { $type: _, authors, ...app } = app_value(manifest);
+          const { $type: _, authors, ...app } = app_value(manifest, await apps.meta(args.id));
           return {
             ...app,
             author: authors,
@@ -118,10 +120,10 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         id: "taskbar list",
         description: "Apps pinned to the taskbar's quick launch, in order",
         yields: "app",
-        *run() {
+        async *run() {
           for (const id of settings().taskbar.pinned) {
             const manifest = apps.get(id);
-            if (manifest) yield app_value(manifest);
+            if (manifest) yield app_value(manifest, await apps.meta(manifest.id));
           }
         },
       }),

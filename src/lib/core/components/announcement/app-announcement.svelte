@@ -1,8 +1,8 @@
 <script lang="ts" module>
-  import type { AppManifest } from "$lib/core/api";
+  import type { AppListing } from "$lib/core/api";
 
   export interface AnnouncedApp {
-    manifest: AppManifest;
+    manifest: AppListing;
     version: string;
   }
 
@@ -41,14 +41,14 @@
   const last = $derived(page >= apps.length - 1);
   let opened = $state<string[]>([]);
 
-  const category = (manifest: AppManifest) => (manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category]);
+  const category = (manifest: AppListing) => (manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category]);
 
   function next() {
     if (last) resolve(true);
     else page++;
   }
 
-  function open(manifest: AppManifest) {
+  function open(manifest: AppListing) {
     apps_service.launch(manifest.id);
     if (listed) opened = [...opened, manifest.id];
     else next();
@@ -65,7 +65,7 @@
   }
 </script>
 
-{#snippet app_tile(manifest: AppManifest, size: "lg" | "sm")}
+{#snippet app_tile(manifest: AppListing, size: "lg" | "sm")}
   <span
     class={cn(
       "relative grid shrink-0 place-items-center bg-background-light shadow-raised ring-1 ring-foreground/10",
@@ -83,7 +83,7 @@
   ></div>
 {/snippet}
 
-{#snippet preview(manifest: AppManifest)}
+{#snippet preview(manifest: AppListing)}
   {#if manifest.preview}
     {#await manifest.preview() then image}
       <img

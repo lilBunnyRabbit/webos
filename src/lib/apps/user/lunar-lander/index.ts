@@ -8,12 +8,7 @@ export default define_app({
   icon: AppIcon,
   version: "0.1.0",
   category: AppCategory.GAMES,
-  description: "Pick a ship and a planet, then set it down on the pad, gently.",
-  pitch: {
-    problem: "You want a short game that rewards a steady hand.",
-    solution: "Pick a ship and a planet, then set it down on the pad, gently.",
-  },
-  keywords: ["game", "arcade", "rocket", "space", "physics"],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 440 },

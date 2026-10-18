@@ -1,6 +1,6 @@
 # AppsService
 
-Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps), [047](../../adrs/047-solo-app-open.md) (solo) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
+Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps), [047](../../adrs/047-solo-app-open.md) (solo), [049](../../adrs/049-lazy-app-metadata.md) (meta) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -8,9 +8,10 @@ The app registry. Holds every discovered manifest and which user apps are instal
 
 | File | Contents |
 |------|----------|
-| `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppsFilter`, `UninstallOptions`, `AppCategory`, `AppProps`, `AppAuthor`, `AppPitch`, `AppHighlight`, `DailyRank` (re-exported by the games kit, ADR-048), `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
+| `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppsFilter`, `UninstallOptions`, `AppCategory`, `AppProps`, `AppMeta`, `AppListing`, `AppAuthor`, `AppPitch`, `AppHighlight`, `DailyRank` (re-exported by the games kit, ADR-048), `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
 | `helpers.ts` | `define_app()`, `FILE_PROPS` |
-| `authors.ts` | `OWNER`, `app_authors()`, `author_link()`, `author_names()`, `credits()`, `Credit`: who made an app (manifest `authors`, else the owner) |
+| `authors.ts` | `OWNER`, `app_authors()`, `author_link()`, `author_names()`, `credits()`, `Credit`: who made an app (the meta's `authors`, else the owner) |
+| `meta.ts` | `load_metas()`, `with_meta()`: every app's loaded `AppMeta` as a map, and a manifest merged with it (ADR-049) |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
 | `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
@@ -39,6 +40,8 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Installs an app that isn't, with an "{App} installed" toast. Always opens a new window |
 | `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
+| `meta_ready` | `Promise<void>` (getter) | Settles once every app's `meta` has loaded; the first read starts the load. [App meta](#app-meta-adr-049) |
+| `meta(id)` | `(id: AppId): Promise<AppMeta>` | After `meta_ready`: the app's meta, `{}` without one |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
 
@@ -78,6 +81,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 
 - `registry`, filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)).
 - `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
+- `metas`, a private plain `Map<AppId, AppMeta>`, filled once by the meta load ([below](#app-meta-adr-049)). Not reactive: it never changes after it fills, and readers await it.
 
 The constructor also wires `$derived` references to its five dependencies. There is no `destroy()`.
 
@@ -87,6 +91,8 @@ The constructor also wires `$derived` references to its five dependencies. There
 2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the system apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
 3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Library**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
+
+Before any of that, `init()` schedules the meta load with `requestIdleCallback`.
 
 ## Lifecycle
 
@@ -109,6 +115,15 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
+
+### App meta (ADR-049)
+
+An app's display text (`description`, `keywords`, `pitch`, `authors`) is in its `meta.ts`, behind the manifest's `meta` loader ([manifest](../apps/manifest.md#meta-metats)), so boot never carries it.
+
+- **Loading.** `meta_ready` is a getter over one memoized promise: the first read starts the load, every later read gets the same promise. `init()` reads it from `requestIdleCallback`, so the load normally runs once the main thread is idle after boot; anything that awaits it sooner (a first-boot intro, a launcher opened at once) starts it then. The load calls every registered app's `meta()` in parallel with `Promise.allSettled`; Vite puts all of them in one `app-meta` chunk, so it's one request. A module that fails logs `[AppsService] {id}'s meta failed to load` and the app counts as having none. It runs once per page: an app registered after the load starts has no meta (only tests register late).
+- **`meta(id)`** awaits `meta_ready` and resolves the app's `AppMeta`, or `{}` for an app without `meta`, one whose module failed, or an unknown id.
+- **Readers.** `load_metas(apps)` (`apps/meta.ts`) awaits `meta_ready` and resolves a `ReadonlyMap<AppId, AppMeta>` for every registered app; `with_meta(manifest, metas)` merges one into an `AppListing` (`AppManifest & AppMeta`), or returns the bare manifest while the map is empty. The start menu, the mobile drawer, the App Library and Showcase, Game Hub, Settings › About › Credits and the Style Guide keep the map in `$state.raw` and derive their lists from it, so they render names at once and the text fills in. `search_apps` and `group_apps` are generic over the listing type. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement only after `meta_ready` ([version](version.md)).
+- Static per app, so two windows of one app, the mobile service set and solo mode (`SoloAppsService` inherits it) all share the one load.
 
 ### Solo mode
 

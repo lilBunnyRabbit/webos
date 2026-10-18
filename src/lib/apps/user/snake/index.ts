@@ -8,9 +8,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Classic Snake: eat, grow, don't bite yourself.",
-  pitch: { problem: "You want a game you already know how to play.", solution: "Classic Snake: eat, grow, don't bite yourself." },
-  keywords: ["game", "arcade", "classic", "retro"],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 300 },

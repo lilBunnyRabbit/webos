@@ -10,13 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description:
-    "Build and send HTTP requests, read the response, save requests as .http files and download to your files.",
-  pitch: {
-    problem: "Testing an API usually means installing a heavy desktop tool.",
-    solution: "Build and send HTTP requests, read the response and save them as .http files.",
-  },
-  keywords: ["api", "http", "rest", "request", "fetch", "curl", "wget", "postman", "json", "download", "endpoint"],
+  meta: () => import("./meta"),
   associations: HTTP_FILES,
   props: z.object({ path: z.string().optional() }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },

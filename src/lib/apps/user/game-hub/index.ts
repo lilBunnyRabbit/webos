@@ -10,12 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
-  description: "Every game in one place, with play time, stats and today's daily puzzles.",
-  pitch: {
-    problem: "With many games, it's easy to forget what you played and how well.",
-    solution: "Every game in one place, with play time, stats and today's daily puzzles.",
-  },
-  keywords: ["games", "game", "library", "launcher", "daily", "puzzle", "streak", "stats", "play time"],
+  meta: () => import("./meta"),
   props: z.object({ tab: z.enum(Tab).optional() }),
   defaults: {
     constraints: {

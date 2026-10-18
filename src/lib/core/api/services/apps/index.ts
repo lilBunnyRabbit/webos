@@ -1,6 +1,7 @@
 export * from "./associations";
 export * from "./authors";
 export * from "./helpers";
+export * from "./meta";
 export * from "./shortcut";
 export * from "./type";
 export * from "./search";

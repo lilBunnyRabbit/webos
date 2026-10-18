@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { AppCategory, type AppManifest } from "$lib/core/api/services/apps/type";
+import { AppCategory, type AppListing } from "$lib/core/api/services/apps/type";
 import type { Command } from "$lib/core/api/services/shell/type";
 import { ChangeKind, type Release } from "$lib/core/api/services/version/type";
 import {
@@ -16,8 +16,8 @@ import {
   showcase_sections,
 } from "./library";
 
-const app = (name: string, extra: Partial<AppManifest> = {}) =>
-  ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppManifest;
+const app = (name: string, extra: Partial<AppListing> = {}) =>
+  ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppListing;
 
 const command = (id: string, app?: string) => ({ id, description: id, app, run() {} }) as Command;
 const COMMANDS = [command("note add", "quick-notes"), command("note", "quick-notes"), command("ls")];
@@ -32,7 +32,7 @@ const APPS = [
 ];
 
 const BASE = { query: "", category: LibraryCategory.ALL, filters: [], used: new Set<string>(), installed: new Set<string>(), sort: LibrarySort.NAME } as const;
-const names = (sections: { apps: AppManifest[] }[]) => sections.flatMap((section) => section.apps.map((manifest) => manifest.name));
+const names = (sections: { apps: AppListing[] }[]) => sections.flatMap((section) => section.apps.map((manifest) => manifest.name));
 
 describe("category_of", () => {
   test("system apps are System whatever their category", () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { AppManifest } from "$lib/core/api";
+  import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Button, IconButton } from "$lib/core/components/ui";
@@ -8,7 +8,7 @@
   import ShowcaseActions from "./showcase-actions.svelte";
 
   interface Props {
-    manifest: AppManifest;
+    manifest: AppListing;
     onback: () => void;
     onstore: () => void;
   }

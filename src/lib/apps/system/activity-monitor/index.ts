@@ -10,26 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description:
-    "What's running and how hard it works: windows, widgets, frame rate, network, storage and background tasks.",
-  pitch: {
-    problem: "Something feels slow and you can't tell what's doing it.",
-    solution: "See every window, widget, background task and the frame rate live, and close what's heavy.",
-  },
-  keywords: [
-    "task manager",
-    "processes",
-    "performance",
-    "fps",
-    "memory",
-    "storage",
-    "network",
-    "profiler",
-    "monitor",
-    "widgets",
-    "tasks",
-    "background",
-  ],
+  meta: () => import("./meta"),
   defaults: {
     constraints: {
       width: { min: 480 },

@@ -7,12 +7,7 @@ export default define_app({
   name: "P2P Transfer",
   icon: AppIcon,
   version: "1.0.0",
-  description: "Sends files straight to another device. The two devices connect by scanning each other's QR code.",
-  pitch: {
-    problem: "Moving a file to the phone next to you usually goes through the cloud.",
-    solution: "Send it straight between devices, connected by scanning each other's QR code.",
-  },
-  keywords: ["send", "share", "receive", "webrtc", "peer", "airdrop", "qr", "transfer", "files", "phone"],
+  meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   defaults: {
     constraints: {

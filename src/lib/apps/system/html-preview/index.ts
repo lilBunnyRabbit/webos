@@ -10,12 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
-  description: "Renders an HTML file safely in a sandbox, without running its scripts.",
-  pitch: {
-    problem: "Opening a downloaded HTML file can run scripts you didn't ask for.",
-    solution: "Render it in a sandbox, so you see the page without running its code.",
-  },
-  keywords: ["html", "web page", "website", "preview", "browser", "render"],
+  meta: () => import("./meta"),
   associations: ["text/html", ".html", ".htm"],
   props: FILE_PROPS,
   defaults: {

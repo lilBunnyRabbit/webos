@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppManifest, type AppsService, type DialogsService } from "$lib/core/api";
+  import kernel, { load_metas, with_meta, type AppId, type AppListing, type AppMeta, type AppsService, type DialogsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppAnnouncement, { type AnnouncedApp } from "$lib/core/components/announcement/app-announcement.svelte";
   import {
@@ -101,19 +101,24 @@
     { icon: ShapesIcon, title: "Shapes and text", text: "Lines, rectangles, ellipses and text on their own layer until placed." },
     { icon: FloppyDiskIcon, title: "Your files", text: "Opens and saves PNG, JPEG and WebP in your folders." },
   ];
+  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
+  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
+  const pick = (id: string) => {
+    const manifest = apps.get(id);
+    return manifest && with_meta(manifest, metas);
+  };
   const sample_apps = $derived.by((): AnnouncedApp[] => {
-    const pick = (id: string) => apps.get(id);
     const paint = pick("paint");
     const list = [
       paint && { ...paint, highlights: () => Promise.resolve({ default: SAMPLE_HIGHLIGHTS }) },
       pick("maze"),
       pick("calculator"),
-    ].filter((manifest): manifest is AppManifest => Boolean(manifest));
+    ].filter((manifest): manifest is AppListing => Boolean(manifest));
     return list.map((manifest) => ({ manifest, version: "1.5.0" }));
   });
   const many_apps = $derived(
     ["paint", "maze", "snake", "sudoku", "kanban", "clock"].flatMap((id) => {
-      const manifest = apps.get(id);
+      const manifest = pick(id);
       return manifest ? [{ manifest, version: "0.34.0" }] : [];
     })
   );
