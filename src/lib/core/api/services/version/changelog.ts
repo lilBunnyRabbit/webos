@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.2.0",
+    date: "2026-10-18",
+    title: "Pick your format",
+    introduces: ["format-lab"],
+    changes: [
+      { kind: NEW, apps: ["format-lab"], text: "Format Lab: encode one image as JPEG, WebP, AVIF and JPEG XL, then swipe between any two to see what each one costs." },
+      { kind: NEW, apps: ["format-lab"], text: "Each format shows its size, its share of the original, how long it took and a quality score, with a heatmap of where detail was lost." },
+      { kind: NEW, apps: ["format-lab"], text: "Inspect an AVIF or JPEG XL file to see its size, bit depth, transparency, animation and colour, straight from the file." },
+      { kind: NEW, apps: ["format-lab"], text: "The convert command turns images, or every image in a folder, into AVIF, JPEG XL, WebP, JPEG or PNG." },
+    ],
+  },
+  {
     version: "3.1.0",
     date: "2026-10-18",
     title: "Know your colours",

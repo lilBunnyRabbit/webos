@@ -88,6 +88,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `link-preview` | `text/html`, `.html`, `.htm` (HTML Preview stays the default) |
 | `metadata` | `image/jpeg`, `image/png`, `image/webp`, `.jpg`, `.jpeg`, `.png`, `.webp`, `application/pdf`, `.pdf` |
 | `svg-workbench` | `.svg`, `image/svg+xml` |
+| `format-lab` | `image/*` (a tool on purpose: an AVIF or JPEG XL opens in Media Preview, which decodes JPEG XL through the kit's codecs, and Format Lab is under Open with) |
 | `funky` | `.xml` (imports a SimplePlanes craft save) |
 | `speed-reader` | `text/plain`, `.txt`, `.md` |
 | `hex-viewer` | `*` (every file) |
