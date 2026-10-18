@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.0.1",
+    date: "2026-10-18",
+    title: "Back where it belongs",
+    changes: [
+      { kind: FIXED, text: "In an app opened on its own page, the browser's Back closes the open panel or steps back inside the app instead of leaving the page." },
+      { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor opens on its first section when a link or command doesn't name one." },
+      { kind: FIXED, apps: ["forms", "image-tools"], text: "Pasting while a panel is open over Forms or Image Tools no longer reaches the app behind it." },
+    ],
+  },
+  {
     version: "3.0.0",
     date: "2026-10-18",
     title: "Lighter start",
