@@ -1,0 +1,10 @@
+{
+  "name": "@webos/color-games",
+  "private": true,
+  "dependencies": {
+    "culori": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/culori": "^4.0.1"
+  }
+}
