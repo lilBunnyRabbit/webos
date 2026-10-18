@@ -1,6 +1,6 @@
 # App API
 
-ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md), [049](../adrs/049-lazy-app-metadata.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md), [lazy app metadata](../brainstorm/2026-10-18_lazy-app-metadata.md) · Pinned by: `src/lib/core/app-api.test.ts`
+ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md), [049](../adrs/049-lazy-app-metadata.md), [050](../adrs/050-per-mode-dailies.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md), [lazy app metadata](../brainstorm/2026-10-18_lazy-app-metadata.md) · Pinned by: `src/lib/core/app-api.test.ts`
 
 What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. Anything not listed is internal: use it if you want, but it can change in any release.
 
@@ -41,7 +41,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$lib/core/components/ui` | The whole UI kit | |
 | `$kit/games` | The whole games kit | Import from the barrel in components and lazy files |
 | `$kit/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
-| `$kit/games/daily` | `DailyRank`, `better_daily`, `DailyResult` | Stable path (1.20), same reason as `games/time`: manifests set `daily_rank` |
+| `$kit/games/daily` | `DailyRank`, `DailyRanks`, `better_daily`, `DailyResult`, `daily_key`, `split_daily_key`, `daily_rank_for` | Stable path (1.20; the per-mode names 3.1), same reason as `games/time`: manifests set `daily_rank` |
 | `$kit/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 | `$kit/utils/image` | The names in [App kit](#app-kit-kit) | |
@@ -59,7 +59,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
 | `props` | yes | A zod object schema |
-| `daily_rank` | yes (1.20) | `DailyRank`: `time` (default), `score-asc`, `score-desc`. How the game's daily results rank, time breaking a tie |
+| `daily_rank` | yes (1.20; per-mode record 3.1) | `DailyRank`: `time` (default), `score-asc`, `score-desc`. How the game's daily results rank, time breaking a tie. Or a `DailyRanks` record, mode id → rank: the game has one daily per mode (ADR-050), Game Hub lists a row per mode |
 | `restore` | yes | `false` keeps windows out of saved sessions |
 | `shell` | yes | `() => import("./commands")`, the module default-exporting a `ShellContribution`. [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
@@ -183,11 +183,11 @@ The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib
 | Area | Names |
 |------|-------|
 | Time | `format_time`, `FormatTimeOptions`, `Stopwatch` |
-| Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`, `DailyRank`, `DailyResult`, `better_daily`. `day_key` comes from `$lib/core/utils/date` |
+| Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`, `DailyRank`, `DailyRanks`, `DailyResult`, `better_daily`, `daily_key`, `split_daily_key`, `daily_rank_for`. `day_key` comes from `$lib/core/utils/date` |
 | Play tracking | `track_play`, `PlayTracker`, `use_plays`, `Plays`, `GameStats`, `PlaysSchema`, `EMPTY_PLAYS`, `PLAYS_PATH` |
 | Input | `Direction`, `key_direction`, `swipe_direction`, `grid_key_move`, `stroke_axis`, `stroke_end`, `stroke_cells`, `Axis` |
 
-`/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?)` keeps the better result by the manifest's `daily_rank`.
+`/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?, mode?)` keeps the better result by the manifest's `daily_rank`. A day's keys are app ids, or `{app_id}/{mode}` for one mode of a game with a per-mode `daily_rank` (3.1, ADR-050); `daily_key(app_id, mode?)` builds one and `split_daily_key` takes one apart, so a reader that looks up a manifest by key splits first.
 
 ## Utilities
 

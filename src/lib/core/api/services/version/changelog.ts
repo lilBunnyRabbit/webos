@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.1.0",
+    date: "2026-10-18",
+    title: "Know your colours",
+    introduces: ["color-games"],
+    changes: [
+      { kind: NEW, apps: ["color-games"], text: "Color Games: rebuild five colours from memory, spot the tile that's a shade off, sort a scrambled gradient, or guess a colour's hex code in five tries." },
+      { kind: NEW, apps: ["color-games"], text: "Each Color Games mode has its own puzzle of the day, plus endless practice, and a result line with a link to challenge a friend on the same puzzle." },
+      { kind: IMPROVED, apps: ["game-hub"], text: "Game Hub lists each mode of a game with several dailies as its own row, and opens the game straight on that mode." },
+    ],
+  },
+  {
     version: "3.0.1",
     date: "2026-10-18",
     title: "Back where it belongs",

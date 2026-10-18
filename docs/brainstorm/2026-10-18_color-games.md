@@ -32,8 +32,8 @@ In the repo: daily results are day → app id → one result (`kit/games/plays.t
 
 ## Action items
 
-- [ ] ADR-050: per-mode dailies (extends ADR-035).
-- [ ] Implement Color Games, Game Hub per-mode rows, docs, changelog.
+- [x] ADR-050: per-mode dailies (extends ADR-035).
+- [x] Implement Color Games, Game Hub per-mode rows, docs, changelog (2026-10-18).
 
 ## Next session topics
 

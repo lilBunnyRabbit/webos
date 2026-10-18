@@ -65,7 +65,7 @@ import type {
   WindowHandle,
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
-import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
+import type { Axis, DailyRanks, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
 import type { SourceImage } from "$kit/utils/image";
 import type { Rng } from "$lib/core/utils/random";
@@ -81,11 +81,14 @@ const GAMES = [
   "PlaysSchema",
   "Stopwatch",
   "better_daily",
+  "daily_key",
+  "daily_rank_for",
   "daily_seed",
   "format_time",
   "grid_key_move",
   "key_direction",
   "parse_day",
+  "split_daily_key",
   "stroke_axis",
   "stroke_cells",
   "stroke_end",
@@ -94,7 +97,7 @@ const GAMES = [
   "use_plays",
 ];
 const GAMES_TIME = ["daily_seed", "format_time", "parse_day"];
-const GAMES_DAILY = ["DailyRank", "better_daily"];
+const GAMES_DAILY = ["DailyRank", "better_daily", "daily_key", "daily_rank_for", "split_daily_key"];
 const GAMES_DIRECTION = ["Direction", "key_direction", "swipe_direction"];
 const IMAGE = [
   "FORMAT_OPTIONS",
@@ -397,6 +400,7 @@ type StableTypes = [
   FieldVariants,
   IconComponent,
   Axis,
+  DailyRanks,
   DailyResult,
   FormatTimeOptions,
   GameStats,
