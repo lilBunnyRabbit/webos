@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Taking things out",
     changes: [
       { kind: NEW, apps: ["algorithms"], text: "Red-black trees in Algorithms now delete too, showing each recolouring and rotation that keeps the tree balanced." },
+      { kind: NEW, apps: ["algorithms"], text: "B-trees in Algorithms delete keys as well, borrowing from a neighbour or merging two nodes when one runs short." },
     ],
   },
   {
