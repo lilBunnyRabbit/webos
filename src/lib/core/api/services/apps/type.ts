@@ -86,8 +86,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;
+  /** @deprecated Stored only and never read; credits come from `authors` in `meta`. Removed in 4.0. */
   author?: string;
+  /** @deprecated Stored only and never read. Removed in 4.0. */
   license?: string;
+  /** @deprecated Stored only and never read. Removed in 4.0. */
   repository?: string;
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */

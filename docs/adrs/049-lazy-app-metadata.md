@@ -2,7 +2,7 @@
 **Date:** 2026-10-18
 **Status:** Implemented
 
-> **Revision 2026-10-18: AppsService owns listings** (owner, [brainstorm follow-up](../brainstorm/2026-10-18_lazy-app-metadata.md#follow-up-after-300-shipped)). The loaded metas are reactive state in AppsService, and `listings(filter?)` derives every manifest merged with its meta (bare manifests until the load lands). Readers use it instead of awaiting; the `load_metas` / `with_meta` helper is gone. `meta_ready` and `meta(id)` stay internal.
+> **Revision 2026-10-18: AppsService owns listings** (owner, [brainstorm follow-up](../brainstorm/2026-10-18_lazy-app-metadata.md#follow-up-after-300-shipped)). The loaded metas are reactive state in AppsService, and `listings(filter?)` derives every manifest merged with its meta (bare manifests until the load lands). Readers use it instead of awaiting; the `load_metas` / `with_meta` helper is gone. `meta_ready` and `meta(id)` stay internal. `author`, `license` and `repository` are deprecated, removed in 4.0.
 
 ## Context
 
