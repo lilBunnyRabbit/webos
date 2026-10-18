@@ -40,6 +40,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms searches text five ways, from naive to Knuth–Morris–Pratt and Boyer–Moore, and fills in edit distance and suffix array tables step by step.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms covers searching too: linear, binary, interpolation and exponential search, two pointers and a sliding window.",
+      },
     ],
   },
   {

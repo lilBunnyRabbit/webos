@@ -10,6 +10,7 @@ const LOADERS: Record<Group, () => GroupModule> = {
   [Group.STRUCTURES]: () => import("./groups/structures"),
   [Group.COMPRESSION]: () => import("./groups/compression"),
   [Group.STRINGS]: () => import("./groups/strings"),
+  [Group.SEARCHING]: () => import("./groups/searching"),
 };
 
 const loaded: Partial<Record<Group, GroupModule>> = {};

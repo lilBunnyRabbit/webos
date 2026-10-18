@@ -19,7 +19,7 @@ export const TONE_BG: Record<Tone, string> = {
   [Tone.MARK]: "bg-tertiary",
   [Tone.DONE]: "bg-success",
   [Tone.BAD]: "bg-error",
-  [Tone.MUTED]: "bg-foreground/12",
+  [Tone.MUTED]: "bg-foreground/7",
 };
 
 export const TONE_TINT: Record<Tone, string> = {

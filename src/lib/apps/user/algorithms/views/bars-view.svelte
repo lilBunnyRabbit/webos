@@ -61,7 +61,7 @@
             <span class={cn("mb-0.5 text-center font-mono text-2xs tabular-nums", tone ? TONE_TEXT[tone] : "text-foreground/65")}>{value}</span>
           {/if}
           <div
-            class={cn("min-h-0.5 rounded-t-sm transition-[height,background-color] duration-150 ease-out", tone ? TONE_BG[tone] : "bg-foreground/20")}
+            class={cn("min-h-0.5 rounded-t-sm transition-[height,background-color] duration-150 ease-out", tone ? TONE_BG[tone] : "bg-foreground/30")}
             style:height="calc({value / max} * (100% - {labelled ? '1.125rem' : '0px'}))"
           ></div>
         </div>

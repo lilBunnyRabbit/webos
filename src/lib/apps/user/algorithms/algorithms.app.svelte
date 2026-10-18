@@ -12,6 +12,7 @@
     FolderOpen as FolderOpenIcon,
     Graph as GraphIcon,
     LinkSimple as LinkSimpleIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
     SortAscending as SortAscendingIcon,
     Stack as StackIcon,
     TextAa as TextAaIcon,
@@ -41,6 +42,7 @@
     [Group.STRUCTURES]: StackIcon,
     [Group.COMPRESSION]: FileZipIcon,
     [Group.STRINGS]: TextAaIcon,
+    [Group.SEARCHING]: MagnifyingGlassIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

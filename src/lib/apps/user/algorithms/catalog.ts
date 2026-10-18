@@ -5,6 +5,7 @@ export const Group = {
   STRUCTURES: "structures",
   COMPRESSION: "compression",
   STRINGS: "strings",
+  SEARCHING: "searching",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -15,6 +16,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.STRUCTURES]: "Data structures",
   [Group.COMPRESSION]: "Compression",
   [Group.STRINGS]: "Strings",
+  [Group.SEARCHING]: "Searching",
 };
 
 export interface Complexity {
@@ -107,6 +109,13 @@ export const CATALOG: CatalogEntry[] = [
   entry("z-algorithm", "Z-algorithm", Group.STRINGS, "How far each position matches the start", ["O(n + m)", "O(n + m)", "O(n + m)", "O(n + m)"]),
   entry("edit-distance", "Edit distance", Group.STRINGS, "Fewest inserts, deletes and replacements", ["O(n·m)", "O(n·m)", "O(n·m)", "O(n·m)"]),
   entry("suffix-array", "Suffix array", Group.STRINGS, "Every suffix, sorted, with shared prefixes", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n)"]),
+
+  entry("linear-search", "Linear search", Group.SEARCHING, "Check every element in turn", ["O(1)", "O(n)", "O(n)", "O(1)"]),
+  entry("binary-search", "Binary search", Group.SEARCHING, "Halve a sorted range each step", ["O(1)", "O(log n)", "O(log n)", "O(1)"]),
+  entry("interpolation-search", "Interpolation search", Group.SEARCHING, "Guess the position from the value", ["O(1)", "O(log log n)", "O(n)", "O(1)"]),
+  entry("exponential-search", "Exponential search", Group.SEARCHING, "Double a bound, then binary search", ["O(1)", "O(log i)", "O(log n)", "O(1)"]),
+  entry("two-pointers", "Two pointers", Group.SEARCHING, "Walk in from both ends of a sorted array", ["O(1)", "O(n)", "O(n)", "O(1)"]),
+  entry("sliding-window", "Sliding window", Group.SEARCHING, "Reuse each window's sum for the next", ["O(n)", "O(n)", "O(n)", "O(1)"]),
 ];
 
 export type AlgorithmId = string;
