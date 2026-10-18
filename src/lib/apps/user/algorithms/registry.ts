@@ -11,6 +11,7 @@ const LOADERS: Record<Group, () => GroupModule> = {
   [Group.COMPRESSION]: () => import("./groups/compression"),
   [Group.STRINGS]: () => import("./groups/strings"),
   [Group.SEARCHING]: () => import("./groups/searching"),
+  [Group.DP]: () => import("./groups/dp"),
 };
 
 const loaded: Partial<Record<Group, GroupModule>> = {};

@@ -45,6 +45,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms covers searching too: linear, binary, interpolation and exponential search, two pointers and a sliding window.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms fills dynamic programming tables cell by cell: longest common subsequence, knapsack, coin change, longest increasing subsequence and matrix chain order.",
+      },
     ],
   },
   {

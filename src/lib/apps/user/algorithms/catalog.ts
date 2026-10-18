@@ -6,6 +6,7 @@ export const Group = {
   COMPRESSION: "compression",
   STRINGS: "strings",
   SEARCHING: "searching",
+  DP: "dp",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -17,6 +18,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.COMPRESSION]: "Compression",
   [Group.STRINGS]: "Strings",
   [Group.SEARCHING]: "Searching",
+  [Group.DP]: "Dynamic programming",
 };
 
 export interface Complexity {
@@ -116,6 +118,12 @@ export const CATALOG: CatalogEntry[] = [
   entry("exponential-search", "Exponential search", Group.SEARCHING, "Double a bound, then binary search", ["O(1)", "O(log i)", "O(log n)", "O(1)"]),
   entry("two-pointers", "Two pointers", Group.SEARCHING, "Walk in from both ends of a sorted array", ["O(1)", "O(n)", "O(n)", "O(1)"]),
   entry("sliding-window", "Sliding window", Group.SEARCHING, "Reuse each window's sum for the next", ["O(n)", "O(n)", "O(n)", "O(1)"]),
+
+  entry("lcs", "Longest common subsequence", Group.DP, "The longest sequence two strings share in order", ["O(n·m)", "O(n·m)", "O(n·m)", "O(n·m)"]),
+  entry("knapsack", "0/1 knapsack", Group.DP, "The most value that fits a weight limit", ["O(n·W)", "O(n·W)", "O(n·W)", "O(n·W)"]),
+  entry("coin-change", "Coin change", Group.DP, "The fewest coins for an amount", ["O(a·c)", "O(a·c)", "O(a·c)", "O(a)"]),
+  entry("lis", "Longest increasing subsequence", Group.DP, "The longest run that keeps going up", ["O(n²)", "O(n²)", "O(n²)", "O(n)"]),
+  entry("matrix-chain", "Matrix chain order", Group.DP, "The cheapest way to bracket a product", ["O(n³)", "O(n³)", "O(n³)", "O(n²)"]),
 ];
 
 export type AlgorithmId = string;

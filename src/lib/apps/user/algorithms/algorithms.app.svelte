@@ -15,6 +15,7 @@
     MagnifyingGlass as MagnifyingGlassIcon,
     SortAscending as SortAscendingIcon,
     Stack as StackIcon,
+    Table as TableIcon,
     TextAa as TextAaIcon,
     TreeStructure as TreeStructureIcon,
     WarningCircle as WarningCircleIcon,
@@ -43,6 +44,7 @@
     [Group.COMPRESSION]: FileZipIcon,
     [Group.STRINGS]: TextAaIcon,
     [Group.SEARCHING]: MagnifyingGlassIcon,
+    [Group.DP]: TableIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 
