@@ -1,7 +1,7 @@
 <script lang="ts">
   import { BRAND_DARK, BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
   import type { Theme } from "$lib/core/api/services/settings/type";
-  import { paint } from "$lib/core/utils/image";
+  import { paint } from "$kit/utils/image";
   import { CARD_HEIGHT, CARD_WIDTH, PackFile, SAFE_ZONE, type IconOptions } from "./pack";
   import type { RenderedIcons } from "./render";
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { define_command } from "$lib/core/api/services/shell/define";
-import { format_time } from "$lib/core/games/time";
+import { format_time } from "$kit/games/time";
 import type { ShellContribution } from "$lib/core/api/services/shell/type";
 
 const logic = () => import("./shell");

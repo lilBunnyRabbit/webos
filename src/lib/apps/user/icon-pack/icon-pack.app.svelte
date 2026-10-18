@@ -5,7 +5,7 @@
   import { Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { has_files } from "$lib/core/utils/image";
+  import { has_files } from "$kit/utils/image";
   import { write_at } from "$lib/core/utils/zip/files";
   import {
     AppWindow as AppWindowIcon,

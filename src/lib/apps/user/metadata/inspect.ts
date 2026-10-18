@@ -1,4 +1,4 @@
-import { read_metadata, type GpsPosition } from "$lib/core/utils/exif";
+import { read_metadata, type GpsPosition } from "$kit/utils/exif";
 import { camera, image_groups, taken, type RowGroup } from "./groups";
 import { strip_metadata } from "./strip";
 

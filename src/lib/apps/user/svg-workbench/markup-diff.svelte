@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { load_language, Language, token_highlight, token_theme } from "$lib/core/components/code";
+  import { load_language, Language, token_highlight, token_theme } from "$kit/components/code";
   import { unifiedMergeView } from "@codemirror/merge";
   import { EditorState } from "@codemirror/state";
   import { EditorView } from "@codemirror/view";

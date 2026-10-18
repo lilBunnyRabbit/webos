@@ -15,7 +15,7 @@
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { has_files, image_files, load_image, load_image_at, paint, save_image, type SourceImage } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image, load_image_at, paint, save_image, type SourceImage } from "$kit/utils/image";
   import { kept_format, redacted_name } from "./naming";
   import { RestoreMode, drag_rect, draw_ops, type Rect, type RestoreOp } from "./patch";
   import { Effect, MIN_BLOCK, MIN_BLUR, area_at, area_bounds, redact, type RedactArea } from "./redact";

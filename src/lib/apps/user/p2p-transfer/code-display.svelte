@@ -1,7 +1,7 @@
 <script lang="ts">
   import { CopyButton, IconButton } from "$lib/core/components/ui";
   import { ShareNetwork as ShareNetworkIcon } from "phosphor-svelte";
-  import { qr_path } from "$lib/core/utils/qr";
+  import { qr_path } from "$kit/utils/qr";
   import Viewfinder from "./viewfinder.svelte";
 
   let { code, label, kind }: { code: string; label: string; kind: string } = $props();

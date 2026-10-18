@@ -11,7 +11,7 @@
     SquareHalf as SquareHalfIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { has_files, image_files, paint } from "$lib/core/utils/image";
+  import { has_files, image_files, paint } from "$kit/utils/image";
   import { changed_percent, tolerance_level } from "./compare";
   import { ImagePair, Slot } from "./pair.svelte";
   import PairAlignment from "./pair-alignment.svelte";

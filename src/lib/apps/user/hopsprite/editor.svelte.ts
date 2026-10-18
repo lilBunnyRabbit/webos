@@ -1,4 +1,4 @@
-import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
+import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$kit/utils/history";
 import { pick_index } from "./composite";
 import * as doc from "./document";
 import { cel_key, create_sprite, type Layer, type Point, type Rect, type Sprite } from "./model";

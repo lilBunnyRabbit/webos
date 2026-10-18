@@ -4,8 +4,8 @@ import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { file_value } from "$lib/core/api/services/files/shell";
 import type { CommandContext, Tagged, Value } from "$lib/core/api/services/shell/type";
-import { read_metadata } from "$lib/core/utils/exif";
-import { jpeg, png, tiff } from "$lib/core/utils/exif/fixtures";
+import { read_metadata } from "$kit/utils/exif";
+import { jpeg, png, tiff } from "$kit/utils/exif/fixtures";
 import { pdf_lib } from "$lib/apps/user/pdf-tools/pdf";
 import { meta, strip } from "./shell";
 

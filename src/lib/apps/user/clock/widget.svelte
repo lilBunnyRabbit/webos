@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import { format_date, clamp, pad2 } from "$lib/core/utils";
-  import { format_time } from "$lib/core/games";
+  import { format_time } from "$kit/games";
   import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
   import { APP_ID, ClockFace, ClockTab, format_hm, format_until, next_alarm, timer_remaining } from "./clock";

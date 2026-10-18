@@ -19,7 +19,7 @@ import {
   read_pixels,
   write_image,
   type SourceImage,
-} from "$lib/core/utils/image";
+} from "$kit/utils/image";
 import { compare_images } from "./compare";
 import { concat_images, type Align, type Direction } from "./join";
 import {

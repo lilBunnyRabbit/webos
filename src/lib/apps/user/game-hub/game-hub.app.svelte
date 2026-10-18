@@ -2,7 +2,7 @@
   import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, use_plays } from "$lib/core/games";
+  import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import {
     CalendarCheck as CalendarCheckIcon,

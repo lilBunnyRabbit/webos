@@ -16,7 +16,7 @@
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { has_files, image_files, is_image_file, load_image, load_image_at, paint, read_pixels, type SourceImage } from "$lib/core/utils/image";
+  import { has_files, image_files, is_image_file, load_image, load_image_at, paint, read_pixels, type SourceImage } from "$kit/utils/image";
   import { AtlasFormat, SHEET_SIZES, natural_compare, pack, unique_names, type AtlasFrame, type Rect } from "./atlas";
   import { draw_sheet, export_atlas, type SheetFrame } from "./atlas-render";
   import { is_image_name } from "./naming";

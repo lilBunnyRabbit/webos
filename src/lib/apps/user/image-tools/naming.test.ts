@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { ImageFormat } from "$lib/core/utils/image-format";
+import { ImageFormat } from "$kit/utils/image-format";
 import {
   is_image_name,
   joined_name,

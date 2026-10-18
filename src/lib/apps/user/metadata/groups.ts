@@ -1,5 +1,5 @@
 import { format_bytes } from "$lib/core/utils";
-import type { ExifTags, ExifValue, GpsPosition, Metadata } from "$lib/core/utils/exif";
+import type { ExifTags, ExifValue, GpsPosition, Metadata } from "$kit/utils/exif";
 
 export const Group = {
   DOCUMENT: "Document",

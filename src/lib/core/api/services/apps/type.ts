@@ -4,7 +4,7 @@ import type { IService } from "../../type";
 import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
-import type { DailyRank } from "$lib/core/games/daily";
+import type { DailyRank } from "$kit/games/daily";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;

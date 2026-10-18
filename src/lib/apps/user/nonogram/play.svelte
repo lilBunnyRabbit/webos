@@ -13,7 +13,7 @@
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { daily_seed, format_time, Stopwatch } from "$lib/core/games";
+  import { daily_seed, format_time, Stopwatch } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
   import {

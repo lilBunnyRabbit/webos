@@ -4,8 +4,8 @@
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, Slider, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message } from "$lib/core/utils";
-  import { encode_image, ImageFormat, write_image } from "$lib/core/utils/image";
-  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
+  import { encode_image, ImageFormat, write_image } from "$kit/utils/image";
+  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$kit/utils/qr";
   import {
     Check as CheckIcon,
     Copy as CopyIcon,

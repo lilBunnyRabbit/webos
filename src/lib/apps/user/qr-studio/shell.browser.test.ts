@@ -3,7 +3,7 @@ import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import type { CommandContext, Value } from "$lib/core/api/services/shell/type";
-import { create_qr_detector, detect_qr } from "$lib/core/utils/qr";
+import { create_qr_detector, detect_qr } from "$kit/utils/qr";
 import type { Ecc } from "./encode/tables";
 import { qr } from "./shell";
 

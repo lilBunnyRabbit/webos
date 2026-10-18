@@ -1,5 +1,5 @@
 import { file_extension, file_stem } from "$lib/core/api/services/files/path";
-import { ImageFormat, format_of } from "$lib/core/utils/image-format";
+import { ImageFormat, format_of } from "$kit/utils/image-format";
 
 export function transparent_name(name: string, extension: string): string {
   return `${file_stem(name)}-transparent${extension}`;

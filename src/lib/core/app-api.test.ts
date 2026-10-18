@@ -63,9 +63,9 @@ import type {
   WindowHandle,
 } from "$lib/core/contexts/app";
 import type { BadgeVariants, ButtonVariants, FieldVariants, IconComponent } from "$lib/core/components/ui";
-import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$lib/core/games";
+import type { Axis, DailyResult, FormatTimeOptions, GameStats, ParsedDay, PlayTracker, Plays } from "$kit/games";
 import type { DeviceFileOptions } from "$lib/core/utils/device-file";
-import type { SourceImage } from "$lib/core/utils/image";
+import type { SourceImage } from "$kit/utils/image";
 import type { Rng } from "$lib/core/utils/random";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 
@@ -133,8 +133,8 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     ],
   ],
   [
-    "$lib/core/games",
-    () => import("$lib/core/games"),
+    "$kit/games",
+    () => import("$kit/games"),
     [
       "DailyRank",
       "Direction",
@@ -204,15 +204,15 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     () => import("$lib/core/api/services/files/shell"),
     ["assert_writable", "file_value", "is_file_value"],
   ],
-  ["$lib/core/games/time", () => import("$lib/core/games/time"), ["daily_seed", "format_time", "parse_day"]],
-  ["$lib/core/games/daily", () => import("$lib/core/games/daily"), ["DailyRank", "better_daily"]],
-  ["$lib/core/games/direction", () => import("$lib/core/games/direction"), ["Direction", "key_direction", "swipe_direction"]],
+  ["$kit/games/time", () => import("$kit/games/time"), ["daily_seed", "format_time", "parse_day"]],
+  ["$kit/games/daily", () => import("$kit/games/daily"), ["DailyRank", "better_daily"]],
+  ["$kit/games/direction", () => import("$kit/games/direction"), ["Direction", "key_direction", "swipe_direction"]],
   ["$lib/core/utils/date", () => import("$lib/core/utils/date"), ["day_key", "parse_time", "resolve_day"]],
   ["$lib/core/utils/detached-root.svelte", () => import("$lib/core/utils/detached-root.svelte"), ["detached_root"]],
   ["$lib/core/utils/device-file", () => import("$lib/core/utils/device-file"), ["pick_device_files"]],
   [
-    "$lib/core/utils/image",
-    () => import("$lib/core/utils/image"),
+    "$kit/utils/image",
+    () => import("$kit/utils/image"),
     [
       "FORMAT_OPTIONS",
       "ImageFormat",

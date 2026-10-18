@@ -11,7 +11,7 @@
   import type { IconComponent } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { load_image_at, type SourceImage, write_image } from "$lib/core/utils/image";
+  import { load_image_at, type SourceImage, write_image } from "$kit/utils/image";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -42,7 +42,7 @@
   import { draw_shape, shape_bounds, stamp_pencil, stroke_brush } from "./draw";
   import { flood_fill } from "./flood-fill";
   import { changed_bounds, clip_rect, copy_region, empty_patch, paste_region, patch_bytes, segment_bounds, union, type Patch } from "./patch";
-  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$lib/core/utils/history";
+  import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$kit/utils/history";
   import { css_to_hex } from "./paint-file";
   import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point, type Rect } from "./shapes";
   import {

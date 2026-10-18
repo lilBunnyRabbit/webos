@@ -1,4 +1,4 @@
-import { ImageFormat } from "$lib/core/utils/image-format";
+import { ImageFormat } from "$kit/utils/image-format";
 import { resize_to, type Size } from "../image-editor/edit";
 
 /** No AVIF: browsers can't encode it without a WASM encoder. */

@@ -1,10 +1,10 @@
 <script lang="ts">
   import { Button, Textarea, button } from "$lib/core/components/ui";
   import Viewfinder from "./viewfinder.svelte";
-  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$lib/core/utils/qr";
+  import { create_qr_detector, detect_qr, type BarcodeDetector } from "$kit/utils/qr";
   import { Aperture as ApertureIcon, Camera as CameraIcon, CameraSlash as CameraSlashIcon, PlugsConnected as PlugsConnectedIcon } from "phosphor-svelte";
   import { error_message } from "$lib/core/utils";
-  import { CameraScan } from "$lib/core/utils/qr-scan.svelte";
+  import { CameraScan } from "$kit/utils/qr-scan.svelte";
   import { get_app_context } from "$lib/core/contexts/app";
 
   /** `onscan` throws when the code is wrong; the scanner shows why and keeps looking. */

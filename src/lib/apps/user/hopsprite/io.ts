@@ -1,6 +1,6 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
-import { load_image, read_pixels } from "$lib/core/utils/image";
+import { load_image, read_pixels } from "$kit/utils/image";
 import { set_cel, set_durations, insert_frame } from "./document";
 import { EXTENSION, parse_sprite } from "./format";
 import { create_sprite, MAX_FRAMES, MAX_SIDE, TRANSPARENT_HEX, type Sprite } from "./model";

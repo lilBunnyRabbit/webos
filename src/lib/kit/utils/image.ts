@@ -2,7 +2,7 @@ import kernel, { NotificationType, type AppId, type FilesService, type Notificat
 import type { WindowHandle } from "$lib/core/contexts/app";
 import { DEFAULT_QUALITY, format_for_name, needs_backdrop, type ImageFormat } from "./image-format";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
-import { error_message } from "./utils";
+import { error_message } from "$lib/core/utils/utils";
 
 export * from "./image-format";
 

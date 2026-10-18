@@ -3,7 +3,7 @@ import kernel, { TaskJobStatus, type AppsService, type FilesService, type TaskJo
 import type { AppId } from "$lib/core/api/services/apps/type";
 import { parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
-import { encode_image, extension_for, load_image } from "$lib/core/utils/image";
+import { encode_image, extension_for, load_image } from "$kit/utils/image";
 import type { Size } from "../image-editor/edit";
 import { is_image_name, squashed_name } from "./naming";
 import { format_share, saved_share, squashed_size, type SquashOptions } from "./squash";

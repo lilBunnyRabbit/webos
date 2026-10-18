@@ -3,7 +3,7 @@ import { parent_path, resolve_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ArgKind } from "$lib/core/api/services/shell/arg";
 import { ShellError, type CommandContext, type Completion, type ShellService, type ShellSession } from "$lib/core/api/services/shell/type";
-import { is_image_file } from "$lib/core/utils/image";
+import { is_image_file } from "$kit/utils/image";
 import { DEFAULT_PACK, pack_name, parse_padding, type PackOptions } from "./pack";
 import { build_pack, card_style, close_source, load_card_fonts, load_icon_source } from "./render";
 import { is_svg } from "./svg";

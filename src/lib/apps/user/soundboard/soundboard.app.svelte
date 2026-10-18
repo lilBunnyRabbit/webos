@@ -3,7 +3,7 @@
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { has_files } from "$lib/core/utils/image";
+  import { has_files } from "$kit/utils/image";
   import type { Position } from "$lib/core/utils/type";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,

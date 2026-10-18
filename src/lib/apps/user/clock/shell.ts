@@ -1,6 +1,6 @@
 import kernel, { type AppsService, type DesktopService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
-import { format_time } from "$lib/core/games";
+import { format_time } from "$kit/games";
 import {
   APP_ID,
   check_alarm,

@@ -1,6 +1,6 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type CommandContext } from "$lib/core/api/services/shell/type";
-import { parse_day } from "$lib/core/games";
+import { parse_day } from "$kit/games";
 
 const APP_ID = "blocks";
 

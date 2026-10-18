@@ -3,7 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, IconButton, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { format_bytes, error_message } from "$lib/core/utils";
-  import { has_files } from "$lib/core/utils/image";
+  import { has_files } from "$kit/utils/image";
   import {
     ChartBar as ChartBarIcon,
     Circle as CircleIcon,
