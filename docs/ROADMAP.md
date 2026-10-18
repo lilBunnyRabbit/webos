@@ -250,7 +250,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] `#/file/{path}`, `#/demo/{name}` (deferred: paths don't exist on the receiving machine)
 - [x] App links with query param props (JSON per value, validated via zod; bad links open nothing)
 - [ ] Workspace state save/restore via URL
-- [ ] Embed mode (`?embed=true` strips OS chrome)
+- [ ] Isolated app open (was "embed mode"; owner, 2026-10-18): a URL that opens just one app, full page, no desktop, taskbar or other windows. First use: sharing a form so the person filling it sees only Forms' Fill view. Open questions: URL shape (`?app=forms&…` or `#/app/forms?…&solo`), which services still boot (session restore, intro, version notices and the Restore dialog all off), whether the app can open others or files, mobile shell vs desktop, how Copy link offers it, and whether an app opts in through its manifest. Needs a grill, then an ADR revising ADR-010
 - [ ] Demo presets (curated workspace configurations)
 - [-] Share: titlebar Copy link for apps without a `path` prop. No dialog, no QR, nothing on mobile
 
