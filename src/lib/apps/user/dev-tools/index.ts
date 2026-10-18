@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   description:
     "Base64, hashes, URL encoding, UUIDs, regex, JSON, JWTs, timestamps, cron and certificates in one place.",
+  pitch: {
+    problem: "Decoding a JWT or a Base64 string sends you to a random website.",
+    solution: "Base64, hashes, UUIDs, regex, JSON, JWTs, timestamps and cron, offline in one place.",
+  },
   keywords: [
     "base64",
     "hash",

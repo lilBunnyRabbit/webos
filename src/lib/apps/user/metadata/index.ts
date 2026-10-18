@@ -11,6 +11,10 @@ export default define_app({
   category: AppCategory.MEDIA,
   description:
     "Shows what a photo or PDF says about itself: camera, date, location, software. Strips it from images without re-encoding.",
+  pitch: {
+    problem: "Photos and PDFs can quietly carry your location and device.",
+    solution: "See what a file says about itself, and strip it from images without re-encoding.",
+  },
   keywords: [
     "metadata",
     "exif",

@@ -37,6 +37,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Compare two files or pasted texts side by side or inline.",
+  pitch: {
+    problem: "Spotting what changed between two versions by eye is error-prone.",
+    solution: "Compare two files or pasted texts side by side or inline.",
+  },
   keywords: ["compare", "difference", "diff", "merge", "changes", "text", "code", "versions"],
   tools: DIFF_ACCEPT,
   props: DIFF_PROPS,

@@ -12,6 +12,10 @@ export default define_app({
   category: AppCategory.PRODUCTIVITY,
   description:
     "Recipes as Cooklang .cook files: scale servings, switch metric and imperial, cook step by step with timers.",
+  pitch: {
+    problem: "Recipes are hard to scale and follow while you cook.",
+    solution: "Keep them as Cooklang files, scale servings and cook step by step with timers.",
+  },
   keywords: [
     "recipe",
     "cooking",

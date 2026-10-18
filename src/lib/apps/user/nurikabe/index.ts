@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Shade the sea so every number becomes an island of exactly that size.",
+  pitch: {
+    problem: "You want a logic puzzle that isn't about adding numbers up.",
+    solution: "Shade the sea so every number becomes an island of exactly that size.",
+  },
   keywords: ["islands", "sea", "wall", "nikoli", "puzzle", "logic", "game", "brain"],
   defaults: {
     constraints: {

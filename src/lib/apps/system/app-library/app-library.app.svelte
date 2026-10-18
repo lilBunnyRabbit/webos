@@ -11,27 +11,28 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import { set_drag_app } from "$lib/core/components/apps/drag";
-  import { Badge, Button, EmptyState, IconButton, Input, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
-    Briefcase as BriefcaseIcon,
     ClockCounterClockwise as ClockCounterClockwiseIcon,
-    Code as CodeIcon,
     DownloadSimple as DownloadSimpleIcon,
     Files as FilesIcon,
-    FilmStrip as FilmStripIcon,
-    GameController as GameControllerIcon,
-    GearSix as GearSixIcon,
     ListBullets as ListBulletsIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
+    Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
     Sticker as StickerIcon,
+    Storefront as StorefrontIcon,
     TerminalWindow as TerminalWindowIcon,
-    Wrench as WrenchIcon,
     X as XIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import { z } from "zod";
   import AppDetails from "./app-details.svelte";
+  import { CATEGORY_ICONS } from "./category-icons";
+  import { APP_LIBRARY_PROPS, LibraryView } from "./props";
+  import Showcase from "./showcase.svelte";
+  import ShowcaseDetail from "./showcase-detail.svelte";
   import {
     category_counts,
     category_label,
@@ -41,20 +42,16 @@
     LibraryCategory,
     LibraryFilter,
     LibrarySort,
+    showcase_sections,
   } from "./library";
 
   const ViewMode = { GRID: "grid", LIST: "list" } as const;
   type ViewMode = (typeof ViewMode)[keyof typeof ViewMode];
 
-  const CATEGORY_ICONS = {
-    [LibraryCategory.ALL]: SquaresFourIcon,
-    [LibraryCategory.PRODUCTIVITY]: BriefcaseIcon,
-    [LibraryCategory.MEDIA]: FilmStripIcon,
-    [LibraryCategory.UTILITIES]: WrenchIcon,
-    [LibraryCategory.DEVELOPER]: CodeIcon,
-    [LibraryCategory.GAMES]: GameControllerIcon,
-    [LibraryCategory.SYSTEM]: GearSixIcon,
-  };
+  const VIEWS = [
+    { value: LibraryView.SHOWCASE, label: "Showcase", icon: SparkleIcon },
+    { value: LibraryView.STORE, label: "Store", icon: StorefrontIcon },
+  ];
 
   const FILTERS = [
     { id: LibraryFilter.WIDGET, label: "Has widget", icon: StickerIcon },
@@ -63,6 +60,8 @@
     { id: LibraryFilter.USED, label: "Used before", icon: ClockCounterClockwiseIcon },
     { id: LibraryFilter.NOT_INSTALLED, label: "Not installed", icon: DownloadSimpleIcon },
   ];
+
+  let { view: initial_view, app: initial_app }: Partial<z.infer<typeof APP_LIBRARY_PROPS>> = $props();
 
   const { window: win, storage } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -75,7 +74,10 @@
   const filters = storage.window<LibraryFilter[]>("filters", [], z.array(z.enum(Object.values(LibraryFilter))));
   const sort = storage.window<LibrarySort>("sort", LibrarySort.NAME, z.enum(Object.values(LibrarySort)));
   const view = storage.window<ViewMode>("view", ViewMode.GRID, z.enum(Object.values(ViewMode)));
-  const selected_id = storage.window<string | null>("selected", null, z.string().nullable());
+  const selected_id = storage.window<string | null>("selected", untrack(() => initial_app) ?? null, z.string().nullable());
+  const page = storage.window<LibraryView>("page", untrack(() => initial_view) ?? LibraryView.STORE, z.enum(Object.values(LibraryView)));
+  const showcase = $derived(page.value === LibraryView.SHOWCASE);
+  const showcase_category = storage.window<LibraryCategory>("showcase_category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
 
   let query = $state("");
 
@@ -101,7 +103,9 @@
   // Only for this session, like What's new's "New to you": nothing records which apps were looked at.
   const fresh = $derived(new Set(introduced_apps(version.unseen).map(({ app }) => app)));
   const updated = $derived(updated_apps(version.unseen));
-  const shown = $derived(sections.reduce((sum, section) => sum + section.apps.length, 0));
+  const showcase_list = $derived(showcase_sections(manifests, { query, category: showcase_category.value }));
+  const showcase_counts = $derived(category_counts(manifests, { query, filters: [], used: new Set(), installed: new Set() }));
+  const shown = $derived((showcase ? showcase_list : sections).reduce((sum, section) => sum + section.apps.length, 0));
   const first = $derived(sections[0]?.apps[0]);
 
   const nav_items = $derived(LIBRARY_CATEGORIES.map(({ id, label }) => ({ value: id, label, icon: CATEGORY_ICONS[id], count: counts[id] })));
@@ -213,121 +217,161 @@
   {/if}
 {/snippet}
 
+{#snippet search(onenter: () => void)}
+  <Input
+    bind:value={query}
+    size="sm"
+    class="min-w-36 flex-1"
+    placeholder="Search apps"
+    aria-label="Search apps"
+    onkeydown={(event) => {
+      if (event.key === "Enter" && query.trim()) onenter();
+    }}
+  >
+    {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
+    {#snippet trailing()}
+      {#if query}
+        <IconButton label="Clear search" size="sm" class="size-5 pointer-coarse:size-7" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>
+      {/if}
+    {/snippet}
+  </Input>
+{/snippet}
+
+{#snippet view_switch()}
+  <Segmented size="sm" label="Library view" options={VIEWS} bind:value={page.value} />
+{/snippet}
+
 <div class="flex h-full flex-col">
-  <div class="flex min-h-0 flex-1">
-    <div class={cn("min-w-0 flex-1 flex-col", selected ? "hidden @4xl:flex" : "flex")}>
+  {#if showcase}
+    <div class={cn("min-h-0 flex-1 flex-col", selected ? "hidden" : "flex")}>
       <Toolbar>
-        <Input
-          bind:value={query}
-          size="sm"
-          class="min-w-36 flex-1"
-          placeholder="Search apps"
-          aria-label="Search apps"
-          onkeydown={(event) => {
-            if (event.key === "Enter" && query.trim() && first) apps.launch(first.id);
-          }}
-        >
-          {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
-          {#snippet trailing()}
-            {#if query}
-              <IconButton label="Clear search" size="sm" class="size-5 pointer-coarse:size-7" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>
-            {/if}
-          {/snippet}
-        </Input>
-        <Select
-          bind:value={sort.value}
-          size="sm"
-          class="w-auto"
-          aria-label="Sort"
-          options={[
-            { value: LibrarySort.NAME, label: "A–Z" },
-            { value: LibrarySort.CATEGORY, label: "By category" },
-            { value: LibrarySort.RECENT, label: "Recently added / updated" },
-          ]}
-        />
-        <div role="group" aria-label="View" class="flex">
-          <IconButton label="Grid" size="sm" pressed={view.value === ViewMode.GRID} onclick={() => (view.value = ViewMode.GRID)}><SquaresFourIcon /></IconButton>
-          <IconButton label="List" size="sm" pressed={view.value === ViewMode.LIST} onclick={() => (view.value = ViewMode.LIST)}><ListBulletsIcon /></IconButton>
-        </div>
+        {@render view_switch()}
+        {@render search(() => {
+          const top = showcase_list[0]?.apps[0];
+          if (top) select(top);
+        })}
       </Toolbar>
-
-      <div class="flex min-h-0 flex-1 flex-col @2xl:flex-row">
-        <!-- Remounts when the details view closes, so a narrow window's tab row scrolls the active category back into view. -->
-        {#key selected === null}
-          <SideNav bind:value={category.value} items={nav_items} label="Categories" />
-        {/key}
-
-        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div role="group" aria-label="Filters" class="flex shrink-0 gap-1 overflow-x-auto px-3 pt-2.5 pb-1">
-            {#each FILTERS as filter (filter.id)}
-              <Button size="sm" variant="quiet" pressed={filters.value.includes(filter.id)} onclick={() => toggle(filter.id)}>
-                <filter.icon weight={filters.value.includes(filter.id) ? "fill" : "regular"} />
-                {filter.label}
-              </Button>
-            {/each}
+      <Showcase
+        sections={showcase_list}
+        counts={showcase_counts}
+        bind:category={showcase_category.value}
+        total={manifests.length}
+        {query}
+        {fresh}
+        {updated}
+        onselect={select}
+        onclear={() => {
+          query = "";
+          showcase_category.value = LibraryCategory.ALL;
+        }}
+      />
+    </div>
+    {#if selected}
+      {#key selected.id}
+        <ShowcaseDetail manifest={selected} onback={() => (selected_id.value = null)} onstore={() => (page.value = LibraryView.STORE)} />
+      {/key}
+    {/if}
+  {:else}
+    <div class="flex min-h-0 flex-1">
+      <div class={cn("min-w-0 flex-1 flex-col", selected ? "hidden @4xl:flex" : "flex")}>
+        <Toolbar>
+          {@render view_switch()}
+          {@render search(() => first && apps.launch(first.id))}
+          <Select
+            bind:value={sort.value}
+            size="sm"
+            class="w-auto"
+            aria-label="Sort"
+            options={[
+              { value: LibrarySort.NAME, label: "A–Z" },
+              { value: LibrarySort.CATEGORY, label: "By category" },
+              { value: LibrarySort.RECENT, label: "Recently added / updated" },
+            ]}
+          />
+          <div role="group" aria-label="View" class="flex">
+            <IconButton label="Grid" size="sm" pressed={view.value === ViewMode.GRID} onclick={() => (view.value = ViewMode.GRID)}><SquaresFourIcon /></IconButton>
+            <IconButton label="List" size="sm" pressed={view.value === ViewMode.LIST} onclick={() => (view.value = ViewMode.LIST)}><ListBulletsIcon /></IconButton>
           </div>
-
-          <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-1 pb-3">
-            {#if sections.length === 0}
-              <EmptyState
-                icon={MagnifyingGlassIcon}
-                title="No apps match"
-                description={query ? `Nothing called "${query}" with these filters.` : "No app here has everything the filters ask for."}
-                class="py-10"
-              >
-                {#snippet actions()}
-                  {#if filters.value.length || query}
-                    <Button
-                      size="sm"
-                      onclick={() => {
-                        filters.value = [];
-                        query = "";
-                      }}>Clear search and filters</Button
-                    >
-                  {/if}
-                {/snippet}
-              </EmptyState>
-            {:else}
-              <div class="flex flex-col gap-3">
-                {#each sections as section (section.id)}
-                  <section>
-                    {#if section.label}
-                      <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{section.label}</p>
+        </Toolbar>
+  
+        <div class="flex min-h-0 flex-1 flex-col @2xl:flex-row">
+          <!-- Remounts when the details view closes, so a narrow window's tab row scrolls the active category back into view. -->
+          {#key selected === null}
+            <SideNav bind:value={category.value} items={nav_items} label="Categories" />
+          {/key}
+  
+          <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div role="group" aria-label="Filters" class="flex shrink-0 gap-1 overflow-x-auto px-3 pt-2.5 pb-1">
+              {#each FILTERS as filter (filter.id)}
+                <Button size="sm" variant="quiet" pressed={filters.value.includes(filter.id)} onclick={() => toggle(filter.id)}>
+                  <filter.icon weight={filters.value.includes(filter.id) ? "fill" : "regular"} />
+                  {filter.label}
+                </Button>
+              {/each}
+            </div>
+  
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-1 pb-3">
+              {#if sections.length === 0}
+                <EmptyState
+                  icon={MagnifyingGlassIcon}
+                  title="No apps match"
+                  description={query ? `Nothing called "${query}" with these filters.` : "No app here has everything the filters ask for."}
+                  class="py-10"
+                >
+                  {#snippet actions()}
+                    {#if filters.value.length || query}
+                      <Button
+                        size="sm"
+                        onclick={() => {
+                          filters.value = [];
+                          query = "";
+                        }}>Clear search and filters</Button
+                      >
                     {/if}
-                    {@render tiles(section.apps)}
-                  </section>
-                {/each}
-              </div>
-            {/if}
+                  {/snippet}
+                </EmptyState>
+              {:else}
+                <div class="flex flex-col gap-3">
+                  {#each sections as section (section.id)}
+                    <section>
+                      {#if section.label}
+                        <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{section.label}</p>
+                      {/if}
+                      {@render tiles(section.apps)}
+                    </section>
+                  {/each}
+                </div>
+              {/if}
+            </div>
           </div>
         </div>
       </div>
+  
+      <aside
+        aria-label="App details"
+        class={cn(
+          "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-background @4xl:w-80 @4xl:flex-none @4xl:border-l @4xl:border-foreground/8",
+          selected ? "flex" : "hidden @4xl:flex"
+        )}
+      >
+        {#if selected}
+          {#key selected.id}
+            <AppDetails
+              manifest={selected}
+              freshness={fresh.has(selected.id) ? "new" : updated.has(selected.id) ? "updated" : null}
+              onback={() => (selected_id.value = null)}
+            />
+          {/key}
+        {:else}
+          <EmptyState icon={SquaresFourIcon} title="Pick an app" description="Its details, the files it opens and its commands show here." />
+        {/if}
+      </aside>
     </div>
-
-    <aside
-      aria-label="App details"
-      class={cn(
-        "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-background @4xl:w-80 @4xl:flex-none @4xl:border-l @4xl:border-foreground/8",
-        selected ? "flex" : "hidden @4xl:flex"
-      )}
-    >
-      {#if selected}
-        {#key selected.id}
-          <AppDetails
-            manifest={selected}
-            freshness={fresh.has(selected.id) ? "new" : updated.has(selected.id) ? "updated" : null}
-            onback={() => (selected_id.value = null)}
-          />
-        {/key}
-      {:else}
-        <EmptyState icon={SquaresFourIcon} title="Pick an app" description="Its details, the files it opens and its commands show here." />
-      {/if}
-    </aside>
-  </div>
+  {/if}
 
   <StatusBar>
     <span>{shown} of {manifests.length} apps · {installed.size} installed</span>
-    {#if filters.value.length}<span class="hidden @sm:inline">{filters.value.length} filter{filters.value.length === 1 ? "" : "s"}</span>{/if}
+    {#if !showcase && filters.value.length}<span class="hidden @sm:inline">{filters.value.length} filter{filters.value.length === 1 ? "" : "s"}</span>{/if}
     {#if selected}<span class="ml-auto">{selected.id}</span>{/if}
   </StatusBar>
 </div>

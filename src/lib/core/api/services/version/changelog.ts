@@ -5,7 +5,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "2.2.0",
+    version: "2.3.0",
     date: "2026-10-18",
     title: "Watch it think",
     introduces: ["algorithms"],
@@ -50,6 +50,16 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms fills dynamic programming tables cell by cell: longest common subsequence, knapsack, coin change, longest increasing subsequence and matrix chain order.",
       },
+    ],
+  },
+  {
+    version: "2.2.0",
+    date: "2026-10-18",
+    title: "What every app solves",
+    changes: [
+      { kind: NEW, apps: ["app-library"], text: "The App Library has a Showcase: every app by category, with the problem it solves and what it does about it." },
+      { kind: NEW, apps: ["app-library"], text: "Open any app's story for all its highlights, and copy a link that opens just that app." },
+      { kind: NEW, apps: ["app-library"], text: "Share the whole showcase as one link, so someone new can see what WebOS can do." },
     ],
   },
   {

@@ -9,6 +9,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   description: "Basic arithmetic with brackets, percent and a history of results.",
+  pitch: {
+    problem: "You need a quick sum without reaching for your phone.",
+    solution: "Type an expression with brackets and percent, and keep a history of results.",
+  },
   keywords: ["math", "calc", "arithmetic", "numbers", "sum", "percent", "maths"],
   defaults: { constraints: { width: { min: 280 }, height: { min: 360 } } },
   component: () => import("./calculator.app.svelte"),

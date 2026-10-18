@@ -11,6 +11,10 @@ export default define_app({
   category: AppCategory.DEVELOPER,
   description:
     "Test every key of a keyboard with timing, rollover and a layout heatmap, and inspect USB HID devices and their report descriptors.",
+  pitch: {
+    problem: "You can't tell whether a keyboard key misfires or ghosts.",
+    solution: "Test every key with timing, rollover and a heatmap, and inspect USB HID devices.",
+  },
   keywords: [
     "keyboard",
     "key",

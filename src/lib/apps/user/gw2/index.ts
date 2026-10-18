@@ -10,6 +10,10 @@ export default define_app({
   icon: AppIcon,
   version: "1.1.0",
   description: "Guild Wars 2 Wizard's Vault objectives, your wallet, a searchable inventory of every character and crafting goals, from your API key.",
+  pitch: {
+    problem: "Guild Wars 2 progress hides across characters, vaults and the wiki.",
+    solution: "See Wizard's Vault objectives, your wallet, every character's inventory and crafting goals from your API key.",
+  },
   keywords: ["guild wars", "gw2", "wizard's vault", "dailies", "wallet", "gold", "crafting", "goals", "inventory", "bank", "items", "mmo"],
   category: AppCategory.UTILITIES,
   props: z.object({ section: z.enum(SECTION_IDS).optional(), query: z.string().optional() }),

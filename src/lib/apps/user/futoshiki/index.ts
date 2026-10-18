@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Fill the grid so every row and column holds each digit once and every sign is obeyed.",
+  pitch: {
+    problem: "Sudoku gets familiar, and you want a fresh grid puzzle.",
+    solution: "Fill the grid so each row and column holds each digit once and every sign holds.",
+  },
   keywords: ["unequal", "inequality", "latin square", "sudoku", "puzzle", "logic", "numbers", "game", "brain"],
   defaults: {
     constraints: {

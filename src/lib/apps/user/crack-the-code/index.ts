@@ -11,6 +11,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Break a secret code of distinct digits. Each guess only tells you how many sit in the right place.",
+  pitch: {
+    problem: "You want a logic puzzle you can finish over a coffee.",
+    solution: "Break a secret code of distinct digits, told only how many sit in the right place.",
+  },
   keywords: ["code", "cipher", "mastermind", "bulls and cows", "digits", "guess", "logic", "puzzle", "daily", "game"],
   defaults: {
     constraints: {

@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "World clock, alarms, timers and a stopwatch.",
+  pitch: {
+    problem: "Alarms, timers and time zones each want their own app.",
+    solution: "World clock, alarms, timers and a stopwatch in one window.",
+  },
   keywords: ["time", "clock", "alarm", "timer", "stopwatch", "countdown", "world clock", "time zone", "wake up"],
   props: CLOCK_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },

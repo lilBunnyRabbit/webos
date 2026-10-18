@@ -10,6 +10,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Fill the grid so every row, column and box holds 1 to 9 once.",
+  pitch: {
+    problem: "You want the classic number puzzle without a newspaper.",
+    solution: "Fill the grid so every row, column and box holds 1 to 9 once.",
+  },
   keywords: ["number", "numbers", "puzzle", "logic", "9x9", "game", "brain", "classic"],
   defaults: {
     constraints: {

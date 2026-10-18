@@ -11,6 +11,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Reads PDF documents with the browser's built-in viewer.",
+  pitch: {
+    problem: "A PDF in your files should open without downloading anything.",
+    solution: "Read it in the browser's own PDF viewer, right in a window.",
+  },
   keywords: ["pdf", "document", "reader", "viewer"],
   associations: ["application/pdf", ".pdf"],
   props: FILE_PROPS,

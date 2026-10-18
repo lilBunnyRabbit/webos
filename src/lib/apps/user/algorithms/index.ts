@@ -11,6 +11,10 @@ export default define_app({
   category: AppCategory.DEVELOPER,
   description:
     "Watch classic algorithms work step by step: each step explained in plain words, the pseudocode line lit as it runs, live counters, and inputs you can type, randomise, pick from presets or draw.",
+  pitch: {
+    problem: "Algorithms in textbooks are frozen pseudocode, so it's hard to see what actually happens at each step.",
+    solution: "Run them on your own input and step through every comparison and change, explained in plain words with the pseudocode lit.",
+  },
   keywords: [
     "algorithm",
     "algorithms",

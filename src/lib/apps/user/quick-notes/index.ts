@@ -16,6 +16,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Capture a note or a todo from anywhere, triage it later.",
+  pitch: {
+    problem: "A thought gets lost while you look for somewhere to write it.",
+    solution: "Capture a note or a todo from anywhere and sort it later.",
+  },
   keywords: ["notes", "note", "todo", "to-do", "tasks", "inbox", "capture", "sticky", "memo", "quno", "journal"],
   props: QUICK_NOTES_PROPS,
   badge: open_todos,

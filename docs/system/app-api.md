@@ -47,6 +47,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 |-------|--------|-------|
 | `id`, `name`, `version`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
 | `description`, `keywords` | yes | Launcher search |
+| `pitch` | yes (2.2) | `AppPitch` (`{ problem, solution }`, one short sentence each). The App Library's Showcase tells the app's story with it; without it the Showcase falls back to `description`. Eager, so it costs boot weight: keep it short |
 | `highlights`, `preview` | yes (1.5) | The new-app announcement and the App Library details. `highlights: () => import("./highlights")` (a module whose default is `AppHighlight[]`, `{ icon, title, text }`; lazy since 1.9), `preview: () => import("./preview.webp?url")` (ADR-038) |
 | `author`, `license`, `repository` | yes | Stored only today. `author` predates `authors` and isn't read |
 | `authors` | yes (1.5) | `AppAuthor[]` (`{ name, github?, url? }`). Omitted means the owner (`OWNER`). Credited in the App Library details, the new-app announcement, Settings › About › Credits and `app info` / `app list` |
@@ -62,7 +63,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 
 `define_app` throws at boot on an invalid `widget_size`. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
-Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppAuthor`, `AppHighlight`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
+Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
 
 ## Props and file associations
 

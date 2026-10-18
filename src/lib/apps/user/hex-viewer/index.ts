@@ -12,6 +12,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   description: "Shows the raw bytes of any file, however large, as hex and ASCII side by side.",
+  pitch: {
+    problem: "Some files make no sense until you see their raw bytes.",
+    solution: "View any file, however large, as hex and text side by side.",
+  },
   keywords: [
     "hex",
     "binary",

@@ -18,7 +18,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section` |
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
-| `app-library` | App Library | none | none | min 340×360 | apps, windows, session, desktop, notifications, version | window: `category`, `filters`, `sort`, `view`, `selected` |
+| `app-library` | App Library | none | `{ view?, app? }`: `showcase` or `store`, and an app whose details open | min 340×360 | apps, windows, session, desktop, notifications, version, clipboard | window: `page`, `category`, `showcase_category`, `filters`, `sort`, `view`, `selected` |
 | `getting-started` | Getting started | none | `{ topic? }`: scrolls to that card | min 340×360 | shell, apps, desktop, files, router, shortcuts, notifications | `storage.file("progress.json")`: `{ tried }` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
@@ -478,7 +478,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 `app-library` · `SquaresFour` icon · source `system/app-library/`
 
-**Purpose.** The store (ADR-040): every app, installed or not, in one browsable window: categories with counts, search, filters, a grid or list, and a details panel per app. The start menu's and the app drawer's "All apps" button opens it. Category Utilities. The id is `app-library`, not `apps`, so it can't be mistaken for the `apps` service or the `app list` command.
+**Purpose.** The store (ADR-040): every app, installed or not, in one browsable window: categories with counts, search, filters, a grid or list, and a details panel per app. Its Showcase view tells each app's story, what it solves, for someone new to WebOS ([brainstorm](../brainstorm/2026-10-18_app-showcase.md)). The start menu's and the app drawer's "All apps" button opens it. Category Utilities. The id is `app-library`, not `apps`, so it can't be mistaken for the `apps` service or the `app list` command.
 
 **Files.**
 
@@ -487,8 +487,15 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 | `library.ts` | Pure: `LibraryCategory` (All, the five categories, System), `LibraryFilter`, `LibrarySort`, `category_of`, `has_filter`, `category_counts`, `library_sections`, `app_commands` (an app's commands from the shell's registry; the details panel calls `shell.load()`), `app_file_types`, `category_label`. Unit tests in `library.test.ts` |
 | `app-library.app.svelte` | Toolbar, category nav, filter chips, grid or list, details pane, status bar |
 | `app-details.svelte` | The details of one app and its actions |
+| `props.ts` | `LibraryView` (`showcase`, `store`) and `APP_LIBRARY_PROPS`, apart from `index.ts` so the component can import them without a cycle |
+| `category-icons.ts` | The Phosphor icon per `LibraryCategory`, shared by the store's nav and the Showcase chips |
+| `showcase.svelte` | The Showcase: hero, category chips, a grid of story cards per category |
+| `showcase-detail.svelte` | One app's story: problem and answer, preview, every highlight |
+| `showcase-actions.svelte` | Open / Get (Open in WebOS in a solo tab) and Copy solo link, on cards and in the detail |
 
-**Layout.** Container queries only.
+**Props.** `APP_LIBRARY_PROPS`: `view` picks the Showcase or the Store, `app` selects that app (its story in the Showcase, its details in the Store). Both only seed the window state, so a restored window keeps what the user last chose. `#/solo/app-library?view=showcase` is the shareable showcase link; `#/app/app-library?view=showcase&app=forms` opens one story inside the OS.
+
+**Layout.** Container queries only. Every toolbar starts with a `Segmented` Showcase / Store switch (`page`, default Store); the search is shared by both views.
 
 - **Toolbar:** a search `Input` (the launcher's `search_apps`: every word must match name, id, keywords, description or category, with one-typo tolerance from five letters), a sort `Select` (A–Z, By category, Recently added / updated) and Grid / List as a pair of `pressed` `IconButton`s. Enter in the search launches the first app shown.
 - **Categories:** the kit `SideNav` with a `count` per item: All, Productivity, Media, Utilities, Developer, Games, System. Counts follow the search and the filters, so they say where the matches are. A sidebar from `@2xl`, a tab row below.
@@ -497,11 +504,22 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 - **Details:** a side pane (`w-80`, hairline left) from `@4xl`, with a "Pick an app" empty state when nothing is selected. Below `@4xl` a selection swaps the whole browser for the details as a second view, with a back arrow; the browser stays mounted underneath, so its scroll and search survive. The category nav remounts when the details close, so a narrow tab row scrolls the active category back into view. On phones the app is fullscreen like any other and Back closes the details first (`window.on_back`).
 - **Status bar:** `{shown} of {total} apps · {n} installed`, the number of active filters, the selected app's id.
 
+**Showcase.** A scrolling page, at most `max-w-6xl` wide:
+
+- **Hero:** an overline, "Every app, and what it solves", and one line with the app count.
+- **Category chips:** `quiet` `sm` `pressed` `Button`s, All plus the six library categories with a mono count that follows the search (`showcase_category`, its own window state). A horizontal scroll row below `@2xl`, wrapping above.
+- **Sections:** `showcase_sections()` (`library.ts`): one per category in the nav's order, System last, apps A–Z, empty ones dropped; the search narrows like the store's. Each is a grid of cards (`auto-fill`, min 17rem, one column on a phone).
+- **Card:** the icon tile, name, category and the session's New / Updated badge; `app_story()`: the `pitch` problem muted, then an arrow and the solution (the description when there's no pitch); the first two `highlights` as small chips (loaded lazily per card); then Open (installed), Get (not installed, `apps.install`) and a Copy solo link `IconButton`. The name is a button stretched over the card, so a click anywhere but the actions opens the story; Tab reaches the name and each action.
+- **Detail:** replaces the page (the page stays mounted, keeping its scroll), with a back arrow; the OS Back closes it too. Icon, name, category, byline; Open / Get, Copy solo link, and Details (switches to the Store with the same app selected); The problem / What {name} does cards; the `preview` image when the manifest has one; the description when it differs from the pitch; every highlight as a card, two columns from `@xl`.
+- **Copy solo link** copies `route_url({ kind: solo, id })`, `#/solo/{id}` with no props, and toasts it.
+- **In a solo tab** (ADR-047) Open and Get become **Open in WebOS**, a link to `#/app/{id}` in a new tab: a solo tab launches no other app and installs nothing, and the deep link installs it on open (ADR-040).
+- Enter in the search opens the first match's story.
+
 **Details pane.** The icon tile with the app's badge, name (with the New / Updated badge), category label (System for system apps) and "Added v… · Updated v…" from the release notes (`app_history`, ADR-038), or the manifest `v{version}` when the notes say nothing; for an installed app: Open (`apps.launch`, the library stays open), Pin to desktop (`desktop.pin`; "Add to home screen" on mobile), on desktop Pin to taskbar / Unpin from taskbar (`settings.taskbar.pinned`, ADR-042), for an app with a widget on desktop Add widget (`desktop.pin_widget(id, { label: name })`), and for a user app **Uninstall…** (`uninstall_app()`, [apps](services/apps.md#public-api)). For one that isn't: **Get** (`apps.install`, quietly; the buttons turn into the installed set) and **Get and open** (`apps.launch`). Each action toasts its result. A "By …" line (`AppByline`, `components/apps/app-byline.svelte`: each author linked to GitHub or their url, new tab) sits under it. Then the description, **What it does** (the manifest `highlights` as small cards, when present), keywords as `Badge`s, **Opens** (`associations`) and **Works on, from Open with** (`tools`) as mono badges with extensions first, **Commands** (ids from the manifest `shell` declarations, sorted, with their descriptions), **Widget** (the default and range of `widget_size` in cells, or the 2×2 fixed fallback; "desktop only" on mobile) **History** (every changelog line tagged with the app, newest first: kind `Badge`, mono version, date, the text; four shown, then "Show all N"; ending with "Added in v…" when the release that introduced it is reached) and **Shell**, the `app launch {id}` line.
 
-**Shell.** No commands of its own: `app launch app-library` opens it, and `app list` / `app info` already give the same data as values.
+**Shell.** No commands of its own: `app launch app-library` opens it, the Showcase included (owner, 2026-10-18: nothing new in the shell; it's reached through the view switch, the start menu and its link), and `app list` / `app info` already give the same data as values.
 
-**Persistence.** Category, filters, sort, view and the selected app are `storage.window()` state, restored with the session. The search is not kept.
+**Persistence.** The Showcase / Store page, category, Showcase category, filters, sort, view and the selected app are `storage.window()` state, restored with the session. The search is not kept.
 
 **Known gaps.**
 

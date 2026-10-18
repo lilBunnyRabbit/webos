@@ -10,6 +10,7 @@ export default define_app({
   icon: AppIcon,
   version: "1.0.0",
   description: "Reads text one word at a time, fast.",
+  pitch: { problem: "Long articles take longer to read than you have.", solution: "Read text one word at a time, at the speed you set." },
   keywords: ["rsvp", "reading", "read", "wpm", "spritz", "books", "text"],
   category: AppCategory.PRODUCTIVITY,
   tools: ["text/plain", ".txt", ".md"],

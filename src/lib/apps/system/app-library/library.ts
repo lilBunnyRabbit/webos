@@ -109,6 +109,17 @@ function recent_sections(list: AppManifest[], changelog: readonly Release[]): Li
     });
 }
 
+export function showcase_sections(apps: Iterable<AppManifest>, { query, category }: { query: string; category: LibraryCategory }): LibrarySection[] {
+  const list = search_apps(apps, query);
+  return LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL && (category === LibraryCategory.ALL || id === category))
+    .map(({ id, label }) => ({ id, label, apps: list.filter((manifest) => category_of(manifest) === id).sort((a, b) => a.name.localeCompare(b.name)) }))
+    .filter((section) => section.apps.length > 0);
+}
+
+export function app_story(manifest: AppManifest): { problem: string | null; solution: string } {
+  return manifest.pitch ?? { problem: null, solution: manifest.description ?? "" };
+}
+
 /** From the shell's registry, which holds the apps' commands once loaded (ADR-034). */
 export function app_commands(manifest: AppManifest, commands: readonly Command[]): { id: string; description: string }[] {
   return commands

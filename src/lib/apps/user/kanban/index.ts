@@ -16,6 +16,10 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "A board for life: errands, projects and ideas, from later to done.",
+  pitch: {
+    problem: "Errands and projects slip when they only live in your head.",
+    solution: "Put them on a board and move each card from later to done.",
+  },
   keywords: ["kanban", "board", "tasks", "todo", "cards", "planner"],
   props: KANBAN_PROPS,
   badge: due_badge,

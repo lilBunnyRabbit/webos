@@ -11,6 +11,10 @@ export default define_app({
   version: "2.0.0",
   category: AppCategory.PRODUCTIVITY,
   description: "Edit text and code files, with highlighting for common formats.",
+  pitch: {
+    problem: "Notes and code files need a quick, plain editor.",
+    solution: "Edit any text file with highlighting for common formats, and save it back to your files.",
+  },
   keywords: ["text", "code", "notepad", "editor", "viewer", "markdown", "json", "write", "document"],
   associations: ["text/*", ".md", ".json", ".ts", ".js", ".svelte", ".yaml", ".yml", ".toml", ".ini", ".log", ".env"],
   tools: [".http", ".rest", ".cook", ".fdsl"],

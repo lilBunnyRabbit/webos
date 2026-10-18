@@ -10,6 +10,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.GAMES,
   description: "Find the hidden words in a grid of letters.",
+  pitch: { problem: "You want a relaxed puzzle, no maths involved.", solution: "Find the hidden words in a grid of letters." },
   keywords: ["wordsearch", "word find", "osmosmerka", "words", "puzzle", "letters", "game", "vocabulary"],
   defaults: {
     constraints: {
