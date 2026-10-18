@@ -40,3 +40,10 @@ Earlier: [lazy shell commands](../ROADMAP.md) (P4 › Performance), [app showcas
 ## Next session topics
 
 - Lazy `props` if the budget gets tight again (rejected for now: every launch path goes async).
+
+## Follow-up (after 3.0.0 shipped)
+
+1. **Merge helper.** The internal `apps/meta.ts` (`load_metas`, `with_meta`) is replaced. **Decided: AppsService owns listings.** It keeps the loaded metas in reactive state and exposes a derived `listings()` (manifest + meta merged). Readers drop the helper.
+2. **`meta_ready` / `meta(id)`:** stay internal (only Game Hub uses them; promoting later is a minor).
+3. **`author`, `license`, `repository`:** stable, unset, unread. **Deprecated now** (`@deprecated` + app-api.md), removed in 4.0.
+4. **Bugs from the docs pass, all fixed next:** solo tab back, Activity Monitor `section` optional, paste caught under an open sheet (Forms, Image Tools), Showcase overline colour.
