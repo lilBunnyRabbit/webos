@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { load_language, token_highlight, token_theme, type Language } from "$lib/core/components/code";
+  import { token_highlight, token_theme } from "./editor";
+  import { load_language, type Language } from "./language";
   import { cn } from "$lib/core/utils";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState } from "@codemirror/state";
@@ -50,7 +51,7 @@
     };
   }
 
-  // A new request or a formatted body replaces the document; the editor's own edits already match.
+  // An outside value replaces the document; the editor's own edits already match.
   $effect(() => {
     if (!view || view.state.doc.toString() === value) return;
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });

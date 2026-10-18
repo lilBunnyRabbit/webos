@@ -18,7 +18,7 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import CodeView from "./code-view.svelte";
+  import { CodeView } from "$lib/core/components/code";
   import { download, downloads_folder } from "./download";
   import { empty_request, parse_http, serialize_http, type HttpDocument, type HttpRequest, type Pair } from "./http-file";
   import { APP_ID, HTTP_FILES, METHODS } from "./methods";

@@ -3,7 +3,7 @@
   import { Badge, Button, CopyButton, EmptyState, Segmented } from "$lib/core/components/ui";
   import { format_bytes } from "$lib/core/utils";
   import { File as FileIcon, FloppyDisk as FloppyDiskIcon } from "phosphor-svelte";
-  import CodeView from "./code-view.svelte";
+  import { CodeView } from "$lib/core/components/code";
   import { ResponseKind, status_line } from "./request";
   import { pretty_json, TEXT_LIMIT, type ApiResponse } from "./send";
 

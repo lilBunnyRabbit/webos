@@ -184,7 +184,7 @@ The rule: generic helpers used by three or more user apps are stable.
 | `$lib/core/utils/print` | `print_html` (ADR-035) |
 | `$lib/core/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` |
 
-Internal, though bundled apps use them: `utils/image`'s `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality`; `utils/history` (Paint, Image Editor); `utils/qr`, `utils/qr-scan.svelte` (QR Reader, P2P Transfer); `utils/zip/*` (Archive); `utils/exif` (Metadata, PDF Tools); `utils/install.svelte`; `utils/image-format` directly; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `components/code`; `settings/themes`. An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
+Internal, though bundled apps use them: `utils/image`'s `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality`; `utils/history` (Paint, Image Editor); `utils/qr`, `utils/qr-scan.svelte` (QR Reader, P2P Transfer); `utils/zip/*` (Archive); `utils/exif` (Metadata, PDF Tools); `utils/install.svelte`; `utils/image-format` directly; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `components/code` (with `CodeView`, a bound CodeMirror field: API Client, Recipe Box); `settings/themes`. An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
 
 ## Storage locations
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
-  import CodeView from "$lib/apps/user/api-client/code-view.svelte";
+  import { CodeView } from "$lib/core/components/code";
   import { base_name, parent_path, tilde_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
