@@ -158,15 +158,16 @@
     <Stage {bounds} label="Graph editor" class="h-full" pannable={(event) => !(event.target as Element).closest("[data-node]")}>
       {#snippet children(to_point)}
         <rect
-          x={bounds.x}
-          y={bounds.y}
-          width={bounds.width}
-          height={bounds.height}
+          x="-5000"
+          y="-5000"
+          width="10000"
+          height="10000"
           class="fill-transparent"
           role="presentation"
           onpointerdown={background_down}
           onclick={(event) => background_click(event, to_point)}
         />
+        <rect x="0" y="0" width={100 * SCALE} height={100 * SCALE} rx="10" class="pointer-events-none fill-background-light/40 stroke-foreground/10" stroke-dasharray="6 6" />
         {#each graph.edges as edge, index (index)}
           {@const from = positions.get(edge.from)}
           {@const to = positions.get(edge.to)}

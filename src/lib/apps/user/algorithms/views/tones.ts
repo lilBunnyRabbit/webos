@@ -13,7 +13,7 @@ export const TONE_LABEL: Record<Tone, string> = {
 };
 
 export const TONE_BG: Record<Tone, string> = {
-  [Tone.ACTIVE]: "bg-primary",
+  [Tone.ACTIVE]: "bg-info",
   [Tone.COMPARE]: "bg-secondary",
   [Tone.WARN]: "bg-warning",
   [Tone.MARK]: "bg-tertiary",
@@ -23,7 +23,7 @@ export const TONE_BG: Record<Tone, string> = {
 };
 
 export const TONE_TINT: Record<Tone, string> = {
-  [Tone.ACTIVE]: "bg-primary/15 ring-primary",
+  [Tone.ACTIVE]: "bg-info/15 ring-info",
   [Tone.COMPARE]: "bg-secondary/15 ring-secondary",
   [Tone.WARN]: "bg-warning/15 ring-warning",
   [Tone.MARK]: "bg-tertiary/15 ring-tertiary/70",
@@ -33,7 +33,7 @@ export const TONE_TINT: Record<Tone, string> = {
 };
 
 export const TONE_FILL: Record<Tone, string> = {
-  [Tone.ACTIVE]: "fill-primary",
+  [Tone.ACTIVE]: "fill-info",
   [Tone.COMPARE]: "fill-secondary",
   [Tone.WARN]: "fill-warning",
   [Tone.MARK]: "fill-tertiary",
@@ -43,7 +43,7 @@ export const TONE_FILL: Record<Tone, string> = {
 };
 
 export const TONE_STROKE: Record<Tone, string> = {
-  [Tone.ACTIVE]: "stroke-primary",
+  [Tone.ACTIVE]: "stroke-info",
   [Tone.COMPARE]: "stroke-secondary",
   [Tone.WARN]: "stroke-warning",
   [Tone.MARK]: "stroke-tertiary",
@@ -53,7 +53,7 @@ export const TONE_STROKE: Record<Tone, string> = {
 };
 
 export const TONE_TEXT: Record<Tone, string> = {
-  [Tone.ACTIVE]: "text-primary",
+  [Tone.ACTIVE]: "text-info",
   [Tone.COMPARE]: "text-secondary",
   [Tone.WARN]: "text-warning",
   [Tone.MARK]: "text-tertiary",

@@ -98,12 +98,12 @@
 
 <div class="grid min-h-0 gap-3 @4xl:h-full @4xl:grid-cols-[minmax(0,1fr)_19rem] @4xl:grid-rows-[minmax(0,1fr)]">
   <section class="flex min-h-0 min-w-0 flex-col gap-2" aria-label="Visualisation">
-    <div class="flex h-[22rem] min-h-0 flex-col gap-3 overflow-hidden rounded-xl bg-background-light/60 p-3 ring-1 ring-foreground/8 @4xl:h-auto @4xl:flex-1">
+    <div class="flex min-h-[22rem] flex-col gap-3 rounded-xl bg-background-light/60 p-3 ring-1 ring-foreground/8 @4xl:min-h-0 @4xl:flex-1 @4xl:overflow-hidden">
       {#if stage_override}
         {@render stage_override()}
       {:else if step}
         {#each step.views as view, n (n)}
-          <figure class={cn("flex min-h-0 min-w-0 flex-col gap-1.5", flexible(view) ? "flex-1 basis-0" : "shrink-0")}>
+          <figure class={cn("flex min-h-0 min-w-0 flex-col gap-1.5", flexible(view) ? "min-h-64 flex-1 basis-0 @4xl:min-h-0" : "shrink-0")}>
             {#if view.title}
               <figcaption class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{view.title}</figcaption>
             {/if}

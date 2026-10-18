@@ -9,6 +9,7 @@
   import {
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
+    Graph as GraphIcon,
     LinkSimple as LinkSimpleIcon,
     SortAscending as SortAscendingIcon,
     TreeStructure as TreeStructureIcon,
@@ -33,6 +34,7 @@
   const GROUP_ICONS: Record<Group, Component> = {
     [Group.SORTING]: SortAscendingIcon,
     [Group.TREES]: TreeStructureIcon,
+    [Group.GRAPHS]: GraphIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

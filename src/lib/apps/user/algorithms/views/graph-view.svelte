@@ -69,7 +69,10 @@
         <circle r={RADIUS} stroke-width={node.tone ? 2.5 : 1.25} class={cn("transition-colors duration-150", node.tone ? `${TONE_FILL[node.tone]} ${TONE_STROKE[node.tone]}` : "fill-background-light stroke-foreground/45")} />
         <text text-anchor="middle" dominant-baseline="middle" y="0.5" class={cn("text-[13px] font-semibold", node.tone && node.tone !== "muted" ? "fill-background" : "fill-foreground")}>{node.id}</text>
         {#if node.badge}
-          <text y={RADIUS + 12} text-anchor="middle" class="fill-foreground/80 font-mono text-[11px]">{node.badge}</text>
+          <g transform="translate({RADIUS - 4} {-RADIUS - 2})">
+            <rect x="0" y="-8" width={node.badge.length * 6.8 + 8} height="15" rx="4" class="fill-background stroke-foreground/20" />
+            <text x="4" y="0" dominant-baseline="middle" class="fill-foreground font-mono text-[11px]">{node.badge}</text>
+          </g>
         {/if}
       </g>
     {/each}

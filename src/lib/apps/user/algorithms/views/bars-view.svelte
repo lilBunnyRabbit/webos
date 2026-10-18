@@ -7,7 +7,7 @@
 
   const CANVAS_FROM = 150;
   const TONE_VARS: Record<string, string> = {
-    active: "--primary",
+    active: "--info",
     compare: "--secondary",
     warn: "--warning",
     mark: "--tertiary",

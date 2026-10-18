@@ -1,12 +1,14 @@
 export const Group = {
   SORTING: "sorting",
   TREES: "trees",
+  GRAPHS: "graphs",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
 export const GROUP_NAMES: Record<Group, string> = {
   [Group.SORTING]: "Sorting",
   [Group.TREES]: "Trees",
+  [Group.GRAPHS]: "Graphs",
 };
 
 export interface Complexity {
@@ -60,6 +62,18 @@ export const CATALOG: CatalogEntry[] = [
   entry("kd-tree", "k-d tree", Group.TREES, "Split the plane by x, then y, to find neighbours", ["O(log n)", "O(log n)", "O(n)", "O(n)"]),
   entry("union-find", "Union-find", Group.TREES, "Disjoint sets with ranks and path compression", ["O(1)", "O(α(n))", "O(log n)", "O(n)"]),
   entry("huffman-tree", "Huffman tree", Group.TREES, "Short codes for frequent symbols", ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)"]),
+
+  entry("bfs", "Breadth-first search", Group.GRAPHS, "Explore in rings: fewest edges first", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
+  entry("dfs", "Depth-first search", Group.GRAPHS, "Go deep, back up, go deep again", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
+  entry("dijkstra", "Dijkstra", Group.GRAPHS, "Shortest paths with non-negative weights", ["O(E log V)", "O(E log V)", "O(E log V)", "O(V)"]),
+  entry("a-star", "A* search", Group.GRAPHS, "Dijkstra steered by a distance estimate", ["O(E)", "O(E log V)", "O(E log V)", "O(V)"]),
+  entry("bellman-ford", "Bellman-Ford", Group.GRAPHS, "Shortest paths with negative weights", ["O(E)", "O(V·E)", "O(V·E)", "O(V)"]),
+  entry("floyd-warshall", "Floyd-Warshall", Group.GRAPHS, "Every shortest distance, all pairs", ["O(V³)", "O(V³)", "O(V³)", "O(V²)"]),
+  entry("prim", "Prim", Group.GRAPHS, "Grow a minimum spanning tree from one node", ["O(E log V)", "O(E log V)", "O(E log V)", "O(V)"]),
+  entry("kruskal", "Kruskal", Group.GRAPHS, "Cheapest edges first, unless they close a cycle", ["O(E log E)", "O(E log E)", "O(E log E)", "O(V)"]),
+  entry("topological-sort", "Topological sort", Group.GRAPHS, "Order tasks so every edge points forward", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
+  entry("tarjan-scc", "Tarjan's components", Group.GRAPHS, "Groups of nodes that all reach each other", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
+  entry("max-flow", "Max flow", Group.GRAPHS, "Edmonds-Karp: push flow along shortest paths", ["O(V·E²)", "O(V·E²)", "O(V·E²)", "O(V + E)"]),
 ];
 
 export type AlgorithmId = string;

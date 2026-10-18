@@ -20,6 +20,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms has fifteen trees to grow and query, from search trees that rotate to stay balanced to B-trees, tries, heaps, k-d trees and Huffman codes.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms runs eleven graph algorithms, from breadth-first search and Dijkstra to spanning trees and max flow, on graphs you can type or draw.",
+      },
     ],
   },
   {
