@@ -357,6 +357,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Image Editor — crop, resize, rotate, flip, adjustments, save as (2026-10-14)
 - [x] Recorder: mic, screen, camera and photos in one app (2026-10-14). Real microphone untested by the agents
 - [x] Soundboard (user-loaded sounds) (2026-10-14)
+- [x] Format Lab (2026-10-18, [brainstorm](brainstorm/2026-10-18_format-lab.md)): one image as JPEG, WebP, AVIF and JPEG XL side by side, swipe compare, size, time, SSIM and a heatmap, per-format settings, save one or all; Inspect reads AVIF and JPEG XL headers; `convert` command. Codecs in `$kit/utils/codecs` (jSquash wasm in a worker); Media Preview decodes JPEG XL through it
+  - [ ] Squash gaining AVIF and JPEG XL through the kit codecs; a shared swipe-compare stage for Image Tools › Compare and Format Lab
 - [x] Video Tools: trim to WebM, Video → GIF, audio extraction, by play-and-capture with its own WebM muxer and colour quantizer; `video trim|gif|audio` (2026-10-17). Merge not built
 
 ### Utilities

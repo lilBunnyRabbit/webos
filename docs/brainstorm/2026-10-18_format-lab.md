@@ -29,9 +29,20 @@ Today Image Tools › Squash writes WebP or JPEG only; Media Preview claims `ima
 - The browser decodes AVIF but can't make it; JXL needs wasm both ways.
 - `convert` overlaps `squash` a little; squash stays the "make smaller" batch tool, convert is format change.
 
+## Implementation notes (agent, same day)
+
+Choices made inside the decisions above, for the owner to overrule:
+
+- **Format Lab is a tool for `image/*`, not an association.** An association (`image/avif` is tier 2) would beat Media Preview's `image/*` (tier 1) and make Format Lab the default viewer for AVIF. Chromium already reports `image/jxl` for `.jxl`, so no MIME mapping was needed.
+- **Category Media,** next to Image Tools and Image Editor.
+- **Settings re-encode on Encode,** not live: each run is a task job with a toast, so live re-encoding on every slider move would flood toasts. Only formats whose settings changed run again.
+- **Worker pool:** up to 4 workers, Cancel terminates the worker doing the job (a wasm encode never yields), idle workers end after 30 s to give back wasm memory.
+- **`convert` runs one file at a time** (a sequential group): decoded photos plus an AVIF encode's memory make parallel runs risky.
+- **Swipe stage** is Format Lab's own, modelled on Image Tools › Compare. Two apps now have one; moving it to the kit is open.
+
 ## Action items
 
-- [ ] Implement `$kit/utils/codecs`, Format Lab, Media Preview JXL, `convert`, docs, changelog.
+- [x] Implement `$kit/utils/codecs`, Format Lab, Media Preview JXL, `convert`, docs, changelog.
 
 ## Next session topics
 
