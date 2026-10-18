@@ -33,11 +33,21 @@
   let offset = $state({ x: 0, y: 0 });
   const moved = $derived(zoom !== 1 || offset.x !== 0 || offset.y !== 0);
 
+  const MAX_SCALE = 1.3;
+  let client = $state({ width: 0, height: 0 });
+
+  const framed = $derived({
+    x: bounds.x - Math.max(0, client.width / MAX_SCALE - bounds.width) / 2,
+    y: bounds.y - Math.max(0, client.height / MAX_SCALE - bounds.height) / 2,
+    width: Math.max(bounds.width, client.width / MAX_SCALE),
+    height: Math.max(bounds.height, client.height / MAX_SCALE),
+  });
+
   const box = $derived.by(() => {
-    const width = bounds.width / zoom;
-    const height = bounds.height / zoom;
-    const cx = bounds.x + bounds.width / 2 + offset.x;
-    const cy = bounds.y + bounds.height / 2 + offset.y;
+    const width = framed.width / zoom;
+    const height = framed.height / zoom;
+    const cx = framed.x + framed.width / 2 + offset.x;
+    const cy = framed.y + framed.height / 2 + offset.y;
     return { x: cx - width / 2, y: cy - height / 2, width, height };
   });
 
@@ -51,8 +61,8 @@
   function zoom_at(factor: number, at: Point) {
     const next = Math.min(8, Math.max(0.5, zoom * factor));
     const applied = next / zoom;
-    const cx = bounds.x + bounds.width / 2 + offset.x;
-    const cy = bounds.y + bounds.height / 2 + offset.y;
+    const cx = framed.x + framed.width / 2 + offset.x;
+    const cy = framed.y + framed.height / 2 + offset.y;
     offset = { x: offset.x + (at.x - cx) * (1 - 1 / applied), y: offset.y + (at.y - cy) * (1 - 1 / applied) };
     zoom = next;
   }
@@ -114,7 +124,7 @@
   }
 </script>
 
-<div class={cn("relative min-h-0 min-w-0", class_name)}>
+<div class={cn("relative min-h-0 min-w-0", class_name)} bind:clientWidth={client.width} bind:clientHeight={client.height}>
   <svg
     bind:this={svg}
     role="img"

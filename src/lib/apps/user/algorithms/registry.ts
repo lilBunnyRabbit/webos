@@ -5,6 +5,7 @@ type GroupModule = Promise<{ default: Record<string, Definition> }>;
 
 const LOADERS: Record<Group, () => GroupModule> = {
   [Group.SORTING]: () => import("./groups/sorting"),
+  [Group.TREES]: () => import("./groups/trees"),
 };
 
 const loaded: Partial<Record<Group, GroupModule>> = {};

@@ -35,15 +35,24 @@
             stroke-width={placed.node.red || tone ? 2 : 1.25}
             class={cn(
               "transition-colors duration-150",
-              tone ? TONE_FILL[tone] : placed.node.red ? "fill-error/15" : "fill-background-light",
-              placed.node.red ? "stroke-error" : tone ? TONE_STROKE[tone] : "stroke-foreground/40"
+              tone
+                ? TONE_FILL[tone]
+                : placed.node.red
+                  ? "fill-error/15"
+                  : placed.node.black
+                    ? "fill-[light-dark(var(--foreground),var(--background-darkest))]"
+                    : "fill-background-light",
+              placed.node.red ? "stroke-error" : tone ? TONE_STROKE[tone] : placed.node.black ? "stroke-foreground/70" : "stroke-foreground/40"
             )}
           />
           <text
             y="0.5"
             text-anchor="middle"
             dominant-baseline="middle"
-            class={cn("font-mono text-[12px]", tone && tone !== "muted" ? "fill-background font-semibold" : "fill-foreground")}>{placed.node.label}</text
+            class={cn(
+              "font-mono text-[12px]",
+              tone && tone !== "muted" ? "fill-background font-semibold" : placed.node.black ? "fill-[light-dark(var(--background),var(--foreground))]" : "fill-foreground"
+            )}>{placed.node.label}</text
           >
           {#if placed.node.badge}
             <text y={half + 11} text-anchor="middle" class="fill-foreground/65 font-mono text-[10px]">{placed.node.badge}</text>

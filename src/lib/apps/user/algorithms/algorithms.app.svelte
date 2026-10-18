@@ -11,6 +11,7 @@
     FolderOpen as FolderOpenIcon,
     LinkSimple as LinkSimpleIcon,
     SortAscending as SortAscendingIcon,
+    TreeStructure as TreeStructureIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
@@ -31,6 +32,7 @@
 
   const GROUP_ICONS: Record<Group, Component> = {
     [Group.SORTING]: SortAscendingIcon,
+    [Group.TREES]: TreeStructureIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 

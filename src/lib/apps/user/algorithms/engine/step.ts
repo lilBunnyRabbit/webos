@@ -31,6 +31,7 @@ export interface TreeNode {
   tone?: Tone;
   badge?: string;
   red?: boolean;
+  black?: boolean;
   /** `null` keeps a binary node's empty side, so a lone right child still leans right. */
   children: (TreeNode | null)[];
 }

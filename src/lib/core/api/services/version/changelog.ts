@@ -15,6 +15,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms: watch ten sorting algorithms work step by step, each step explained, with the pseudocode lit as it runs and a race between any two.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms has fifteen trees to grow and query, from search trees that rotate to stay balanced to B-trees, tries, heaps, k-d trees and Huffman codes.",
+      },
     ],
   },
   {

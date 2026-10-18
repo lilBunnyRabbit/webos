@@ -175,7 +175,7 @@
     {#if definition.operations}
       <form class="flex flex-wrap items-center gap-1.5" onsubmit={run_operation}>
         <span class="text-ui font-medium text-foreground/80">Try it</span>
-        <Select size="sm" aria-label="Operation" options={definition.operations.list.map((item) => ({ value: item.id, label: item.label }))} bind:value={operation} />
+        <Select size="sm" aria-label="Operation" class="w-auto" options={definition.operations.list.map((item) => ({ value: item.id, label: item.label }))} bind:value={operation} />
         {#if current_operation?.placeholder}
           <Input size="sm" aria-label="Value" class="w-28 font-mono" placeholder={current_operation.placeholder} bind:value={operand} autocomplete="off" />
         {/if}
