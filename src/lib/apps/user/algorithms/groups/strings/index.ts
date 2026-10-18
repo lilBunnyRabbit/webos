@@ -148,59 +148,141 @@ const kmp = define({
   },
 });
 
+export function good_suffix_shifts(pattern: string): number[] {
+  const m = pattern.length;
+  const shifts = Array<number>(m + 1).fill(0);
+  const border = Array<number>(m + 1).fill(0);
+  let i = m;
+  let j = m + 1;
+  border[i] = j;
+  while (i > 0) {
+    while (j <= m && pattern[i - 1] !== pattern[j - 1]) {
+      if (shifts[j] === 0) shifts[j] = j - i;
+      j = border[j];
+    }
+    i--;
+    j--;
+    border[i] = j;
+  }
+  j = border[0];
+  for (i = 0; i <= m; i++) {
+    if (shifts[i] === 0) shifts[i] = j;
+    if (i === j) j = border[j];
+  }
+  return shifts;
+}
+
 const boyer_moore = define({
   intro:
-    "Boyer–Moore compares the pattern right to left. On a mismatch, the bad-character rule looks up where the mismatched text character last occurs in the pattern and slides the pattern so they line up, or right past it if it doesn't occur at all. On normal text that skips most characters: the longer the pattern, the faster it gets.",
-  use: "Search in editors and grep-like tools (GNU grep uses a Boyer–Moore variant); long patterns over a large alphabet.",
+    "Boyer–Moore compares the pattern right to left and, on a mismatch, slides it by the larger of two rules. The bad-character rule looks up where the mismatched text character last occurs in the pattern and lines them up, or jumps right past it. The good-suffix rule uses the part that already matched: it slides to the next copy of that suffix in the pattern (one not preceded by the same mismatching character), or to the longest prefix that fits its end. On normal text that skips most characters: the longer the pattern, the faster it gets.",
+  use: "Search in editors and grep-like tools (GNU grep uses a Boyer–Moore variant); long patterns over a large alphabet. The good-suffix rule matters on small alphabets like DNA, where bad characters rarely help.",
   traits: ["Right to left", "Skips ahead", "Sub-linear on typical text"],
   pseudocode: [
     "last[c] ← the last index of c in the pattern, or −1",
+    "good[j] ← the smallest slide that lines the matched suffix after j up again, not preceded by pattern[j]",
     "s ← 0",
     "while s ≤ n − m:",
     "  j ← m − 1; while j ≥ 0 and pattern[j] = text[s + j]: j ← j − 1",
-    "  j < 0: a match at s; s ← s + 1",
-    "  else: s ← s + max(1, j − last[text[s + j]])",
+    "  j < 0: a match at s; s ← s + good[full match]",
+    "  bad ← j − last[text[s + j]]; suffix ← good[j]",
+    "  s ← s + max(1, bad, suffix)",
   ],
   input: search_spec({ a: "example", b: "here is a simple example" }),
-  *run({ a: pattern, b: text_value }: Pair) {
+  presets: [
+    { label: "Good suffix wins", value: { a: "abbabab", b: "abaabbababbabababbabab" } },
+    { label: "Repetitive", value: { a: "abab", b: "abababababcababab" } },
+  ],
+  params: [
+    {
+      id: "rules",
+      label: "Rules",
+      kind: "choice",
+      choices: [
+        { value: "both", label: "Bad character + good suffix" },
+        { value: "bad", label: "Bad character only" },
+        { value: "good", label: "Good suffix only" },
+      ],
+      default: "both",
+    },
+  ],
+  *run({ a: pattern, b: text_value }: Pair, params) {
+    const rules = String(params.rules ?? "both");
+    const use_bad = rules !== "good";
+    const use_good = rules !== "bad";
+    const m = pattern.length;
     const last = new Map<string, number>();
     [...pattern].forEach((char, i) => last.set(char, i));
+    const good = good_suffix_shifts(pattern);
     const found: number[] = [];
     let comparisons = 0;
-    const table = (mark?: string): View => grid({ title: "last occurrence", col_labels: [...last.keys()].map(show), rows: [[...last.entries()].map(([char, i]) => ({ text: String(i), tone: char === mark ? Tone.ACTIVE : undefined }))] });
-    const frame = (note: string, line: number, s: number, text_tones: Tones, pattern_tones: Tones, mark?: string): Step => ({
-      views: [alignment(text_value, pattern, s, text_tones, pattern_tones), table(mark), found_view(found)],
+    const last_table = (mark?: string): View =>
+      grid({ title: "bad character: last occurrence", col_labels: [...last.keys()].map(show), rows: [[...last.entries()].map(([char, i]) => ({ text: String(i), tone: char === mark ? Tone.ACTIVE : undefined }))] });
+    const good_table = (mark?: number): View =>
+      grid({
+        title: `good suffix: slide on a mismatch at j (full match: ${good[0]})`,
+        col_labels: [...pattern].map((char, j) => `${j} ${show(char)}`),
+        rows: [[...pattern].map((_, j) => ({ text: String(good[j + 1]), tone: j === mark ? Tone.ACTIVE : undefined }))],
+      });
+    const frame = (note: string, line: number, s: number, text_tones: Tones, pattern_tones: Tones, mark?: { char?: string; j?: number }): Step => ({
+      views: [
+        alignment(text_value, pattern, s, text_tones, pattern_tones),
+        ...(use_bad ? [last_table(mark?.char)] : []),
+        ...(use_good ? [good_table(mark?.j)] : []),
+        found_view(found),
+      ],
       line,
       note,
       counters: { comparisons, "shift position": s },
     });
-    yield frame(`Note where each pattern character last occurs.`, 0, 0, {}, {});
+    if (use_bad) yield frame(`Bad-character table: where each pattern character last occurs.`, 0, 0, {}, {});
+    if (use_good)
+      yield frame(
+        `Good-suffix table: if the mismatch is at j, the suffix after j already matched; slide by good[j] so another copy of it (or a prefix that fits its end) lands under the same text.`,
+        1,
+        0,
+        {},
+        {}
+      );
     let s = 0;
-    while (s <= text_value.length - pattern.length) {
-      let j = pattern.length - 1;
+    while (s <= text_value.length - m) {
+      let j = m - 1;
       while (j >= 0) {
         comparisons++;
         const same = pattern[j] === text_value[s + j];
-        yield frame(same ? `${show(text_value[s + j])} = ${show(pattern[j])}, keep going left.` : `${show(text_value[s + j])} ≠ ${show(pattern[j])}.`, 3, s, { ...range_tones(s + j + 1, s + pattern.length, Tone.DONE), [s + j]: same ? Tone.DONE : Tone.BAD }, { ...range_tones(j + 1, pattern.length, Tone.DONE), [j]: same ? Tone.DONE : Tone.BAD });
+        yield frame(same ? `${show(text_value[s + j])} = ${show(pattern[j])}, keep going left.` : `${show(text_value[s + j])} ≠ ${show(pattern[j])}.`, 4, s, { ...range_tones(s + j + 1, s + m, Tone.DONE), [s + j]: same ? Tone.DONE : Tone.BAD }, { ...range_tones(j + 1, m, Tone.DONE), [j]: same ? Tone.DONE : Tone.BAD });
         if (!same) break;
         j--;
       }
       if (j < 0) {
         found.push(s);
-        yield frame(`A match at ${s}.`, 4, s, range_tones(s, s + pattern.length, Tone.DONE), range_tones(0, pattern.length, Tone.DONE));
-        s += 1;
+        const jump = use_good ? good[0] : 1;
+        yield frame(
+          use_good ? `A match at ${s}. The pattern overlaps itself at a slide of ${jump}, so move ${jump}.` : `A match at ${s}. Without the good-suffix rule, move 1.`,
+          5,
+          s,
+          range_tones(s, s + m, Tone.DONE),
+          range_tones(0, m, Tone.DONE)
+        );
+        s += jump;
         continue;
       }
       const char = text_value[s + j];
       const at = last.get(char) ?? -1;
-      const jump = Math.max(1, j - at);
+      const bad = use_bad ? j - at : 0;
+      const suffix = use_good ? good[j + 1] : 0;
+      const jump = Math.max(1, bad, suffix);
+      const parts: string[] = [];
+      if (use_bad)
+        parts.push(at < 0 ? `“${show(char)}” isn't in the pattern: bad character says ${bad}` : `the last “${show(char)}” is at ${at}: bad character says ${bad}${bad < 1 ? " (that would go backwards)" : ""}`);
+      if (use_good) parts.push(j === m - 1 ? `nothing matched yet: good suffix says ${suffix}` : `“${pattern.slice(j + 1)}” matched: good suffix says ${suffix}`);
+      const winner = use_bad && use_good ? (suffix > bad ? " The good suffix wins." : bad > suffix ? " The bad character wins." : "") : "";
       yield frame(
-        at < 0 ? `“${show(char)}” isn't in the pattern at all: jump past it, ${jump} ${jump === 1 ? "place" : "places"}.` : `The last “${show(char)}” in the pattern is at ${at}: slide ${jump} to line it up.`,
-        5,
+        `${parts.join("; ")}. Slide ${jump}.${winner}`.replace(/^./, (first) => first.toUpperCase()),
+        7,
         s,
-        { [s + j]: Tone.WARN },
-        at >= 0 ? { [at]: Tone.WARN } : {},
-        char
+        { [s + j]: Tone.WARN, ...range_tones(s + j + 1, s + m, Tone.MARK) },
+        { ...(use_bad && at >= 0 ? { [at]: Tone.WARN } : {}), ...range_tones(j + 1, m, Tone.MARK) },
+        { char, j }
       );
       s += jump;
     }

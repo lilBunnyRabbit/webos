@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, apps: ["algorithms"], text: "Red-black trees in Algorithms now delete too, showing each recolouring and rotation that keeps the tree balanced." },
       { kind: NEW, apps: ["algorithms"], text: "B-trees in Algorithms delete keys as well, borrowing from a neighbour or merging two nodes when one runs short." },
+      { kind: IMPROVED, apps: ["algorithms"], text: "Boyer–Moore search adds the good-suffix rule, and you can switch each rule off to see how much it saves." },
     ],
   },
   {
