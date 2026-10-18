@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { key_direction, swipe_direction, track_play } from "$lib/core/games";
+  import { key_direction, swipe_direction, track_play } from "$kit/games";
   import { BoardOverlay, Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon } from "phosphor-svelte";

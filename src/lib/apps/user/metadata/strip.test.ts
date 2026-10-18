@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { orientation, read_metadata } from "$lib/core/utils/exif";
-import { JPEG_SCAN, concat, jpeg, latin1, png, png_chunk, riff_chunk, tiff, vp8l, vp8x, webp, type TiffEntry } from "$lib/core/utils/exif/fixtures";
-import { png_chunks, webp_chunks } from "$lib/core/utils/exif/containers";
+import { orientation, read_metadata } from "$kit/utils/exif";
+import { JPEG_SCAN, concat, jpeg, latin1, png, png_chunk, riff_chunk, tiff, vp8l, vp8x, webp, type TiffEntry } from "$kit/utils/exif/fixtures";
+import { png_chunks, webp_chunks } from "$kit/utils/exif/containers";
 import { crc32 } from "$lib/core/utils/zip/crc32";
 import { strip_metadata, stripped_name } from "./strip";
 

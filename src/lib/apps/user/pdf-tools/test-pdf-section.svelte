@@ -2,7 +2,7 @@
   import { Button, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes, parse_bytes } from "$lib/core/utils";
-  import { paint } from "$lib/core/utils/image";
+  import { paint } from "$kit/utils/image";
   import { FloppyDisk as FloppyDiskIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { z } from "zod";

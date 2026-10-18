@@ -4,7 +4,7 @@ import { base_name, parent_path, resolve_path } from "$lib/core/api/services/fil
 import { assert_writable, file_value, type FileValue } from "$lib/core/api/services/files/shell";
 import { ShellError, type CommandContext } from "$lib/core/api/services/shell/type";
 import { error_message } from "$lib/core/utils";
-import { write_image } from "$lib/core/utils/image";
+import { write_image } from "$kit/utils/image";
 import { encode } from "./encode/encode";
 import type { Ecc } from "./encode/tables";
 import { DEFAULT_STYLE, qr_canvas, qr_svg } from "./render";

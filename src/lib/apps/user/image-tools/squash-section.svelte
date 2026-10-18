@@ -4,7 +4,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message, format_bytes } from "$lib/core/utils";
-  import { encode_image, has_files, image_files, load_image } from "$lib/core/utils/image";
+  import { encode_image, has_files, image_files, load_image } from "$kit/utils/image";
   import {
     ArrowsIn as ArrowsInIcon,
     FolderOpen as FolderOpenIcon,

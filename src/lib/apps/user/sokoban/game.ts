@@ -1,5 +1,5 @@
-import type { Direction } from "$lib/core/games/direction";
-import { daily_seed } from "$lib/core/games/time";
+import type { Direction } from "$kit/games/direction";
+import { daily_seed } from "$kit/games/time";
 import { z } from "zod";
 import { CHAR_DIRECTIONS, generate, MOVE_CHARS, offset, Tile, type GenerateOptions, type Level } from "./puzzle";
 

@@ -1,4 +1,4 @@
-import type { SourceImage } from "$lib/core/utils/image";
+import type { SourceImage } from "$kit/utils/image";
 import { Anchor } from "./sprite-export";
 import {
   clamp_rect,

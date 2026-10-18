@@ -1,4 +1,4 @@
-import type { GameStats, Plays } from "$lib/core/games";
+import type { GameStats, Plays } from "$kit/games";
 import type { Tagged } from "$lib/core/api/services/shell/type";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z, type ZodType } from "zod";

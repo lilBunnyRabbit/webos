@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, Stopwatch, track_play } from "$kit/games";
   import { Button, IconButton, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {

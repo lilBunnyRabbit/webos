@@ -1,4 +1,4 @@
-import { daily_seed } from "$lib/core/games/time";
+import { daily_seed } from "$kit/games/time";
 import { create_rng, shuffle, type Rng } from "$lib/core/utils/random";
 import { z } from "zod";
 

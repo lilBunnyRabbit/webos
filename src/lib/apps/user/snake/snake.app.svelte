@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { key_direction, swipe_direction, track_play } from "$lib/core/games";
+  import { key_direction, swipe_direction, track_play } from "$kit/games";
   import { BoardOverlay, Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import {
     ArrowDown as ArrowDownIcon,

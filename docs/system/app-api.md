@@ -1,6 +1,6 @@
 # App API
 
-ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md) · Pinned by: `src/lib/core/app-api.test.ts`
+ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md) · Pinned by: `src/lib/core/app-api.test.ts`
 
 What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until 2.0. Anything not listed is internal: use it if you want, but it can change in any release.
 
@@ -26,16 +26,18 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | Module | Stable | Notes |
 |--------|--------|-------|
 | `$lib/core/api` | Default export `kernel`, the names in the tables below, every type listed here | The barrel also re-exports a lot of OS-only helpers; only what's listed here is promised |
-| `$lib/core/api/services/apps/type` | `AppCategory` | Manifests import constants from their own module ([the import rule](apps/manifest.md#the-import-rule)), so this path is part of the promise |
+| `$lib/core/api/services/apps/type` | `AppCategory`, `DailyRank` | Manifests import constants from their own module ([the import rule](apps/manifest.md#the-import-rule)), so this path is part of the promise |
 | `$lib/core/api/services/apps/helpers` | `FILE_PROPS`, `define_app` | Same reason |
 | `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: each app's `commands.ts` builds its commands |
 | `$lib/core/contexts/app` | See [App context and data](#app-context-and-data) | Import from the barrel. The files behind it are internal paths |
 | `$lib/core/components/ui` | The whole UI kit | |
-| `$lib/core/games` | The whole games kit | Import from the barrel in components and lazy files |
-| `$lib/core/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
-| `$lib/core/games/daily` | `DailyRank`, `better_daily`, `DailyResult` | Stable path (1.20), same reason as `games/time`: manifests set `daily_rank` |
-| `$lib/core/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
+| `$kit/games` | The whole games kit | Import from the barrel in components and lazy files |
+| `$kit/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
+| `$kit/games/daily` | `DailyRank`, `better_daily`, `DailyResult` | Stable path (1.20), same reason as `games/time`: manifests set `daily_rank` |
+| `$kit/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
+| `$kit/utils/image` | The names in [App kit](#app-kit-kit) | |
+| `$lib/core/games`, `games/time`, `games/daily`, `games/direction`, `$lib/core/utils/image` | Same exports as their `$kit` path | Shims left when the [app kit](#app-kit-kit) moved them. They keep working until 3.0; new code imports `$kit` |
 
 ## Manifest: `define_app`
 
@@ -150,11 +152,27 @@ Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesSer
 
 Theme tokens are part of the surface too: the token names in [CONVENTIONS](../CONVENTIONS.md#themes-and-tokens) (`background` ladder, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, the states) and their Tailwind classes. Renaming one breaks every app's markup, so that's a 2.0. Values change any time.
 
-Not in the kit, internal: everything else under `$lib/core/components/` (`code`, `files`, `dialogs`, `apps/app-badge.svelte`, `brand`, `theme`, `desktop`).
+Not in the kit, internal: everything else under `$lib/core/components/` (`files`, `dialogs`, `apps/app-badge.svelte`, `brand`, `theme`, `desktop`).
+
+## App kit (`$kit`)
+
+`src/lib/kit`, imported as `$kit` ([ADR-048](../adrs/048-app-kit-layer.md)): helpers only apps use, kept out of core. Core never imports it (`src/lib/core/kit-boundary.test.ts`); apps import both. The same rules as core apply: what's listed here as stable keeps working until a major, the rest is internal.
+
+| Module | Stable | Internal (used by) |
+|--------|--------|--------------------|
+| `$kit/games`, `games/time`, `games/daily`, `games/direction` | All of it, see [Games kit](#games-kit) | |
+| `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
+| `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |
+| `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite) |
+| `$kit/utils/qr`, `$kit/utils/qr-scan.svelte` | | QR encode and detect, `CameraScan` (QR Reader, QR Studio, P2P Transfer) |
+| `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
+| `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |
+
+The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-export these until 3.0. `app-api.test.ts` pins both. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 
 ## Games kit
 
-`$lib/core/games`, all of it ([ADR-035](../adrs/035-app-platform-wave-2.md)):
+`$kit/games`, all of it ([ADR-035](../adrs/035-app-platform-wave-2.md)):
 
 | Area | Names |
 |------|-------|
@@ -182,9 +200,8 @@ The rule: generic helpers used by three or more user apps are stable.
 | `$lib/core/utils/long-press` | `long_press` |
 | `$lib/core/utils/detached-root.svelte` | `detached_root` |
 | `$lib/core/utils/print` | `print_html` (ADR-035) |
-| `$lib/core/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` |
 
-Internal, though bundled apps use them: `utils/image`'s `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality`; `utils/history` (Paint, Image Editor); `utils/qr`, `utils/qr-scan.svelte` (QR Reader, P2P Transfer); `utils/zip/*` (Archive); `utils/exif` (Metadata, PDF Tools); `utils/install.svelte`; `utils/image-format` directly; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `components/code` (with `CodeView`, a bound CodeMirror field: API Client, Recipe Box); `settings/themes`. An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
+Internal, though bundled apps use them: `utils/zip/*` (Archive); `utils/install.svelte`; `$lib/core/utils`'s `tv` and `ov`; `files/opfs`, `files/hierarchy`'s `PATHS`; `components/files/drag`; `settings/themes`. The app kit's internal modules are listed under [App kit](#app-kit-kit). An app that copies one of these and needs it stable should ask for it to be promoted (a minor).
 
 ## Storage locations
 
@@ -202,5 +219,5 @@ Users' data sits in these, so moving one is a 2.0 even when no code signature ch
 
 - The pin test checks names. A signature change (a parameter made required, a return type changed) passes it; review catches those.
 - `create_storage_handle(app_id, state)` is stable because two apps need storage outside a window, but its `state` parameter only matters to the window frame. A cleaner out-of-window entry point would be an additive change.
-- Two kinds of bundled file still import the games kit through `$lib/core/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
+- Two kinds of bundled file still import the games kit through `$kit/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
 - The `$lib/core/api` barrel exports much more than this page promises (theme presets, widget and shortcut file parsers, association ranking, launcher search, `Kernel`, `detect_platform`). Listing isn't promising.

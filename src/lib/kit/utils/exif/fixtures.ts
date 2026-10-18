@@ -1,4 +1,4 @@
-import { crc32 } from "../zip/crc32";
+import { crc32 } from "$lib/core/utils/zip/crc32";
 
 // Hand-built files for tests: just enough structure for the reader, no real pixels.
 

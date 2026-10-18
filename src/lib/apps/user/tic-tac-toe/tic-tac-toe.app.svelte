@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { track_play } from "$lib/core/games";
+  import { track_play } from "$kit/games";
   import { Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowUUpLeft as UndoIcon, ChartBar as ChartBarIcon, Circle as CircleIcon, X as XIcon } from "phosphor-svelte";

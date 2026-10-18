@@ -15,7 +15,7 @@
   import type { SectionProps } from "./sections";
   import { clamp_count, compute_layout, draw_preview, MAX_COUNT, render_tiles, SplitDirection } from "./split";
   import { split_folder_name, tile_name } from "./naming";
-  import { has_files, image_files, load_image, type SourceImage } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image, type SourceImage } from "$kit/utils/image";
   import { parent_path } from "$lib/core/api/services/files/path";
 
   const { picker, initial_paths }: SectionProps = $props();

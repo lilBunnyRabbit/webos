@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge, Button, IconButton, Input } from "$lib/core/components/ui";
-  import { format_time } from "$lib/core/games";
+  import { format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { ArrowCounterClockwise, Pause, Play, Trash } from "phosphor-svelte";
   import { format_duration, MINUTE, new_id, pause_timer, reset_timer, start_timer, timer_remaining, timer_state, TimerState, type Timer } from "./clock";

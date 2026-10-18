@@ -1,5 +1,5 @@
 import { file_stem } from "$lib/core/api/services/files/path";
-import { ImageKind, orientation } from "$lib/core/utils/exif";
+import { ImageKind, orientation } from "$kit/utils/exif";
 import {
   JPEG_SOS,
   PNG_SIGNATURE,
@@ -10,8 +10,8 @@ import {
   png_chunks,
   webp_chunks,
   type JpegSegment,
-} from "$lib/core/utils/exif/containers";
-import { EXIF_HEADER } from "$lib/core/utils/exif/read";
+} from "$kit/utils/exif/containers";
+import { EXIF_HEADER } from "$kit/utils/exif/read";
 import { crc32 } from "$lib/core/utils/zip/crc32";
 
 export interface StripOptions {

@@ -1,4 +1,4 @@
-import { format_of, type ImageFormat } from "$lib/core/utils/image-format";
+import { format_of, type ImageFormat } from "$kit/utils/image-format";
 import { file_stem } from "$lib/core/api/services/files/path";
 import { clamp } from "$lib/core/utils";
 

@@ -5,7 +5,7 @@
   import type { IconComponent } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { format_time } from "$lib/core/games";
+  import { format_time } from "$kit/games";
   import { cn, format_bytes, format_datetime, error_message } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,

@@ -3,7 +3,7 @@ import kernel, { TaskJobStatus, type AppsService, type FilesService, type TasksS
 import type { AppId } from "$lib/core/api/services/apps/type";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
-import { encode_image, ImageFormat, write_image } from "$lib/core/utils/image";
+import { encode_image, ImageFormat, write_image } from "$kit/utils/image";
 import { mime_of, Mode, plan_output, TestFormat, type TestImageSpec, type TestOutput } from "./test-image";
 import { BmpEncoder, PngStoredEncoder } from "./test-image-encode";
 import { render_bands, render_canvas } from "./test-image-render";

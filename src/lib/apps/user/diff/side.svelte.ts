@@ -1,6 +1,6 @@
 import type { FilesService } from "$lib/core/api";
 import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-import { language_for } from "$lib/core/components/code";
+import { language_for } from "$kit/components/code";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
 
 export class DiffSide {

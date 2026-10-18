@@ -1,7 +1,2 @@
-export * from "./daily";
-export * from "./direction";
-export * from "./grid";
-export * from "./plays";
-export * from "./plays.svelte";
-export * from "./stopwatch.svelte";
-export * from "./time";
+/** @deprecated Stable path kept until 3.0 (ADR-048): import `$kit/games`. */
+export * from "$kit/games";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Direction } from "$lib/core/games/direction";
+import { Direction } from "$kit/games/direction";
 
 export const SIZE = 4;
 export const WIN_VALUE = 2048;

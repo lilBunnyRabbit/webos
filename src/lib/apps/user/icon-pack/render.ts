@@ -1,5 +1,5 @@
 import { BRAND_DARK, BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
-import { load_image } from "$lib/core/utils/image";
+import { load_image } from "$kit/utils/image";
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip, type ZipSource } from "$lib/core/utils/zip/write";
 import { write_ico } from "./ico";

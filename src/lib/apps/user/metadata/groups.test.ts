@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { read_metadata } from "$lib/core/utils/exif";
-import { jpeg, tiff } from "$lib/core/utils/exif/fixtures";
+import { read_metadata } from "$kit/utils/exif";
+import { jpeg, tiff } from "$kit/utils/exif/fixtures";
 import { camera, exif_date, exposure, image_groups, map_link, taken } from "./groups";
 
 const photo = read_metadata(

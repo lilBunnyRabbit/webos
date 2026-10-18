@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { Platform, type SettingsService } from "$lib/core/api";
   import { untrack } from "svelte";
-  import type { SourceImage } from "$lib/core/utils/image";
+  import type { SourceImage } from "$kit/utils/image";
   import type { SpriteExtractState } from "./sprite-extract.svelte";
   import type { SpriteOverrides, SpriteSettings } from "./sprite-model";
   import {

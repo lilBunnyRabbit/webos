@@ -5,7 +5,7 @@
   import { available_name } from "$lib/core/api/services/files/opfs";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
-  import { has_files, image_files, load_image, load_image_at, paint, type SourceImage } from "$lib/core/utils/image";
+  import { has_files, image_files, load_image, load_image_at, paint, type SourceImage } from "$kit/utils/image";
   import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Printer as PrinterIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { z } from "zod";

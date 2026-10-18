@@ -1,7 +1,7 @@
 import kernel, { type AppsService, type FilesService } from "$lib/core/api";
 import { resolve_path } from "$lib/core/api/services/files/path";
 import { ShellError, type CommandContext } from "$lib/core/api/services/shell/type";
-import { parse_day } from "$lib/core/games";
+import { parse_day } from "$kit/games";
 import { analyze_off_thread } from "./analysis";
 import { parse_nonogram, VERDICT_TEXT } from "./file";
 import { Mode, type Size } from "./game";

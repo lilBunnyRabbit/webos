@@ -1,10 +1,10 @@
 <script lang="ts">
   import kernel, { NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { format_time, Stopwatch, track_play } from "$lib/core/games";
+  import { format_time, Stopwatch, track_play } from "$kit/games";
   import { BoardOverlay, Button, EmptyState, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
-  import { has_files, image_files } from "$lib/core/utils/image";
+  import { has_files, image_files } from "$kit/utils/image";
   import { random_seed } from "$lib/core/utils/random";
   import {
     CornersOut as FitIcon,
