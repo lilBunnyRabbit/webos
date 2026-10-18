@@ -82,6 +82,7 @@ What are the implications of this decision?
 | [046](./046-on-device-ai-service.md) | On-Device AI Service | 2026-10-17 | Implemented |
 | [047](./047-solo-app-open.md) | Solo App Open | 2026-10-18 | Implemented |
 | [048](./048-app-kit-layer.md) | App Kit Layer | 2026-10-18 | Implemented |
+| [049](./049-lazy-app-metadata.md) | Lazy App Metadata | 2026-10-18 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
