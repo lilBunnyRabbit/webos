@@ -1,23 +1,9 @@
 import { define, type Definition } from "../../engine/definition";
 import { InputError, text, type InputSpec } from "../../engine/inputs";
 import { grid, range_tones, Tone, type Cell, type Step, type Tones, type View } from "../../engine/step";
+import { chars_view, ratio, show } from "./common";
+import entropy from "./entropy";
 import { best_of, candidates, dict_to_bin, lz77_decode, type Triple } from "./lz77";
-
-const show = (char: string | undefined) => (char === undefined ? "" : char === " " ? "␣" : char === "\n" ? "⏎" : char);
-
-function chars_view(data: string, tones: Tones, title = "input"): View {
-  const chars = [...data];
-  const per_row = 32;
-  const rows = Math.ceil(chars.length / per_row) || 1;
-  return grid({
-    title,
-    row_labels: rows > 1 ? Array.from({ length: rows }, (_, r) => String(r * per_row)) : undefined,
-    col_labels: rows === 1 ? chars.map((_, i) => String(i)) : undefined,
-    rows: Array.from({ length: rows }, (_, r) => chars.slice(r * per_row, (r + 1) * per_row).map((char, i): Cell => ({ text: show(char), tone: tones[r * per_row + i] }))),
-  });
-}
-
-const ratio = (from: number, to: number) => (from === 0 ? "–" : `${Math.round((to / from) * 100)}%`);
 
 const rle = define({
   intro:
@@ -393,4 +379,6 @@ export default {
   lzw,
   "bwt-mtf": bwt_mtf,
   base64,
+  "huffman-coding": entropy.huffman,
+  "arithmetic-coding": entropy.arithmetic,
 } as unknown as Record<string, Definition>;

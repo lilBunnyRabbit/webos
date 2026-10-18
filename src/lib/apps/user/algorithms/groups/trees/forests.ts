@@ -326,7 +326,7 @@ const union_find = define({
   },
 });
 
-interface HNode {
+export interface HNode {
   id: string;
   weight: number;
   char?: string;
@@ -334,28 +334,52 @@ interface HNode {
   right?: HNode;
 }
 
-export function huffman_codes(source: string): Map<string, string> {
+export function huffman_leaves(source: string): HNode[] {
   const counts = new Map<string, number>();
   for (const char of source) counts.set(char, (counts.get(char) ?? 0) + 1);
-  let queue: HNode[] = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([char, weight], i) => ({ id: `h${i}`, char, weight }));
-  if (queue.length === 1) return new Map([[queue[0].char!, "0"]]);
+  return [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([char, weight], i): HNode => ({ id: `h${i}`, char, weight }))
+    .sort((a, b) => a.weight - b.weight);
+}
+
+export function huffman_tree(source: string): HNode {
+  const queue = huffman_leaves(source);
   let id = queue.length;
   while (queue.length > 1) {
     queue.sort((a, b) => a.weight - b.weight);
     const [a, b] = queue.splice(0, 2);
     queue.push({ id: `h${id++}`, weight: a.weight + b.weight, left: a, right: b });
   }
+  return queue[0];
+}
+
+export function huffman_code_map(root: HNode): Map<string, string> {
   const codes = new Map<string, string>();
   const walk = (node: HNode, code: string) => {
-    if (node.char !== undefined) codes.set(node.char, code);
+    if (node.char !== undefined) codes.set(node.char, code || "0");
     if (node.left) walk(node.left, code + "0");
     if (node.right) walk(node.right, code + "1");
   };
-  walk(queue[0], "");
+  walk(root, "");
   return codes;
 }
 
+export const huffman_codes = (source: string): Map<string, string> => huffman_code_map(huffman_tree(source));
+
 const show = (char: string) => (char === " " ? "␣" : char === "\n" ? "⏎" : char);
+
+const huffman_label = (node: HNode) => (node.char !== undefined ? `${show(node.char)} ${node.weight}` : String(node.weight));
+
+export function huffman_snapshot(node: HNode, marks: Map<HNode, Tone>, code: string | null): TreeNode {
+  return {
+    id: node.id,
+    label: huffman_label(node),
+    tone: marks.get(node),
+    badge: code !== null && node.char !== undefined ? code || "0" : undefined,
+    children: node.left && node.right ? [huffman_snapshot(node.left, marks, code === null ? null : code + "0"), huffman_snapshot(node.right, marks, code === null ? null : code + "1")] : [],
+  };
+}
 
 const huffman = define({
   intro:
@@ -381,16 +405,8 @@ const huffman = define({
     let merges = 0;
     const freq = (active?: string): View =>
       grid({ title: "counts", col_labels: [...counts.keys()].map(show), rows: [[...counts].map(([char, count]) => ({ text: String(count), tone: char === active ? Tone.WARN : undefined }))] });
-    const label = (node: HNode) => (node.char !== undefined ? `${show(node.char)} ${node.weight}` : String(node.weight));
-    const snapshot = (node: HNode, marks: Map<HNode, Tone>, code: string | null): TreeNode => ({
-      id: node.id,
-      label: label(node),
-      tone: marks.get(node),
-      badge: code && node.char !== undefined ? code : undefined,
-      children: node.left && node.right ? [snapshot(node.left, marks, code === null ? null : code + "0"), snapshot(node.right, marks, code === null ? null : code + "1")] : [],
-    });
     const frame = (note: string, line: number, roots: HNode[], marks: Map<HNode, Tone> = new Map(), extra: View[] = [], coded = false): Step => ({
-      views: [{ kind: "tree", title: roots.length > 1 ? "queue, lightest first" : "tree", roots: roots.map((root) => snapshot(root, marks, coded ? "" : null)) }, ...extra],
+      views: [{ kind: "tree", title: roots.length > 1 ? "queue, lightest first" : "tree", roots: roots.map((root) => huffman_snapshot(root, marks, coded ? "" : null)) }, ...extra],
       line,
       note,
       counters: { symbols: counts.size, merges },
@@ -399,14 +415,13 @@ const huffman = define({
       counts.set(char, (counts.get(char) ?? 0) + 1);
     }
     yield { views: [freq()], line: 0, note: `Count the ${source.length} symbols: ${counts.size} different ones.`, counters: { symbols: counts.size, merges } };
-    let queue: HNode[] = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([char, weight], i) => ({ id: `h${i}`, char, weight }));
+    const queue = huffman_leaves(source);
     let id = queue.length;
-    queue.sort((a, b) => a.weight - b.weight);
     yield frame("One tree per symbol, weighted by its count.", 1, [...queue], new Map(), [freq()]);
     while (queue.length > 1) {
       queue.sort((a, b) => a.weight - b.weight);
       const [a, b] = queue.slice(0, 2);
-      yield frame(`The two lightest: ${label(a)} and ${label(b)}.`, 3, [...queue], new Map([[a, Tone.ACTIVE], [b, Tone.ACTIVE]]), [freq()]);
+      yield frame(`The two lightest: ${huffman_label(a)} and ${huffman_label(b)}.`, 3, [...queue], new Map([[a, Tone.ACTIVE], [b, Tone.ACTIVE]]), [freq()]);
       queue.splice(0, 2);
       const joined: HNode = { id: `h${id++}`, weight: a.weight + b.weight, left: a, right: b };
       merges++;
@@ -414,13 +429,7 @@ const huffman = define({
       queue.sort((x, y) => x.weight - y.weight);
       yield frame(`Join them under a node of weight ${joined.weight}.`, 4, [...queue], new Map([[joined, Tone.WARN]]), [freq()]);
     }
-    const codes = new Map<string, string>();
-    const walk = (node: HNode, code: string) => {
-      if (node.char !== undefined) codes.set(node.char, code || "0");
-      if (node.left) walk(node.left, code + "0");
-      if (node.right) walk(node.right, code + "1");
-    };
-    walk(queue[0], "");
+    const codes = huffman_code_map(queue[0]);
     const table = grid({ title: "codes", row_labels: [...codes.keys()].map(show), rows: [...codes].map(([char, code]) => [{ text: code, tone: Tone.DONE }, { text: `× ${counts.get(char)}` }]) });
     const bits = [...source].reduce((sum, char) => sum + codes.get(char)!.length, 0);
     const encoded: View = { kind: "text", title: `${bits} bits instead of ${source.length * 8}`, lines: [...source].map((char) => ({ text: `${show(char)} ${codes.get(char)}` })) };

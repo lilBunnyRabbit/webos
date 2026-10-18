@@ -266,9 +266,231 @@ const sweep = define({
   },
 });
 
+const EPS = 1e-7;
+
+function crossing_point(s: Segment, t: Segment): Point | null {
+  const d = (s.b.x - s.a.x) * (t.b.y - t.a.y) - (s.b.y - s.a.y) * (t.b.x - t.a.x);
+  if (d === 0) return null;
+  const u = ((t.a.x - s.a.x) * (t.b.y - t.a.y) - (t.a.y - s.a.y) * (t.b.x - t.a.x)) / d;
+  const v = ((t.a.x - s.a.x) * (s.b.y - s.a.y) - (t.a.y - s.a.y) * (s.b.x - s.a.x)) / d;
+  if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+  return { x: s.a.x + u * (s.b.x - s.a.x), y: s.a.y + u * (s.b.y - s.a.y) };
+}
+
+const before = (p: Point, q: Point) => (Math.abs(p.x - q.x) > EPS ? p.x < q.x : q.y - p.y > EPS);
+const same = (p: Point, q: Point) => Math.abs(p.x - q.x) <= EPS && Math.abs(p.y - q.y) <= EPS;
+const round = (value: number) => Math.round(value * 10) / 10;
+const at = (p: Point) => `(${round(p.x)}, ${round(p.y)})`;
+
+function contains(s: Segment, p: Point): boolean {
+  const length = Math.hypot(s.b.x - s.a.x, s.b.y - s.a.y);
+  if (Math.abs(cross(s.a, s.b, p)) / length > 1e-6) return false;
+  return p.x >= Math.min(s.a.x, s.b.x) - EPS && p.x <= Math.max(s.a.x, s.b.x) + EPS && p.y >= Math.min(s.a.y, s.b.y) - EPS && p.y <= Math.max(s.a.y, s.b.y) + EPS;
+}
+
+const BO_SEGMENTS: Segment[] = [
+  { a: { x: 5, y: 20 }, b: { x: 60, y: 70 } },
+  { a: { x: 15, y: 80 }, b: { x: 70, y: 15 } },
+  { a: { x: 30, y: 40 }, b: { x: 95, y: 45 } },
+  { a: { x: 50, y: 85 }, b: { x: 90, y: 60 } },
+  { a: { x: 65, y: 10 }, b: { x: 80, y: 95 } },
+  { a: { x: 10, y: 55 }, b: { x: 40, y: 58 } },
+  { a: { x: 20, y: 10 }, b: { x: 45, y: 95 } },
+];
+
+const bentley_ottmann = define({
+  intro:
+    "The full plane sweep. The active segments are kept sorted by where they cross the sweep line, so a segment only ever needs testing against its neighbours in that order: two segments can't cross without first becoming neighbours. Every crossing found ahead of the line becomes an event of its own, and at it the two segments swap places in the order, which makes new neighbours to test.",
+  use: "Map overlay in GIS, checking circuit layouts and polygons for self-intersections; the textbook example of an output-sensitive algorithm, fast when crossings are few.",
+  traits: ["Plane sweep", "Sorted active set", "Output-sensitive"],
+  pseudocode: [
+    "Q ← every endpoint, ordered by x, then y; T ← empty, ordered by y along the line",
+    "while Q isn't empty: p ← the next event point",
+    "  two or more segments meet at p (start, end or pass through): report p",
+    "  remove the ones that end at p or pass through it from T",
+    "  insert the ones that start at p or pass through it, in their order just right of p",
+    "  nothing inserted: test the two segments now adjacent at p",
+    "  else: test the topmost inserted with its neighbour above, the bottommost with its neighbour below",
+    "  they cross right of p, and it isn't queued yet: add the crossing to Q",
+  ],
+  input: segments_spec(BO_SEGMENTS),
+  presets: [
+    { label: "Sample", value: BO_SEGMENTS },
+    { label: "Three through one point", value: [{ a: { x: 10, y: 10 }, b: { x: 90, y: 90 } }, { a: { x: 10, y: 90 }, b: { x: 90, y: 10 } }, { a: { x: 10, y: 50 }, b: { x: 90, y: 50 } }, { a: { x: 50, y: 5 }, b: { x: 50, y: 95 } }] },
+    { label: "Few crossings", value: Array.from({ length: 10 }, (_, i) => ({ a: { x: 5 + i * 3, y: 5 + i * 9 }, b: { x: 60 + i * 3, y: 8 + i * 9 } })).concat([{ a: { x: 40, y: 0 }, b: { x: 55, y: 100 } }]) },
+  ],
+  *run(input: Segment[]): Generator<Step, { crossings: Point[]; pairs: string[] }> {
+    const list = input.map((s) => (before(s.b, s.a) ? { a: s.b, b: s.a } : s));
+    const usable = list.map((_, i) => i).filter((i) => !same(list[i].a, list[i].b));
+    const name = (i: number) => `s${i + 1}`;
+    const names = (ids: number[]) => ids.map(name).join(", ");
+    const slope = (i: number) => {
+      const s = list[i];
+      return s.a.x === s.b.x ? Infinity : (s.b.y - s.a.y) / (s.b.x - s.a.x);
+    };
+    const y_on = (i: number, p: Point) => {
+      const s = list[i];
+      if (s.a.x === s.b.x) return Math.min(Math.max(p.y, s.a.y), s.b.y);
+      return s.a.y + ((p.x - s.a.x) * (s.b.y - s.a.y)) / (s.b.x - s.a.x);
+    };
+    const order = (p: Point) => (i: number, j: number) => {
+      const dy = y_on(i, p) - y_on(j, p);
+      if (Math.abs(dy) > 1e-6) return dy;
+      const ds = slope(i) - slope(j);
+      return Number.isNaN(ds) || ds === 0 ? i - j : ds;
+    };
+
+    interface Event {
+      p: Point;
+      starts: number[];
+      crossing: boolean;
+    }
+    const queue: Event[] = [];
+    const enqueue = (p: Point, starts: number[], crossing: boolean) => {
+      const found = queue.find((event) => same(event.p, p));
+      if (found) {
+        found.starts.push(...starts);
+        return false;
+      }
+      let index = queue.findIndex((event) => before(p, event.p));
+      if (index === -1) index = queue.length;
+      queue.splice(index, 0, { p, starts, crossing });
+      return true;
+    };
+    for (const i of usable) enqueue(list[i].a, [i], false);
+    for (const i of usable) enqueue(list[i].b, [], false);
+
+    const status: number[] = [];
+    const crossings: Point[] = [];
+    const pairs = new Set<string>();
+    let events = 0;
+    let tests = 0;
+    let sweep: number | undefined;
+
+    const frame = (note: string, line: number, marks: Map<number, Tone> = new Map(), event?: Point): Step => {
+      const active = new Set(status);
+      return {
+        views: [
+          {
+            kind: "points",
+            title: "plane",
+            points: [
+              ...usable.flatMap((i) => [
+                { ...list[i].a, label: name(i) },
+                { ...list[i].b },
+              ]),
+              ...crossings.map((p) => ({ ...p, tone: Tone.DONE, label: "×" })),
+              ...(event ? [{ ...event, tone: Tone.ACTIVE }] : []),
+            ],
+            segments: usable.map((i) => ({ a: list[i].a, b: list[i].b, tone: marks.get(i) ?? (active.has(i) ? Tone.MARK : undefined) })),
+            sweep,
+          },
+          { kind: "text", title: "active set T, top to bottom along the line", lines: status.length ? status.map((i) => ({ text: name(i), tone: marks.get(i) ?? Tone.MARK })) : [{ text: "empty", tone: Tone.MUTED }] },
+          {
+            kind: "text",
+            title: `event queue Q (${queue.length})`,
+            lines: queue.length
+              ? queue.slice(0, 8).map((e, k) => ({ text: `${at(e.p)} ${e.crossing ? "crossing" : e.starts.length ? `start ${names(e.starts)}` : "end"}`, tone: k === 0 ? Tone.COMPARE : e.crossing ? Tone.WARN : undefined }))
+              : [{ text: "empty", tone: Tone.MUTED }],
+          },
+        ],
+        line,
+        note,
+        counters: { events, "neighbour tests": tests, crossings: crossings.length, active: status.length },
+      };
+    };
+
+    function* test(i: number | undefined, j: number | undefined, p: Point): Generator<Step> {
+      if (i === undefined || j === undefined) return;
+      tests++;
+      const q = crossing_point(list[i], list[j]);
+      const marks = new Map<number, Tone>([
+        [i, Tone.COMPARE],
+        [j, Tone.COMPARE],
+      ]);
+      if (!q) {
+        yield frame(`Neighbours ${name(i)} and ${name(j)} don't cross.`, 7, marks, p);
+        return;
+      }
+      if (!before(p, q)) {
+        yield frame(`Neighbours ${name(i)} and ${name(j)} meet at ${at(q)}, which the line has already passed.`, 7, marks, p);
+        return;
+      }
+      const fresh = enqueue(q, [], true);
+      yield frame(fresh ? `Neighbours ${name(i)} and ${name(j)} cross ahead at ${at(q)}: queue it as an event.` : `Neighbours ${name(i)} and ${name(j)} cross at ${at(q)}, already queued.`, 7, marks, p);
+    }
+
+    const skipped = list.length - usable.length;
+    yield frame(`${queue.length} endpoint events, sorted left to right.${skipped ? ` ${skipped} zero-length ${skipped === 1 ? "segment is" : "segments are"} left out.` : ""}`, 0);
+    while (queue.length) {
+      const event = queue.shift()!;
+      const p = event.p;
+      events++;
+      sweep = p.x;
+      const starts = event.starts;
+      const through = status.filter((i) => contains(list[i], p));
+      const ends = through.filter((i) => same(list[i].b, p));
+      const passes = through.filter((i) => !same(list[i].b, p));
+      const meeting = [...starts, ...through];
+      const what = [starts.length && `${names(starts)} ${starts.length === 1 ? "starts" : "start"}`, ends.length && `${names(ends)} ${ends.length === 1 ? "ends" : "end"}`, passes.length && `${names(passes)} ${passes.length === 1 ? "passes" : "pass"} through`].filter(Boolean).join(", ");
+      yield frame(`Event ${at(p)}${event.crossing ? ", a crossing" : ""}: ${what || "nothing left here"}.`, 1, new Map(meeting.map((i) => [i, Tone.ACTIVE])), p);
+      if (meeting.length > 1) {
+        let added = 0;
+        for (let a = 0; a < meeting.length; a++)
+          for (let b = a + 1; b < meeting.length; b++) {
+            const [i, j] = [Math.min(meeting[a], meeting[b]), Math.max(meeting[a], meeting[b])];
+            if (crossing_point(list[i], list[j]) && !pairs.has(`${i}-${j}`)) {
+              pairs.add(`${i}-${j}`);
+              added++;
+            }
+          }
+        if (added) {
+          crossings.push(p);
+          yield frame(`${names(meeting)} meet at ${at(p)}: report it.`, 2, new Map(meeting.map((i) => [i, Tone.DONE])), p);
+        }
+      }
+      const removed = through;
+      for (const i of removed) status.splice(status.indexOf(i), 1);
+      const compare = order(p);
+      const inserted = [...passes, ...starts];
+      for (const i of inserted) {
+        let k = status.findIndex((j) => compare(i, j) < 0);
+        if (k === -1) k = status.length;
+        status.splice(k, 0, i);
+      }
+      if (removed.length || inserted.length) {
+        const notes: string[] = [];
+        if (ends.length) notes.push(`${names(ends)} ${ends.length === 1 ? "leaves" : "leave"} T`);
+        if (passes.length > 1) notes.push(`${names(passes)} swap order`);
+        else if (passes.length) notes.push(`${names(passes)} keeps its place`);
+        if (starts.length) notes.push(`${names(starts)} ${starts.length === 1 ? "joins" : "join"} T in order`);
+        yield frame(`${notes.join("; ")}.`.replace(/^./, (first) => first.toUpperCase()), inserted.length ? 4 : 3, new Map(inserted.map((i) => [i, Tone.WARN])), p);
+      }
+      if (!inserted.length) {
+        const below = status.findIndex((i) => y_on(i, p) > p.y + 1e-6);
+        const lower = below === -1 ? undefined : status[below];
+        const upper = below === -1 ? status.at(-1) : below > 0 ? status[below - 1] : undefined;
+        if (upper !== undefined && lower !== undefined) yield frame(`With nothing inserted, ${name(upper)} and ${name(lower)} are now neighbours.`, 5, new Map([[upper, Tone.COMPARE], [lower, Tone.COMPARE]]), p);
+        yield* test(upper, lower, p);
+      } else {
+        const top = Math.min(...inserted.map((i) => status.indexOf(i)));
+        const bottom = Math.max(...inserted.map((i) => status.indexOf(i)));
+        if (top > 0 || bottom < status.length - 1) yield frame(`Test the new neighbours at the edges of what was inserted.`, 6, new Map(inserted.map((i) => [i, Tone.WARN])), p);
+        yield* test(status[top - 1], status[top], p);
+        yield* test(status[bottom], status[bottom + 1], p);
+      }
+    }
+    sweep = undefined;
+    const all = (usable.length * (usable.length - 1)) / 2;
+    yield frame(`Done: ${pairs.size} crossing ${pairs.size === 1 ? "pair" : "pairs"} at ${crossings.length} ${crossings.length === 1 ? "point" : "points"}, with ${tests} neighbour tests (testing all pairs would take ${all}).`, -1);
+    return { crossings, pairs: [...pairs].sort() };
+  },
+});
+
 export default {
   "graham-scan": graham,
   "jarvis-march": jarvis,
   "closest-pair": closest,
   "line-sweep": sweep,
+  "bentley-ottmann": bentley_ottmann,
 } as unknown as Record<string, Definition>;

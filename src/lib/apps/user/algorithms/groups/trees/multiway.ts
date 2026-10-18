@@ -15,10 +15,12 @@ class Multi {
   root: MNode;
   comparisons = 0;
   splits = 0;
+  borrows = 0;
+  merges = 0;
   private count = 0;
   tones = new Map<MNode, Tone>();
 
-  constructor() {
+  constructor(private readonly deletes = false) {
     this.root = this.make([]);
   }
 
@@ -36,7 +38,10 @@ class Multi {
     for (const [node, tone] of marks) if (node) this.tones.set(node, tone);
     const root = this.snapshot();
     this.tones = saved;
-    return { views: [{ kind: "tree", roots: [root] }, ...extra], line, note, counters: { comparisons: this.comparisons, splits: this.splits, height: depth(this.root) } };
+    const counters: Record<string, number> = { comparisons: this.comparisons, splits: this.splits };
+    if (this.deletes) Object.assign(counters, { borrows: this.borrows, merges: this.merges });
+    counters.height = depth(this.root);
+    return { views: [{ kind: "tree", roots: [root] }, ...extra], line, note, counters };
   }
 
   all_keys(node: MNode = this.root, leaves_only = false): number[] {
@@ -54,7 +59,7 @@ const B_KEYS = inserts(10, 20, 5, 6, 12, 30, 7, 17, 3, 4, 8, 25, 27);
 
 const b_tree = define({
   intro:
-    "A search tree whose nodes hold many keys and have many children, so it stays very shallow. All leaves sit at the same depth. A full node splits in two and pushes its middle key up; the tree only ever grows at the root. Each node fits a disk page, so a lookup touches very few pages.",
+    "A search tree whose nodes hold many keys and have many children, so it stays very shallow. All leaves sit at the same depth. A full node splits in two and pushes its middle key up; the tree only ever grows at the root. A delete borrows a key from a sibling or merges two nodes, so it only ever shrinks at the root too. Each node fits a disk page, so a lookup touches very few pages.",
   use: "Databases and file systems (SQLite, NTFS, ext4 directories): anywhere data lives on disk in blocks.",
   traits: ["Ordered", "Balanced", "Shallow"],
   pseudocode: [
@@ -64,19 +69,139 @@ const b_tree = define({
     "  at a leaf: put k among its keys, in order",
     "find(k): in each node, scan the keys",
     "  found it, or go down between the two keys around k",
+    "delete(k): walk down; before entering a child with only t − 1 keys, top it up:",
+    "  a sibling has t keys or more: borrow one through the parent",
+    "  else merge it with a sibling and the parent key between them",
+    "  k in a leaf: remove it",
+    "  k in an inner node: swap in its predecessor or successor from a child with t keys or more",
+    "    both children have t − 1 keys: merge them around k, delete k from the merged node",
+    "  the root has no keys left: its only child becomes the root",
   ],
-  input: key_ops({ sample: B_KEYS, allow: ["insert", "find"], max_count: 60 }),
+  input: key_ops({ sample: [...B_KEYS, ...[6, 17, 4].map((key) => ({ op: KeyOpKind.DELETE, key }))], allow: ["insert", "delete", "find"], max_count: 60 }),
   presets: [
     { label: "Sample", value: B_KEYS },
     { label: "Ascending keys", value: inserts(...Array.from({ length: 20 }, (_, i) => (i + 1) * 5)) },
+    { label: "Borrow and merge", value: [...inserts(...Array.from({ length: 12 }, (_, i) => (i + 1) * 10)), ...[10, 20, 70, 40, 60].map((key) => ({ op: KeyOpKind.DELETE, key }))] },
+    { label: "Shrink to nothing", value: [...inserts(5, 15, 25, 35, 45, 55, 65, 75), ...[45, 5, 75, 25, 55, 15, 35, 65].map((key) => ({ op: KeyOpKind.DELETE, key }))] },
   ],
   params: [{ id: "t", label: "Minimum degree t", kind: "number", min: 2, max: 4, default: 2 }],
-  operations: key_operations(["insert", "find"]),
+  operations: key_operations(["insert", "delete", "find"]),
   *run(ops: KeyOp[], params) {
     const t = Number(params.t ?? 2);
     const max = 2 * t - 1;
-    const tree = new Multi();
+    const tree = new Multi(true);
     const found: boolean[] = [];
+
+    function* top_up(parent: MNode, i: number): Generator<Step, number> {
+      const child = parent.children[i];
+      const left = parent.children[i - 1];
+      const right = parent.children[i + 1];
+      yield tree.frame(`The child to enter has only ${t - 1} ${t - 1 === 1 ? "key" : "keys"}: top it up first, so a delete below can't leave it short.`, 6, [
+        [parent, Tone.COMPARE],
+        [child, Tone.BAD],
+      ]);
+      if (left && left.keys.length >= t) {
+        const down = parent.keys[i - 1];
+        const up = left.keys.pop()!;
+        child.keys.unshift(down);
+        parent.keys[i - 1] = up;
+        if (left.children.length) child.children.unshift(left.children.pop()!);
+        tree.borrows++;
+        yield tree.frame(`Its left sibling can spare one: ${up} moves up into the parent and ${down} comes down into the child.`, 7, [
+          [left, Tone.MARK],
+          [parent, Tone.WARN],
+          [child, Tone.WARN],
+        ]);
+        return i;
+      }
+      if (right && right.keys.length >= t) {
+        const down = parent.keys[i];
+        const up = right.keys.shift()!;
+        child.keys.push(down);
+        parent.keys[i] = up;
+        if (right.children.length) child.children.push(right.children.shift()!);
+        tree.borrows++;
+        yield tree.frame(`Its right sibling can spare one: ${up} moves up into the parent and ${down} comes down into the child.`, 7, [
+          [right, Tone.MARK],
+          [parent, Tone.WARN],
+          [child, Tone.WARN],
+        ]);
+        return i;
+      }
+      const at = right ? i : i - 1;
+      const merged = yield* merge(parent, at, 8, "Neither sibling can spare a key");
+      return parent.children.indexOf(merged);
+    }
+
+    function* merge(parent: MNode, at: number, line: number, why: string): Generator<Step, MNode> {
+      const a = parent.children[at];
+      const b = parent.children[at + 1];
+      const middle = parent.keys[at];
+      a.keys = [...a.keys, middle, ...b.keys];
+      a.children = [...a.children, ...b.children];
+      parent.keys.splice(at, 1);
+      parent.children.splice(at + 1, 1);
+      tree.merges++;
+      yield tree.frame(`${why}: merge the two siblings with ${middle} from the parent between them: ${a.keys.join(", ")}.`, line, [
+        [parent, Tone.MARK],
+        [a, Tone.WARN],
+      ]);
+      if (parent === tree.root && parent.keys.length === 0) {
+        tree.root = a;
+        yield tree.frame("The root gave its last key away: the merged node becomes the root, and the tree is one level shorter.", 12, [[a, Tone.DONE]]);
+      }
+      return a;
+    }
+
+    function* remove(key: number): Generator<Step, boolean> {
+      let node = tree.root;
+      for (;;) {
+        let i = 0;
+        while (i < node.keys.length && key > node.keys[i]) {
+          tree.comparisons++;
+          i++;
+        }
+        tree.comparisons++;
+        const here = node.keys[i] === key;
+        if (node.children.length === 0) {
+          if (!here) {
+            yield tree.frame(`${key} isn't in this leaf, so it isn't in the tree.`, 9, [[node, Tone.BAD]]);
+            return false;
+          }
+          node.keys.splice(i, 1);
+          yield tree.frame(`${key} is in this leaf: remove it${node.keys.length ? `, leaving ${node.keys.join(", ")}` : ""}.`, 9, [[node, Tone.WARN]]);
+          return true;
+        }
+        if (here) {
+          const before = node.children[i];
+          const after = node.children[i + 1];
+          yield tree.frame(`${key} is in this inner node: it can't simply go, a child hangs on each side.`, 10, [[node, Tone.ACTIVE]]);
+          if (before.keys.length >= t || after.keys.length >= t) {
+            const use_before = before.keys.length >= t;
+            let leaf = use_before ? before : after;
+            while (leaf.children.length) leaf = use_before ? leaf.children[leaf.children.length - 1] : leaf.children[0];
+            const swap = use_before ? leaf.keys[leaf.keys.length - 1] : leaf.keys[0];
+            node.keys[i] = swap;
+            yield tree.frame(
+              `The ${use_before ? "left" : "right"} child has keys to spare: put ${key}'s ${use_before ? "predecessor" : "successor"} ${swap} in its place, then delete ${swap} from that side.`,
+              10,
+              [
+                [node, Tone.WARN],
+                [leaf, Tone.COMPARE],
+              ]
+            );
+            key = swap;
+            node = use_before ? before : after;
+            continue;
+          }
+          node = yield* merge(node, i, 11, `Both children around ${key} have only ${t - 1}`);
+          continue;
+        }
+        yield tree.frame(`${key} falls between the keys here: go down to child ${i + 1}.`, 6, [[node, Tone.COMPARE]]);
+        if (node.children[i].keys.length === t - 1) i = yield* top_up(node, i);
+        node = node.children[i];
+      }
+    }
 
     function* split(parent: MNode, index: number): Generator<Step> {
       const full = parent.children[index];
@@ -95,7 +220,11 @@ const b_tree = define({
     }
 
     for (const item of ops) {
-      yield tree.frame(`${op_text(item)}.`, item.op === "insert" ? 0 : 4);
+      yield tree.frame(`${op_text(item)}.`, item.op === "insert" ? 0 : item.op === "find" ? 4 : 6);
+      if (item.op === "delete") {
+        if (yield* remove(item.key)) yield tree.frame(`${item.key} is gone. Every node but the root still has at least ${t - 1} ${t - 1 === 1 ? "key" : "keys"}, and every leaf sits at the same depth.`, 6);
+        continue;
+      }
       if (item.op === "find") {
         let node: MNode | undefined = tree.root;
         let hit = false;

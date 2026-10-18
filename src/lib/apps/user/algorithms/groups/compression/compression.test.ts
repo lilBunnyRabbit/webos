@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { default_params, record, type Definition } from "../../engine/definition";
 import compression, { inverse_bwt } from "./index";
+import { huffman_codes } from "../trees/forests";
 import { bin_to_dict, decode_from_bin, dict_to_bin, dict_to_string, lz77_decode, lz77_encode } from "./lz77";
 
 const run = <R>(id: string, input: string, params: Record<string, number | string> = {}) => {
@@ -103,6 +104,41 @@ describe("other coders round-trip", () => {
 
   test("BWT inverse helper", () => {
     expect(inverse_bwt("ipssm$pissii")).toBe("mississippi");
+  });
+});
+
+describe("Huffman coding", () => {
+  test("the bit stream uses the tree's codes and decodes back", () => {
+    for (let round = 0; round < 60; round++) {
+      const data = random_text(1 + Math.floor(Math.random() * 60), round % 4 ? "aaab c\n" : "z");
+      const codes = huffman_codes(data);
+      const result = run<{ bits: string; bytes: number[]; decoded: string }>("huffman-coding", data);
+      expect(result.bits).toBe([...data].map((char) => codes.get(char)).join(""));
+      expect(result.decoded).toBe(data);
+      expect(result.bytes).toHaveLength(Math.ceil(result.bits.length / 8));
+    }
+  });
+});
+
+describe("arithmetic coding", () => {
+  test("decodes back, within a bit of the information content and of Huffman", () => {
+    for (let round = 0; round < 60; round++) {
+      const data = random_text(1 + Math.floor(Math.random() * 32), round % 4 ? "aaab c" : "z");
+      const result = run<{ bits: string; decoded: string }>("arithmetic-coding", data);
+      expect(result.decoded).toBe(data);
+      const counts = new Map<string, number>();
+      for (const char of data) counts.set(char, (counts.get(char) ?? 0) + 1);
+      const information = [...data].reduce((sum, char) => sum - Math.log2(counts.get(char)! / data.length), 0);
+      expect(result.bits.length).toBeLessThanOrEqual(Math.ceil(information + 1e-9) + 1);
+      const codes = huffman_codes(data);
+      expect(result.bits.length).toBeLessThanOrEqual([...data].reduce((sum, char) => sum + codes.get(char)!.length, 0) + 1);
+    }
+  });
+
+  test("abracadabra", () => {
+    const result = run<{ bits: string; decoded: string }>("arithmetic-coding", "abracadabra");
+    expect(result.decoded).toBe("abracadabra");
+    expect(result.bits.length).toBeLessThan(23);
   });
 });
 

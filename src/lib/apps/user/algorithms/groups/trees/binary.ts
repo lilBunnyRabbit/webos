@@ -303,11 +303,13 @@ const avl = define({
   },
 });
 
+const is_red = (node: Node | null) => node?.red ?? false;
+
 const red_black = define({
   intro:
-    "A binary search tree whose nodes are red or black, with two rules: a red node has no red child, and every path from a node down to a leaf passes the same number of black nodes. Inserting a red node may break the first rule; recolouring and at most two rotations fix it. The longest path is at most twice the shortest.",
+    "A binary search tree whose nodes are red or black, with two rules: a red node has no red child, and every path from a node down to a leaf passes the same number of black nodes. Inserting a red node may break the first rule; recolouring and at most two rotations fix it. Deleting a black node leaves one path a black short; the sibling's colours decide how to repay it, with at most three rotations. The longest path is at most twice the shortest.",
   use: "The balanced tree in most standard libraries (Java TreeMap, C++ std::map, the Linux scheduler): fewer rotations than AVL on updates.",
-  traits: ["Ordered", "Balanced", "At most 2 rotations per insert"],
+  traits: ["Ordered", "Balanced", "At most 2 rotations per insert", "At most 3 per delete"],
   pseudocode: [
     "insert(k) like a binary search tree, colour it red",
     "while z's parent is red:",
@@ -316,19 +318,145 @@ const red_black = define({
     "  uncle black, z an outer child: swap colours, rotate the grandparent",
     "colour the root black",
     "find(k) like a binary search tree",
+    "delete(k): find z; two children: copy the successor's key in, z ← successor",
+    "  remove z; its child x (maybe nil) takes its place",
+    "  z was red, or x is red: colour x black, done",
+    "  else x is doubly black; while x isn't the root and is black:",
+    "    sibling w red: swap colours of w and parent, rotate the parent toward x",
+    "    both of w's children black: w red; x ← parent",
+    "    w's far child black: swap colours of w and its near child, rotate w away",
+    "    w's far child red: w takes the parent's colour, parent and far child black, rotate the parent; done",
+    "  colour x black",
   ],
-  input: key_ops({ sample: inserts(10, 20, 30, 15, 25, 5, 1), allow: ["insert", "find"] }),
-  presets: key_presets(),
-  operations: key_operations(["insert", "find"]),
+  input: key_ops({ sample: [...inserts(10, 20, 30, 15, 25, 5, 1), { op: KeyOpKind.DELETE, key: 5 }, { op: KeyOpKind.DELETE, key: 20 }], allow: ["insert", "delete", "find"] }),
+  presets: key_presets([
+    { label: "Delete black leaves", value: [...inserts(50, 30, 70, 20, 40, 60, 80, 10), ...[10, 40, 20].map((key) => ({ op: KeyOpKind.DELETE, key }))] },
+    { label: "Delete down to one", value: [...inserts(40, 20, 60, 10, 30, 50, 70), ...[10, 30, 20, 50, 70, 60].map((key) => ({ op: KeyOpKind.DELETE, key }))] },
+  ]),
+  operations: key_operations(["insert", "delete", "find"]),
   *run(ops: KeyOp[]) {
     const tree = new Bst(undefined, true);
     const found: boolean[] = [];
+
+    function* remove(key: number): Generator<Step> {
+      const { node } = yield* tree.descend(key, 7, `Delete ${key}`);
+      if (!node) {
+        yield tree.frame(`${key} isn't in the tree: nothing to delete.`, 7);
+        return;
+      }
+      let z = node;
+      if (z.left && z.right) {
+        const s = tree.min(z.right);
+        yield tree.frame(`${z.key} has two children: its successor ${s.key} is the smallest key on its right.`, 7, [
+          [z, Tone.ACTIVE],
+          [s, Tone.COMPARE],
+        ]);
+        const old = z.key;
+        z.key = s.key;
+        yield tree.frame(`Copy ${s.key} over ${old} (colours stay put), then remove the old ${s.key} node below, which has at most one child.`, 7, [
+          [z, Tone.WARN],
+          [s, Tone.BAD],
+        ]);
+        z = s;
+      }
+      let x = z.left ?? z.right;
+      let parent = z.parent;
+      tree.replace(parent, z, x);
+      if (z.red || is_red(x)) {
+        if (x) x.red = false;
+        yield tree.frame(
+          z.red
+            ? `${z.key} was red: removing it changes no black count. Done.`
+            : `${z.key} was black but its child ${x!.key} is red: ${x!.key} takes its place and turns black. Done.`,
+          9,
+          x ? [[x, Tone.WARN]] : [[parent, Tone.DONE]]
+        );
+        return;
+      }
+      if (!parent) {
+        yield tree.frame(`${z.key} was the root and had no child: the tree is empty.`, 8);
+        return;
+      }
+      const at = (n: Node | null, p: Node) => (n ? `${n.key}` : `the empty ${p.left === n ? "left" : "right"} of ${p.key}`);
+      yield tree.frame(`Removed black ${z.key}. Paths through ${at(x, parent)} are now one black short: it is doubly black.`, 10, [
+        [x, Tone.BAD],
+        [parent, Tone.COMPARE],
+      ]);
+      while (x !== tree.root && !is_red(x)) {
+        const p: Node = parent!;
+        const left_side = p.left === x;
+        let w = (left_side ? p.right : p.left)!;
+        const toward = left_side ? "left" : "right";
+        const away = left_side ? "right" : "left";
+        if (w.red) {
+          w.red = false;
+          p.red = true;
+          yield tree.frame(`Sibling ${w.key} is red: make it black and ${p.key} red, then rotate ${p.key} ${toward}.`, 11, [
+            [w, Tone.ACTIVE],
+            [p, Tone.WARN],
+          ]);
+          if (left_side) tree.rotate_left(p);
+          else tree.rotate_right(p);
+          w = (left_side ? p.right : p.left)!;
+          yield tree.frame(`Now the sibling of ${at(x, p)} is ${w.key}, which is black.`, 11, [
+            [x, Tone.BAD],
+            [w, Tone.COMPARE],
+          ]);
+        }
+        const far = () => (left_side ? w.right : w.left);
+        if (!is_red(w.left) && !is_red(w.right)) {
+          w.red = true;
+          yield tree.frame(`Sibling ${w.key} and both its children are black: make ${w.key} red, so both sides of ${p.key} are a black short. Push the problem up to ${p.key}.`, 12, [
+            [w, Tone.WARN],
+            [p, Tone.BAD],
+          ]);
+          x = p;
+          parent = p.parent;
+          continue;
+        }
+        if (!is_red(far())) {
+          const n = (left_side ? w.left : w.right)!;
+          n.red = false;
+          w.red = true;
+          yield tree.frame(`${w.key}'s far child is black but its near child ${n.key} is red: swap their colours and rotate ${w.key} ${away}.`, 13, [
+            [w, Tone.ACTIVE],
+            [n, Tone.WARN],
+          ]);
+          if (left_side) tree.rotate_right(w);
+          else tree.rotate_left(w);
+          w = n;
+        }
+        const f = far()!;
+        w.red = p.red;
+        p.red = false;
+        f.red = false;
+        yield tree.frame(`${w.key}'s far child ${f.key} is red: ${w.key} takes ${p.key}'s colour, ${p.key} and ${f.key} turn black, then rotate ${p.key} ${toward}.`, 14, [
+          [w, Tone.ACTIVE],
+          [p, Tone.WARN],
+          [f, Tone.WARN],
+        ]);
+        if (left_side) tree.rotate_left(p);
+        else tree.rotate_right(p);
+        yield tree.frame(`${p.key} now carries the missing black: every path has the same black count again.`, 14, [[w, Tone.DONE]]);
+        x = tree.root;
+        parent = null;
+      }
+      if (x?.red) {
+        x.red = false;
+        yield tree.frame(`${x.key} is red: colour it black to absorb the extra black. Done.`, 15, [[x, Tone.DONE]]);
+      } else if (x && x === tree.root && parent === null) yield tree.frame("Balanced again: no red node has a red child, every path has the same black count.", 15, [[x, Tone.DONE]]);
+    }
+
     for (const item of ops) {
-      yield tree.frame(`${op_text(item)}.`, item.op === "insert" ? 0 : 6);
+      yield tree.frame(`${op_text(item)}.`, item.op === "insert" ? 0 : item.op === "find" ? 6 : 7);
       if (item.op === "find") {
         const { node } = yield* tree.descend(item.key, 6, op_text(item));
         found.push(Boolean(node));
         yield tree.frame(node ? `Found ${item.key}.` : `${item.key} isn't in the tree.`, 6, node ? [[node, Tone.DONE]] : []);
+        continue;
+      }
+      if (item.op === "delete") {
+        yield* remove(item.key);
         continue;
       }
       let z = yield* tree.insert(item.key, { walk: 0, hang: 0 });

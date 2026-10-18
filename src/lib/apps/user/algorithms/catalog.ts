@@ -110,6 +110,8 @@ export const CATALOG: CatalogEntry[] = [
   entry("lz78", "LZ78", Group.COMPRESSION, "Grow a phrase dictionary while reading", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("lzw", "LZW", Group.COMPRESSION, "Output codes only; the dictionary rebuilds itself", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("bwt-mtf", "BWT + move-to-front", Group.COMPRESSION, "Sort rotations to group equal characters", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n²)"]),
+  entry("huffman-coding", "Huffman coding", Group.COMPRESSION, "Text to bits with the Huffman tree, and back", ["O(n + σ log σ)", "O(n + σ log σ)", "O(n + σ log σ)", "O(n)"]),
+  entry("arithmetic-coding", "Arithmetic coding", Group.COMPRESSION, "The whole message as one number in [0, 1)", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("base64", "Base64", Group.COMPRESSION, "3 bytes become 4 safe characters", ["O(n)", "O(n)", "O(n)", "O(n)"]),
 
   entry("naive-search", "Naive search", Group.STRINGS, "Try every position, character by character", ["O(n)", "O(n·m)", "O(n·m)", "O(1)"]),
@@ -150,6 +152,7 @@ export const CATALOG: CatalogEntry[] = [
   entry("jarvis-march", "Jarvis march", Group.GEOMETRY, "Convex hull by wrapping a string around", ["O(n·h)", "O(n·h)", "O(n²)", "O(h)"]),
   entry("closest-pair", "Closest pair", Group.GEOMETRY, "Divide and conquer with a narrow strip", ["O(n log n)", "O(n log n)", "O(n log² n)", "O(n)"]),
   entry("line-sweep", "Line sweep", Group.GEOMETRY, "Test only segments the sweep line crosses", ["O(n log n)", "O(n·k)", "O(n²)", "O(n)"]),
+  entry("bentley-ottmann", "Bentley–Ottmann", Group.GEOMETRY, "Sorted sweep: only neighbours can cross", ["O(n log n)", "O((n + k) log n)", "O(n² log n)", "O(n + k)"]),
 
   entry("cpu-scheduling", "CPU scheduling", Group.OS, "FCFS, shortest job, priority and round robin on a Gantt chart", ["O(n log n)", "O(n log n)", "O(n²)", "O(n)"]),
   entry("page-replacement", "Page replacement", Group.OS, "FIFO, LRU, Clock and Optimal, fault by fault", ["O(1)", "O(1)", "O(n)", "O(frames)"]),

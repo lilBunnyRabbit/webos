@@ -66,9 +66,9 @@ describe("binary search trees keep their keys and answer finds", () => {
     });
   }
 
-  test("red-black tree (inserts and finds)", () => {
+  test("red-black tree", () => {
     for (let round = 0; round < 25; round++) {
-      const ops = random_ops(30, false);
+      const ops = random_ops(30, true);
       const result = run<TreeResult>("red-black-tree", ops);
       expect(result.keys).toEqual(expected(ops).keys);
       expect(result.found).toEqual(expected(ops).found);
@@ -97,12 +97,26 @@ describe("balance invariants", () => {
   });
 
   test("red-black: black root, no red-red, equal black heights", () => {
-    for (let round = 0; round < 25; round++) {
-      const result = run<TreeResult>("red-black-tree", random_ops(40, false));
+    for (let round = 0; round < 200; round++) {
+      const ops = random_ops(40, round % 2 === 0);
+      const cut = 1 + Math.floor(Math.random() * ops.length);
+      const result = run<TreeResult>("red-black-tree", ops.slice(0, cut));
       if (!result.root) continue;
       expect(result.root.red).toBe(false);
       black_height(result.root);
     }
+  });
+
+  test("red-black: deleting every key empties the tree, valid at each step", () => {
+    const keys = Array.from({ length: 30 }, (_, i) => (i * 37) % 61);
+    const ops: KeyOp[] = keys.map((k) => ({ op: KeyOpKind.INSERT, key: k }));
+    for (const k of [...keys].reverse()) {
+      ops.push({ op: KeyOpKind.DELETE, key: k });
+      const result = run<TreeResult>("red-black-tree", ops);
+      expect(result.keys).toEqual(expected(ops).keys);
+      if (result.root) black_height(result.root);
+    }
+    expect(run<TreeResult>("red-black-tree", ops).root).toBeNull();
   });
 
   test("treap: heap order on priorities", () => {
@@ -137,8 +151,9 @@ describe("B-trees", () => {
 
   for (const t of [2, 3, 4]) {
     test(`B-tree t=${t}: sorted keys, node sizes, equal leaf depths`, () => {
-      for (let round = 0; round < 15; round++) {
-        const ops = random_ops(50, false);
+      for (let round = 0; round < 60; round++) {
+        const all = random_ops(50, round % 3 !== 0);
+        const ops = all.slice(0, 1 + Math.floor(Math.random() * all.length));
         const result = run<TreeResult & { max_keys: number; min_keys: number }>("b-tree", ops, { t });
         expect(result.keys).toEqual(expected(ops).keys);
         expect(result.found).toEqual(expected(ops).found);
@@ -154,6 +169,16 @@ describe("B-trees", () => {
       }
     });
   }
+
+  test("B-tree: deleting every key leaves an empty root", () => {
+    for (const t of [2, 3]) {
+      const keys = Array.from({ length: 40 }, (_, i) => (i * 23) % 97);
+      const ops: KeyOp[] = [...keys.map((k) => ({ op: KeyOpKind.INSERT, key: k })), ...keys.map((k) => ({ op: KeyOpKind.DELETE, key: k }))];
+      const result = run<TreeResult>("b-tree", ops, { t });
+      expect(result.keys).toEqual([]);
+      expect(result.root?.children).toEqual([]);
+    }
+  });
 
   for (const order of [3, 4, 5]) {
     test(`B+ tree order ${order}: every key in a leaf, in order`, () => {

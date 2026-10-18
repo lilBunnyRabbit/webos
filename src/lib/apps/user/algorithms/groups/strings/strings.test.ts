@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { default_params, record, type Definition } from "../../engine/definition";
-import strings, { failure_table, matches_of, z_array, type Pair } from "./index";
+import strings, { failure_table, good_suffix_shifts, matches_of, z_array, type Pair } from "./index";
 
 const run = <R>(id: string, input: unknown, params: Record<string, number | string> = {}) => {
   const definition = strings[id] as Definition<unknown, R>;
@@ -43,6 +43,45 @@ describe("tables", () => {
 
   test("Z-array", () => {
     expect(z_array("aabcaabxaaaz")).toEqual([0, 1, 0, 0, 3, 1, 0, 0, 2, 2, 1, 0]);
+  });
+});
+
+describe("Boyer–Moore good-suffix rule", () => {
+  const brute = (pattern: string, j: number) => {
+    const m = pattern.length;
+    for (let k = 1; k <= m; k++) {
+      let ok = true;
+      for (let i = j + 1; i < m && ok; i++) if (i - k >= 0 && pattern[i - k] !== pattern[i]) ok = false;
+      if (ok && j >= 0 && j - k >= 0 && pattern[j - k] === pattern[j]) ok = false;
+      if (ok) return k;
+    }
+    return m;
+  };
+
+  test("table matches the definition", () => {
+    for (let round = 0; round < 200; round++) {
+      const pattern = random_text(1 + Math.floor(Math.random() * 9), round % 2 ? "ab" : "abc");
+      const shifts = good_suffix_shifts(pattern);
+      expect(shifts[0]).toBe(brute(pattern, -1));
+      for (let j = 0; j < pattern.length; j++) expect(shifts[j + 1]).toBe(brute(pattern, j));
+    }
+  });
+
+  test("every rule choice finds every match", () => {
+    for (const rules of ["both", "bad", "good"]) {
+      for (let round = 0; round < 40; round++) {
+        const pair: Pair = { a: random_text(1 + Math.floor(Math.random() * 5)), b: random_text(5 + Math.floor(Math.random() * 30)) };
+        expect(run<{ found: number[] }>("boyer-moore", pair, { rules }).found).toEqual(matches_of(pair.b, pair.a));
+      }
+    }
+  });
+
+  test("the good suffix cuts comparisons on a small alphabet", () => {
+    const count = (rules: string) => {
+      const recording = record(strings["boyer-moore"], { a: "abbabab", b: "abaabbababbabababbabab".repeat(2) }, { rules });
+      return Number(recording.steps.at(-1)!.counters!.comparisons);
+    };
+    expect(count("both")).toBeLessThan(count("bad"));
   });
 });
 
