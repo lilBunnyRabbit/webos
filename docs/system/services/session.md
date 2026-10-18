@@ -53,6 +53,10 @@ Read-only state plus `reopen_closed()`.
 
 `destroy()` sets `destroyed` and disposes the saving effect. A write already queued still finishes.
 
+### Solo mode
+
+A `#/solo/` link registers `SoloSessionService` (`session/solo.svelte.ts`, ADR-047) under the same key: it extends this class with an empty `init()`. No Restore dialog, no saving, no frames loaded, `status` stays `none`, `closed` stays empty. The person's saved session is untouched for their own WebOS tab.
+
 ## Persistence
 
 | | |

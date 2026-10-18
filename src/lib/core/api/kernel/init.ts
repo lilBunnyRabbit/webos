@@ -1,5 +1,6 @@
 import type { Kernel } from "./kernel.svelte";
 import { Platform } from "./platform";
+import { Mode } from "./mode";
 import type {
   AiService as IAiService,
   DesktopService as IDesktopService,
@@ -44,8 +45,21 @@ async function platform_services(platform: Platform) {
   return { windows: windows.WindowsService, desktop: desktop.DesktopService, extract: extract.ExtractService, ai: ai.AiService };
 }
 
+// A solo link keeps every key, so nothing an app reaches for is missing, and swaps the three whose behaviour solo drops (ADR-047).
+async function mode_services(mode: Mode) {
+  if (mode === Mode.SOLO) {
+    const [apps, session, version] = await Promise.all([
+      import("../services/apps/solo.svelte"),
+      import("../services/session/solo.svelte"),
+      import("../services/version/solo.svelte"),
+    ]);
+    return { apps: apps.SoloAppsService, session: session.SoloSessionService, version: version.SoloVersionService };
+  }
+  return { apps: AppsService, session: SessionService, version: VersionService };
+}
+
 export async function register_default_services(kernel: Kernel) {
-  const platform = await platform_services(kernel.platform);
+  const [platform, mode] = await Promise.all([platform_services(kernel.platform), mode_services(kernel.mode)]);
 
   kernel.register("settings", {
     instance: SettingsService,
@@ -73,7 +87,7 @@ export async function register_default_services(kernel: Kernel) {
   });
 
   kernel.register("apps", {
-    instance: AppsService,
+    instance: mode.apps,
     dependencies: ["windows", "notifications", "files", "settings", "dialogs"],
   });
 
@@ -83,7 +97,7 @@ export async function register_default_services(kernel: Kernel) {
   });
 
   kernel.register("session", {
-    instance: SessionService,
+    instance: mode.session,
     dependencies: ["windows", "apps", "files", "dialogs", "notifications"],
   });
 
@@ -137,7 +151,7 @@ export async function register_default_services(kernel: Kernel) {
 
   // Registered last so it initialises after session: its introduction stacks above the Restore dialog (ADR-026).
   kernel.register("version", {
-    instance: VersionService,
+    instance: mode.version,
     dependencies: ["files", "notifications", "dialogs", "apps", "session"],
   });
 }

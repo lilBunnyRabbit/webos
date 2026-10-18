@@ -24,6 +24,7 @@ describe("links", () => {
     const link = app_link({ f: payload }, "https://x.test/webos/");
     const route = parse_hash(link.slice(link.indexOf("#")));
     expect(route?.id).toBe("forms");
+    expect(route?.kind).toBe("solo");
     const props = FORMS_PROPS.parse(route?.props);
     expect(await read_form_payload(props.f!)).toEqual({ source: EXAMPLE, name: "Design" });
   });

@@ -80,6 +80,7 @@ What are the implications of this decision?
 | [044](./044-folder-mounts-and-sources.md) | Folder Mounts and One Picker for Every Source | 2026-10-17 | Implemented |
 | [045](./045-scoped-app-dependencies.md) | Scoped App Dependencies | 2026-10-17 | Implemented |
 | [046](./046-on-device-ai-service.md) | On-Device AI Service | 2026-10-17 | Implemented |
+| [047](./047-solo-app-open.md) | Solo App Open | 2026-10-18 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

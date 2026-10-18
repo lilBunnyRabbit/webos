@@ -9,6 +9,10 @@
 > - The router is **RouterService** (`router`, depends on windows, apps, session, clipboard, notifications), not an OS-level module. It waits for the session's Restore answer, launches the link, then clears the hash with `history.replaceState`. `hashchange` is handled the same way.
 > - Share is a **Copy link** button in the titlebar, shown when the app's props schema has no `path` key. It copies the launch props, not the app's current state. No QR code, no share dialog, nothing on mobile.
 
+### Revision 2026-10-18
+
+Embed mode is replaced by solo app open, `#/solo/{id}?{props}` ([ADR-047](047-solo-app-open.md)): one app full page, every service booted with session, version and apps swapped for solo versions.
+
 ## Context
 
 WebOS runs as a single-page app with no URL routing. Every visit loads the same default desktop state. This makes it impossible to:

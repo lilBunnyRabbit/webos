@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { serialize_route } from "$lib/core/api/services/router/route";
+import { RouteKind, serialize_route } from "$lib/core/api/services/router/route";
 import { blank_answers, FieldKind, parse_form, questions, type Answer, type Form } from "./form";
 import { PAYLOAD_PREFIX } from "./props";
 
@@ -62,8 +62,9 @@ export interface SharedAnswer extends SharedForm {
   response: FormResponse;
 }
 
+/** A shared form opens solo, so the person filling it sees only the form; an answer comes back into the full OS to be saved (ADR-047). */
 export function app_link(props: { f: string } | { a: string }, base = `${location.origin}${location.pathname}`): string {
-  return base + serialize_route({ kind: "app", id: APP_ID, props });
+  return base + serialize_route({ kind: "f" in props ? RouteKind.SOLO : RouteKind.APP, id: APP_ID, props });
 }
 
 export async function form_payload(form: SharedForm): Promise<string> {

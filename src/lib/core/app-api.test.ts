@@ -74,7 +74,7 @@ const DOC = "docs/system/app-api.md";
 // `$lib/core/api` builds the kernel singleton on import (it reads `location` and `matchMedia`), and app discovery
 // imports every manifest back through the half-initialized barrel, which only native ESM tolerates.
 vi.mock("$lib/apps", () => ({ apps: [] }));
-vi.stubGlobal("location", { search: "" });
+vi.stubGlobal("location", { search: "", hash: "" });
 vi.stubGlobal("matchMedia", () => ({ matches: false }));
 
 const STABLE: [string, () => Promise<object>, string[]][] = [

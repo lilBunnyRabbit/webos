@@ -15,6 +15,11 @@ describe("parse_hash", () => {
     });
   });
 
+  test("solo link", () => {
+    expect(parse_hash("#/solo/forms?f=v1abc")).toEqual({ kind: "solo", id: "forms", props: { f: "v1abc" } });
+    expect(parse_hash("#/solo/")).toBeNull();
+  });
+
   test("anything that isn't an app link", () => {
     expect(parse_hash("")).toBeNull();
     expect(parse_hash("#top")).toBeNull();
@@ -29,6 +34,12 @@ describe("serialize_route", () => {
   test("round-trips through parse_hash", () => {
     const route = { kind: "app" as const, id: "settings", props: { section: "about", count: 2, nested: { a: [1] } } };
     expect(serialize_route(route)).toBe("#/app/settings?section=about&count=2&nested=%7B%22a%22%3A%5B1%5D%7D");
+    expect(parse_hash(serialize_route(route))).toEqual(route);
+  });
+
+  test("solo round-trips", () => {
+    const route = { kind: "solo" as const, id: "forms", props: { f: "v1abc" } };
+    expect(serialize_route(route)).toBe("#/solo/forms?f=v1abc");
     expect(parse_hash(serialize_route(route))).toEqual(route);
   });
 

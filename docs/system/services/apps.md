@@ -108,6 +108,10 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
 
+### Solo mode
+
+`SoloAppsService` (`apps/solo.svelte.ts`, ADR-047) is registered under `apps` for a `#/solo/` link. `install()` returns `[]`, so nothing joins the person's start menu. `launch()` opens the first window normally; once a window exists, every later launch (and so every `open(path)`) opens nothing, focuses the solo window, returns its id and toasts "Open WebOS to use other apps" with an Open WebOS action that opens the window's app link in a new tab.
+
 ### `create_instance(id, props?)`
 
 Silent and strict, for callers that would rather skip than open an empty window (ADR-023). `state` seeds the instance's window state (`AppInstance.state`, a `$state` record; `{}` otherwise), read by `storage.window()` ([app context](../apps/app-context.md#window)):

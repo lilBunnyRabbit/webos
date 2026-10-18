@@ -2,6 +2,7 @@ import type { ServiceDescriptor, IService } from "../type";
 import { SvelteMap } from "svelte/reactivity";
 import { register_default_services } from "./init";
 import { detect_platform, type Platform } from "./platform";
+import { detect_mode, type Mode } from "./mode";
 
 export interface BootStep {
   key: string;
@@ -14,6 +15,8 @@ export class Kernel {
 
   /** Fixed for the page's life; no switching at runtime (ADR-016). */
   readonly platform: Platform = detect_platform();
+  /** Fixed for the page's life too (ADR-047). */
+  readonly mode: Mode = detect_mode();
 
   readonly services: Map<string, IService> = new SvelteMap();
   private readonly descriptors: Map<string, ServiceDescriptor<IService>> = new Map();

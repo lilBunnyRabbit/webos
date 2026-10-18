@@ -162,7 +162,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | notifications | `notify`, `notifications` | | `notification` |
 | clipboard | `copy`, `paste` | | |
 | version | `version`, `changelog [-c] [--apps]`, `install` | | `release`, `new-app` (click launches) |
-| router | `link [id] [-c]` | | |
+| router | `link [id] [-c] [-s]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |
 | ai | `summarize [--type tldr\|key-points\|teaser\|headline] [--length short\|medium\|long]`, `translate --to <lang> [--from <lang>]`, `lang`; each hidden where its feature answers `no` (ADR-046) | `language` | `language` |

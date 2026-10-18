@@ -56,6 +56,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [shell/desktop.md](shell/desktop.md) | Desktop surface and icons |
 | [shell/taskbar.md](shell/taskbar.md) | Taskbar dock, items, tray + notification center, start menu |
 | [shell/mobile.md](shell/mobile.md) | Phone and tablet shell: home pages, dock, app drawer, switcher, nav bar |
+| [shell/solo.md](shell/solo.md) | Solo shell: one app full page from a `#/solo/` link, Open WebOS bar |
 
 ### Core utils
 

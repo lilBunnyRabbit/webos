@@ -1,7 +1,8 @@
 import { untrack } from "svelte";
 import type { AppsService, ClipboardService, Kernel, NotificationsService, SessionService, WindowId, WindowsService } from "$lib/core/api";
 import { SessionStatus } from "../session/type";
-import { parse_hash, serialize_route, shareable_props, type Route } from "./route";
+import { Mode, detect_mode } from "../../kernel/mode";
+import { RouteKind, parse_hash, route_url, shareable_props, type Route } from "./route";
 import { LinkOutcome, type RouterService as IRouterService } from "./type";
 import { router_shell } from "./shell";
 
@@ -34,7 +35,7 @@ export class RouterService implements IRouterService {
   }
 
   init(): void {
-    window.addEventListener("hashchange", this.consume);
+    window.addEventListener("hashchange", this.on_hash_change);
     // The Restore answer comes first, so a link opens on top of the restored windows instead of under the dialog.
     this.dispose_wait = $effect.root(() => {
       $effect(() => {
@@ -44,39 +45,45 @@ export class RouterService implements IRouterService {
   }
 
   destroy(): void {
-    window.removeEventListener("hashchange", this.consume);
+    window.removeEventListener("hashchange", this.on_hash_change);
     this.dispose_wait?.();
   }
 
-  public link_for(id: WindowId): string | null {
+  public link_for(id: WindowId, kind: RouteKind = RouteKind.APP): string | null {
     const instance = this.windows_service.get(id);
     if (!instance) return null;
 
-    const hash = serialize_route({ kind: "app", id: instance.app.id, props: shareable_props(instance.app.props).props });
-    return `${location.origin}${location.pathname}${hash}`;
+    return route_url({ kind, id: instance.app.id, props: shareable_props(instance.app.props).props });
   }
 
-  public async copy_link(id: WindowId): Promise<void> {
-    const link = this.link_for(id);
+  public async copy_link(id: WindowId, kind: RouteKind = RouteKind.APP): Promise<void> {
+    const link = this.link_for(id, kind);
     if (!link) return;
 
     try {
       await this.clipboard_service.copy_text(link);
       const dropped = shareable_props(this.windows_service.get(id)?.app.props).dropped;
-      this.notifications_service.notify("router", { type: "info", title: dropped ? "Link copied · the open file isn't included" : "Link copied", message: link });
+      this.notifications_service.notify("router", { type: "info", title: `${kind === RouteKind.SOLO ? "Solo link" : "Link"} copied${dropped ? " · the open file isn't included" : ""}`, message: link });
     } catch (error) {
       console.error("[RouterService] Copy failed:", error);
       this.notifications_service.notify("router", { type: "error", title: "Couldn't copy the link" });
     }
   }
 
+  // Services are picked for the mode at boot, so a link into the other mode (or a new solo link) needs a fresh boot.
+  private on_hash_change = (): void => {
+    if (this.kernel.mode === Mode.SOLO || detect_mode() === Mode.SOLO) location.reload();
+    else this.consume();
+  };
+
   private consume = (): void => {
     if (this.session_service.status === SessionStatus.PENDING) return;
 
     const hash = location.hash;
     if (!hash.startsWith("#/")) return;
-    // Consumed: a reload must not open the app a second time next to the restored session.
-    history.replaceState(history.state, "", `${location.pathname}${location.search}`);
+    // Consumed: a reload must not open the app a second time next to the restored session. A solo link stays, so a
+    // reload reopens its app.
+    if (this.kernel.mode === Mode.FULL) history.replaceState(history.state, "", `${location.pathname}${location.search}`);
 
     const route = parse_hash(hash);
     this.last_link = { hash, outcome: route ? this.open(route) : LinkOutcome.NOT_A_LINK };

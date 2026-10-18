@@ -61,7 +61,7 @@ async function main() {
       show_step(step);
       warm();
     }),
-    load_shell(kernel.platform),
+    load_shell(kernel.platform, kernel.mode),
   ]);
 
   // TODO: intro

@@ -2,13 +2,14 @@
   import {
     CornersIn as CornersInIcon,
     CornersOut as CornersOutIcon,
+    AppWindow as AppWindowIcon,
     Link as LinkIcon,
     Minus as MinusIcon,
     PictureInPicture as PictureInPictureIcon,
     Plus as PlusIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import kernel, { type ExtractService, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
+  import kernel, { type DialogsService, type ExtractService, RouteKind, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
@@ -17,6 +18,7 @@
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const router = $derived(kernel.service<RouterService>("router"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const instance = $derived(windows.get(window_id)!);
   const shareable = $derived(router.link_for(window_id) !== null);
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
@@ -27,6 +29,18 @@
   const ZOOM_MAX = 2;
 
   const percent = $derived(Math.round(zoom * 100));
+
+  async function share(event: MouseEvent) {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const kind = await dialogs.menu(
+      [
+        { id: RouteKind.APP, label: "Copy link", icon: LinkIcon },
+        { id: RouteKind.SOLO, label: "Copy solo link", icon: AppWindowIcon },
+      ],
+      { anchor: { x: rect.left, y: rect.bottom + 4 } }
+    );
+    if (kind === RouteKind.APP || kind === RouteKind.SOLO) await router.copy_link(window_id, kind);
+  }
 </script>
 
 <div class={cn("flex min-w-0 items-center gap-2 transition-opacity duration-150", !focused && "opacity-80")}>
@@ -61,7 +75,7 @@
   </div>
 
   {#if shareable}
-    <IconButton data-window-button label="Copy link" size="sm" onclick={() => void router.copy_link(window_id)}>
+    <IconButton data-window-button label="Copy link" size="sm" aria-haspopup="menu" onclick={(event: MouseEvent) => void share(event)}>
       <LinkIcon weight="bold" />
     </IconButton>
   {/if}
