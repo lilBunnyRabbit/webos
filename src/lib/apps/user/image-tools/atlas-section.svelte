@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -48,7 +48,8 @@
   const TAP_SLOP = 6;
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window: win } = get_app_context();
+  const { app_id, window_id, window: win } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -190,7 +191,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused) return;
+    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const list = image_files(event.clipboardData);

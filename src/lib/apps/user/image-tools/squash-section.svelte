@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type AppsService, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
@@ -37,7 +37,8 @@
   }
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const settings = storage.persisted(
     "squash",
@@ -201,7 +202,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused) return;
+    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);

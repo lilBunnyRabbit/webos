@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type FilesService } from "$lib/core/api";
+  import kernel, { type DialogsService, type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { available_name } from "$lib/core/api/services/files/opfs";
@@ -46,7 +46,8 @@
   ] as const;
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const files = $derived(kernel.service<FilesService>("files"));
 
   const settings = storage.persisted(
@@ -150,7 +151,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused) return;
+    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const list = image_files(event.clipboardData);

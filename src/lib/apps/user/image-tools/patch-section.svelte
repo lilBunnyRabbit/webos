@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type SettingsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type SettingsService } from "$lib/core/api";
   import { Button, Checkbox, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { resolve_token } from "$lib/core/utils";
@@ -74,7 +74,8 @@
   const TAP_REACH = { mouse: 4, touch: 16 };
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window: win } = get_app_context();
+  const { app_id, window_id, window: win } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
   let root = $state<HTMLElement>();
@@ -151,7 +152,7 @@
   pair.load_paths(untrack(() => initial_paths));
 
   function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused) return;
+    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);
