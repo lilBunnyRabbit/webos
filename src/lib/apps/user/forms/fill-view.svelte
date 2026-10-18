@@ -3,7 +3,7 @@
   import { PaperPlaneTilt as PaperPlaneTiltIcon } from "phosphor-svelte";
   import { blank_answers, questions, type Answer, type Form } from "./form";
   import FormView from "./form-view.svelte";
-  import { answer_payload, app_link, type SharedForm } from "./link";
+  import { answer_code, type SharedForm } from "./link";
   import LinkBox from "./link-box.svelte";
 
   let {
@@ -25,8 +25,8 @@
     const source = { ...shared };
     let current = true;
     const timer = setTimeout(async () => {
-      const payload = await answer_payload(source, form, response);
-      if (current) link = app_link({ a: payload });
+      const code = await answer_code(source, form, response);
+      if (current) link = code;
     }, 150);
     return () => {
       current = false;
@@ -46,13 +46,13 @@
           <Input bind:value={respondent} placeholder="Who's answering?" autocomplete="name" />
         </label>
         {#if wanted && link}
-          <LinkBox {link} label="Answer link: send it back" />
+          <LinkBox {link} label="Answer code: send it back to whoever shared the form" copy_label="Copy code" long={false} />
         {:else}
           <Button variant="primary" size="lg" class="self-start" disabled={wanted} onclick={() => (wanted = true)}>
-            <PaperPlaneTiltIcon weight="bold" /> Create answer link
+            <PaperPlaneTiltIcon weight="bold" /> Create answer code
           </Button>
         {/if}
-        <p class="text-2xs text-foreground/65">Nothing is sent anywhere. Your answers go into a link you send back yourself.</p>
+        <p class="text-2xs text-foreground/65">Nothing is sent anywhere. Your answers go into a code you send back yourself.</p>
       </div>
     {/if}
   {/snippet}

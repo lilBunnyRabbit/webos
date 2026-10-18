@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { Badge, Button, EmptyState, IconButton, Segmented } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Segmented } from "$lib/core/components/ui";
   import { cn, format_datetime } from "$lib/core/utils";
   import {
     Check as CheckIcon,
     DownloadSimple as DownloadSimpleIcon,
     FloppyDisk as FloppyDiskIcon,
+    ClipboardText as ClipboardTextIcon,
     Minus as MinusIcon,
     Tray as TrayIcon,
     Trash as TrashIcon,
@@ -24,13 +25,29 @@
     onsave: () => void;
     onremove: (index: number) => void;
     onexport: () => void;
+    /** A pasted answer code or answer link; resolves `true` once it's handled, so the box clears. */
+    onadd: (text: string) => Promise<boolean>;
   }
 
-  let { form, responses, incoming, incoming_saved, target, onsave, onremove, onexport }: Props = $props();
+  let { form, responses, incoming, incoming_saved, target, onsave, onremove, onexport, onadd }: Props = $props();
 
-  const Mode = { EACH: "each", COMPARE: "compare" } as const;
+  let code = $state("");
+  let adding = $state(false);
+
+  async function add(event: SubmitEvent) {
+    event.preventDefault();
+    if (!code.trim() || adding) return;
+    adding = true;
+    try {
+      if (await onadd(code)) code = "";
+    } finally {
+      adding = false;
+    }
+  }
+
+  const Mode = { SUMMARY: "summary", EACH: "each", COMPARE: "compare" } as const;
   type Mode = (typeof Mode)[keyof typeof Mode];
-  let mode = $state<Mode>(Mode.EACH);
+  let mode = $state<Mode>(Mode.SUMMARY);
 
   const columns = $derived(answer_columns(form, incoming && !incoming_saved ? [...responses, incoming] : responses));
   const checks = $derived(columns.filter((column) => column.check));
@@ -73,10 +90,15 @@
 {/snippet}
 
 <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
+  <form class="flex items-center gap-1.5" onsubmit={add}>
+    <Input bind:value={code} placeholder="Paste an answer code" aria-label="Answer code" class="min-w-0 flex-1 font-mono text-2xs" />
+    <Button type="submit" variant="primary" disabled={!code.trim() || adding}><ClipboardTextIcon weight="bold" /> Add</Button>
+  </form>
+
   {#if incoming}
     <section class="flex flex-col gap-2.5" aria-label="Answer from the link">
       <div class="flex flex-wrap items-center gap-2">
-        <Badge tone="primary">From a link</Badge>
+        <Badge tone="primary">No matching form</Badge>
         <span class="min-w-0 flex-1 text-ui text-foreground/80">
           {#if incoming_saved}Saved in {target ?? "the answers file"}{:else}Not saved yet{/if}
         </span>
@@ -92,11 +114,16 @@
 
   <section class="flex flex-col gap-3">
     <header class="flex flex-wrap items-center gap-2">
-      <h2 class="min-w-0 flex-1 text-sm font-semibold">
+      <h2 class="min-w-48 flex-1 text-sm font-semibold">
         {responses.length} {responses.length === 1 ? "answer" : "answers"}{#if target}{" "}<span class="font-normal text-foreground/65">in {target}</span>{/if}
       </h2>
       {#if responses.length > 0}
-        <Segmented size="sm" label="Show" bind:value={mode} options={[{ value: Mode.EACH, label: "Each" }, { value: Mode.COMPARE, label: "Compare" }]} />
+        <Segmented
+          size="sm"
+          label="Show"
+          bind:value={mode}
+          options={[{ value: Mode.SUMMARY, label: "Summary" }, { value: Mode.EACH, label: "Each" }, { value: Mode.COMPARE, label: "Compare" }]}
+        />
         <Button size="sm" onclick={onexport}><DownloadSimpleIcon weight="bold" /> CSV</Button>
       {/if}
     </header>
@@ -105,9 +132,40 @@
       <EmptyState
         icon={TrayIcon}
         title="No answers yet"
-        description="Send the form's link. When someone sends their answer link back, open it and save it here."
+        description="Share the form. When someone sends their answer code back, paste it above."
         class="p-6"
       />
+    {:else if mode === Mode.SUMMARY}
+      <ul class="flex flex-col gap-3">
+        {#each columns as column (column.key)}
+          <li class="flex flex-col gap-2 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+            <span class="text-ui font-medium break-words"><InlineText text={column.label} /></span>
+            {#if column.check}
+              {@const ticked = totals.get(column.key) ?? 0}
+              <div class="flex items-center gap-3">
+                <div class="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/8" role="img" aria-label="{ticked} of {responses.length} ticked">
+                  <div class="h-full rounded-full bg-primary" style:width="{(ticked / responses.length) * 100}%"></div>
+                </div>
+                <span class="shrink-0 font-mono text-2xs tabular-nums">{ticked} / {responses.length}</span>
+              </div>
+            {:else}
+              {@const written = responses.map((response, index) => ({ who: who(response, index), value: response.answers[column.key] })).filter((entry) => is_answered(entry.value))}
+              {#if written.length === 0}
+                <p class="text-ui text-foreground/65 italic">No answers</p>
+              {:else}
+                <ul class="flex flex-col gap-1.5">
+                  {#each written as entry, index (index)}
+                    <li class="rounded-md bg-background-darker px-2.5 py-1.5 text-ui">
+                      <p class="break-words whitespace-pre-wrap">{entry.value}</p>
+                      <p class="text-2xs text-foreground/65">{entry.who}</p>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            {/if}
+          </li>
+        {/each}
+      </ul>
     {:else if mode === Mode.EACH}
       {#each responses as response, index (`${response.submitted_at}-${index}`)}
         {#snippet remove()}

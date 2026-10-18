@@ -26,6 +26,8 @@ export type Question = CheckField | TextField;
 export type Answer = string | boolean;
 
 export interface Form {
+  /** From the `<!-- form: {id} -->` line sharing stamps in; what a pasted answer code finds its form by. */
+  id: string | null;
   title: string;
   fields: Field[];
 }
@@ -33,6 +35,7 @@ export interface Form {
 export const UNTITLED = "Untitled form";
 
 const TITLE = /^#\s+(.+)$/;
+const FORM_ID = /^<!--\s*form:\s*([\w-]+)\s*-->\s*$/;
 const AREA = /^\s*[-*]\s+\[\.\.\.\]\s+(.*)$/;
 const INPUT = /^\s*[-*]\s+\[_+\]\s+(.*)$/;
 const CHECK = /^\s*[-*]\s+\[[ xX]?\]\s+(.*)$/;
@@ -48,6 +51,7 @@ export function parse_form(source: string): Form {
   const fields: Field[] = [];
   const seen = new Map<string, number>();
   let title = "";
+  let id: string | null = null;
   let note: string[] = [];
 
   const flush = () => {
@@ -63,6 +67,12 @@ export function parse_form(source: string): Form {
   };
 
   for (const line of source.replace(/\r\n?/g, "\n").split("\n")) {
+    const stamp: RegExpExecArray | null = id ? null : FORM_ID.exec(line);
+    if (stamp) {
+      id = stamp[1];
+      continue;
+    }
+
     const heading = title ? null : TITLE.exec(line);
     if (heading) {
       title = heading[1].trim();
@@ -85,7 +95,16 @@ export function parse_form(source: string): Form {
   }
   flush();
 
-  return { title: title || UNTITLED, fields };
+  return { id, title: title || UNTITLED, fields };
+}
+
+export function new_form_id(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (byte) => (byte % 36).toString(36)).join("");
+}
+
+/** The source with an id line on top, unchanged when it already has one. */
+export function with_form_id(source: string, id: string = new_form_id()): string {
+  return parse_form(source).id ? source : `<!-- form: ${id} -->\n${source}`;
 }
 
 export function questions(form: Form): Question[] {

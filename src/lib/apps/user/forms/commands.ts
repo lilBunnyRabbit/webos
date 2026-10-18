@@ -18,5 +18,12 @@ export default {
         field === "path" ? logic().then((m) => m.complete_forms(partial, context)) : undefined,
       run: async (context) => (await logic()).link(context),
     }),
+    define_command({
+      id: "form answer",
+      description: "Saves an answer code beside the form it belongs to, found by the form's id",
+      args: z.object({ code: z.string().describe("The answer code, or an answer link") }),
+      positional: ["code"],
+      run: async (context) => (await logic()).answer(context),
+    }),
   ],
 } satisfies ShellContribution;

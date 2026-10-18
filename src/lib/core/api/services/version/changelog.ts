@@ -11,6 +11,8 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: NEW, text: "Copy a solo link from any window: it opens just that app, full page, with an Open WebOS button to get the rest." },
       { kind: IMPROVED, apps: ["forms"], text: "A shared form opens on its own, so the person filling it sees only the form." },
+      { kind: NEW, apps: ["forms"], text: "People send back a short answer code; paste it in Forms or run form answer, and it's saved beside the right form." },
+      { kind: NEW, apps: ["forms"], text: "Forms shows every form with its answer count, and a summary of each question's answers." },
     ],
   },
   {

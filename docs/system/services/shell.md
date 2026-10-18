@@ -210,7 +210,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | svg-workbench | `svg optimize <path> [-o] [-p precision]`, `svg png <path> [-s size]`, `svg component <path> [-o] [-s size] [--colors]` | `file`; path completion filtered to `.svg`; output next to the SVG (`name.min.svg`, `name-512.png`, `Name.svelte`) under a free name, or `-o` a file to replace or a folder; `component` makes a one-colour SVG follow its `color` prop unless `--colors` |
 | gw2 | `gw2 daily`: today's Wizard's Vault objectives, with the key saved in GW2 Tracker | `gw2-objective` values (name, progress, done; open → GW2 Tracker) |
 | hid-lab | `hid ls` (unavailable without WebHID) | `hid-device` values (name, ids, usage, collections, opened; open → Keyboard & HID Lab, HID section) |
-| forms | `form link <path> [-c]` | the form's link as `text` (`-c` copies it too); path completion filtered to `.form.md` |
+| forms | `form link <path> [-c]`, `form answer <code>` | `link`: the form's solo link as `text` (`-c` copies it too), stamping the form id into the file first; path completion filtered to `.form.md`. `answer`: saves an answer code (or old answer link) beside its form, found by id under `/home`, and says where |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

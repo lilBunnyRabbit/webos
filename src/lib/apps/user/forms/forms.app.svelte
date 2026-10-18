@@ -50,8 +50,10 @@
   } from "./answers";
   import AnswersView from "./answers-view.svelte";
   import FillView from "./fill-view.svelte";
-  import { AI_PROMPT, EXAMPLE, parse_form, questions } from "./form";
-  import { app_link, form_payload, read_answer_payload, read_form_payload, type SharedAnswer } from "./link";
+  import { read_answers, store_answer, StoreOutcome, write_text } from "./collect";
+  import { AI_PROMPT, EXAMPLE, parse_form, questions, with_form_id } from "./form";
+  import FormsHome from "./forms-home.svelte";
+  import { app_link, form_payload, read_answer_code, read_answer_payload, read_form_payload, type SharedAnswer } from "./link";
   import LinkBox from "./link-box.svelte";
   import type { FormsProps } from "./props";
 
@@ -262,12 +264,6 @@
     await load(chosen);
   }
 
-  async function write_text(target: string, content: string): Promise<void> {
-    const directory = await files.get_directory(parent_path(target));
-    if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
-    await files.create_file(directory, base_name(target), { content, overwrite: true });
-  }
-
   async function write_form(target: string): Promise<boolean> {
     try {
       if (target === form_path) {
@@ -310,11 +306,6 @@
     return form_path && !is_system_path(form_path) ? write_form(form_path) : save_as();
   }
 
-  async function read_answers(target: string): Promise<AnswersFile | null | undefined> {
-    const file = await files.get_file(target);
-    return file ? parse_answers(await file.text()) : undefined;
-  }
-
   async function write_answers(target: string, next: AnswersFile) {
     await write_text(target, serialize_answers(next));
     answers_file = next;
@@ -350,6 +341,86 @@
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the answer", message: error_message(reason) });
     }
+  }
+
+  /** Stamps the form's id before it goes out, so answer codes find this file again; a shared form has to be saved. */
+  async function toggle_share() {
+    if (share_open) {
+      share_open = false;
+      return;
+    }
+    const stamped = with_form_id(source);
+    if (stamped !== source) {
+      if (editor) editor.dispatch({ changes: { from: 0, insert: stamped.slice(0, stamped.length - source.length) } });
+      else source = stamped;
+    }
+    if ((!form_path || dirty) && !(await save())) return;
+    share_open = true;
+  }
+
+  async function add_answer(text: string): Promise<boolean> {
+    const pasted = await read_answer_code(text);
+    if (!pasted) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "That isn't an answer code", message: "Paste the code someone sent back after filling in your form." });
+      return false;
+    }
+
+    let result;
+    try {
+      result = await store_answer(pasted);
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the answer", message: error_message(reason) });
+      return false;
+    }
+
+    if (result.outcome === StoreOutcome.NO_FORM) {
+      // An old answer carries its form, so it can still be read and saved by hand.
+      if (pasted.source !== null && (await discard_ok())) {
+        load_id++;
+        leave_link();
+        doc_path.value = null;
+        answers_file = null;
+        incoming = { source: pasted.source, name: pasted.name, response: pasted.response };
+        link_name = pasted.name;
+        show(pasted.source);
+        view.value = View.ANSWERS;
+        return true;
+      }
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: "No form matches this answer", message: "Its form isn't anywhere in /home on this device." });
+      return false;
+    }
+    if (result.outcome === StoreOutcome.UNREADABLE) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: `“${base_name(result.answers_path)}” isn't an answers file Forms can read`, message: "Move it away and paste the code again." });
+      return false;
+    }
+
+    if (result.form_path !== form_path && (await discard_ok())) {
+      leave_link();
+      answers_file = null;
+      await load(result.form_path);
+    }
+    view.value = View.ANSWERS;
+    const who = pasted.response.respondent;
+    notifications.notify(app_id, {
+      type: NotificationType.INFO,
+      title: result.outcome === StoreOutcome.SAVED ? `Saved ${who ? `${who}'s` : "an"} answer` : "Already saved",
+      message: `${result.count} ${result.count === 1 ? "answer" : "answers"} in ${base_name(result.answers_path)}`,
+    });
+    return true;
+  }
+
+  let root = $state<HTMLElement>();
+
+  // A code pasted anywhere in the window adds it, except into a text field, where it's just text.
+  function on_paste(event: ClipboardEvent) {
+    if (!win.is_focused) return;
+    const target = event.target;
+    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
+    if (target instanceof HTMLElement && target.closest("input, textarea, [contenteditable]")) return;
+    const text = event.clipboardData?.getData("text/plain") ?? "";
+    if (!/(^|[?&]a=)v1[\w-]{8,}/.test(text.trim())) return;
+    event.preventDefault();
+    void add_answer(text);
   }
 
   async function remove(index: number) {
@@ -450,7 +521,9 @@
   });
 </script>
 
-<div class="grid h-full grid-rows-[auto_auto_1fr_auto]">
+<svelte:document onpaste={on_paste} />
+
+<div bind:this={root} class="grid h-full grid-rows-[auto_auto_1fr_auto]">
   <Toolbar>
     <IconButton label="New form" size="sm" onclick={() => start(NEW_FORM)}><FilePlusIcon weight="bold" /></IconButton>
     <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
@@ -459,7 +532,7 @@
     <Separator vertical class="hidden @md:block" />
     <Segmented size="sm" label="View" bind:value={view.value} options={VIEW_OPTIONS} class="ml-auto hidden @md:inline-flex" />
     <Select size="sm" aria-label="View" bind:value={view.value} options={VIEW_OPTIONS} class="ml-auto w-24 @md:hidden" />
-    <Button size="sm" variant={share_open ? "primary" : "secondary"} disabled={!ready} aria-pressed={share_open} aria-label="Share link" title="Share link" onclick={() => (share_open = !share_open)}>
+    <Button size="sm" variant={share_open ? "primary" : "secondary"} disabled={!ready} aria-pressed={share_open} aria-label="Share link" title="Share link" onclick={() => void toggle_share()}>
       <LinkSimpleIcon weight="bold" /><span class="hidden @md:inline">Share</span>
     </Button>
   </Toolbar>
@@ -510,6 +583,7 @@
           onsave={save_incoming}
           onremove={remove}
           onexport={export_csv}
+          onadd={add_answer}
         />
       </div>
     {/if}
@@ -517,7 +591,9 @@
     {#if status !== Status.READY}
       <div class="absolute inset-0 z-20 grid bg-background">
         {#if status === Status.EMPTY}
-          <EmptyState icon={ListChecksIcon} title="Make a form" description="Write it as a checklist, send it as a link, and collect the answer links people send back.">
+          <div class="h-full overflow-auto">
+            <div class="flex min-h-full flex-col justify-center">
+          <EmptyState icon={ListChecksIcon} class="h-auto" title="Make a form" description="Write it as a checklist, share it as a link, and paste the answer codes people send back.">
             {#snippet actions()}
               <div class="flex flex-wrap justify-center gap-2">
                 <Button variant="primary" onclick={() => start(NEW_FORM)}><FilePlusIcon weight="bold" /> New form</Button>
@@ -526,6 +602,9 @@
               </div>
             {/snippet}
           </EmptyState>
+          <FormsHome onopen={(target) => void load(target)} onadd={add_answer} />
+            </div>
+          </div>
         {:else if status === Status.LOADING}
           <div class="grid place-items-center"><Spinner label="Opening" /></div>
         {:else if status === Status.BROKEN}

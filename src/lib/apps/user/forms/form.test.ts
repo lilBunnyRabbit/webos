@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { blank_answers, EXAMPLE, FieldKind, parse_form, questions, UNTITLED } from "./form";
+import { blank_answers, EXAMPLE, FieldKind, parse_form, questions, UNTITLED, new_form_id, with_form_id } from "./form";
 
 describe("parse_form", () => {
   test("first h1 is the title, the rest becomes questions and notes in order", () => {
@@ -38,5 +38,21 @@ describe("parse_form", () => {
     const form = parse_form(EXAMPLE);
     expect(questions(form)).toHaveLength(6);
     expect(blank_answers(form)).toMatchObject({ "Darker sticky header": false, "Anything else you'd change first?": "" });
+  });
+});
+
+describe("form id", () => {
+  test("the id line is read and never shows as a note", () => {
+    const form = parse_form("<!-- form: k3x9q2 -->\n# Survey\n- [ ] Yes");
+    expect(form.id).toBe("k3x9q2");
+    expect(form.fields).toEqual([{ kind: "check", key: "Yes", label: "Yes", note: null }]);
+    expect(parse_form("# Survey").id).toBeNull();
+  });
+
+  test("with_form_id stamps once", () => {
+    const stamped = with_form_id("# Survey", "abc123");
+    expect(stamped).toBe("<!-- form: abc123 -->\n# Survey");
+    expect(with_form_id(stamped, "other")).toBe(stamped);
+    expect(new_form_id()).toMatch(/^[0-9a-z]{6}$/);
   });
 });

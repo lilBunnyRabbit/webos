@@ -87,6 +87,53 @@ export async function answer_payload(shared: SharedForm, form: Form, response: F
   });
 }
 
+const AnswerCode = z.object({
+  i: z.string(),
+  n: z.string().optional(),
+  r: z.string().optional(),
+  t: z.number(),
+  a: z.record(z.string(), z.union([z.string(), z.boolean()])),
+});
+
+/**
+ * What the respondent sends back. A form with an id gets a short code: the id and the answers keyed by question, no
+ * form inside, since the owner's own file is found by the id. A form shared before ids existed still packs itself in.
+ */
+export async function answer_code(shared: SharedForm, form: Form, response: FormResponse): Promise<string> {
+  if (!form.id) return answer_payload(shared, form, response);
+  return pack({
+    i: form.id,
+    ...(shared.name ? { n: shared.name } : {}),
+    ...(response.respondent ? { r: response.respondent } : {}),
+    t: response.submitted_at,
+    a: response.answers,
+  });
+}
+
+/** A pasted answer: `id` finds the form; `source` only rides along in codes from forms shared without an id. */
+export interface PastedAnswer {
+  id: string | null;
+  name: string | null;
+  source: string | null;
+  response: FormResponse;
+}
+
+/** Takes the code itself or an answer link (`…?a=v1…`); `null` when it's neither. */
+export async function read_answer_code(text: string): Promise<PastedAnswer | null> {
+  const trimmed = text.trim();
+  const from_link = /[?&]a=([^&\s]+)/.exec(trimmed);
+  const payload = from_link ? decodeURIComponent(from_link[1]) : trimmed;
+
+  const code = AnswerCode.safeParse(await unpack(payload));
+  if (code.success) {
+    const { i, n, r, t, a } = code.data;
+    return { id: i, name: n ?? null, source: null, response: { respondent: r?.trim() || null, submitted_at: t, answers: a } };
+  }
+
+  const shared = await read_answer_payload(payload);
+  return shared ? { id: parse_form(shared.source).id, name: shared.name, source: shared.source, response: shared.response } : null;
+}
+
 export async function read_answer_payload(payload: string): Promise<SharedAnswer | null> {
   const parsed = AnswerPayload.safeParse(await unpack(payload));
   if (!parsed.success) return null;
