@@ -1,11 +1,7 @@
 <script lang="ts">
   import kernel, {
-    load_metas,
     NotificationType,
     Platform,
-    with_meta,
-    type AppId,
-    type AppMeta,
     type AppsService,
     type DesktopItem,
     type DesktopService,
@@ -48,10 +44,8 @@
     { value: Tab.STATS, label: "Stats", icon: ChartBarIcon },
   ];
 
-  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
-  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
 
-  const games = $derived(list_games([...apps.list()].map(([, manifest]) => with_meta(manifest, metas))));
+  const games = $derived(list_games(apps.listings()));
   const library = $derived(sort_entries(entries(games, plays.value), sort.value));
   const dailies = $derived(games.filter((game) => supports_daily(game.props)).sort((a, b) => a.name.localeCompare(b.name)));
   const solved_today = $derived(plays.value.daily[today.value] ?? {});

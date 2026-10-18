@@ -12,6 +12,7 @@ export const CHANGELOG: Release[] = [
       { kind: FIXED, text: "In an app opened on its own page, the browser's Back closes the open panel or steps back inside the app instead of leaving the page." },
       { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor opens on its first section when a link or command doesn't name one." },
       { kind: FIXED, apps: ["forms", "image-tools", "jigsaw", "image-editor", "icon-pack", "svg-workbench"], text: "Pasting while a panel is open over an app no longer reaches the app behind it." },
+      { kind: FIXED, apps: ["app-library"], text: "Section labels in the App Library's Showcase now use the same quiet colour as labels everywhere else." },
     ],
   },
   {

@@ -55,7 +55,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `id`, `name`, `version`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
 | `highlights`, `preview` | yes (1.5) | The new-app announcement and the App Library details. `highlights: () => import("./highlights")` (a module whose default is `AppHighlight[]`, `{ icon, title, text }`; lazy since 1.9), `preview: () => import("./preview.webp?url")` (ADR-038) |
 | `meta` | yes (3.0) | `meta: () => import("./meta")`, the module default-exporting an `AppMeta` (ADR-049): `description` (one sentence; launcher search and the App Library), `keywords` (launcher search), `pitch` (`AppPitch`, `{ problem, solution }`, one short sentence each: the Showcase tells the app's story with it and falls back to `description`), `authors` (`AppAuthor[]`, `{ name, github?, url? }`; omitted means the owner, `OWNER`; credited in the App Library details, the new-app announcement, Settings › About › Credits and `app info` / `app list`). Every member of `AppMeta` is stable. Loaded after boot, so it costs no boot weight |
-| `author`, `license`, `repository` | yes | Stored only today. `author` predates `authors` and isn't read |
+| `author`, `license`, `repository` | **deprecated**, removed in 4.0 | Stored and never read. `author` predates `authors` (now in `meta`). Typed `@deprecated`; drop them from your manifest |
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
 | `props` | yes | A zod object schema |
@@ -140,7 +140,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 
 | Key | Stable | Internal (used by) |
 |-----|--------|--------------------|
-| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps); `meta_ready`, `meta` (ADR-049; Game Hub and system UI, through `load_metas` / `with_meta`) |
+| `apps` | `launch` (19), `open` (4), `get` (1; the manifest lookup is basic enough to promise) | `create_instance`, `register`, `list` (system apps); `listings`, `meta_ready`, `meta` (ADR-049; Game Hub and system UI) |
 | `files` | `get_file` (17), `get_directory` (11), `create_file` (9), `create_directory` (7), `revision` (7), `list` (3), `delete_entry` (3), `exists` (2), `get_root` (2) | `read_file`, `rename_entry` (one each); `write_file`, `directory`, `move_*`, `copy_*`, `move_paths`, `copy_paths`, `import_entries`, `upload_files`, `export_to_disk`, `get_storage_estimate`, `get_directory_size`, `clear` |
 | `notifications` | `notify` (21), `request_system` (3), `update` (1; a `progress` notification is useless without it) | `hide_toast` (Pomodoro), `dismiss`, `mark_read`, `mark_all_read`, `all`, `toasts`, `unread_count` |
 | `desktop` | `items` (5), `pin_widget` (7), `remove_item` (7) | `pin`, `open`, `rename_item`, `create_folder`, `names` and the grid/mobile variants |

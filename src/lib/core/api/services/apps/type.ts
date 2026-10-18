@@ -40,6 +40,11 @@ export interface AppsService extends IService {
    */
   readonly meta_ready: Promise<void>;
   meta(id: AppId): Promise<AppMeta>;
+  /**
+   * Every app, or only the installed (`true`) or not installed (`false`) ones, its manifest merged with its `meta`
+   * (ADR-049). Reactive: bare manifests until the metas load, so names show at once and the text fills in.
+   */
+  listings(filter?: AppsFilter): AppListing[];
 }
 
 export interface AppsFilter {
@@ -81,8 +86,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;
+  /** @deprecated Stored only and never read; credits come from `authors` in `meta`. Removed in 4.0. */
   author?: string;
+  /** @deprecated Stored only and never read. Removed in 4.0. */
   license?: string;
+  /** @deprecated Stored only and never read. Removed in 4.0. */
   repository?: string;
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */

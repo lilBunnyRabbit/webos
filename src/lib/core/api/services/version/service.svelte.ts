@@ -9,7 +9,6 @@ import type {
 } from "$lib/core/api";
 import { untrack } from "svelte";
 import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
-import { load_metas, with_meta } from "../apps/meta";
 import { LatestWriter } from "../files/latest-writer";
 import { SessionStatus } from "../session/type";
 import { introduced_apps } from "./history";
@@ -229,10 +228,11 @@ export class VersionService implements IVersionService {
   }
 
   private async show_announcement(): Promise<void> {
-    const [{ default: component }, metas] = await Promise.all([announcement_dialog(), load_metas(this.apps_service)]);
+    const [{ default: component }] = await Promise.all([announcement_dialog(), this.apps_service.meta_ready]);
+    const listings = this.apps_service.listings();
     const apps = this.announced.flatMap(({ app, release }) => {
-      const manifest = this.apps_service.get(app);
-      return manifest ? [{ manifest: with_meta(manifest, metas), version: release.version }] : [];
+      const manifest = listings.find((listing) => listing.id === app);
+      return manifest ? [{ manifest, version: release.version }] : [];
     });
     if (this.destroyed || apps.length === 0) return;
     await this.dialogs_service.show(component, { apps });

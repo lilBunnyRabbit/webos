@@ -3,11 +3,7 @@
     Platform,
     THEME_PRESETS,
     TaskbarPosition,
-    load_metas,
-    with_meta,
-    type AppId,
     type AppListing,
-    type AppMeta,
     type AppsService,
     type DesktopService,
     type DialogProps,
@@ -56,9 +52,7 @@
 
   const interests = new SvelteSet<string>();
   const pins = new SvelteSet<string>();
-  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
-  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
-  const suggested = $derived(interest_apps(interests).flatMap((id) => apps.get(id) ?? []).map((manifest) => with_meta(manifest, metas)));
+  const suggested = $derived(interest_apps(interests).flatMap((id) => apps.listings().find((listing) => listing.id === id) ?? []));
 
   function toggle<T>(set: SvelteSet<T>, value: T) {
     if (set.has(value)) set.delete(value);

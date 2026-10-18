@@ -46,8 +46,8 @@
         </section>
       {/if}
       <section class="flex flex-col gap-1.5 rounded-xl bg-background-light p-4 ring-1 ring-primary/30">
-        <h3 class="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-primary uppercase">
-          <ArrowRightIcon class="size-3" weight="bold" aria-hidden="true" /> What {manifest.name} does
+        <h3 class="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">
+          <ArrowRightIcon class="size-3 text-primary" weight="bold" aria-hidden="true" /> What {manifest.name} does
         </h3>
         <p class="text-sm text-pretty">{story.solution}</p>
       </section>

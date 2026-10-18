@@ -3,11 +3,7 @@
     format_keys,
     group_apps,
     search_apps,
-    load_metas,
-    with_meta,
-    type AppId,
     type AppManifest,
-    type AppMeta,
     type AppsService,
     type DesktopService,
     type DialogsService,
@@ -56,13 +52,11 @@
     search?.focus();
   });
 
-  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
-  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
 
-  const installed = $derived([...apps.list({ installed: true })].map(([, manifest]) => with_meta(manifest, metas)));
+  const installed = $derived(apps.listings({ installed: true }));
   const matches = $derived(search_apps(installed, query));
   /** Search covers every app: the ones not installed come after, under Get (ADR-040). */
-  const gettable = $derived(query.trim() ? search_apps([...apps.list({ installed: false })].map(([, manifest]) => with_meta(manifest, metas)), query) : []);
+  const gettable = $derived(query.trim() ? search_apps(apps.listings({ installed: false }), query) : []);
   const best = $derived(matches[0] ?? gettable[0]);
   const sections = $derived(group_apps(installed));
 

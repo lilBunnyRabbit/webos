@@ -2,11 +2,7 @@
   import kernel, {
     introduced_apps,
     updated_apps,
-    load_metas,
-    with_meta,
-    type AppId,
     type AppListing,
-    type AppMeta,
     type AppsService,
     type SessionService,
     type VersionService,
@@ -85,10 +81,8 @@
 
   let query = $state("");
 
-  let metas = $state.raw<ReadonlyMap<AppId, AppMeta>>(new Map());
-  void load_metas(kernel.service<AppsService>("apps")).then((loaded) => (metas = loaded));
 
-  const manifests = $derived([...apps.list()].map(([, manifest]) => with_meta(manifest, metas)));
+  const manifests = $derived(apps.listings());
   const selected = $derived(selected_id.value ? (manifests.find((manifest) => manifest.id === selected_id.value) ?? null) : null);
 
   // No usage log exists; an open window, a recently closed one or a remembered window frame is what the OS already knows.
