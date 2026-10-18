@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { default_params, record, type Definition } from "../../engine/definition";
 import compression, { inverse_bwt } from "./index";
+import { huffman_codes } from "../trees/forests";
 import { bin_to_dict, decode_from_bin, dict_to_bin, dict_to_string, lz77_decode, lz77_encode } from "./lz77";
 
 const run = <R>(id: string, input: string, params: Record<string, number | string> = {}) => {
@@ -103,6 +104,19 @@ describe("other coders round-trip", () => {
 
   test("BWT inverse helper", () => {
     expect(inverse_bwt("ipssm$pissii")).toBe("mississippi");
+  });
+});
+
+describe("Huffman coding", () => {
+  test("the bit stream uses the tree's codes and decodes back", () => {
+    for (let round = 0; round < 60; round++) {
+      const data = random_text(1 + Math.floor(Math.random() * 60), round % 4 ? "aaab c\n" : "z");
+      const codes = huffman_codes(data);
+      const result = run<{ bits: string; bytes: number[]; decoded: string }>("huffman-coding", data);
+      expect(result.bits).toBe([...data].map((char) => codes.get(char)).join(""));
+      expect(result.decoded).toBe(data);
+      expect(result.bytes).toHaveLength(Math.ceil(result.bits.length / 8));
+    }
   });
 });
 
