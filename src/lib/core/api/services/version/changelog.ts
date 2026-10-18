@@ -30,6 +30,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms has data structures to poke at: stacks, queues, ring buffers, linked lists, hash tables, Bloom filters, an LRU cache, skip lists and consistent hashing.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms shows how compression works: run-length, LZ77 with its sliding window and bits, LZ78, LZW, Burrows–Wheeler with move-to-front, and Base64.",
+      },
     ],
   },
   {

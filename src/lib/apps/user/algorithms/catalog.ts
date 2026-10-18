@@ -3,6 +3,7 @@ export const Group = {
   TREES: "trees",
   GRAPHS: "graphs",
   STRUCTURES: "structures",
+  COMPRESSION: "compression",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -11,6 +12,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.TREES]: "Trees",
   [Group.GRAPHS]: "Graphs",
   [Group.STRUCTURES]: "Data structures",
+  [Group.COMPRESSION]: "Compression",
 };
 
 export interface Complexity {
@@ -88,6 +90,13 @@ export const CATALOG: CatalogEntry[] = [
   entry("lru-cache", "LRU cache", Group.STRUCTURES, "Evict whatever was used longest ago", ["O(1)", "O(1)", "O(1)", "O(n)"]),
   entry("skip-list", "Skip list", Group.STRUCTURES, "A sorted list with express lanes", ["O(log n)", "O(log n)", "O(n)", "O(n)"]),
   entry("consistent-hashing", "Consistent hashing", Group.STRUCTURES, "Servers on a ring; few keys move on change", ["O(log n)", "O(log n)", "O(n)", "O(n)"]),
+
+  entry("rle", "Run-length encoding", Group.COMPRESSION, "Runs become a count and a symbol", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+  entry("lz77", "LZ77", Group.COMPRESSION, "Copy from a sliding window: distance, length, next", ["O(n·w)", "O(n·w)", "O(n·w)", "O(w)"]),
+  entry("lz78", "LZ78", Group.COMPRESSION, "Grow a phrase dictionary while reading", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+  entry("lzw", "LZW", Group.COMPRESSION, "Output codes only; the dictionary rebuilds itself", ["O(n)", "O(n)", "O(n)", "O(n)"]),
+  entry("bwt-mtf", "BWT + move-to-front", Group.COMPRESSION, "Sort rotations to group equal characters", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n²)"]),
+  entry("base64", "Base64", Group.COMPRESSION, "3 bytes become 4 safe characters", ["O(n)", "O(n)", "O(n)", "O(n)"]),
 ];
 
 export type AlgorithmId = string;

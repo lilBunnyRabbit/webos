@@ -7,6 +7,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import {
+    FileZip as FileZipIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Graph as GraphIcon,
@@ -37,6 +38,7 @@
     [Group.TREES]: TreeStructureIcon,
     [Group.GRAPHS]: GraphIcon,
     [Group.STRUCTURES]: StackIcon,
+    [Group.COMPRESSION]: FileZipIcon,
   };
   const GROUP_ITEMS = Object.values(Group).map((group) => ({ value: group, label: GROUP_NAMES[group], icon: GROUP_ICONS[group], count: in_group(group).length }));
 
