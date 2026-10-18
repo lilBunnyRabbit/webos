@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo), [ADR-049](../../adrs/049-lazy-app-metadata.md) (waits for app meta) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -20,7 +20,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `load_changelog` | `(): Promise<Release[]>` | Imports `changelog.ts` once (the promise is kept) and fills `changelog`. `init()` awaits it only after an update; Settings › What's new, App Library and the `changelog` command call it themselves. It's the largest module WebOS has and grows every release, so it stays out of the boot chunk |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
 | `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to registered apps (installed or not; Open installs through `launch`): what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
-| `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte`, then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits that import, so the introduction is up when the splash goes (ADR-036). Resolves when it closes. Doesn't write the seen marker |
+| `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte` and awaits the apps' `meta_ready` (ADR-049: the suggestions show descriptions), then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits both before returning, so the introduction is up when the splash goes (ADR-036); only a first boot waits for the `app-meta` chunk. Resolves when it closes. Doesn't write the seen marker |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
 
@@ -111,7 +111,7 @@ At boot (`init()`), after reading the seen marker:
 
 Tagging rules for `changelog.ts`: `apps` names the apps whose own UI or own commands the line is about. Shell-wide, launcher and desktop lines stay untagged, as do lines about a service (backups, tasks) rather than an app. A line about a retired app is tagged with its successor (Image Tools' history keeps the five image apps' lines; Text Viewer's lines belong to `text-editor`). `introduces` lists apps first shipped in that release; Style Guide and Example were never announced and have none.
 
-Announcement: when `announced` isn't empty, `init()` starts an `$effect.root` that waits for `session.status !== PENDING` (RouterService's pattern), so an app opened from it lands above the restored windows. It then imports `components/announcement/app-announcement.svelte` and calls `dialogs.show(AppAnnouncement, { apps })` once, dismissible (Esc, outside click, the phone's Back). Nothing is persisted: it shows once because the seen marker moves at boot. The "Updated to vX" toast still shows. First boot shows the introduction and no announcement.
+Announcement: when `announced` isn't empty, `init()` starts an `$effect.root` that waits for `session.status !== PENDING` (RouterService's pattern), so an app opened from it lands above the restored windows. It then imports `components/announcement/app-announcement.svelte` and, in parallel, the apps' meta (`load_metas`, ADR-049), so each announced manifest arrives with its description and authors and nothing pops in; then calls `dialogs.show(AppAnnouncement, { apps })` once, dismissible (Esc, outside click, the phone's Back). Nothing is persisted: it shows once because the seen marker moves at boot. The "Updated to vX" toast still shows. First boot shows the introduction and no announcement.
 
 `AppAnnouncement` (`{ apps: { manifest, version }[] }`):
 

@@ -7,6 +7,7 @@ The short path from nothing to a window. Details live in [manifest.md](manifest.
 ```
 src/lib/apps/user/notes/        # or system/ for a bundled OS app
 ├── index.ts                    # manifest, loaded eagerly
+├── meta.ts                     # description, keywords, pitch, authors; loaded after boot
 └── notes.app.svelte            # component, loaded on launch
 ```
 
@@ -30,11 +31,27 @@ export default define_app({
   associations: [".note"],
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 240 } } },
+  meta: () => import("./meta"),
   component: () => import("./notes.app.svelte"),
 });
 ```
 
+```ts
+// meta.ts
+import type { AppMeta } from "$lib/core/api";
+
+export default {
+  description: "Plain-text notes in your own folders.",
+  keywords: ["memo", "text", "jot"],
+  pitch: {
+    problem: "Quick thoughts end up scattered across tabs and sticky notes.",
+    solution: "Write them as .note files in your folders, one click from the desktop.",
+  },
+} satisfies AppMeta;
+```
+
 - `id` must be unique; a clash silently replaces the other app.
+- Text the user reads but boot doesn't need (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): every manifest ships in the boot chunk, the metas load together after it. `bun run check` rejects those fields in `define_app` ([meta](manifest.md#meta-metats)).
 - From `$lib/core/api`, import only types and functions. Constants come from their own module ([why](manifest.md#the-import-rule)).
 - Skip `associations` and `props` if the app doesn't open files. Without a `props` schema the app never receives props.
 

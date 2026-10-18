@@ -33,3 +33,7 @@ Discussion: [brainstorm](../brainstorm/2026-10-18_app-kit-layer.md).
 - `$lib/core/api` (through `services/apps/type`) now exports `DailyRank` too.
 - A new app-only helper goes into `src/lib/kit`, not core (CONVENTIONS, Where code goes). A helper core needs later moves back to core with a kit shim, never a core → kit import.
 - The shims and the allow-list entries go together at 3.0.
+
+## Revisions
+
+- **2026-10-18:** The shim period is over (ADR-049). 3.0.0 deletes `$lib/core/games` (`index`, `time`, `daily`, `direction`) and `$lib/core/utils/image`, with their `app-api.test.ts` pins and their entries in the `kit-boundary.test.ts` allow list, which now holds only `app-api.test.ts`. Apps import `$kit/games` and `$kit/utils/image`; nothing in the repo still used the old paths.

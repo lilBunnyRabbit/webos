@@ -33,9 +33,9 @@ Earlier: [lazy shell commands](../ROADMAP.md) (P4 › Performance), [app showcas
 
 ## Action items
 
-- [ ] ADR-049, revising ADR-008 and ADR-034 (and closing ADR-048's shims).
-- [ ] Implement: `AppMeta` type, `meta` field, `meta.ts` for all apps, AppsService `meta_ready` + `meta(id)`, readers await, `manualChunks`, Algorithms props, shim removal, app-api.md + `app-api.test.ts`, manifest.md, writing-an-app.md, changelog 3.0.0.
-- [ ] Re-measure the budget after.
+- [x] ADR-049, revising ADR-008 and ADR-034 (and closing ADR-048's shims).
+- [x] Implement: `AppMeta` type, `meta` field, `meta.ts` for all apps, AppsService `meta_ready` + `meta(id)`, readers await, `manualChunks`, Algorithms props, shim removal, app-api.md + `app-api.test.ts`, manifest.md, writing-an-app.md, changelog 3.0.0.
+- [x] Re-measure the budget after: entry chunk 168.2 → 154.4 KB gz (~9.9 KB from the text, ~4 KB from Algorithms' catalog), `app-meta` chunk 36.6 KB raw.
 
 ## Next session topics
 
