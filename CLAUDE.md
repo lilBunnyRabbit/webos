@@ -26,19 +26,19 @@ Tests sit next to their source: `*.test.ts` runs in Node, `*.browser.test.ts` in
 
 ## Architecture in one screen
 
-The kernel is a service registry with dependency resolution. `kernel.init()` builds services in dependency order and awaits each `init()` before the app mounts (ADR-002). Services are domain classes using runes, registered in `src/lib/core/api/kernel/init.ts`. Its job is to let one implementation be swapped for another, for example mobile and desktop (ADR-016). It is not a security boundary.
+The kernel is a service registry with dependency resolution. `kernel.init()` builds services in dependency order and awaits each `init()` before the app mounts (ADR-002). Services are domain classes using runes, registered in `src/lib/core/api/kernel/init.ts`. Its job is to let one implementation be swapped for another, for example mobile and desktop (ADR-016), or full and solo (`#/solo/` links swap `apps`, `session` and `version`, ADR-047). It is not a security boundary.
 
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
 | `settings` | SettingsService | Theme tokens, taskbar position and quick launch pins, file defaults, persisted in `/etc/settings.json` | files |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap. `MobileWindowsService` on mobile (ADR-016) | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
-| `version` | VersionService | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026), new-app announcements after the Restore answer (ADR-038). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps, session |
+| `version` | VersionService (`SoloVersionService` in solo, ADR-047) | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026), new-app announcements after the Restore answer (ADR-038). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps, session |
 | `notifications` | NotificationsService | Toasts + history (ADR-006). Report user-facing errors here | none |
 | `dialogs` | DialogsService | Promise-based system dialogs above windows (ADR-019) | windows |
-| `apps` | AppsService | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
+| `apps` | AppsService (`SoloAppsService` in solo) | Registry from glob, `launch()` validates props (ADR-008), `open(path)` by association (ADR-018) | windows, notifications, files, settings, dialogs |
 | `desktop` | DesktopService | `/home/Desktop` folder as icons, `.desktop` shortcuts, positions in `/var/lib/desktop/layout.json` (ADR-022). `MobileDesktopService` (pages + dock) on mobile (ADR-016) | files, apps |
-| `session` | SessionService | Saves open windows and window frames to `/var/lib/session/session.json`, restore dialog at boot, reopen closed windows (ADR-023) | windows, apps, files, dialogs, notifications |
+| `session` | SessionService (`SoloSessionService` in solo) | Saves open windows and window frames to `/var/lib/session/session.json`, restore dialog at boot, reopen closed windows (ADR-023) | windows, apps, files, dialogs, notifications |
 | `clipboard` | ClipboardService | Copy/cut/paste for files (in memory), text to the system clipboard (ADR-025) | files |
 | `ui` | UiService | Shell overlay state: launcher, mobile switcher, notification center; `back()` for the nav bar and the browser's back via a history guard (ADR-028) | windows, dialogs |
 | `shell` | ShellService | Commands contributed by services through `IService.shell()`, zod args, structured values and pipes, completion, shared history in `/var/lib/shell/history` (ADR-033) | files, dialogs, notifications |
@@ -47,7 +47,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `backup` | BackupService | Zips `/home`, `/etc`, `/var/lib` and `app.*` localStorage (picked per area) to the device, never OPFS; restore replaces the areas a backup holds and reloads, holding FilesService writes meanwhile; both run as tasks (ADR-037) | files, dialogs, notifications, windows, tasks |
 | `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
 | `ai` | AiService | Chrome's on-device AI (Gemini Nano): availability per feature, summarize, translate, detect, streaming prompt; sessions kept and reused, model downloads as tasks. `MobileAiService` answers "no" on mobile (ADR-046) | files, tasks, notifications |
-| `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; Copy link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
+| `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; `#/solo/{id}?{props}` stays in the URL (ADR-047); Copy link and Copy solo link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
 

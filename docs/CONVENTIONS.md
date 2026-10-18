@@ -18,11 +18,13 @@ src/lib/
 │   │   │   ├── kernel.svelte.ts  # registry, dependency resolution
 │   │   │   ├── init.ts           # THE place services get registered
 │   │   │   ├── platform.ts       # desktop or mobile, detected once (ADR-016)
+│   │   │   ├── mode.ts           # full or solo (`#/solo/` link), detected once (ADR-047)
 │   │   │   └── test-kernel.ts    # boot_test_kernel, stub_service for browser tests
 │   │   └── services/{name}/
 │   │       ├── index.ts          # export * from "./type", plus pure helpers apps may use
 │   │       ├── type.ts           # public interface + domain types
 │   │       ├── service.svelte.ts # implementation class (runes)
+│   │       ├── mobile.svelte.ts | solo.svelte.ts  # swapped implementation, picked in init.ts (ADR-016, ADR-047)
 │   │       ├── shell.ts          # shell commands: definitions, eager (ADR-033)
 │   │       ├── shell-run.ts      # their bodies, `import()`ed on first use (when ≥ 1 KB)
 │   │       ├── inspector.svelte  # Kernel app view, lazy (ADR-020)
@@ -34,12 +36,15 @@ src/lib/
 │   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types, zip
 ├── kit/                          # $kit, the app kit (ADR-048): helpers only apps use
 │   ├── components/code/          # shared CodeMirror setup, CodeView
-│   ├── games/                    # shared game helpers: play tracking, stopwatch (ADR-035)
+│   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
 │   └── utils/                    # image, image-format, history, qr, qr-scan, exif
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
         ├── index.ts              # define_app manifest (eager)
+        ├── icon.svelte           # the app's own icon
+        ├── highlights.ts         # App Library showcase slides, `highlights: () => import("./highlights")` (lazy)
+        ├── package.json          # only when the app has its own packages (ADR-045)
         ├── commands.ts           # shell commands, `shell: () => import("./commands")` (lazy, ADR-034)
         ├── shell.ts              # their bodies, `import()`ed on first run
         └── {id}.app.svelte       # component (lazy)
@@ -102,7 +107,7 @@ export default define_app({
 });
 ```
 
-- What an app may rely on (stable until 2.0) and what is internal: [system/app-api.md](system/app-api.md).
+- What an app may rely on (frozen at 1.0, stable until 3.0) and what is internal: [system/app-api.md](system/app-api.md).
 - Auto-discovered by glob in `src/lib/apps/index.ts`. No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
@@ -111,6 +116,7 @@ export default define_app({
 - Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 190 KB gz (`bun run build && bun run budget`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
 - Apps use `@container` queries (`@sm:`, `@md:`) for responsiveness, never viewport breakpoints. That's what makes mobile free (ADR-016).
+- Every app can open solo from a `#/solo/{id}?{props}` link (ADR-047): one window, full page, no desktop or taskbar, and launching another app only points to Open WebOS. There's no manifest flag, so an app never assumes other apps or windows are around.
 
 ---
 
