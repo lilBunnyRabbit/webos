@@ -238,7 +238,7 @@
           )}
           <div class="flex flex-wrap gap-2" role="group" aria-label="Interests">
             {#each INTERESTS as interest (interest.id)}
-              <Button size="lg" variant="quiet" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
+              <Button size="lg" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
                 {interest.label}
               </Button>
             {/each}
