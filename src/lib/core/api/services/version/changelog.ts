@@ -15,6 +15,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, apps: ["algorithms"], text: "Algorithms adds Bentley–Ottmann, the sweep that keeps crossing segments in order and only ever tests neighbours." },
       { kind: NEW, apps: ["algorithms"], text: "Huffman coding under Compression turns your text into actual bits and bytes, then decodes them back by walking the tree." },
       { kind: NEW, apps: ["algorithms"], text: "Arithmetic coding joins Compression: watch the interval narrow symbol by symbol until the whole message is a single number." },
+      { kind: IMPROVED, apps: ["algorithms"], text: "Graphs and points in Algorithms can be drawn from the keyboard: Tab to a node, move it with the arrow keys, press Enter on two nodes to connect them." },
     ],
   },
   {

@@ -18,12 +18,14 @@
     bounds,
     label,
     pannable = true,
+    role = "img",
     class: class_name,
     children,
   }: {
     bounds: Bounds;
     label: string;
     pannable?: boolean | ((event: PointerEvent) => boolean);
+    role?: "img" | "group";
     class?: string;
     children: Snippet<[(event: { clientX: number; clientY: number }) => Point]>;
   } = $props();
@@ -127,7 +129,7 @@
 <div class={cn("relative min-h-0 min-w-0", class_name)} bind:clientWidth={client.width} bind:clientHeight={client.height}>
   <svg
     bind:this={svg}
-    role="img"
+    {role}
     aria-label={label}
     viewBox="{box.x} {box.y} {Math.max(1, box.width)} {Math.max(1, box.height)}"
     preserveAspectRatio="xMidYMid meet"

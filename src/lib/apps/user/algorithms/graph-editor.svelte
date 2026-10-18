@@ -2,8 +2,9 @@
   import { Button, Input } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { Trash as TrashIcon } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { Plus as PlusIcon, Trash as TrashIcon } from "phosphor-svelte";
+  import { tick, untrack } from "svelte";
+  import { free_spot, is_arrow, nudge } from "./editor-keys";
   import type { GraphInput } from "./engine/graph-input";
   import type { Point } from "./engine/step";
   import { edge_path, RADIUS, SCALE } from "./views/graph-view.svelte";
@@ -15,6 +16,7 @@
   let graph = $state<GraphInput>(untrack(() => structuredClone(value as GraphInput)));
   let selected = $state<{ kind: "node"; id: string } | { kind: "edge"; index: number } | null>(null);
   let error = $state<string | null>(null);
+  let root = $state<HTMLDivElement>();
 
   const positions = $derived(new Map(graph.nodes.map((node) => [node.id, node])));
   const weighted = $derived(graph.edges.some((edge) => edge.w !== 1) || (value as GraphInput).edges.some((edge) => edge.w !== 1));
@@ -34,6 +36,12 @@
   }
 
   const clamp = (point: Point) => ({ x: Math.round(Math.min(100, Math.max(0, point.x / SCALE))), y: Math.round(Math.min(100, Math.max(0, point.y / SCALE))) });
+
+  async function focus_node(id: string | undefined) {
+    await tick();
+    if (id === undefined) return;
+    root?.querySelector<SVGGElement>(`[data-node-id="${CSS.escape(id)}"]`)?.focus();
+  }
 
   let drag: { id: string; from: Point; moved: boolean } | null = null;
   let down_at: Point | null = null;
@@ -58,6 +66,10 @@
     drag = null;
     if (!was) return;
     if (was.moved) return commit(graph);
+    pick(id);
+  }
+
+  function pick(id: string) {
     if (selected?.kind === "node" && selected.id !== id) {
       const from = selected.id;
       const exists = graph.edges.findIndex((edge) => (edge.from === from && edge.to === id) || (!graph.directed && edge.from === id && edge.to === from));
@@ -70,6 +82,42 @@
       return;
     }
     selected = selected?.kind === "node" && selected.id === id ? null : { kind: "node", id };
+  }
+
+  let nudged = false;
+
+  function settle() {
+    if (!nudged) return;
+    nudged = false;
+    commit(graph);
+  }
+
+  function node_key(event: KeyboardEvent, id: string) {
+    if (is_arrow(event.key)) {
+      event.preventDefault();
+      graph = { ...graph, nodes: graph.nodes.map((node) => (node.id === id ? { ...node, ...nudge(node, event.key, event.shiftKey) } : node)) };
+      nudged = true;
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pick(id);
+    } else if (event.key === "Escape" && selected) {
+      event.preventDefault();
+      selected = null;
+    } else if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      if (!selected) selected = { kind: "node", id };
+      const index = graph.nodes.findIndex((node) => node.id === id);
+      const removes_this = selected.kind === "node" && selected.id === id;
+      remove();
+      void focus_node(removes_this ? (graph.nodes[index] ?? graph.nodes.at(-1))?.id : id);
+    }
+  }
+
+  function add_node() {
+    const id = next_id();
+    commit({ ...graph, nodes: [...graph.nodes, { id, ...free_spot(graph.nodes) }] });
+    selected = null;
+    void focus_node(id);
   }
 
   function background_down(event: PointerEvent) {
@@ -120,7 +168,7 @@
   }
 
   function onkeydown(event: KeyboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || event.defaultPrevented) return;
     if ((event.key === "Delete" || event.key === "Backspace") && selected && !(event.target instanceof HTMLInputElement)) {
       event.preventDefault();
       remove();
@@ -130,8 +178,8 @@
 
 <svelte:document {onkeydown} />
 
-<div class="flex h-full min-h-0 flex-col gap-2">
-  <div class="flex min-h-9 flex-wrap items-center gap-1.5 text-ui text-foreground/80">
+<div bind:this={root} class="flex h-full min-h-0 flex-col gap-2">
+  <div class="flex min-h-9 flex-wrap items-center gap-1.5 text-ui text-foreground/80" aria-live="polite">
     {#if selected?.kind === "node"}
       <span class="font-medium text-foreground">Node {selected.id}</span>
       {#if "start" in graph || graph.start !== undefined}
@@ -140,7 +188,7 @@
       {#if "goal" in graph || graph.goal !== undefined}
         <Button size="sm" variant={graph.goal === selected.id ? "primary" : "secondary"} onclick={() => set_role("goal")}>Goal</Button>
       {/if}
-      <span class="hidden @lg:inline">Tap another node to connect them.</span>
+      <span class="hidden @lg:inline">Tap another node, or Enter on it, to connect them.</span>
       <Button size="sm" variant="quiet" class="ml-auto" onclick={remove}><TrashIcon weight="bold" /> Delete</Button>
     {:else if selected_edge}
       <span class="font-medium text-foreground">Edge {selected_edge.from}{graph.directed ? "→" : "–"}{selected_edge.to}</span>
@@ -150,12 +198,16 @@
       </label>
       <Button size="sm" variant="quiet" class="ml-auto" onclick={remove}><TrashIcon weight="bold" /> Delete</Button>
     {:else}
-      <span>Tap empty space to add a node, tap two nodes to connect them, drag to move.</span>
+      <span class="min-w-0 flex-1">
+        Tap empty space to add a node, tap two nodes to connect them, drag to move.
+        <span class="hidden @2xl:inline">Keys: Tab to a node, arrows move it (Shift for 10), Enter on two nodes connects them, Delete removes.</span>
+      </span>
+      <Button size="sm" variant="quiet" onclick={add_node}><PlusIcon weight="bold" /> Add node</Button>
     {/if}
   </div>
   {#if error}<p class="text-2xs text-error">{error}</p>{/if}
   <div class="min-h-0 flex-1 rounded-lg bg-background ring-1 ring-foreground/10">
-    <Stage {bounds} label="Graph editor" class="h-full" pannable={(event) => !(event.target as Element).closest("[data-node]")}>
+    <Stage {bounds} label="Graph editor" role="group" class="h-full" pannable={(event) => !(event.target as Element).closest("[data-node]")}>
       {#snippet children(to_point)}
         <rect
           x="-5000"
@@ -188,15 +240,21 @@
           <g
             transform="translate({node.x * SCALE} {node.y * SCALE})"
             role="button"
-            tabindex="-1"
-            aria-label="Node {node.id}"
+            tabindex="0"
+            aria-label="Node {node.id} at {node.x}, {node.y}"
+            aria-pressed={active}
             data-node
-            class="cursor-grab"
+            data-node-id={node.id}
+            class="group cursor-grab outline-none"
             onpointerdown={(event) => node_down(event, node.id)}
             onpointermove={(event) => node_move(event, to_point)}
             onpointerup={() => node_up(node.id)}
+            onkeydown={(event) => node_key(event, node.id)}
+            onkeyup={(event) => is_arrow(event.key) && settle()}
+            onblur={settle}
           >
             <circle r={RADIUS + 6} class="fill-transparent" />
+            <circle r={RADIUS + 5} fill="none" stroke-width="2" class="stroke-transparent group-focus-visible:stroke-cottontail" />
             <circle r={RADIUS} stroke-width={active ? 3 : 1.5} class={cn(active ? "fill-primary/15 stroke-primary" : "fill-background-light stroke-foreground/50")} />
             <text text-anchor="middle" dominant-baseline="middle" y="0.5" class="fill-foreground text-[13px] font-semibold">{node.id}</text>
             {#if graph.start === node.id || graph.goal === node.id}
