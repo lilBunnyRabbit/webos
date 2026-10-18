@@ -92,7 +92,7 @@
     return () => disposers.forEach((dispose) => dispose());
   });
 
-  const flexible = (view: StepView) => view.kind === "bars" || view.kind === "tree" || view.kind === "graph" || view.kind === "points";
+  const flexible = (view: StepView) => view.kind === "bars" || view.kind === "tree" || view.kind === "graph" || view.kind === "points" || view.kind === "ring";
   const counter_label = (key: string) => key.charAt(0).toUpperCase() + key.slice(1);
 </script>
 

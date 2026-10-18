@@ -28,14 +28,27 @@
     };
   }
 
+  const dense = $derived(view.cells.length > 16);
   const pointers = $derived([...pointers_at(view.pointers)].map(([index, list]) => ({ index, list })));
 </script>
 
-<svg viewBox="-130 -125 260 250" class="mx-auto h-full max-h-80 w-full" role="img" aria-label={view.title ?? "Ring"}>
+<svg viewBox={dense ? "-150 -140 300 280" : "-130 -125 260 250"} class="mx-auto h-full max-h-[26rem] w-full" role="img" aria-label={view.title ?? "Ring"}>
   {#each view.cells as cell, index (index)}
     {@const part = segment(index)}
     <path d={part.d} stroke-width="1.25" class={cn("transition-colors duration-150", cell.tone ? `${TONE_FILL[cell.tone]} stroke-background` : "fill-background-light stroke-foreground/25")} />
-    <text x={part.label.x} y={part.label.y} text-anchor="middle" dominant-baseline="middle" class={cn("font-mono text-[12px]", cell.tone && cell.tone !== "muted" ? "fill-background font-semibold" : "fill-foreground")}>{cell.text}</text>
+    {#if dense}
+      {#if cell.text}
+        <text
+          x={part.outside.x}
+          y={part.outside.y}
+          text-anchor={part.outside.x > 4 ? "start" : part.outside.x < -4 ? "end" : "middle"}
+          dominant-baseline="middle"
+          class={cn("font-mono text-[10px]", cell.tone && cell.tone !== "muted" ? TONE_FILL[cell.tone] : "fill-foreground/80")}>{cell.text}</text
+        >
+      {/if}
+    {:else}
+      <text x={part.label.x} y={part.label.y} text-anchor="middle" dominant-baseline="middle" class={cn("font-mono text-[12px]", cell.tone && cell.tone !== "muted" ? "fill-background font-semibold" : "fill-foreground")}>{cell.text}</text>
+    {/if}
     {#if count <= 16}
       <text x={part.index.x} y={part.index.y} text-anchor="middle" dominant-baseline="middle" class="fill-foreground/45 font-mono text-[9px]">{index}</text>
     {/if}

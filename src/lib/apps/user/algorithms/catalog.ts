@@ -2,6 +2,7 @@ export const Group = {
   SORTING: "sorting",
   TREES: "trees",
   GRAPHS: "graphs",
+  STRUCTURES: "structures",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -9,6 +10,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.SORTING]: "Sorting",
   [Group.TREES]: "Trees",
   [Group.GRAPHS]: "Graphs",
+  [Group.STRUCTURES]: "Data structures",
 };
 
 export interface Complexity {
@@ -74,6 +76,18 @@ export const CATALOG: CatalogEntry[] = [
   entry("topological-sort", "Topological sort", Group.GRAPHS, "Order tasks so every edge points forward", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
   entry("tarjan-scc", "Tarjan's components", Group.GRAPHS, "Groups of nodes that all reach each other", ["O(V + E)", "O(V + E)", "O(V + E)", "O(V)"]),
   entry("max-flow", "Max flow", Group.GRAPHS, "Edmonds-Karp: push flow along shortest paths", ["O(V·E²)", "O(V·E²)", "O(V·E²)", "O(V + E)"]),
+
+  entry("stack", "Stack", Group.STRUCTURES, "Last in, first out", ["O(1)", "O(1)", "O(1)", "O(n)"]),
+  entry("queue", "Queue", Group.STRUCTURES, "First in, first out", ["O(1)", "O(1)", "O(1)", "O(n)"]),
+  entry("deque", "Deque", Group.STRUCTURES, "Add and remove at both ends", ["O(1)", "O(1)", "O(1)", "O(n)"]),
+  entry("ring-buffer", "Ring buffer", Group.STRUCTURES, "A fixed array used in a circle", ["O(1)", "O(1)", "O(1)", "O(n)"]),
+  entry("singly-linked-list", "Singly linked list", Group.STRUCTURES, "Nodes that point to the next one", ["O(1)", "O(n)", "O(n)", "O(n)"]),
+  entry("doubly-linked-list", "Doubly linked list", Group.STRUCTURES, "Nodes that point both ways", ["O(1)", "O(n)", "O(n)", "O(n)"]),
+  entry("hash-table", "Hash table", Group.STRUCTURES, "Keys to slots; chaining or probing on collisions", ["O(1)", "O(1)", "O(n)", "O(n)"]),
+  entry("bloom-filter", "Bloom filter", Group.STRUCTURES, "Maybe yes, definitely no, in a few bits", ["O(k)", "O(k)", "O(k)", "O(m)"]),
+  entry("lru-cache", "LRU cache", Group.STRUCTURES, "Evict whatever was used longest ago", ["O(1)", "O(1)", "O(1)", "O(n)"]),
+  entry("skip-list", "Skip list", Group.STRUCTURES, "A sorted list with express lanes", ["O(log n)", "O(log n)", "O(n)", "O(n)"]),
+  entry("consistent-hashing", "Consistent hashing", Group.STRUCTURES, "Servers on a ring; few keys move on change", ["O(log n)", "O(log n)", "O(n)", "O(n)"]),
 ];
 
 export type AlgorithmId = string;

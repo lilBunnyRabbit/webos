@@ -25,6 +25,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms runs eleven graph algorithms, from breadth-first search and Dijkstra to spanning trees and max flow, on graphs you can type or draw.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms has data structures to poke at: stacks, queues, ring buffers, linked lists, hash tables, Bloom filters, an LRU cache, skip lists and consistent hashing.",
+      },
     ],
   },
   {
