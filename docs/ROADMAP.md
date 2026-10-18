@@ -378,6 +378,13 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] P2P Transfer — WebRTC, QR-code signaling (no room codes: no server), resume (2026-10-13, [ADR-032](adrs/032-p2p-transfer.md), [brainstorm](brainstorm/2026-10-13_p2p-transfer.md))
   - [ ] Text chat during a transfer: short messages over the open data channel, shown as a side thread (owner's ideas notes, 2026-10-17)
 
+### Algorithms
+- [ ] Algorithm visualizers (owner, 2026-10-18): step-through views of the classic CS algorithms and data structures, with play / pause / step / speed, the pseudocode line lit as it runs, counters (comparisons, swaps, visits) and random or typed input. Owner named sorting, trees ("b/w", read as B-trees and red-black, to confirm) and Dijkstra, "all the CS trees". Candidate scope:
+  - Sorting: bubble, selection, insertion, shell, merge, quick (Lomuto / Hoare), heap, counting, radix, bucket; side-by-side race of two
+  - Trees: BST, AVL, red-black, B-tree / B+ tree, splay, treap, binary heap, trie / radix tree, segment tree, Fenwick, interval tree, k-d tree, union-find forest, Huffman (Archive's How it works already builds one)
+  - Graphs: BFS / DFS, Dijkstra, A* on a grid (Maze has one), Bellman-Ford, Floyd-Warshall, Prim / Kruskal, topological sort, Tarjan SCC, max flow
+  - Open questions: one app with sections (like Image Tools) or separate Sorting / Trees / Graphs apps; a shared step engine (record steps, replay) in the app or in the planned app kit layer; drawing (SVG vs canvas) and layout for big trees and graphs on a phone; graph input (draw nodes and edges, presets, import); props for solo links that open one algorithm with its input (good for teaching, ADR-047); shell (`algo run <name> [input]`, a `steps` value?); persistence (saved inputs as files?). Needs a grill before building
+
 ### static-utils Ports
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - **Brainstorm:** [2026-10-11 App ports](brainstorm/2026-10-11_app-ports.md). Outputs saved into OPFS (`pick_save`, folders for multi-file), native APIs instead of gifuct-js/jszip; QR uses `BarcodeDetector` with a lazy jsqr fallback
