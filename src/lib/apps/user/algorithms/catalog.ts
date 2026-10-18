@@ -9,6 +9,7 @@ export const Group = {
   DP: "dp",
   BACKTRACKING: "backtracking",
   MATH: "math",
+  GEOMETRY: "geometry",
 } as const;
 export type Group = (typeof Group)[keyof typeof Group];
 
@@ -23,6 +24,7 @@ export const GROUP_NAMES: Record<Group, string> = {
   [Group.DP]: "Dyn. programming",
   [Group.BACKTRACKING]: "Backtracking",
   [Group.MATH]: "Math",
+  [Group.GEOMETRY]: "Geometry",
 };
 
 export interface Complexity {
@@ -141,6 +143,11 @@ export const CATALOG: CatalogEntry[] = [
   entry("fisher-yates", "Fisher–Yates shuffle", Group.MATH, "An unbiased shuffle in one pass", ["O(n)", "O(n)", "O(n)", "O(1)"]),
   entry("reservoir-sampling", "Reservoir sampling", Group.MATH, "A fair sample from a stream of unknown length", ["O(n)", "O(n)", "O(n)", "O(k)"]),
   entry("crc32", "CRC32", Group.MATH, "A checksum by polynomial division with XOR", ["O(n)", "O(n)", "O(n)", "O(1)"]),
+
+  entry("graham-scan", "Graham scan", Group.GEOMETRY, "Convex hull: sort by angle, pop right turns", ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)"]),
+  entry("jarvis-march", "Jarvis march", Group.GEOMETRY, "Convex hull by wrapping a string around", ["O(n·h)", "O(n·h)", "O(n²)", "O(h)"]),
+  entry("closest-pair", "Closest pair", Group.GEOMETRY, "Divide and conquer with a narrow strip", ["O(n log n)", "O(n log n)", "O(n log² n)", "O(n)"]),
+  entry("line-sweep", "Line sweep", Group.GEOMETRY, "Test only segments the sweep line crosses", ["O(n log n)", "O(n·k)", "O(n²)", "O(n)"]),
 ];
 
 export type AlgorithmId = string;

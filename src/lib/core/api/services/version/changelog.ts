@@ -60,6 +60,11 @@ export const CHANGELOG: Release[] = [
         apps: ["algorithms"],
         text: "Algorithms does number tricks: Euclid's GCD, the sieve of Eratosthenes, fast exponentiation, Fisher–Yates, reservoir sampling and CRC32.",
       },
+      {
+        kind: NEW,
+        apps: ["algorithms"],
+        text: "Algorithms draws geometry on points you place: convex hulls two ways, the closest pair, and a line sweep that finds crossing segments.",
+      },
     ],
   },
   {
