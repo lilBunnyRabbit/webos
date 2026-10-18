@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { type DialogsService, NotificationType, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
@@ -64,6 +64,7 @@
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -426,7 +427,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);

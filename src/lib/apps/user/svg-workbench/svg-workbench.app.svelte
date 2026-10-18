@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import {
     Badge,
@@ -80,7 +80,8 @@
   }
 
   const props: { path?: string } = $props();
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
@@ -363,7 +364,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     if (take_files(event.clipboardData?.files)) return event.preventDefault();

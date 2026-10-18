@@ -11,7 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: FIXED, text: "In an app opened on its own page, the browser's Back closes the open panel or steps back inside the app instead of leaving the page." },
       { kind: FIXED, apps: ["activity-monitor"], text: "Activity Monitor opens on its first section when a link or command doesn't name one." },
-      { kind: FIXED, apps: ["forms", "image-tools"], text: "Pasting while a panel is open over Forms or Image Tools no longer reaches the app behind it." },
+      { kind: FIXED, apps: ["forms", "image-tools", "jigsaw", "image-editor", "icon-pack", "svg-workbench"], text: "Pasting while a panel is open over an app no longer reaches the app behind it." },
     ],
   },
   {

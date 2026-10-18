@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time, Stopwatch, track_play } from "$kit/games";
   import { BoardOverlay, Button, EmptyState, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -48,7 +48,8 @@
 
   const { path: path_prop }: { path?: string } = $props();
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const play = track_play(app_id, () => win.is_visible);
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -384,7 +385,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const list = image_files(event.clipboardData);

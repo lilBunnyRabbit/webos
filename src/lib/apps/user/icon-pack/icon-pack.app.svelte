@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { to_hex } from "$lib/apps/system/settings/color";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
@@ -34,7 +34,8 @@
   const ACCEPT = ["image/*", ".svg"];
 
   const { path }: { path?: string } = $props();
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
@@ -121,7 +122,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     if (target instanceof HTMLInputElement) return;
