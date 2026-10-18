@@ -13,8 +13,8 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 ## Windows
 
 - Frame: `rounded-xl`, `bg-background`, a hairline ring (`foreground/8`, focused `foreground/16`), `shadow-window` / `shadow-window-focused`. Maximized drops the radius, ring and shadow.
-- Titlebar: 40px, `bg-background-light`, hairline below. App icon (duotone) and name in `text-ui font-medium`; unfocused windows fade the title to 80%.
-- Controls: kit `IconButton`s (28px, quiet); close turns `bg-error text-background` on hover. Zoom is a `− 100% +` group that appears on titlebar hover or focus (always visible when zoom isn't 100%); the percentage is the "Reset zoom" button.
+- Titlebar: 40px, `bg-background-light`, hairline below. App icon (duotone) and the window's title (else the app name) in `text-ui font-medium`, then an 8px `primary` dot while it has unsaved changes; unfocused windows fade the title to 80%.
+- Controls: kit `IconButton`s (28px, quiet), in order: Copy link (a menu: Copy link, Copy solo link), Pop out (where Document Picture-in-Picture exists; disabled while unsaved), minimize, maximize, close. Close turns `bg-error text-background` on hover. Zoom is a `− 100% +` group that appears on titlebar hover or focus (always visible when zoom isn't 100%); the percentage is the "Reset zoom" button.
 - Double-click the titlebar to maximize or restore. Drag snaps show a `primary/10` preview with a `primary/60` hairline.
 - **Where windows open:** where that app's last window was closed. A second window of an open app steps 28px down and right from it. An app's very first window is centred, a little above the middle, at about two thirds of the area. A window never opens partly off screen.
 - **Motion:** windows fade and grow from 96% when they open (140ms) and shrink away when they close (100ms). Minimizing flies the window into its taskbar button and restoring flies it back out; maximize and snap morph between frames. A new window takes the keyboard. The loading spinner only appears when an app takes longer than 300ms.
@@ -63,8 +63,16 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 ## Toasts
 
 - Stacked in the desktop corner nearest the tray, `w-80`, `rounded-xl bg-background-lighter shadow-popover`, sliding in from the right.
-- A tinted icon tile per type (`info`, `warning`, `error`, `progress` → primary). Title `text-ui font-semibold`, message at 70%.
+- A tinted icon tile per type (`info`, `warning`, `error`, `progress` → primary). Title `text-ui font-semibold`, message at 80%.
 - Actions are small buttons: the first is primary, the rest secondary. Progress shows a 4px primary bar.
+
+## Solo
+
+A `#/solo/{id}` link opens one app on its own, full page, on every platform ([system reference](../system/shell/solo.md), ADR-047). No desktop, taskbar, dock or window frame.
+
+- **Header:** one strip on `bg-background` with a `foreground/10` hairline below, 44px (52px on touch), padded by the top safe area. The app's duotone icon, the window's title and its unsaved dot, like a titlebar without controls. At the far end a `primary` `sm` "Open WebOS" link with the logo mark and an `ArrowSquareOut`; it opens the OS in a new tab, so this one keeps its state.
+- **Body:** the app fills the rest at zoom 100%, no frame, radius or shadow. Toasts sit top right (top centre on phones); menus are dropdowns on desktop and sheets on phones.
+- **Closed or broken:** an `EmptyState`: "{App} is closed" with a primary Reopen, or `tone="error"` "This link can't open".
 
 ## Mobile
 

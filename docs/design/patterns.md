@@ -20,7 +20,7 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 
 ```
 ┌ SideNav ┬ page ─────────────────────────┐
-│ items   │  h1 text-lg                   │  max-w-2xl, px-6 py-6, gap-6
+│ items   │  h1 text-lg                   │  max-w-2xl (Style Guide 3xl), px-6 py-6, gap-6–8
 │         │  Section · Section · …        │
 ```
 
@@ -32,7 +32,7 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 
 - Order: navigation (back, reload) → location (breadcrumb or title) → `flex-1` → filter → separator → actions.
 - Controls are `size="sm"`. Icon buttons are `quiet`.
-- A filter field narrows below `@lg` (`w-28`) rather than disappearing, so an active filter can always be seen and cleared.
+- A filter field narrows below `@lg` (`w-28`) rather than disappearing, and below `@md` stretches onto its own toolbar row, so an active filter can always be seen and cleared.
 - Open… is followed by "Open from device…" (`Devices` icon, `pick_device_files`), and an empty state's "Open a file…" by a "From device…" `Button`. A file on the phone or PC opens without an upload first (ADR-031).
 - Status bars never wrap: they truncate and drop secondary items below `@sm`/`@md`.
 
@@ -54,6 +54,7 @@ Tic-Tac-Toe, Minesweeper, 2048, Snake, Maze and the puzzle apps share one frame:
 - **Stats panel (optional, Tic-Tac-Toe and Minesweeper):** a side panel from `@3xl` (wins, best times, streaks). Below that, a `pressed` "Statistics" `IconButton` in the toolbar shows it over the board.
 - **Pause and end:** a `BoardOverlay` inside the board: the title ("Paused", "Game over"), one mono line (score, best), the primary action (Resume, Play again, New game) last. Starting cues that must not hide the board (Snake's "swipe to start") sit at its edge instead.
 - **Touch:** swipes on the board; a direction pad only on `pointer-coarse`. Touch targets stay the kit's 36px; a dense board (Minesweeper Expert) may go down to 32px cells.
+- **Helpers:** `$kit/games` has the non-visual parts: `key_direction` / `swipe_direction`, `grid_key_move` for arrows over a grid of cells, `Stopwatch` and `format_time`, `daily_seed`, and `track_play` for the shared play stats.
 
 ### Puzzle apps
 
@@ -67,7 +68,7 @@ Nonogram, Word Search, Sudoku, Futoshiki, Kakuro and Nurikabe use the same frame
 
 ## Breadcrumbs
 
-Show the real path, not the history. `/` in mono, then each segment; the current one is `font-medium` and not clickable; separators are a small `CaretRight` at `foreground/35`.
+Show the real path, not the history. `/` in mono, then each segment; the current one is `font-medium` and not clickable; separators are a small bold `CaretRight` (`size-3`) at `foreground/65`.
 
 ## Lists and tables
 
@@ -101,17 +102,25 @@ The desktop and File Explorer select the same way (`$lib/core/utils/selection.ts
 - Pointer only: phones and tablets keep tap and long press.
 - Files dragged in from the computer are copied in, not moved, onto the same targets with the same highlight. No confirmation, no progress; failures toast.
 
+## Paste and drop
+
+Apps that take a file or a code (image tools, QR Reader, GIF Player, Forms' answer codes) accept it three ways: Open…, a drop, and a paste.
+
+- **Drop:** files dragged in from the computer (`has_files(event)`, `$kit/utils/image`) light the drop area with an inset 2px `primary` ring (`ring-2 ring-primary ring-inset`) while they're over it. Drags from inside the page are left alone.
+- **Paste:** anywhere in the window, not only in a field. A `<svelte:document onpaste>` handler acts only when its window is focused (`win.is_focused`) and the event's target is inside the app's root (or `body`); a text paste skips inputs, textareas and contenteditable. Anything it doesn't recognise falls through to the browser.
+- A dropped or pasted file is a `File` in memory: nothing is written to OPFS until the user saves (ADR-031). The empty state says so in its one line: "Open an image, drop it here or paste it."
+
 ## Dialogs and menus
 
 - **Menus at the cursor** (Open with): `rounded-xl bg-background-lighter p-1.5 shadow-popover`, an overline title, 36px items with icon tiles, on the shared scrim.
 - **Questions** (Restore session): centered, `rounded-2xl p-5`, a tinted icon tile, a title phrased as a question, one line of context, then actions right-aligned: quiet dismiss, primary confirm (autofocused). The OS behind is dimmed and slightly blurred.
-- **Announcements** (new apps, ADR-038): a wider centred card (`w-[36rem]`, `rounded-2xl`, `background-lighter`, capped at the viewport height with only the body scrolling). The top carries a soft `primary` glow fading to transparent (one brand colour into nothing, never into another brand colour), a primary "New app" badge, the app icon in a large raised tile in `primary`, the name at `text-xl`, one muted meta line and the description. Feature cards follow the introduction's point cards (tinted icon tile, title, one sentence), then a recessed strip saying where to find the app. The footer sits on `background-light` behind a hairline: page dots left, quiet Later and the primary Open right (autofocused). Unlike questions it is dismissible: nothing is lost by closing it. Past four items it becomes one list with an Open per row.
+- **Announcements** (new apps, ADR-038; the manifest's `highlights` and `preview`): a wider centred card (`w-[36rem]`, `rounded-2xl`, `background-lighter`, capped at the viewport height with only the body scrolling). The top carries a soft `primary` glow fading to transparent (one brand colour into nothing, never into another brand colour), a primary "New app" badge, the app icon in a large raised tile in `primary`, the name at `text-xl`, one muted meta line and the description. Feature cards follow the introduction's point cards (tinted icon tile, title, one sentence), then a recessed strip saying where to find the app. The footer sits on `background-light` behind a hairline: page dots left, quiet Later and the primary Open right (autofocused). Unlike questions it is dismissible: nothing is lost by closing it. Past four items it becomes one list with an Open per row.
 - All of them enter with `animate-pop-in`. Menus dismiss with Esc or an outside click (`closedby="any"`). Questions are shown with `dismissible: false` (`closedby="none"`): only their buttons close them, so a stray click can't throw away a session.
 - Floating layers sit on `background-lighter`, one step above window chrome, so they read as on top even over a window.
 
 ## Context menus
 
-Built with `dialogs.menu(items, { anchor })`, never by hand. Order items by frequency: the default action first (Open), then variations (Open with), then edit actions (Rename, Copy, Cut, Paste), then destructive actions last after a separator. Destructive items are `danger`. Show the keyboard shortcut as a hint when one exists. Every right-clickable thing also opens its menu from the keyboard (ContextMenu key, Shift+F10).
+Built with `dialogs.menu(items, { anchor })`, never by hand. Rows are 32px (44px on touch), a duotone icon at `foreground/80`, the shortcut in mono `text-2xs` at the end; arrows, Home, End and typeahead move through them. An item with `items` opens a submenu anchored beside it (hover, Enter or ArrowRight; ArrowLeft goes back). On phones the menu is a bottom sheet: full width, submenus open inline under their item, no shortcut hints. Order items by frequency: the default action first (Open), then variations (Open with), then edit actions (Rename, Copy, Cut, Paste), then destructive actions last after a separator. Destructive items are `danger`. Show the keyboard shortcut as a hint when one exists. Every right-clickable thing also opens its menu from the keyboard (ContextMenu key, Shift+F10).
 
 ## Window sheets
 

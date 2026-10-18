@@ -14,12 +14,12 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Switch` | On/off that applies immediately | A `role="switch"` checkbox |
 | `Checkbox` | A choice that applies on submit | `accent-primary` |
 | `Segmented` | Pick one of 2–4 short options | A real radio group (shared `name`): one Tab stop, arrow keys move the choice. Takes `id` / `aria-describedby` from a `SettingRow`. `size`: `md` (default, 32px, matches `md` controls) or `sm` (28px, 36px on touch) in a toolbar next to `sm` buttons |
-| `ResizeHandle` | A splitter between two panes the user sizes: Hopsprite's colour panel and filmstrip | The ARIA window-splitter pattern: a focusable `role="separator"` with `aria-valuenow`. Drag (pointer capture, previews once per frame through `onpreview`, saves on release through `oncommit`), arrow keys in 16px steps, Home folds, End maximises, Enter or double-click folds and unfolds. Dragging past half of `min` folds to `rest`. `axis` `row` or `column`; `grows_backward` (default) when the pane sits after the handle. A 1px hairline with a 12px hit area (24px on touch); `primary` on hover and drag, `cottontail` on focus. It owns no size: the caller stores it |
+| `ResizeHandle` | A splitter between two panes the user sizes: Hopsprite's colour panel and filmstrip | The ARIA window-splitter pattern: a focusable `role="separator"` with `aria-valuenow`. Drag (pointer capture, previews once per frame through `onpreview`, saves on release through `oncommit`), arrow keys in 16px steps, Home goes to `min`, End to `max`, Enter, Space or double-click folds and unfolds. Dragging past half of `min` folds to `rest`. `axis` `row` or `column`; `grows_backward` (default) when the pane sits after the handle. A 1px hairline with a 12px hit area (24px on touch); `primary` on hover and drag, `cottontail` on focus. It owns no size: the caller stores it |
 | `Section` | A titled group on a page | Title, description, `actions` snippet; content sits in a `rounded-xl` card with dividers, or `flush` for none |
 | `SettingRow` | Label, description and a control | Stacks below `@md`. Its `children` snippet receives `{ id, describedby }`; put them on the control so it gets its name and description: `{#snippet children({ id, describedby })}<Switch {id} aria-describedby={describedby} />{/snippet}` |
-| `SideNav` | An app's section navigation | Sidebar at `@2xl`, tab row below. Active item is `foreground/10` with a filled primary icon. An optional `count` per item sits at the end in mono `text-2xs` (App Library's categories) |
+| `SideNav` | An app's section navigation | Sidebar at `@2xl`, tab row below. Active item is `foreground/10` with a filled primary icon. An optional `count` per item sits at the end in mono `text-2xs` (App Library's categories). A `footer` snippet sits at the end of the row, or at the bottom of the sidebar |
 | `Toolbar` | An app's top bar | At least 44px, `bg-background-light`, hairline below. `role="toolbar"`. Wraps onto more rows when a phone is too narrow: give the part that should stretch `flex-1` and a `min-w-*` |
-| `StatusBar` | Footer metadata | 28px, mono `text-2xs`, muted. No important actions |
+| `StatusBar` | Footer metadata | 28px, mono `text-2xs` at `foreground/80`, items truncate, never wrap. No important actions |
 | `Badge` | A short label or status | `tone`: neutral, primary, success, warning, error, info (tinted fill + ink) |
 | `EmptyState` | Nothing to show, an error, or a first run | Icon tile, title, one line of help, optional actions. `tone="error"` for failures |
 | `BoardOverlay` | A game's pause or end screen | Covers its positioned parent (the board) with `background/80` and a 2px blur, fades in, and announces itself (`aria-live`). `title`, an optional mono `detail` line (the score), actions as children with the primary one last. Takes the board's radius (`rounded-[inherit]`); pass `class` for another radius or a z-index. See [Game app](patterns.md#game-app) |
@@ -28,6 +28,14 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Separator` | A hairline | `vertical` for toolbars |
 
 Class recipes (`button`, `field`, `badge`) are exported too, for elements that must look like a control without being one (a link that reads as a button).
+
+## App kit
+
+UI only apps use lives in `src/lib/kit/components/`, imported as `$kit/components/…` (ADR-048). Core and the shell never import it. The Style Guide doesn't show it yet.
+
+| Component | What | Notes |
+|-----------|------|-------|
+| `CodeView` (`$kit/components/code`) | A code or data editor: API Client's body and response, Recipe Box's source | CodeMirror with the theme's tokens (`token_theme`, `token_highlight`), so it follows the palette without a rebuild. Hack at 13px, `primary` caret, `primary/28` selection. `value` + `onchange` (it doesn't bind), `label` is the editor's accessible name, `language` (loaded lazily), `read_only`, `wrap` (default on). A `rounded-md` box with a `foreground/8` hairline; give it a height (`flex-1 min-h-0`, `min-h-40`). `label` and `read_only` are read once at mount |
 
 ## Toggles
 

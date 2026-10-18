@@ -18,9 +18,9 @@ The Style Guide system app renders every token and component live in the current
 | Page | Covers |
 |------|--------|
 | [foundations.md](foundations.md) | Colour roles, surface ladder, type scale, spacing, radius, elevation, motion, icons, focus |
-| [components.md](components.md) | The UI kit: every component, its variants and when to use it |
-| [patterns.md](patterns.md) | App layout, toolbars, side navigation, lists, settings pages, empty and loading states, dialogs, copy |
-| [shell.md](shell.md) | Window chrome, taskbar, start menu, desktop, toasts |
+| [components.md](components.md) | The UI kit: every component, its variants and when to use it; the app kit's `CodeView` |
+| [patterns.md](patterns.md) | App layout, toolbars, games, lists, settings pages, empty and loading states, selection, paste and drop, dialogs and menus, copy |
+| [shell.md](shell.md) | Window chrome, taskbar, start menu, desktop, toasts, the solo shell, mobile |
 
 ## Rules for changes
 
