@@ -462,8 +462,11 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### Scoped app dependencies
 - [x] Scoped node modules for apps: an app declares its packages in its own `package.json`, Bun workspaces with the isolated linker keep them out of core and other apps ([ADR-045](adrs/045-scoped-app-dependencies.md))
 
+### App kit layer
+- [ ] Move app-only utilities out of core into an app layer (an "app kit" or `apps/lib`) (owner, 2026-10-18). Core keeps what the OS itself runs on; helpers only bundled apps use leave it. Candidates from the app-api "internal, though bundled apps use them" list: `utils/image`, `utils/history`, `utils/qr` and `qr-scan`, `utils/exif`, `utils/zip`, `components/code` (with `CodeView`, moved out of API Client on 2026-10-18), `games/*`. Open questions: where it lives and its import alias, what counts as core (zip backs File Explorer and Backup, exif backs Metadata and PDF Tools), whether it's public API for app authors with a stability promise or stays internal, whether it becomes a workspace package under ADR-045, and how the fork test (delete `apps/user`, core still builds) treats it. Needs a grill, then an ADR
+
 ### Custom app icons
-- [ ] A skill (or script) that generates a custom icon per app in the lilBunnyRabbit brand style instead of a stock Phosphor glyph (owner, 2026-10-17). Open questions: output format (Svelte SVG component like the logo, sized for 16–64 px and the mobile home grid), theme tokens or fixed brand colours, how it fits the manifest `icon` field and the boot budget (every manifest icon ships in the boot chunk: Crack the Code's Phosphor icon alone is ~0.7 KB gz), and whether Style Guide shows the set
+- [x] Custom icon per app, drawn in the house line style; the Phosphor app icons are gone (2026-10-17, [brainstorm](brainstorm/2026-10-17_app-wave-7.md#decided-app-icons), [foundations](design/foundations.md#app-icons)). Boot entry 186.4 → 159.0 KB gz. Was: a skill (or script) that generates a custom icon per app in the lilBunnyRabbit brand style instead of a stock Phosphor glyph (owner, 2026-10-17). Open questions: output format (Svelte SVG component like the logo, sized for 16–64 px and the mobile home grid), theme tokens or fixed brand colours, how it fits the manifest `icon` field and the boot budget (every manifest icon ships in the boot chunk: Crack the Code's Phosphor icon alone is ~0.7 KB gz), and whether Style Guide shows the set
 
 ### Code quality pass (2026-10-15, 0.37.0)
 - **Brainstorm:** [code quality pass](brainstorm/2026-10-15_code-quality-pass.md)
