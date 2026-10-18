@@ -34,7 +34,7 @@
 {/snippet}
 
 <article class={["flex flex-col gap-2.5 rounded-xl bg-background-light p-3 ring-1", shown ? "ring-primary/60" : "ring-foreground/8"]} aria-labelledby="{id}-title">
-  <header class="flex items-center gap-2">
+  <header class="flex flex-wrap items-center gap-2">
     <h3 id="{id}-title" class="text-sm font-semibold">{info.label}</h3>
     {#if busy}
       <Spinner label="Encoding {info.label}" class="size-3.5" />

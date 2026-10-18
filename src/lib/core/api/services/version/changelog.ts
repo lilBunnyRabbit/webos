@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.2.1",
+    date: "2026-10-18",
+    title: "Tidy labels",
+    changes: [
+      { kind: FIXED, apps: ["format-lab"], text: "The \"Settings changed\" label in Format Lab stays on one line instead of spilling out of its box." },
+    ],
+  },
+  {
     version: "3.2.0",
     date: "2026-10-18",
     title: "Pick your format",

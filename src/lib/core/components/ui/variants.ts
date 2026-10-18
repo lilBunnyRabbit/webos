@@ -64,7 +64,7 @@ export const field = merge_tv({
 export type FieldVariants = VariantProps<typeof field>;
 
 export const badge = merge_tv({
-  base: "inline-flex h-5 items-center gap-1 rounded-sm px-1.5 text-2xs font-medium [&_svg]:size-3",
+  base: "inline-flex h-5 shrink-0 items-center gap-1 rounded-sm px-1.5 text-2xs font-medium whitespace-nowrap [&_svg]:size-3",
   variants: {
     tone: {
       neutral: "bg-foreground/8 text-foreground/80",
