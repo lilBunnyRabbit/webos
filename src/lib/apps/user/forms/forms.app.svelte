@@ -3,6 +3,7 @@
     NotificationType,
     ShortcutCategory,
     type ClipboardService,
+    type DialogsService,
     type FilesService,
     type NotificationsService,
     type ShortcutsService,
@@ -60,6 +61,7 @@
   const { path: initial_path, f, a }: Partial<FormsProps> = $props();
 
   const { app_id, window_id, window: win, storage } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -413,7 +415,7 @@
 
   // A code pasted anywhere in the window adds it, except into a text field, where it's just text.
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused) return;
+    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     if (target instanceof HTMLElement && target.closest("input, textarea, [contenteditable]")) return;

@@ -18,6 +18,6 @@ export default define_app({
     },
   },
   /** `section` opens on that section, e.g. Tasks from the taskbar. */
-  props: z.object({ section: z.enum(SECTION_IDS) }),
+  props: z.object({ section: z.enum(SECTION_IDS).optional() }),
   component: () => import("./activity-monitor.app.svelte"),
 });

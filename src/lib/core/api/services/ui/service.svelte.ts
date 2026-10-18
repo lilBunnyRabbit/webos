@@ -1,6 +1,7 @@
 export * from "./type";
 import type { DialogsService, Kernel, MobileWindowsService, WindowsService } from "$lib/core/api";
 import { Platform } from "../../kernel/platform";
+import { Mode } from "../../kernel/mode";
 import { view_transition } from "$lib/core/utils/view-transition";
 import type { UiOverlay, UiService as IUiService } from "./type";
 import { ui_shell } from "./shell";
@@ -22,6 +23,7 @@ export class UiService implements IUiService {
 
   private windows_service!: WindowsService;
   private dialogs_service!: DialogsService;
+  private readonly boot_hash = location.hash;
 
   constructor(private kernel: Kernel) {
     this.windows_service = $derived(this.kernel.service<WindowsService>("windows"));
@@ -75,7 +77,8 @@ export class UiService implements IUiService {
     }
 
     if (this.windows_service.back(focused)) return true;
-    if (this.kernel.platform !== Platform.MOBILE) return false;
+    // A solo tab has no home: going there would only unfocus its one window.
+    if (this.kernel.platform !== Platform.MOBILE || this.kernel.mode === Mode.SOLO) return false;
 
     const windows = this.windows_service as MobileWindowsService;
     view_transition(() => windows.go_home());
@@ -89,9 +92,15 @@ export class UiService implements IUiService {
   };
 
   private on_popstate = (): void => {
-    // A pasted deep link navigates too; that one is the router's.
-    if (location.hash.startsWith("#/")) return;
+    if (this.routed()) return;
     this.armed = false;
     this.back();
   };
+
+  // A pasted link navigates too; that one is the router's. Full mode opens any `#/` link and clears it. A solo tab
+  // keeps the link it booted from, so only a different hash is a link (the router reloads for it).
+  private routed(): boolean {
+    if (this.kernel.mode === Mode.SOLO) return location.hash !== this.boot_hash;
+    return location.hash.startsWith("#/");
+  }
 }

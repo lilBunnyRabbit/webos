@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, type DialogsService, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
@@ -46,7 +46,8 @@
   ];
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window: win } = get_app_context();
+  const { app_id, window_id, window: win } = get_app_context();
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   let root = $state<HTMLElement>();
   let images = $state.raw<SourceImage[]>([]);
@@ -134,7 +135,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused) return;
+    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const files = image_files(event.clipboardData);
