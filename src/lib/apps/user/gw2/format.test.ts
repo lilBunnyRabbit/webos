@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boss_name, format_coins, format_progress, fraction, split_coins } from "./format";
+import { boss_name, format_coins, format_progress, format_stack, fraction, split_coins } from "./format";
 
 describe("coins", () => {
   it("splits copper into gold, silver and copper", () => {
@@ -35,4 +35,10 @@ describe("progress", () => {
     expect(fraction(9, 4)).toBe(1);
     expect(fraction(0, 0)).toBe(1);
   });
+});
+
+it("shortens stack counts from a thousand up", () => {
+  expect(format_stack(250)).toBe("250");
+  expect(format_stack(7769)).toBe("7.8k");
+  expect(format_stack(1_250_000)).toBe("1.3m");
 });

@@ -22,4 +22,5 @@ export interface SectionProps {
   picker: Snippet;
   active: boolean;
   onnavigate: (section: Section) => void;
+  query?: string;
 }

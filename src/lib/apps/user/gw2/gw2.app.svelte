@@ -1,14 +1,14 @@
 <script lang="ts">
   import { Select, SideNav } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { CalendarCheck as CalendarCheckIcon, Coins as CoinsIcon, Key as KeyIcon, Target as TargetIcon } from "phosphor-svelte";
+  import { Backpack as BackpackIcon, CalendarCheck as CalendarCheckIcon, Coins as CoinsIcon, Key as KeyIcon, Target as TargetIcon } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { z } from "zod";
   import { Account, type SectionProps } from "./account.svelte";
   import { KEY_STORAGE, SECTION_IDS, Section } from "./sections";
 
-  const props: { section?: Section } = $props();
+  const props: { section?: Section; query?: string } = $props();
   const { storage } = get_app_context();
 
   const key = storage.persisted(KEY_STORAGE, "", z.string());
@@ -23,6 +23,7 @@
   const SECTIONS = [
     { value: Section.TODAY, label: "Today", icon: CalendarCheckIcon },
     { value: Section.WALLET, label: "Wallet", icon: CoinsIcon },
+    { value: Section.INVENTORY, label: "Inventory", icon: BackpackIcon },
     { value: Section.GOALS, label: "Goals", icon: TargetIcon },
     { value: Section.KEY, label: "API key", icon: KeyIcon },
   ];
@@ -31,6 +32,7 @@
   const LOADERS: Record<Section, () => SectionModule> = {
     [Section.TODAY]: () => import("./today-section.svelte"),
     [Section.WALLET]: () => import("./wallet-section.svelte"),
+    [Section.INVENTORY]: () => import("./inventory-section.svelte"),
     [Section.GOALS]: () => import("./goals-section.svelte"),
     [Section.KEY]: () => import("./key-section.svelte"),
   };
@@ -58,7 +60,7 @@
       {#if visited.has(item.value)}
         <div class="h-full" hidden={section.value !== item.value}>
           {#await module_for(item.value) then { default: SectionComponent }}
-            <SectionComponent {account} {picker} active={section.value === item.value} onnavigate={select} />
+            <SectionComponent {account} {picker} active={section.value === item.value} onnavigate={select} query={props.query} />
           {/await}
         </div>
       {/if}

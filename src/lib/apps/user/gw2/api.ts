@@ -49,6 +49,7 @@ export interface Slot {
 export interface Character {
   name: string;
   bags?: ({ inventory: (Slot | null)[] } | null)[];
+  equipment?: { id: number }[];
 }
 
 export interface VaultObjective {

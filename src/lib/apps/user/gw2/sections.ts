@@ -3,6 +3,7 @@ export const APP_ID = "gw2";
 export const Section = {
   TODAY: "today",
   WALLET: "wallet",
+  INVENTORY: "inventory",
   GOALS: "goals",
   KEY: "key",
 } as const;

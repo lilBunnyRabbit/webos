@@ -39,3 +39,9 @@ export function format_progress(current: number, complete: number): string {
 export function fraction(current: number, complete: number): number {
   return complete <= 0 ? 1 : Math.min(1, Math.max(0, current / complete));
 }
+
+const COMPACT = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
+export function format_stack(count: number): string {
+  return count < 1000 ? String(count) : COMPACT.format(count).toLowerCase();
+}

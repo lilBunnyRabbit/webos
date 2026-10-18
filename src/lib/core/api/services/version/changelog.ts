@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "2.0.0",
-    date: "2026-10-17",
+    date: "2026-10-18",
     title: "Wave seven",
     changes: [
       { kind: IMPROVED, text: "Every app has its own new icon, drawn for what that app does." },
@@ -120,7 +120,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["gw2"],
-        text: "GW2 Tracker shows your Guild Wars 2 daily objectives, wallet and crafting goals.",
+        text: "GW2 Tracker shows your Guild Wars 2 daily objectives, wallet, crafting goals and a searchable grid of everything you own, with where each item sits.",
       },
       { kind: NEW, apps: ["jigsaw"], text: "Jigsaw turns any picture into a puzzle with real piece shapes." },
       {

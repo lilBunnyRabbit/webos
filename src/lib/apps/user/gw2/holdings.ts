@@ -3,6 +3,7 @@ import { character_slots, tally, type Holding } from "./goals";
 
 export interface Holdings {
   holdings: Holding[];
+  equipped: Holding[];
   at: number;
   characters: boolean;
 }
@@ -24,6 +25,10 @@ export async function load_holdings(key: string, permissions: readonly string[],
     { label: "Shared slots", counts: tally(shared.data) },
     ...(roster?.data ?? []).map((character) => ({ label: character.name, counts: tally(character_slots(character)) })),
   ];
+  const equipped = (roster?.data ?? []).map((character) => ({
+    label: character.name,
+    counts: tally((character.equipment ?? []).map((piece) => ({ id: piece.id, count: 1 }))),
+  }));
   const at = Math.min(bank.at, materials.at, shared.at, roster?.at ?? Infinity);
-  return { holdings, at, characters };
+  return { holdings, equipped, at, characters };
 }
