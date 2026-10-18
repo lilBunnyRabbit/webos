@@ -20,6 +20,7 @@
   import manifest from "./index";
   import { distance, fit_scale, midpoint, rotated_size, type Point, type Size } from "./zoom";
   import { find_duration } from "./duration";
+  import { is_jxl, jxl_to_png } from "./jxl";
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 5;
@@ -67,7 +68,7 @@
 
   const kind = $derived.by(() => {
     const type = file?.type ?? "";
-    if (type.startsWith("image/")) return "image";
+    if (type.startsWith("image/") || (file && is_jxl(file))) return "image";
     if (type.startsWith("video/")) return "video";
     if (type.startsWith("audio/")) return "audio";
     return "unsupported";
@@ -98,11 +99,26 @@
 
   $effect(() => {
     if (!file) return;
-    const object_url = URL.createObjectURL(file);
+    const shown = file;
     natural = null;
-    url = object_url;
+    let object_url: string | null = null;
+    let cancelled = false;
+    const show = (blob: Blob) => {
+      object_url = URL.createObjectURL(blob);
+      url = object_url;
+    };
+    if (is_jxl(shown)) {
+      jxl_to_png(shown)
+        .then((png) => !cancelled && show(png))
+        .catch((reason) => {
+          if (!cancelled) error = `Couldn't decode the JPEG XL: ${error_message(reason)}`;
+        });
+    } else {
+      show(shown);
+    }
     return () => {
-      URL.revokeObjectURL(object_url);
+      cancelled = true;
+      if (object_url) URL.revokeObjectURL(object_url);
       url = null;
     };
   });
@@ -223,13 +239,14 @@
         <Separator vertical />
       {/if}
 
-      {#if kind === "image" && source}
+      <!-- The desktop draws its wallpaper through CSS, which can't decode JPEG XL. -->
+      {#if kind === "image" && source && !is_jxl(file)}
         <IconButton label="Set as wallpaper" size="sm" class="ml-auto @lg:ml-0" onclick={() => source && set_wallpaper(source)}>
           <ImageIcon weight="bold" />
         </IconButton>
       {/if}
       {#if path}
-        <IconButton label="Save to disk…" size="sm" class={cn(kind !== "image" && "ml-auto @lg:ml-0")} onclick={() => path && save_to_disk(path)}>
+        <IconButton label="Save to disk…" size="sm" class={cn((kind !== "image" || is_jxl(file)) && "ml-auto @lg:ml-0")} onclick={() => path && save_to_disk(path)}>
           <HardDrivesIcon weight="bold" />
         </IconButton>
       {/if}

@@ -14,6 +14,7 @@ export const CHANGELOG: Release[] = [
       { kind: NEW, apps: ["format-lab"], text: "Each format shows its size, its share of the original, how long it took and a quality score, with a heatmap of where detail was lost." },
       { kind: NEW, apps: ["format-lab"], text: "Inspect an AVIF or JPEG XL file to see its size, bit depth, transparency, animation and colour, straight from the file." },
       { kind: NEW, apps: ["format-lab"], text: "The convert command turns images, or every image in a folder, into AVIF, JPEG XL, WebP, JPEG or PNG." },
+      { kind: NEW, apps: ["media-preview"], text: "Media Preview now opens JPEG XL images." },
     ],
   },
   {
