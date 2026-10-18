@@ -111,6 +111,7 @@ export const CATALOG: CatalogEntry[] = [
   entry("lzw", "LZW", Group.COMPRESSION, "Output codes only; the dictionary rebuilds itself", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("bwt-mtf", "BWT + move-to-front", Group.COMPRESSION, "Sort rotations to group equal characters", ["O(n log n)", "O(n² log n)", "O(n² log n)", "O(n²)"]),
   entry("huffman-coding", "Huffman coding", Group.COMPRESSION, "Text to bits with the Huffman tree, and back", ["O(n + σ log σ)", "O(n + σ log σ)", "O(n + σ log σ)", "O(n)"]),
+  entry("arithmetic-coding", "Arithmetic coding", Group.COMPRESSION, "The whole message as one number in [0, 1)", ["O(n)", "O(n)", "O(n)", "O(n)"]),
   entry("base64", "Base64", Group.COMPRESSION, "3 bytes become 4 safe characters", ["O(n)", "O(n)", "O(n)", "O(n)"]),
 
   entry("naive-search", "Naive search", Group.STRINGS, "Try every position, character by character", ["O(n)", "O(n·m)", "O(n·m)", "O(1)"]),

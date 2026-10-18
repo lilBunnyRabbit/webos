@@ -380,4 +380,5 @@ export default {
   "bwt-mtf": bwt_mtf,
   base64,
   "huffman-coding": entropy.huffman,
+  "arithmetic-coding": entropy.arithmetic,
 } as unknown as Record<string, Definition>;

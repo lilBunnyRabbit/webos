@@ -14,6 +14,7 @@ export const CHANGELOG: Release[] = [
       { kind: IMPROVED, apps: ["algorithms"], text: "Boyer–Moore search adds the good-suffix rule, and you can switch each rule off to see how much it saves." },
       { kind: NEW, apps: ["algorithms"], text: "Algorithms adds Bentley–Ottmann, the sweep that keeps crossing segments in order and only ever tests neighbours." },
       { kind: NEW, apps: ["algorithms"], text: "Huffman coding under Compression turns your text into actual bits and bytes, then decodes them back by walking the tree." },
+      { kind: NEW, apps: ["algorithms"], text: "Arithmetic coding joins Compression: watch the interval narrow symbol by symbol until the whole message is a single number." },
     ],
   },
   {

@@ -120,6 +120,28 @@ describe("Huffman coding", () => {
   });
 });
 
+describe("arithmetic coding", () => {
+  test("decodes back, within a bit of the information content and of Huffman", () => {
+    for (let round = 0; round < 60; round++) {
+      const data = random_text(1 + Math.floor(Math.random() * 32), round % 4 ? "aaab c" : "z");
+      const result = run<{ bits: string; decoded: string }>("arithmetic-coding", data);
+      expect(result.decoded).toBe(data);
+      const counts = new Map<string, number>();
+      for (const char of data) counts.set(char, (counts.get(char) ?? 0) + 1);
+      const information = [...data].reduce((sum, char) => sum - Math.log2(counts.get(char)! / data.length), 0);
+      expect(result.bits.length).toBeLessThanOrEqual(Math.ceil(information + 1e-9) + 1);
+      const codes = huffman_codes(data);
+      expect(result.bits.length).toBeLessThanOrEqual([...data].reduce((sum, char) => sum + codes.get(char)!.length, 0) + 1);
+    }
+  });
+
+  test("abracadabra", () => {
+    const result = run<{ bits: string; decoded: string }>("arithmetic-coding", "abracadabra");
+    expect(result.decoded).toBe("abracadabra");
+    expect(result.bits.length).toBeLessThan(23);
+  });
+});
+
 describe("samples and presets run", () => {
   for (const [id, definition] of Object.entries(compression)) {
     test(id, () => {
