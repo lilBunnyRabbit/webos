@@ -10,8 +10,9 @@ A desktop environment in the browser, built with Svelte 5. It's a solo learning 
 4. [docs/adrs/README.md](docs/adrs/README.md): the ADR index, showing which are implemented and which are only accepted.
 5. [docs/system/README.md](docs/system/README.md): the system reference, describing how every part of the OS works today.
 6. [docs/design/README.md](docs/design/README.md): how WebOS should look: foundations, UI kit, patterns, shell.
+7. [docs/apps/README.md](docs/apps/README.md): internals of the user apps that have non-obvious ones (models, algorithms, protocols, formats).
 
-Read the ADR and the system reference page for the area you touch before you touch it.
+Read the ADR and the system reference page for the area you touch before you touch it. For a user app with a page in `docs/apps/`, read that page too.
 
 ## Quick start
 
@@ -159,7 +160,7 @@ Don't present a menu and wait for a click. Interrogate:
 
 Claude Code: use `AskUserQuestion`, putting the recommended option first and a code preview per option. Never ask in prose and then carry on.
 
-Sub-agents that implement get this section in their prompt. Otherwise scope them to investigation only.
+Sub-agents that implement get this section in their prompt. Otherwise scope them to investigation only. A sub-agent that changes a user app also gets the "Per-app docs" rule (under Documentation duties) and the app's `docs/apps/{id}.md` path when the app is listed there.
 
 If architectural work is blocked waiting on the owner, finish everything that doesn't depend on the answer. Then stop and report.
 
@@ -167,9 +168,24 @@ If architectural work is blocked waiting on the owner, finish everything that do
 
 ### System reference
 
-`docs/system/` documents all OS infrastructure in depth, as it is now: kernel, services, shell UI, app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are excluded.
+`docs/system/` documents all OS infrastructure in depth, as it is now: kernel, services, shell UI, app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are excluded; the ones with non-obvious internals are in `docs/apps/` (below).
 
 **Every change to OS code updates the matching reference page in the same commit.** This covers new or changed service APIs, state, persistence keys, shell interactions, manifest fields and system app features. A new service, shell component or system app gets its page and an index entry. A commit that changes behaviour and leaves the reference stale is incomplete. Code that diverges from an ADR goes under "Divergence from ADR" on the page, and the ADR gets a revision note. Page shape and the full index are in `docs/system/README.md`.
+
+### Per-app docs
+
+`docs/apps/` holds a page for each user app with non-obvious internals: a model, an algorithm, a protocol, a file or share format. Apps that are a form over a JSON file don't get one. Documented today:
+
+| App id | Page |
+|--------|------|
+| `shopping-list` | `docs/apps/shopping-list.md` |
+| `cards` | `docs/apps/cards.md` |
+| `p2p-transfer` | `docs/apps/p2p-transfer.md` |
+| `format-lab` | `docs/apps/format-lab.md` |
+
+**Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/codecs`, `$kit/utils/qr`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
+
+A new or changed app that gains a model, an algorithm, a protocol, a file or share format, or a non-trivial dependency gets a page, a row in this table and a row in the index in `docs/apps/README.md`. Page shape: `docs/apps/README.md`.
 
 ### Brainstorm logs
 
