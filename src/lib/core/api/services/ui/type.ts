@@ -1,6 +1,6 @@
 import type { IService } from "../../type";
 
-/** The shell's overlay state (ADR-028): which launcher, switcher or notification center is open, so shortcuts and apps can open them. Also back, for the nav bar and the browser. */
+/** The shell's overlay state (ADR-028): which launcher, switcher, notification center or home edit mode is open, so shortcuts and apps can open them. Also back, for the nav bar and the browser. */
 export interface UiService extends IService {
   /** The open overlay. One at a time. */
   readonly overlay: UiOverlay | null;
@@ -26,5 +26,7 @@ export const UiOverlay = {
   SWITCHER: "switcher",
   /** The notification center: the tray popover on desktop, the switcher (which lists them) on mobile. */
   NOTIFICATIONS: "notifications",
+  /** The mobile home's edit mode: move, resize and remove icons and widgets. */
+  HOME_EDIT: "home-edit",
 } as const;
 export type UiOverlay = (typeof UiOverlay)[keyof typeof UiOverlay];

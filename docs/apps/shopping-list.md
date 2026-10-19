@@ -152,7 +152,7 @@ Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an
 
 At h=1 everything uses the kit's `sm` sizes; at h=2 `md`, with more padding. Measured on the desktop at 3×1: 263×60 px body, the field 183 px wide, nothing overflows.
 
-Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Deleting a list removes its widget too. A widget added from App Library has no `list` prop and isn't counted.
+Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Renaming a list renames its widget file (`rename_list`, same `/ \ :` cleanup as `pin_widget`), so the desktop frame's title follows; a taken name keeps the old one. Deleting a list removes its widget too. A widget added from App Library has no `list` prop and isn't counted.
 
 ### Suggestions and buy again
 
@@ -193,7 +193,6 @@ No shell commands (owner: nothing for now).
 - Sync has no TURN relay: two phones on mobile data behind carrier NAT don't connect (same limit as P2P Transfer). One list per pairing, one pairing per window.
 - LWW per item: two people editing the same item at once keep only the later edit.
 - Renames and colour changes don't sync.
-- A widget's label is the list's name when it was pinned; renaming the list later doesn't rename the widget file (its header shows the new name).
 - At h=1 on a touch screen the kit's taller `pointer-coarse` sizes need about 80 px; a 1-row desktop cell gives 60, so the field can clip on a touch laptop. A phone cell is taller.
 - `ocr.browser.test.ts:34` is still named after tesseract ("core and language data").
 

@@ -10,7 +10,7 @@ The shell's overlay state, so a service or a shell command (shortcuts, the Termi
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `overlay` | `readonly UiOverlay \| null` | `"launcher"`, `"switcher"` or `"notifications"`. One at a time |
+| `overlay` | `readonly UiOverlay \| null` | `"launcher"`, `"switcher"`, `"notifications"` or `"home-edit"` (the mobile home's edit mode). One at a time |
 | `open` | `(overlay) => void` | Replaces whatever was open |
 | `close` | `() => void` | |
 | `toggle` | `(overlay) => void` | Opens it, or closes it when it's the open one |
@@ -49,6 +49,7 @@ Sheets come before the app's own back, so an app can't navigate behind its sheet
 | `taskbar/start-menu.svelte` | Mirrors both ways: the popover's `toggle` event writes `open` / `close` (light dismiss and Esc included), and an effect calls `showPopover()` / `hidePopover()` when `overlay` changes. The popover keeps its own open state too, for mounting the contents |
 | `taskbar/taskbar-tray.svelte` | The same two-way mirror for `notifications` and the notification center popover |
 | `mobile/mobile-shell.svelte` | `overlay` is its layer: `launcher` renders the app drawer; `switcher` and `notifications` both show the switcher, which lists notifications above the cards. It closes the overlay when an app comes on screen |
+| `mobile/mobile-home.svelte` | Edit mode is `overlay === "home-edit"`: Edit home screen opens it, Done closes it, so Back leaves it like the drawer |
 | `notifications/notification-list.svelte` | `close()` after a notification's action or the Tasks line opens Activity Monitor |
 | ShortcutsService | Mod+K toggles `launcher`, Alt+Shift+N toggles `notifications` |
 | `mobile/nav-bar.svelte` via `mobile-shell.svelte` | Back calls `back()`; Esc with an overlay open too |

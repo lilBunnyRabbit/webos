@@ -338,7 +338,12 @@
     if (!list) return;
     const target = list;
     const name = await win.prompt("Rename list", { initial: target.name, confirm_label: "Rename" });
-    if (name?.trim()) target.name = name.trim();
+    if (!name?.trim()) return;
+    target.name = name.trim();
+    const widget = widget_for(target.id);
+    const file_name = `${target.name.replace(/[/\\:]/g, " ").trim()}.widget`;
+    // A taken name keeps the widget's old label; the list itself is renamed either way.
+    if (widget && widget.name !== file_name) await desktop.rename_item(widget.name, file_name).catch(() => {});
   }
 
   async function delete_list() {

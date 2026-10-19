@@ -32,8 +32,8 @@ export interface DesktopService extends IService {
 
   /**
    * Writes `{label}.widget` into `/home/Desktop` (ADR-034). `size` defaults to the manifest's `widget_size.default` and
-   * is clamped into its range. Returns the file name, or `null` for an app without a widget. The mobile home doesn't
-   * show widgets yet, but the file is the same.
+   * is clamped into its range. Returns the file name, or `null` for an app without a widget. The mobile home shows
+   * the same file.
    */
   pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null>;
 

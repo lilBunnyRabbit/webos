@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DesktopItem, type HomeSlot, type MobileDesktopService } from "$lib/core/api";
+  import kernel, { type AppsService, type DesktopItem, type HomeSlot, type MobileDesktopService, type UiService } from "$lib/core/api";
+  import { UiOverlay } from "$lib/core/api/services/ui/type";
   import type { WidgetSize } from "$lib/core/api/services/apps/type";
   import { clamp_widget_size } from "$lib/core/api/services/apps/widget";
   import { cn } from "$lib/core/utils";
@@ -16,6 +17,7 @@
 
   const desktop = $derived(kernel.service<MobileDesktopService>("desktop"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const ui = $derived(kernel.service<UiService>("ui"));
 
   /** A cell is a little wider than the 56px tile plus its two-line label; tablets just fit more of them. */
   const CELL_WIDTH = 88;
@@ -45,8 +47,17 @@
   /**
    * Edit mode exists because a drag after a hold never started on Samsung Internet: until the hold fired the browser
    * owned the touch and claimed it as a scroll. Here items carry `touch-action: none` from the start, so the press is ours.
+   * It lives in `ui` as an overlay so Back and Escape leave it.
    */
-  let editing = $state(false);
+  const editing = $derived(ui.overlay === UiOverlay.HOME_EDIT);
+  const edit = () => ui.open(UiOverlay.HOME_EDIT);
+
+  // Leaving removes the grips under a held pointer, so their capture is never lost.
+  $effect(() => {
+    if (editing) return;
+    drag_cancel();
+    resize_cancel();
+  });
 
   type Target = { zone: "home" | "dock"; before: string | null };
   interface Drag {
@@ -71,7 +82,7 @@
   let resize = $state<Resize | null>(null);
 
   const item_menu = (item: DesktopItem, docked: boolean) =>
-    long_press({ on_menu: (point) => home_item_menu(item, docked, point, () => (editing = true)) });
+    long_press({ on_menu: (point) => home_item_menu(item, docked, point, edit) });
 
   function stop_turning() {
     clearTimeout(turn_timer);
@@ -141,7 +152,7 @@
     const finished = drag;
     drag_cancel();
     if (!finished) return;
-    if (!finished.moving) home_item_menu(finished.item, finished.docked, finished.point, () => (editing = true));
+    if (!finished.moving) home_item_menu(finished.item, finished.docked, finished.point, edit);
     else if (finished.target?.zone === "dock") desktop.set_docked(finished.item.name, true, finished.target.before);
     else if (finished.target) desktop.move_item(finished.item.name, finished.target.before);
   }
@@ -187,13 +198,13 @@
 
   function background(point: Position) {
     void background_menu(point, [
-      { item: EDIT_HOME_ITEM, run: () => (editing = true) },
+      { item: EDIT_HOME_ITEM, run: edit },
       { item: { id: "add_widget", label: "Add widget", icon: PlusIcon }, run: () => void add_widget_menu(point) },
     ]);
   }
 
   function on_key_down(event: KeyboardEvent) {
-    if (editing && event.key === "Escape" && !drag && !resize) editing = false;
+    if (event.key === "Escape" && (drag || resize)) event.preventDefault();
   }
 
   const resizable = (item: DesktopItem) => item.kind === "widget" && apps.get(item.app_id)?.widget_size !== undefined;
@@ -201,7 +212,7 @@
   const dock_before = $derived(drag?.moving && drag.target?.zone === "dock" ? drag.target.before : undefined);
 </script>
 
-<svelte:window onkeydown={on_key_down} />
+<svelte:window onkeydowncapture={on_key_down} />
 
 {#snippet edit_handlers(item: DesktopItem, docked: boolean)}
   <button
@@ -222,7 +233,7 @@
       <Button variant="secondary" size="sm" onclick={(event) => add_widget_menu({ x: event.clientX, y: event.clientY })}>
         <PlusIcon weight="bold" /> Add widget
       </Button>
-      <Button size="sm" onclick={() => (editing = false)}>Done</Button>
+      <Button size="sm" onclick={() => ui.close()}>Done</Button>
     </div>
   {/if}
 
@@ -253,7 +264,7 @@
           {#if item.kind === "widget"}
             <div
               data-home-name={item.name}
-              {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, false, point, () => (editing = true)), ignore: "input, textarea, select, [contenteditable]" })}
+              {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, false, point, edit), ignore: "input, textarea, select, [contenteditable]" })}
               class={cn(
                 "relative m-1.5 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-opacity duration-150",
                 editing && !resize && "motion-safe:animate-wiggle",
