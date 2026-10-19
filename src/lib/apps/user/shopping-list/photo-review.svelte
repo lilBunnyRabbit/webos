@@ -32,7 +32,7 @@
     <div class="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
       <Spinner label="Reading" />
       <p class="text-sm">Reading the list…</p>
-      <p class="text-ui text-foreground/65">{method === ReadMethod.AI ? "Gemini Nano reads it on this device." : "The first time, the text reader downloads about 8 MB."}</p>
+      <p class="text-ui text-foreground/65">{method === ReadMethod.AI ? "Gemini Nano reads it on this device." : "The first time, the text reader downloads about 17 MB."}</p>
       <Button variant="quiet" onclick={oncancel}>Cancel</Button>
     </div>
   {:else if rows.length === 0}

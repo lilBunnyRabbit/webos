@@ -67,3 +67,25 @@ Decisions:
   - Snap words within edit distance 1–2 to your history first, then to a built-in list of about 500 Slovenian and English grocery words.
 - **Optional crop** before reading, with "Read all" to skip it.
 - **In parallel, test only:** try another OCR model (PaddleOCR via ONNX and similar) on the same photo, and report what it reads, its size and its speed. The owner decides afterwards whether it goes in.
+
+### Results
+
+Measured on the owner's photo (34 items incl. one struck out) in Chromium on the owner's Mac, with an empty history. A line counts when it equals an item, case and punctuation aside.
+
+| Reader | Items right | Near misses | Junk lines |
+|--------|-------------|-------------|------------|
+| tesseract as shipped in 3.3.0 (photo read sideways) | 0 | 0 | 19 |
+| tesseract + orientation, confidence filter, snap | 15 | 4 | 6 |
+| PP-OCRv5 + the same | 28 | 3 | 1 |
+
+- **Orientation.** The photo carries an EXIF orientation tag; tesseract.js read the raw sideways pixels. The app now decodes with `createImageBitmap(…, { imageOrientation: "from-image" })`. A read with under 40% of its letters in sure words is tried at 90°, 270° and 180°, keeping the surest; a copy without the tag reads the same 28 after one extra turn.
+- **No grayscale or contrast.** Both read fewer items with tesseract (5–11 against 15), and tesseract's adaptive thresholds were worse still.
+- **Tesseract was a lottery.** 1600, 2000, 2400 and 4000 px read 10, 15, 12 and 11; cropping to the paper read 5–12. PP-OCRv5 reads 28 on the whole photo and on a crop alike.
+- **Decision (owner, after a parallel test): PP-OCRv5 replaces tesseract.js.** Mobile detector at 1280 px and the Latin recogniser, on `onnxruntime-web` 1.30.0's wasm-only build, single-threaded (the site isn't cross-origin isolated), in a module worker inside the task. First use downloads ONNX Runtime's wasm (14.2 MB, 3.7 MB gzipped) and the models (4.8 MB and 8.0 MB), about 17 MB; then it works offline. A photo takes about 2 s on the Mac, 2.7 s when it has to turn once. Models: Apache-2.0, see `models/README.md` in the app.
+- **Columns.** Boxes are grouped into rows by their middles; a gap wider than a box is tall splits a row into items, which split all four two-column rows that 1.5× and 3× merged.
+- **Snap.** History words first, then about 520 built-in Slovenian and English words (2.2 KB gz, in the reader's worker chunk only). Damerau-Levenshtein on folded text (case, diacritics), ≤1 edit for 4–5 letters, ≤2 longer, exact only for shorter. A tie between two different words keeps the word as read ("zoda": voda or soda); a tie between forms of one word ("jogurt", "jogurti") doesn't. Digits a reader gives for letters are tried as letters (2→z, 0→o, 1→i/l, 5→s, 8→b). PP-OCRv5 never wrote č, š or ž on this photo; the snap puts them back (riž, kartuše, šamponi, palčke, prašek).
+- **Left over.** "salutejp" snaps to "selotejp" (the real word); "vrečke zasm." and "zelenjava" sit too close to split; "soda b." loses its "b."; the struck-out "dezva" is read like any item.
+- **The "Shopping list read" toast stays.** `TaskRunOptions.done` can only change the done toast, not drop it: removing it would change the TasksService API. Open question below.
+
+Action items:
+- Owner: decide whether TasksService gets a way to end a job without a done toast (`done: () => null`, or `toast: false`), since Shopping List's review screen already says it.

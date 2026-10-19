@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.3.1",
+    date: "2026-10-19",
+    title: "Reads your handwriting",
+    changes: [
+      { kind: IMPROVED, apps: ["shopping-list"], text: "Shopping List reads handwritten lists far better, in two columns too, and straightens a photo taken sideways." },
+      { kind: NEW, apps: ["shopping-list"], text: "Before reading a photo, drag a frame around the list, or read all of it." },
+      { kind: IMPROVED, apps: ["shopping-list"], text: "Words read from a photo are matched to what you've bought before and to common groceries, so they come out spelled right." },
+    ],
+  },
+  {
     version: "3.3.0",
     date: "2026-10-19",
     title: "Ready for the shop",

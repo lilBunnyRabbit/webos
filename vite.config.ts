@@ -52,15 +52,13 @@ export default defineConfig({
         // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        // Shopping List's OCR core inlines its wasm in a 3.9 MB script; it belongs with the wasm below, not the install.
-        globIgnores: ["**/tesseract-core-*.js"],
-        // The codec wasm (2–3.5 MB each) and the OCR core and language data stay out of the install; cached on first
-        // use so AVIF, JPEG XL and reading a shopping list from a photo then work offline.
+        // The codec wasm (2–3.5 MB each), ONNX Runtime's wasm and Shopping List's text models stay out of the install;
+        // cached on first use so AVIF, JPEG XL and reading a shopping list from a photo then work offline.
         runtimeCaching: [
           {
-            urlPattern: /(\.wasm|\/tesseract-core-[^/]*\.js|\.traineddata[^/]*\.gz)$/,
+            urlPattern: /\.(wasm|onnx)$/,
             handler: "CacheFirst",
-            options: { cacheName: "webos-wasm", expiration: { maxEntries: 12 } },
+            options: { cacheName: "webos-wasm", expiration: { maxEntries: 16 } },
           },
         ],
       },
@@ -110,8 +108,9 @@ export default defineConfig({
   },
   // The codec worker imports jSquash lazily, and a classic worker can't split chunks.
   worker: { format: "es" },
-  // jSquash finds its wasm with `new URL("x.wasm", import.meta.url)`; pre-bundling moves the module away from the file.
-  optimizeDeps: { exclude: ["@jsquash/avif", "@jsquash/jxl"] },
+  // jSquash and ONNX Runtime find their wasm with `new URL("x.wasm", import.meta.url)`; pre-bundling moves the module
+  // away from the file.
+  optimizeDeps: { exclude: ["@jsquash/avif", "@jsquash/jxl", "onnxruntime-web"] },
   resolve: {
     alias: {
       $lib: path.resolve("./src/lib"),

@@ -1,7 +1,9 @@
 import kernel, { AiAvailability, AiFeature, type AiService, type TaskJob, type TasksService } from "$lib/core/api";
+import type { Bounds } from "$lib/core/utils/type";
 import { createTask } from "@lilbunnyrabbit/task-manager";
 import { APP_ID } from "./data";
 import { clean_lines } from "./lines";
+import { render, upright } from "./photo";
 
 export const ReadMethod = { AI: "ai", OCR: "ocr" } as const;
 export type ReadMethod = (typeof ReadMethod)[keyof typeof ReadMethod];
@@ -20,8 +22,17 @@ export function read_method(): ReadMethod {
 const INSTRUCTIONS =
   "You read shopping lists from photos. Reply with the items only, one per line, written as on the list with any amount (like 2x or 500 g). No bullets, numbering, headings or other text. If there's no list in the picture, reply with nothing.";
 
+async function prepared(image: Blob, crop: Bounds | null): Promise<Blob> {
+  const bitmap = await upright(image);
+  try {
+    return await render(bitmap, crop);
+  } finally {
+    bitmap.close();
+  }
+}
+
 /** Gemini Nano on this device: reads handwriting and layout better than OCR. Rejects when the model can't. */
-export async function read_with_ai(image: Blob, signal: AbortSignal): Promise<string[]> {
+export async function read_with_ai(image: Blob, crop: Bounds | null, signal: AbortSignal): Promise<string[]> {
   let text = "";
   const messages = [
     { role: "system" as const, content: INSTRUCTIONS },
@@ -29,7 +40,7 @@ export async function read_with_ai(image: Blob, signal: AbortSignal): Promise<st
       role: "user" as const,
       content: [
         { type: "text" as const, value: "List every item on this shopping list." },
-        { type: "image" as const, value: image },
+        { type: "image" as const, value: await prepared(image, crop) },
       ],
     },
   ];
@@ -37,20 +48,20 @@ export async function read_with_ai(image: Blob, signal: AbortSignal): Promise<st
   return clean_lines(text);
 }
 
-/** tesseract.js in a worker, as a task: the first run downloads about 8 MB, then it works offline. */
-export function read_with_ocr(image: Blob): TaskJob<string[]> {
+/**
+ * PP-OCRv5 in a worker, as a task: the first run downloads about 17 MB, then it works offline. Words snap to
+ * `history` (the purchase history's names) before the built-in grocery words.
+ */
+export function read_with_ocr(image: Blob, crop: Bounds | null, history: readonly string[]): TaskJob<string[]> {
   return kernel.service<TasksService>("tasks").run<string[]>(
     APP_ID,
     (context) =>
       createTask<void, string[]>({
         name: "Read the shopping list",
         async execute() {
-          const { recognize } = await import("./ocr");
-          const text = await recognize(image, context.signal, {
-            progress: (fraction) => this.setProgress(fraction),
-            message: (line) => context.message(line),
-          });
-          return clean_lines(text);
+          const { read_list } = await import("./ocr");
+          const report = { progress: (fraction: number) => this.setProgress(fraction), message: (line: string) => context.message(line) };
+          return read_list(image, crop, context.signal, report, history);
         },
       })(),
     {
