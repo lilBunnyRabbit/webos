@@ -47,6 +47,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
+  import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
 
   const SECTIONS = [
@@ -95,6 +96,7 @@
   let speed = $state<"slow" | "normal" | "fast">("normal");
   let pane = $state({ size: 160, collapsed: false });
   let split = $state(50);
+  let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -370,6 +372,19 @@
         >
           <div class="flex h-72 flex-col overflow-hidden rounded-xl bg-background-darker ring-1 ring-foreground/10">
             <SwipeCompare width={320} height={200} left={sharp} right={blurred} left_label="Sharp" right_label="Blurred" bind:split class="flex-1" />
+          </div>
+        </Section>
+        <Section
+          title="Crop frame"
+          description="A crop over a picture at any scale, from $kit: drag inside to move, drag a handle to resize, arrow keys move and Shift+arrows resize. Image Editor's crop and Shopping List's photo step use it."
+          flush
+        >
+          <div class="flex flex-col gap-2">
+            <div class="relative aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10">
+              {@render sharp()}
+              <CropFrame bind:rect={crop} bounds={{ width: 320, height: 200 }} />
+            </div>
+            <span class="font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(crop.width)} × {Math.round(crop.height)} at {Math.round(crop.x)}, {Math.round(crop.y)}</span>
           </div>
         </Section>
       {:else}

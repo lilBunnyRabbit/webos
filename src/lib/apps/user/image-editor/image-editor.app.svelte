@@ -36,7 +36,7 @@
   } from "phosphor-svelte";
   import { flushSync, onDestroy, untrack } from "svelte";
   import { z } from "zod";
-  import { ASPECT_PRESETS, Handle, RESIZE_HANDLES, aspect_of, drag_rect, fit_aspect } from "./crop-rect";
+  import { ASPECT_PRESETS, CropFrame, aspect_of, fit_aspect } from "$kit/components/crop-frame";
   import {
     DEFAULT_ADJUSTMENTS,
     EMPTY_DOC,
@@ -357,33 +357,6 @@
     save_to_picker(sheet_format);
   }
 
-  interface CropDrag {
-    pointer_id: number;
-    handle: Handle;
-    start: Rect;
-    x: number;
-    y: number;
-  }
-  let crop_drag: CropDrag | null = null;
-
-  function start_crop_drag(event: PointerEvent, handle: Handle) {
-    if (crop_drag || (event.pointerType === "mouse" && event.button !== 0)) return;
-    event.stopPropagation();
-    event.preventDefault();
-    (event.currentTarget as HTMLElement).closest<HTMLElement>("[data-crop-box]")!.setPointerCapture(event.pointerId);
-    crop_drag = { pointer_id: event.pointerId, handle, start: { ...crop_rect }, x: event.clientX, y: event.clientY };
-  }
-
-  function move_crop(event: PointerEvent) {
-    if (!crop_drag || event.pointerId !== crop_drag.pointer_id) return;
-    const { handle, start, x, y } = crop_drag;
-    crop_rect = drag_rect(start, handle, (event.clientX - x) / zoom, (event.clientY - y) / zoom, size, aspect);
-  }
-
-  function end_crop(event: PointerEvent) {
-    if (crop_drag?.pointer_id === event.pointerId) crop_drag = null;
-  }
-
   const pointers = new Map<number, { x: number; y: number }>();
   let pinch: { distance: number; zoom: number } | null = null;
 
@@ -474,10 +447,6 @@
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
-
-  function percent(value: number, total: number) {
-    return `${(value / total) * 100}%`;
-  }
 </script>
 
 <svelte:document onpaste={on_paste} />
@@ -557,33 +526,7 @@
                   style:filter={filter_string(draft, zoom)}
                 ></canvas>
                 {#if tool.value === Tool.CROP}
-                  <div class="pointer-events-none absolute inset-0 overflow-hidden">
-                    <div
-                      class="crop-shade absolute"
-                      style:left={percent(crop_rect.x, size.width)}
-                      style:top={percent(crop_rect.y, size.height)}
-                      style:width={percent(crop_rect.width, size.width)}
-                      style:height={percent(crop_rect.height, size.height)}
-                    ></div>
-                  </div>
-                  <div
-                    data-crop-box
-                    class="crop-box absolute cursor-move"
-                    role="group"
-                    aria-label="Crop area"
-                    style:left={percent(crop_rect.x, size.width)}
-                    style:top={percent(crop_rect.y, size.height)}
-                    style:width={percent(crop_rect.width, size.width)}
-                    style:height={percent(crop_rect.height, size.height)}
-                    onpointerdown={(event) => start_crop_drag(event, Handle.MOVE)}
-                    onpointermove={move_crop}
-                    onlostpointercapture={end_crop}
-                  >
-                    <span class="thirds pointer-events-none absolute inset-0"></span>
-                    {#each RESIZE_HANDLES as handle (handle)}
-                      <span class="handle" role="presentation" data-handle={handle} onpointerdown={(event) => start_crop_drag(event, handle)}></span>
-                    {/each}
-                  </div>
+                  <CropFrame bind:rect={crop_rect} bounds={size} {aspect} />
                 {/if}
               </div>
             {/if}
@@ -751,61 +694,6 @@
   .checker {
     background: repeating-conic-gradient(color-mix(in oklch, var(--foreground) 8%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
   }
-
-  .crop-shade {
-    box-shadow: 0 0 0 100vmax color-mix(in oklch, var(--background-darkest) 65%, transparent);
-  }
-
-  .crop-box {
-    outline: 1px solid var(--primary);
-    touch-action: none;
-  }
-
-  .thirds {
-    background:
-      linear-gradient(to right, transparent calc(100% / 3 - 0.5px), color-mix(in oklch, var(--foreground) 35%, transparent) 0 calc(100% / 3 + 0.5px), transparent 0 calc(200% / 3 - 0.5px), color-mix(in oklch, var(--foreground) 35%, transparent) 0 calc(200% / 3 + 0.5px), transparent 0),
-      linear-gradient(to bottom, transparent calc(100% / 3 - 0.5px), color-mix(in oklch, var(--foreground) 35%, transparent) 0 calc(100% / 3 + 0.5px), transparent 0 calc(200% / 3 - 0.5px), color-mix(in oklch, var(--foreground) 35%, transparent) 0 calc(200% / 3 + 0.5px), transparent 0);
-  }
-
-  .handle {
-    --hit: 28px;
-    position: absolute;
-    width: var(--hit);
-    height: var(--hit);
-    translate: -50% -50%;
-    display: grid;
-    place-items: center;
-    touch-action: none;
-  }
-
-  .handle::after {
-    content: "";
-    width: 12px;
-    height: 12px;
-    border-radius: 9999px;
-    background: var(--primary);
-    box-shadow: 0 0 0 2px var(--background-darkest);
-  }
-
-  @media (pointer: coarse) {
-    .handle {
-      --hit: 40px;
-    }
-
-    .handle::after {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .handle[data-handle="nw"] { left: 0; top: 0; cursor: nwse-resize; }
-  .handle[data-handle="n"] { left: 50%; top: 0; cursor: ns-resize; }
-  .handle[data-handle="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
-  .handle[data-handle="e"] { left: 100%; top: 50%; cursor: ew-resize; }
-  .handle[data-handle="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
-  .handle[data-handle="s"] { left: 50%; top: 100%; cursor: ns-resize; }
-  .handle[data-handle="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
-  .handle[data-handle="w"] { left: 0; top: 50%; cursor: ew-resize; }
 
   .save-sheet {
     position-area: bottom span-right;

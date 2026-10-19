@@ -21,6 +21,10 @@ AiService (ADR-046) takes text only: `AiMessage.content` is a string. Shopping L
 - **Images always on.** Every chat session created with `expectedInputs` image: no extra key, but a chat would then fail on a device whose model takes text and not pictures.
 - **OCR in the app only (tesseract.js).** Shopping List does this as the fallback anyway; the model reads handwriting and layout far better where it exists.
 
+## Revision 2026-10-19
+
+Shopping List's fallback reader is now PP-OCRv5 (mobile detector, Latin recogniser) on `onnxruntime-web` in a worker, not tesseract.js: on a handwritten two-column list it read 28 of 34 items against tesseract's 0 as shipped ([brainstorm](../brainstorm/2026-10-19_shopping-list.md#photo-reading-on-handwriting-later-the-same-day)). Gemini Nano still goes first where it's available, and gets the same straightened, cropped picture.
+
 ## Consequences
 
 - `AiFeature` has five values; `Record<AiFeature, …>` literals (the services, the inspector's count) list it.

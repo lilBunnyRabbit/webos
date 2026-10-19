@@ -4,7 +4,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import type { Position } from "$lib/core/utils/type";
+  import type { Bounds, Position } from "$lib/core/utils/type";
   import { image_files, has_files } from "$kit/utils/image";
   import {
     ArrowsLeftRight as ArrowsLeftRightIcon,
@@ -44,12 +44,13 @@
   import { live, merge_items, prune } from "./merge";
   import PairPanel from "./pair-panel.svelte";
   import { entry_text, parse_entry } from "./parse";
+  import PhotoCrop from "./photo-crop.svelte";
   import PhotoReview from "./photo-review.svelte";
   import { read_method, read_with_ai, read_with_ocr, ReadMethod, type ReviewRow } from "./read-image";
   import { record_trip } from "./suggest";
   import { PairSession, PairState } from "./sync.svelte";
 
-  const View = { LIST: "list", PAIR: "pair", REVIEW: "review" } as const;
+  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review" } as const;
   type View = (typeof View)[keyof typeof View];
 
   const { window: win, window_id, storage } = get_app_context();
@@ -321,13 +322,21 @@
   let review_error = $state<string | null>(null);
   let review_method = $state<ReadMethod>(ReadMethod.OCR);
   let review_controller: AbortController | null = null;
+  let photo_image = $state.raw<Blob | null>(null);
 
   async function photo() {
     const [image] = await pick_device_files({ accept: ["image/*"] });
-    if (image) await read(image);
+    if (image) choose_part(image);
   }
 
-  async function read(image: Blob) {
+  function choose_part(image: Blob) {
+    review_controller?.abort();
+    review_controller = null;
+    photo_image = image;
+    view = View.CROP;
+  }
+
+  async function read(image: Blob, crop: Bounds | null) {
     review_controller?.abort();
     const own = new AbortController();
     review_controller = own;
@@ -339,7 +348,7 @@
       let lines: string[] | null = null;
       if (review_method === ReadMethod.AI) {
         try {
-          lines = await read_with_ai(image, own.signal);
+          lines = await read_with_ai(image, crop, own.signal);
         } catch (reason) {
           if (own.signal.aborted) return;
           console.warn("[ShoppingList] Gemini Nano couldn't read the photo, using the text reader", reason);
@@ -347,7 +356,7 @@
         }
       }
       if (lines === null) {
-        const job = read_with_ocr(image);
+        const job = read_with_ocr(image, crop, Object.keys(file.value.history));
         own.signal.addEventListener("abort", () => job.cancel(), { once: true });
         lines = await job.done;
         if (own.signal.aborted) return;
@@ -370,6 +379,7 @@
     review_controller = null;
     review_rows = null;
     review_error = null;
+    photo_image = null;
     view = View.LIST;
   }
 
@@ -384,7 +394,7 @@
     const [image] = image_files(event.clipboardData);
     if (!image) return;
     event.preventDefault();
-    void read(image);
+    choose_part(image);
   }
 
   function on_dragover(event: DragEvent) {
@@ -399,7 +409,7 @@
     dragging_file = false;
     if (busy_elsewhere()) return;
     const [image] = image_files(event.dataTransfer);
-    if (image) void read(image);
+    if (image) choose_part(image);
   }
 </script>
 
@@ -441,6 +451,8 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading lists" /></div>
     {:else if view === View.PAIR}
       <PairPanel session={pair} {list} onclose={() => (view = View.LIST)} />
+    {:else if view === View.CROP && photo_image}
+      <PhotoCrop image={photo_image} onread={(crop) => photo_image && void read(photo_image, crop)} oncancel={close_side_view} />
     {:else if view === View.REVIEW}
       <PhotoReview
         bind:rows={review_rows}
