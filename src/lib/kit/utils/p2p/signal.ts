@@ -224,7 +224,7 @@ function read_address(reader: Reader, kind: number): string {
   throw new Error("unknown address kind");
 }
 
-/** Throws a user-readable error when `code` isn't a P2P Transfer code. Line breaks from pasting are ignored. */
+/** Throws a user-readable error when `code` isn't a pairing code. Line breaks from pasting are ignored. */
 export function decode_signal(code: string): Signal {
   try {
     const reader = new Reader(from_base45(code.replace(/[\r\n\t]/g, "")));
@@ -250,7 +250,7 @@ export function decode_signal(code: string): Signal {
     if (!reader.done) throw new Error("trailing bytes");
     return signal;
   } catch {
-    throw new Error("This isn't a P2P Transfer code");
+    throw new Error("This isn't a pairing code");
   }
 }
 

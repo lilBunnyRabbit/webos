@@ -8,7 +8,7 @@
     LockSimple as LockSimpleIcon,
     Monitor as MonitorIcon,
   } from "phosphor-svelte";
-  import type { LinkStats } from "./peer";
+  import type { LinkStats } from "$kit/utils/p2p";
   import { format_endpoint, Phase, tls_name } from "./session.svelte";
 
   let { role, phase, link }: { role: "send" | "receive"; phase: Phase; link: LinkStats | null } = $props();

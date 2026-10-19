@@ -1,4 +1,6 @@
-import { AiAvailability, AiFeature, type AiMessage, type LanguagePair } from "./type";
+import { AiAvailability, AiFeature, type AiMessage, type AiPart, type LanguagePair } from "./type";
+
+export const IMAGE_INPUTS: { type: "text" | "image" }[] = [{ type: "text" }, { type: "image" }];
 
 export function to_availability(answer: BuiltInAvailability): AiAvailability {
   if (answer === "available") return AiAvailability.READY;
@@ -16,6 +18,10 @@ export async function check(feature: AiFeature, pair?: LanguagePair): Promise<Ai
         return globalThis.LanguageDetector ? to_availability(await globalThis.LanguageDetector.availability()) : AiAvailability.NO;
       case AiFeature.PROMPT:
         return globalThis.LanguageModel ? to_availability(await globalThis.LanguageModel.availability()) : AiAvailability.NO;
+      case AiFeature.PROMPT_IMAGE:
+        return globalThis.LanguageModel
+          ? to_availability(await globalThis.LanguageModel.availability({ expectedInputs: IMAGE_INPUTS }))
+          : AiAvailability.NO;
       case AiFeature.TRANSLATE:
         if (!globalThis.Translator) return AiAvailability.NO;
         if (!pair) return AiAvailability.DOWNLOAD;
@@ -32,4 +38,21 @@ export async function check(feature: AiFeature, pair?: LanguagePair): Promise<Ai
 /** `en-US` and `en` are the same language for "already in the target language". */
 export const same_language = (a: string, b: string) => a.split("-")[0].toLowerCase() === b.split("-")[0].toLowerCase();
 
-export const history_key = (messages: AiMessage[]) => JSON.stringify(messages.map(({ role, content }) => [role, content]));
+export const has_image = (messages: AiMessage[]) =>
+  messages.some(({ content }) => typeof content !== "string" && content.some((part) => part.type === "image"));
+
+// By identity: the same Blob continues a chat, another picture of the same size and type doesn't.
+const image_ids = new WeakMap<Blob, number>();
+let next_image_id = 0;
+
+function part_key(part: AiPart): [string, string | number] {
+  if (part.type === "text") return ["text", part.value];
+  let id = image_ids.get(part.value);
+  if (id === undefined) image_ids.set(part.value, (id = next_image_id++));
+  return ["image", id];
+}
+
+export const history_key = (messages: AiMessage[]) =>
+  JSON.stringify(
+    messages.map(({ role, content }) => [role, typeof content === "string" ? content : content.map(part_key)])
+  );

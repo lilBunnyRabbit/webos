@@ -2,6 +2,8 @@
 **Date:** 2026-10-17
 **Status:** Implemented
 
+> **Revision 2026-10-19:** `prompt()` takes pictures: `AiMessage.content` can be `AiPart[]`, and `AiFeature.PROMPT_IMAGE` answers whether the model reads them ([ADR-051](./051-ai-image-input.md)).
+
 ## Context
 
 Chrome ships built-in AI that runs Gemini Nano on the device after a one-time model download: Summarizer, Translator and Language Detector are stable on desktop (since 138), and the Prompt API is stable from 148. It's private and works offline, with no key and no backend. Android Chrome doesn't have it. Several wave 7 ideas want it: shell filters (`summarize`, `translate`, `lang`), an Ask window, later i18n Lab and Voice ([brainstorm](../brainstorm/2026-10-17_app-wave-7.md)). The owner chose one core service over per-app calls.

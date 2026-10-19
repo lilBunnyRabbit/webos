@@ -3,6 +3,8 @@
 **Status:** Implemented
 
 > **Revision 2026-10-18:** `qr.ts` and `qr-scan.svelte.ts` moved to the app kit, `$kit/utils/qr` ([ADR-048](./048-app-kit-layer.md)).
+>
+> **Revision 2026-10-19:** `peer.ts` and `signal.ts` moved to the app kit, `$kit/utils/p2p`, so Shopping List pairs the same way ([ADR-052](./052-p2p-pairing-in-kit.md)). Their errors no longer name P2P Transfer, and `create_offer` takes the channel label.
 
 ## Context
 

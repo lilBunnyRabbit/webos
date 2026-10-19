@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { check, history_key, same_language, to_availability } from "./availability";
+import { check, has_image, history_key, same_language, to_availability } from "./availability";
 import { AiAvailability, AiFeature } from "./type";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -24,6 +24,15 @@ describe("check", () => {
     expect(await check(AiFeature.SUMMARIZE)).toBe(AiAvailability.READY);
     expect(await check(AiFeature.PROMPT)).toBe(AiAvailability.DOWNLOAD);
     expect(await check(AiFeature.DETECT)).toBe(AiAvailability.NO);
+  });
+
+  test("prompt-image asks the Prompt API for a session that takes pictures", async () => {
+    const availability = vi.fn(async (options?: { expectedInputs?: { type: string }[] }) =>
+      options?.expectedInputs?.some((input) => input.type === "image") ? "unavailable" : "available"
+    );
+    vi.stubGlobal("LanguageModel", { availability });
+    expect(await check(AiFeature.PROMPT)).toBe(AiAvailability.READY);
+    expect(await check(AiFeature.PROMPT_IMAGE)).toBe(AiAvailability.NO);
   });
 
   test("translate answers per pair, and download for the API alone", async () => {
@@ -57,5 +66,32 @@ describe("history_key", () => {
     expect(a).toBe(history_key([{ role: "user", content: "hi" }]));
     expect(a).not.toBe(history_key([{ role: "assistant", content: "hi" }]));
     expect(history_key([])).not.toBe(a);
+  });
+});
+
+describe("history_key with pictures", () => {
+  test("the same Blob gives the same key, another one with the same bytes doesn't", () => {
+    const photo = new Blob(["a"]);
+    const turn = (value: Blob) => [{ role: "user" as const, content: [{ type: "text" as const, value: "hi" }, { type: "image" as const, value }] }];
+    expect(history_key(turn(photo))).toBe(history_key(turn(photo)));
+    expect(history_key(turn(photo))).not.toBe(history_key(turn(new Blob(["a"]))));
+  });
+
+  test("parts don't collide with plain text", () => {
+    const parts = history_key([{ role: "user", content: [{ type: "text", value: "hi" }] }]);
+    expect(parts).not.toBe(history_key([{ role: "user", content: "hi" }]));
+  });
+});
+
+describe("has_image", () => {
+  test("finds a picture in any message", () => {
+    expect(has_image([{ role: "user", content: "hi" }])).toBe(false);
+    expect(has_image([{ role: "user", content: [{ type: "text", value: "hi" }] }])).toBe(false);
+    expect(
+      has_image([
+        { role: "user", content: [{ type: "image", value: new Blob() }] },
+        { role: "user", content: "and?" },
+      ])
+    ).toBe(true);
   });
 });

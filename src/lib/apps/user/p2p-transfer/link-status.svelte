@@ -1,7 +1,7 @@
 <script lang="ts">
   import { format_bytes } from "$lib/core/utils";
   import { cn } from "$lib/core/utils";
-  import type { Route } from "./peer";
+  import type { Route } from "$kit/utils/p2p";
   import { Phase } from "./session.svelte";
 
   let { phase, stalled, route, rtt, rate }: { phase: Phase; stalled: boolean; route: Route | null; rtt: number | null; rate: number } = $props();

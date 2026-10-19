@@ -1,8 +1,16 @@
 import * as opfs from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { accept_answer, accept_offer, channel_open, create_offer, create_peer, Inbox } from "./peer";
-import { decode_signal, encode_signal } from "./signal";
+import {
+  accept_answer,
+  accept_offer,
+  channel_open,
+  create_offer,
+  create_peer,
+  decode_signal,
+  encode_signal,
+  Inbox,
+} from "$kit/utils/p2p";
 import { receive_files, send_files } from "./transfer";
 
 let files: FilesService;

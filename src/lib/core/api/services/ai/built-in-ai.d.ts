@@ -73,13 +73,16 @@ interface LanguageDetectorConstructor {
   create(options?: { expectedInputLanguages?: string[] } & BuiltInCreateOptions): Promise<BuiltInLanguageDetector>;
 }
 
+type LanguageModelMessageContent = { type: "text"; value: string } | { type: "image"; value: Blob };
+
 interface LanguageModelMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | LanguageModelMessageContent[];
 }
 
 interface LanguageModelCreateCoreOptions {
-  expectedInputs?: { type: "text"; languages?: string[] }[];
+  /** A session that will see pictures has to ask for `image` when it's created. */
+  expectedInputs?: { type: "text" | "image"; languages?: string[] }[];
   expectedOutputs?: { type: "text"; languages?: string[] }[];
 }
 

@@ -1,0 +1,10 @@
+{
+  "name": "@webos/shopping-list",
+  "private": true,
+  "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/slv": "1.0.0",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "7.0.0"
+  }
+}

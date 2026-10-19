@@ -1,6 +1,6 @@
 import type { FilesService, Kernel, TasksService } from "$lib/core/api";
 import { TaskJobStatus, type TaskJob } from "../tasks/type";
-import { check, history_key, same_language } from "./availability";
+import { check, has_image, history_key, IMAGE_INPUTS, same_language } from "./availability";
 import { ai_shell } from "./shell";
 import {
   AI_REQUIREMENTS,
@@ -41,6 +41,7 @@ export class AiService implements IAiService {
     translate: AiAvailability.NO,
     detect: AiAvailability.NO,
     prompt: AiAvailability.NO,
+    "prompt-image": AiAvailability.NO,
   });
 
   private kept = $state.raw<Kept[]>([]);
@@ -114,20 +115,31 @@ export class AiService implements IAiService {
     if (last?.role !== "user") throw new Error("The last message has to be the user's");
     const history = messages.slice(0, -1);
 
+    // A session only takes pictures when it was created for them, so the kind is part of the key.
+    const image = has_image(messages);
+    const feature = image ? AiFeature.PROMPT_IMAGE : AiFeature.PROMPT;
+    const prefix = image ? "prompt image" : "prompt";
+
     // A session holds its conversation, so a kept one is taken out while it answers: two windows never share one.
-    const key = `prompt ${history_key(history)}`;
+    const key = `${prefix} ${history_key(history)}`;
     const kept = this.kept.find((entry) => entry.key === key) as Kept<BuiltInLanguageModel> | undefined;
     if (kept) this.kept = this.kept.filter((entry) => entry !== kept);
     const session = await (kept?.model ??
-      this.create(AiFeature.PROMPT, "Language model", {
-        check: () => this.availability(AiFeature.PROMPT),
-        create: (options) => globalThis.LanguageModel!.create({ initialPrompts: history, ...options }),
+      this.create(feature, image ? "Language model with pictures" : "Language model", {
+        check: () => this.availability(feature),
+        create: (options) =>
+          globalThis.LanguageModel!.create({
+            initialPrompts: history,
+            ...(image ? { expectedInputs: IMAGE_INPUTS } : {}),
+            ...options,
+          }),
       }));
 
     let answer = "";
     let complete = false;
     try {
-      for await (const chunk of session.promptStreaming(last.content, { signal })) {
+      const input = typeof last.content === "string" ? last.content : [{ role: last.role, content: last.content }];
+      for await (const chunk of session.promptStreaming(input, { signal })) {
         answer += chunk;
         yield chunk;
       }
@@ -138,14 +150,14 @@ export class AiService implements IAiService {
     }
 
     const turns = messages.filter((message) => message.role === "user").length;
-    const chats = this.kept.filter((entry) => entry.feature === AiFeature.PROMPT);
+    const chats = this.kept.filter((entry) => entry.feature === AiFeature.PROMPT || entry.feature === AiFeature.PROMPT_IMAGE);
     const evicted = chats.length >= CHAT_CAP ? chats[0] : null;
     if (evicted) void evicted.model.then((model) => model.destroy());
     this.kept = [
       ...this.kept.filter((entry) => entry !== evicted),
       {
-        key: `prompt ${history_key([...messages, { role: "assistant", content: answer }])}`,
-        feature: AiFeature.PROMPT,
+        key: `${prefix} ${history_key([...messages, { role: "assistant", content: answer }])}`,
+        feature,
         label: `Chat, ${turns} ${turns === 1 ? "question" : "questions"}`,
         model: Promise.resolve(session),
       },

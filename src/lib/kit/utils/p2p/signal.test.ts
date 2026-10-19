@@ -82,8 +82,8 @@ describe("encode_signal / decode_signal", () => {
   });
 
   test("rejects a code from somewhere else", () => {
-    expect(() => decode_signal("https://example.com")).toThrow("This isn't a P2P Transfer code");
-    expect(() => decode_signal("HTTPS://EXAMPLE.COM")).toThrow("This isn't a P2P Transfer code");
+    expect(() => decode_signal("https://example.com")).toThrow("This isn't a pairing code");
+    expect(() => decode_signal("HTTPS://EXAMPLE.COM")).toThrow("This isn't a pairing code");
   });
 });
 

@@ -6,13 +6,13 @@ import {
   channel_open,
   create_offer,
   create_peer,
+  decode_signal,
   Inbox,
   read_link,
   type Endpoint,
   type LinkStats,
-} from "./peer";
+} from "$kit/utils/p2p";
 import { part_name, type FileEntry } from "./protocol";
-import { decode_signal } from "./signal";
 import { describe_file, receive_files, send_files } from "./transfer";
 
 export const Phase = {

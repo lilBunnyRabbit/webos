@@ -1,6 +1,6 @@
 import { decode_signal, encode_signal, read_sdp, SignalKind, write_sdp } from "./signal";
 
-/** Finds each side's public address so peers on different networks can connect. No file data passes through it. */
+/** Finds each side's public address so peers on different networks can connect. No app data passes through it. */
 const ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 /** The code is shown once, with every candidate in it. A blocked STUN server must not hold it back forever. */
 const GATHER_TIMEOUT = 4000;
@@ -29,17 +29,17 @@ async function local_code(pc: RTCPeerConnection, kind: SignalKind): Promise<stri
   return encode_signal(read_sdp(kind, pc.localDescription!.sdp));
 }
 
-/** Sender: opens the data channel and returns the code the receiver scans. */
-export async function create_offer(pc: RTCPeerConnection): Promise<{ code: string; channel: RTCDataChannel }> {
-  const channel = pc.createDataChannel("files", { ordered: true });
+/** The device that starts: opens the data channel and returns the code the other device scans. */
+export async function create_offer(pc: RTCPeerConnection, label = "files"): Promise<{ code: string; channel: RTCDataChannel }> {
+  const channel = pc.createDataChannel(label, { ordered: true });
   channel.binaryType = "arraybuffer";
   return { code: await local_code(pc, SignalKind.OFFER), channel };
 }
 
-/** Receiver: takes the sender's code and returns the code the sender scans back. */
+/** The device that joins: takes the offer and returns the answer code the starting device scans back. */
 export async function accept_offer(pc: RTCPeerConnection, code: string): Promise<string> {
   const signal = decode_signal(code);
-  if (signal.kind !== SignalKind.OFFER) throw new Error("That's a receiver's code. Scan the code on the sending device");
+  if (signal.kind !== SignalKind.OFFER) throw new Error("That's an answer code. Scan the code on the device that started");
   await pc.setRemoteDescription(write_sdp(signal));
   return local_code(pc, SignalKind.ANSWER);
 }
@@ -47,7 +47,7 @@ export async function accept_offer(pc: RTCPeerConnection, code: string): Promise
 /** Scanning the same answer twice is harmless; only the first one is applied. */
 export async function accept_answer(pc: RTCPeerConnection, code: string): Promise<void> {
   const signal = decode_signal(code);
-  if (signal.kind !== SignalKind.ANSWER) throw new Error("That's a sender's code. Scan the code on the receiving device");
+  if (signal.kind !== SignalKind.ANSWER) throw new Error("That's an offer code. Scan the answer on the device that joined");
   if (pc.signalingState !== "have-local-offer") {
     if (pc.remoteDescription) return;
     throw new Error("This connection isn't waiting for an answer anymore. Generate a new offer");

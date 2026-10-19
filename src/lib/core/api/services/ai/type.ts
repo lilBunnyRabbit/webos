@@ -6,6 +6,7 @@ export const AiFeature = {
   TRANSLATE: "translate",
   DETECT: "detect",
   PROMPT: "prompt",
+  PROMPT_IMAGE: "prompt-image",
 } as const;
 export type AiFeature = (typeof AiFeature)[keyof typeof AiFeature];
 
@@ -49,9 +50,22 @@ export interface DetectedLanguage {
   confidence: number;
 }
 
+export interface AiTextPart {
+  type: "text";
+  value: string;
+}
+
+export interface AiImagePart {
+  type: "image";
+  value: Blob;
+}
+
+export type AiPart = AiTextPart | AiImagePart;
+
 export interface AiMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  /** Text, or parts mixing text and pictures (needs `prompt-image`). */
+  content: string | AiPart[];
 }
 
 export interface AiSessionInfo {
@@ -81,7 +95,8 @@ export interface AiService extends IService {
   detect(text: string, options?: { signal?: AbortSignal }): Promise<DetectedLanguage[]>;
   /**
    * Streams the answer to the last message, a `user` one, in pieces. A leading `system` message sets the instructions.
-   * A conversation that continues where an earlier call ended reuses that call's session.
+   * A conversation that continues where an earlier call ended reuses that call's session. A picture in any message
+   * needs `prompt-image` and gets a session created to accept pictures.
    */
   prompt(messages: AiMessage[], options?: { signal?: AbortSignal }): AsyncGenerator<string, void>;
 }

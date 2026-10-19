@@ -20,6 +20,7 @@ export class MobileAiService implements IAiService {
     translate: AiAvailability.NO,
     detect: AiAvailability.NO,
     prompt: AiAvailability.NO,
+    "prompt-image": AiAvailability.NO,
   };
   readonly downloads: TaskJob[] = [];
   readonly sessions: AiSessionInfo[] = [];

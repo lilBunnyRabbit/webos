@@ -52,12 +52,15 @@ export default defineConfig({
         // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        // The codec wasm (2–3.5 MB each) stays out of the install; cached on first use so AVIF and JPEG XL then work offline.
+        // Shopping List's OCR core inlines its wasm in a 3.9 MB script; it belongs with the wasm below, not the install.
+        globIgnores: ["**/tesseract-core-*.js"],
+        // The codec wasm (2–3.5 MB each) and the OCR core and language data stay out of the install; cached on first
+        // use so AVIF, JPEG XL and reading a shopping list from a photo then work offline.
         runtimeCaching: [
           {
-            urlPattern: /\.wasm$/,
+            urlPattern: /(\.wasm|\/tesseract-core-[^/]*\.js|\.traineddata[^/]*\.gz)$/,
             handler: "CacheFirst",
-            options: { cacheName: "webos-wasm", expiration: { maxEntries: 8 } },
+            options: { cacheName: "webos-wasm", expiration: { maxEntries: 12 } },
           },
         ],
       },
