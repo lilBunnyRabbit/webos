@@ -27,3 +27,7 @@ Likely cause of the Samsung failure: `long_press` leaves the touch to the browse
 ## Next session topics
 
 - Does the edit mode drag work on the Samsung phone? If not, capture a touch log there.
+
+## Follow-up: Back and edit mode (later the same day)
+
+Back (nav bar, back gesture, browser back) skipped edit mode: `editing` was local to `mobile-home.svelte` and `ui.back()` knew only overlays, dialogs, sheets and windows. Options: edit mode as a `UiOverlay`, a generic `ui.add_back_handler`, or leave it. **Decision (owner): `UiOverlay.HOME_EDIT`.** `back()` already closes overlays; the cost is one overlay at a time, so opening the drawer or switcher ends edit mode, which is fine.
