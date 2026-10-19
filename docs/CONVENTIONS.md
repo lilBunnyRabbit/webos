@@ -37,7 +37,7 @@ src/lib/
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── components/swipe-compare/ # SwipeCompare: wipe divider, zoom, pan, pinch
 │   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
-│   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), view (2D camera math), history, qr, qr-scan, exif
+│   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), view (2D camera math), history, qr, qr-scan, exif, p2p (WebRTC pairing by QR)
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else

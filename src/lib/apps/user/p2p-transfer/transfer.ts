@@ -1,6 +1,6 @@
 import type { FilesService } from "$lib/core/api";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
-import type { Inbox } from "./peer";
+import type { Inbox } from "$kit/utils/p2p";
 import { parse_message, part_name, PROTOCOL_VERSION, resume_offset, type FileEntry, type Message } from "./protocol";
 
 /** Small enough for every browser's SCTP message limit, big enough to keep the per-message overhead low. */

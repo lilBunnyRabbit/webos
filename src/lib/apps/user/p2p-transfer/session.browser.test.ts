@@ -1,6 +1,6 @@
 import { flushSync } from "svelte";
 import { afterEach, expect, test, vi } from "vitest";
-import { accept_offer, create_peer } from "./peer";
+import { accept_offer, create_peer } from "$kit/utils/p2p";
 import { NO_PATH, Phase, SendSession } from "./session.svelte";
 
 const cleanup: (() => void)[] = [];
