@@ -55,3 +55,15 @@ Built 2026-10-19 as decided, with these calls made on the way (flagged for the o
 - **Kit wording.** The moved pairing code no longer names P2P Transfer in its errors (ADR-052).
 - **tesseract.js 7 bug.** It can't take language data as bytes (`{ code, data }`: its worker joins `data` into the language name). The app wraps tesseract's worker in a tiny blob worker that maps `{langPath}/{code}.traineddata.gz` onto the Vite-hashed bundled files. Core, worker and data all come from this site; the service worker caches them in `webos-wasm` after first use.
 - **Session.** The live link belongs to the window that paired; closing it ends the pairing (the other phone shows Offline).
+
+## Photo reading on handwriting (later the same day)
+
+The owner tried a photo of a handwritten list (block capitals, two columns, clipboard, magnets). The text reader returned junk. Run locally on the same photo: sideways it's junk, upright it gets about half (KARTUSE, KANALETA, SYOSS, MESO, VEGETA…) plus near misses ("TOKA" for moka, "HASLO" for maslo, "ZELEAAVA" for zelenjava).
+
+Decisions:
+- **Fix the local reader first:**
+  - Straighten the photo by its orientation, and try all four rotations when the read is poor, keeping the most confident.
+  - Drop low-confidence words.
+  - Snap words within edit distance 1–2 to your history first, then to a built-in list of about 500 Slovenian and English grocery words.
+- **Optional crop** before reading, with "Read all" to skip it.
+- **In parallel, test only:** try another OCR model (PaddleOCR via ONNX and similar) on the same photo, and report what it reads, its size and its speed. The owner decides afterwards whether it goes in.
