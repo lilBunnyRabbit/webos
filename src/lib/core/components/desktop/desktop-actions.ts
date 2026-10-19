@@ -5,6 +5,7 @@ import kernel, {
   type DesktopItem,
   type DesktopService,
   type DialogsService,
+  type MenuAction,
   type MenuItem,
   type DesktopWindowsService,
   type FilesService,
@@ -218,13 +219,16 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
   else if (choice === "uninstall" && (item.kind === "shortcut" || item.kind === "widget")) void uninstall_app(item.app_id, anchor);
 }
 
-export async function background_menu(anchor: Position): Promise<void> {
+/** `lead` goes first, for the phone home's own entries. */
+export async function background_menu(anchor: Position, lead: { item: MenuAction; run: () => void }[] = []): Promise<void> {
   const windows = kernel.service<WindowsService>("windows");
   const gather = "gather" in windows ? (windows as DesktopWindowsService) : null;
   // The phone home is an ordered flow with no cells to sort into (ADR-016).
   const grid = "move_items" in desktop();
   const choice = await dialogs().menu(
     [
+      ...lead.map((entry) => entry.item),
+      ...(lead.length > 0 ? [{ separator: true } as const] : []),
       { id: "new_folder", label: "New folder", icon: FolderPlusIcon },
       { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Ctrl+V", disabled: !clipboard().content },
       ...(grid
@@ -257,7 +261,9 @@ export async function background_menu(anchor: Position): Promise<void> {
     ],
     { anchor }
   );
-  if (choice === "new_folder") create_folder();
+  const led = lead.find((entry) => entry.item.id === choice);
+  if (led) led.run();
+  else if (choice === "new_folder") create_folder();
   else if (choice === "paste") paste();
   else if (choice === "gather") window_transition(gather?.list() ?? [], () => gather?.gather());
   else if (choice === "appearance") apps().launch("settings");

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LAYOUT_DIRECTORY } from "./layout";
 import type { DesktopItem } from "./type";
+import type { WidgetSize } from "../apps/type";
 
 /** The mobile home's arrangement of `/home/Desktop` (ADR-016). Separate from the desktop's cells: neither maps onto the other. */
 export const HOME_LAYOUT_FILE = "home-layout.json";
@@ -59,10 +60,56 @@ export function arrange_home(entries: DesktopItem[], layout: HomeLayout): { home
   return { home, dock };
 }
 
-/** Pages of `capacity` items. Always at least one page, so an empty home still has somewhere to be. */
-export function paginate<T>(items: T[], capacity: number): T[][] {
-  if (capacity <= 0) return [items];
-  const pages: T[][] = [];
-  for (let start = 0; start < items.length; start += capacity) pages.push(items.slice(start, start + capacity));
-  return pages.length > 0 ? pages : [[]];
+export interface HomeSlot {
+  item: DesktopItem;
+  /** Top-left cell on its page, 0-based. */
+  x: number;
+  y: number;
+  size: WidgetSize;
+}
+
+/** A widget's cells on a home of `columns × rows`, cut to fit; everything else is one cell. */
+export function home_span(item: DesktopItem, columns: number, rows: number): WidgetSize {
+  if (item.kind !== "widget") return { w: 1, h: 1 };
+  return { w: Math.max(1, Math.min(item.size.w, columns)), h: Math.max(1, Math.min(item.size.h, rows)) };
+}
+
+/**
+ * Places items in order on pages of `columns × rows` cells, the way CSS grid's sparse auto-placement would: the cursor
+ * only moves forward, so icons after a widget fill the cells beside it but never a gap before it, and the order the user
+ * set is the order on screen. An item that fits nowhere after the cursor starts the next page. Always at least one page.
+ */
+export function paginate_spans(items: DesktopItem[], columns: number, rows: number): HomeSlot[][] {
+  if (columns <= 0 || rows <= 0) return [[]];
+
+  const pages: HomeSlot[][] = [[]];
+  let taken = new Set<string>();
+  let cursor = { x: 0, y: 0 };
+
+  const fits = (x: number, y: number, size: WidgetSize) => {
+    if (x + size.w > columns || y + size.h > rows) return false;
+    for (let dy = 0; dy < size.h; dy++) for (let dx = 0; dx < size.w; dx++) if (taken.has(`${x + dx},${y + dy}`)) return false;
+    return true;
+  };
+
+  const find = (size: WidgetSize) => {
+    for (let y = cursor.y; y < rows; y++) for (let x = y === cursor.y ? cursor.x : 0; x < columns; x++) if (fits(x, y, size)) return { x, y };
+    return null;
+  };
+
+  for (const item of items) {
+    const size = home_span(item, columns, rows);
+    let spot = find(size);
+    if (!spot) {
+      pages.push([]);
+      taken = new Set();
+      cursor = { x: 0, y: 0 };
+      spot = { x: 0, y: 0 };
+    }
+    for (let dy = 0; dy < size.h; dy++) for (let dx = 0; dx < size.w; dx++) taken.add(`${spot.x + dx},${spot.y + dy}`);
+    pages[pages.length - 1].push({ item, ...spot, size });
+    cursor = { x: spot.x + size.w, y: spot.y };
+  }
+
+  return pages;
 }

@@ -4,6 +4,8 @@
 
 Extends [ADR-008](./008-app-props-validation.md) (`define_app`), [ADR-022](./022-desktop-folder.md) (desktop as a folder) and [ADR-033](./033-shell.md) (shell). First consumer: Quick Notes. [Brainstorm](../brainstorm/2026-10-14_quick-notes.md).
 
+> **Revision 2026-10-19: widgets on the phone** (owner, [brainstorm](../brainstorm/2026-10-19_mobile-home-widgets.md)). The mobile home shows widgets, each spanning its size cut to the page inside the ordered flow, and resizes them in edit mode through the same `.widget` file. App Library's Add widget works on mobile; the home's edit mode adds an Add widget picker.
+
 ## Context
 
 Apps reach the OS only through a window. Three things Quick Notes needs happen with no window open:

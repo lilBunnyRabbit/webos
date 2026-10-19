@@ -33,7 +33,10 @@
   );
   const widget_monitor = new DomMonitor<string>(
     () => widgets.map((item) => item.name),
-    (name) => document.querySelector(`[data-desktop-name="${CSS.escape(name)}"]`)?.parentElement?.querySelector(":scope > [data-widget-body]") ?? null
+    (name) =>
+      (document.querySelector(`[data-desktop-name="${CSS.escape(name)}"]`)?.parentElement ?? document.querySelector(`[data-home-name="${CSS.escape(name)}"]`))?.querySelector(
+        ":scope > [data-widget-body]"
+      ) ?? null
   );
   const performance_monitor = new PerformanceMonitor();
   const network_monitor = new NetworkMonitor();

@@ -73,11 +73,13 @@
   const GRID = "grid items-center gap-x-3 grid-cols-[minmax(0,1fr)_3.5rem_4rem] @md:grid-cols-[minmax(0,1fr)_3rem_3.5rem_4rem] @xl:grid-cols-[minmax(0,1fr)_minmax(0,9rem)_3rem_3.5rem_3.5rem_4rem] @2xl:grid-cols-[minmax(0,1fr)_minmax(0,8rem)_3rem_5rem_3.5rem_3.5rem_4rem]";
 </script>
 
-<Section title="Desktop widgets" description="DOM activity per widget, sampled every second while Activity Monitor is visible.">
-  {#if kernel.platform === Platform.MOBILE}
-    <EmptyState icon={SquaresFourIcon} title="No widgets on phones" description="Widgets show on the desktop only. Pinned ones stay in your Desktop folder and show on a computer." />
-  {:else if rows.length === 0}
-    <EmptyState icon={SquaresFourIcon} title="No widgets" description="Pin one from an app's menu or the desktop's right-click menu." />
+<Section title={kernel.platform === Platform.MOBILE ? "Home screen widgets" : "Desktop widgets"} description="DOM activity per widget, sampled every second while Activity Monitor is visible.">
+  {#if rows.length === 0}
+    <EmptyState
+      icon={SquaresFourIcon}
+      title="No widgets"
+      description={kernel.platform === Platform.MOBILE ? "Hold the home screen, then Add widget." : "Pin one from an app's menu or the desktop's right-click menu."}
+    />
   {:else}
     <div class="@container divide-y divide-foreground/8">
       <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>

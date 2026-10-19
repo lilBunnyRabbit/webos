@@ -6,14 +6,16 @@ import {
   EMPTY_HOME_LAYOUT,
   HOME_LAYOUT_FILE,
   HOME_LAYOUT_PATH,
-  paginate,
+  paginate_spans,
   parse_home_layout,
   serialize_home_layout,
   type HomeLayout,
+  type HomeSlot,
 } from "./home-layout";
 import { LAYOUT_DIRECTORY_NAME, LAYOUT_PATH } from "./layout";
 import type { DesktopItem, MobileDesktopService as IMobileDesktopService } from "./type";
 import type { WidgetSize } from "../apps/type";
+import { clamp_widget_size } from "../apps/widget";
 
 export class MobileDesktopService implements IMobileDesktopService {
   name = "MobileDesktopService";
@@ -43,9 +45,7 @@ export class MobileDesktopService implements IMobileDesktopService {
   });
 
   private layout = $state<HomeLayout>(EMPTY_HOME_LAYOUT);
-  /** Widgets span several cells and home pages flow without gaps, so the phone leaves them out for now (ADR-034). */
-  private entries = $derived(this.folder.entries.filter((entry) => entry.kind !== "widget"));
-  private arranged = $derived(arrange_home(this.entries, this.layout));
+  private arranged = $derived(arrange_home(this.folder.entries, this.layout));
 
   public readonly dock_full = $derived(this.arranged.dock.length >= DOCK_SIZE);
 
@@ -87,15 +87,19 @@ export class MobileDesktopService implements IMobileDesktopService {
   }
 
   public items(): DesktopItem[] {
-    return this.entries;
+    return this.folder.entries;
   }
 
   public names(): string[] {
     return this.folder.names();
   }
 
-  public pages(capacity: number): DesktopItem[][] {
-    return paginate(this.arranged.home, capacity);
+  public home(): DesktopItem[] {
+    return this.arranged.home;
+  }
+
+  public pages(columns: number, rows: number): HomeSlot[][] {
+    return paginate_spans(this.arranged.home, columns, rows);
   }
 
   public dock(): DesktopItem[] {
@@ -113,7 +117,8 @@ export class MobileDesktopService implements IMobileDesktopService {
   }
 
   public set_docked(name: string, docked: boolean, before: string | null = null): void {
-    if (!this.folder.get(name) || name === before) return;
+    const entry = this.folder.get(name);
+    if (!entry || name === before || (docked && entry.kind === "widget")) return;
 
     const home = this.arranged.home.map((entry) => entry.name).filter((entry) => entry !== name);
     const dock = this.arranged.dock.map((entry) => entry.name).filter((entry) => entry !== name);
@@ -125,6 +130,17 @@ export class MobileDesktopService implements IMobileDesktopService {
       home.push(name);
     }
     this.commit(home, dock);
+  }
+
+  public async resize_widget(name: string, size: WidgetSize): Promise<boolean> {
+    const entry = this.folder.get(name);
+    if (entry?.kind !== "widget") return false;
+    const limits = this.apps_service.get(entry.app_id)?.widget_size;
+    if (!limits) return false;
+    const next = clamp_widget_size(size, limits);
+    if (next.w === entry.size.w && next.h === entry.size.h) return true;
+    await this.folder.write_widget_size(name, next);
+    return true;
   }
 
   public async remove_item(name: string): Promise<void> {

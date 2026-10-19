@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.4.0",
+    date: "2026-10-19",
+    title: "Your home, your way",
+    changes: [
+      { kind: NEW, text: "On a phone, hold the home screen and pick Edit home screen to drag icons around, between pages and into the dock." },
+      { kind: NEW, text: "Widgets now show on the phone's home screen too. Add one from Edit home screen or App Library, and resize it by its corner." },
+      { kind: NEW, apps: ["shopping-list"], text: "Shopping List has a widget: add items or snap a photo of a list without opening the app. Add one from a list's menu." },
+    ],
+  },
+  {
     version: "3.3.3",
     date: "2026-10-19",
     title: "Right code, right app",

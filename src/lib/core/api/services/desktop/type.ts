@@ -3,8 +3,9 @@ import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, OpenOptions } from "..";
 import type { WidgetSize } from "../apps/type";
 import type { DesktopMove, ResizeTarget } from "./helper";
+import type { HomeSlot } from "./home-layout";
 
-export type { DesktopMove, ResizeTarget };
+export type { DesktopMove, HomeSlot, ResizeTarget };
 
 /**
  * The `/home/Desktop` folder as items, addressed by entry name (ADR-022). Platform-neutral (ADR-016): the desktop grid
@@ -76,10 +77,16 @@ export interface GridDesktopService extends DesktopService {
   resize_widget(name: string, size: WidgetSize): Promise<boolean>;
 }
 
-/** The mobile home (ADR-016): an ordered flow of entries, paged by capacity, plus a dock. */
+/** The mobile home (ADR-016): an ordered flow of entries and widgets, paged by cells, plus a dock. */
 export interface MobileDesktopService extends DesktopService {
-  /** Entries not in the dock, in the user's order, chunked into pages of `capacity`. Always at least one page. */
-  pages(capacity: number): DesktopItem[][];
+  /** Entries not in the dock, in the user's order. */
+  home(): DesktopItem[];
+
+  /**
+   * `home()` placed on pages of `columns × rows` cells: a widget spans its size cut to the page, icons wrap around it,
+   * and nothing moves back into a gap. Always at least one page.
+   */
+  pages(columns: number, rows: number): HomeSlot[][];
 
   /** Dock entries, in dock order. */
   dock(): DesktopItem[];
@@ -95,6 +102,12 @@ export interface MobileDesktopService extends DesktopService {
 
   /** Whether the dock has room for one more entry. */
   readonly dock_full: boolean;
+
+  /**
+   * Writes `size`, clamped into the app's `widget_size`, into the `.widget` file. Resolves `false` when `name` isn't a
+   * widget of an app with a `widget_size`. The size is shared with the desktop.
+   */
+  resize_widget(name: string, size: WidgetSize): Promise<boolean>;
 }
 
 export type DesktopGrid = Array<Array<DesktopItem | undefined>>;

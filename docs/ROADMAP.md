@@ -336,7 +336,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [x] App commands (`define_app({ shell })`)
   - [x] Core: `/home/Notes`, ids, Todo | Notes | Inbox tabs, `note`/`notes`/`todo` commands and values, capture dialog with context stamp, Alt+Shift+Q
   - [x] Manifest badge (open todos), shown where the icon shows
-  - [x] Desktop widgets (`.widget` files, multi-cell), stickies; mobile later
+  - [x] Desktop widgets (`.widget` files, multi-cell), stickies; on the phone home since 2026-10-19 (spans in the flow, resize in edit mode)
   - [x] Widget resizing: corner grip and Shift+arrows, per-app `widget_size` limits (2026-10-15)
   - [x] Wikilinks and backlinks
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
@@ -539,7 +539,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Navigation: three-button bar (gestures rejected: device edges)
 - [x] Back: apps claim it with `window.on_back` ([brainstorm](brainstorm/2026-10-12_mobile-apps-pass.md))
 - [x] OS back gesture through history (2026-10-14, `ui.back()` + guard)
-- [ ] Revisit home icon drag: the hold fired on Samsung Internet but the icon never moved, cause unknown
+- [x] Home icon drag, back in an edit mode with `touch-action: none` (2026-10-19); still to check on the Samsung phone
 - [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
 - [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes
 - [x] Conditional service registration in `init.ts`

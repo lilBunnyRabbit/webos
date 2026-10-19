@@ -5,7 +5,7 @@
   let { service, detailed }: InspectorProps<MobileDesktopService> = $props();
 
   const dock = $derived(service.dock());
-  const home = $derived(service.pages(0)[0]);
+  const home = $derived(service.home());
 </script>
 
 <InspectorStats>

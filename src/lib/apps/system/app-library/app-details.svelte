@@ -85,8 +85,8 @@
   async function add_widget() {
     try {
       const name = await desktop.pin_widget(manifest.id, { label: manifest.name });
-      if (!name) throw new Error("The desktop is full");
-      notifications.notify(app_id, { title: "Widget added to the desktop", message: manifest.name });
+      if (!name) throw new Error(mobile ? "The home screen is full" : "The desktop is full");
+      notifications.notify(app_id, { title: mobile ? "Widget added to the home screen" : "Widget added to the desktop", message: manifest.name });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't add the ${manifest.name} widget`, message: String(reason) });
     }
@@ -144,7 +144,7 @@
           {#if on_taskbar}<PushPinSimpleSlashIcon weight="bold" /> Unpin from taskbar{:else}<PushPinSimpleIcon weight="bold" /> Pin to taskbar{/if}
         </Button>
       {/if}
-      {#if manifest.widget && !mobile}
+      {#if manifest.widget}
         <Button onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>
       {/if}
       {#if !manifest.system}
@@ -222,7 +222,6 @@
         {:else}
           <span class="font-mono">{WIDGET_FALLBACK_SIZE.w}×{WIDGET_FALLBACK_SIZE.h}</span> cells, fixed size
         {/if}
-        {#if mobile}· desktop only{/if}
       </p>
     </section>
   {/if}

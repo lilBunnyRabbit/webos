@@ -83,7 +83,7 @@ Three layers of state turn the folder into a grid:
 | `create_folder` | `(name) => Promise<void>` | Creates a folder in `/home/Desktop` |
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
-| `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. The entry is in `items()` as soon as the promise resolves, before the reload the write triggers, so a caller checking for an existing widget right after (pinning twice from the shell) sees it. Same on mobile, where it's written but not shown |
+| `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. The entry is in `items()` as soon as the promise resolves, before the reload the write triggers, so a caller checking for an existing widget right after (pinning twice from the shell) sees it. Same on mobile, where it lands at the end of the home |
 | `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" (or "Broken widget") toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
@@ -137,7 +137,7 @@ Positions are keyed by entry name, so renaming an entry in File Explorer loses i
 
 **Seeding.** A new default reaches only new devices: existing desktops already have a layout file, so the seed never runs again (owner's call, 2026-10-14). An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` first takes the v0 React pins (`take_v0_pins()` in `layout.ts`: localStorage `desktop`, read and removed) and writes one shortcut per pin at its v0 grid cell. Without v0 pins it writes one shortcut per `DEFAULT_SHORTCUTS` (`getting-started`, `settings`, `file-explorer`, `terminal`) at `{ x: i, y: 0 }`. Shortcuts are named after the manifest (`Settings.desktop`, `File Explorer.desktop`); then it saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.
 
-**Default widgets** (`additions.ts`, owner 2026-10-14). Apps flagged `default_widget: true` in their manifest (today: Game Hub, at its `widget_size.default`) reach every desktop once, new or existing, unlike shortcuts. Deleting the app drops it from the list, so core names no user app. After the folder loads, `init()` starts, without awaiting it so boot doesn't wait, a pass that reads `/var/lib/desktop/additions.json` (`{ version: 1, applied: string[] }`), writes each pending widget with `write_widget` unless that app already has a widget on the desktop, then records every default id. A removed widget stays removed; a missing or invalid file counts as nothing applied. It takes the first free cells. Desktop only: `MobileDesktopService` doesn't show widgets.
+**Default widgets** (`additions.ts`, owner 2026-10-14). Apps flagged `default_widget: true` in their manifest (today: Game Hub, at its `widget_size.default`) reach every desktop once, new or existing, unlike shortcuts. Deleting the app drops it from the list, so core names no user app. After the folder loads, `init()` starts, without awaiting it so boot doesn't wait, a pass that reads `/var/lib/desktop/additions.json` (`{ version: 1, applied: string[] }`), writes each pending widget with `write_widget` unless that app already has a widget on the desktop, then records every default id. A removed widget stays removed; a missing or invalid file counts as nothing applied. It takes the first free cells. Desktop only: `MobileDesktopService` doesn't run the pass.
 
 **Spans** (ADR-034). `item_span(item)` is `size` for a widget and 1×1 for everything else. Every step below works on the whole span: a widget is placed only where all its cells are free (and, when fitting or moving, on the grid). The grid holds the widget in each cell it covers; `grid_items(grid)` lists each item once with its top-left cell, which is what positions store and what the shell renders.
 
@@ -175,21 +175,25 @@ Keyboard: with the widget's title strip focused, Shift+→/← grows or shrinks 
 
 ## Mobile home
 
-`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Widgets are filtered out of its entries for now (ADR-034): home pages flow without gaps and can't hold a spanning tile. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
+`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Widgets show (2026-10-19): they span cells inside the ordered flow. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `pages` | `(capacity) => DesktopItem[][]` | Home items (not docked) in the saved order, then entries the order doesn't know in folder order, chunked by `capacity`. Always at least one page; `capacity <= 0` gives one page with everything |
+| `home` | `() => DesktopItem[]` | Home items (not docked) in the saved order, then entries the order doesn't know in folder order |
+| `pages` | `(columns, rows) => HomeSlot[][]` | `home()` placed by `paginate_spans` (below): `{ item, x, y, size }` per item. Always at least one page; no size gives one empty page |
 | `dock` | `() => DesktopItem[]` | Docked items in dock order, at most `DOCK_SIZE` (4) |
 | `dock_full` | `readonly boolean` | `$derived` |
 | `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end), taking it out of the dock if it was there |
-| `set_docked` | `(name, docked, before?) => void` | Docks just before `before` (`null`/absent: the end); an already docked entry just moves. Ignored when full. `docked: false` moves it back to the end of home |
+| `set_docked` | `(name, docked, before?) => void` | Docks just before `before` (`null`/absent: the end); an already docked entry just moves. Ignored when full and for widgets. `docked: false` moves it back to the end of home |
+| `resize_widget` | `(name, size) => Promise<boolean>` | Clamps into the app's `widget_size` and writes `w`/`h` through `DesktopFolder.write_widget_size`, like the desktop. `false` when `name` isn't a widget of an app with a `widget_size` |
 | `rename_item` | `(name, new_name)` | Swaps the name in the order and dock and saves before renaming, so the icon keeps its place |
 | base members | | Forward to `DesktopFolder` |
 
 **Layout file** `/var/lib/desktop/home-layout.json`: `{ "version": 1, "order": ["Settings.desktop", …], "dock": ["File Explorer.desktop"] }`. zod-validated (dock max 4); anything invalid is an empty layout (folder order, empty dock), not an error. Every change rebuilds both lists from what's shown, so stale names drop out, assigns the state at once and writes in the background (`[MobileDesktopService] Failed to save the home layout`).
 
-**Arrange** (`arrange_home(entries, layout)`, pure, unit-tested): dock names that exist, capped at 4; then home = saved order minus docked, stale and duplicate names; then every other entry in folder order. No gaps and no cells: rotating or a bigger screen just reflows.
+**Arrange** (`arrange_home(entries, layout)`, pure, unit-tested): dock names that exist, capped at 4; then home = saved order minus docked, stale and duplicate names; then every other entry in folder order. Rotating or a bigger screen just reflows.
+
+**Pack** (`paginate_spans(items, columns, rows)`, pure, unit-tested). CSS grid's sparse auto-placement by hand: a widget spans `home_span` (its size cut to `columns × rows`), everything else one cell. A cursor walks row by row and only moves forward, so icons after a widget fill the cells beside it but never a gap before it. An item that fits nowhere after the cursor starts the next page. The widget's file keeps its own size; the cut is only how the phone shows it.
 
 **Seeding** runs for an empty folder with no `home-layout.json`. If the desktop's `layout.json` exists, the desktop was set up and emptied on purpose, so only an empty home layout is written. Otherwise it writes the `DEFAULT_SHORTCUTS` and saves them as the home order. A folder the desktop already filled isn't seeded: those items show in folder order with an empty dock.
 
@@ -205,7 +209,7 @@ Contributes no commands.
 
 ## Known gaps
 
-- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. They don't show on the phone.
+- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. On the phone they show and resize in edit mode ([shell/mobile.md](../shell/mobile.md#home)).
 - The context menu has no Resize item; the keyboard path is Shift+arrows on the title strip.
 - Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.

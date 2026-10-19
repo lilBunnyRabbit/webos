@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arrange_home, DOCK_SIZE, paginate, parse_home_layout, serialize_home_layout } from "./home-layout";
+import { arrange_home, DOCK_SIZE, paginate_spans, parse_home_layout, serialize_home_layout } from "./home-layout";
 import type { DesktopItem } from "./type";
 
 const dir = (name: string): DesktopItem => ({ kind: "directory", name });
@@ -34,17 +34,33 @@ describe("arrange_home", () => {
   });
 });
 
-describe("paginate", () => {
-  it("chunks by capacity", () => {
-    expect(paginate([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+describe("paginate_spans", () => {
+  const widget = (name: string, w: number, h: number): DesktopItem => ({ kind: "widget", name, label: name, app_id: "x", size: { w, h } });
+  const cells = (pages: ReturnType<typeof paginate_spans>) =>
+    pages.map((page) => page.map(({ item, x, y, size }) => `${item.name}@${x},${y}:${size.w}x${size.h}`));
+
+  it("flows icons row by row and pages by capacity", () => {
+    expect(cells(paginate_spans(["a", "b", "c"].map(dir), 2, 1))).toEqual([["a@0,0:1x1", "b@1,0:1x1"], ["c@0,0:1x1"]]);
+  });
+
+  it("wraps icons around a widget", () => {
+    const pages = paginate_spans([widget("w", 3, 2), dir("a"), dir("b"), dir("c")], 4, 3);
+    expect(cells(pages)).toEqual([["w@0,0:3x2", "a@3,0:1x1", "b@3,1:1x1", "c@0,2:1x1"]]);
+  });
+
+  it("never backfills a gap before the cursor", () => {
+    const pages = paginate_spans([dir("a"), dir("b"), widget("w", 3, 1), dir("c")], 4, 2);
+    expect(cells(pages)).toEqual([["a@0,0:1x1", "b@1,0:1x1", "w@0,1:3x1", "c@3,1:1x1"]]);
+  });
+
+  it("cuts a widget to the home and starts a page when it doesn't fit", () => {
+    const pages = paginate_spans([dir("a"), widget("w", 6, 5)], 4, 3);
+    expect(cells(pages)).toEqual([["a@0,0:1x1"], ["w@0,0:4x3"]]);
   });
 
   it("always has one page", () => {
-    expect(paginate([], 4)).toEqual([[]]);
-  });
-
-  it("keeps everything on one page without a capacity", () => {
-    expect(paginate([1, 2], 0)).toEqual([[1, 2]]);
+    expect(paginate_spans([], 4, 4)).toEqual([[]]);
+    expect(paginate_spans([dir("a")], 0, 0)).toEqual([[]]);
   });
 });
 
