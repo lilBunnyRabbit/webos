@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type MenuItem } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
@@ -19,6 +19,7 @@
     PencilSimple as PencilSimpleIcon,
     QrCode as QrCodeIcon,
     ShoppingCart as ShoppingCartIcon,
+    Sticker as StickerIcon,
     Storefront as StorefrontIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
@@ -41,6 +42,7 @@
   } from "./data";
   import EntryBar from "./entry-bar.svelte";
   import ItemRow from "./item-row.svelte";
+  import { add_entry } from "./items";
   import { live, merge_items, prune } from "./merge";
   import PairPanel from "./pair-panel.svelte";
   import { entry_text, parse_entry } from "./parse";
@@ -53,12 +55,24 @@
   const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review" } as const;
   type View = (typeof View)[keyof typeof View];
 
-  const { window: win, window_id, storage } = get_app_context();
+  interface Props {
+    list?: string;
+    photo?: boolean;
+  }
+
+  let { list: list_prop, photo: photo_prop }: Props = $props();
+
+  const { app_id, window: win, window_id, storage } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const desktop = $derived(kernel.service<DesktopService>("desktop"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const on_phone = kernel.platform === Platform.MOBILE;
 
   const file = storage.file(LISTS_FILE, empty_file(), ListsFileSchema);
   const current = storage.window("list", DEFAULT_LIST_ID, z.string());
   const store = storage.window("store", false, z.boolean());
+  // Props come back with a restored window; without this a reload would switch lists and ask for a photo again.
+  const launched = storage.window("launched", false, z.boolean());
 
   let view = $state<View>(View.LIST);
   let root = $state<HTMLElement | null>(null);
@@ -96,6 +110,15 @@
         const kept = prune(each.items);
         if (kept.length !== each.items.length) each.items = kept;
       }
+    });
+  });
+
+  $effect(() => {
+    if (!file.ready || launched.value) return;
+    untrack(() => {
+      launched.value = true;
+      if (list_prop && file.value.lists.some((candidate) => candidate.id === list_prop)) current.value = list_prop;
+      if (photo_prop) void photo();
     });
   });
 
@@ -153,20 +176,7 @@
   }
 
   function add(text: string) {
-    const entry = parse_entry(text);
-    if (!list || !entry.text) return;
-    const key = history_key(entry.text);
-    const existing = list.items.find((item) => item.deleted_at === undefined && history_key(item.text) === key);
-    if (existing) {
-      existing.checked = false;
-      if (entry.qty !== undefined) {
-        existing.qty = entry.qty;
-        existing.unit = entry.unit;
-      }
-      existing.updated_at = stamp(existing);
-      return;
-    }
-    list.items.push({ id: new_id(), text: entry.text, qty: entry.qty, unit: entry.unit, checked: false, updated_at: stamp() });
+    if (list) add_entry(list, text);
   }
 
   function toggle(id: string) {
@@ -273,6 +283,7 @@
         icon: PaletteIcon,
         items: LIST_COLORS.map((color) => ({ id: `color:${color}`, label: COLOR_NAME[color], icon: color === list.color ? CheckIcon : undefined })),
       },
+      { id: "widget", label: on_phone ? "Add to home screen" : "Add to desktop", icon: StickerIcon },
     ];
     if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
     if (shared) entries.push({ id: "unshare", label: "Stop sharing", icon: LinkBreakIcon });
@@ -283,6 +294,7 @@
     else if (choice === "photo") await photo();
     else if (choice === "new") await new_list();
     else if (choice === "rename") await rename_list();
+    else if (choice === "widget") await add_widget(list);
     else if (choice === "clear") clear_done();
     else if (choice === "unshare") pair.stop();
     else if (choice === "delete") await delete_list();
@@ -295,6 +307,17 @@
     const created: List = { id: new_id(), name: name.trim(), color: next_color(lists), items: [] };
     file.value.lists.push(created);
     current.value = created.id;
+  }
+
+  async function add_widget(target: List) {
+    const place = on_phone ? "home screen" : "desktop";
+    try {
+      const name = await desktop.pin_widget(app_id, { label: target.name, props: { list: target.id } });
+      if (!name) throw new Error(`The ${place} is full`);
+      notifications.notify(app_id, { title: `List added to the ${place}`, message: `${target.name}: add items or read a photo right there.` });
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't change the ${place}`, message: error_message(reason) });
+    }
   }
 
   async function rename_list() {

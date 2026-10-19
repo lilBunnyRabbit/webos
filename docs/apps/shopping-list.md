@@ -105,7 +105,7 @@ Merge is last-writer-wins per item (`merge.ts:8`, `merge.ts:19`):
 
 - Every change stamps `updated_at = max(now, previous + 1)`, so an item's stamp never goes back even when this phone's clock is behind (`data.ts:75`).
 - Equal stamps are broken by comparing the items' serialised form, so both phones pick the same one.
-- A deletion is a tombstone (`deleted_at`) and wins or loses like any edit. Tombstones older than 30 days are pruned when the file loads (`merge.ts:29`, `shopping-list.app.svelte:90`); a phone apart longer than that can bring a deleted item back.
+- A deletion is a tombstone (`deleted_at`) and wins or loses like any edit. Tombstones older than 30 days are pruned when the file loads (`merge.ts:29`, `shopping-list.app.svelte:104`); a phone apart longer than that can bring a deleted item back.
 - Ids start with the time in base 36 (`data.ts:69`), so sorting by id gives the order of adding on both phones.
 - `known` holds what the other side has per item; `push` sends only the difference, and a received item is recorded first so it isn't echoed back (`sync.svelte.ts:90`, `sync.svelte.ts:164`).
 
@@ -128,6 +128,32 @@ Last-writer-wins per item, not a CRDT: the brainstorm settled on "each item reso
 
 Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an optional dot. Decimal comma or point. The rest needs a letter and the amount must be over 0, otherwise the whole text is the item. Amounts display with a decimal comma and parse back to the same entry (`parse.ts:50`).
 
+### Adding an item
+
+`add_entry` (`items.ts:5`) is the one add path, used by the entry bar, the photo review and the widget. It parses the amount (below); an item already open under the same name (case aside, deleted ones skipped) is unticked and takes the new amount instead of being added twice; anything else is pushed with a fresh id and stamp. History isn't touched: only "Clear done" records a trip.
+
+### Props and launching
+
+`props: { list?: string, photo?: boolean }` (`index.ts`). Every launch opens a new window, as for any app.
+
+- `list`: the window opens on that list. An unknown id is ignored and the window keeps its own (first list by default).
+- `photo`: the window starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
+- Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:117`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
+
+### Widget
+
+`widget.svelte`, `widget_size` min 3×1, max 6×2, default 4×1 (`index.ts`). Prop `list`: the list id; none or an unknown id shows the first list. Add only, no item list (owner):
+
+| Part | Does |
+|------|------|
+| Header | Colour dot, list name, "N left" (`left_count`, `items.ts:23`: not ticked, not deleted). Tap launches the app with `{ list }` |
+| Camera | Launches the app with `{ list, photo: true }` |
+| Field + Add | `add_entry` on the shared file, the same path as the entry bar; Enter or the + button. No suggestion chips |
+
+At h=1 everything uses the kit's `sm` sizes; at h=2 `md`, with more padding. Measured on the desktop at 3×1: 263×60 px body, the field 183 px wide, nothing overflows.
+
+Pinned from the list actions menu: "Add to desktop", or "Add to home screen" on mobile, with the list's name as label (`shopping-list.app.svelte:312`). Each tap pins another widget; there's no remove toggle. The mobile home doesn't show widgets yet, so on a phone the file is written but not shown until it does.
+
 ### Suggestions and buy again
 
 History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:47`). "Clear done" records the trip: each cleared item counts once, all with the same `last` (`suggest.ts:30`). Adding an item doesn't count.
@@ -139,12 +165,14 @@ History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:4
 
 | What | Where | Format |
 |------|-------|--------|
-| Lists, items, history | `/var/lib/apps/shopping-list/lists.json`, `storage.file()` (`shopping-list.app.svelte:59`) | `{ version: 1, lists: [{ id, name, color, items }], history: { [text]: { count, last } } }`; item `{ id, text, qty?, unit?, checked, updated_at, deleted_at? }` (`data.ts:29`) |
+| Lists, items, history | `/var/lib/apps/shopping-list/lists.json`, `storage.file()` (`shopping-list.app.svelte:71`); the widget holds the same file through `json_file()`, so both see each other's changes at once | `{ version: 1, lists: [{ id, name, color, items }], history: { [text]: { count, last } } }`; item `{ id, text, qty?, unit?, checked, updated_at, deleted_at? }` (`data.ts:29`) |
 | Open list | Window storage `list` | List id, default `groceries` |
-| In-store mode | Window storage `store` | Boolean; big rows, Screen Wake Lock (`shopping-list.app.svelte:134`) |
+| In-store mode | Window storage `store` | Boolean; big rows, Screen Wake Lock (`shopping-list.app.svelte:149`) |
+| Launch props handled | Window storage `launched` | Boolean; set once the `list` and `photo` props were acted on, so a restored window doesn't switch lists or ask for a photo again |
+| Widgets | `/home/Desktop/{list name}.widget` | `{ app: "shopping-list", props: { list }, w, h }`, written by `pin_widget` (desktop service) |
 | Models and runtime | Bundled assets, `webos-wasm` cache | Not in OPFS, not in backups |
 
-No props. No shell commands (owner: nothing for now).
+No shell commands (owner: nothing for now).
 
 ## Dependencies & licences
 
@@ -165,6 +193,8 @@ No props. No shell commands (owner: nothing for now).
 - Sync has no TURN relay: two phones on mobile data behind carrier NAT don't connect (same limit as P2P Transfer). One list per pairing, one pairing per window.
 - LWW per item: two people editing the same item at once keep only the later edit.
 - Renames and colour changes don't sync.
+- A widget's label is the list's name when it was pinned; renaming the list later doesn't rename the widget file (its header shows the new name).
+- At h=1 on a touch screen the kit's taller `pointer-coarse` sizes need about 80 px; a 1-row desktop cell gives 60, so the field can clip on a touch laptop. A phone cell is taller.
 - `ocr.browser.test.ts:34` is still named after tesseract ("core and language data").
 
 ## Decisions
