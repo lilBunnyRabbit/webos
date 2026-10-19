@@ -170,7 +170,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
 | `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |
 | `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite) |
-| `$kit/utils/qr`, `$kit/utils/qr-scan.svelte` | | QR encode and detect, `CameraScan` (QR Reader, QR Studio, P2P Transfer) |
+| `$kit/utils/qr`, `$kit/utils/qr-scan.svelte` | | QR encode, barcode and QR detect (`create_barcode_detector`, `detect_barcode` with the format), `CameraScan` (QR Reader, QR Studio, P2P Transfer, Cards) |
 | `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
 | `$kit/utils/codecs` (and its kernel-free `codecs/formats`) | | Image codecs in a worker (Format Lab, Media Preview): `encode(format, image, options, { signal })` → `{ blob, ms }` for JPEG, WebP, PNG (OffscreenCanvas) and AVIF, JPEG XL (jSquash wasm); `decode(blob)` → `ImageData` (the browser's decoder, jSquash for JPEG XL and for AVIF where the browser can't); `compare(a, b)` → SSIM with its window map; `supported(format)`. Up to 4 workers, an idle one ends after 30 s, and aborting a call ends its worker, so a wasm encode stops at once. The wasm loads on first use only. See [codecs](#image-codecs-kitutilscodecs) |
 | `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |

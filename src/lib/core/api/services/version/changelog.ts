@@ -5,10 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.2.1",
+    version: "3.3.0",
     date: "2026-10-19",
-    title: "Tidy labels",
+    title: "Your cards, always with you",
+    introduces: ["cards"],
     changes: [
+      { kind: NEW, apps: ["cards"], text: "Cards: keep your loyalty cards in one place, scan them once with the camera or a photo, and show the barcode full screen at the checkout." },
+      { kind: NEW, apps: ["cards"], text: "Cards reads and draws every common barcode, from EAN and Code 128 to QR, PDF417, Aztec and Data Matrix, and checks the number as you type it." },
+      { kind: NEW, apps: ["cards"], text: "Move your cards to another device as a file, or share the list or a single card as a QR code." },
       { kind: FIXED, apps: ["format-lab"], text: "The \"Settings changed\" label in Format Lab stays on one line instead of spilling out of its box." },
       { kind: IMPROVED, apps: ["format-lab", "media-preview"], text: "AVIF and JPEG XL keep working offline once you've used them." },
       { kind: IMPROVED, apps: ["image-tools"], text: "In Image Tools › Compare, dragging anywhere on the picture moves the divider, like in Format Lab." },

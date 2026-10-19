@@ -3,6 +3,8 @@ import { encode } from "uqr";
 /** `BarcodeDetector` isn't in TypeScript's DOM lib yet; this is the slice the apps use. */
 interface DetectedBarcode {
   rawValue: string;
+  /** The `BarcodeDetector` format name: `qr_code`, `ean_13`, `code_128`… */
+  format: string;
 }
 
 export interface BarcodeDetector {
@@ -12,6 +14,12 @@ export interface BarcodeDetector {
 interface BarcodeDetectorConstructor {
   new (options: { formats: string[] }): BarcodeDetector;
   getSupportedFormats(): Promise<string[]>;
+}
+
+/** A code read from an image or a frame, with the format it was written in. */
+export interface DetectedCode {
+  value: string;
+  format: string;
 }
 
 /** What gets scanned: a decoded image or a live camera preview. */
@@ -33,13 +41,16 @@ export function source_size(source: QrSource): { width: number; height: number }
 }
 
 /**
- * The native `BarcodeDetector` where it reads QR codes, otherwise jsQR behind the same interface.
- * jsQR is imported here, not at the top, so it only ships to browsers that need it (iOS Safari, Firefox).
+ * The native `BarcodeDetector` for the `formats` it reads (its names: `qr_code`, `ean_13`, …), otherwise jsQR behind
+ * the same interface, which reads QR codes only. A format the platform lacks is left out rather than dropping to jsQR:
+ * macOS reads UPC-A as EAN-13 and lists no `upc_a`. jsQR is imported here, not at the top, so it only ships to
+ * browsers that need it (iOS Safari, Firefox).
  */
-export async function create_qr_detector(): Promise<BarcodeDetector> {
+export async function create_barcode_detector(formats: string[]): Promise<BarcodeDetector> {
   const Native = (globalThis as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-  const formats = await Native?.getSupportedFormats().catch((): string[] => []);
-  if (Native && formats?.includes("qr_code")) return new Native({ formats: ["qr_code"] });
+  const supported = (await Native?.getSupportedFormats().catch((): string[] => [])) ?? [];
+  const usable = formats.filter((format) => supported.includes(format));
+  if (Native && usable.length > 0) return new Native({ formats: usable });
 
   const { default: jsqr } = await import("jsqr");
   const canvas = document.createElement("canvas");
@@ -55,14 +66,24 @@ export async function create_qr_detector(): Promise<BarcodeDetector> {
       canvas.height = height;
       context.drawImage(source, 0, 0, width, height);
       const code = jsqr(context.getImageData(0, 0, width, height).data, width, height);
-      return code ? [{ rawValue: code.data }] : [];
+      return code ? [{ rawValue: code.data, format: "qr_code" }] : [];
     },
   };
 }
 
-export async function detect_qr(detector: BarcodeDetector, source: QrSource): Promise<string | null> {
+/** `create_barcode_detector(["qr_code"])`. */
+export function create_qr_detector(): Promise<BarcodeDetector> {
+  return create_barcode_detector(["qr_code"]);
+}
+
+/** The first code `detector` finds in `source`, with its format. */
+export async function detect_barcode(detector: BarcodeDetector, source: QrSource): Promise<DetectedCode | null> {
   const [code] = await detector.detect(source);
-  return code?.rawValue ?? null;
+  return code ? { value: code.rawValue, format: code.format } : null;
+}
+
+export async function detect_qr(detector: BarcodeDetector, source: QrSource): Promise<string | null> {
+  return (await detect_barcode(detector, source))?.value ?? null;
 }
 
 export interface QrPath {
