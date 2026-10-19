@@ -13,7 +13,7 @@ interface IService {
   name: string;           // class name, e.g. "WindowsService"
   description: string;
   init?(): Promise<void> | void;
-  destroy?(): void;       // sync on purpose: pagehide never awaits
+  destroy?(): void | Promise<void>;  // the kernel never awaits it (pagehide can't); only the test kernel does
   to_string(): string;    // debug text; the Kernel app's fallback when there's no inspector
   inspector?: () => Promise<{ default: Component<InspectorProps<never>> }>;  // ADR-020
   shell?(): ShellContribution;  // commands, completers, value types (ADR-033)
@@ -119,7 +119,7 @@ Errors thrown during resolution, before anything is constructed:
 | Construct | `new Class(kernel)`. By convention ([CONVENTIONS → Services](../CONVENTIONS.md#services)) the constructor only sets fields. Most services capture dependencies in the constructor as `$derived(kernel.service(...))`; only FilesService and the windows services don't, having no dependencies. It's safe because the dependencies are already in `services`. |
 | `init()` | Awaited serially. A service may use its dependencies here, because they're already initialized and registered. Side effects (`$effect.root`, timers, listeners, storage reads) belong here. |
 | Registered | Only after `init()` resolves does the service enter `services`. No consumer ever sees a half-initialized service. |
-| `destroy()` | Synchronous. It must undo everything `init()` started. |
+| `destroy()` | Its cleanup is synchronous and must undo everything `init()` started. It may return a promise for work already on its way (a save), which the kernel never awaits; only the test kernel's `shutdown()` does. |
 
 Which services implement which hooks today:
 
@@ -133,13 +133,17 @@ Which services implement which hooks today:
 | desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher; the desktop variant then adds default widgets not yet recorded in `/var/lib/desktop/additions.json` ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
 | session | read `/var/lib/session/session.json`; empty → start saving; else start the restore dialog **without awaiting it** (it renders after mount) and save only after the answer ([session](services/session.md#lifecycle)) | dispose the saving effect |
 | router | listen to `hashchange`; an effect opens the hash's link once the session status leaves `pending` ([router](services/router.md#lifecycle)) | remove the listener, dispose the effect |
-| shell | read the shared history from `/var/lib/shell/history` ([shell](services/shell.md#lifecycle)) | none |
+| shell | read the shared history from `/var/lib/shell/history` ([shell](services/shell.md#lifecycle)) | return the pending history save |
 | ui | `pointerup` / `keydown` (capture) listeners that arm the back guard, and a `popstate` listener ([ui](services/ui.md#back)) | remove them |
 | windows (both, in `BaseWindowsService`) | `beforeunload` listener (warns while a window is dirty, ADR-029), `visibilitychange` listener (page hidden state) | remove them |
 | shortcuts | register the OS defaults, global `keydown` listener ([shortcuts](services/shortcuts.md)) | remove the listener, dispose the defaults |
 | apps, clipboard, tasks, backup | none | none |
 | ai | asks the browser which features it has, **without awaiting** (every feature reads `no` until it answers) ([ai](services/ai.md#lifecycle)); the mobile variant has no `init` | destroy kept model sessions |
 | extract | `pointerdown` / `keydown` (capture) listeners on `window` for `input_inside`, an `$effect.root` that closes a closed window's mini window; while one is out, a `pagehide` listener and two `MutationObserver`s ([extract](services/extract.md)) | dispose it, close the mini window |
+
+### Test kernel
+
+`kernel/test-kernel.ts` (tests only, ADR-027): `boot_test_kernel(services)` constructs and initialises the listed services into a real `Kernel`, in the order given. Its `shutdown()` is async: it awaits each service's `destroy()` in reverse order, then clears `services`. Callers await it (`afterEach(async () => await shutdown?.())`), so a save still on its way lands before the next test's `clear_opfs()`. `stub_service(name, members)` stands in for a service only UI can resolve.
 
 ### Shell hook
 

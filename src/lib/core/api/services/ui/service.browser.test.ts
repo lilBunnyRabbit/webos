@@ -12,7 +12,7 @@ const app = (id: string) =>
 
 const Dummy = (() => {}) as never;
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function boot(platform: "desktop" | "mobile" = "desktop", hash = ""): Promise<Kernel> {
   // Kernel reads `?platform=` and the solo hash once, at construction.
@@ -30,8 +30,8 @@ const ui = (kernel: Kernel) => kernel.service<UiService>("ui");
 const dialogs = (kernel: Kernel) => kernel.service<DialogsService>("dialogs");
 const windows = (kernel: Kernel) => kernel.service<WindowsService>("windows");
 
-afterEach(() => {
-  shutdown?.();
+afterEach(async () => {
+  await shutdown?.();
   history.replaceState(null, "", location.pathname);
 });
 

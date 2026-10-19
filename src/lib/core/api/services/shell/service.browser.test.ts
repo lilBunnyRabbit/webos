@@ -7,7 +7,7 @@ import { NotificationsService } from "../notifications/service.svelte";
 import { HISTORY_PATH, ShellService } from "./service.svelte";
 import { EntryStatus, type ShellSession, type Value } from "./type";
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 let confirm = true;
 
 async function boot(): Promise<Kernel> {
@@ -31,10 +31,9 @@ const names = (values: Value[]) => values.map((value) => (value as { name: strin
 
 beforeEach(async () => {
   confirm = true;
-  // A save from the previous test may still be writing.
-  await vi.waitFor(() => opfs.clear_opfs());
+  await opfs.clear_opfs();
 });
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("ShellService", () => {
   test("collects commands from the services that contribute them", async () => {

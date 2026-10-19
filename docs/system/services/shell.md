@@ -236,7 +236,7 @@ Files:
 
 - `init()` reads `/var/lib/shell/history`, one line per command.
 - History is saved through `LatestWriter` on every `remember`.
-- No `destroy`.
+- `destroy()` returns the writer's `idle()`: the pending history save. The kernel doesn't await it; the test kernel's `shutdown()` does, so the next test's `clear_opfs()` doesn't hit the open writable.
 
 ## Persistence
 

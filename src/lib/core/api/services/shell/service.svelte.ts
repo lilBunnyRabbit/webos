@@ -108,6 +108,10 @@ export class ShellService implements IShellService {
     return this.own;
   }
 
+  destroy(): Promise<void> {
+    return this.writer.idle();
+  }
+
   public load(): Promise<void> {
     this.loading ??= this.load_lazy();
     return this.loading;

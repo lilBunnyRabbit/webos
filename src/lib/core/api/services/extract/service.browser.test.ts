@@ -13,7 +13,7 @@ const app = (id: string) =>
 
 const Dummy = (() => {}) as never;
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function boot(): Promise<Kernel> {
   const booted = await boot_test_kernel({
@@ -29,7 +29,7 @@ async function boot(): Promise<Kernel> {
 const extract = (kernel: Kernel) => kernel.service<ExtractService>("extract");
 const windows = (kernel: Kernel) => kernel.service<WindowsService>("windows");
 
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("ExtractService", () => {
   test("refuses a window with unsaved changes or that doesn't exist", async () => {

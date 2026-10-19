@@ -5,10 +5,10 @@ import { FilesService } from "../files/service.svelte";
 import { WALLPAPER_DIRECTORY } from "./persistence";
 import { SettingsService } from "./service.svelte";
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 beforeEach(() => vi.waitFor(() => opfs.clear_opfs()));
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 async function boot() {
   const booted = await boot_test_kernel({ files: FilesService, settings: SettingsService });

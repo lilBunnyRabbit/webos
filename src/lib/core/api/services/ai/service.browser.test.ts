@@ -8,7 +8,7 @@ import { MobileAiService } from "./mobile";
 import { AiService } from "./service.svelte";
 import { AiAvailability, AiFeature, type AiService as IAiService } from "./type";
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function boot(ai: typeof AiService | typeof MobileAiService): Promise<Kernel> {
   const booted = await boot_test_kernel({ files: FilesService, notifications: NotificationsService, tasks: TasksService, ai });
@@ -18,7 +18,7 @@ async function boot(ai: typeof AiService | typeof MobileAiService): Promise<Kern
 
 const command = (ai: IAiService, id: string) => ai.shell!().commands!.find((entry) => entry.id === id)!;
 
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("AiService", () => {
   test("features follow the browser's answers, and the commands show where a feature isn't no", async () => {

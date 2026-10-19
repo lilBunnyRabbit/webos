@@ -12,7 +12,7 @@ import { ShortcutCategory } from "./type";
 const app = (id: string) =>
   ({ id, manifest: { id, name: id }, component: new Promise(() => {}), props: {}, state: {} }) as unknown as AppInstance;
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 let system_dialogs: DialogEntry[] = [];
 
 // Not stub_service: its spread would read the getter once, and the tests change the dialogs as they go.
@@ -41,7 +41,7 @@ async function boot(): Promise<Kernel> {
   return booted.kernel;
 }
 
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 // Alt+Shift and Mod+K/Ctrl+K: the test machine may be a Mac, so press both Ctrl and Cmd for "mod".
 function press(code: string, modifiers: KeyboardEventInit = {}, target: EventTarget = document.body) {
