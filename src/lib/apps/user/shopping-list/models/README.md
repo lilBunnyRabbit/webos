@@ -9,3 +9,5 @@ PaddleOCR's PP-OCRv5 models, as published by PaddlePaddle on Hugging Face. Apach
 | `latin-dict.json` | `character_dict` of the same repo's `inference.yml` | The recogniser's 836 characters, in order |
 
 Unchanged from the source. Vite ships them as hashed assets; the service worker caches them in `webos-wasm` on first use.
+
+How they work, why these and the measured numbers: [docs/apps/shopping-list.md › Reading a photo](../../../../../../docs/apps/shopping-list.md#reading-a-photo).
