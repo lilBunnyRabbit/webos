@@ -42,6 +42,8 @@ export const NO_PATH =
   "No direct path between the devices. Mobile data often blocks one; put both on the same Wi-Fi, or connect one to the other's hotspot";
 
 const LOG_LIMIT = 200;
+/** The data channel's label: another app pairing the same way (Shopping List) is turned away by it. */
+const CHANNEL_LABEL = "files";
 const SAMPLE_MS = 500;
 /** 20 s of throughput at one sample per tick, for the graph. */
 const SAMPLE_COUNT = 40;
@@ -241,7 +243,7 @@ export class SendSession extends Session {
     this.phase = Phase.CONNECTING;
     this.write(`Gathering ICE candidates for ${this.files.length} file${this.files.length === 1 ? "" : "s"}`);
     try {
-      const { code, channel } = await create_offer(pc);
+      const { code, channel } = await create_offer(pc, CHANNEL_LABEL);
       if (pc !== this.peer) return;
       this.code = code;
       this.write(`Offer ready: ${describe_candidates(code)}, ${code.length} B`);
@@ -330,6 +332,7 @@ export class ReceiveSession extends Session {
     try {
       const channel = await channel_open(pc);
       if (pc !== this.peer) return;
+      if (channel.label !== CHANNEL_LABEL) throw new Error("That code is from another app. Scan the code P2P Transfer shows");
       this.write("Data channel open", LogTone.OK);
       this.phase = Phase.TRANSFERRING;
       this.start_sampling(pc);

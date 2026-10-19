@@ -23,5 +23,5 @@ P2P Transfer (ADR-032) pairs two devices over WebRTC with no server: each side s
 ## Consequences
 
 - P2P Transfer's behaviour is unchanged apart from the three error sentences above.
-- Codes are interchangeable between the apps: a P2P Transfer offer scanned in Shopping List connects, and the app closes it because the channel label doesn't match.
+- Codes are interchangeable between the apps: a P2P Transfer offer scanned in Shopping List connects, and the app closes it because the channel label doesn't match. The reverse holds too: P2P Transfer turns away a Shopping List channel (added 2026-10-19).
 - The UI for showing and scanning codes (viewfinder, QR display, paste field) stays per app for now; a second identical copy would be the signal to move it into the kit too.

@@ -31,7 +31,7 @@ async function with_orientation(jpeg: Blob, orientation: number): Promise<Blob> 
   return new Blob([bytes.slice(0, 2), new Uint8Array(segment), bytes.slice(2)], { type: "image/jpeg" });
 }
 
-test("reads a printed list with the bundled core and language data, no network beyond this site", async () => {
+test("reads a printed list with the bundled models, no network beyond this site", async () => {
   const messages: string[] = [];
   const lines = await read_list(await picture(["- 2x mleko", "- kruh", "- 500 g moka"]), null, signal(), { progress: () => {}, message: (line) => messages.push(line) }, []);
   expect(lines.map((line) => line.toLowerCase())).toEqual(["2x mleko", "kruh", "500 g moka"]);

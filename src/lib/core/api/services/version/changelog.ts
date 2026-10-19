@@ -5,6 +5,12 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.3.3",
+    date: "2026-10-19",
+    title: "Right code, right app",
+    changes: [{ kind: FIXED, apps: ["p2p-transfer"], text: "Scanning a Shopping List code in P2P Transfer now says it's from another app instead of failing with an unclear error." }],
+  },
+  {
     version: "3.3.2",
     date: "2026-10-19",
     title: "One less pop-up",

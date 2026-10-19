@@ -48,7 +48,7 @@ Why manual signalling: the rejected options were a public relay for room codes (
 
 ### Transfer protocol
 
-One ordered, reliable data channel labelled `files`. Control messages are JSON strings validated with zod (`protocol.ts:25`); file bytes are binary messages between `start` and `end`.
+One ordered, reliable data channel labelled `files`. A channel with another label (a Shopping List code) is turned away with "That code is from another app" (`session.svelte.ts:335`). Control messages are JSON strings validated with zod (`protocol.ts:25`); file bytes are binary messages between `start` and `end`.
 
 ```
 sender   → manifest { protocol: 2, files: [{ name, size, type }] }
@@ -109,7 +109,6 @@ No props, no settings, no shell commands. The pairing code (`$kit/utils/p2p`) is
 - No receive-side flow control: the receiver writes as fast as messages arrive.
 - The rebuilt SDP is hand-shaped and tested against Chromium peers only (`transfer.browser.test.ts`); Safari and Firefox are untested. A browser that rejects it needs its fields added back.
 - Resume doesn't survive a reload.
-- P2P Transfer doesn't check the channel label. A Shopping List offer scanned here connects, then fails on the first message with a parse error rather than a clear "wrong app".
 - Throughput is unmeasured; the UI shows it live but no figures are recorded.
 
 ## Decisions
