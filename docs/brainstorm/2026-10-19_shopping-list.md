@@ -94,3 +94,13 @@ Action items:
 
 - **Model files stay in git** (about 12.9 MB under `models/`), so the site stays self-contained, with no runtime CDN.
 - **The finished toast is removed.** `TaskRunOptions.done` may return `null` to dismiss the toast; Shopping List uses that, since the review screen shows the result.
+
+## Per-app docs (2026-10-19)
+
+The OCR work left facts (thresholds, model sizes, the measurements) only in this log and code comments. The system reference excludes user apps, so there was no place for them.
+
+Decisions (owner):
+- **Location:** `docs/apps/{id}.md`, with an index and the page-shape guide in `docs/apps/README.md`. Linked from CLAUDE.md's "Read first" and from `docs/system/README.md`.
+- **Scope:** only apps with non-obvious internals: an algorithm, a model, a protocol or a format worth explaining. First four: Shopping List, Cards, P2P Transfer, Format Lab.
+- **Shape:** What it does · How it works (pipeline and algorithms, why each over the alternatives, measured numbers) · Data (paths, formats, props) · Dependencies & licences · Limits · Decisions. Code cited as `file:line`.
+- **Kept current by rule:** CLAUDE.md lists the documented ids; a change to a listed app updates its page in the same commit, and an app that gains a model, algorithm, protocol, format or non-trivial dependency gets a page. Implementing sub-agents get the rule in their prompt.

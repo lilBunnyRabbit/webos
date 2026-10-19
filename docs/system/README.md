@@ -2,7 +2,7 @@
 
 How WebOS works **today**, in depth. ADRs say why a decision was made, brainstorm logs record how it was reached, and the roadmap tracks what's left. This reference describes what the code does right now. How things should *look* (tokens to use, the UI kit, app patterns, shell visuals) is in [docs/design](../design/README.md); keep the two in sync.
 
-It covers all OS infrastructure: kernel, services, shell UI, the app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are left out.
+It covers all OS infrastructure: kernel, services, shell UI, the app model, persistence, theming and system apps. Non-OS user apps (`src/lib/apps/user/`) are left out; the ones with non-obvious internals (models, algorithms, protocols, formats) have their own pages in [docs/apps](../apps/README.md).
 
 ## Keeping it current
 
