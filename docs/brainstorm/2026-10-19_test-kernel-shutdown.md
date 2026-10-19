@@ -14,4 +14,4 @@
 
 ## Action items
 
-- [ ] Implement, update kernel docs (`IService`), remove the retry.
+- [x] Implement, update kernel docs (`IService`), remove the retry.

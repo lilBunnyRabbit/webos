@@ -101,8 +101,6 @@ describe("shell", () => {
       shell: ShellService,
     });
     const shell = booted.kernel.service<ShellService>("shell");
-    // A history save is fire-and-forget and can outlive the test; the next clear_opfs then hits its open writable.
-    vi.spyOn(shell, "remember").mockImplementation(() => {});
     const session = shell.session();
     const folder = await disk_folder("Photos");
     await booted.kernel.service<FilesService>("files").mount(folder);
@@ -120,7 +118,7 @@ describe("shell", () => {
     expect(await opfs.exists(folder, "a.txt")).toBe(true);
     expect((await run("rm -f /mnt/Photos/a.txt")).status).toBe(EntryStatus.DONE);
     expect(await opfs.exists(folder, "a.txt")).toBe(false);
-    shutdown();
+    await shutdown();
   });
 
   test("mounts lists them, umount forgets one and leaves it", async () => {
@@ -131,14 +129,14 @@ describe("shell", () => {
     expect(session.cwd).toBe("/home");
     expect((await run("mounts")).values).toEqual([]);
     expect((await run("umount /mnt/Photos")).error).toMatch(/not available/);
-    shutdown();
+    await shutdown();
   });
 
   test("nothing is created in /mnt itself", async () => {
     const { run, shutdown } = await shell_session();
     expect((await run("mkdir /mnt/New")).error).toMatch(/mount/);
     expect((await run("mkdir /mnt/Photos/New")).status).toBe(EntryStatus.DONE);
-    shutdown();
+    await shutdown();
   });
 });
 

@@ -8,6 +8,10 @@
 > - The helper imports `Kernel` through the `$lib/core/api` barrel. Importing `kernel.svelte` directly starts the service graph mid-cycle (`Cannot access 'Kernel' before initialization`).
 > - The browser project pre-bundles zod, phosphor-svelte, uuid, tailwind-merge and tailwind-variants (`optimizeDeps.include`); found mid-run, Vite reloads the test page.
 
+> **Revision 2026-10-19: async test shutdown** (owner, [brainstorm](../brainstorm/2026-10-19_test-kernel-shutdown.md))
+> - `IService.destroy?()` may return a promise. `boot_test_kernel().shutdown()` is async and awaits each service's `destroy()`; ShellService's returns its pending history save. The production kernel still doesn't await.
+> - Replaces the `vi.waitFor` retry around `clear_opfs()` in the shell tests and the `shell.remember` stub in the mounts tests.
+
 ## Context
 
 There were no tests. Services grew subtle: session restore, directory revisions, DirectoryHandler's coalesced reloads. Refactors relied on manual browser checks. The riskiest layer, OPFS, exists only in a real browser, and the bugs so far were browser behaviour that a fake wouldn't reproduce. Brainstorm: [2026-10-12 Testing strategy](../brainstorm/2026-10-12_testing-strategy.md).

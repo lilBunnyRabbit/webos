@@ -24,7 +24,7 @@ const saved: WindowSnapshot = {
   state: undefined,
 };
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function boot(answer: Promise<boolean> | null = null): Promise<Kernel> {
   if (answer) {
@@ -62,7 +62,7 @@ beforeEach(async () => {
   await vi.waitFor(() => opfs.clear_opfs());
   history.replaceState(null, "", location.pathname + location.search);
 });
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("RouterService", () => {
   test("a link opens its app with typed props and clears the hash", async () => {

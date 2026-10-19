@@ -7,8 +7,11 @@ export interface IService {
   name: string;
   description: string;
   init?(): Promise<void> | void;
-  /** Sync on purpose: unload never awaits, so async cleanup would silently not run. */
-  destroy?(): void;
+  /**
+   * The kernel never awaits this: unload can't, so cleanup that must run is synchronous. A returned promise is pending
+   * work (a save already on its way) that only the test kernel's shutdown awaits.
+   */
+  destroy?(): void | Promise<void>;
   to_string(): string;
   /**
    * Kernel app view of this service, lazy so it never loads at boot (ADR-020).

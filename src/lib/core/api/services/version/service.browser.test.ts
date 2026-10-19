@@ -16,7 +16,7 @@ import { VersionService } from "./service.svelte";
 declare const __VERSION_INFO__: { version: string };
 const current = __VERSION_INFO__.version;
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 let show: ReturnType<typeof vi.fn>;
 
 async function write(path: string, text: string) {
@@ -67,7 +67,7 @@ async function seen_on_disk(kernel: Kernel): Promise<string | null> {
 }
 
 beforeEach(() => vi.waitFor(() => opfs.clear_opfs()));
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("VersionService at boot", () => {
   test("first boot shows the introduction, then marks the current version seen", async () => {

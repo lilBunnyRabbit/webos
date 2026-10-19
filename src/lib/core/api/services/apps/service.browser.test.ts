@@ -12,7 +12,7 @@ import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installe
 import { TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function write(path: string, text: string) {
   const files = new FilesService();
@@ -49,7 +49,7 @@ beforeEach(async () => {
   await vi.waitFor(() => opfs.clear_opfs());
   for (const key of Object.keys(localStorage)) if (key.startsWith("app.")) localStorage.removeItem(key);
 });
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("AppsService installed apps", () => {
   test("a first boot starts with the system apps only, quietly", async () => {

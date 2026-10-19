@@ -24,7 +24,7 @@ const settings_window: WindowSnapshot = {
 };
 const example_window: WindowSnapshot = { ...settings_window, app_id: "example", props: undefined, state: undefined, flags: [WindowFlag.MINIMIZED] };
 
-let shutdown: () => void;
+let shutdown: () => Promise<void>;
 
 async function boot(saved: WindowSnapshot[] | null, answer = true, frames: WindowFrames = {}): Promise<Kernel> {
   if (saved) {
@@ -59,7 +59,7 @@ async function saved_file(kernel: Kernel): Promise<SessionFile> {
 const saved_on_disk = async (kernel: Kernel) => (await saved_file(kernel)).windows;
 
 beforeEach(() => vi.waitFor(() => opfs.clear_opfs()));
-afterEach(() => shutdown?.());
+afterEach(async () => await shutdown?.());
 
 describe("SessionService", () => {
   test("with nothing saved, open windows are written as they change", async () => {
