@@ -89,7 +89,8 @@
   });
 
   $effect(() => {
-    if (initial_run && !untrack(() => started.value)) run(initial_run);
+    // Untracked: the run's own state would otherwise re-run this effect, and its cleanup would abort the run.
+    if (initial_run && !untrack(() => started.value)) untrack(() => run(initial_run));
     started.value = true;
     // Closing the window stops what's running in it.
     return () => current?.abort();
@@ -97,7 +98,7 @@
 </script>
 
 <!-- column-reverse keeps the view pinned to the newest output natively; mb-auto keeps short output at the top. -->
-<div class="flex h-full flex-col bg-[light-dark(var(--background-lightest),var(--background-darker))] font-mono text-ui">
+<div class="flex h-full flex-col bg-(--terminal-background) font-mono text-ui [--terminal-background:light-dark(var(--background-lightest),var(--background-darker))]">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
     class="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-3 py-2"

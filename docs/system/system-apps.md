@@ -538,7 +538,7 @@ A [shell](services/shell.md) session per window (opening it calls `shell.load()`
 |------|----------|
 | `terminal.app.svelte` | Session, persistence, layout |
 | `prompt-input.svelte` | The prompt line: input, ghost text, completion popup, history, keys |
-| `terminal-entry.svelte` / `entry-output.svelte` / `output-table.svelte` | One run: prompt line, output blocks, error or `^C` |
+| `terminal-entry.svelte` / `entry-output.svelte` / `output-table.svelte` | One run: prompt line, output blocks, error or `^C`. A table wider than the terminal scrolls sideways with its first column pinned (`sticky`, on `--terminal-background`), and its right edge fades while columns are hidden (a scroll-driven animation of `--fade` in a mask; no overflow, no timeline, no fade) |
 | `key-row.svelte` | Touch key row |
 | `blocks.ts` / `line.ts` | Pure: values to blocks, cells, saved text; common prefix, applying a completion, history hint. Unit-tested |
 
@@ -573,7 +573,7 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 **Persistence.**
 - Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached per entry while its output is unchanged; a running entry's output is saved once a second, not per streamed batch) and `started`. Session restore therefore brings back the folder and the screen.
 - Restored output is plain text. An entry restored mid-run shows as aborted.
-- `run` executes only on the first mount (`started`), so a restore doesn't rerun it.
+- `run` executes only on the first mount (`started`), so a restore doesn't rerun it. It's called inside `untrack`: tracked, the run's own state re-ran the effect and its cleanup aborted the command (a `^C` on every `run` link before 3.4.3).
 - Closing the window aborts the running line.
 
 **Ways in.** The launcher and the `>` palette (Open in Terminal), the desktop and phone-home icon (new devices only: the seed runs once), the taskbar button, Alt+Shift+↵, File Explorer (toolbar and folder menu) and the desktop menu (Open Terminal here, in `~/Desktop`).

@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.4.3",
+    date: "2026-10-20",
+    title: "Side to side",
+    changes: [
+      { kind: FIXED, apps: ["terminal"], text: "Wide tables in Terminal keep their first column in place while you scroll sideways, and fade at the edge while more columns are hidden." },
+      { kind: FIXED, apps: ["terminal"], text: "A command sent to Terminal from the command palette or a link now runs instead of stopping right away." },
+    ],
+  },
+  {
     version: "3.4.2",
     date: "2026-10-20",
     title: "Way back",
