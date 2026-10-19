@@ -10,7 +10,7 @@
 </script>
 
 <InspectorStats>
-  <InspectorStat label="Features" value={any ? `${ready} of 4 ready` : "not on this device"} />
+  <InspectorStat label="Features" value={any ? `${ready} of ${Object.keys(service.features).length} ready` : "not on this device"} />
   <InspectorStat label="Downloading" value={service.downloads.length} />
   <InspectorStat label="Sessions" value={service.sessions.length} />
 </InspectorStats>
