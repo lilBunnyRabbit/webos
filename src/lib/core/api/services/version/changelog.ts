@@ -7,7 +7,7 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.3.0",
     date: "2026-10-19",
-    title: "Your cards, always with you",
+    title: "Ready for the shop",
     introduces: ["cards", "shopping-list"],
     changes: [
       { kind: NEW, apps: ["cards"], text: "Cards: keep your loyalty cards in one place, scan them once with the camera or a photo, and show the barcode full screen at the checkout." },
