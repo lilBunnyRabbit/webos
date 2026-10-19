@@ -1,6 +1,6 @@
 {
   "name": "webos",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "devDependencies": {
     "@internationalized/date": "^3.8.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",

@@ -31,8 +31,8 @@ export interface TaskReport {
 
 export interface TaskRunOptions<T> {
   title: string;
-  /** The finished toast. Default: the title, "done". */
-  done?: (result: T) => TaskReport;
+  /** The finished toast. Default: the title, "done". `null` dismisses it, for a job whose result shows itself. */
+  done?: (result: T) => TaskReport | null;
   /** The failed or cancelled toast, over the defaults. */
   failed?: (error: unknown, cancelled: boolean) => TaskReport;
   /** Another way to cancel, like the shell's Ctrl+C. */

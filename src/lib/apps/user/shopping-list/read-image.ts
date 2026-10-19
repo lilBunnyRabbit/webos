@@ -66,7 +66,7 @@ export function read_with_ocr(image: Blob, crop: Bounds | null, history: readonl
       })(),
     {
       title: "Reading the shopping list",
-      done: (lines) => ({ title: "Shopping list read", message: `${lines.length} ${lines.length === 1 ? "line" : "lines"} found` }),
+      done: () => null,
     }
   );
 }

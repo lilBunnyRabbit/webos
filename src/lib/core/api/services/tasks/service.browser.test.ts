@@ -13,7 +13,7 @@ function setup() {
     dismiss: vi.fn(),
   } as unknown as NotificationsService;
   const kernel = { service: () => notifications } as unknown as Kernel;
-  return { tasks: new TasksService(kernel), updates, last: () => updates.at(-1) };
+  return { tasks: new TasksService(kernel), notifications, updates, last: () => updates.at(-1) };
 }
 
 const task = <T>(execute: (context: TaskContext) => Promise<T>) => (context: TaskContext) => createTask<void, T>({ name: "work", execute: () => execute(context) })();
@@ -35,6 +35,16 @@ describe("TasksService", () => {
     expect(job.progress).toBe(1);
     expect(tasks.active_count).toBe(0);
     expect(last()).toMatchObject({ type: NotificationType.INFO, title: "Got 42", progress: null });
+  });
+
+  test("a done report of null dismisses the toast instead of finishing it", async () => {
+    const { tasks, notifications, updates } = setup();
+    const job = tasks.run("test", task(async () => 1), { title: "Read", done: () => null });
+
+    expect(await job.done).toBe(1);
+    expect(job.status).toBe(TaskJobStatus.DONE);
+    expect(notifications.dismiss).toHaveBeenCalledWith("toast");
+    expect(updates.some((update) => update.type === NotificationType.INFO)).toBe(false);
   });
 
   test("cancel aborts the work's signal and ends cancelled, not failed", async () => {

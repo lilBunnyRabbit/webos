@@ -29,7 +29,7 @@ Background work with progress, Cancel and retry, on `@lilbunnyrabbit/task-manage
 
 Progress is the package's own: work calls `this.setProgress()` inside `execute`, and the job reads it from the manager's `progress` event.
 
-`TaskRunOptions<T>`: `title`, `done(result) => TaskReport`, `failed(error, cancelled) => TaskReport`, and `signal` (a second way to cancel, such as the shell's Ctrl+C). A `TaskReport` is `{ title?, message?, actions? }`.
+`TaskRunOptions<T>`: `title`, `done(result) => TaskReport | null`, `failed(error, cancelled) => TaskReport`, and `signal` (a second way to cancel, such as the shell's Ctrl+C). A `TaskReport` is `{ title?, message?, actions? }`.
 
 `TaskJob<T>`: `id`, `app_id`, `title`, `created_at`, `finished_at`, `status` (`TaskJobStatus`: `running | done | failed | cancelled`), `progress` (0 to 1), `message`, `error`, `manager` (the package's `TaskManager`, `null` until its chunk loads), `done` (a promise of the current run's result, `null` on failure or cancel), `cancel()`.
 
@@ -42,7 +42,7 @@ Progress is the package's own: work calls `this.setProgress()` inside `execute`,
 4. **Toasts.**
    - Every run notifies a `progress` toast with Cancel. Progress and message updates reach the toast, and the job's reactive `progress`, at most every 150 ms; an update inside the window is sent at its end, so the last one is never lost. The package's raw progress is kept in a plain field, and the final value is set on success (1), failure and cancel.
    - At the end, the toast becomes one of three:
-     - **done** (`info`): the `done` report, or the title with "Done";
+     - **done** (`info`): the `done` report, or the title with "Done"; a `done` returning `null` dismisses the toast instead, for a job whose result shows itself (Shopping List's review screen);
      - **failed** (`error`): `<title> failed` and the error;
      - **cancelled** (`warning`): "Cancelled" and the title.
    - `failed(error, cancelled)` overrides the failed and cancelled toasts; Archive uses it to offer Discard or Keep for a half-written file.

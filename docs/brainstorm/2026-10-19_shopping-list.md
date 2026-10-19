@@ -89,3 +89,8 @@ Measured on the owner's photo (34 items incl. one struck out) in Chromium on the
 
 Action items:
 - Owner: decide whether TasksService gets a way to end a job without a done toast (`done: () => null`, or `toast: false`), since Shopping List's review screen already says it.
+
+## Follow-up decisions (2026-10-19)
+
+- **Model files stay in git** (about 12.9 MB under `models/`), so the site stays self-contained, with no runtime CDN.
+- **The finished toast is removed.** `TaskRunOptions.done` may return `null` to dismiss the toast; Shopping List uses that, since the review screen shows the result.

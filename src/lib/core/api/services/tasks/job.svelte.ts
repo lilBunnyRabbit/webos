@@ -150,7 +150,12 @@ export class Job<T> implements TaskJob<T> {
     this.finished_at = Date.now();
     this.progress = 1;
     this.status = TaskJobStatus.DONE;
-    const report = this.options.done?.(result) ?? { message: "Done" };
+    const report = this.options.done ? this.options.done(result) : { message: "Done" };
+    if (report === null) {
+      if (this.toast !== null) this.notifications.dismiss(this.toast);
+      this.toast = null;
+      return result;
+    }
     this.settle(NotificationType.INFO, { ...report, title: report.title ?? this.title });
     return result;
   }
