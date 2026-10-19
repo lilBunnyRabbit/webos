@@ -1,12 +1,13 @@
 import { untrack } from "svelte";
 import type { Attachment } from "svelte/attachments";
-import { detect_qr, type BarcodeDetector } from "./qr";
+import { detect_barcode, type BarcodeDetector } from "./qr";
 
 export interface CameraScanOptions {
   constraints: MediaTrackConstraints;
   detector: () => Promise<BarcodeDetector>;
   visible: () => boolean;
-  oncode: (code: string, video: HTMLVideoElement) => boolean | Promise<boolean>;
+  /** `format` is the detector's name for it (`qr_code`, `ean_13`, …). Return `true` to stop scanning. */
+  oncode: (code: string, video: HTMLVideoElement, format: string) => boolean | Promise<boolean>;
   onerror: (reason: unknown) => void;
 }
 
@@ -53,9 +54,9 @@ export class CameraScan {
     let active = true;
     let handle = 0;
     const scan = async () => {
-      const code = await detect_qr(await this.options.detector(), element).catch(() => null);
+      const code = await detect_barcode(await this.options.detector(), element).catch(() => null);
       if (!active) return;
-      if (code && (await this.options.oncode(code, element))) return this.stop();
+      if (code && (await this.options.oncode(code.value, element, code.format))) return this.stop();
       if (active) handle = element.requestVideoFrameCallback(scan);
     };
     handle = element.requestVideoFrameCallback(scan);
