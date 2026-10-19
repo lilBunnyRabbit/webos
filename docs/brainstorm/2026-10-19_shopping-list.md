@@ -14,6 +14,7 @@ Findings:
 
 ## Decisions
 
+- **Mobile first:** designed for the phone first (one hand, thumb reach, big targets); desktop window must still work.
 - **Name and storage:** Shopping List, id `shopping-list`. Everything lives in `/var/lib/shopping-list/lists.json`: lists, items and history. Items carry `updated_at`. Deleted items stay as tombstones (`deleted_at`) for 30 days so a sync can merge them.
 - **Sync:** WebRTC paired by scanning QR codes. P2P Transfer's peer and signal code moves into `$kit/utils/p2p` and is shared by both apps.
   - A pairing shares one chosen list. Both sides edit it live, and each item resolves to its newest `updated_at`.
