@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "3.4.2",
-    date: "2026-10-19",
+    date: "2026-10-20",
     title: "Way back",
     changes: [
       { kind: FIXED, text: "On a phone, Back now leaves Edit home screen, like Done." },
