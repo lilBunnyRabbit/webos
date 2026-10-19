@@ -17,7 +17,7 @@
     Shuffle as ShuffleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { fit_view, pinch_view, to_image, zoom_view, type Point, type View } from "../image-tools/sprite-sheet";
+  import { fit_view, pinch_view, to_image, zoom_view, type Point, type View } from "$kit/utils/view";
   import {
     bounds,
     create_board,

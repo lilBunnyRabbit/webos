@@ -174,6 +174,8 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
 | `$kit/utils/codecs` (and its kernel-free `codecs/formats`) | | Image codecs in a worker (Format Lab, Media Preview): `encode(format, image, options, { signal })` → `{ blob, ms }` for JPEG, WebP, PNG (OffscreenCanvas) and AVIF, JPEG XL (jSquash wasm); `decode(blob)` → `ImageData` (the browser's decoder, jSquash for JPEG XL and for AVIF where the browser can't); `compare(a, b)` → SSIM with its window map; `supported(format)`. Up to 4 workers, an idle one ends after 30 s, and aborting a call ends its worker, so a wasm encode stops at once. The wasm loads on first use only. See [codecs](#image-codecs-kitutilscodecs) |
 | `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |
+| `$kit/components/swipe-compare` | | `SwipeCompare`: two snippets under a wipe divider with zoom, pan and pinch (Format Lab, Image Tools › Compare, Style Guide). See [components](../design/components.md#app-kit) |
+| `$kit/utils/view` | | 2D camera math: `View`, `Point`, `to_screen`, `to_image`, `clamp_scale`, `fit_view`, `zoom_view`, `pinch_view` (`SwipeCompare`, Image Tools, Jigsaw) |
 
 The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 
@@ -185,7 +187,7 @@ Internal: Format Lab and Media Preview use it; the API can change in any release
 - **Options.** `quality` 1–100 for every lossy format (jSquash's own scale for AVIF and JPEG XL, `quality / 100` for the canvas), `effort`, `lossless`. Lossless WebP is Chromium's canvas encoder at quality 1. JPEG is flattened onto white.
 - **Worker.** `codecs.worker.ts`, loaded with Vite's `?worker`; `vite.config.ts` sets `worker.format: "es"` (the worker imports jSquash lazily) and excludes `@jsquash/*` from `optimizeDeps` (pre-bundling moves the module away from the `new URL("x.wasm", import.meta.url)` it locates its wasm by). The build emits the wasm under `assets/`, so it resolves under `/webos/`. jSquash also ships multithreaded encoders; they need cross-origin isolation, which GitHub Pages doesn't give, so the single-threaded ones run.
 - **SSIM** (`ssim.ts`, pure, Node-tested): Wang et al. on BT.601 luma with transparency flattened onto white, 8×8 windows every 4 px (column sums per band, about 12 operations a pixel). `map` holds each window's value for a heatmap.
-- **Known gaps.** jSquash's JPEG XL decoder rounds a few lossless values one step off. Decoding is 8 bits per channel, sRGB: HDR and high bit depth are tone-mapped or truncated. The wasm isn't in the PWA precache (2–3.5 MB each), so AVIF and JPEG XL need the network the first time.
+- **Known gaps.** jSquash's JPEG XL decoder rounds a few lossless values one step off. Decoding is 8 bits per channel, sRGB: HDR and high bit depth are tone-mapped or truncated. The wasm isn't in the PWA precache (2–3.5 MB each), so AVIF and JPEG XL need the network the first time; after that the service worker's `webos-wasm` runtime cache serves it offline ([service worker](services/version.md#service-worker)).
 
 ## Games kit
 

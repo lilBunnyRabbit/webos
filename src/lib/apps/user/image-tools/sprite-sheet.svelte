@@ -5,27 +5,21 @@
   import type { SpriteExtractState } from "./sprite-extract.svelte";
   import type { SpriteOverrides, SpriteSettings } from "./sprite-model";
   import {
-    clamp_scale,
     describe_hit,
     draw_sheet,
-    fit_view,
     grid_lines,
     HANDLE_SIZE,
     HIT_TOLERANCE,
     hit_cursor,
     hit_test,
-    pinch_view,
     read_palette,
-    to_image,
     TOUCH_HANDLE_SIZE,
     TOUCH_HIT_TOLERANCE,
-    zoom_view,
     type Drag,
     type Hit,
     type Palette,
-    type Point,
-    type View,
   } from "./sprite-sheet";
+  import { clamp_scale, fit_view, pinch_view, to_image, zoom_view, type Point, type View } from "$kit/utils/view";
 
   /** Same feel as the shell's long press. */
   const HOLD_MS = 450;

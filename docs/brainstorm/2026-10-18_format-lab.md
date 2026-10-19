@@ -39,6 +39,7 @@ Choices made inside the decisions above, for the owner to overrule:
 - **Worker pool:** up to 4 workers, Cancel terminates the worker doing the job (a wasm encode never yields), idle workers end after 30 s to give back wasm memory.
 - **`convert` runs one file at a time** (a sequential group): decoded photos plus an AVIF encode's memory make parallel runs risky.
 - **Swipe stage** is Format Lab's own, modelled on Image Tools › Compare. Two apps now have one; moving it to the kit is open.
+- **Follow-up (owner, same day):** the stage moved to the kit as `SwipeCompare` (`$kit/components/swipe-compare`), used by both apps and shown in the Style Guide; `zoom_view` / `pinch_view` and the rest of the camera math moved from `image-tools/sprite-sheet` to `$kit/utils/view`. Both apps now share Format Lab's gesture: at fit a drag anywhere moves the divider. The codec wasm got a `CacheFirst` runtime rule, so AVIF and JPEG XL work offline after first use.
 
 ## Action items
 
