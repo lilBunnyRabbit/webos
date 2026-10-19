@@ -1,5 +1,5 @@
-import type { Rect, Size } from "./edit";
 import { clamp } from "$lib/core/utils";
+import type { Bounds as Rect, Dimensions as Size } from "$lib/core/utils/type";
 
 export const Handle = {
   MOVE: "move",

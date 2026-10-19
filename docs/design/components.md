@@ -31,11 +31,12 @@ Class recipes (`button`, `field`, `badge`) are exported too, for elements that m
 
 ## App kit
 
-UI only apps use lives in `src/lib/kit/components/`, imported as `$kit/components/…` (ADR-048). Core and the shell never import it. The Style Guide's App kit section shows `SwipeCompare`; `CodeView` isn't there yet.
+UI only apps use lives in `src/lib/kit/components/`, imported as `$kit/components/…` (ADR-048). Core and the shell never import it. The Style Guide's App kit section shows `SwipeCompare` and `CropFrame`; `CodeView` isn't there yet.
 
 | Component | What | Notes |
 |-----------|------|-------|
 | `CodeView` (`$kit/components/code`) | A code or data editor: API Client's body and response, Recipe Box's source | CodeMirror with the theme's tokens (`token_theme`, `token_highlight`), so it follows the palette without a rebuild. Hack at 13px, `primary` caret, `primary/28` selection. `value` + `onchange` (it doesn't bind), `label` is the editor's accessible name, `language` (loaded lazily), `read_only`, `wrap` (default on). A `rounded-md` box with a `foreground/8` hairline; give it a height (`flex-1 min-h-0`, `min-h-40`). `label` and `read_only` are read once at mount |
+| `CropFrame` (`$kit/components/crop-frame`) | A crop rectangle over a picture: Image Editor's Crop tool, Shopping List's "what to read" step | Fills its positioned parent, which shows the picture at any scale. `bind:rect` in image pixels, `bounds` the image size, optional `aspect` (width / height) and `label`. A `primary` outline with rule-of-thirds lines, the outside shaded with `background-darkest/65`. Drag inside to move, eight handles to resize (`lostpointercapture` ends a drag); arrow keys move, Shift+arrows resize. Handles are 28px targets, 44px on a coarse pointer. The pure geometry (`drag_rect`, `fit_aspect`, `ASPECT_PRESETS`, `aspect_of`) is exported beside it |
 | `SwipeCompare` (`$kit/components/swipe-compare`) | Two versions of a picture under one divider: Format Lab's formats, Image Tools › Compare | A toolbar row (`controls` snippet first, the divider `Slider` while there's a `right`, then zoom out / % (Fit) / zoom in) over a checkered stage sized to `width` × `height`. `left` and `right` are snippets that get `pixelated` (true past 200%) and fill the box; `left` alone is a plain zoomable preview. `bind:split` is the divider in %. Drag anywhere at fit moves the divider; zoomed in, only the handle does and a drag pans. Pinch, Ctrl/⌘+scroll zooms, scroll pans, up to 3200%. Optional `left_label` / `right_label` chips. Instance `reset()` and `focus(rect)` (image pixels). Inside the snippets, `var(--zoom)` keeps outlines at screen size. Touch: 44px handle and controls on a coarse pointer |
 
 ## Toggles

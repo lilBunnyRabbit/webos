@@ -36,6 +36,7 @@ src/lib/
 ├── kit/                          # $kit, the app kit (ADR-048): helpers only apps use
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── components/swipe-compare/ # SwipeCompare: wipe divider, zoom, pan, pinch
+│   ├── components/crop-frame/    # CropFrame: draggable crop over a picture, crop geometry
 │   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
 │   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), view (2D camera math), history, qr, qr-scan, exif, p2p (WebRTC pairing by QR)
 └── apps/
