@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.4.1",
+    date: "2026-10-19",
+    title: "On and off",
+    changes: [
+      { kind: FIXED, apps: ["shopping-list"], text: "A list's Add to home screen now turns into Remove once its widget is there, instead of adding another copy. Deleting a list removes its widget too." },
+    ],
+  },
+  {
     version: "3.4.0",
     date: "2026-10-19",
     title: "Your home, your way",

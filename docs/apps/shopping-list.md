@@ -152,7 +152,7 @@ Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an
 
 At h=1 everything uses the kit's `sm` sizes; at h=2 `md`, with more padding. Measured on the desktop at 3×1: 263×60 px body, the field 183 px wide, nothing overflows.
 
-Pinned from the list actions menu: "Add to desktop", or "Add to home screen" on mobile, with the list's name as label (`shopping-list.app.svelte:312`). Each tap pins another widget; there's no remove toggle. The mobile home doesn't show widgets yet, so on a phone the file is written but not shown until it does.
+Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Deleting a list removes its widget too. A widget added from App Library has no `list` prop and isn't counted.
 
 ### Suggestions and buy again
 

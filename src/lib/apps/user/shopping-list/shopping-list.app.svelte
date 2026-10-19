@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
@@ -283,7 +283,9 @@
         icon: PaletteIcon,
         items: LIST_COLORS.map((color) => ({ id: `color:${color}`, label: COLOR_NAME[color], icon: color === list.color ? CheckIcon : undefined })),
       },
-      { id: "widget", label: on_phone ? "Add to home screen" : "Add to desktop", icon: StickerIcon },
+      widget_for(list.id)
+        ? { id: "widget", label: on_phone ? "Remove from home screen" : "Remove from desktop", icon: StickerIcon }
+        : { id: "widget", label: on_phone ? "Add to home screen" : "Add to desktop", icon: StickerIcon },
     ];
     if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
     if (shared) entries.push({ id: "unshare", label: "Stop sharing", icon: LinkBreakIcon });
@@ -294,7 +296,7 @@
     else if (choice === "photo") await photo();
     else if (choice === "new") await new_list();
     else if (choice === "rename") await rename_list();
-    else if (choice === "widget") await add_widget(list);
+    else if (choice === "widget") await toggle_widget(list);
     else if (choice === "clear") clear_done();
     else if (choice === "unshare") pair.stop();
     else if (choice === "delete") await delete_list();
@@ -309,9 +311,21 @@
     current.value = created.id;
   }
 
-  async function add_widget(target: List) {
+  function widget_for(id: string) {
+    return desktop
+      .items()
+      .find((item): item is Extract<DesktopItem, { kind: "widget" }> => item.kind === "widget" && item.app_id === app_id && item.props?.list === id);
+  }
+
+  async function toggle_widget(target: List) {
     const place = on_phone ? "home screen" : "desktop";
+    const existing = widget_for(target.id);
     try {
+      if (existing) {
+        await desktop.remove_item(existing.name);
+        notifications.notify(app_id, { title: `Removed from the ${place}`, message: target.name });
+        return;
+      }
       const name = await desktop.pin_widget(app_id, { label: target.name, props: { list: target.id } });
       if (!name) throw new Error(`The ${place} is full`);
       notifications.notify(app_id, { title: `List added to the ${place}`, message: `${target.name}: add items or read a photo right there.` });
@@ -339,6 +353,8 @@
     if (!confirmed) return;
     if (pair.list_id === target.id) pair.stop();
     file.value.lists = file.value.lists.filter((candidate) => candidate.id !== target.id);
+    const widget = widget_for(target.id);
+    if (widget) await desktop.remove_item(widget.name).catch(() => {});
   }
 
   let review_rows = $state<ReviewRow[] | null>(null);
