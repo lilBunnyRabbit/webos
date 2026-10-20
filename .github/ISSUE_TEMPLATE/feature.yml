@@ -1,0 +1,25 @@
+name: Feature request
+description: An idea for WebOS or one of its apps
+labels: [enhancement]
+body:
+  - type: input
+    id: app
+    attributes:
+      label: App
+      description: Which app or part of WebOS, if any
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What should WebOS do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What would it help with?
+  - type: input
+    id: version
+    attributes:
+      label: Version

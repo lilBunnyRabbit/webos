@@ -16,14 +16,17 @@
   import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
   import { installer } from "$lib/core/utils/install.svelte";
+  import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
+    Bug as BugIcon,
     CheckCircle as CheckCircleIcon,
     Compass as CompassIcon,
     DownloadSimple as DownloadSimpleIcon,
     GithubLogo as GithubLogoIcon,
+    Lightbulb as LightbulbIcon,
     Link as LinkIcon,
     Play as PlayIcon,
     Sparkle as SparkleIcon,
@@ -46,6 +49,10 @@
     ["Branch", version.info.branch],
     ["Built", format_datetime(new Date(version.info.buildTime))],
   ]);
+
+  function open_issue(kind: FeedbackKind) {
+    window.open(issue_url(kind, version.info, kernel.platform), "_blank", "noopener,noreferrer");
+  }
 
   function reset_settings() {
     settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false, seconds: false };
@@ -127,6 +134,19 @@
     </SettingRow>
   </Section>
 
+  <Section title="Feedback" description="Opens a pre-filled issue on GitHub; posting it needs a GitHub account.">
+    <SettingRow label="Request a feature" description="An idea for WebOS or one of its apps.">
+      <Button onclick={() => open_issue(FeedbackKind.FEATURE)}>
+        <LightbulbIcon /> Request <ArrowSquareOutIcon class="size-3.5" />
+      </Button>
+    </SettingRow>
+    <SettingRow label="Report a bug" description="Something that doesn't work. Your version and platform are filled in.">
+      <Button onclick={() => open_issue(FeedbackKind.BUG)}>
+        <BugIcon /> Report <ArrowSquareOutIcon class="size-3.5" />
+      </Button>
+    </SettingRow>
+  </Section>
+
   <Section title="Credits" description="Who made the apps in WebOS. An app without a credit of its own is the owner's.">
     {#each credit_list as { author, apps: made } (author.name)}
       {@const href = author_link(author)}
@@ -189,7 +209,7 @@
   </Section>
 
   <a
-    href="https://github.com/lilbunnyrabbit/webos"
+    href={REPOSITORY}
     target="_blank"
     rel="noopener noreferrer"
     class="inline-flex items-center gap-1.5 self-start text-ui text-primary hover:underline"

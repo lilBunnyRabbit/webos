@@ -10,6 +10,7 @@ export const CHANGELOG: Release[] = [
     title: "Recent apps",
     changes: [
       { kind: NEW, text: "The start menu and the app drawer show the apps you opened lately at the top: scroll or swipe for more, and right-click or hold one to clear them." },
+      { kind: NEW, apps: ["settings"], text: "Settings › About has Request a feature and Report a bug, which open a ready-to-fill issue on GitHub." },
     ],
   },
   {
