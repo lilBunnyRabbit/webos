@@ -568,6 +568,21 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
 - [ ] **Background scheduler** (owner, 2026-10-14). Alarms, timers, Pomodoro phases and Calendar reminders only fire while that app's window or widget is alive. An OS-level scheduler (service) that holds due times and fires `notify({ system })` with no app open. Open: who owns the schedule (apps register `{ at, title, action }`?), persistence in `/var/lib`, dedupe across tabs, how the app is told on click.
+- [ ] **AI-native apps** (owner, 2026-10-20, [ideas](brainstorm/2026-10-20_ai-native-apps.md)). Apps that couldn't exist without Gemini Nano, not existing apps with an AI button. Owner picks which to build; each gets its own grill (shell question included). Open calls: whether AI-only apps may be desktop-only, and which ideas are too close to "AI bolted on" (ADR-054)
+  - [ ] Taboo: describe a word without the banned ones; the AI guesses (S, research pick #1)
+  - [ ] Twenty Questions: the AI holds a secret, answers yes / no / sometimes / unknown (S)
+  - [ ] Sketch Guess: you draw, the AI guesses from snapshots (M, research pick #2)
+  - [ ] Alibi: question an AI suspect, find the lie (M)
+  - [ ] Pocket Dungeon: text adventure, code runs the world, AI parses and narrates (L, research pick #3)
+  - [ ] Emoji Rebus: guess or make emoji puzzles; Game Hub daily (S)
+  - [ ] Café Talk: role-play language practice with corrections (M, needs Proofreader API)
+  - [ ] Voice Inbox: speak a thought, filed as todo, idea or event (M, needs audio input)
+  - [ ] Night Journal: private diary with one follow-up question and mood tags (M)
+  - [ ] Photo Bingo: webcam scavenger hunt (M)
+  - [ ] Receipt Box: receipt photo to a spending table, totals checked (M; overlaps Shopping List photo reading)
+  - [ ] Whiteboard Snap: photo of a board to clean Markdown (S; overlaps photo reading)
+  - [ ] Quiz Me: text file to a multiple-choice quiz (M; maybe a shell filter instead)
+  - [ ] Tone Dial: rewrite with formality, length and warmth sliders (S, needs Writer/Rewriter; maybe a shell filter)
 - [x] **Forms by link** (owner's ideas notes "Auto Savable", 2026-10-17; answer codes 2026-10-18, [brainstorm](brainstorm/2026-10-18_forms-answer-codes.md): form id stamped on share, answer codes pasted in Forms or `form answer` save beside the form, Summary tab, forms home). Build a checklist or form, Copy link puts it in the URL; the other person fills it in and sends back a reply link; opening it merges the answers into your `.form` file. Open: compressed deep-link props (CompressionStream + base64url) and link length limits change the router's prop shape (ADR-010)
 - [x] **Window extraction** (owner, 2026-10-16). Done as [ADR-043](adrs/043-window-extraction.md) ([brainstorm](brainstorm/2026-10-16_window-extraction.md)): Document Picture-in-Picture only, desktop-only `ExtractService`, any app, frame hidden and taskbar item marked, the window's sheets, menus and dialogs inside the mini window, disabled while dirty, `win pop` / `win back` + Alt+Shift+P. Built 2026-10-16. Left: OS shortcuts inside the mini window, keeping in-memory state across the move, `window.open` popups after cross-tab sync
 - [x] **Backup system** (owner, 2026-10-14). Done as [ADR-037](adrs/037-backups.md): one zip of `/home`, `/etc`, `/var/lib` and `app.*` localStorage, picked per area, saved to the device; restore replaces the areas it holds and reloads ([brainstorm](brainstorm/2026-10-15_v1-release.md)).
