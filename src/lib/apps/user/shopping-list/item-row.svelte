@@ -92,6 +92,15 @@
     offset = 0;
   }
 
+  /** In store mode a tap doesn't tick (misclicks); the row nudges right instead, showing the swipe that does. */
+  function peek() {
+    if (dragging || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    offset = 28;
+    setTimeout(() => {
+      if (!dragging) offset = 0;
+    }, 160);
+  }
+
   function on_click(event: MouseEvent) {
     if (!swallow_click) return;
     swallow_click = false;
@@ -142,7 +151,7 @@
         store ? "min-h-16 text-lg" : "min-h-12 text-base pointer-coarse:min-h-14"
       )}
       aria-label={store ? undefined : `Edit ${item.text}`}
-      onclick={() => !store && onedit()}
+      onclick={() => (store ? peek() : onedit())}
     >
       <span class="contents pointer-fine:hidden">{@render circle()}</span>
       {#if from}<ListMark list={from} size="sm" />{/if}
@@ -157,7 +166,7 @@
       {#if store}
         <span class={pill}>{amount}</span>
       {:else}
-        <button type="button" class="group grid min-h-10 shrink-0 place-items-center px-1 pointer-coarse:mr-2" aria-label="Amount of “{item.text}”: {amount}" onclick={onedit}>
+        <button type="button" class="group grid min-h-10 shrink-0 place-items-center self-stretch px-1 pointer-coarse:pr-3" aria-label="Amount of “{item.text}”: {amount}" onclick={onedit}>
           <span class={cn(pill, !item.checked && "group-hover:bg-primary/28")}>{amount}</span>
         </button>
       {/if}

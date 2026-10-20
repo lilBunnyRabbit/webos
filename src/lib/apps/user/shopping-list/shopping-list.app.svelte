@@ -237,8 +237,31 @@
 
   function clear_done() {
     if (done.length === 0) return;
+    const cleared = done.map((item) => item.id);
+    const history = $state.snapshot(file.value.history);
     file.value.history = record_trip(file.value.history, done.map((item) => item.text));
-    for (const item of done) remove(item);
+    view_transition(() => {
+      for (const item of done) remove(item);
+    });
+    notifications.notify(app_id, {
+      title: cleared.length === 1 ? "Cleared 1 item" : `Cleared ${cleared.length} items`,
+      message: "Saved to Buy again.",
+      duration: 8000,
+      actions: [
+        {
+          label: "Undo",
+          on_click: () => {
+            file.value.history = history;
+            for (const id of cleared) {
+              const again = find(id);
+              if (!again?.deleted_at) continue;
+              delete again.deleted_at;
+              again.updated_at = stamp(again);
+            }
+          },
+        },
+      ],
+    });
   }
 
   async function item_menu(id: string, anchor: Position) {
@@ -611,7 +634,7 @@
             <section aria-label={group.list.name} class="flex flex-col gap-1.5">
               <button
                 type="button"
-                class="flex min-h-8 items-center gap-2 rounded-md px-1 text-left text-2xs font-medium tracking-wide text-foreground/80 uppercase hover:text-foreground"
+                class="flex min-h-11 items-center gap-2 rounded-md px-1 text-left text-2xs font-medium tracking-wide text-foreground/80 uppercase hover:text-foreground"
                 onclick={() => open_place(group.list.id)}
               >
                 <ListMark list={group.list} size="sm" />
@@ -628,7 +651,7 @@
           <section aria-label="In the cart">
             <button
               type="button"
-              class="flex min-h-9 w-full items-center gap-1.5 rounded-md px-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase hover:text-foreground"
+              class="flex min-h-11 w-full items-center gap-1.5 rounded-md px-1 text-2xs font-medium tracking-wide text-foreground/80 uppercase hover:text-foreground"
               aria-expanded={cart_open.value}
               onclick={() => (cart_open.value = !cart_open.value)}
             >
@@ -651,14 +674,16 @@
   {#if (view === View.LIST || view === View.EDIT) && file.ready && !home}
     <div inert={view === View.EDIT}>
       {#if done.length > 0}
-        <div class="flex items-center justify-between gap-2 border-t border-foreground/8 bg-background-light px-3 pt-2">
-          <p class="font-mono text-2xs text-foreground/65 tabular-nums" aria-live="polite">{done.length} of {items.length} in the cart</p>
-          <Button size={store.value ? "lg" : "sm"} variant={store.value ? "primary" : "secondary"} onclick={clear_done}>
-            <BroomIcon weight="bold" /> Clear done
-          </Button>
+        <div class="border-t border-foreground/8 bg-background-light">
+          <div class="mx-auto flex max-w-xl items-center justify-between gap-2 px-3 pt-2">
+            <p class={cn("font-mono text-foreground/80 tabular-nums", store.value ? "text-sm" : "text-ui")} aria-live="polite">{done.length} of {items.length} in the cart</p>
+            <Button size={store.value ? "lg" : "md"} variant={open_items.length === 0 ? "primary" : "secondary"} onclick={clear_done}>
+              <BroomIcon weight="bold" /> Clear done
+            </Button>
+          </div>
         </div>
       {/if}
-      <EntryBar history={file.value.history} exclude={open_keys} onadd={add} onphoto={() => void photo()}>
+      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} onadd={add} onphoto={() => void photo()}>
         {#snippet before()}
           {#if all && target}
             <button
