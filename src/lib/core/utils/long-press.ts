@@ -34,6 +34,8 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     let dragging = false;
     let pointer_id: number | null = null;
     let swallow_click = false;
+    /** The last touch press, kept past a browser cancel so a late `contextmenu` can still open the menu. */
+    let pressed: Position | null = null;
 
     const point = (event: PointerEvent): Position => ({ x: event.clientX, y: event.clientY });
 
@@ -52,21 +54,26 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
       if (event.pointerType === "mouse" || !event.isPrimary || ignored(event)) return;
       reset();
       start = point(event);
+      pressed = start;
       pointer_id = event.pointerId;
-      timer = setTimeout(() => {
-        held = true;
-        swallow_click = true;
-        navigator.vibrate?.(8);
-        // From here the element keeps the pointer even when the finger leaves it.
-        if (pointer_id !== null && element.isConnected) {
-          try {
-            element.setPointerCapture(pointer_id);
-          } catch (error) {
-            // The pointer ended without an event reaching us: nothing to hold on to.
-            reset();
-          }
+      timer = setTimeout(hold, HOLD_MS);
+    }
+
+    function hold() {
+      clearTimeout(timer);
+      timer = undefined;
+      held = true;
+      swallow_click = true;
+      navigator.vibrate?.(8);
+      // From here the element keeps the pointer even when the finger leaves it.
+      if (pointer_id !== null && element.isConnected) {
+        try {
+          element.setPointerCapture(pointer_id);
+        } catch (error) {
+          // The pointer ended without an event reaching us: nothing to hold on to.
+          reset();
         }
-      }, HOLD_MS);
+      }
     }
 
     function on_pointer_move(event: PointerEvent) {
@@ -74,7 +81,10 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
       const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y) > SLOP_PX;
 
       if (!held) {
-        if (moved) reset();
+        if (moved) {
+          pressed = null;
+          reset();
+        }
         return;
       }
       if (!dragging && moved) {
@@ -86,6 +96,7 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
     }
 
     function on_pointer_up(event: PointerEvent) {
+      if (event.pointerType !== "mouse") pressed = null;
       if (event.pointerId !== pointer_id) return;
       if (dragging) options.on_drag_end?.(point(event));
       else if (held) options.on_menu(point(event));
@@ -115,7 +126,18 @@ export function long_press(options: LongPressOptions): Attachment<HTMLElement> {
       event.preventDefault();
       if (ignored(event)) return;
       const type = (event as Partial<PointerEvent>).pointerType;
-      if (type !== "touch" && type !== "pen" && start === null) options.on_menu({ x: event.clientX, y: event.clientY });
+      const at = { x: event.clientX, y: event.clientY };
+      if (type !== "touch" && type !== "pen") {
+        if (start === null) options.on_menu(at);
+        return;
+      }
+      // Samsung Internet's own long press beats the timer on elements with text: it either arrives first (hold now) or
+      // after the browser already cancelled the pointer (open the menu, since the finger is still down and still).
+      if (timer !== undefined) hold();
+      else if (start === null && pressed !== null) {
+        pressed = null;
+        options.on_menu(at);
+      }
     }
 
     element.addEventListener("pointerdown", on_pointer_down);
