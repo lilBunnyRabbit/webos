@@ -106,6 +106,19 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         },
       }),
       define_command({
+        id: "app recent",
+        description: "Apps opened lately, newest first",
+        args: z.object({ clear: z.boolean().default(false).describe("Forget them") }),
+        yields: "app",
+        async *run({ args }) {
+          if (args.clear) return apps.clear_recent();
+          for (const id of apps.recent) {
+            const manifest = apps.get(id);
+            if (manifest) yield app_value(manifest, await apps.meta(id));
+          }
+        },
+      }),
+      define_command({
         id: "app launch",
         description: "Open an app in a new window",
         args: z.object({ id: arg.app() }),

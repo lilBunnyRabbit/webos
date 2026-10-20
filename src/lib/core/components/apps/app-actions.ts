@@ -7,9 +7,12 @@ import kernel, {
   type WindowsService,
 } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
+import { Broom as BroomIcon } from "phosphor-svelte";
 
 const apps = () => kernel.service<AppsService>("apps");
 const dialogs = () => kernel.service<DialogsService>("dialogs");
+
+export const CLEAR_RECENT_ITEM = { id: "clear-recent", label: "Clear recent", icon: BroomIcon };
 
 /**
  * Asks, closes the app's windows (guarded: a dirty one can keep it), removes its desktop shortcuts and widgets, then

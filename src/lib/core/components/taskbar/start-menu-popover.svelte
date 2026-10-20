@@ -26,7 +26,8 @@
   import CommandMode from "./command-mode.svelte";
   import { Button, EmptyState, IconButton, Input, Kbd } from "../ui";
   import AppBadge from "../apps/app-badge.svelte";
-  import { uninstall_app } from "../apps/app-actions";
+  import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
+  import RecentApps from "../apps/recent-apps.svelte";
   import { set_drag_app } from "../apps/drag";
   import { with_pin, without_pin } from "$lib/core/api";
 
@@ -78,7 +79,7 @@
     desktop.pin(manifest.id).catch((error) => console.error(`[StartMenu] Failed to pin ${manifest.id}`, error));
   }
 
-  async function menu(manifest: AppManifest, event: MouseEvent) {
+  async function menu(manifest: AppManifest, event: MouseEvent, recent = false) {
     event.preventDefault();
     const anchor = { x: event.clientX, y: event.clientY };
     const choice = await dialogs.menu(
@@ -89,6 +90,7 @@
             settings.taskbar.pinned.includes(manifest.id)
               ? { id: "unpin-taskbar", label: "Unpin from taskbar", icon: PushPinSimpleSlashIcon }
               : { id: "pin-taskbar", label: "Pin to taskbar", icon: PushPinSimpleIcon },
+            ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
             ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
         : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
@@ -99,45 +101,50 @@
     else if (choice === "pin-taskbar") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, manifest.id);
     else if (choice === "unpin-taskbar") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, manifest.id);
     else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
+    else if (choice === CLEAR_RECENT_ITEM.id) apps.clear_recent();
   }
 </script>
+
+{#snippet app_tile(manifest: AppManifest, get = false, recent = false)}
+  <li class="group relative">
+    <button
+      class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
+      onclick={() => launch(manifest)}
+      oncontextmenu={(event) => menu(manifest, event, recent)}
+      draggable="true"
+      ondragstart={(event) => {
+        set_drag_app(event, manifest.id);
+        // Out of the way of the desktop and the taskbar; closing inside dragstart would cancel the drag.
+        requestAnimationFrame(close);
+      }}
+    >
+      <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+        <manifest.icon class="size-6" weight="duotone" />
+        <AppBadge app_id={manifest.id} />
+      </span>
+      <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
+      {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
+      {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
+    </button>
+    {#if !get}
+      <IconButton
+        label="Pin {manifest.name} to desktop"
+        size="sm"
+        class="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        onclick={() => pin(manifest)}
+      >
+        <PushPinIcon weight="bold" />
+      </IconButton>
+    {/if}
+  </li>
+{/snippet}
 
 {#snippet grid(label: string, list: AppManifest[], get = false)}
   <section>
     <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{label}</p>
     <ul class="grid grid-cols-4 gap-1">
       {#each list as manifest (manifest.id)}
-        <li class="group relative">
-          <button
-            class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
-            onclick={() => launch(manifest)}
-            oncontextmenu={(event) => menu(manifest, event)}
-            draggable="true"
-            ondragstart={(event) => {
-              set_drag_app(event, manifest.id);
-              // Out of the way of the desktop and the taskbar; closing inside dragstart would cancel the drag.
-              requestAnimationFrame(close);
-            }}
-          >
-            <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
-              <manifest.icon class="size-6" weight="duotone" />
-              <AppBadge app_id={manifest.id} />
-            </span>
-            <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
-            {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
-            {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
-          </button>
-          {#if !get}
-            <IconButton
-              label="Pin {manifest.name} to desktop"
-              size="sm"
-              class="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-              onclick={() => pin(manifest)}
-            >
-              <PushPinIcon weight="bold" />
-            </IconButton>
-          {/if}
-        </li>
+        {@render app_tile(manifest, get)}
       {/each}
     </ul>
   </section>
@@ -181,6 +188,9 @@
     </div>
   {:else}
     <div class="flex flex-col gap-3">
+      <RecentApps>
+        {#snippet tile(manifest)}{@render app_tile(manifest, false, true)}{/snippet}
+      </RecentApps>
       {#each sections as section (section.id)}
         {@render grid(section.label, section.apps)}
       {/each}

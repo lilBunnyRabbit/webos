@@ -22,6 +22,11 @@ export class SoloAppsService extends AppsService {
     return [];
   }
 
+  // A shared link's app isn't one the person opened in their own WebOS: the list stays empty and nothing is saved.
+  protected override async load_recent(): Promise<void> {}
+
+  protected override remember(): void {}
+
   override launch(id: AppId, props?: unknown): WindowId {
     const current = this.solo_windows.list()[0];
     if (!current) return super.launch(id, props);

@@ -45,6 +45,12 @@ export interface AppsService extends IService {
    * (ADR-049). Reactive: bare manifests until the metas load, so names show at once and the text fills in.
    */
   listings(filter?: AppsFilter): AppListing[];
+  /**
+   * User apps `launch()` opened lately, newest first, each once, at most 16; never system apps, and apps uninstalled
+   * since drop out. Reactive. Saved in `/var/lib/apps/recent.json`; always empty in solo mode (ADR-047).
+   */
+  readonly recent: AppId[];
+  clear_recent(): void;
 }
 
 export interface AppsFilter {

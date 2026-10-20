@@ -29,6 +29,7 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
 
 export class AppsService implements IAppsService {
@@ -51,6 +52,10 @@ export class AppsService implements IAppsService {
   /** User apps only: system apps are always installed (ADR-040). */
   private readonly installed = new SvelteSet<AppId>();
   private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
+  private recent_writer = new LatestWriter(() => this.files_service, RECENT_PATH, "recent apps");
+  /** As saved: can hold apps uninstalled since, which `recent` leaves out until they're reinstalled. */
+  private recent_ids: AppId[] = $state.raw([]);
+  private readonly recent_listed: AppId[] = $derived(this.recent_ids.filter((id) => this.is_recent_candidate(id)));
   private metas: ReadonlyMap<AppId, AppMeta> = $state.raw(new Map());
   private meta_loading: Promise<void> | null = null;
   private readonly all_listings: AppListing[] = $derived(
@@ -74,6 +79,11 @@ export class AppsService implements IAppsService {
 
   async init(): Promise<void> {
     requestIdleCallback(() => void this.meta_ready);
+    await this.init_installed();
+    await this.load_recent();
+  }
+
+  private async init_installed(): Promise<void> {
     const saved = parse_installed(await this.read(INSTALLED_PATH));
     if (saved) {
       for (const id of saved) if (this.registry.has(id)) this.installed.add(id);
@@ -90,6 +100,32 @@ export class AppsService implements IAppsService {
       this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals, commands));
     }
     this.writer.write(serialize_installed(this.installed));
+  }
+
+  public get recent(): AppId[] {
+    return this.recent_listed;
+  }
+
+  public clear_recent(): void {
+    if (this.recent_ids.length === 0) return;
+    this.recent_ids = [];
+    this.recent_writer.write(serialize_recent([]));
+  }
+
+  protected async load_recent(): Promise<void> {
+    const text = await this.read(RECENT_PATH);
+    this.recent_writer.seed(text);
+    this.recent_ids = parse_recent(text).filter((id) => this.registry.get(id)?.system === false);
+  }
+
+  protected remember(id: AppId): void {
+    if (!this.is_recent_candidate(id) || this.recent_ids[0] === id) return;
+    this.recent_ids = with_recent(this.recent_ids, id);
+    this.recent_writer.write(serialize_recent(this.recent_ids));
+  }
+
+  private is_recent_candidate(id: AppId): boolean {
+    return this.registry.get(id)?.system === false && this.is_installed(id);
   }
 
   private tidy(all: AppId[], used: Set<AppId>): void {
@@ -191,7 +227,9 @@ export class AppsService implements IAppsService {
       this.notifications_service.notify("apps", { title: `${manifest.name} installed`, message: "It's in the start menu now." });
     }
 
-    return this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
+    const window_id = this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
+    this.remember(id);
+    return window_id;
   }
 
   public create_instance(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance | null {

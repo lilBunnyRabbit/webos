@@ -9,6 +9,7 @@ import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
 import { TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
 
@@ -124,6 +125,58 @@ describe("AppsService installed apps", () => {
     apps(kernel).install("quick-notes");
     expect(command.available?.() ?? true).toBe(true);
     expect(() => commands.find((candidate) => candidate.id === "app launch")!.run({ args: { id: "clock" } } as never)).toThrow(/isn't installed/);
+  });
+});
+
+describe("AppsService recent apps", () => {
+  async function recent_on_disk(kernel: Kernel): Promise<string[]> {
+    const file = await kernel.service<FilesService>("files").get_file(RECENT_PATH);
+    return parse_recent(file ? await file.text() : null);
+  }
+
+  test("launch records user apps newest first, once each; system apps never", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
+    const kernel = await boot();
+    apps(kernel).launch("clock");
+    apps(kernel).launch("settings");
+    apps(kernel).launch("kanban");
+    apps(kernel).launch("clock");
+    expect(apps(kernel).recent).toEqual(["clock", "kanban"]);
+    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["clock", "kanban"]));
+  });
+
+  test("the saved list loads, dropping system, unknown and uninstalled apps", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
+    await write(RECENT_PATH, serialize_recent(["gone", "kanban", "settings", "snake", "clock"]));
+    const kernel = await boot();
+    expect(apps(kernel).recent).toEqual(["kanban", "clock"]);
+
+    await apps(kernel).uninstall("kanban");
+    expect(apps(kernel).recent).toEqual(["clock"]);
+    apps(kernel).install("kanban");
+    expect(apps(kernel).recent).toEqual(["kanban", "clock"]);
+  });
+
+  test("clear_recent empties and saves the list", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["clock"]));
+    await write(RECENT_PATH, serialize_recent(["clock"]));
+    const kernel = await boot();
+    apps(kernel).clear_recent();
+    expect(apps(kernel).recent).toEqual([]);
+    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual([]));
+  });
+
+  test("app recent yields the list; --clear forgets it", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
+    await write(RECENT_PATH, serialize_recent(["kanban", "clock"]));
+    const kernel = await boot();
+    const command = (apps(kernel).shell!().commands ?? []).find((candidate) => candidate.id === "app recent")!;
+    const yielded: unknown[] = [];
+    for await (const value of command.run({ args: { clear: false } } as never) as AsyncIterable<unknown>) yielded.push(value);
+    expect(yielded).toMatchObject([{ $type: "app", id: "kanban" }, { $type: "app", id: "clock" }]);
+
+    for await (const _ of command.run({ args: { clear: true } } as never) as AsyncIterable<unknown>);
+    expect(apps(kernel).recent).toEqual([]);
   });
 });
 

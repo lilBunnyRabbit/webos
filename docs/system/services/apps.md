@@ -17,6 +17,7 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()`, `group_apps()`, `within_one_edit()`, `APP_CATEGORY_LABELS`, `AppSection` |
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
 | `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
+| `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
 | `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
@@ -42,6 +43,8 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `meta_ready` | `Promise<void>` (getter) | Settles once every app's `meta` has loaded; the first read starts the load. [App meta](#app-meta-adr-049) |
 | `meta(id)` | `(id: AppId): Promise<AppMeta>` | After `meta_ready`: the app's meta, `{}` without one |
 | `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every app (or the installed / not installed ones, like `list`), its manifest merged with its meta. Reactive: bare manifests until the metas load. [App meta](#app-meta-adr-049) |
+| `recent` | `readonly AppId[]` (getter) | User apps `launch()` opened lately, newest first, each once, at most 16. Installed ones only: an uninstalled app drops out (and comes back if reinstalled). Reactive. [Recent apps](#recent-apps) |
+| `clear_recent()` | `(): void` | Empties the list and saves it |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
 
@@ -82,6 +85,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 - `registry`, filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)).
 - `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
 - `metas`, a private `$state.raw` `ReadonlyMap<AppId, AppMeta>`, empty until the meta load replaces it once ([below](#app-meta-adr-049)).
+- `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping only installed user apps, is what `recent` returns.
 - `all_listings`, a private `$derived` over `registry` and `metas`: each manifest merged with its meta, the bare manifest while it has none. `listings()` returns it, filtered when asked.
 
 The constructor also wires `$derived` references to its five dependencies. There is no `destroy()`.
@@ -93,7 +97,7 @@ The constructor also wires `$derived` references to its five dependencies. There
 3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Library**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
 
-Before any of that, `init()` schedules the meta load with `requestIdleCallback`.
+Before any of that, `init()` schedules the meta load with `requestIdleCallback`. After it, `load_recent()` reads the recent list ([below](#recent-apps)).
 
 ## Lifecycle
 
@@ -103,7 +107,9 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 
 ## Persistence
 
-`/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
+`/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change.
+
+`/var/lib/apps/recent.json`: `{ "version": 1, "ids": AppId[] }`, newest first, at most 16, written through its own `LatestWriter` when a launch changes the list and on `clear_recent()`. Missing or invalid reads as empty. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
 
 ## Behaviour & invariants
 
@@ -114,6 +120,7 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 3. Validate props (below).
 4. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
 5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
+6. `remember(id)`: a user app moves to the front of the recent list ([below](#recent-apps)).
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
 
@@ -126,9 +133,18 @@ An app's display text (`description`, `keywords`, `pitch`, `authors`) is in its 
 - **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta`), from a `$derived` over the registry and the loaded metas. Until the load lands it returns bare manifests, so a reader renders names at once and the text fills in when `metas` is replaced; it never awaits. `filter.installed` works as in `list()`. The start menu, the mobile drawer, the first-boot intro's suggestions, the App Library and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `meta_ready` and `meta(id)` stay internal. `search_apps` and `group_apps` are generic over the listing type. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement only after `meta_ready`, then reads `listings()` ([version](version.md)).
 - Static per app, so two windows of one app, the mobile service set and solo mode (`SoloAppsService` inherits it) all share the one load.
 
+### Recent apps
+
+The Recent row in the start menu and the mobile app drawer, and `app recent`, read `recent` ([brainstorm](../../brainstorm/2026-10-20_recent-apps.md)).
+
+- **Recording.** Every `launch()` calls the protected `remember(id)`, so a file, a shortcut, a deep link or the shell all count; `create_instance()` (session restore, reopen closed) doesn't. Only installed user apps are recorded: system apps (Settings, File Explorer, Terminal…) never. The app moves to the front, each id once, capped at 16, and the list is saved. Launching the app already in front writes nothing.
+- **Reading.** `load_recent()` runs at the end of `init()`, after the installed list: it parses the file and drops ids no app has and system apps. `recent` also leaves out apps that aren't installed at read time, so an uninstall hides the app without rewriting the file.
+- **Clearing.** `clear_recent()` (the tile menu's "Clear recent", `app recent --clear`) empties and saves.
+- **Inspector.** A Recent count; detailed mode adds the list, newest first, and the file path.
+
 ### Solo mode
 
-`SoloAppsService` (`apps/solo.svelte.ts`, ADR-047) is registered under `apps` for a `#/solo/` link. `install()` returns `[]`, so nothing joins the person's start menu. `launch()` opens the first window normally; once a window exists, every later launch (and so every `open(path)`) opens nothing, focuses the solo window, returns its id and toasts "Open WebOS to use other apps" with an Open WebOS action that opens the window's app link in a new tab.
+`SoloAppsService` (`apps/solo.svelte.ts`, ADR-047) is registered under `apps` for a `#/solo/` link. `install()` returns `[]`, so nothing joins the person's start menu. `load_recent()` and `remember()` are no-ops, so `recent` stays empty and `recent.json` is neither read nor written. `launch()` opens the first window normally; once a window exists, every later launch (and so every `open(path)`) opens nothing, focuses the solo window, returns its id and toasts "Open WebOS to use other apps" with an Open WebOS action that opens the window's app link in a new tab.
 
 ### `create_instance(id, props?)`
 
@@ -190,7 +206,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Shell
 
-Contributes `app list|info|launch`, `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), `taskbar position [top|bottom|left|right]`, `taskbar size [small|medium|large]` `taskbar autohide [on|off]` and `taskbar seconds [on|off]` (ADR-015 revision: zod enums, so Tab completes them; with no argument each returns the current value as text), the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also puts every app's manifest `shell` module behind its contribution's `lazy`, loaded in parallel on the shell's first `load()`, tagging those commands with `app: <id>` (ADR-034, revised 2026-10-17). See [shell](shell.md#contributions).
+Contributes `app list|info|launch`, `app recent` (yields `app` values from `recent`, newest first; `--clear` calls `clear_recent()` and yields nothing), `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), `taskbar position [top|bottom|left|right]`, `taskbar size [small|medium|large]` `taskbar autohide [on|off]` and `taskbar seconds [on|off]` (ADR-015 revision: zod enums, so Tab completes them; with no argument each returns the current value as text), the `app` completer, the `app` value type and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also puts every app's manifest `shell` module behind its contribution's `lazy`, loaded in parallel on the shell's first `load()`, tagging those commands with `app: <id>` (ADR-034, revised 2026-10-17). See [shell](shell.md#contributions).
 
 The shell never installs (ADR-040):
 

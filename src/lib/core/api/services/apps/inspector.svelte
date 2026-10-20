@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AppsService, InspectorProps } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
+  import { RECENT_PATH } from "./recent";
 
   let { service, detailed }: InspectorProps<AppsService> = $props();
 
@@ -13,9 +14,15 @@
   <InspectorStat label="Registered" value={manifests.length} />
   <InspectorStat label="System / user" value="{system_count} / {manifests.length - system_count}" />
   <InspectorStat label="Associations" value={association_count} />
+  <InspectorStat label="Recent" value={service.recent.length} />
 </InspectorStats>
 
 {#if detailed}
+  <InspectorStats>
+    <InspectorStat label="Recent, newest first" value={service.recent.join(" ") || "—"} />
+    <InspectorStat label="Recent file" value={RECENT_PATH} />
+  </InspectorStats>
+
   <InspectorTable columns={["", "Id", "Name", "Version", "Props", "Opens"]} empty={manifests.length === 0}>
     {#each manifests as manifest (manifest.id)}
       <tr>

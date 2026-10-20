@@ -19,7 +19,8 @@
   import { Button, EmptyState, Input } from "../ui";
   import { long_press } from "$lib/core/utils/long-press";
   import AppBadge from "../apps/app-badge.svelte";
-  import { uninstall_app } from "../apps/app-actions";
+  import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
+  import RecentApps from "../apps/recent-apps.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -77,11 +78,12 @@
     if (close) onclose();
   }
 
-  async function menu(manifest: AppManifest, anchor: { x: number; y: number }) {
+  async function menu(manifest: AppManifest, anchor: { x: number; y: number }, recent = false) {
     const choice = await dialogs.menu(
       apps.is_installed(manifest.id)
         ? [
             { id: "pin", label: "Add to home screen", icon: PushPinIcon },
+            ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
             ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
         : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
@@ -90,28 +92,33 @@
     if (choice === "pin") desktop.pin(manifest.id).catch((error) => console.error(`[AppDrawer] Failed to pin ${manifest.id}`, error));
     else if (choice === "open") launch(manifest);
     else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
+    else if (choice === CLEAR_RECENT_ITEM.id) apps.clear_recent();
   }
 </script>
+
+{#snippet app_tile(manifest: AppManifest, get = false, recent = false)}
+  <li>
+    <button
+      {@attach long_press({ on_menu: (point) => menu(manifest, point, recent) })}
+      class="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-3 pb-2 transition-colors duration-150 active:bg-foreground/8"
+      onclick={() => launch(manifest)}
+    >
+      <span class="relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+        <manifest.icon class="size-7" weight="duotone" />
+        <AppBadge app_id={manifest.id} />
+      </span>
+      <span class="line-clamp-2 max-w-full text-center text-xs leading-tight font-medium">{manifest.name}</span>
+      {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
+    </button>
+  </li>
+{/snippet}
 
 {#snippet grid(label: string, list: AppManifest[], get = false)}
   <section>
     <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{label}</p>
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1">
       {#each list as manifest (manifest.id)}
-        <li>
-          <button
-            {@attach long_press({ on_menu: (point) => menu(manifest, point) })}
-            class="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-3 pb-2 transition-colors duration-150 active:bg-foreground/8"
-            onclick={() => launch(manifest)}
-          >
-            <span class="relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
-              <manifest.icon class="size-7" weight="duotone" />
-              <AppBadge app_id={manifest.id} />
-            </span>
-            <span class="line-clamp-2 max-w-full text-center text-xs leading-tight font-medium">{manifest.name}</span>
-            {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
-          </button>
-        </li>
+        {@render app_tile(manifest, get)}
       {/each}
     </ul>
   </section>
@@ -167,6 +174,9 @@
         </div>
       {:else}
         <div class="flex flex-col gap-3">
+          <RecentApps>
+            {#snippet tile(manifest)}{@render app_tile(manifest, false, true)}{/snippet}
+          </RecentApps>
           {#each sections as section (section.id)}
             {@render grid(section.label, section.apps)}
           {/each}
