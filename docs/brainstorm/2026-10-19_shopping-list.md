@@ -104,3 +104,16 @@ Decisions (owner):
 - **Scope:** only apps with non-obvious internals: an algorithm, a model, a protocol or a format worth explaining. First four: Shopping List, Cards, P2P Transfer, Format Lab.
 - **Shape:** What it does · How it works (pipeline and algorithms, why each over the alternatives, measured numbers) · Data (paths, formats, props) · Dependencies & licences · Limits · Decisions. Code cited as `file:line`.
 - **Kept current by rule:** CLAUDE.md lists the documented ids; a change to a listed app updates its page in the same commit, and an app that gains a model, algorithm, protocol, format or non-trivial dependency gets a page. Implementing sub-agents get the rule in their prompt.
+
+## Follow-up 2026-10-20: readability, amounts, swipe, list views
+
+Owner, from the phone: the list read like a plain toggle list, items hard to read, checked hard to see, amount barely visible, "omega 3" became 3× omega, misclicks tick items, the list selector is a pain, wants all lists at once and list name/colour/icon editing.
+
+Decisions:
+- **Layout:** open items in a card, ticked ones in a collapsible "In the cart" section, progress bar under the toolbar. Row menu by long press on touch; ⋯ only with a mouse. (Shipped in 3.5.0.)
+- **Parser:** a bare trailing number stays in the name ("omega 3", "WD 40"); trailing amounts need `x` or a unit.
+- **Amounts:** an item editor view (name, −/+ stepper with a number field, unit chips), from Edit… or a tap on the amount pill.
+- **Swipe:** → ticks (unticks in the cart), ← deletes with Undo, tap opens the editor, long press the menu. A mouse can still click the circle.
+- **Lists:** both an overview home screen (a card per list: icon, colour, name, N left, first items) and a chip row inside a list ([All] [lists…] [+]) to hop.
+- **All lists:** one scroll, a header per list with its open items, tickable; the cart gathers below. Adding in All asks which list (remembered per window).
+- **List icon:** optional `icon` on the list, a fixed set; file stays version 1. A List settings view edits name, colour and icon. Not synced to a paired phone, like name and colour today.

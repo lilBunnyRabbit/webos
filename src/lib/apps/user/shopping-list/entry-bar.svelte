@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button, IconButton, Input } from "$lib/core/components/ui";
   import { Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import type { Snippet } from "svelte";
   import type { History } from "./data";
   import { entry_text, format_amount, parse_entry } from "./parse";
   import { last_trip, suggestions } from "./suggest";
@@ -11,9 +12,11 @@
     exclude: ReadonlySet<string>;
     onadd: (text: string) => void;
     onphoto: () => void;
+    /** Before the camera button, like All's list picker. */
+    before?: Snippet;
   }
 
-  let { history, exclude, onadd, onphoto }: Props = $props();
+  let { history, exclude, onadd, onphoto, before }: Props = $props();
 
   let draft = $state("");
   let field = $state<HTMLInputElement | null>(null);
@@ -64,6 +67,7 @@
       add(draft);
     }}
   >
+    {@render before?.()}
     <IconButton label="Read a list from a photo" size="md" onclick={onphoto}><CameraIcon weight="bold" /></IconButton>
     <Input
       bind:value={draft}

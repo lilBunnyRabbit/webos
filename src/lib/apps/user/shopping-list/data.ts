@@ -24,6 +24,28 @@ export const ListColor = {
 export type ListColor = (typeof ListColor)[keyof typeof ListColor];
 export const LIST_COLORS = Object.values(ListColor);
 
+/** A list's icon, from a fixed set; a list without one shows the cart. */
+export const ListIcon = {
+  CART: "cart",
+  BASKET: "basket",
+  CARROT: "carrot",
+  BREAD: "bread",
+  COFFEE: "coffee",
+  WINE: "wine",
+  HOUSE: "house",
+  BROOM: "broom",
+  WRENCH: "wrench",
+  PILL: "pill",
+  BABY: "baby",
+  PAW: "paw",
+  LEAF: "leaf",
+  SHIRT: "shirt",
+  GIFT: "gift",
+  BOOK: "book",
+} as const;
+export type ListIcon = (typeof ListIcon)[keyof typeof ListIcon];
+export const LIST_ICONS = Object.values(ListIcon);
+
 const Id = z.string().min(1);
 
 export const ItemSchema = z.object({
@@ -37,7 +59,7 @@ export const ItemSchema = z.object({
 });
 export type Item = z.infer<typeof ItemSchema>;
 
-export const ListMetaSchema = z.object({ id: Id, name: z.string(), color: z.enum(ListColor) });
+export const ListMetaSchema = z.object({ id: Id, name: z.string(), color: z.enum(ListColor), icon: z.enum(ListIcon).optional() });
 export type ListMeta = z.infer<typeof ListMetaSchema>;
 
 export const ListSchema = ListMetaSchema.extend({ items: z.array(ItemSchema) });

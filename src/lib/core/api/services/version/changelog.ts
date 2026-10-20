@@ -10,7 +10,10 @@ export const CHANGELOG: Release[] = [
     title: "Easier to read",
     changes: [
       { kind: IMPROVED, apps: ["shopping-list"], text: "Shopping List is easier to read: bolder items in a card, a clear amount, and ticked items move down into an In the cart section." },
-      { kind: NEW, apps: ["shopping-list"], text: "Set an item's amount and unit (g, kg, ml, l, pak…) with a stepper: tap the amount or pick Edit." },
+      { kind: NEW, apps: ["shopping-list"], text: "Set an item's amount and unit (g, kg, ml, l, pak…) with a stepper: tap the item or its amount." },
+      { kind: NEW, apps: ["shopping-list"], text: "Swipe an item right to tick it and left to delete it (with Undo), so a stray tap no longer ticks anything." },
+      { kind: NEW, apps: ["shopping-list"], text: "Shopping List opens on all your lists, hops between them with one tap, and has an All view with every list at once." },
+      { kind: NEW, apps: ["shopping-list"], text: "Give each list a name, colour and icon in its settings." },
       { kind: FIXED, apps: ["shopping-list"], text: "A number at the end of a name stays part of it: \"omega 3\" is no longer three of omega." },
     ],
   },

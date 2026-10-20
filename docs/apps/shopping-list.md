@@ -131,9 +131,17 @@ Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an
 
 ### The list view
 
-Open items sit in one card (`divide-y`, full-contrast medium text, the amount as a pill); ticked ones drop into a collapsible "In the cart · N" section under it (window storage `cart_open`), dimmed and struck through. A tick runs inside `view_transition`, each row carrying `view-transition-name: item-{id}`, so the row slides between the sections. A thin progress bar under the toolbar shows ticked over all.
+Three places, in window storage `list`: `@home` (the default), `@all`, or a list id.
 
-The row menu (Edit…, Move to, Delete) is a long press on touch (`long_press`, off in store mode) and the ⋯ button or a right-click with a mouse; the ⋯ is `pointer-coarse:hidden`. Edit… and a tap on the amount pill open the item editor (`item-editor.svelte`, `View.EDIT`): name, a −/+ stepper with a number field (steps of 50 for g and ml, 0,5 for kg and l, 1 otherwise; empty means no amount), and unit chips (×, g, dag, kg, ml, dl, l, pak, plus the item's own unit when it's another). Back or Cancel closes it.
+- **Lists** (`lists-overview.svelte`): an All lists row, then a card per list (icon tile, name, "N left", the first four open items), a gear for List settings, and a New list card.
+- **A list or All**: the toolbar is a back arrow to Lists, then a chip row (`list-chips.svelte`: All, each list with its icon and open count, +), store mode and ⋯. Back (nav bar, browser) goes to Lists from either.
+- **All**: a header per list with open items (tap the header to open that list), then one "In the cart" section where each row shows its list's icon. The entry bar gets a list picker in front (window storage `add_to`, else the first list); photo lines go to the same list.
+
+Open items sit in a card (`divide-y`, full-contrast medium text, the amount as a pill); ticked ones drop into a collapsible "In the cart · N" section (window storage `cart_open`), dimmed and struck through. A tick runs inside `view_transition`, each row carrying `view-transition-name: item-{id}`, so the row slides between the sections. A thin progress bar under the toolbar shows ticked over all.
+
+A row (`item-row.svelte`) is swiped, not tapped, to tick (owner: taps were misclicks). Pointer events on the `li` with `touch-action: pan-y`: past 10px a mostly horizontal move takes the pointer (capture) and drags the row over a coloured reveal; released past `min(120px, 35%)` (a short vibration when crossed), → ticks or unticks, ← deletes with an Undo toast (`delete_item`); short of it the row springs back. A vertical move first leaves it to the page scroll. The click after a swipe is swallowed. A tap opens the item editor (in store mode it does nothing); a mouse also gets a real checkbox in front (`pointer-fine:grid`, `data-no-swipe`), keyboard users too. The row menu (Edit…, Move to, Delete) is a long press on touch (`long_press`, off in store mode) and the ⋯ button or a right-click with a mouse; the ⋯ is `pointer-coarse:hidden`. Edit…, a tap and a tap on the amount pill open the item editor (`item-editor.svelte`, `View.EDIT`): name, a −/+ stepper with a number field (steps of 50 for g and ml, 0,5 for kg and l, 1 otherwise; empty means no amount), and unit chips (×, g, dag, kg, ml, dl, l, pak, plus the item's own unit when it's another). Back or Cancel closes it.
+
+List settings (`list-settings.svelte`, `View.SETTINGS`) edit name, colour (swatches) and icon (a grid of 16, `ListIcon` in `data.ts`, components in `colors.ts`), with a live preview tile; New list opens the same view empty. Renaming also renames the list's widget file.
 
 ### Adding an item
 
@@ -172,8 +180,9 @@ History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:4
 
 | What | Where | Format |
 |------|-------|--------|
-| Lists, items, history | `/var/lib/apps/shopping-list/lists.json`, `storage.file()` (`shopping-list.app.svelte:71`); the widget holds the same file through `json_file()`, so both see each other's changes at once | `{ version: 1, lists: [{ id, name, color, items }], history: { [text]: { count, last } } }`; item `{ id, text, qty?, unit?, checked, updated_at, deleted_at? }` (`data.ts:29`) |
-| Open list | Window storage `list` | List id, default `groceries` |
+| Lists, items, history | `/var/lib/apps/shopping-list/lists.json`, `storage.file()` (`shopping-list.app.svelte:71`); the widget holds the same file through `json_file()`, so both see each other's changes at once | `{ version: 1, lists: [{ id, name, color, icon?, items }], history: { [text]: { count, last } } }`; item `{ id, text, qty?, unit?, checked, updated_at, deleted_at? }` (`data.ts:29`) |
+| Open place | Window storage `list` | `@home` (default), `@all` or a list id |
+| Add target in All | Window storage `add_to` | List id or `null` (the first list) |
 | "In the cart" open | Window storage `cart_open` | Boolean, default open |
 | In-store mode | Window storage `store` | Boolean; big rows, Screen Wake Lock (`shopping-list.app.svelte:149`) |
 | Launch props handled | Window storage `launched` | Boolean; set once the `list` and `photo` props were acted on, so a restored window doesn't switch lists or ask for a photo again |

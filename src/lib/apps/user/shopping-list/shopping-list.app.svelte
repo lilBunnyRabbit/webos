@@ -11,12 +11,13 @@
     Broom as BroomIcon,
     Camera as CameraIcon,
     CaretDown as CaretDownIcon,
+    CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
     Check as CheckIcon,
     DotsThree as DotsThreeIcon,
+    GearSix as GearSixIcon,
     LinkBreak as LinkBreakIcon,
     ListPlus as ListPlusIcon,
-    Palette as PaletteIcon,
     PencilSimple as PencilSimpleIcon,
     QrCode as QrCodeIcon,
     ShoppingCart as ShoppingCartIcon,
@@ -27,12 +28,9 @@
   import { untrack } from "svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import { z } from "zod";
-  import { COLOR_DOT, COLOR_NAME } from "./colors";
   import {
-    DEFAULT_LIST_ID,
     empty_file,
     history_key,
-    LIST_COLORS,
     LISTS_FILE,
     ListsFileSchema,
     new_id,
@@ -40,11 +38,15 @@
     stamp,
     type Item,
     type List,
-    type ListColor,
+    type ListMeta,
   } from "./data";
   import EntryBar from "./entry-bar.svelte";
   import ItemEditor from "./item-editor.svelte";
   import ItemRow from "./item-row.svelte";
+  import ListChips from "./list-chips.svelte";
+  import ListMark from "./list-mark.svelte";
+  import ListSettings from "./list-settings.svelte";
+  import ListsOverview from "./lists-overview.svelte";
   import { add_entry } from "./items";
   import { live, merge_items, prune } from "./merge";
   import PairPanel from "./pair-panel.svelte";
@@ -55,7 +57,10 @@
   import { record_trip } from "./suggest";
   import { PairSession, PairState } from "./sync.svelte";
 
-  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review", EDIT: "edit" } as const;
+  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review", EDIT: "edit", SETTINGS: "settings" } as const;
+  /** Window storage `list` holds a list id, or one of these. */
+  const HOME = "@home";
+  const ALL = "@all";
   type View = (typeof View)[keyof typeof View];
 
   interface Props {
@@ -72,7 +77,9 @@
   const on_phone = kernel.platform === Platform.MOBILE;
 
   const file = storage.file(LISTS_FILE, empty_file(), ListsFileSchema);
-  const current = storage.window("list", DEFAULT_LIST_ID, z.string());
+  const current = storage.window("list", HOME, z.string());
+  /** Where an item typed in All goes. */
+  const add_to = storage.window<string | null>("add_to", null, z.string().nullable());
   const store = storage.window("store", false, z.boolean());
   const cart_open = storage.window("cart_open", true, z.boolean());
   // Props come back with a restored window; without this a reload would switch lists and ask for a photo again.
@@ -83,11 +90,16 @@
   let dragging_file = $state(false);
 
   const lists = $derived(file.value.lists);
-  const list = $derived(lists.find((candidate) => candidate.id === current.value) ?? lists[0]);
-  const items = $derived(list ? live(list.items) : []);
+  const list = $derived(lists.find((candidate) => candidate.id === current.value));
+  const all = $derived(current.value === ALL);
+  const home = $derived(!list && !all);
+  const scope = $derived(list ? [list] : all ? lists : []);
+  const items = $derived(scope.flatMap((each) => live(each.items)));
   const done = $derived(items.filter((item) => item.checked));
   const open_items = $derived(items.filter((item) => !item.checked));
-  const open_keys = $derived(new Set(items.filter((item) => !item.checked).map((item) => history_key(item.text))));
+  const groups = $derived(lists.map((each) => ({ list: each, open: live(each.items).filter((item) => !item.checked) })).filter((group) => group.open.length > 0));
+  const target = $derived(list ?? lists.find((candidate) => candidate.id === add_to.value) ?? lists[0]);
+  const open_keys = $derived(new Set(target ? live(target.items).filter((item) => !item.checked).map((item) => history_key(item.text)) : []));
 
   const pair = new PairSession({
     list: (id) => file.value.lists.find((candidate) => candidate.id === id),
@@ -140,15 +152,16 @@
   });
 
   $effect(() => {
-    if (view === View.LIST) return;
+    if (view === View.LIST && home) return;
     return win.on_back(() => {
-      close_side_view();
+      if (view !== View.LIST) close_side_view();
+      else current.value = HOME;
       return true;
     });
   });
 
   $effect(() => {
-    win.set_title(list && lists.length > 1 ? list.name : null);
+    win.set_title(list ? list.name : all ? "All lists" : null);
   });
 
   // In the store the phone sits in a hand for minutes between taps; a dimmed screen would mean unlocking it each time.
@@ -176,12 +189,16 @@
     };
   });
 
+  function owner_of(id: string): List | undefined {
+    return lists.find((candidate) => candidate.items.some((item) => item.id === id));
+  }
+
   function find(id: string): Item | undefined {
-    return list?.items.find((item) => item.id === id);
+    return owner_of(id)?.items.find((item) => item.id === id);
   }
 
   function add(text: string) {
-    if (list) add_entry(list, text);
+    if (target) add_entry(target, text);
   }
 
   function toggle(id: string) {
@@ -196,6 +213,27 @@
   function remove(item: Item) {
     item.deleted_at = Date.now();
     item.updated_at = stamp(item);
+  }
+
+  function delete_item(id: string) {
+    const item = find(id);
+    if (!item) return;
+    view_transition(() => remove(item));
+    notifications.notify(app_id, {
+      title: "Deleted",
+      message: item.text,
+      actions: [
+        {
+          label: "Undo",
+          on_click: () => {
+            const again = find(id);
+            if (!again) return;
+            delete again.deleted_at;
+            again.updated_at = stamp(again);
+          },
+        },
+      ],
+    });
   }
 
   let editing_id = $state<string | null>(null);
@@ -226,7 +264,7 @@
   }
 
   function clear_done() {
-    if (!list || done.length === 0) return;
+    if (done.length === 0) return;
     file.value.history = record_trip(file.value.history, done.map((item) => item.text));
     for (const item of done) remove(item);
   }
@@ -234,7 +272,7 @@
   async function item_menu(id: string, anchor: Position) {
     const item = find(id);
     if (!item) return;
-    const others = lists.filter((candidate) => candidate.id !== list?.id);
+    const others = lists.filter((candidate) => candidate.id !== owner_of(id)?.id);
     const entries: MenuItem[] = [{ id: "edit", label: "Edit…", icon: PencilSimpleIcon }];
     if (others.length > 0) {
       entries.push({
@@ -246,10 +284,8 @@
     entries.push({ separator: true }, { id: "delete", label: "Delete", icon: TrashIcon, danger: true });
     const choice = await dialogs.menu(entries, { anchor });
     if (choice === "edit") edit(id);
-    else if (choice === "delete") {
-      const target = find(id);
-      if (target) remove(target);
-    } else if (choice?.startsWith("move:")) move(id, choice.slice(5));
+    else if (choice === "delete") delete_item(id);
+    else if (choice?.startsWith("move:")) move(id, choice.slice(5));
   }
 
   const below = (event: MouseEvent): Position => {
@@ -257,25 +293,21 @@
     return { x: rect.left, y: rect.bottom + 4 };
   };
 
-  async function lists_menu(event: MouseEvent) {
+  function open_place(id: string | null) {
+    if (id === null) current.value = ALL;
+    else current.value = id;
+  }
+
+  async function pick_target(event: MouseEvent) {
     const choice = await dialogs.menu(
-      [
-        ...lists.map((candidate) => ({
-          id: `open:${candidate.id}`,
-          label: candidate.name,
-          icon: candidate.id === list?.id ? CheckIcon : undefined,
-        })),
-        { separator: true },
-        { id: "new", label: "New list…", icon: ListPlusIcon },
-      ],
+      lists.map((candidate) => ({ id: candidate.id, label: candidate.name, icon: candidate.id === target?.id ? CheckIcon : undefined })),
       { anchor: below(event) }
     );
-    if (choice === "new") await new_list();
-    else if (choice?.startsWith("open:")) current.value = choice.slice(5);
+    if (choice) add_to.value = choice;
   }
 
   async function more_menu(event: MouseEvent) {
-    if (!list) return;
+    if (!list) return all_menu(event);
     const entries: MenuItem[] = [
       {
         id: "share",
@@ -285,13 +317,7 @@
       },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
       { separator: true },
-      { id: "new", label: "New list…", icon: ListPlusIcon },
-      { id: "rename", label: "Rename list…", icon: PencilSimpleIcon },
-      {
-        label: "Colour",
-        icon: PaletteIcon,
-        items: LIST_COLORS.map((color) => ({ id: `color:${color}`, label: COLOR_NAME[color], icon: color === list.color ? CheckIcon : undefined })),
-      },
+      { id: "settings", label: "List settings…", icon: GearSixIcon },
       widget_for(list.id)
         ? { id: "widget", label: on_phone ? "Remove from home screen" : "Remove from desktop", icon: StickerIcon }
         : { id: "widget", label: on_phone ? "Add to home screen" : "Add to desktop", icon: StickerIcon },
@@ -303,21 +329,55 @@
     const choice = await dialogs.menu(entries, { anchor: below(event) });
     if (choice === "share") view = View.PAIR;
     else if (choice === "photo") await photo();
-    else if (choice === "new") await new_list();
-    else if (choice === "rename") await rename_list();
+    else if (choice === "settings") open_settings(list.id);
     else if (choice === "widget") await toggle_widget(list);
     else if (choice === "clear") clear_done();
     else if (choice === "unshare") pair.stop();
     else if (choice === "delete") await delete_list();
-    else if (choice?.startsWith("color:")) list.color = choice.slice(6) as ListColor;
   }
 
-  async function new_list() {
-    const name = await win.prompt("New list", { placeholder: "Pharmacy, Hardware store…", confirm_label: "Create" });
-    if (!name?.trim()) return;
-    const created: List = { id: new_id(), name: name.trim(), color: next_color(lists), items: [] };
-    file.value.lists.push(created);
-    current.value = created.id;
+  async function all_menu(event: MouseEvent) {
+    const entries: MenuItem[] = [
+      { id: "photo", label: "Read a photo…", icon: CameraIcon },
+      { id: "new", label: "New list…", icon: ListPlusIcon },
+    ];
+    if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
+    const choice = await dialogs.menu(entries, { anchor: below(event) });
+    if (choice === "photo") await photo();
+    else if (choice === "new") new_list();
+    else if (choice === "clear") clear_done();
+  }
+
+  /** A list id, or `"new"` for one not created yet. */
+  let settings_for = $state<string | null>(null);
+  const settings_list = $derived(settings_for === "new" ? { name: "", color: next_color(lists) } : lists.find((candidate) => candidate.id === settings_for));
+
+  function new_list() {
+    settings_for = "new";
+    view = View.SETTINGS;
+  }
+
+  function open_settings(id: string) {
+    settings_for = id;
+    view = View.SETTINGS;
+  }
+
+  async function save_settings(details: Pick<ListMeta, "name" | "color" | "icon">) {
+    const id = settings_for;
+    close_side_view();
+    if (id === "new") {
+      const created: List = { id: new_id(), ...details, items: [] };
+      file.value.lists.push(created);
+      current.value = created.id;
+      return;
+    }
+    const edited = lists.find((candidate) => candidate.id === id);
+    if (!edited) return;
+    const renamed = edited.name !== details.name;
+    edited.name = details.name;
+    edited.color = details.color;
+    edited.icon = details.icon;
+    if (renamed) await rename_widget(edited);
   }
 
   function widget_for(id: string) {
@@ -343,12 +403,7 @@
     }
   }
 
-  async function rename_list() {
-    if (!list) return;
-    const target = list;
-    const name = await win.prompt("Rename list", { initial: target.name, confirm_label: "Rename" });
-    if (!name?.trim()) return;
-    target.name = name.trim();
+  async function rename_widget(target: List) {
     const widget = widget_for(target.id);
     const file_name = `${target.name.replace(/[/\\:]/g, " ").trim()}.widget`;
     // A taken name keeps the widget's old label; the list itself is renamed either way.
@@ -366,6 +421,7 @@
     });
     if (!confirmed) return;
     if (pair.list_id === target.id) pair.stop();
+    current.value = HOME;
     file.value.lists = file.value.lists.filter((candidate) => candidate.id !== target.id);
     const widget = widget_for(target.id);
     if (widget) await desktop.remove_item(widget.name).catch(() => {});
@@ -434,6 +490,7 @@
     review_error = null;
     photo_image = null;
     editing_id = null;
+    settings_for = null;
     view = View.LIST;
   }
 
@@ -472,7 +529,7 @@
 <div
   bind:this={root}
   role="presentation"
-  class={cn("grid h-full grid-rows-[auto_1fr_auto] bg-background", dragging_file && "ring-2 ring-primary ring-inset")}
+  class={cn("grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] bg-background", dragging_file && "ring-2 ring-primary ring-inset")}
   ondragover={on_dragover}
   ondragleave={(event) => {
     if (!root?.contains(event.relatedTarget as Node | null)) dragging_file = false;
@@ -481,26 +538,28 @@
 >
   <div>
     <Toolbar class="flex-nowrap">
-      <Button variant="quiet" class="min-w-0 flex-1 justify-start gap-2 text-sm font-medium" aria-label="Lists, now “{list?.name ?? ''}”" onclick={lists_menu}>
-        {#if list}<span class={cn("size-2.5 shrink-0 rounded-full", COLOR_DOT[list.color])}></span>{/if}
-        <span class="truncate">{list?.name ?? "Shopping List"}</span>
-        <CaretDownIcon weight="bold" class="shrink-0 text-foreground/65" />
-      </Button>
-      {#if shared}
-        {#if pair.state === PairState.LIVE}
-          <Badge tone="success">Live</Badge>
-        {:else}
-          <button type="button" class="shrink-0" onclick={() => (view = View.PAIR)} aria-label="Offline: pair again">
-            <Badge>Offline</Badge>
-          </button>
+      {#if home}
+        <ShoppingCartIcon weight="bold" class="ml-1 size-4.5 shrink-0 text-foreground/80" />
+        <h1 class="min-w-0 flex-1 truncate text-sm font-semibold">Lists</h1>
+      {:else}
+        <IconButton label="All your lists" class="shrink-0" onclick={() => (current.value = HOME)}><CaretLeftIcon weight="bold" /></IconButton>
+        <ListChips {lists} active={list?.id ?? null} onselect={open_place} onnew={new_list} class="min-w-0 flex-1 py-0.5" />
+        {#if shared}
+          {#if pair.state === PairState.LIVE}
+            <Badge tone="success">Live</Badge>
+          {:else}
+            <button type="button" class="shrink-0" onclick={() => (view = View.PAIR)} aria-label="Offline: pair again">
+              <Badge>Offline</Badge>
+            </button>
+          {/if}
         {/if}
+        <IconButton label="In-store mode" class="shrink-0" pressed={store.value} onclick={() => (store.value = !store.value)}>
+          <StorefrontIcon weight="bold" />
+        </IconButton>
+        <IconButton label={list ? "List actions" : "Actions"} class="shrink-0" onclick={more_menu}><DotsThreeIcon weight="bold" /></IconButton>
       {/if}
-      <IconButton label="In-store mode" pressed={store.value} onclick={() => (store.value = !store.value)}>
-        <StorefrontIcon weight="bold" />
-      </IconButton>
-      <IconButton label="List actions" onclick={more_menu}><DotsThreeIcon weight="bold" /></IconButton>
     </Toolbar>
-    {#if view === View.LIST && items.length > 0}
+    {#if view === View.LIST && !home && items.length > 0}
       <div
         class="h-1 bg-foreground/8"
         role="progressbar"
@@ -521,6 +580,16 @@
       {#key editing.id}
         <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
       {/key}
+    {:else if view === View.SETTINGS && settings_list}
+      {#key settings_for}
+        <ListSettings
+          list={settings_list}
+          title={settings_for === "new" ? "New list" : "List settings"}
+          confirm_label={settings_for === "new" ? "Create" : "Save"}
+          onsave={(details) => void save_settings(details)}
+          oncancel={close_side_view}
+        />
+      {/key}
     {:else if view === View.PAIR}
       <PairPanel session={pair} {list} onclose={() => (view = View.LIST)} />
     {:else if view === View.CROP && photo_image}
@@ -530,15 +599,17 @@
         bind:rows={review_rows}
         method={review_method}
         error={review_error}
-        list_name={list?.name ?? ""}
+        list_name={target?.name ?? ""}
         onadd={add_reviewed}
         oncancel={close_side_view}
         onretry={() => void photo()}
       />
+    {:else if home}
+      <ListsOverview {lists} onopen={open_place} onsettings={open_settings} onnew={new_list} />
     {:else if items.length === 0}
       <EmptyState
         icon={ShoppingCartIcon}
-        title="Nothing on the list"
+        title={all ? "Nothing on any list" : "Nothing on the list"}
         description="Type below, tap one you bought before, or read a list from a photo."
       >
         {#snippet actions()}
@@ -547,14 +618,25 @@
       </EmptyState>
     {:else}
       <div class="mx-auto flex max-w-xl flex-col gap-3 p-3">
-        {#if open_items.length > 0}
-          <ul class="flex flex-col divide-y divide-foreground/8 overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/8" aria-label="To buy">
-            {#each open_items as item (item.id)}
-              <ItemRow {item} store={store.value} ontoggle={() => toggle(item.id)} onmenu={(anchor) => void item_menu(item.id, anchor)} onamount={() => edit(item.id)} />
-            {/each}
-          </ul>
-        {:else}
+        {#if open_items.length === 0}
           <p class="flex items-center justify-center gap-2 py-6 text-sm text-foreground/65"><CheckIcon weight="bold" class="text-primary" /> Everything's in the cart</p>
+        {:else if all}
+          {#each groups as group (group.list.id)}
+            <section aria-label={group.list.name} class="flex flex-col gap-1.5">
+              <button
+                type="button"
+                class="flex min-h-8 items-center gap-2 rounded-md px-1 text-left text-2xs font-medium tracking-wide text-foreground/80 uppercase hover:text-foreground"
+                onclick={() => open_place(group.list.id)}
+              >
+                <ListMark list={group.list} size="sm" />
+                <span class="min-w-0 flex-1 truncate">{group.list.name}</span>
+                <span class="font-mono tabular-nums">{group.open.length}</span>
+              </button>
+              {@render card(group.open)}
+            </section>
+          {/each}
+        {:else}
+          {@render card(open_items)}
         {/if}
         {#if done.length > 0}
           <section aria-label="In the cart">
@@ -568,9 +650,9 @@
               In the cart · <span class="font-mono tabular-nums">{done.length}</span>
             </button>
             {#if cart_open.value}
-              <ul class="flex flex-col divide-y divide-foreground/6">
+              <ul class="flex flex-col divide-y divide-foreground/6 [--row-background:var(--color-background)]">
                 {#each done as item (item.id)}
-                  <ItemRow {item} store={store.value} ontoggle={() => toggle(item.id)} onmenu={(anchor) => void item_menu(item.id, anchor)} onamount={() => edit(item.id)} />
+                  {@render row(item, all ? owner_of(item.id) : undefined)}
                 {/each}
               </ul>
             {/if}
@@ -580,7 +662,7 @@
     {/if}
   </main>
 
-  {#if view === View.LIST && file.ready}
+  {#if view === View.LIST && file.ready && !home}
     <div>
       {#if done.length > 0}
         <div class="flex items-center justify-between gap-2 border-t border-foreground/8 bg-background-light px-3 pt-2">
@@ -590,7 +672,41 @@
           </Button>
         </div>
       {/if}
-      <EntryBar history={file.value.history} exclude={open_keys} onadd={add} onphoto={() => void photo()} />
+      <EntryBar history={file.value.history} exclude={open_keys} onadd={add} onphoto={() => void photo()}>
+        {#snippet before()}
+          {#if all && target}
+            <button
+              type="button"
+              class="flex h-10 shrink-0 items-center gap-1 rounded-lg pr-1.5 pl-1 hover:bg-foreground/6"
+              aria-label="Add to “{target.name}”, change list"
+              onclick={pick_target}
+            >
+              <ListMark list={target} size="md" />
+              <CaretDownIcon weight="bold" class="size-3 text-foreground/65" />
+            </button>
+          {/if}
+        {/snippet}
+      </EntryBar>
     </div>
   {/if}
 </div>
+
+{#snippet card(rows: Item[])}
+  <ul class="flex flex-col divide-y divide-foreground/8 overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/8 [--row-background:var(--color-background-light)]">
+    {#each rows as item (item.id)}
+      {@render row(item)}
+    {/each}
+  </ul>
+{/snippet}
+
+{#snippet row(item: Item, from?: List)}
+  <ItemRow
+    {item}
+    {from}
+    store={store.value}
+    ontoggle={() => toggle(item.id)}
+    onremove={() => delete_item(item.id)}
+    onedit={() => edit(item.id)}
+    onmenu={(anchor) => void item_menu(item.id, anchor)}
+  />
+{/snippet}
