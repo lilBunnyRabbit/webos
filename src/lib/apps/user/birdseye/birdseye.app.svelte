@@ -91,9 +91,10 @@
   const running = $derived(job !== null && job.status === "running");
   const camera_path = $derived(track.length ? build_path(track) : null);
   const runs = $derived(status_runs(track));
-  const lost_count = $derived(track.reduce((count, point) => count + (status_of(point.conf) === FrameStatus.LOST ? 1 : 0), 0));
+  const lost_count = $derived(track.reduce((count, point) => count + (status_of(point) === FrameStatus.LOST ? 1 : 0), 0));
+  const shape_count = $derived(track.reduce((count, point) => count + (point.shape ? 1 : 0), 0));
   const here = $derived(sample_at(track, time));
-  const here_lost = $derived(here !== null && status_of(here.conf) === FrameStatus.LOST);
+  const here_lost = $derived(here !== null && status_of(here) === FrameStatus.LOST);
   const preview = $derived.by(() => {
     if (!loaded) return { width: 1, height: 1 };
     const width = Math.min(loaded.width, PREVIEW_MAX);
@@ -517,6 +518,7 @@
           {#if track.length}
             {@render row("Frames", String(track.length))}
             {@render row("Lost", String(lost_count))}
+            {#if shape_count}{@render row("By shape", String(shape_count))}{/if}
           {:else}
             <p class="px-0.5 text-2xs text-foreground/65">Pause on a frame where the subject is clear, press Box and draw around it, then Track.</p>
           {/if}

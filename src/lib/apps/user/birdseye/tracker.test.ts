@@ -119,4 +119,50 @@ describe("tracker", () => {
     const point = run(tracker, frame(116, 83, 100), 1 / 30);
     expect(Math.hypot(point.cx - 116, point.cy - 83)).toBeLessThan(1.5);
   });
+
+  it("widens the search 3×, 5×, then 8× the box while lost, ahead along the last velocity, capped at the frame", () => {
+    const tracker = new Tracker({
+      box: { x: 50, y: 60, width: 20, height: 20 },
+      frame: { width: WIDTH, height: HEIGHT },
+      follow_size: false,
+    });
+    run(tracker, frame(60, 70), 0, true);
+    for (let i = 1; i <= 4; i++) run(tracker, frame(60 + i * 4, 70), i / 30);
+    const side = (search: number) => Math.ceil(20 * search * 1.05) + TRACK.REFINE * 2;
+    expect(tracker.region().width).toBe(side(3));
+    const sizes = [];
+    let last_centre = 0;
+    for (let i = 5; i <= 8; i++) {
+      const lost = run(tracker, frame(0, 0, 20, true), i / 30);
+      expect(lost.conf).toBeLessThan(TRACK.LOST);
+      expect(lost.cx).toBeCloseTo(76, 0);
+      const area = tracker.region();
+      sizes.push([area.width, area.height]);
+      if (area.x > 0) {
+        expect(area.x + area.width / 2).toBeGreaterThan(last_centre);
+        last_centre = area.x + area.width / 2;
+      }
+    }
+    expect(sizes).toEqual([
+      [side(5), side(5)],
+      [side(8), HEIGHT],
+      [side(8), HEIGHT],
+      [side(8), HEIGHT],
+    ]);
+  });
+
+  it("finds a subject again that moved on while hidden, outside the normal window", () => {
+    const tracker = new Tracker({
+      box: { x: 40, y: 60, width: 20, height: 20 },
+      frame: { width: WIDTH, height: HEIGHT },
+      follow_size: false,
+    });
+    run(tracker, frame(50, 70), 0, true);
+    for (let i = 1; i <= 4; i++) run(tracker, frame(50 + i * 7, 70), i / 30);
+    for (let i = 5; i <= 9; i++) expect(run(tracker, frame(0, 0, 20, true), i / 30).conf).toBeLessThan(TRACK.LOST);
+    const back = run(tracker, frame(50 + 10 * 7, 72), 10 / 30);
+    expect(back.conf).toBeGreaterThan(TRACK.WEAK);
+    expect(Math.hypot(back.cx - 120, back.cy - 72)).toBeLessThan(0.5);
+    expect(tracker.region().width).toBe(Math.ceil(20 * 3 * 1.05) + TRACK.REFINE * 2);
+  });
 });

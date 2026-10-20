@@ -8,6 +8,7 @@ import {
   sample_at,
   smooth,
   splice_track,
+  status_of,
   status_runs,
   strip_gradient,
 } from "./path";
@@ -92,8 +93,15 @@ describe("path", () => {
     ]);
   });
 
+  it("counts a frame found by shape as found, whatever its confidence", () => {
+    expect(status_of({ conf: 0.5, shape: true })).toBe(FrameStatus.SHAPE);
+    expect(status_of({ conf: 0.5 })).toBe(FrameStatus.LOST);
+    const filled = fill_gaps([point(0, 0), { ...point(1, 7, 0.5), shape: true }, point(2, 0, 0.1), point(3, 3)])!;
+    expect(filled.map((sample) => sample.cx)).toEqual([0, 7, 5, 3]);
+  });
+
   it("draws the runs as hard stops, untracked time empty", () => {
-    const colors = { good: "G", weak: "W", lost: "L" };
+    const colors = { good: "G", weak: "W", shape: "S", lost: "L" };
     expect(strip_gradient([], 10, colors, "E")).toBe("E");
     expect(
       strip_gradient(

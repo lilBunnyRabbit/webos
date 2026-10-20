@@ -1,5 +1,21 @@
 import { WebmEncoder } from "$kit/utils/video/encode";
 import { FIXTURE_FPS } from "$kit/utils/video/fixtures";
+import { bird_frame, bird_scene } from "./bird-fixture";
+
+export async function make_bird_video(scene = bird_scene()): Promise<Blob> {
+  const { width, height, seconds } = scene;
+  const encoder = await WebmEncoder.create({ video: { width, height, bitrate: 2_000_000, framerate: FIXTURE_FPS } });
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext("2d")!;
+  const count = Math.round(seconds * FIXTURE_FPS);
+  for (let i = 0; i < count; i++) {
+    const time = i / FIXTURE_FPS;
+    context.putImageData(new ImageData(bird_frame(scene, time), width, height), 0, 0);
+    encoder.encode_frame(canvas, Math.round(time * 1e6));
+    await encoder.drained();
+  }
+  return encoder.finish(seconds * 1000);
+}
 
 export interface SquareFixture {
   width: number;

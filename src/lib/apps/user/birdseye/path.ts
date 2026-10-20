@@ -1,11 +1,12 @@
 import { TRACK, type TrackPoint } from "./tracker";
 
-export const FrameStatus = { GOOD: "good", WEAK: "weak", LOST: "lost" } as const;
+export const FrameStatus = { GOOD: "good", WEAK: "weak", SHAPE: "shape", LOST: "lost" } as const;
 export type FrameStatus = (typeof FrameStatus)[keyof typeof FrameStatus];
 
 export const SMOOTH = { POSITION: 0.5, SCALE: 0.04 } as const;
 
-export function status_of(conf: number): FrameStatus {
+export function status_of({ conf, shape }: Pick<TrackPoint, "conf" | "shape">): FrameStatus {
+  if (shape) return FrameStatus.SHAPE;
   if (conf < TRACK.LOST) return FrameStatus.LOST;
   return conf < TRACK.WEAK ? FrameStatus.WEAK : FrameStatus.GOOD;
 }
@@ -24,7 +25,7 @@ export function status_runs(track: TrackPoint[]): Run[] {
     .sort((a, b) => a - b);
   const frame = gaps.length ? gaps[gaps.length >> 1] : 1 / 30;
   track.forEach((point, i) => {
-    const status = status_of(point.conf);
+    const status = status_of(point);
     const to = track[i + 1]?.t ?? point.t + frame;
     const last = runs[runs.length - 1];
     if (last && last.status === status && Math.abs(last.to - point.t) < 1e-9) last.to = to;
@@ -58,7 +59,7 @@ export function splice_track(track: TrackPoint[], from: number, next: TrackPoint
 }
 
 export function fill_gaps(track: TrackPoint[]): TrackPoint[] | null {
-  const is_good = track.map((point) => status_of(point.conf) !== FrameStatus.LOST);
+  const is_good = track.map((point) => status_of(point) !== FrameStatus.LOST);
   if (!is_good.includes(true)) return null;
   const next_good: number[] = new Array(track.length);
   for (let i = track.length - 1, next = -1; i >= 0; i--) {

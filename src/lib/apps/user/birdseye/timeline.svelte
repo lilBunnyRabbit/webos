@@ -14,7 +14,7 @@
 
   const { duration, time, runs, step, disabled = false, onseek }: Props = $props();
 
-  const COLORS = { [FrameStatus.GOOD]: "var(--success)", [FrameStatus.WEAK]: "var(--warning)", [FrameStatus.LOST]: "var(--error)" };
+  const COLORS = { [FrameStatus.GOOD]: "var(--success)", [FrameStatus.WEAK]: "var(--warning)", [FrameStatus.SHAPE]: "var(--info)", [FrameStatus.LOST]: "var(--error)" };
   const EMPTY = "color-mix(in oklch, var(--foreground) 12%, transparent)";
 
   let track = $state<HTMLDivElement>();

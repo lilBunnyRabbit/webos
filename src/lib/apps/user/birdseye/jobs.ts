@@ -66,7 +66,7 @@ export async function run_track(run: TrackRun): Promise<TrackOutcome> {
             const area = tracker.region();
             draw.drawImage(video, 0, 0, tracker.work.width, tracker.work.height);
             const pixels = draw.getImageData(area.x, area.y, area.width, area.height).data;
-            return { region: to_gray(pixels, area.width, area.height), origin: area };
+            return { region: to_gray(pixels, area.width, area.height), origin: area, pixels };
           };
           const result = await capture({
             file: run.file,
@@ -75,13 +75,13 @@ export async function run_track(run: TrackRun): Promise<TrackOutcome> {
             signal: context.signal,
             on_frame: (video, time) => {
               const started = performance.now();
-              const { region, origin } = read(video);
+              const { region, origin, pixels } = read(video);
               if (!points.length) {
-                tracker.start(region, origin);
+                tracker.start(region, origin, pixels);
                 points.push(tracker.first(time));
               } else {
-                const point = tracker.step(region, origin, time);
-                if (status_of(point.conf) === FrameStatus.LOST) lost++;
+                const point = tracker.step(region, origin, time, pixels);
+                if (status_of(point) === FrameStatus.LOST) lost++;
                 points.push(point);
               }
               this.setProgress((time - run.from) / span);

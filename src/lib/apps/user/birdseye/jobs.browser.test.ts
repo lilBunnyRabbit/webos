@@ -5,7 +5,8 @@ import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
 import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import { probe_video } from "$kit/utils/video/capture";
-import { make_square_video, square_path } from "./fixtures";
+import { bird_scene } from "./bird-fixture";
+import { make_bird_video, make_square_video, square_path } from "./fixtures";
 import { export_locked, run_track } from "./jobs";
 import { build_path, FrameStatus, splice_track, status_of } from "./path";
 import { draw_locked, EdgeFill } from "./render";
@@ -56,7 +57,7 @@ test("tracks the square in a played webm and saves the locked video beside it", 
     return Math.hypot(point.cx - (truth.x + fixture.side / 2), point.cy - (truth.y + fixture.side / 2));
   });
   expect(Math.max(...errors)).toBeLessThan(1.5);
-  expect(points.every((point) => status_of(point.conf) !== FrameStatus.LOST)).toBe(true);
+  expect(points.every((point) => status_of(point) !== FrameStatus.LOST)).toBe(true);
   const camera = build_path(points)!;
   const smoothed = points.map((point, i) => {
     const truth = fixture.at(point.t);
@@ -95,13 +96,13 @@ test("marks the frames where the square is gone as lost, and finds it again afte
     follow_size: false,
   });
   if (!outcome.ok) throw new Error("tracking failed");
-  const lost = outcome.points.filter((point) => status_of(point.conf) === FrameStatus.LOST);
+  const lost = outcome.points.filter((point) => status_of(point) === FrameStatus.LOST);
   expect(lost.length).toBeGreaterThan(5);
   expect(lost[0].t).toBeGreaterThanOrEqual(0.79);
   expect(
     outcome.points
       .filter((point) => point.t >= 0.8 && point.t < 1.1)
-      .every((point) => status_of(point.conf) === FrameStatus.LOST)
+      .every((point) => status_of(point) === FrameStatus.LOST)
   ).toBe(true);
 
   const again = 1.2;
@@ -118,12 +119,39 @@ test("marks the frames where the square is gone as lost, and finds it again afte
   });
   if (!retrack.ok) throw new Error("re-tracking failed");
   const track = splice_track(outcome.points, again, retrack.points);
-  expect(track.filter((point) => point.t >= again).every((point) => status_of(point.conf) !== FrameStatus.LOST)).toBe(
+  expect(track.filter((point) => point.t >= again).every((point) => status_of(point) !== FrameStatus.LOST)).toBe(
     true
   );
   const last = track.at(-1)!;
   const truth = fixture.at(last.t);
   expect(Math.hypot(last.cx - truth.x - fixture.side / 2, last.cy - truth.y - fixture.side / 2)).toBeLessThan(2);
+});
+
+test("follows a shape-changing bird in a played webm, partly by shape, and goes lost in the trees", async () => {
+  const scene = bird_scene();
+  const blob = await make_bird_video(scene);
+  const outcome = await run_track({
+    app_id: "birdseye",
+    name: "bird.webm",
+    file: blob,
+    frame: { width: scene.width, height: scene.height },
+    duration: scene.seconds,
+    box: scene.box,
+    from: 0,
+    follow_size: false,
+  });
+  if (!outcome.ok) throw new Error("tracking failed");
+  const samples = outcome.points.map((point) => {
+    const truth = scene.at(point.t);
+    return { point, x: truth.x, error: Math.hypot(point.cx - truth.x, point.cy - truth.y) };
+  });
+  const found = (sample: (typeof samples)[number]) => status_of(sample.point) !== FrameStatus.LOST;
+  const sky = samples.filter((sample) => sample.x < scene.trees - 30);
+  const trees = samples.filter((sample) => sample.x > scene.trees + 30);
+  expect(sky.filter(found).length / sky.length).toBeGreaterThan(0.9);
+  expect(Math.max(...sky.filter(found).map((sample) => sample.error))).toBeLessThan(5);
+  expect(samples.some((sample) => status_of(sample.point) === FrameStatus.SHAPE)).toBe(true);
+  expect(trees.filter(found).every((sample) => sample.error < 5)).toBe(true);
 });
 
 test("draws the camera centre in the middle, filled with the chosen edge", () => {
