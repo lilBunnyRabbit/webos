@@ -318,7 +318,7 @@ const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release
 const shell_contribution_members: Members<ShellContribution, "commands" | "completers" | "lazy" | "values"> = true;
 const command_members: Members<
   Command,
-  "app" | "args" | "available" | "complete" | "description" | "id" | "positional" | "run" | "short" | "yields"
+  "ai" | "app" | "args" | "available" | "complete" | "description" | "id" | "positional" | "run" | "short" | "yields"
 > = true;
 const command_context_members: Members<CommandContext, "args" | "elevated" | "input" | "piped" | "session" | "signal"> =
   true;

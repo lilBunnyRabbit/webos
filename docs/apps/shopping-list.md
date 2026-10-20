@@ -155,6 +155,15 @@ The bottom of a list: a strip with "N of M in the cart" and Clear done (shown on
 - `photo`: the window starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
 - Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:117`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
 
+### Shell and Ask
+
+`commands.ts` (lazy bodies in `shell.ts`, reading `lists.json` through `live_file`, so an open window and a command share one cell):
+
+- `list ls`: `shopping-list` values, one per list: `name`, `left` (unticked), `in_cart` (ticked). Open launches the app on that list.
+- `list items [list]`: `shopping-item` values for one list (by name, case-insensitive, or id) or all lists: unticked first, then those in the cart; deleted items (tombstones) left out. `amount` is `format_amount` of the item (`2×`, `500 g`). An unknown list fails with the list names.
+
+Both are `ai: "read"`, so Ask's assistant can answer "what's on my shopping list?" once the user switches them on (ADR-054). No write commands yet: v1 of the assistant reads only.
+
 ### Widget
 
 `widget.svelte`, `widget_size` min 3×1, max 6×2, default 4×1 (`index.ts`). Prop `list`: the list id; none or an unknown id shows the first list. Add only, no item list (owner):

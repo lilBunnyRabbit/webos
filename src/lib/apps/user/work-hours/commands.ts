@@ -37,12 +37,14 @@ export default {
     }),
     define_command({
       id: "wh status",
+      ai: "read",
       description: "Whether you're clocked in, and today's and this month's hours",
       run: async () => (await logic()).status(),
     }),
     define_command({
       id: "wh ls",
-      description: "Days worked in a month",
+      ai: "read",
+      description: "Work Hours: days worked in a month and the hours of each",
       args: z.object({ month: month_arg() }),
       positional: ["month"],
       yields: "workday",

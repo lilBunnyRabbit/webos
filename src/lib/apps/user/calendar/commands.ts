@@ -17,7 +17,8 @@ export default {
   commands: [
     define_command({
       id: "cal",
-      description: "Events on a day, today by default",
+      ai: "read",
+      description: "Calendar events on one day, today by default",
       args: z.object({ day: day_arg().optional() }),
       positional: ["day"],
       yields: "event",
@@ -42,7 +43,8 @@ export default {
     }),
     define_command({
       id: "cal agenda",
-      description: "Events from today on, 7 days or --days N",
+      ai: "read",
+      description: "Calendar events from today on: the next 7 days, or --days N",
       args: z.object({ days: z.number().int().min(1).max(366).default(7) }),
       yields: "event",
       async *run(context) {

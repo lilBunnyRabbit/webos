@@ -9,6 +9,7 @@ import { z } from "zod";
 
 export const APP_ID = "shopping-list";
 export const LISTS_FILE = "lists.json";
+export const LISTS_PATH = `/var/lib/apps/${APP_ID}/${LISTS_FILE}`;
 export const LISTS_VERSION = 1;
 export const TOMBSTONE_MS = 30 * 24 * 60 * 60 * 1000;
 

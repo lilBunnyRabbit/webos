@@ -13,6 +13,7 @@ export default define_app({
   props: z.object({ list: z.string().optional(), photo: z.boolean().optional() }),
   defaults: { constraints: { width: { min: 300 }, height: { min: 400 } } },
   highlights: () => import("./highlights"),
+  shell: () => import("./commands"),
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 3, h: 1 }, max: { w: 6, h: 2 }, default: { w: 4, h: 1 } },
   component: () => import("./shopping-list.app.svelte"),

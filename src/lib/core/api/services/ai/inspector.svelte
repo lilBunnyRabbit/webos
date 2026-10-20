@@ -28,9 +28,9 @@
     {/each}
   </InspectorTable>
 
-  <InspectorTable columns={["Session", "Feature"]} empty={service.sessions.length === 0} empty_text="No sessions kept.">
+  <InspectorTable columns={["Session", "Feature", "Context"]} empty={service.sessions.length === 0} empty_text="No sessions kept.">
     {#each service.sessions as session, index (index)}
-      <tr><td>{session.label}</td><td>{session.feature}</td></tr>
+      <tr><td>{session.label}</td><td>{session.feature}</td><td>{session.usage ? `${session.usage.used} of ${session.usage.window}` : "—"}</td></tr>
     {/each}
   </InspectorTable>
 {/if}

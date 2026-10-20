@@ -12,7 +12,11 @@ export function clip_source(name: string, text: string, max = MAX_FILE_CHARS): A
 }
 
 export function system_prompt(source: AskSource | null): string {
-  if (!source) return "You are a helpful assistant. Answer briefly and plainly.";
+  if (!source)
+    return [
+      "You are a helpful assistant in WebOS. Answer briefly and plainly; Markdown is fine.",
+      "When a message carries data from the user's apps, answer from that data only, and say so when it doesn't hold the answer.",
+    ].join("\n");
   return [
     `You answer questions about the file "${source.name}", shown between the markers below.`,
     "Use only what the file says; when it doesn't answer the question, say so. Answer briefly and plainly.",

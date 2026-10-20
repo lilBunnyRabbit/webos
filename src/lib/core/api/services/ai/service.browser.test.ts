@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { z } from "zod";
 import type { Kernel } from "$lib/core/api";
 import { boot_test_kernel } from "../../kernel/test-kernel";
 import { FilesService } from "../files/service.svelte";
@@ -26,6 +27,8 @@ afterEach(async () => {
 interface Created {
   options: { expectedInputs?: { type: string }[]; initialPrompts?: AiMessage[] };
   inputs: unknown[];
+  constraints: unknown[];
+  destroyed: boolean;
 }
 
 /** A Prompt API that answers "ok" and records every session it creates and what each was asked. */
@@ -34,9 +37,19 @@ function fake_language_model(): Created[] {
   vi.stubGlobal("LanguageModel", {
     availability: async () => "available",
     create: async (options: Created["options"]) => {
-      const record: Created = { options, inputs: [] };
+      const record: Created = { options, inputs: [], constraints: [], destroyed: false };
       created.push(record);
       return {
+        contextUsage: 120,
+        contextWindow: 6144,
+        async prompt(input: unknown, prompt_options: { responseConstraint?: unknown }) {
+          record.inputs.push(input);
+          record.constraints.push(prompt_options.responseConstraint);
+          return JSON.stringify({ command: "cal agenda", args: ["tomorrow"] });
+        },
+        async measureContextUsage(input: string) {
+          return input.length;
+        },
         promptStreaming(input: unknown) {
           record.inputs.push(input);
           return new ReadableStream<string>({
@@ -46,7 +59,9 @@ function fake_language_model(): Created[] {
             },
           });
         },
-        destroy() {},
+        destroy() {
+          record.destroyed = true;
+        },
       };
     },
   });
@@ -133,5 +148,36 @@ describe("MobileAiService", () => {
     await expect(ai.prompt([{ role: "user", content: "Hi" }]).next()).rejects.toThrow(/desktop Chrome/);
     expect(ai.sessions).toEqual([]);
     expect(ai.downloads).toEqual([]);
+  });
+});
+
+describe("AiService structured answers and usage", () => {
+  test("extract sends the schema, validates the answer and drops its session", async () => {
+    const created = fake_language_model();
+    const ai = (await boot(AiService)).service<IAiService>("ai");
+    const schema = z.object({ command: z.enum(["cal agenda", "none"]), args: z.array(z.string()) });
+    const messages: AiMessage[] = [
+      { role: "system", content: "Pick" },
+      { role: "user", content: "what am I doing tomorrow" },
+    ];
+    expect(await ai.extract(messages, schema)).toEqual({ command: "cal agenda", args: ["tomorrow"] });
+    expect(created[0].options.initialPrompts).toEqual([{ role: "system", content: "Pick" }]);
+    expect(created[0].constraints[0]).toMatchObject({ type: "object", required: ["command", "args"] });
+    expect(created[0].destroyed).toBe(true);
+    expect(ai.sessions).toEqual([]);
+
+    await expect(ai.extract(messages, z.object({ command: z.literal("none") }))).rejects.toThrow();
+  });
+
+  test("a chat reports its usage when it ends, and measure counts against the window", async () => {
+    fake_language_model();
+    const ai = (await boot(AiService)).service<IAiService>("ai");
+    const stream = ai.prompt([{ role: "user", content: "Hi" }]);
+    let step = await stream.next();
+    while (!step.done) step = await stream.next();
+    expect(step.value).toEqual({ used: 120, window: 6144 });
+    expect(ai.sessions[0].usage).toEqual({ used: 120, window: 6144 });
+
+    expect(await ai.measure("12345")).toEqual({ used: 5, window: 6144 });
   });
 });

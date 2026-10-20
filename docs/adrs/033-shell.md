@@ -4,6 +4,8 @@
 
 Supersedes [ADR-007](./007-shell-service.md). [Brainstorm](../brainstorm/2026-10-14_shell-terminal.md).
 
+> **Revision 2026-10-20: `Command.ai`** ([ADR-054](./054-ai-assistant-over-shell.md)). An optional `ai: "read"` marks a command Ask's assistant may run; the user switches each on.
+
 > **Revision 2026-10-15: dependencies and app commands.** ShellService depends on `files`, `dialogs` and `notifications` (`kernel/init.ts`), not only `files`. Apps contribute global commands through `define_app({ shell })` ([ADR-034](./034-app-extension-points.md)); a service wins an id clash. Only window-scoped app commands stay deferred, so in-app shortcuts keep `run`.
 
 > **Revision 2026-10-15: service command bodies load lazily** (owner, [brainstorm](../brainstorm/2026-10-15_code-quality-pass.md))

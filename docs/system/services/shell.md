@@ -51,6 +51,7 @@ define_command({
   positional: ["from", "to"],
   short: { recursive: "r" },
   yields: "file",                              // lets `where` complete fields after it; "input" for filters
+  ai: "read",                                  // offered to Ask's assistant (ADR-054): only for commands that change nothing
   available: () => true,                       // false or a reason string: hidden from the palette and completion, and running it fails with the reason
   complete: (field, partial) => undefined,     // per-arg override ahead of the kind's completer
   run: async function* ({ args, input, piped, session, signal, elevated }) { … },
@@ -65,6 +66,8 @@ define_command({
 - `session`: the session the line runs in.
 - `signal`: aborts on Ctrl+C or window close.
 - `elevated`: true under `sudo`.
+
+`ai: "read"` makes a command eligible for Ask's assistant (ADR-054). The user still switches it on in Ask; the model picks by `usage()` plus `description`, so the description should say what data comes back, naming the app. Never on a command that writes, prints, opens a dialog or launches anything. Tagged today: `cal`, `cal agenda`, `quno ls`, `kanban ls`, `wh status`, `wh ls`, `since`, `list ls`, `list items`. A browser test (`ask/catalogue.browser.test.ts`) keeps all of them under 4,000 characters.
 
 Throw `ShellError` for a message the user should read as is. Any other error shows its `message` and is logged.
 
@@ -188,6 +191,8 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | time-since | `since`, `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>` | `counter` values; `counter` completer |
 | work-hours | `wh in [desc…]`, `wh out`, `wh status`, `wh ls [month]`, `wh add <date> <start> <end> [desc…]`, `wh report [month]`, `wh target <hours\|none> [month]` | `workday` values (open → `{ day }`), `text` |
 | kanban | `kanban [card]`, `kanban ls [-b] [--due]`, `kanban add <title…> [-c] [-d] [-b]`, `kanban mv <card> <column> [-b]`, `kanban done <card>`, `kanban archive [card]`; with `-b` on a folder board, `ls` lists its files, `mv` rewrites one file's column field (card by title or file name) and `add` writes a new file from the board's template | `card` values (`path` set for a folder board's file; open → `{ board, card }`, or the file in Text Editor); `card` completer |
+| shopping-list | `list ls`, `list items [list]` (both `ai: "read"`) | `shopping-list` values (name, left, in_cart; open → `{ list }`), `shopping-item` values (list, amount, item, in_cart; open → its list) |
+| ask | `ask <question…>`: picks one switched-on read command with Gemini Nano, runs it and answers from its output; piped input becomes the data instead. Hidden when chat is `no` | text |
 | calendar | `cal [day]`, `cal add <title…> --day [--at] [--until] [--repeat] [--remind]`, `cal agenda [--days N]`, `cal open [date]` | `event` values (open → `{ day }`) |
 | soundboard | `sb`, `sb ls [-b]`, `sb play <pad> [-b]`, `sb stop`, `sb add <path…> [-b]` | `pad` values (open plays); `pad` completer |
 | recorder | `rec list`, `rec start [-s mic\|screen\|camera]` | `recording` values (open → Media Preview) |

@@ -2,6 +2,7 @@ export const TOPIC_IDS = [
   "launcher",
   "palette",
   "terminal",
+  "ask",
   "shortcuts",
   "snap",
   "widgets",

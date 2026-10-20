@@ -1,6 +1,8 @@
 # ADR-054: AI Assistant over Shell Commands
 **Date:** 2026-10-20
-**Status:** Accepted
+**Status:** Implemented
+
+> **Revision 2026-10-20: implementation.** The switches are `/var/lib/apps/ask/commands.json` (`storage.file` in Ask, `live_file` in `ask`), not localStorage: the `ask` command and every Ask window read the same list (owner). `measure` returns `{ used, window }`. The pick takes up to six string arguments; each non-flag one is double-quoted, so the model can't add a pipe or a second command. `wh report` prints, so it isn't tagged; `wh ls` is. A failed pick or run falls back to a plain answer (a failed run is shown in the chip and told to the model).
 
 ## Context
 Gemini Nano (ADR-046) runs on the device but has a context of a few thousand tokens and is weak at multi-step plans. The owner doesn't want AI features built into individual apps. Instead, one assistant should answer questions like "what's on my shopping list?" from app data. Apps already expose their data as shell commands that yield tagged values (ADR-033, ADR-034). Discussion: [brainstorm](../brainstorm/2026-10-20_ai-assistant.md).

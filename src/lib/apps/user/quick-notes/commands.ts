@@ -43,6 +43,7 @@ export default {
     }),
     define_command({
       id: "quno ls",
+      ai: "read",
       description: "Notes, newest first: open ones, or -s <status>, or -a for all",
       args: z.object({
         status: z.enum(NOTE_STATUSES).optional().describe("Only this status"),

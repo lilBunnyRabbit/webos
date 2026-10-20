@@ -1,11 +1,13 @@
 <script lang="ts">
-  import kernel, { AI_REQUIREMENTS, AiAvailability, AiFeature, type AiMessage, type AiService, type ClipboardService, type FilesService } from "$lib/core/api";
+  import kernel, { AI_REQUIREMENTS, AiAvailability, AiFeature, type AiMessage, type AiService, type AiUsage, type ClipboardService, type FilesService, type ShellService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
   import { Button, CopyButton, EmptyState, IconButton, Spinner, Textarea, Toolbar } from "$lib/core/components/ui";
   import {
+    CaretRight as CaretRightIcon,
     ChatCircleText as ChatCircleTextIcon,
+    Database as DatabaseIcon,
     FolderOpen as FolderOpenIcon,
     NotePencil as NotePencilIcon,
     PaperPlaneRight as PaperPlaneRightIcon,
@@ -17,18 +19,29 @@
   import manifest from "./index";
   import { MAX_FILE_CHARS, MODEL_SETTINGS, clip_source, system_prompt, type AskSource } from "./ask";
   import Markdown from "./markdown.svelte";
+  import CommandsSheet from "./commands-sheet.svelte";
+  import MemoryMeter from "./memory-meter.svelte";
+  import { EMPTY_ENABLED, ENABLED_FILE, EnabledSchema, eligible, gather, question_message, type Previous, type Ran } from "./assistant";
 
   interface Turn {
     role: "user" | "assistant";
+    /** What the chat shows. */
     content: string;
+    /** What the model was sent, when it differs: the question with the data read for it. */
+    sent?: string;
     stopped?: boolean;
+    /** Assistant turns: Ask is still looking in the apps. */
+    looking?: boolean;
+    ran?: Ran;
   }
 
   const { path: initial_path }: { path?: string } = $props();
-  const { window: win } = get_app_context();
+  const { window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const ai = $derived(kernel.service<AiService>("ai"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
+  const shell = $derived(kernel.service<ShellService>("shell"));
+  const enabled = storage.file(ENABLED_FILE, EMPTY_ENABLED, EnabledSchema);
 
   let availability = $state<AiAvailability | null>(null);
   let source = $state.raw<(AskSource & { path: string | null }) | null>(null);
@@ -40,7 +53,36 @@
   let controller = $state.raw<AbortController | null>(null);
   let composer = $state<HTMLTextAreaElement | null>(null);
 
+  let choosing = $state(false);
+  let usage = $state.raw<AiUsage | null>(null);
+  let instructions = $state(0);
+
   const busy = $derived(controller !== null);
+  const catalogue = $derived(eligible(shell.commands).filter((command) => (command.available?.() ?? true) === true));
+  const on = $derived(catalogue.filter((command) => enabled.value.on.includes(command.id)));
+  const questions = $derived(turns.filter((turn) => turn.role === "user").length);
+
+  untrack(() => void shell.load());
+
+  $effect(() =>
+    choosing
+      ? win.on_back(() => {
+          choosing = false;
+          return true;
+        })
+      : undefined
+  );
+
+  function toggle(id: string, value: boolean) {
+    const rest = enabled.value.on.filter((other) => other !== id);
+    enabled.value = { ...enabled.value, on: value ? [...rest, id] : rest };
+  }
+
+  function previous(): Previous | null {
+    const index = turns.map((turn) => turn.role).lastIndexOf("user");
+    if (index < 0) return null;
+    return { question: turns[index].content, line: turns[index + 1]?.ran?.line ?? null };
+  }
 
   untrack(() => ai)
     .availability(AiFeature.PROMPT)
@@ -89,6 +131,7 @@
     controller?.abort();
     turns = [];
     error = null;
+    usage = null;
     composer?.focus();
   }
 
@@ -98,18 +141,38 @@
     draft = "";
     error = null;
 
-    const history: AiMessage[] = [
-      { role: "system", content: system_prompt(source) },
-      ...turns.map(({ role, content }) => ({ role, content })),
-      { role: "user", content: question },
-    ];
-    turns.push({ role: "user", content: question }, { role: "assistant", content: "" });
+    const instructions_text = system_prompt(source);
+    const earlier: AiMessage[] = turns.map(({ role, content, sent }) => ({ role, content: sent ?? content }));
+    const before = previous();
+    const reads = source ? [] : on;
+    turns.push({ role: "user", content: question }, { role: "assistant", content: "", looking: reads.length > 0 });
+    const asked = turns[turns.length - 2];
     const answer = turns[turns.length - 1];
     const own = new AbortController();
     controller = own;
 
     try {
-      for await (const chunk of ai.prompt(history, { signal: own.signal })) answer.content += chunk;
+      let ran: Ran | null = null;
+      if (reads.length > 0) {
+        try {
+          ran = await gather(ai, shell, reads, question, before, own.signal);
+        } catch (reason) {
+          if (own.signal.aborted) throw reason;
+        }
+        answer.looking = false;
+        if (ran) answer.ran = ran;
+      }
+      asked.sent = question_message(question, ran);
+      const stream = ai.prompt([{ role: "system", content: instructions_text }, ...earlier, { role: "user", content: asked.sent }], {
+        signal: own.signal,
+      });
+      let step = await stream.next();
+      while (!step.done) {
+        answer.content += step.value;
+        step = await stream.next();
+      }
+      usage = step.value;
+      if (!instructions) instructions = (await ai.measure(instructions_text)).used;
       if (availability !== AiAvailability.READY) availability = AiAvailability.READY;
     } catch (reason) {
       if (own.signal.aborted) {
@@ -153,7 +216,7 @@
 {:else if availability === AiAvailability.NO}
   <EmptyState icon={ChatCircleTextIcon} title="Ask isn't available on this device" description={AI_REQUIREMENTS} />
 {:else}
-  <div class="grid h-full grid-rows-[auto_auto_1fr_auto]">
+  <div class="relative grid h-full grid-rows-[auto_auto_1fr_auto]">
     <Toolbar>
       <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
       <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={source?.path ?? undefined}>
@@ -162,10 +225,18 @@
       <Button size="sm" variant="quiet" aria-label="New chat" disabled={turns.length === 0 && !error} onclick={new_chat}>
         <NotePencilIcon weight="bold" /> <span class="hidden @sm:inline">New chat</span>
       </Button>
+      {#if !source}
+        <Button size="sm" variant="quiet" aria-label="What Ask can read" onclick={() => (choosing = true)}>
+          <DatabaseIcon weight="bold" /> <span class="hidden tabular-nums @sm:inline">{on.length ? `Reads ${on.length}` : "Read apps"}</span>
+        </Button>
+      {/if}
       <IconButton label="Remove the AI model…" size="sm" onclick={remove_model}><TrashIcon weight="bold" /></IconButton>
     </Toolbar>
 
     <div>
+      {#if usage}
+        <MemoryMeter {usage} {instructions} {questions} onnew={new_chat} />
+      {/if}
       {#if load_error}
         <div role="alert" class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
           <WarningIcon weight="fill" class="size-4 shrink-0 text-warning" />
@@ -199,11 +270,16 @@
           title={source ? `Ask about ${source.name}` : "Ask anything"}
           description={source
             ? "What it says, what a part means, what's missing. Answers come from the file only."
-            : "Or open a text file to ask about it. Answers are made on this device."}
+            : on.length
+              ? `Like "what's on my shopping list?". Ask can read ${on.length} ${on.length === 1 ? "thing" : "things"} from your apps, or open a text file to ask about it.`
+              : "Ask can't read your apps yet: choose what it may look up, or open a text file to ask about it. Answers are made on this device."}
         >
           {#snippet actions()}
             {#if !source}
-              <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
+              {#if on.length === 0 && catalogue.length > 0}
+                <Button variant="primary" onclick={() => (choosing = true)}><DatabaseIcon weight="bold" /> Choose what Ask can read…</Button>
+              {/if}
+              <Button variant={on.length === 0 && catalogue.length > 0 ? "secondary" : "primary"} onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button>
             {/if}
           {/snippet}
         </EmptyState>
@@ -215,8 +291,17 @@
             {:else}
               <li class="group flex max-w-[92%] flex-col items-start gap-1 self-start">
                 <div class="min-w-0 max-w-full rounded-xl bg-background-light px-3 py-2 text-ui">
-                  {#if turn.content}<Markdown text={turn.content} />{:else}<Spinner label="Thinking" />{/if}
+                  {#if turn.content}<Markdown text={turn.content} />{:else}<Spinner label={turn.looking ? "Looking in your apps" : "Thinking"} />{/if}
                 </div>
+                {#if turn.ran}
+                  <details class="group/ran max-w-full text-2xs text-foreground/65">
+                    <summary class="flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-0.5 hover:bg-foreground/6 pointer-coarse:py-2">
+                      <CaretRightIcon weight="bold" class="size-3 transition-transform group-open/ran:rotate-90" />
+                      {turn.ran.failed ? "Couldn't read" : "Read"} <code class="font-mono">{turn.ran.line}</code>
+                    </summary>
+                    <pre class="mt-1 max-h-48 overflow-auto rounded-md bg-foreground/6 p-2 font-mono whitespace-pre-wrap">{turn.ran.text || "(nothing)"}</pre>
+                  </details>
+                {/if}
                 {#if turn.stopped || (turn.content && !(busy && index === turns.length - 1))}
                   <div class="flex items-center gap-1 text-2xs text-foreground/65">
                     {#if turn.stopped}<span class="px-1">Stopped</span>{/if}
@@ -254,5 +339,30 @@
         </Button>
       {/if}
     </div>
+
+    {#if choosing}
+      <div class="absolute inset-0 z-20 flex flex-col justify-end">
+        <button type="button" tabindex="-1" aria-label="Close" class="absolute inset-0 bg-(--overlay)" onclick={() => (choosing = false)}></button>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="What Ask can read"
+          tabindex="-1"
+          class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+          {@attach (element) => element.focus({ preventScroll: true })}
+          onkeydown={(event) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            choosing = false;
+          }}
+        >
+          <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
+          <CommandsSheet {catalogue} on={enabled.value.on} ready={availability === AiAvailability.READY} ontoggle={toggle} />
+          <div class="flex justify-end border-t border-foreground/8 p-2">
+            <Button variant="primary" onclick={() => (choosing = false)}>Done</Button>
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 {/if}

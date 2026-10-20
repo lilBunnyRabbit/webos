@@ -1,6 +1,7 @@
 import type { FilesService, Kernel, TasksService } from "$lib/core/api";
 import { TaskJobStatus, type TaskJob } from "../tasks/type";
 import { check, has_image, history_key, IMAGE_INPUTS, same_language } from "./availability";
+import { z } from "zod";
 import { ai_shell } from "./shell";
 import {
   AI_REQUIREMENTS,
@@ -9,6 +10,7 @@ import {
   type AiMessage,
   type AiService as IAiService,
   type AiSessionInfo,
+  type AiUsage,
   type DetectedLanguage,
   type LanguagePair,
   type SummarizeOptions,
@@ -47,7 +49,7 @@ export class AiService implements IAiService {
   private kept = $state.raw<Kept[]>([]);
 
   public get sessions(): AiSessionInfo[] {
-    return this.kept.map(({ feature, label }) => ({ feature, label }));
+    return this.kept.map(({ feature, label, usage }) => ({ feature, label, usage }));
   }
 
   public get downloads(): TaskJob[] {
@@ -110,7 +112,7 @@ export class AiService implements IAiService {
     return results.map((result) => ({ language: result.detectedLanguage, confidence: result.confidence }));
   }
 
-  async *prompt(messages: AiMessage[], { signal }: { signal?: AbortSignal } = {}): AsyncGenerator<string, void> {
+  async *prompt(messages: AiMessage[], { signal }: { signal?: AbortSignal } = {}): AsyncGenerator<string, AiUsage> {
     const last = messages.at(-1);
     if (last?.role !== "user") throw new Error("The last message has to be the user's");
     const history = messages.slice(0, -1);
@@ -149,6 +151,7 @@ export class AiService implements IAiService {
       if (!complete) session.destroy();
     }
 
+    const usage = { used: session.contextUsage, window: session.contextWindow };
     const turns = messages.filter((message) => message.role === "user").length;
     const chats = this.kept.filter((entry) => entry.feature === AiFeature.PROMPT || entry.feature === AiFeature.PROMPT_IMAGE);
     const evicted = chats.length >= CHAT_CAP ? chats[0] : null;
@@ -160,8 +163,33 @@ export class AiService implements IAiService {
         feature,
         label: `Chat, ${turns} ${turns === 1 ? "question" : "questions"}`,
         model: Promise.resolve(session),
+        usage,
       },
     ];
+    return usage;
+  }
+
+  async extract<T>(messages: AiMessage[], schema: z.ZodType<T>, { signal }: { signal?: AbortSignal } = {}): Promise<T> {
+    const last = messages.at(-1);
+    if (last?.role !== "user" || typeof last.content !== "string") throw new Error("The last message has to be the user's, as text");
+    const session = await this.create(AiFeature.PROMPT, "Language model", {
+      check: () => this.availability(AiFeature.PROMPT),
+      create: (options) => globalThis.LanguageModel!.create({ initialPrompts: messages.slice(0, -1), ...options }),
+    });
+    try {
+      const answer = await session.prompt(last.content, { signal, responseConstraint: z.toJSONSchema(schema) });
+      return schema.parse(JSON.parse(answer));
+    } finally {
+      session.destroy();
+    }
+  }
+
+  async measure(text: string, { signal }: { signal?: AbortSignal } = {}): Promise<AiUsage> {
+    const counter = await this.reuse("measure", AiFeature.PROMPT, "Token counter", {
+      check: () => this.availability(AiFeature.PROMPT),
+      create: (options) => globalThis.LanguageModel!.create(options),
+    });
+    return { used: await counter.measureContextUsage(text, { signal }), window: counter.contextWindow };
   }
 
   private reuse<T extends BuiltInModel>(

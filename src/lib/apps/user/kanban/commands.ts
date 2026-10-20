@@ -33,6 +33,7 @@ export default {
     }),
     define_command({
       id: "kanban ls",
+      ai: "read",
       description:
         "Cards on every board, or -b <board> (a folder board lists its files); --due: cards with a due date that aren't done, soonest first",
       args: z.object({

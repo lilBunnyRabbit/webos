@@ -66,7 +66,7 @@ Owner: show how full the context is, as much information as possible but not tec
 - Everything is opt-in twice (app tags the command, user switches it on), and the context cost is visible.
 - Nano's small context shapes every choice: read-only, one pick per question, a measured catalogue.
 
-## Action items
+## Action items (done 2026-10-20)
 - ADR-054 (AI assistant over shell commands); revision notes on ADR-033/034 (`Command.ai`) and ADR-046 (`extract`, `measure`, session usage).
 - AiService: `extract`, `measure`, session usage; MobileAiService equivalents; inspector; `docs/system/services/ai.md`.
 - `Command.ai` in `shell/type.ts`; `docs/system/services/shell.md`.
@@ -75,10 +75,15 @@ Owner: show how full the context is, as much information as possible but not tec
 - Ask: assistant module (pick → run → answer), commands sheet with costs, memory meter, "ran" chip, `ask` shell command.
 - Check: desktop window narrow and wide; mobile shows the unavailable state.
 
-Open (decide during implementation, ask if structural): what happens on context overflow (Chrome evicts the oldest turns versus the service recreating the session); budget-test threshold.
-
-## Action items
+Settled during implementation:
+- Switches live in `/var/lib/apps/ask/commands.json`, not localStorage (owner): `persisted()` only works inside a window, so the `ask` command couldn't read it and two Ask windows wouldn't sync.
+- Context overflow: left to Chrome, which drops the oldest turns; the meter warns from 90 %.
+- Budget test: all tagged commands' catalogue under 4,000 characters (about 1,000 tokens).
+- `wh report` prints, so it isn't tagged; `wh ls` is.
 
 ## Next session topics
 
 - Multiple models (WebLLM / transformers.js), "choose who you talk to" (L4X's idea)
+- Writes behind a confirm ("add milk")
+- Linear-style corner panel with the focused window's context
+- AI-native apps: [ideas](2026-10-20_ai-native-apps.md)

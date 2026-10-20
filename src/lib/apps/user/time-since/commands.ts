@@ -21,7 +21,8 @@ export default {
   commands: [
     define_command({
       id: "since",
-      description: "Counters, longest running first",
+      ai: "read",
+      description: "Time Since counters: how long since each thing last happened, longest first",
       yields: "counter",
       async *run() {
         yield* (await logic()).list();

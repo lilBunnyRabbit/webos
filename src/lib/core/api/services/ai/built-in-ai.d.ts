@@ -86,8 +86,16 @@ interface LanguageModelCreateCoreOptions {
   expectedOutputs?: { type: "text"; languages?: string[] }[];
 }
 
+interface LanguageModelPromptOptions {
+  signal?: AbortSignal;
+  /** A JSON Schema the answer has to match. */
+  responseConstraint?: object;
+}
+
 interface BuiltInLanguageModel extends BuiltInModel {
-  prompt(input: string | LanguageModelMessage[], options?: { signal?: AbortSignal }): Promise<string>;
+  prompt(input: string | LanguageModelMessage[], options?: LanguageModelPromptOptions): Promise<string>;
+  /** Tokens `input` would take, without sending it. */
+  measureContextUsage(input: string | LanguageModelMessage[], options?: LanguageModelPromptOptions): Promise<number>;
   /** Chunks are pieces of the answer, not the answer so far. */
   promptStreaming(input: string | LanguageModelMessage[], options?: { signal?: AbortSignal }): ReadableStream<string>;
   readonly contextUsage: number;

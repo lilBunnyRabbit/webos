@@ -11,6 +11,7 @@ import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import {
   AppWindow as AppWindowIcon,
   Archive as ArchiveIcon,
+  ChatCircleText as ChatCircleTextIcon,
   ArrowsLeftRight as ArrowsLeftRightIcon,
   Command as CommandIcon,
   FolderOpen as FolderOpenIcon,
@@ -76,6 +77,15 @@ export const TOPICS: Topic[] = [
     platforms: BOTH,
     action: "Run ls ~",
     run: () => apps().launch("terminal", { run: "ls ~" }),
+  },
+  {
+    id: "ask",
+    icon: ChatCircleTextIcon,
+    title: "Ask about your apps",
+    text: "Ask \"what's on my shopping list?\" or \"what am I doing tomorrow?\". Choose what Ask may read; the AI runs on this device, offline too.",
+    platforms: DESKTOP,
+    action: "Open Ask",
+    run: () => apps().launch("ask"),
   },
   {
     id: "shortcuts",

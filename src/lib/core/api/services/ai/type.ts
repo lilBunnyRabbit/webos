@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import type { IService } from "../../type";
 import type { TaskJob } from "../tasks/type";
 
@@ -68,9 +69,17 @@ export interface AiMessage {
   content: string | AiPart[];
 }
 
+/** Tokens: how much a session or a text takes of the model's context window. */
+export interface AiUsage {
+  used: number;
+  window: number;
+}
+
 export interface AiSessionInfo {
   feature: AiFeature;
   label: string;
+  /** Chats only, after their latest answer. */
+  usage?: AiUsage;
 }
 
 /**
@@ -98,5 +107,12 @@ export interface AiService extends IService {
    * A conversation that continues where an earlier call ended reuses that call's session. A picture in any message
    * needs `prompt-image` and gets a session created to accept pictures.
    */
-  prompt(messages: AiMessage[], options?: { signal?: AbortSignal }): AsyncGenerator<string, void>;
+  prompt(messages: AiMessage[], options?: { signal?: AbortSignal }): AsyncGenerator<string, AiUsage>;
+  /**
+   * Answers the last message, a `user` one, with a value matching `schema` (sent as the answer's JSON Schema), parsed
+   * and validated. A fresh session each call: nothing is kept.
+   */
+  extract<T>(messages: AiMessage[], schema: z.ZodType<T>, options?: { signal?: AbortSignal }): Promise<T>;
+  /** How many tokens `text` takes, and the context window it's measured against. */
+  measure(text: string, options?: { signal?: AbortSignal }): Promise<AiUsage>;
 }

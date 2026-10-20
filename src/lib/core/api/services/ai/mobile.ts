@@ -1,6 +1,6 @@
 import type { TaskJob } from "../tasks/type";
 import { ai_shell } from "./shell";
-import { AI_REQUIREMENTS, AiAvailability, type AiFeature, type AiService as IAiService, type AiSessionInfo } from "./type";
+import { AI_REQUIREMENTS, AiAvailability, type AiFeature, type AiService as IAiService, type AiSessionInfo, type AiUsage } from "./type";
 
 const unavailable = () => new Error(AI_REQUIREMENTS);
 
@@ -41,7 +41,15 @@ export class MobileAiService implements IAiService {
     throw unavailable();
   }
 
-  async *prompt(): AsyncGenerator<string, void> {
+  async *prompt(): AsyncGenerator<string, AiUsage> {
+    throw unavailable();
+  }
+
+  async extract(): Promise<never> {
+    throw unavailable();
+  }
+
+  async measure(): Promise<AiUsage> {
     throw unavailable();
   }
 }

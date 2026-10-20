@@ -7,8 +7,11 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.9.0",
     date: "2026-10-20",
-    title: "Every second counts",
+    title: "Lax asked again",
     changes: [
+      { kind: NEW, apps: ["ask"], text: "Ask answers questions about your apps, like \"what's on my shopping list?\": choose what it may read, and it looks there before answering. It only reads." },
+      { kind: NEW, apps: ["ask"], text: "Ask shows how full its memory is, and what each app it can read costs." },
+      { kind: NEW, text: "Ask from the Terminal: ask what am I doing tomorrow, or pipe text into ask." },
       { kind: FIXED, apps: ["clock"], text: "Clock finds big cities that share a time zone, like Dallas, Mumbai or Munich, and keeps their own name on your list." },
       { kind: IMPROVED, text: "The taskbar clock can show seconds: turn on Show seconds in Settings › Taskbar." },
     ],
