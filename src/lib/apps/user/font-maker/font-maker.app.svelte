@@ -353,7 +353,7 @@
   });
 </script>
 
-<div class="font-maker relative grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] bg-background" data-pane={pane}>
+<div class="font-maker relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-background" data-pane={pane}>
   <Toolbar class="flex-nowrap gap-1">
     <Button size="sm" variant="quiet" class="max-w-40 min-w-0 shrink gap-1 pr-1.5" title={file_path ?? "Not saved yet"} onclick={file_menu}>
       <span class="min-w-0 truncate">{mobile ? file_stem(file_name) : "File"}</span>
@@ -365,7 +365,7 @@
     <div class="flex-1"></div>
     <IconButton label="Scan a filled-in sheet" size="sm" class="shrink-0" disabled={scanning} onclick={scan_menu}><ScanIcon weight="bold" /></IconButton>
     <IconButton label="Font settings" size="sm" class="shrink-0" popovertarget="settings-{popover}" style="anchor-name: --settings-{popover}"><SlidersHorizontalIcon weight="bold" /></IconButton>
-    <Button size="sm" class="shrink-0" onclick={export_font}><ExportIcon weight="bold" /><span class="hidden @sm:inline">Export font</span></Button>
+    <Button size="sm" class="shrink-0" onclick={export_font}><ExportIcon weight="bold" /><span class="hidden @md:inline">Export font</span></Button>
   </Toolbar>
 
   <div class="body grid min-h-0">

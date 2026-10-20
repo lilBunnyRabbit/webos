@@ -53,9 +53,9 @@
 <div class="absolute inset-0 z-10 grid grid-rows-[auto_auto_minmax(0,1fr)] bg-background">
   <Toolbar class="gap-2">
     <Button size="sm" variant="quiet" onclick={oncancel}>Cancel</Button>
-    <span class="min-w-0 flex-1 truncate text-ui font-medium">Line up the corners</span>
+    <span class="min-w-0 flex-[1_1_8rem] truncate text-ui font-medium">Line up the corners</span>
     {#if sets.length > 1}
-      <Select size="sm" aria-label="Which sheet" class="max-w-40" options={sets.map((value) => ({ value, label: CHAR_SET_LABELS[value] }))} bind:value={set} />
+      <Select size="sm" aria-label="Which sheet" class="ml-auto max-w-40" options={sets.map((value) => ({ value, label: CHAR_SET_LABELS[value] }))} bind:value={set} />
     {/if}
     <Button size="sm" variant="primary" disabled={busy} onclick={() => onapply(set, $state.snapshot(corners) as Quad)}>
       {#if busy}<Spinner label="Reading the sheet" class="size-3.5" />{/if}Use guides

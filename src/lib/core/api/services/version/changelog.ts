@@ -5,6 +5,12 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.15.1",
+    date: "2026-10-21",
+    title: "Fits your phone",
+    changes: [{ kind: FIXED, apps: ["font-maker"], text: "Font Maker fits a phone screen instead of running off the right edge, and the scan screen keeps its title readable." }],
+  },
+  {
     version: "3.15.0",
     date: "2026-10-21",
     title: "Widgets your way",
