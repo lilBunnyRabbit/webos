@@ -26,6 +26,8 @@ export interface Taskbar {
   size: TaskbarSize;
   /** The bar overlays the screen edge, hidden until the pointer reaches it (ADR-015). */
   auto_hide: boolean;
+  /** The clock shows seconds too. */
+  seconds: boolean;
 }
 
 export const TaskbarSize = {

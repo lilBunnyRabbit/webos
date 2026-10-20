@@ -94,7 +94,7 @@ ADR-042, [brainstorm](../../brainstorm/2026-10-16_quick-launch-and-random-theme.
 
 ## Clock
 
-`taskbar-clock.svelte` keeps a local `now` and re-reads it with a `setTimeout` aimed at the next minute boundary, so the time never lags. It renders a `<time datetime>`: mono `text-ui` time, always 24-hour `HH:MM` (`hourCycle: "h23"`) in every locale, over a `text-2xs` date at 80% (`weekday day month` horizontally, `day month` vertically). It's the label half of the tray button and has no action of its own.
+`taskbar-clock.svelte` keeps a local `now` and re-reads it with a `setTimeout` aimed at the next minute boundary (the next second while `settings.taskbar.seconds` is on), so the time never lags. It renders a `<time datetime>`: mono `text-ui` time, always 24-hour `HH:MM` (`hourCycle: "h23"`) in every locale, `HH:MM:SS` horizontally with seconds on (tabular digits, so the width holds); a vertical dock keeps `HH:MM` and puts `:SS` on its own mono `text-2xs` line, since the dock's width is fixed. Off by default; Settings › Taskbar › Clock and `taskbar seconds on|off` switch it. The time sits over a `text-2xs` date at 80% (`weekday day month` horizontally, `day month` vertically). It's the label half of the tray button and has no action of its own.
 
 ## Tray and notification center
 

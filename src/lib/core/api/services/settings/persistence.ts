@@ -75,6 +75,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
         // Added after version 1 shipped, like pinned: a missing or unknown value is the default.
         size: Object.values(TaskbarSize).includes(data.taskbar?.size) ? data.taskbar.size : TaskbarSize.MEDIUM,
         auto_hide: data.taskbar?.auto_hide === true,
+        seconds: data.taskbar?.seconds === true,
       },
       file_defaults: sanitize_file_defaults(data.file_defaults),
       wallpaper: parse_wallpaper(data.wallpaper),

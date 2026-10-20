@@ -69,14 +69,14 @@ describe("saved themes", () => {
   });
 });
 
-describe("taskbar size and auto-hide", () => {
+describe("taskbar size, auto-hide and seconds", () => {
   test("keep valid values", () => {
-    const settings = parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "left", size: "large", auto_hide: true } }));
-    expect(settings?.taskbar).toMatchObject({ position: "left", size: "large", auto_hide: true });
+    const settings = parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "left", size: "large", auto_hide: true, seconds: true } }));
+    expect(settings?.taskbar).toMatchObject({ position: "left", size: "large", auto_hide: true, seconds: true });
   });
 
-  test("a save from before they existed, or unknown values, load as medium and always shown", () => {
-    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "top" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false });
+  test("a save from before they existed, or unknown values, load as medium, always shown, no seconds", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "top" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false, seconds: false });
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { size: "huge", auto_hide: "yes" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false });
   });
 });

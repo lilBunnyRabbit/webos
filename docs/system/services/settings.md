@@ -1,6 +1,6 @@
 # SettingsService
 
-Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens), [ADR-042](../../adrs/042-quick-launch.md) (`taskbar.pinned`), ADR-015 revision (`taskbar.size`, `taskbar.auto_hide`) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
+Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens), [ADR-042](../../adrs/042-quick-launch.md) (`taskbar.pinned`), ADR-015 revision (`taskbar.size`, `taskbar.auto_hide`, `taskbar.seconds`) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
 
 | File | Contents |
 |------|----------|
@@ -18,7 +18,7 @@ Key `settings` · Depends on: `files` · ADR: [ADR-002](../../adrs/002-service-l
 
 ## Purpose
 
-Owns the user's persisted OS preferences: theme colour tokens, saved themes, taskbar position, pins, size and auto-hide, per-extension default apps, the wallpaper, and the non-colour appearance (corners, shadows, text size, motion). It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
+Owns the user's persisted OS preferences: theme colour tokens, saved themes, taskbar position, pins, size, auto-hide and clock seconds, per-extension default apps, the wallpaper, and the non-colour appearance (corners, shadows, text size, motion). It writes the theme onto `<html>` as CSS variables (plus `color-scheme`) and saves everything to `/etc/settings.json` when anything changes.
 
 ## Public API
 
@@ -27,7 +27,7 @@ The API is six plain reactive fields, which consumers assign to directly, plus o
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `theme` | `theme: Theme` (`Record<ThemeToken, string>`) | 17 tokens (`snake_case` keys). Replace it wholesale (`settings.theme = { ...settings.theme, primary: v }`) or mutate a key. Both trigger the effects, because it's deep `$state`. |
-| `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition, pinned: AppId[], size: TaskbarSize, auto_hide: boolean }` | Read by `desktop-shell.svelte`, `taskbar.svelte`, `window-manager.svelte`. The Settings app and the `taskbar position|size|autohide` commands (AppsService) mutate `position`, `size` and `auto_hide` ([taskbar](../shell/taskbar.md#size), [auto-hide](../shell/taskbar.md#auto-hide)). `pinned` is the quick launch in order ([taskbar](../shell/taskbar.md#quick-launch)); assign `with_pin(pinned, id, index?)` / `without_pin(pinned, id)`. Written by the quick launch, the start menu, App Library, the window item menu, the `taskbar` commands (AppsService) and `apps.uninstall()`. |
+| `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition, pinned: AppId[], size: TaskbarSize, auto_hide: boolean, seconds: boolean }` | Read by `desktop-shell.svelte`, `taskbar.svelte`, `window-manager.svelte`, `taskbar-clock.svelte`. The Settings app and the `taskbar position|size|autohide|seconds` commands (AppsService) mutate `position`, `size`, `auto_hide` and `seconds` ([taskbar](../shell/taskbar.md#size), [auto-hide](../shell/taskbar.md#auto-hide), [clock](../shell/taskbar.md#clock)). `pinned` is the quick launch in order ([taskbar](../shell/taskbar.md#quick-launch)); assign `with_pin(pinned, id, index?)` / `without_pin(pinned, id)`. Written by the quick launch, the start menu, App Library, the window item menu, the `taskbar` commands (AppsService) and `apps.uninstall()`. |
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
 | `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`. Assign a preset, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
 | `saved_themes` | `saved_themes: SavedTheme[]` (`{ name, theme: Theme }`) | Themes the user named, in the order saved. Change through the `saved-themes.ts` helpers and assign the result. Written by Settings › Appearance (Save…, Rename…, Delete…, importing a `.webos-theme` file) and `theme save` / `theme delete`. Exported and imported as `.webos-theme` files by the Settings app ([Settings](../system-apps.md#settings)); the service has no file format of its own for them. Kept by About › Reset settings |
@@ -58,7 +58,7 @@ Token list and semantics: [theming.md](../theming.md).
 ## State
 
 ```ts
-taskbar       = $state<Taskbar>({ position: "bottom", pinned: [], size: "medium", auto_hide: false });
+taskbar       = $state<Taskbar>({ position: "bottom", pinned: [], size: "medium", auto_hide: false, seconds: false });
 theme         = $state<Theme>({ ...BRAND_DARK });
 file_defaults = $state<FileDefaults>({});
 wallpaper     = $state<Wallpaper>({ kind: "preset", preset: "grid" });
@@ -93,7 +93,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `d
 |-|-|
 | Store | OPFS, through FilesService |
 | Path | `/etc/settings.json` (ADR-021: OS config lives in `/etc`) |
-| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"], "size": "medium", "auto_hide": false }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": …, "shadow": …, "text": … } }`, pretty-printed (2 spaces) |
+| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"], "size": "medium", "auto_hide": false, "seconds": false }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": …, "shadow": …, "text": … } }`, pretty-printed (2 spaces) |
 | Images | `/var/lib/wallpaper/`, copies owned by the OS. Only the current image is kept |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | 300 ms after the last change (debounced), flushed when the tab hides. Also right after `init()` when the file is missing or its normalized text differs from what was read; an unchanged file isn't rewritten. |
@@ -111,6 +111,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - `taskbar.pinned`: additive; strings only, deduplicated, else `[]`. Ids aren't checked against the registry; the quick launch skips unknown ones.
 - `taskbar.size`: additive; one of `TaskbarSize`, else `medium`.
 - `taskbar.auto_hide`: additive; `true` only when stored as `true`, else `false`.
+- `taskbar.seconds`: additive; `true` only when stored as `true`, else `false`.
 - `file_defaults`: keeps entries whose key starts with `.` and whose value is a string. It's an additive field, so v1 blobs without it load as `{}`. The app id is not checked against the registry here. `apps.open()` deals with stale ids.
 - `wallpaper` (`parse_wallpaper`, zod): additive like `file_defaults`, so a missing or invalid value is the grid preset. An image path must be inside `/var/lib/wallpaper/`; a bad `fit` becomes `fill`, an out-of-range `dim` or `blur` becomes 0. The image file isn't checked here; a missing one draws the glow.
 - `saved_themes`: additive; entries need a non-empty trimmed name, the first of each name (case ignored) wins, each theme merged like `theme`. Missing → `[]`.
@@ -124,7 +125,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - Derived presets store strings like `oklch(from var(--primary) l 0.14 140)` as the token value. They resolve at use time in CSS, so editing `primary` live re-derives the states.
 - No cross-tab sync, and none possible through `storage` events now that the store is OPFS. Two tabs each write their own state, and the last write wins on reload.
 - The file isn't watched. Editing or deleting `/etc/settings.json` (File Explorer can delete it) takes effect on the next boot, and the next settings change in this tab overwrites it.
-- The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar` (position, pins, size and auto-hide), `theme`, `file_defaults`, `wallpaper` (grid preset; the image copy is pruned at the next boot) and `appearance`. Saved themes stay. Default apps → Forget / Forget all clears `file_defaults` entries only.
+- The Settings app's About → Reset (`sections/about.svelte`) resets `taskbar` (position, pins, size, auto-hide and seconds), `theme`, `file_defaults`, `wallpaper` (grid preset; the image copy is pruned at the next boot) and `appearance`. Saved themes stay. Default apps → Forget / Forget all clears `file_defaults` entries only.
 - `color-scheme` is set in the same effect as the tokens, so native controls switch together with the palette.
 - **Radius:** every `@theme` radius in `app.css` (`--radius`, `xs` … `3xl`) is `calc(<px> * var(--radius-scale, 1))`, so the utilities follow the variable on `<html>`. `rounded-full` and arbitrary values (`rounded-[5px]`) aren't scaled.
 - **Shadows:** the darkest-shade percentage inside each `@theme` shadow's `color-mix` is `calc(<n>% * var(--shadow-strength, 1))`. Tailwind's `--tw-shadow-color` rewrite keeps the `calc()` intact (checked in the built CSS, inside its `@supports (color: color-mix(…))` block). A percentage past 100% (Strong on `shadow-window-focused`) clamps to 100%. The 1px `foreground/16` hairline in `shadow-popover`, the desktop glyph drop-shadows and the `--overlay` scrim aren't scaled.
@@ -133,11 +134,11 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 
 ## Divergence from ADR
 
-- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide`, `saved_themes` and `appearance` (ADR-015 revisions) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
+- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide` / `taskbar.seconds`, `saved_themes` and `appearance` (ADR-015 revisions) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
 
 ## Shell
 
-Contributes `theme get|list|set|random|save|delete`, the `theme` completer and value type (`settings/shell.ts`). `theme list` yields presets then saved themes (columns name, saved, active), and the `theme` completer lists both (detail `active` or `saved`). `theme get` and `theme set` take either; a preset wins a name clash. `theme save <name…>` saves the current theme (a preset's name is refused; the same saved name replaces it). `theme delete <name…>` removes a saved theme (available while any exist). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(generate_theme({ ...DEFAULT_GENERATE, mode }))` and yields the five base colours. The `taskbar pin|unpin|list|position|size|autohide` commands live in AppsService's shell, beside the pin commands that need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
+Contributes `theme get|list|set|random|save|delete`, the `theme` completer and value type (`settings/shell.ts`). `theme list` yields presets then saved themes (columns name, saved, active), and the `theme` completer lists both (detail `active` or `saved`). `theme get` and `theme set` take either; a preset wins a name clash. `theme save <name…>` saves the current theme (a preset's name is refused; the same saved name replaces it). `theme delete <name…>` removes a saved theme (available while any exist). `theme random` keeps the current mode (`is_dark`), sets `derive_theme(generate_theme({ ...DEFAULT_GENERATE, mode }))` and yields the five base colours. The `taskbar pin|unpin|list|position|size|autohide|seconds` commands live in AppsService's shell, beside the pin commands that need the registry ([apps](apps.md#shell)). See [shell](shell.md#contributions).
 
 ## Known gaps
 

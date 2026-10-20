@@ -14,7 +14,7 @@
 
 <InspectorStats>
   <InspectorStat label="Theme" value={preset?.name ?? "Custom"} />
-  <InspectorStat label="Taskbar" value={`${service.taskbar.position} · ${service.taskbar.size}${service.taskbar.auto_hide ? " · auto-hide" : ""}`} />
+  <InspectorStat label="Taskbar" value={`${service.taskbar.position} · ${service.taskbar.size}${service.taskbar.auto_hide ? " · auto-hide" : ""}${service.taskbar.seconds ? " · seconds" : ""}`} />
   <InspectorStat label="File defaults" value={defaults.length} />
 </InspectorStats>
 

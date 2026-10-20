@@ -179,6 +179,16 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         },
       }),
       define_command({
+        id: "taskbar seconds",
+        description: "Show seconds on the taskbar clock; no argument prints it",
+        args: z.object({ state: z.enum(["on", "off"]).optional() }),
+        positional: ["state"],
+        run({ args }) {
+          if (!args.state) return settings().taskbar.seconds ? "on" : "off";
+          settings().taskbar.seconds = args.state === "on";
+        },
+      }),
+      define_command({
         id: "open",
         description: "Open files in their app, folders in File Explorer",
         args: z.object({ paths: z.array(arg.path()).default([]).describe("Paths, or the files piped in") }),

@@ -29,7 +29,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 - **Grouping:** one button per app. Several windows of one app add a count pill in the button's bottom-right corner (`foreground` with `text-background` digits and the same `background-light` ring as badges); a click lists the windows in a menu above the button.
 - **Size:** small, medium (default) or large: 32, 40 or 48px buttons. Icons, separators, the bar and the show desktop sliver scale with them; badges and text don't.
 - **Auto-hide:** the dock overlays the screen and slides off its edge, leaving a 4px sliver. Pointing at it, focusing it, opening the start menu or notification center, or dragging over it brings it back at once; it slides away 2s after. It stays a floating dock over a maximized window.
-- The clock shows mono 24-hour `HH:MM` and a short date in `text-2xs`, and ticks on the minute.
+- The clock shows mono 24-hour `HH:MM` and a short date in `text-2xs`, and ticks on the minute. With Show seconds on it reads `HH:MM:SS` in tabular digits and ticks every second; a vertical dock gives `:SS` its own small line.
 
 ## Start menu
 

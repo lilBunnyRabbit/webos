@@ -49,6 +49,14 @@
     </SettingRow>
   </Section>
 
+  <Section title="Clock">
+    <SettingRow label="Show seconds" description="The taskbar clock ticks every second.">
+      {#snippet children({ id, describedby })}
+        <Switch {id} aria-describedby={describedby} bind:checked={settings.taskbar.seconds} />
+      {/snippet}
+    </SettingRow>
+  </Section>
+
   <Section title="Preview" flush>
     <div class="grid place-items-center rounded-xl bg-background-darker p-6 ring-1 ring-foreground/8">
       <div

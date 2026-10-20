@@ -48,7 +48,7 @@
   ]);
 
   function reset_settings() {
-    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false };
+    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false, seconds: false };
     settings.theme = { ...BRAND_DARK };
     settings.file_defaults = {};
     settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };

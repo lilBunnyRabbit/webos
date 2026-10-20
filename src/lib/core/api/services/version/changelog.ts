@@ -5,11 +5,12 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.8.1",
+    version: "3.9.0",
     date: "2026-10-20",
-    title: "Every city counts",
+    title: "Every second counts",
     changes: [
       { kind: FIXED, apps: ["clock"], text: "Clock finds big cities that share a time zone, like Dallas, Mumbai or Munich, and keeps their own name on your list." },
+      { kind: IMPROVED, text: "The taskbar clock can show seconds: turn on Show seconds in Settings › Taskbar." },
     ],
   },
   {
