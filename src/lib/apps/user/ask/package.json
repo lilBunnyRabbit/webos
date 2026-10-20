@@ -1,0 +1,7 @@
+{
+  "name": "@webos/ask",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.1.1"
+  }
+}

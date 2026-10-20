@@ -24,3 +24,13 @@ export function system_prompt(source: AskSource | null): string {
     .filter(Boolean)
     .join("\n");
 }
+
+export const MODEL_SETTINGS = "chrome://settings/system";
+
+export function safe_href(href: string): string | null {
+  try {
+    return ["http:", "https:", "mailto:"].includes(new URL(href).protocol) ? href : null;
+  } catch {
+    return null;
+  }
+}

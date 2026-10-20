@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.8.0",
+    date: "2026-10-20",
+    title: "Lax asked",
+    changes: [
+      { kind: IMPROVED, apps: ["ask"], text: "Ask shows answers formatted: bold, lists, headings, tables and code blocks with a copy button." },
+      { kind: FIXED, apps: ["ask"], text: "Ask follows a long answer as it's written, so you no longer scroll after every reply." },
+      { kind: NEW, apps: ["ask"], text: "Ask shows how to remove Chrome's AI model when you want the disk space back." },
+    ],
+  },
+  {
     version: "3.7.0",
     date: "2026-10-20",
     title: "More room in the store",

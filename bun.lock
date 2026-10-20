@@ -57,6 +57,12 @@
         "marked": "^18.1.1",
       },
     },
+    "src/lib/apps/user/ask": {
+      "name": "@webos/ask",
+      "dependencies": {
+        "marked": "^18.1.1",
+      },
+    },
     "src/lib/apps/user/cards": {
       "name": "@webos/cards",
       "dependencies": {
@@ -655,6 +661,8 @@
     "@vitest/ui": ["@vitest/ui@5.0.1", "", { "dependencies": { "@vitest/utils": "5.0.1", "fflate": "^0.8.3", "flatted": "^3.4.4", "pathe": "^2.0.3", "sirv": "^3.0.2", "tinyrainbow": "^3.1.1" }, "peerDependencies": { "vitest": "5.0.1" } }, "sha512-7PvQu/X9/pQoHYfNLAYL22qsD4/+sx2k7zpUA7XvjW0sc40r3/r0lGZ2fsEyOHMuO8Q1KjiO1QQVjJdnWUy/WQ=="],
 
     "@vitest/utils": ["@vitest/utils@5.0.1", "", { "dependencies": { "@vitest/pretty-format": "5.0.1", "convert-source-map": "^2.0.0", "tinyrainbow": "^3.1.1" } }, "sha512-E9+yEA+jsfaoxZcUHFzEqUrQcoNh2EwrPT5efIqkUPUwD5Ua2Li9BRWaYeRwvzvdLgTSVrre8oKNeyrfg7KkdQ=="],
+
+    "@webos/ask": ["@webos/ask@workspace:src/lib/apps/user/ask"],
 
     "@webos/cards": ["@webos/cards@workspace:src/lib/apps/user/cards"],
 

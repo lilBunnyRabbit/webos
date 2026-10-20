@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clip_source, system_prompt } from "./ask";
+import { clip_source, safe_href, system_prompt } from "./ask";
 
 describe("clip_source", () => {
   test("keeps short text whole and cuts long text at the limit", () => {
@@ -19,5 +19,14 @@ describe("system_prompt", () => {
 
   test("without a file it's a plain assistant", () => {
     expect(system_prompt(null)).not.toContain("file");
+  });
+});
+
+describe("safe_href", () => {
+  test("keeps web and mail links, drops script and relative ones", () => {
+    expect(safe_href("https://example.com/a")).toBe("https://example.com/a");
+    expect(safe_href("mailto:a@b.c")).toBe("mailto:a@b.c");
+    expect(safe_href("javascript:alert(1)")).toBeNull();
+    expect(safe_href("/etc/settings.json")).toBeNull();
   });
 });

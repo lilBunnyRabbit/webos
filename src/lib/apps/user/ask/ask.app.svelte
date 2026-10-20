@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { AI_REQUIREMENTS, AiAvailability, AiFeature, type AiMessage, type AiService, type FilesService } from "$lib/core/api";
+  import kernel, { AI_REQUIREMENTS, AiAvailability, AiFeature, type AiMessage, type AiService, type ClipboardService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
@@ -10,11 +10,13 @@
     NotePencil as NotePencilIcon,
     PaperPlaneRight as PaperPlaneRightIcon,
     Stop as StopIcon,
+    Trash as TrashIcon,
     Warning as WarningIcon,
   } from "phosphor-svelte";
-  import { tick, untrack } from "svelte";
+  import { untrack } from "svelte";
   import manifest from "./index";
-  import { MAX_FILE_CHARS, clip_source, system_prompt, type AskSource } from "./ask";
+  import { MAX_FILE_CHARS, MODEL_SETTINGS, clip_source, system_prompt, type AskSource } from "./ask";
+  import Markdown from "./markdown.svelte";
 
   interface Turn {
     role: "user" | "assistant";
@@ -26,6 +28,7 @@
   const { window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const ai = $derived(kernel.service<AiService>("ai"));
+  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
   let availability = $state<AiAvailability | null>(null);
   let source = $state.raw<(AskSource & { path: string | null }) | null>(null);
@@ -35,24 +38,15 @@
   let draft = $state("");
   let error = $state<string | null>(null);
   let controller = $state.raw<AbortController | null>(null);
-  let scroller = $state<HTMLDivElement>();
   let composer = $state<HTMLTextAreaElement | null>(null);
 
   const busy = $derived(controller !== null);
-  const last = $derived(turns.at(-1));
 
   untrack(() => ai)
     .availability(AiFeature.PROMPT)
     .then((answer) => (availability = answer));
 
   $effect(() => win.set_title(source?.name ?? null));
-
-  $effect(() => {
-    void last?.content;
-    if (!scroller) return;
-    const near_bottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
-    if (near_bottom || last?.role === "user") tick().then(() => scroller?.scrollTo({ top: scroller.scrollHeight }));
-  });
 
   $effect(() => () => controller?.abort());
 
@@ -131,6 +125,14 @@
     }
   }
 
+  async function remove_model() {
+    const copy = await win.confirm("Remove Chrome's AI model?", {
+      detail: `The model belongs to Chrome, so WebOS can't delete it. Open ${MODEL_SETTINGS} in a new tab and turn off On-device AI: Chrome deletes the model and Ask stops working until you turn it back on.`,
+      confirm_label: "Copy address",
+    });
+    if (copy) await clipboard.copy_text(MODEL_SETTINGS);
+  }
+
   function stop() {
     controller?.abort();
   }
@@ -160,6 +162,7 @@
       <Button size="sm" variant="quiet" aria-label="New chat" disabled={turns.length === 0 && !error} onclick={new_chat}>
         <NotePencilIcon weight="bold" /> <span class="hidden @sm:inline">New chat</span>
       </Button>
+      <IconButton label="Remove the AI model…" size="sm" onclick={remove_model}><TrashIcon weight="bold" /></IconButton>
     </Toolbar>
 
     <div>
@@ -185,11 +188,13 @@
       {/if}
     </div>
 
-    <div bind:this={scroller} class="min-h-0 overflow-auto" aria-live="polite">
+    <!-- column-reverse keeps the view pinned to the newest text natively while it streams; mb-auto keeps a short chat at the top. -->
+    <div class="flex min-h-0 flex-col-reverse overflow-auto" aria-live="polite">
       {#if loading}
-        <div class="grid h-full place-items-center"><Spinner label="Reading file" /></div>
+        <div class="grid flex-1 place-items-center"><Spinner label="Reading file" /></div>
       {:else if turns.length === 0 && !error}
         <EmptyState
+          class="flex-1"
           icon={ChatCircleTextIcon}
           title={source ? `Ask about ${source.name}` : "Ask anything"}
           description={source
@@ -203,14 +208,14 @@
           {/snippet}
         </EmptyState>
       {:else}
-        <ol class="mx-auto flex max-w-3xl flex-col gap-3 p-3">
+        <ol class="mx-auto mb-auto flex w-full max-w-3xl flex-col gap-3 p-3">
           {#each turns as turn, index (index)}
             {#if turn.role === "user"}
               <li class="max-w-[85%] self-end rounded-xl bg-primary/14 px-3 py-2 text-ui whitespace-pre-wrap">{turn.content}</li>
             {:else}
               <li class="group flex max-w-[92%] flex-col items-start gap-1 self-start">
-                <div class="rounded-xl bg-background-light px-3 py-2 text-ui whitespace-pre-wrap">
-                  {#if turn.content}{turn.content}{:else}<Spinner label="Thinking" />{/if}
+                <div class="min-w-0 max-w-full rounded-xl bg-background-light px-3 py-2 text-ui">
+                  {#if turn.content}<Markdown text={turn.content} />{:else}<Spinner label="Thinking" />{/if}
                 </div>
                 {#if turn.stopped || (turn.content && !(busy && index === turns.length - 1))}
                   <div class="flex items-center gap-1 text-2xs text-foreground/65">
