@@ -20,11 +20,11 @@
     is_daytime,
     is_zone,
     local_zone,
-    search_zones,
+    parse_entry,
+    search_places,
     wall_time,
-    zone_city,
     zone_offset,
-    zone_region,
+    type Place,
   } from "./zones";
 
   let { file, now, adding = $bindable(false) }: { file: ClockFile; now: number; adding?: boolean } = $props();
@@ -34,19 +34,19 @@
   const weekday = $derived(date.toLocaleDateString("en-US", { weekday: "long" }));
   const home_offset = $derived(zone_offset(now, home));
 
-  const zones = $derived(file.value.zones.filter(is_zone));
+  const places = $derived(file.value.zones.map(parse_entry).filter((place) => is_zone(place.zone)));
   const rows = $derived(
-    zones.map((zone) => {
-      const wall = wall_time(now, zone);
-      const offset = zone_offset(now, zone);
-      return { zone, wall, shift: day_shift(now, zone, home), relative: offset - home_offset, offset };
+    places.map((place) => {
+      const wall = wall_time(now, place.zone);
+      const offset = zone_offset(now, place.zone);
+      return { place, wall, shift: day_shift(now, place.zone, home), relative: offset - home_offset, offset };
     })
   );
 
   let query = $state("");
   let search_input = $state<HTMLInputElement | null>(null);
   const everything = all_zones();
-  const results = $derived(adding ? search_zones(everything, query, 60) : []);
+  const results = $derived(adding ? search_places(everything, query, 60) : []);
 
   $effect(() => {
     if (!adding) return;
@@ -54,13 +54,13 @@
     void tick().then(() => search_input?.focus());
   });
 
-  function add(zone: string) {
-    if (!file.value.zones.includes(zone)) file.value.zones.push(zone);
+  function add(place: Place) {
+    if (!file.value.zones.includes(place.entry)) file.value.zones.push(place.entry);
     adding = false;
   }
 
-  function remove(zone: string) {
-    file.value.zones = file.value.zones.filter((entry) => entry !== zone);
+  function remove(place: Place) {
+    file.value.zones = file.value.zones.filter((entry) => entry !== place.entry);
   }
 </script>
 
@@ -84,28 +84,31 @@
       <Button variant="quiet" size="sm" onclick={() => (adding = false)}>Cancel</Button>
     </div>
     <ul class="min-h-0 flex-1 overflow-auto p-1.5">
-      {#each results as zone (zone)}
-        {@const wall = wall_time(now, zone)}
-        {@const added = file.value.zones.includes(zone)}
+      {#each results as place (place.entry)}
+        {@const wall = wall_time(now, place.zone)}
+        {@const added = file.value.zones.includes(place.entry)}
         <li>
           <button
             type="button"
             class="flex min-h-10 w-full items-center gap-3 rounded-md px-2.5 py-1.5 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none disabled:opacity-38"
             disabled={added}
-            onclick={() => add(zone)}
+            onclick={() => add(place)}
           >
             <span class="grid min-w-0 flex-1">
-              <span class="truncate text-ui font-medium">{zone_city(zone)}</span>
-              <span class="truncate text-2xs text-foreground/55">{zone_region(zone) || "Coordinated Universal Time"}{added ? " · added" : ""}</span>
+              <span class="truncate text-ui font-medium">{place.name}</span>
+              <span class="truncate text-2xs text-foreground/55">{place.detail || "Coordinated Universal Time"}{added ? " · added" : ""}</span>
             </span>
             <span class="shrink-0 text-right font-mono text-2xs text-foreground/65 tabular-nums">
               <span class="text-ui text-foreground">{format_wall(wall)}</span>
-              <span class="block">{format_utc_offset(zone_offset(now, zone))}</span>
+              <span class="block">{format_utc_offset(zone_offset(now, place.zone))}</span>
             </span>
           </button>
         </li>
       {:else}
-        <li class="px-2.5 py-3 text-ui text-foreground/65">Nothing here is called “{query.trim()}”.</li>
+        <li class="grid gap-0.5 px-2.5 py-3 text-ui text-foreground/65">
+          <span>Nothing here is called “{query.trim()}”.</span>
+          <span class="text-2xs">Try a nearby big city, a country or a time zone.</span>
+        </li>
       {/each}
     </ul>
   </div>
@@ -126,18 +129,18 @@
         </EmptyState>
       {:else}
         <ul class="grid gap-1" aria-label="Cities">
-          {#each rows as row (row.zone)}
+          {#each rows as row (row.place.entry)}
             {@const day = is_daytime(row.wall.hour)}
             <li class="group flex min-h-14 items-center gap-3 rounded-lg bg-background-light px-3 py-2">
               <span class="grid size-8 shrink-0 place-items-center rounded-md bg-foreground/6 text-foreground/65" title={day ? "Daytime" : "Night"}>
                 {#if day}<SunIcon weight="duotone" class="size-4.5" />{:else}<MoonIcon weight="duotone" class="size-4.5" />{/if}
               </span>
               <span class="grid min-w-0 flex-1">
-                <span class="truncate text-ui font-medium">{zone_city(row.zone)}</span>
+                <span class="truncate text-ui font-medium">{row.place.name}</span>
                 <span class="truncate text-2xs text-foreground/55">{day_label(row.shift)}, {format_offset(row.relative)}</span>
               </span>
               <span class={cn("font-mono text-2xl font-medium tabular-nums", !day && "text-foreground/75")}>{format_wall(row.wall)}</span>
-              <IconButton label="Remove {zone_city(row.zone)}" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100" onclick={() => remove(row.zone)}>
+              <IconButton label="Remove {row.place.name}" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100" onclick={() => remove(row.place)}>
                 <XIcon />
               </IconButton>
             </li>

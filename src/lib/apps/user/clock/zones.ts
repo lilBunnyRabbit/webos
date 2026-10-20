@@ -1,4 +1,6 @@
 import { pad2 } from "$lib/core/utils";
+import { CITIES, type City } from "./cities";
+
 export interface WallTime {
   year: number;
   month: number;
@@ -122,4 +124,54 @@ export function search_zones(zones: string[], query: string, limit = 50): string
     else if (lower.includes(q)) contains.push(zone);
   }
   return [...starts, ...contains].slice(0, limit);
+}
+
+export interface Place {
+  /** What clock.json's `zones` holds: the zone, or `zone#name` for a city that shares it. */
+  entry: string;
+  zone: string;
+  name: string;
+  detail: string;
+}
+
+const ENTRY_SEPARATOR = "#";
+
+export function place_entry(zone: string, name: string): string {
+  return name === zone_city(zone) ? zone : `${zone}${ENTRY_SEPARATOR}${name}`;
+}
+
+export function parse_entry(entry: string): Place {
+  const at = entry.indexOf(ENTRY_SEPARATOR);
+  const zone = at === -1 ? entry : entry.slice(0, at);
+  return { entry, zone, name: at === -1 ? zone_city(zone) : entry.slice(at + 1), detail: zone_region(zone) };
+}
+
+function fold(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
+}
+
+function city_place(city: City): Place {
+  const own = city.name === zone_city(city.zone);
+  return {
+    entry: place_entry(city.zone, city.name),
+    zone: city.zone,
+    name: city.name,
+    detail: own ? city.country : `${city.country} · ${zone_city(city.zone)} time`,
+  };
+}
+
+export function search_places(zones: string[], query: string, limit = 50): Place[] {
+  const q = fold(query);
+  const starts: Place[] = [];
+  const contains: Place[] = [];
+  if (q) {
+    for (const city of CITIES) {
+      const name = fold(city.name);
+      if (name.startsWith(q)) starts.push(city_place(city));
+      else if (name.includes(q) || fold(city.country).includes(q)) contains.push(city_place(city));
+    }
+  }
+  const places = [...starts, ...search_zones(zones, q, Infinity).map(parse_entry), ...contains];
+  const seen = new Set<string>();
+  return places.filter((place) => !seen.has(place.entry) && seen.add(place.entry)).slice(0, limit);
 }

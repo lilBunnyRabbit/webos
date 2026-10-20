@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { day_shift, format_offset, format_utc_offset, is_daytime, search_zones, wall_time, zone_city, zone_offset, zone_region } from "./zones";
+import { CITIES } from "./cities";
+import {
+  all_zones,
+  day_shift,
+  format_offset,
+  format_utc_offset,
+  is_daytime,
+  is_zone,
+  parse_entry,
+  place_entry,
+  search_places,
+  search_zones,
+  wall_time,
+  zone_city,
+  zone_offset,
+  zone_region,
+} from "./zones";
 
 const winter = Date.UTC(2026, 0, 15, 23, 30);
 const summer = Date.UTC(2026, 6, 15, 12, 0);
@@ -42,6 +58,35 @@ describe("zones", () => {
     expect(search_zones(zones, "to")).toEqual(["Asia/Tokyo", "Pacific/Tongatapu"]);
     expect(search_zones(zones, "america")).toEqual(["America/New_York", "America/Sao_Paulo"]);
     expect(search_zones(zones, "", 2)).toHaveLength(2);
+  });
+
+  it("finds cities that share a zone", () => {
+    const zones = all_zones();
+    expect(search_places(zones, "Dallas")[0]).toMatchObject({ entry: "America/Chicago#Dallas", zone: "America/Chicago", name: "Dallas" });
+    expect(search_places(zones, "fort worth")[0].name).toBe("Fort Worth");
+    expect(search_places(zones, "mumbai")[0].zone).toBe("Asia/Kolkata");
+    expect(search_places(zones, "krakow")[0].name).toBe("Kraków");
+    expect(search_places(zones, "chicago")[0].entry).toBe("America/Chicago");
+    expect(search_places(zones, "united states").map((place) => place.name)).toContain("Houston");
+    expect(search_places(zones, "")).toHaveLength(50);
+  });
+
+  it("lists each place once", () => {
+    const entries = search_places(["Asia/Kolkata", "Europe/Paris"], "kolkata").map((place) => place.entry);
+    expect(entries).toEqual(["Asia/Kolkata"]);
+  });
+
+  it("stores a shared-zone city under its own name", () => {
+    expect(place_entry("America/Chicago", "Dallas")).toBe("America/Chicago#Dallas");
+    expect(place_entry("Asia/Tokyo", "Tokyo")).toBe("Asia/Tokyo");
+    expect(parse_entry("America/Chicago#Dallas")).toMatchObject({ zone: "America/Chicago", name: "Dallas" });
+    expect(parse_entry("America/Sao_Paulo")).toMatchObject({ zone: "America/Sao_Paulo", name: "Sao Paulo" });
+  });
+
+  it("only knows real zones and unique names", () => {
+    const names = CITIES.map((city) => city.name);
+    expect(new Set(names).size).toBe(names.length);
+    for (const city of CITIES) expect(is_zone(city.zone), city.name).toBe(true);
   });
 
   it("calls 6:00 to 17:59 day", () => {

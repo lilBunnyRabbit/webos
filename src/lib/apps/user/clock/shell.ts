@@ -30,7 +30,7 @@ import {
   format_wall,
   is_zone,
   local_zone,
-  search_zones,
+  search_places,
   wall_time,
   zone_offset,
 } from "./zones";
@@ -183,8 +183,8 @@ export function resolve_zone(query: string): string | null {
   const zones = all_zones();
   const exact = zones.find((zone) => zone.toLowerCase() === query.toLowerCase());
   if (exact) return exact;
-  const found = search_zones(zones, query, 1)[0];
-  if (found) return found;
+  const found = search_places(zones, query, 1)[0];
+  if (found) return found.zone;
   return is_zone(query) ? query : null;
 }
 
@@ -207,5 +207,8 @@ export function time({ args }: CommandContext<{ zone?: string }>): string {
 
 export function complete_zones(partial: string) {
   const now = Date.now();
-  return search_zones(all_zones(), partial).map((zone) => ({ value: zone, detail: format_wall(wall_time(now, zone)) }));
+  return search_places(all_zones(), partial).map((place) => ({
+    value: place.entry === place.zone ? place.zone : place.name,
+    detail: format_wall(wall_time(now, place.zone)),
+  }));
 }
