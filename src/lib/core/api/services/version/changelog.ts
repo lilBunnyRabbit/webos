@@ -5,6 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.13.0",
+    date: "2026-10-21",
+    title: "Keep the bird still",
+    introduces: ["birdseye"],
+    changes: [
+      { kind: NEW, apps: ["birdseye"], text: "Birdseye: box a moving subject in a video, like a bird in flight, and it stays still in the middle while the world moves around it; save it as a new video." },
+    ],
+  },
+  {
     version: "3.12.0",
     date: "2026-10-21",
     title: "Recent apps",

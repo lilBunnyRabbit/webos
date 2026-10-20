@@ -183,8 +183,9 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `p2p-transfer` | `docs/apps/p2p-transfer.md` |
 | `format-lab` | `docs/apps/format-lab.md` |
 | `font-maker` | `docs/apps/font-maker.md` |
+| `birdseye` | `docs/apps/birdseye.md` |
 
-**Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/codecs`, `$kit/utils/qr`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
+**Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
 
 A new or changed app that gains a model, an algorithm, a protocol, a file or share format, or a non-trivial dependency gets a page, a row in this table and a row in the index in `docs/apps/README.md`. Page shape: `docs/apps/README.md`.
 
