@@ -27,10 +27,10 @@
   let row = $state<HTMLElement | null>(null);
   let offset = $state(0);
   let dragging = $state(false);
-  /** Past this a released swipe acts; short of it the row springs back. */
-  let reach = $state(120);
+  /** Past these a released swipe acts; short of them the row springs back. Delete asks for more, so a scroll that drifts left doesn't delete. */
+  let reach = $state({ tick: 120, remove: 220 });
   let gesture: { id: number; x: number; y: number; width: number } | null = null;
-  const armed = $derived(Math.abs(offset) >= reach);
+  const armed = $derived(offset >= reach.tick || -offset >= reach.remove);
   let swallow_click = false;
 
   function menu(point: Position) {
@@ -49,7 +49,7 @@
     if (event.button > 0 || !event.isPrimary || (event.target as Element).closest("[data-no-swipe]")) return;
     const width = row?.clientWidth ?? 300;
     gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, width };
-    reach = Math.min(120, width * 0.35);
+    reach = { tick: Math.min(120, width * 0.35), remove: width * 0.6 };
   }
 
   function on_pointer_move(event: PointerEvent) {
@@ -68,7 +68,7 @@
     }
     const was_armed = armed;
     offset = Math.max(-start.width, Math.min(start.width, dx));
-    if (!was_armed && Math.abs(offset) >= reach) navigator.vibrate?.(8);
+    if (!was_armed && armed) navigator.vibrate?.(8);
   }
 
   function on_pointer_up(event: PointerEvent) {

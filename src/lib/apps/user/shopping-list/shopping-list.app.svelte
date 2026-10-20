@@ -684,7 +684,7 @@
           </div>
         </div>
       {/if}
-      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} onadd={add} onphoto={() => void photo()}>
+      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} compact={store.value} onadd={add} onphoto={() => void photo()}>
         {#snippet before()}
           {#if all && target}
             <button

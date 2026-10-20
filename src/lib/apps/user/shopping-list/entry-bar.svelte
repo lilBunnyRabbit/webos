@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { Button, IconButton, Input } from "$lib/core/components/ui";
   import { Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
@@ -14,11 +15,13 @@
     onphoto: () => void;
     /** Off in the store: a planning aid, and a stray tap there adds an item. Suggestions while typing stay. */
     again?: boolean;
+    /** In the store: one "+ Add" button until tapped, so the list keeps the room. */
+    compact?: boolean;
     /** Before the camera button, like All's list picker. */
     before?: Snippet;
   }
 
-  let { history, exclude, onadd, onphoto, again = true, before }: Props = $props();
+  let { history, exclude, onadd, onphoto, again = true, compact = false, before }: Props = $props();
 
   let draft = $state("");
   let field = $state<HTMLInputElement | null>(null);
@@ -27,6 +30,14 @@
   const typing = $derived(draft.trim().length > 0);
   const chips = $derived(typing ? suggestions(history, parsed.text, exclude) : again ? last_trip(history, exclude) : []);
   const amount = $derived(format_amount(parsed));
+  let expanded = $state(false);
+  const collapsed = $derived(compact && !expanded && !typing);
+
+  async function expand() {
+    expanded = true;
+    await tick();
+    field?.focus();
+  }
 
   function add(text: string) {
     if (!parse_entry(text).text.trim()) return;
@@ -62,33 +73,43 @@
       {/if}
     </div>
   {/if}
-  <form
-    class="mx-auto flex max-w-xl items-center gap-1.5 px-3 py-2"
-    onsubmit={(event) => {
-      event.preventDefault();
-      add(draft);
-    }}
-  >
-    {@render before?.()}
-    <IconButton label="Read a list from a photo" size="lg" class="pointer-coarse:size-11" onclick={onphoto}><CameraIcon weight="bold" /></IconButton>
-    <Input
-      bind:value={draft}
-      bind:element={field}
-      size="lg"
-      class="flex-1 pointer-coarse:h-11"
-      placeholder="Add, like 2x milk"
-      aria-label="New item"
-      enterkeyhint="done"
-      autocomplete="off"
-      onkeydown={(event) => {
-        if (event.key === "Escape" && draft) {
-          event.stopPropagation();
-          draft = "";
-        }
+  {#if collapsed}
+    <div class="mx-auto flex max-w-xl items-center gap-1.5 px-3 py-1.5">
+      {@render before?.()}
+      <Button size="lg" variant="quiet" class="flex-1 justify-center pointer-coarse:h-11" onclick={() => void expand()}><PlusIcon weight="bold" /> Add</Button>
+    </div>
+  {:else}
+    <form
+      class="mx-auto flex max-w-xl items-center gap-1.5 px-3 py-2"
+      onsubmit={(event) => {
+        event.preventDefault();
+        add(draft);
       }}
-    />
-    <Button type="submit" variant="primary" size="lg" disabled={!typing} class="px-3 pointer-coarse:h-11" aria-label="Add">
-      <PlusIcon weight="bold" /><span class="hidden @xs:inline">Add</span>
-    </Button>
-  </form>
+    >
+      {@render before?.()}
+      <IconButton label="Read a list from a photo" size="lg" class="pointer-coarse:size-11" onclick={onphoto}><CameraIcon weight="bold" /></IconButton>
+      <Input
+        bind:value={draft}
+        bind:element={field}
+        size="lg"
+        class="flex-1 pointer-coarse:h-11"
+        placeholder="Add, like 2x milk"
+        aria-label="New item"
+        enterkeyhint="done"
+        autocomplete="off"
+        onkeydown={(event) => {
+          if (event.key === "Escape" && draft) {
+            event.stopPropagation();
+            draft = "";
+          }
+        }}
+        onblur={() => {
+          if (!draft.trim()) expanded = false;
+        }}
+      />
+      <Button type="submit" variant="primary" size="lg" disabled={!typing} class="px-3 pointer-coarse:h-11" aria-label="Add">
+        <PlusIcon weight="bold" /><span class="hidden @xs:inline">Add</span>
+      </Button>
+    </form>
+  {/if}
 </div>

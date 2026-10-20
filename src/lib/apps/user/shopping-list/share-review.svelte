@@ -2,7 +2,7 @@
   import { Button, Checkbox } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { untrack } from "svelte";
-  import { COLOR_NAME, ICON_NAME } from "./colors";
+  import { color_names, ICON_NAME } from "./colors";
   import { ListIcon } from "./data";
   import ListMark from "./list-mark.svelte";
   import { ChangeKind, describe_item, type Change, type ListReview } from "./share";
@@ -18,6 +18,7 @@
   const all = $derived(reviews.flatMap((review) => review.changes));
   let picked = $state(new Set(untrack(() => reviews.flatMap((review) => review.changes.map((change) => change.id)))));
   const count = $derived(all.filter((change) => picked.has(change.id)).length);
+  const names = color_names();
 
   const GROUPS: { kinds: ChangeKind[]; title: string }[] = [
     { kinds: [ChangeKind.NEW_LIST], title: "New list" },
@@ -38,7 +39,7 @@
   function details(change: Extract<Change, { kind: typeof ChangeKind.DETAILS }>) {
     const parts: string[] = [];
     if (change.from.name !== change.to.name) parts.push(`name ${change.from.name} → ${change.to.name}`);
-    if (change.from.color !== change.to.color) parts.push(`colour ${COLOR_NAME[change.from.color]} → ${COLOR_NAME[change.to.color]}`);
+    if (change.from.color !== change.to.color) parts.push(`colour ${names[change.from.color]} → ${names[change.to.color]}`);
     if (change.to.icon && change.from.icon !== change.to.icon) parts.push(`icon ${ICON_NAME[change.from.icon ?? ListIcon.CART]} → ${ICON_NAME[change.to.icon]}`);
     return parts.join(" · ");
   }

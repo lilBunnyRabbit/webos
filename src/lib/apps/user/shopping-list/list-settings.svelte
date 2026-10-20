@@ -2,7 +2,7 @@
   import { Button, Input } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { untrack } from "svelte";
-  import { COLOR_DOT, COLOR_NAME, COLOR_TILE, ICON, ICON_NAME } from "./colors";
+  import { COLOR_DOT, COLOR_TILE, color_names, ICON, ICON_NAME } from "./colors";
   import { LIST_COLORS, LIST_ICONS, ListIcon, type ListColor, type ListMeta } from "./data";
   import ListMark from "./list-mark.svelte";
 
@@ -23,6 +23,7 @@
   let color = $state<ListColor>(untrack(() => list.color));
   let icon = $state<ListIcon>(untrack(() => list.icon ?? ListIcon.CART));
   const can_save = $derived(name.trim().length > 0);
+  const names = color_names();
 
   function save(event: SubmitEvent) {
     event.preventDefault();
@@ -50,7 +51,8 @@
             type="button"
             role="radio"
             aria-checked={color === option}
-            aria-label={COLOR_NAME[option]}
+            aria-label={names[option]}
+            title={names[option]}
             class={cn("grid size-10 place-items-center rounded-full ring-2 transition-shadow ring-inset", color === option ? "ring-foreground" : "ring-transparent hover:ring-foreground/20")}
             onclick={() => (color = option)}
           >

@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.7.0",
+    date: "2026-10-20",
+    title: "More room in the store",
+    changes: [
+      { kind: IMPROVED, apps: ["shopping-list"], text: "Deleting by swipe needs a longer swipe, so scrolling can't delete an item by accident." },
+      { kind: IMPROVED, apps: ["shopping-list"], text: "In store mode the add bar folds into one Add button, leaving more room for the list." },
+      { kind: IMPROVED, apps: ["shopping-list"], text: "List colours are named by how they look in your theme." },
+    ],
+  },
+  {
     version: "3.6.0",
     date: "2026-10-20",
     title: "Scan, check, keep",
