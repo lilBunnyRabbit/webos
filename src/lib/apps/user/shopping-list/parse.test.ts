@@ -12,7 +12,6 @@ describe("parse_entry", () => {
     ["1,5 l mleka", { text: "mleka", qty: 1.5, unit: "l" }],
     ["0.5 KG sira", { text: "sira", qty: 0.5, unit: "kg" }],
     ["10 jajc", { text: "jajc", qty: 10 }],
-    ["mleko 2", { text: "mleko", qty: 2 }],
     ["mleko 2x", { text: "mleko", qty: 2 }],
     ["jajca x10", { text: "jajca", qty: 10 }],
     ["moka 500 g", { text: "moka", qty: 500, unit: "g" }],
@@ -31,6 +30,8 @@ describe("parse_entry", () => {
     expect(parse_entry("7up")).toEqual({ text: "7up" });
     expect(parse_entry("2")).toEqual({ text: "2" });
     expect(parse_entry("0 mleko")).toEqual({ text: "0 mleko" });
+    expect(parse_entry("omega 3")).toEqual({ text: "omega 3" });
+    expect(parse_entry("WD 40")).toEqual({ text: "WD 40" });
   });
 });
 

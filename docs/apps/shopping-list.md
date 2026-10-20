@@ -124,9 +124,16 @@ Last-writer-wins per item, not a CRDT: the brainstorm settled on "each item reso
 | `N item` | `3 jajca` | qty 3 |
 | `item N unit` | `moka 500g` | qty 500, unit `g` |
 | `item Nx` / `item xN` | `jajca x10` | qty 10 |
-| `item N` | `mleko 2` | qty 2 |
+
+A bare trailing number stays in the name (owner, 2026-10-20): `omega 3`, `WD 40`. That also goes for photo lines, so a handwritten `mleko 2` reads as the name `mleko 2`.
 
 Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an optional dot. Decimal comma or point. The rest needs a letter and the amount must be over 0, otherwise the whole text is the item. Amounts display with a decimal comma and parse back to the same entry (`parse.ts:50`).
+
+### The list view
+
+Open items sit in one card (`divide-y`, full-contrast medium text, the amount as a pill); ticked ones drop into a collapsible "In the cart · N" section under it (window storage `cart_open`), dimmed and struck through. A tick runs inside `view_transition`, each row carrying `view-transition-name: item-{id}`, so the row slides between the sections. A thin progress bar under the toolbar shows ticked over all.
+
+The row menu (Edit…, Move to, Delete) is a long press on touch (`long_press`, off in store mode) and the ⋯ button or a right-click with a mouse; the ⋯ is `pointer-coarse:hidden`. Edit… and a tap on the amount pill open the item editor (`item-editor.svelte`, `View.EDIT`): name, a −/+ stepper with a number field (steps of 50 for g and ml, 0,5 for kg and l, 1 otherwise; empty means no amount), and unit chips (×, g, dag, kg, ml, dl, l, pak, plus the item's own unit when it's another). Back or Cancel closes it.
 
 ### Adding an item
 
@@ -167,6 +174,7 @@ History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:4
 |------|-------|--------|
 | Lists, items, history | `/var/lib/apps/shopping-list/lists.json`, `storage.file()` (`shopping-list.app.svelte:71`); the widget holds the same file through `json_file()`, so both see each other's changes at once | `{ version: 1, lists: [{ id, name, color, items }], history: { [text]: { count, last } } }`; item `{ id, text, qty?, unit?, checked, updated_at, deleted_at? }` (`data.ts:29`) |
 | Open list | Window storage `list` | List id, default `groceries` |
+| "In the cart" open | Window storage `cart_open` | Boolean, default open |
 | In-store mode | Window storage `store` | Boolean; big rows, Screen Wake Lock (`shopping-list.app.svelte:149`) |
 | Launch props handled | Window storage `launched` | Boolean; set once the `list` and `photo` props were acted on, so a restored window doesn't switch lists or ask for a photo again |
 | Widgets | `/home/Desktop/{list name}.widget` | `{ app: "shopping-list", props: { list }, w, h }`, written by `pin_widget` (desktop service) |

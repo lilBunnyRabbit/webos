@@ -11,6 +11,7 @@
     Broom as BroomIcon,
     Camera as CameraIcon,
     CaretDown as CaretDownIcon,
+    CaretRight as CaretRightIcon,
     Check as CheckIcon,
     DotsThree as DotsThreeIcon,
     LinkBreak as LinkBreakIcon,
@@ -24,6 +25,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
+  import { view_transition } from "$lib/core/utils/view-transition";
   import { z } from "zod";
   import { COLOR_DOT, COLOR_NAME } from "./colors";
   import {
@@ -41,18 +43,19 @@
     type ListColor,
   } from "./data";
   import EntryBar from "./entry-bar.svelte";
+  import ItemEditor from "./item-editor.svelte";
   import ItemRow from "./item-row.svelte";
   import { add_entry } from "./items";
   import { live, merge_items, prune } from "./merge";
   import PairPanel from "./pair-panel.svelte";
-  import { entry_text, parse_entry } from "./parse";
+  import type { Entry } from "./parse";
   import PhotoCrop from "./photo-crop.svelte";
   import PhotoReview from "./photo-review.svelte";
   import { read_method, read_with_ai, read_with_ocr, ReadMethod, type ReviewRow } from "./read-image";
   import { record_trip } from "./suggest";
   import { PairSession, PairState } from "./sync.svelte";
 
-  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review" } as const;
+  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review", EDIT: "edit" } as const;
   type View = (typeof View)[keyof typeof View];
 
   interface Props {
@@ -71,6 +74,7 @@
   const file = storage.file(LISTS_FILE, empty_file(), ListsFileSchema);
   const current = storage.window("list", DEFAULT_LIST_ID, z.string());
   const store = storage.window("store", false, z.boolean());
+  const cart_open = storage.window("cart_open", true, z.boolean());
   // Props come back with a restored window; without this a reload would switch lists and ask for a photo again.
   const launched = storage.window("launched", false, z.boolean());
 
@@ -82,6 +86,7 @@
   const list = $derived(lists.find((candidate) => candidate.id === current.value) ?? lists[0]);
   const items = $derived(list ? live(list.items) : []);
   const done = $derived(items.filter((item) => item.checked));
+  const open_items = $derived(items.filter((item) => !item.checked));
   const open_keys = $derived(new Set(items.filter((item) => !item.checked).map((item) => history_key(item.text))));
 
   const pair = new PairSession({
@@ -182,8 +187,10 @@
   function toggle(id: string) {
     const item = find(id);
     if (!item) return;
-    item.checked = !item.checked;
-    item.updated_at = stamp(item);
+    view_transition(() => {
+      item.checked = !item.checked;
+      item.updated_at = stamp(item);
+    });
   }
 
   function remove(item: Item) {
@@ -191,17 +198,19 @@
     item.updated_at = stamp(item);
   }
 
-  async function edit(id: string) {
-    const item = find(id);
-    if (!item) return;
-    const text = await win.prompt("Edit item", {
-      initial: entry_text(item),
-      confirm_label: "Save",
-      validate: (value) => (parse_entry(value).text ? null : "Write what to buy"),
-    });
-    const target = find(id);
-    if (text === null || !target) return;
-    const entry = parse_entry(text);
+  let editing_id = $state<string | null>(null);
+  const editing = $derived(editing_id === null ? undefined : find(editing_id));
+
+  function edit(id: string) {
+    if (!find(id)) return;
+    editing_id = id;
+    view = View.EDIT;
+  }
+
+  function save_edit(entry: Entry) {
+    const target = editing;
+    close_side_view();
+    if (!target) return;
     target.text = entry.text;
     target.qty = entry.qty;
     target.unit = entry.unit;
@@ -236,7 +245,7 @@
     }
     entries.push({ separator: true }, { id: "delete", label: "Delete", icon: TrashIcon, danger: true });
     const choice = await dialogs.menu(entries, { anchor });
-    if (choice === "edit") await edit(id);
+    if (choice === "edit") edit(id);
     else if (choice === "delete") {
       const target = find(id);
       if (target) remove(target);
@@ -424,6 +433,7 @@
     review_rows = null;
     review_error = null;
     photo_image = null;
+    editing_id = null;
     view = View.LIST;
   }
 
@@ -469,30 +479,48 @@
   }}
   ondrop={on_drop}
 >
-  <Toolbar class="flex-nowrap">
-    <Button variant="quiet" class="min-w-0 flex-1 justify-start gap-2 text-sm font-medium" aria-label="Lists, now “{list?.name ?? ''}”" onclick={lists_menu}>
-      {#if list}<span class={cn("size-2.5 shrink-0 rounded-full", COLOR_DOT[list.color])}></span>{/if}
-      <span class="truncate">{list?.name ?? "Shopping List"}</span>
-      <CaretDownIcon weight="bold" class="shrink-0 text-foreground/65" />
-    </Button>
-    {#if shared}
-      {#if pair.state === PairState.LIVE}
-        <Badge tone="success">Live</Badge>
-      {:else}
-        <button type="button" class="shrink-0" onclick={() => (view = View.PAIR)} aria-label="Offline: pair again">
-          <Badge>Offline</Badge>
-        </button>
+  <div>
+    <Toolbar class="flex-nowrap">
+      <Button variant="quiet" class="min-w-0 flex-1 justify-start gap-2 text-sm font-medium" aria-label="Lists, now “{list?.name ?? ''}”" onclick={lists_menu}>
+        {#if list}<span class={cn("size-2.5 shrink-0 rounded-full", COLOR_DOT[list.color])}></span>{/if}
+        <span class="truncate">{list?.name ?? "Shopping List"}</span>
+        <CaretDownIcon weight="bold" class="shrink-0 text-foreground/65" />
+      </Button>
+      {#if shared}
+        {#if pair.state === PairState.LIVE}
+          <Badge tone="success">Live</Badge>
+        {:else}
+          <button type="button" class="shrink-0" onclick={() => (view = View.PAIR)} aria-label="Offline: pair again">
+            <Badge>Offline</Badge>
+          </button>
+        {/if}
       {/if}
+      <IconButton label="In-store mode" pressed={store.value} onclick={() => (store.value = !store.value)}>
+        <StorefrontIcon weight="bold" />
+      </IconButton>
+      <IconButton label="List actions" onclick={more_menu}><DotsThreeIcon weight="bold" /></IconButton>
+    </Toolbar>
+    {#if view === View.LIST && items.length > 0}
+      <div
+        class="h-1 bg-foreground/8"
+        role="progressbar"
+        aria-label="In the cart"
+        aria-valuemin={0}
+        aria-valuemax={items.length}
+        aria-valuenow={done.length}
+      >
+        <div class="h-full bg-primary transition-[width] duration-300" style:width="{(done.length / items.length) * 100}%"></div>
+      </div>
     {/if}
-    <IconButton label="In-store mode" pressed={store.value} onclick={() => (store.value = !store.value)}>
-      <StorefrontIcon weight="bold" />
-    </IconButton>
-    <IconButton label="List actions" onclick={more_menu}><DotsThreeIcon weight="bold" /></IconButton>
-  </Toolbar>
+  </div>
 
   <main class="min-h-0 overflow-auto">
     {#if !file.ready}
       <div class="grid h-full place-items-center"><Spinner label="Loading lists" /></div>
+    {:else if view === View.EDIT && editing}
+      {#key editing.id}
+        <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
+      {/key}
     {:else if view === View.PAIR}
       <PairPanel session={pair} {list} onclose={() => (view = View.LIST)} />
     {:else if view === View.CROP && photo_image}
@@ -518,11 +546,37 @@
         {/snippet}
       </EmptyState>
     {:else}
-      <ul class="mx-auto flex max-w-xl flex-col p-2" aria-label={list?.name}>
-        {#each items as item (item.id)}
-          <ItemRow {item} store={store.value} ontoggle={() => toggle(item.id)} onmenu={(anchor) => void item_menu(item.id, anchor)} />
-        {/each}
-      </ul>
+      <div class="mx-auto flex max-w-xl flex-col gap-3 p-3">
+        {#if open_items.length > 0}
+          <ul class="flex flex-col divide-y divide-foreground/8 overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/8" aria-label="To buy">
+            {#each open_items as item (item.id)}
+              <ItemRow {item} store={store.value} ontoggle={() => toggle(item.id)} onmenu={(anchor) => void item_menu(item.id, anchor)} onamount={() => edit(item.id)} />
+            {/each}
+          </ul>
+        {:else}
+          <p class="flex items-center justify-center gap-2 py-6 text-sm text-foreground/65"><CheckIcon weight="bold" class="text-primary" /> Everything's in the cart</p>
+        {/if}
+        {#if done.length > 0}
+          <section aria-label="In the cart">
+            <button
+              type="button"
+              class="flex min-h-9 w-full items-center gap-1.5 rounded-md px-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase hover:text-foreground"
+              aria-expanded={cart_open.value}
+              onclick={() => (cart_open.value = !cart_open.value)}
+            >
+              <CaretRightIcon weight="bold" class={cn("size-3 transition-transform", cart_open.value && "rotate-90")} />
+              In the cart · <span class="font-mono tabular-nums">{done.length}</span>
+            </button>
+            {#if cart_open.value}
+              <ul class="flex flex-col divide-y divide-foreground/6">
+                {#each done as item (item.id)}
+                  <ItemRow {item} store={store.value} ontoggle={() => toggle(item.id)} onmenu={(anchor) => void item_menu(item.id, anchor)} onamount={() => edit(item.id)} />
+                {/each}
+              </ul>
+            {/if}
+          </section>
+        {/if}
+      </div>
     {/if}
   </main>
 

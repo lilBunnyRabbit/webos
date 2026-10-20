@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.5.0",
+    date: "2026-10-20",
+    title: "Easier to read",
+    changes: [
+      { kind: IMPROVED, apps: ["shopping-list"], text: "Shopping List is easier to read: bolder items in a card, a clear amount, and ticked items move down into an In the cart section." },
+      { kind: NEW, apps: ["shopping-list"], text: "Set an item's amount and unit (g, kg, ml, l, pak…) with a stepper: tap the amount or pick Edit." },
+      { kind: FIXED, apps: ["shopping-list"], text: "A number at the end of a name stays part of it: \"omega 3\" is no longer three of omega." },
+    ],
+  },
+  {
     version: "3.4.4",
     date: "2026-10-20",
     title: "Hold on",

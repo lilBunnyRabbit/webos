@@ -14,7 +14,6 @@ const LEADING_UNIT = new RegExp(`^${NUMBER}\\s*${UNIT}\\s+(.+)$`, "i");
 const LEADING = new RegExp(`^${NUMBER}\\s+(.+)$`);
 const TRAILING_UNIT = new RegExp(`^(.+?)\\s+${NUMBER}\\s*${UNIT}$`, "i");
 const TRAILING_TIMES = new RegExp(`^(.+?)\\s+(?:${NUMBER}\\s*${TIMES}|${TIMES}\\s*${NUMBER})$`, "i");
-const TRAILING = new RegExp(`^(.+?)\\s+${NUMBER}$`);
 
 const to_number = (text: string) => Number(text.replace(",", "."));
 const has_letter = (text: string) => /\p{L}/u.test(text);
@@ -25,7 +24,10 @@ function entry(text: string, qty: string | undefined, unit?: string): Entry | nu
   return unit ? { text, qty: value, unit: unit.toLowerCase() } : { text, qty: value };
 }
 
-/** "2x mleko", "500 g moka", "mleko 2", "moka 500g", "jajca x10": the amount comes off, the rest is the item. */
+/**
+ * "2x mleko", "500 g moka", "mleko 2x", "moka 500g", "jajca x10": the amount comes off, the rest is the item. A bare
+ * trailing number stays in the name: "omega 3", "WD 40".
+ */
 export function parse_entry(input: string): Entry {
   const text = input.trim().replace(/\s+/g, " ");
   let match: RegExpMatchArray | null;
@@ -35,7 +37,6 @@ export function parse_entry(input: string): Entry {
   else if ((match = text.match(LEADING))) found = entry(match[2], match[1]);
   else if ((match = text.match(TRAILING_UNIT))) found = entry(match[1], match[2], match[3]);
   else if ((match = text.match(TRAILING_TIMES))) found = entry(match[1], match[2] ?? match[3]);
-  else if ((match = text.match(TRAILING))) found = entry(match[1], match[2]);
   return found ?? { text };
 }
 

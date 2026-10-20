@@ -1,6 +1,7 @@
 <script lang="ts">
   import { IconButton } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
+  import { long_press } from "$lib/core/utils/long-press";
   import type { Position } from "$lib/core/utils/type";
   import { Check as CheckIcon, DotsThreeVertical as DotsThreeVerticalIcon } from "phosphor-svelte";
   import type { Item } from "./data";
@@ -11,16 +12,19 @@
     store: boolean;
     ontoggle: () => void;
     onmenu: (anchor: Position) => void;
+    onamount: () => void;
   }
 
-  let { item, store, ontoggle, onmenu }: Props = $props();
+  let { item, store, ontoggle, onmenu, onamount }: Props = $props();
 
   const amount = $derived(format_amount(item));
 
-  function context_menu(event: MouseEvent) {
-    event.preventDefault();
-    if (event.clientX || event.clientY) return onmenu({ x: event.clientX, y: event.clientY });
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  let row = $state<HTMLElement | null>(null);
+
+  function menu(point: Position) {
+    // The keyboard's menu key reports no position.
+    if (point.x || point.y || !row) return onmenu(point);
+    const rect = row.getBoundingClientRect();
     onmenu({ x: rect.left + 16, y: rect.bottom });
   }
 
@@ -30,34 +34,45 @@
   }
 </script>
 
-<li class={cn("flex items-center rounded-lg transition-colors hover:bg-foreground/6", item.checked && "text-foreground/50")}>
+<li
+  bind:this={row}
+  {@attach store ? undefined : long_press({ on_menu: menu })}
+  class={cn("flex items-center transition-colors hover:bg-foreground/4", item.checked && "text-foreground/55")}
+  style:view-transition-name="item-{item.id}"
+>
   <button
     type="button"
     role="checkbox"
     aria-checked={item.checked}
     class={cn(
-      "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 text-left outline-none focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-      store ? "min-h-16 text-lg" : "min-h-11 text-sm pointer-coarse:min-h-13"
+      "flex min-w-0 flex-1 items-center gap-3 px-3 text-left outline-none select-none focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset [-webkit-touch-callout:none]",
+      store ? "min-h-16 text-lg" : "min-h-12 text-base pointer-coarse:min-h-14"
     )}
     onclick={ontoggle}
-    oncontextmenu={store ? undefined : context_menu}
   >
     <span
       class={cn(
         "grid shrink-0 place-items-center rounded-full transition-colors",
-        store ? "size-7" : "size-5",
-        item.checked ? "bg-primary text-background" : "ring-2 ring-foreground/30 ring-inset"
+        store ? "size-8" : "size-6",
+        item.checked ? "bg-primary text-background" : "ring-2 ring-foreground/45 ring-inset"
       )}
     >
-      {#if item.checked}<CheckIcon weight="bold" class={store ? "size-4" : "size-3"} />{/if}
+      {#if item.checked}<CheckIcon weight="bold" class={store ? "size-4.5" : "size-3.5"} />{/if}
     </span>
-    <span class={cn("min-w-0 flex-1 break-words", item.checked && "line-through decoration-foreground/50")}>{item.text}</span>
-    {#if amount}
-      <span class={cn("shrink-0 font-mono text-foreground/65 tabular-nums", store ? "text-sm" : "text-2xs")}>{amount}</span>
-    {/if}
+    <span class={cn("min-w-0 flex-1 break-words", item.checked ? "line-through decoration-foreground/40" : "font-medium text-foreground")}>{item.text}</span>
   </button>
+  {#if amount}
+    {@const pill = cn("shrink-0 rounded-full px-2.5 py-0.5 font-mono font-semibold tabular-nums", store ? "mr-3 text-base" : "text-sm", item.checked ? "text-foreground/55" : "bg-primary/18 text-foreground")}
+    {#if store}
+      <span class={pill}>{amount}</span>
+    {:else}
+      <button type="button" class="group grid min-h-10 shrink-0 place-items-center px-1 pointer-coarse:mr-2" aria-label="Amount of “{item.text}”: {amount}" onclick={onamount}>
+        <span class={cn(pill, !item.checked && "group-hover:bg-primary/28")}>{amount}</span>
+      </button>
+    {/if}
+  {/if}
   {#if !store}
-    <IconButton label="More for “{item.text}”" class="mr-1 shrink-0" onclick={more}>
+    <IconButton label="More for “{item.text}”" class="mr-1 ml-1 shrink-0 text-foreground/65 pointer-coarse:hidden" onclick={more}>
       <DotsThreeVerticalIcon weight="bold" />
     </IconButton>
   {/if}
