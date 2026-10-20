@@ -229,7 +229,7 @@ Below the `@lg` container width the name takes the toolbar's first row (`order-f
 |------|-----------|----------|
 | (every kind) | | Open… at the start of the toolbar ([Open…](#open-in-the-viewers-adr-025-adr-031)) |
 | image | A box sized in layout to the rotated image times the scale, centred in a `min-w-full min-h-full w-max` grid with padding (24px desktop, 8px mobile). The `<img>` inside is absolutely centred at its natural size times the scale and rotated by `transform`. Fit's scale is `fit_scale()` of the rotated size into the stage (`bind:clientWidth/Height`) minus padding, so small images scale up and a 90° turn still fits | Zoom out / level / zoom in (step 0.25 within 0.25 to 5, the limits widened to include the fit scale; zooming leaves fit mode starting from the fit scale; the level reads "Fit" in fit mode), rotate +90°, fit (resets zoom, rotation and fit), a separator, Set as wallpaper (not for JPEG XL: the desktop paints wallpapers through CSS, which can't decode it), Save to disk… |
-| video | `<video controls>`, `max-h-full max-w-full` | Save to disk… |
+| video | `<video controls>`, `max-h-full max-w-full`, centred in a one-cell grid (`grid-rows-1 grid-cols-1`, so `minmax(0, 1fr)` tracks the stage height bounds; an auto row would grow to the video and scroll). Always fits, no zoom | Save to disk… |
 | audio | a large music-note tile, the file name, `<audio controls>` | Save to disk… |
 | unsupported | "Can't preview this file" empty state with the type | Save to disk… |
 

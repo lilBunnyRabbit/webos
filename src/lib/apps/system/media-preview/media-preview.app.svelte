@@ -288,7 +288,7 @@
           </div>
         </div>
       {:else if kind === "video"}
-        <div class="grid h-full place-items-center p-6">
+        <div class="grid h-full grid-cols-1 grid-rows-1 place-items-center p-6">
           <!-- svelte-ignore a11y_media_has_caption -->
           <video src={url} controls {@attach find_duration} class="max-h-full max-w-full rounded-lg shadow-window"></video>
         </div>
