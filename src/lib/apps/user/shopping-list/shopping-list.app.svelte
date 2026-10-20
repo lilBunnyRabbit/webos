@@ -125,10 +125,9 @@
   });
 
   $effect(() => {
-    if (view === View.LIST && home) return;
+    if (view === View.LIST) return;
     return win.on_back(() => {
-      if (view !== View.LIST) close_side_view();
-      else current.value = HOME;
+      close_side_view();
       return true;
     });
   });
@@ -517,14 +516,14 @@
 <div
   bind:this={root}
   role="presentation"
-  class={cn("grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] bg-background", dragging_file && "ring-2 ring-primary ring-inset")}
+  class={cn("relative grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] bg-background", dragging_file && "ring-2 ring-primary ring-inset")}
   ondragover={on_dragover}
   ondragleave={(event) => {
     if (!root?.contains(event.relatedTarget as Node | null)) dragging_file = false;
   }}
   ondrop={on_drop}
 >
-  <div>
+  <div inert={view === View.EDIT}>
     <Toolbar class="flex-nowrap">
       {#if home}
         <ShoppingCartIcon weight="bold" class="ml-1 size-4.5 shrink-0 text-foreground/80" />
@@ -546,7 +545,7 @@
         <IconButton label={list ? "List actions" : "Actions"} class="shrink-0" onclick={more_menu}><DotsThreeIcon weight="bold" /></IconButton>
       {/if}
     </Toolbar>
-    {#if view === View.LIST && !home && items.length > 0}
+    {#if (view === View.LIST || view === View.EDIT) && !home && items.length > 0}
       <div
         class="h-1 bg-foreground/8"
         role="progressbar"
@@ -560,13 +559,9 @@
     {/if}
   </div>
 
-  <main class="min-h-0 overflow-auto">
+  <main class="min-h-0 overflow-auto" inert={view === View.EDIT}>
     {#if !file.ready}
       <div class="grid h-full place-items-center"><Spinner label="Loading lists" /></div>
-    {:else if view === View.EDIT && editing}
-      {#key editing.id}
-        <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
-      {/key}
     {:else if view === View.SETTINGS && settings_list}
       {#key settings_for}
         <ListSettings
@@ -653,8 +648,8 @@
     {/if}
   </main>
 
-  {#if view === View.LIST && file.ready && !home}
-    <div>
+  {#if (view === View.LIST || view === View.EDIT) && file.ready && !home}
+    <div inert={view === View.EDIT}>
       {#if done.length > 0}
         <div class="flex items-center justify-between gap-2 border-t border-foreground/8 bg-background-light px-3 pt-2">
           <p class="font-mono text-2xs text-foreground/65 tabular-nums" aria-live="polite">{done.length} of {items.length} in the cart</p>
@@ -678,6 +673,30 @@
           {/if}
         {/snippet}
       </EntryBar>
+    </div>
+  {/if}
+  {#if view === View.EDIT && editing}
+    <!-- A sheet over the list, not a view instead of it: the list keeps its scroll. -->
+    <div class="absolute inset-0 z-20 flex flex-col justify-end">
+      <button type="button" tabindex="-1" aria-label="Close" class="absolute inset-0 bg-(--overlay)" onclick={close_side_view}></button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit item"
+        tabindex="-1"
+        class="relative mx-auto flex max-h-[90%] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+        {@attach (element) => element.focus({ preventScroll: true })}
+        onkeydown={(event) => {
+          if (event.key !== "Escape") return;
+          event.stopPropagation();
+          close_side_view();
+        }}
+      >
+        <span class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
+        {#key editing.id}
+          <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
+        {/key}
+      </div>
     </div>
   {/if}
 </div>

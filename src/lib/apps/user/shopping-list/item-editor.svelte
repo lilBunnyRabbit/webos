@@ -45,8 +45,8 @@
   }
 </script>
 
-<form aria-label="Edit item" class="mx-auto flex h-full w-full max-w-md flex-col" onsubmit={save}>
-  <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-auto p-4">
+<form aria-label="Edit item" class="flex min-h-0 w-full flex-col" onsubmit={save}>
+  <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-auto p-4 pt-3">
     <label class="flex flex-col gap-1.5">
       <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Name</span>
       <Input bind:value={name} size="lg" autocomplete="off" enterkeyhint="done" />
@@ -94,7 +94,7 @@
       </div>
     </div>
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
     <Button variant="quiet" onclick={oncancel}>Cancel</Button>
     <Button type="submit" variant="primary" disabled={!can_save}>Save</Button>
   </div>
