@@ -91,7 +91,7 @@ Screen Wake Lock while connecting or transferring, taken again when the page bec
 | Received file | `/home/Downloads/{name}`, renamed on a clash | Kept |
 | Sent files | Read in memory from OPFS or the device | Nothing stored |
 
-No props, no settings, no shell commands. The pairing code (`$kit/utils/p2p`) is shared with [Shopping List](shopping-list.md#live-sync), which uses the channel label `shopping-list`.
+No props, no settings, no shell commands. The pairing code lives in `$kit/utils/p2p` (ADR-052); Shopping List used it until 3.6.0 and now shares by QR instead (ADR-053), so P2P Transfer is its only user. A Shopping List offer from an older version still connects and is turned away by its channel label.
 
 ## Dependencies & licences
 

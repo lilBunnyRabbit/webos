@@ -117,3 +117,17 @@ Decisions:
 - **Lists:** both an overview home screen (a card per list: icon, colour, name, N left, first items) and a chip row inside a list ([All] [lists…] [+]) to hop.
 - **All lists:** one scroll, a header per list with its open items, tickable; the cart gathers below. Adding in All asks which list (remembered per window).
 - **List icon:** optional `icon` on the list, a fixed set; file stays version 1. A List settings view edits name, colour and icon. Not synced to a paired phone, like name and colour today.
+
+## Follow-up 2026-10-20: sharing by QR
+
+Owner: "sharing lists is not ok. i thought of this more like a direct scan code -> get updates that you need to confirm. even if we have to do multiple qr code scans its still fine. the system now is not ok - same issue probbaly with cards".
+
+Today: live WebRTC (two scans per connection and per reconnect, no TURN so mobile data fails, changes apply at once); Cards puts compressed data in one QR, zip past 2000 characters.
+
+Decisions ([ADR-053](../adrs/053-qr-data-transfer.md)):
+- **Transport:** cycling multi-part QR; the receiver collects frames in any order.
+- **Payload:** whole snapshot of the picked lists, tombstones included; diffed with the existing newest-wins rule. No per-device memory.
+- **Confirm:** a review screen grouped by kind (new, changed, ticked, deleted, list details), all ticked, untick to skip, Apply.
+- **Which lists:** a picker, current list ticked by default.
+- **Scope:** live sharing goes; the transfer goes in the kit (`$kit/utils/qr-transfer` plus show and collect components); Cards moves to it, its review adds and updates (by format + code), never deletes.
+- **Shell:** nothing.

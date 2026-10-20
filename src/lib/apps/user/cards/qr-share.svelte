@@ -3,6 +3,7 @@
   import { cn } from "$lib/core/utils";
   import { get_app_context } from "$lib/core/contexts/app";
   import { qr_path } from "$kit/utils/qr";
+  import { QrFrames } from "$kit/components/qr-transfer";
   import { FileZip as FileZipIcon, ShareNetwork as ShareNetworkIcon, Warning as WarningIcon, X as XIcon } from "phosphor-svelte";
   import { CODE_FIELD, CODE_INK } from "./colors";
 
@@ -11,11 +12,13 @@
     caption: string;
     /** What the QR holds; `null` when it doesn't fit one code. */
     text: string | null;
+    /** A list as cycling codes (ADR-053), instead of `text`. */
+    frames?: string[];
     onclose: () => void;
     onfile?: () => void;
   }
 
-  let { title, caption, text, onclose, onfile }: Props = $props();
+  let { title, caption, text, frames, onclose, onfile }: Props = $props();
 
   const { window: win } = get_app_context();
   const qr = $derived(text ? qr_path(text) : null);
@@ -49,7 +52,12 @@
     {/if}
   </Toolbar>
   <div class="min-h-0 flex-1 overflow-y-auto">
-    {#if qr}
+    {#if frames}
+      <div class="mx-auto flex max-w-md flex-col items-center gap-3 p-5">
+        <QrFrames {frames} label={title} />
+        <p class="text-center text-ui text-foreground/65">{caption}</p>
+      </div>
+    {:else if qr}
       <figure class="mx-auto flex max-w-md flex-col items-center gap-3 p-5">
         <svg viewBox="0 0 {qr.size} {qr.size}" role="img" aria-label={title} shape-rendering="crispEdges" class={cn("aspect-square w-full max-w-[min(100%,60cqh)] rounded-xl", CODE_FIELD)}>
           <path d={qr.d} class={CODE_INK} />

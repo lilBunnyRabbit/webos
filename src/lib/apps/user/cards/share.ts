@@ -3,6 +3,8 @@ import { CARD_COLORS, clean_draft, create_card, type Card, type CardDraft } from
 import { FORMAT_IDS } from "./formats";
 
 export const SHARE_PREFIX = "WEBOS-CARDS:1:";
+/** The tag in every QR frame of a list share (ADR-053). */
+export const CARDS_APP = "CARDS";
 
 // A version 40 QR at ECC L holds 2953 bytes; past ~2000 a phone held up to a screen stops reading it reliably.
 export const QR_LIMIT = 2000;
@@ -29,10 +31,8 @@ async function through(bytes: Uint8Array<ArrayBuffer>, stream: CompressionStream
   return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
 }
 
-// Tuples, not objects, and no photos, pins or use counts: every byte makes the QR denser.
 export async function encode_share(cards: readonly Pick<Card, "name" | "code" | "format" | "color" | "notes">[]): Promise<string> {
-  const compact = cards.map(({ name, code, format, color, notes }) => (notes ? [name, code, format, color, notes] : [name, code, format, color]));
-  const bytes = new TextEncoder().encode(JSON.stringify(compact));
+  const bytes = new TextEncoder().encode(JSON.stringify(compact_cards(cards)));
   return SHARE_PREFIX + to_base64url(await through(bytes, new CompressionStream("deflate-raw")));
 }
 
@@ -41,12 +41,51 @@ export async function decode_share(payload: string): Promise<CardDraft[] | null>
   if (!text.startsWith(SHARE_PREFIX)) return null;
   try {
     const bytes = await through(from_base64url(text.slice(SHARE_PREFIX.length)), new DecompressionStream("deflate-raw"));
-    const parsed = CompactSchema.safeParse(JSON.parse(new TextDecoder().decode(bytes)));
-    if (!parsed.success) return null;
-    return parsed.data.map(([name, code, format, color, notes = ""]) => clean_draft({ name, code, format, color, notes }));
+    return read_compact(JSON.parse(new TextDecoder().decode(bytes)));
   } catch {
     return null;
   }
+}
+
+type Compact = Pick<Card, "name" | "code" | "format" | "color" | "notes">;
+
+// Tuples, not objects, and no photos, pins or use counts: every byte is another code to scan.
+export function compact_cards(cards: readonly Compact[]): unknown {
+  return cards.map(({ name, code, format, color, notes }) => (notes ? [name, code, format, color, notes] : [name, code, format, color]));
+}
+
+export function read_compact(payload: unknown): CardDraft[] {
+  const parsed = CompactSchema.safeParse(payload);
+  if (!parsed.success) throw new Error("These codes aren't a Cards list from this version");
+  return parsed.data.map(([name, code, format, color, notes = ""]) => clean_draft({ name, code, format, color, notes }));
+}
+
+export interface CardChange {
+  card: Card;
+  draft: CardDraft;
+}
+
+export interface CardsReview {
+  added: CardDraft[];
+  /** Same format and code, a different name, colour or notes. */
+  changed: CardChange[];
+}
+
+/** What a received list would add or update here. A card is the same card by format + code; nothing is ever removed. */
+export function review_cards(existing: readonly Card[], drafts: readonly CardDraft[]): CardsReview {
+  const by_key = new Map(existing.map((card) => [card_key(card), card]));
+  const added: CardDraft[] = [];
+  const changed: CardChange[] = [];
+  const seen = new Set<string>();
+  for (const draft of drafts) {
+    const key = card_key(draft);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const card = by_key.get(key);
+    if (!card) added.push(draft);
+    else if (card.name !== draft.name || card.color !== draft.color || card.notes !== draft.notes) changed.push({ card, draft });
+  }
+  return { added, changed };
 }
 
 export function payload_of(scanned: string): string {

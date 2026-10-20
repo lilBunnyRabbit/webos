@@ -46,7 +46,9 @@
   import { delete_photo, delete_photos, encode_photo, read_photo, write_photo } from "./photos";
   import QrImport from "./qr-import.svelte";
   import QrShare from "./qr-share.svelte";
-  import { cards_from_drafts, decode_share, encode_share, fits_qr, merge_cards, payload_of } from "./share";
+  import CardsReviewSheet from "./cards-review.svelte";
+  import { CARDS_APP, cards_from_drafts, compact_cards, decode_share, encode_share, fits_qr, merge_cards, payload_of, read_compact, review_cards, type CardsReview } from "./share";
+  import { CollectResult, encode_frames, FrameCollector } from "$kit/utils/qr-transfer";
 
   interface Props {
     card?: string;
@@ -72,7 +74,10 @@
     photos: Record<PhotoSide, boolean>;
   }
 
-  type Overlay = { kind: "share"; title: string; caption: string; text: string | null } | { kind: "import" };
+  type Overlay =
+    | { kind: "share"; title: string; caption: string; text: string | null; frames?: string[] }
+    | { kind: "import" }
+    | { kind: "review"; review: CardsReview };
 
   let editing = $state.raw<Editing | null>(null);
   let editor = $state<ReturnType<typeof CardEditor>>();
@@ -209,7 +214,51 @@
     return true;
   }
 
+  const collector = new FrameCollector(CARDS_APP);
+  let collected = $state<{ got: number; total: number } | null>(null);
+
+  /** One frame of a multi-part list: `true` once the list is in and the review is open. */
+  async function take_frame(text: string): Promise<boolean | null> {
+    const result = collector.add(text);
+    if (result === CollectResult.NOT_A_FRAME) return null;
+    if (result === CollectResult.FOREIGN) {
+      report("Those codes are for another app", undefined, NotificationType.WARNING);
+      return false;
+    }
+    collected = { got: collector.got, total: collector.total };
+    if (result !== CollectResult.COMPLETE) return false;
+    try {
+      const drafts = read_compact(await collector.payload());
+      overlay = { kind: "review", review: review_cards(data.value.cards, drafts) };
+      return true;
+    } catch (reason) {
+      report("Couldn't read those codes", reason);
+      return false;
+    } finally {
+      collector.reset();
+      collected = null;
+    }
+  }
+
+  function apply_review(review: CardsReview, added: number[], changed: number[]) {
+    const now = Date.now();
+    const created = added.map((index) => create_card(review.added[index], crypto.randomUUID(), now));
+    const updates = new Map(changed.map((index) => [review.changed[index].card.id, review.changed[index].draft]));
+    data.value = {
+      ...data.value,
+      cards: [...data.value.cards.map((card) => {
+        const draft = updates.get(card.id);
+        return draft ? { ...card, name: draft.name, color: draft.color, notes: draft.notes } : card;
+      }), ...created],
+    };
+    overlay = null;
+    const total = created.length + updates.size;
+    notifications.notify(app_id, { title: total === 1 ? "1 change applied" : `${total} changes applied` });
+  }
+
   async function scan_import_code(text: string): Promise<boolean> {
+    const framed = await take_frame(text);
+    if (framed !== null) return framed;
     if (await import_payload(text)) return true;
     report("That QR code isn't from Cards", undefined, NotificationType.WARNING);
     return false;
@@ -293,12 +342,13 @@
   }
 
   async function share_list() {
-    const payload = await encode_share(sorted);
+    const frames = await encode_frames(CARDS_APP, compact_cards(sorted));
     overlay = {
       kind: "share",
       title: `Share ${cards.length === 1 ? "1 card" : `${cards.length} cards`}`,
-      caption: "On the other device, open Cards › Add › Import from QR and scan this. Photos stay here.",
-      text: fits_qr(payload) ? payload : null,
+      caption: `On the other device, open Cards › Add › Import from QR and point it here${frames.length > 1 ? " until all the codes are in" : ""}. You pick what to keep there; photos stay here.`,
+      text: null,
+      frames,
     };
   }
 
@@ -515,15 +565,19 @@
   {/if}
 
   {#if overlay?.kind === "share"}
-    <QrShare title={overlay.title} caption={overlay.caption} text={overlay.text} onclose={() => (overlay = null)} onfile={export_file} />
+    <QrShare title={overlay.title} caption={overlay.caption} text={overlay.text} frames={overlay.frames} onclose={() => (overlay = null)} onfile={export_file} />
   {:else if overlay?.kind === "import"}
     <QrImport
       detector={get_detector}
       oncode={scan_import_code}
       onphoto={async () => scan_import_photo((await pick_device_files({ accept: ["image/*"] }))[0])}
-      onclose={() => (overlay = null)}
+      onclose={() => ((overlay = null), collector.reset(), (collected = null))}
       onerror={report}
+      progress={collected}
     />
+  {:else if overlay?.kind === "review"}
+    {@const review = overlay.review}
+    <CardsReviewSheet {review} onapply={(added, changed) => apply_review(review, added, changed)} onclose={() => (overlay = null)} />
   {/if}
 
   {#if checkout_card}

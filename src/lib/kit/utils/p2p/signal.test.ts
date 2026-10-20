@@ -1,6 +1,6 @@
 import { encode } from "uqr";
 import { describe, expect, test } from "vitest";
-import { decode_signal, encode_signal, from_base45, parse_candidate, read_sdp, SignalKind, to_base45, write_sdp } from "./signal";
+import { decode_signal, encode_signal, parse_candidate, read_sdp, SignalKind, write_sdp } from "./signal";
 
 const FINGERPRINT =
   "5C:7E:0F:3B:9A:21:44:D8:6E:11:02:BB:7C:90:3D:AF:E1:58:6A:72:C3:0D:94:1E:29:8B:45:F6:00:C7:3A:12";
@@ -102,18 +102,5 @@ describe("parse_candidate", () => {
   test("skips TCP and RTCP candidates", () => {
     expect(parse_candidate("candidate:1 1 tcp 1 10.0.0.1 9 typ host tcptype active")).toBeNull();
     expect(parse_candidate("candidate:1 2 udp 1 10.0.0.1 5000 typ host")).toBeNull();
-  });
-});
-
-describe("base45", () => {
-  test("matches the RFC 9285 examples", () => {
-    expect(to_base45(new TextEncoder().encode("AB"))).toBe("BB8");
-    expect(to_base45(new TextEncoder().encode("Hello!!"))).toBe("%69 VD92EX0");
-    expect(new TextDecoder().decode(from_base45("QED8WEX0"))).toBe("ietf!");
-  });
-
-  test("rejects invalid input", () => {
-    expect(() => from_base45("GGW")).toThrow();
-    expect(() => from_base45("abc")).toThrow();
   });
 });

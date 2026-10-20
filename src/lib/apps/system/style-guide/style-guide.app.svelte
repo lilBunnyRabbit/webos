@@ -49,6 +49,8 @@
   import { z } from "zod";
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
+  import { QrFrames } from "$kit/components/qr-transfer";
+  import { encode_frames } from "$kit/utils/qr-transfer";
 
   const SECTIONS = [
     { value: "colour", label: "Colour", icon: SwatchesIcon },
@@ -386,6 +388,14 @@
             </div>
             <span class="font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(crop.width)} × {Math.round(crop.height)} at {Math.round(crop.x)}, {Math.round(crop.y)}</span>
           </div>
+        </Section>
+        <Section
+          title="QR frames"
+          description="Data too big for one QR code as a cycle of codes, from $kit: the other phone's QrCollect gathers them in any order. Shopping List and Cards share with it."
+        >
+          {#await encode_frames("DEMO", { lists: Array.from({ length: 12 }, (_, index) => ({ id: crypto.randomUUID(), name: `List ${index + 1}` })) }) then frames}
+            <QrFrames {frames} label="Demo share" />
+          {/await}
         </Section>
       {:else}
         <Section title="Badges" flush>

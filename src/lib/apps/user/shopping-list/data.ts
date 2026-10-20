@@ -3,8 +3,8 @@ import { z } from "zod";
 /**
  * Shopping List's file, `/var/lib/apps/shopping-list/lists.json`: every list, its items and the purchase history.
  *
- * Items are never removed straight away: a deleted one keeps `deleted_at` for `TOMBSTONE_MS`, so a paired device that
- * still has it learns it's gone instead of adding it back. Every change bumps `updated_at`; a sync keeps the newer one.
+ * Items are never removed straight away: a deleted one keeps `deleted_at` for `TOMBSTONE_MS`, so a phone that receives a
+ * share learns it's gone instead of adding it back. Every change bumps `updated_at`; a share review keeps the newer one.
  */
 
 export const APP_ID = "shopping-list";

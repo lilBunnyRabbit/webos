@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { adopt_cards, archive_photo_name, build_archive, read_archive } from "./archive";
 import { CARDS_VERSION, create_card, PhotoSide, type Card, type CardDraft } from "./data";
 import { CardFormat } from "./formats";
-import { decode_share, encode_share, fits_qr, merge_cards, payload_of, QR_LIMIT, SHARE_PREFIX } from "./share";
+import { compact_cards, decode_share, encode_share, fits_qr, merge_cards, payload_of, QR_LIMIT, read_compact, review_cards, SHARE_PREFIX } from "./share";
 
 const DRAFTS: CardDraft[] = [
   { name: "Spar", code: "4006381333931", format: CardFormat.EAN_13, color: "success", notes: "" },
@@ -98,5 +98,29 @@ describe("archive", () => {
     const { write_zip } = await import("$lib/core/utils/zip/write");
     const zip = await write_zip([{ name: "other.txt", data: new Blob(["x"]) }], { method: 0 });
     await expect(read_archive(zip)).rejects.toThrow("isn't a Cards export");
+  });
+});
+
+describe("review_cards", () => {
+  test("new cards, and known ones whose name, colour or notes differ; never a removal", () => {
+    const mine = [
+      create_card({ name: "Spar", code: "111", format: CardFormat.EAN_13, color: "primary", notes: "" }, "a", 1),
+      create_card({ name: "DM", code: "222", format: CardFormat.EAN_13, color: "primary", notes: "" }, "b", 1),
+      create_card({ name: "Mine only", code: "333", format: CardFormat.EAN_13, color: "primary", notes: "" }, "c", 1),
+    ];
+    const drafts = read_compact(
+      compact_cards([
+        { name: "Spar", code: "111", format: CardFormat.EAN_13, color: "info", notes: "" },
+        { name: "DM", code: "222", format: CardFormat.EAN_13, color: "primary", notes: "" },
+        { name: "Mercator", code: "444", format: CardFormat.EAN_13, color: "primary", notes: "Pika" },
+      ])
+    );
+    const review = review_cards(mine, drafts);
+    expect(review.added.map((draft) => draft.name)).toEqual(["Mercator"]);
+    expect(review.changed.map((change) => [change.card.id, change.draft.color])).toEqual([["a", "info"]]);
+  });
+
+  test("a payload that isn't a card list is refused", () => {
+    expect(() => read_compact({ cards: [] })).toThrow();
   });
 });

@@ -12,9 +12,11 @@
     onphoto: () => void;
     onclose: () => void;
     onerror: (title: string, reason: unknown) => void;
+    /** Codes of a multi-part list so far, while one is coming in. */
+    progress: { got: number; total: number } | null;
   }
 
-  let { detector, oncode, onphoto, onclose, onerror }: Props = $props();
+  let { detector, oncode, onphoto, onclose, onerror, progress }: Props = $props();
 
   const { window: win } = get_app_context();
 
@@ -47,7 +49,11 @@
           <video {@attach camera.preview} muted playsinline class="block aspect-square w-full object-cover"></video>
           <div class="pointer-events-none absolute inset-[15%] rounded-lg ring-2 ring-primary"></div>
         </div>
-        <p class="text-center text-ui text-foreground/65">Point the camera at a Cards QR code from another device.</p>
+        {#if progress && progress.total > 1}
+          <p class="text-center font-mono text-ui text-foreground/80 tabular-nums" aria-live="polite">{progress.got} of {progress.total} codes: hold steady</p>
+        {:else}
+          <p class="text-center text-ui text-foreground/65">Point the camera at a Cards QR code from another device.</p>
+        {/if}
       {:else}
         <div class="flex flex-col items-center gap-2 py-6 text-center">
           <span class="grid size-14 place-items-center rounded-2xl bg-primary/12 text-primary"><QrCodeIcon class="size-7" weight="duotone" /></span>

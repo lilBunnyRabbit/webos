@@ -1,10 +1,10 @@
 # Shopping List
 
-Id `shopping-list` · Source: `src/lib/apps/user/shopping-list/` · [ADR-051](../adrs/051-ai-image-input.md), [ADR-052](../adrs/052-p2p-pairing-in-kit.md) · [brainstorm](../brainstorm/2026-10-19_shopping-list.md)
+Id `shopping-list` · Source: `src/lib/apps/user/shopping-list/` · [ADR-051](../adrs/051-ai-image-input.md), [ADR-053](../adrs/053-qr-data-transfer.md) · [brainstorm](../brainstorm/2026-10-19_shopping-list.md)
 
 ## What it does
 
-A shopping list for use in the store, phone first. Several coloured lists, tick and untick in place, amounts typed as you go ("2x mleko", "500 g moka"), suggestions from what you bought before, and "buy again" for the last trip. It reads a handwritten or printed list from a photo, and two phones can share one list live with no server.
+A shopping list for use in the store, phone first. Several coloured lists, tick and untick in place, amounts typed as you go ("2x mleko", "500 g moka"), suggestions from what you bought before, and "buy again" for the last trip. It reads a handwritten or printed list from a photo, and two phones pass lists to each other by QR code, every change reviewed before it lands, with no server.
 
 ## How it works
 
@@ -90,28 +90,26 @@ PP-OCRv5's Latin dictionary has č, š and ž, but it never wrote them on the te
 
 `onnxruntime-web` 1.30.0, the wasm-only build (`onnxruntime-web/wasm`), one thread: the site isn't cross-origin isolated, so there's no `SharedArrayBuffer` and no wasm threads (`ocr.worker.ts:26`). First use downloads ONNX Runtime's wasm (14.2 MB, 3.7 MB gzipped) and both models, about 17 MB; the service worker keeps them in the `webos-wasm` cache (`vite.config.ts`, `CacheFirst` on `.wasm` and `.onnx`), so it works offline after that. A fresh worker per read; it's terminated when the read ends or is cancelled (`ocr.ts:13`).
 
-### Live sync
+### Sharing by QR
 
-Two phones pair by scanning each other's QR code (`$kit/utils/p2p`, see [P2P Transfer](p2p-transfer.md#qr-signalling)) and share one list over a WebRTC data channel labelled `shopping-list` (`sync.ts:6`). A code from another app connects, and the channel label gives it away: the pairing fails with "That code is from another app" (`sync.svelte.ts:135`).
+No connection between the phones ([ADR-053](../adrs/053-qr-data-transfer.md)). Share… (list ⋯, All's ⋯, or Share on the Lists screen) picks lists, current one ticked (`share-panel.svelte`), and shows them as cycling QR codes (`$kit/components/qr-transfer` `QrFrames`). Receive… opens the camera (`QrCollect`), which gathers the codes in any order and hands over the payload; nothing is written until the review is applied.
 
-| Message | Direction | Holds |
-|---------|-----------|-------|
-| `hello` | Starting phone, first thing on every connection | `version: 1`, the list's id, name and colour, every item |
-| `items` | Both, after each change | Only the items the other side doesn't have in that version |
+| Step | What | Where |
+|------|------|-------|
+| Snapshot | `{ v: 1, lists: [{ id, name, color, icon?, items }] }`, every item including tombstones, so deletions travel | `share_of` (`share.ts`) |
+| Frames | JSON → `deflate-raw` → Base45, 240 bytes a frame, `WQ1:SL:{msg}:{i}/{n}:{data}` | `$kit/utils/qr-transfer` |
+| Diff | Per incoming list: unknown id → one New list change; else list details (name, colour, icon: no timestamp, any difference is offered) and per item the version `newer()` would keep: new, changed (text or amount), ticked, unticked, deleted. Identical items and older incoming versions are skipped | `review_share` |
+| Review | Grouped per list and kind, every change ticked, untick to skip, Apply N (`share-review.svelte`) | `View.INCOMING` |
+| Apply | Picked items take the incoming version whole; a new list is pushed as sent | `apply_changes` |
 
-`sync.ts:13` (zod; anything else is ignored with a warning).
+Merge is still last-writer-wins per item (`merge.ts`):
 
-Merge is last-writer-wins per item (`merge.ts:8`, `merge.ts:19`):
-
-- Every change stamps `updated_at = max(now, previous + 1)`, so an item's stamp never goes back even when this phone's clock is behind (`data.ts:75`).
+- Every change stamps `updated_at = max(now, previous + 1)`, so an item's stamp never goes back even when this phone's clock is behind.
 - Equal stamps are broken by comparing the items' serialised form, so both phones pick the same one.
-- A deletion is a tombstone (`deleted_at`) and wins or loses like any edit. Tombstones older than 30 days are pruned when the file loads (`merge.ts:29`, `shopping-list.app.svelte:104`); a phone apart longer than that can bring a deleted item back.
-- Ids start with the time in base 36 (`data.ts:69`), so sorting by id gives the order of adding on both phones.
-- `known` holds what the other side has per item; `push` sends only the difference, and a received item is recorded first so it isn't echoed back (`sync.svelte.ts:90`, `sync.svelte.ts:164`).
+- A deletion is a tombstone (`deleted_at`) and wins or loses like any edit. Tombstones older than 30 days are pruned when the file loads; a phone that hasn't received a share for longer can bring a deleted item back.
+- Ids start with the time in base 36, so sorting by id gives the order of adding on both phones.
 
-What syncs: items only. The joining phone takes the list's name and colour once, when it creates the list. The pairing belongs to the window that paired; closing it ends the link and the other phone shows Offline. "Pair again" sends `hello` again and the merge catches up on whatever changed apart.
-
-Last-writer-wins per item, not a CRDT: the brainstorm settled on "each item resolves to its newest `updated_at`". The price is that two concurrent edits to the same item keep only the later one; edits to different items never conflict.
+45 items with random ids came to 5 codes in the browser check; a typical list is 1–2.
 
 ### Quantities
 
@@ -134,7 +132,7 @@ Units: kg, dag, g, mg, l, dl, cl, ml, kos, kom, pcs, pc, pkg, pack, pak, with an
 Three places, in window storage `list`: `@home` (the default), `@all`, or a list id.
 
 - **Lists** (`lists-overview.svelte`): an All lists row, then a card per list (icon tile, name, "N left", the first four open items), a gear for List settings, and a New list card.
-- **A list or All**: the toolbar is a back arrow to Lists, then a chip row (`list-chips.svelte`: All, each list with its icon and open count, +), store mode and ⋯. Back (nav bar, browser) goes to Lists from either.
+- **A list or All**: the toolbar is a back arrow to Lists, the list's icon and name (or All lists), store mode and ⋯ (owner: no chip row). Back (nav bar, browser) goes to Lists from either.
 - **All**: a header per list with open items (tap the header to open that list), then one "In the cart" section where each row shows its list's icon. The entry bar gets a list picker in front (window storage `add_to`, else the first list); photo lines go to the same list.
 
 Open items sit in a card (`divide-y`, full-contrast medium text, the amount as a pill); ticked ones drop into a collapsible "In the cart · N" section (window storage `cart_open`), dimmed and struck through. A tick runs inside `view_transition`, each row carrying `view-transition-name: item-{id}`, so the row slides between the sections. A thin progress bar under the toolbar shows ticked over all.
@@ -207,9 +205,10 @@ No shell commands (owner: nothing for now).
 - A snap can be wrong with confidence: a misread within 1–2 edits of another grocery word becomes that word. The review screen is the guard.
 - Gemini Nano's reading is untested on a real device with image input; only the fallback path is measured.
 - First read needs about 17 MB over the network; offline before that, the reader fails.
-- Sync has no TURN relay: two phones on mobile data behind carrier NAT don't connect (same limit as P2P Transfer). One list per pairing, one pairing per window.
-- LWW per item: two people editing the same item at once keep only the later edit.
-- Renames and colour changes don't sync.
+- No live sync: the other phone sees changes only after a share and its review.
+- LWW per item: of two edits to the same item, the review offers only the later one.
+- List details carry no timestamp, so the review can't tell whose rename is newer; the user picks.
+- The receiver needs a camera: there is no photo or paste path for multi-part codes.
 - At h=1 on a touch screen the kit's taller `pointer-coarse` sizes need about 80 px; a 1-row desktop cell gives 60, so the field can clip on a touch laptop. A phone cell is taller.
 - `ocr.browser.test.ts:34` is still named after tesseract ("core and language data").
 
@@ -217,5 +216,5 @@ No shell commands (owner: nothing for now).
 
 - [Shopping List brainstorm](../brainstorm/2026-10-19_shopping-list.md): the app, sync, storage, the handwriting investigation, PP-OCRv5 over tesseract.js, models in git, the dropped done toast.
 - [ADR-051](../adrs/051-ai-image-input.md): image input in AiService, `PROMPT_IMAGE`; revision for PP-OCRv5.
-- [ADR-052](../adrs/052-p2p-pairing-in-kit.md): pairing moved to `$kit/utils/p2p`, channel labels.
+- [ADR-053](../adrs/053-qr-data-transfer.md): sharing by multi-part QR with a review, replacing live sync (ADR-052's pairing, used until 3.6.0).
 - [ADR-045](../adrs/045-scoped-app-dependencies.md): app-scoped dependencies.

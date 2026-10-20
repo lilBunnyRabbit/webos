@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
-  import { Badge, Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
@@ -16,10 +16,11 @@
     Check as CheckIcon,
     DotsThree as DotsThreeIcon,
     GearSix as GearSixIcon,
-    LinkBreak as LinkBreakIcon,
     ListPlus as ListPlusIcon,
     PencilSimple as PencilSimpleIcon,
     QrCode as QrCodeIcon,
+    Scan as ScanIcon,
+    Stack as StackIcon,
     ShoppingCart as ShoppingCartIcon,
     Sticker as StickerIcon,
     Storefront as StorefrontIcon,
@@ -43,21 +44,22 @@
   import EntryBar from "./entry-bar.svelte";
   import ItemEditor from "./item-editor.svelte";
   import ItemRow from "./item-row.svelte";
-  import ListChips from "./list-chips.svelte";
   import ListMark from "./list-mark.svelte";
   import ListSettings from "./list-settings.svelte";
   import ListsOverview from "./lists-overview.svelte";
   import { add_entry } from "./items";
-  import { live, merge_items, prune } from "./merge";
-  import PairPanel from "./pair-panel.svelte";
+  import { live, prune } from "./merge";
+  import ReceivePanel from "./receive-panel.svelte";
+  import { apply_changes, review_share, type ListReview, type Share } from "./share";
+  import SharePanel from "./share-panel.svelte";
+  import ShareReview from "./share-review.svelte";
   import type { Entry } from "./parse";
   import PhotoCrop from "./photo-crop.svelte";
   import PhotoReview from "./photo-review.svelte";
   import { read_method, read_with_ai, read_with_ocr, ReadMethod, type ReviewRow } from "./read-image";
   import { record_trip } from "./suggest";
-  import { PairSession, PairState } from "./sync.svelte";
 
-  const View = { LIST: "list", PAIR: "pair", CROP: "crop", REVIEW: "review", EDIT: "edit", SETTINGS: "settings" } as const;
+  const View = { LIST: "list", SHARE: "share", RECEIVE: "receive", INCOMING: "incoming", CROP: "crop", REVIEW: "review", EDIT: "edit", SETTINGS: "settings" } as const;
   /** Window storage `list` holds a list id, or one of these. */
   const HOME = "@home";
   const ALL = "@all";
@@ -101,23 +103,6 @@
   const target = $derived(list ?? lists.find((candidate) => candidate.id === add_to.value) ?? lists[0]);
   const open_keys = $derived(new Set(target ? live(target.items).filter((item) => !item.checked).map((item) => history_key(item.text)) : []));
 
-  const pair = new PairSession({
-    list: (id) => file.value.lists.find((candidate) => candidate.id === id),
-    merge(list_id, incoming, meta) {
-      let target = file.value.lists.find((candidate) => candidate.id === list_id);
-      if (!target) {
-        if (!meta) return;
-        file.value.lists.push({ ...meta, items: [] });
-        target = file.value.lists.at(-1)!;
-      }
-      target.items = merge_items($state.snapshot(target.items) as Item[], incoming);
-      if (meta) current.value = list_id;
-    },
-  });
-  const shared = $derived(pair.list_id === list?.id && (pair.state === PairState.LIVE || pair.state === PairState.OFFLINE));
-
-  $effect(() => () => pair.dispose());
-
   let pruned = false;
   $effect(() => {
     if (!file.ready || pruned) return;
@@ -137,18 +122,6 @@
       if (list_prop && file.value.lists.some((candidate) => candidate.id === list_prop)) current.value = list_prop;
       if (photo_prop) void photo();
     });
-  });
-
-  $effect(() => {
-    if (pair.state !== PairState.LIVE || !pair.list_id) return;
-    const target = file.value.lists.find((candidate) => candidate.id === pair.list_id);
-    if (!target) return;
-    const snapshot = $state.snapshot(target.items) as Item[];
-    untrack(() => pair.push(snapshot));
-  });
-
-  $effect(() => {
-    if (pair.state === PairState.LIVE && view === View.PAIR) untrack(() => (view = View.LIST));
   });
 
   $effect(() => {
@@ -309,12 +282,8 @@
   async function more_menu(event: MouseEvent) {
     if (!list) return all_menu(event);
     const entries: MenuItem[] = [
-      {
-        id: "share",
-        label: pair.state === PairState.OFFLINE && shared ? "Pair again…" : "Share live…",
-        icon: QrCodeIcon,
-        disabled: pair.state === PairState.LIVE && shared,
-      },
+      { id: "share", label: "Share…", icon: QrCodeIcon },
+      { id: "receive", label: "Receive…", icon: ScanIcon },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
       { separator: true },
       { id: "settings", label: "List settings…", icon: GearSixIcon },
@@ -323,27 +292,31 @@
         : { id: "widget", label: on_phone ? "Add to home screen" : "Add to desktop", icon: StickerIcon },
     ];
     if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
-    if (shared) entries.push({ id: "unshare", label: "Stop sharing", icon: LinkBreakIcon });
     if (lists.length > 1) entries.push({ separator: true }, { id: "delete", label: "Delete list…", icon: TrashIcon, danger: true });
 
     const choice = await dialogs.menu(entries, { anchor: below(event) });
-    if (choice === "share") view = View.PAIR;
+    if (choice === "share") view = View.SHARE;
+    else if (choice === "receive") view = View.RECEIVE;
     else if (choice === "photo") await photo();
     else if (choice === "settings") open_settings(list.id);
     else if (choice === "widget") await toggle_widget(list);
     else if (choice === "clear") clear_done();
-    else if (choice === "unshare") pair.stop();
     else if (choice === "delete") await delete_list();
   }
 
   async function all_menu(event: MouseEvent) {
     const entries: MenuItem[] = [
+      { id: "share", label: "Share…", icon: QrCodeIcon },
+      { id: "receive", label: "Receive…", icon: ScanIcon },
+      { separator: true },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
       { id: "new", label: "New list…", icon: ListPlusIcon },
     ];
     if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
     const choice = await dialogs.menu(entries, { anchor: below(event) });
-    if (choice === "photo") await photo();
+    if (choice === "share") view = View.SHARE;
+    else if (choice === "receive") view = View.RECEIVE;
+    else if (choice === "photo") await photo();
     else if (choice === "new") new_list();
     else if (choice === "clear") clear_done();
   }
@@ -420,7 +393,6 @@
       danger: true,
     });
     if (!confirmed) return;
-    if (pair.list_id === target.id) pair.stop();
     current.value = HOME;
     file.value.lists = file.value.lists.filter((candidate) => candidate.id !== target.id);
     const widget = widget_for(target.id);
@@ -483,6 +455,21 @@
     close_side_view();
   }
 
+  let incoming = $state.raw<{ share: Share; reviews: ListReview[] } | null>(null);
+
+  function receive(share: Share) {
+    incoming = { share, reviews: review_share($state.snapshot(file.value.lists) as List[], share) };
+    view = View.INCOMING;
+  }
+
+  function apply_incoming(picked: Set<string>) {
+    if (!incoming) return;
+    const { share, reviews } = incoming;
+    const applied = apply_changes(file.value.lists, share, picked, reviews);
+    close_side_view();
+    notifications.notify(app_id, { title: applied === 1 ? "1 change applied" : `${applied} changes applied` });
+  }
+
   function close_side_view() {
     review_controller?.abort();
     review_controller = null;
@@ -491,6 +478,7 @@
     photo_image = null;
     editing_id = null;
     settings_for = null;
+    incoming = null;
     view = View.LIST;
   }
 
@@ -499,7 +487,7 @@
   }
 
   function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || busy_elsewhere() || view === View.PAIR) return;
+    if (!win.is_focused || busy_elsewhere() || view === View.SHARE || view === View.RECEIVE) return;
     const target = event.target;
     if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
     const [image] = image_files(event.clipboardData);
@@ -541,17 +529,16 @@
       {#if home}
         <ShoppingCartIcon weight="bold" class="ml-1 size-4.5 shrink-0 text-foreground/80" />
         <h1 class="min-w-0 flex-1 truncate text-sm font-semibold">Lists</h1>
+        <Button size="sm" variant="quiet" onclick={() => (view = View.RECEIVE)}><ScanIcon weight="bold" /> Receive</Button>
+        <Button size="sm" variant="quiet" onclick={() => (view = View.SHARE)}><QrCodeIcon weight="bold" /> Share</Button>
       {:else}
         <IconButton label="All your lists" class="shrink-0" onclick={() => (current.value = HOME)}><CaretLeftIcon weight="bold" /></IconButton>
-        <ListChips {lists} active={list?.id ?? null} onselect={open_place} onnew={new_list} class="min-w-0 flex-1 py-0.5" />
-        {#if shared}
-          {#if pair.state === PairState.LIVE}
-            <Badge tone="success">Live</Badge>
-          {:else}
-            <button type="button" class="shrink-0" onclick={() => (view = View.PAIR)} aria-label="Offline: pair again">
-              <Badge>Offline</Badge>
-            </button>
-          {/if}
+        {#if list}
+          <ListMark {list} size="md" />
+          <h1 class="min-w-0 flex-1 truncate text-sm font-semibold">{list.name}</h1>
+        {:else}
+          <StackIcon weight="bold" class="size-4.5 shrink-0 text-foreground/80" />
+          <h1 class="min-w-0 flex-1 truncate text-sm font-semibold">All lists</h1>
         {/if}
         <IconButton label="In-store mode" class="shrink-0" pressed={store.value} onclick={() => (store.value = !store.value)}>
           <StorefrontIcon weight="bold" />
@@ -590,8 +577,12 @@
           oncancel={close_side_view}
         />
       {/key}
-    {:else if view === View.PAIR}
-      <PairPanel session={pair} {list} onclose={() => (view = View.LIST)} />
+    {:else if view === View.SHARE}
+      <SharePanel {lists} initial={list ? [list.id] : all ? lists.map((each) => each.id) : []} onclose={close_side_view} />
+    {:else if view === View.RECEIVE}
+      <ReceivePanel onreceive={receive} oncancel={close_side_view} />
+    {:else if view === View.INCOMING && incoming}
+      <ShareReview reviews={incoming.reviews} onapply={apply_incoming} oncancel={close_side_view} />
     {:else if view === View.CROP && photo_image}
       <PhotoCrop image={photo_image} onread={(crop) => photo_image && void read(photo_image, crop)} oncancel={close_side_view} />
     {:else if view === View.REVIEW}

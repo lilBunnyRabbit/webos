@@ -422,13 +422,13 @@ An API the browser doesn't have shows "Not available in this browser". There are
 | Actions | `Button` variants and sizes, `IconButton`s, toggles (`pressed` on `Button` and `IconButton`), `CopyButton` (with text and empty) |
 | Inputs | `Input` (plain and with a leading icon), `Select`, `Segmented` (`md` and `sm`), `Slider` (`md` and `sm`), `Switch`, `Checkbox` inside `SettingRow`s; `Textarea` (prose and `mono`) |
 | Feedback | `Badge` tones, `Kbd`, `Spinner`, `BoardOverlay` over a sample board, the app announcement (in place with three sample apps, Paint with sample highlights; "Show as dialog" and "Show with 6 apps" open it for real), `EmptyState` with an action |
-| App kit | `SwipeCompare` from `$kit/components/swipe-compare`, wiping between a sharp and a blurred sample drawn from tokens (a Phosphor icon on `background-light`) |
+| App kit | `SwipeCompare` from `$kit/components/swipe-compare`, wiping between a sharp and a blurred sample drawn from tokens (a Phosphor icon on `background-light`); `CropFrame`; `QrFrames` from `$kit/components/qr-transfer`, cycling the frames of a made-up 12-list payload |
 
 The controls (and the sample panel's width) are bound to local `$state` and do nothing else. Nothing but the open section is persisted.
 
 **Known gaps.**
 
-- Hand-maintained: a new kit component or token only appears once someone adds it here. `Separator` isn't shown at all; `SideNav` only appears as the app's own navigation. Of the app kit, only `SwipeCompare` is shown (not `CodeView`).
+- Hand-maintained: a new kit component or token only appears once someone adds it here. `Separator` isn't shown at all; `SideNav` only appears as the app's own navigation. Of the app kit, `CodeView` and `QrCollect` aren't shown.
 - The token lists are hard-coded arrays, not read from `ThemeToken`.
 
 ---

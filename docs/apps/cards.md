@@ -69,16 +69,16 @@ WEBOS-CARDS:1: + base64url( deflate-raw( JSON [[name, code, format, color, notes
 - **deflate-raw** through the browser's `CompressionStream`, no dependency.
 - **base64url**, unpadded: URL-safe, so the same payload goes into a share link unescaped.
 - **Version 1** in the prefix: a future format gets `:2:`; `decode_share` rejects anything without this prefix, a body that doesn't inflate, or a shape that fails the zod schema (`share.ts:39`).
-- **Limit**: 2000 characters (`share.ts:8`). A version 40 QR at ECC L holds 2953 bytes, but past about 2000 a phone held up to a screen stops reading it reliably. Over that, the share sheet says so and offers the file.
+- **Limit**: 2000 characters (`share.ts:8`), for the one-card link only. A version 40 QR at ECC L holds 2953 bytes, but past about 2000 a phone held up to a screen stops reading it reliably.
 
 Two ways out:
 
 | Share | QR holds | Read by |
 |-------|----------|---------|
-| The list (More › Share list as QR) | The bare payload | Add › Import from QR (or More › Import from QR): camera, photo or paste |
+| The list (More › Share list as QR) | Cycling frames (`$kit/utils/qr-transfer`, tag `CARDS`, [ADR-053](../adrs/053-qr-data-transfer.md)) of the same tuples (`compact_cards`); 30 cards are 2 codes | Add › Import from QR (or More › Import from QR): the camera feeds each frame to a `FrameCollector` ("3 of 5 codes: hold steady"); a photo adds one frame at a time |
 | One card (card › Share) | `{origin}{base}#/app/cards?import=<payload>` | Any phone camera; the link opens WebOS with the `import` prop. Import from QR also accepts the link (`share.ts:52`) |
 
-Import shows a confirm sheet listing the new cards; duplicates (same format and number, `share.ts:68`) are skipped and counted. Imported cards get fresh ids.
+A complete list opens a review (`cards-review.svelte`, `review_cards`): New cards and Changed ones (same format and number, a different name, colour or notes), each ticked, Apply N. Nothing on this device is ever removed. A one-card link or an old single-code list (`WEBOS-CARDS:1:`, before 3.6.0) still goes through the confirm sheet, which adds new cards and skips duplicates. Imported cards get fresh ids.
 
 ### Zip export
 
@@ -126,7 +126,8 @@ Sort order: pinned, then most used, then most recently used, then name (`data.ts
 - No real-till test is recorded: whether every drawn format scans at a checkout is untested beyond round-trips in the browser tests.
 - Without a native `BarcodeDetector` (iOS Safari, Firefox) only QR codes scan; 1D cards must be typed.
 - macOS's detector reads UPC-A as EAN-13, so a UPC-A card scanned there is saved as EAN-13.
-- The QR limit (2000 characters) is a rule of thumb, not measured per phone.
+- The one-card link's limit (2000 characters) is a rule of thumb, not measured per phone.
+- A shared list carries no timestamps: the review can't tell whose edit is newer, the user picks.
 - A share link holds the card number in the URL; anyone who sees the QR has the card.
 - The zip import trusts `cards.json` beyond its schema: a huge photo is written as is.
 - No coupons (deferred: the store's site blocks in-browser fetches).

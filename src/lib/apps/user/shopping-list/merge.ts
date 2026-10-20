@@ -31,7 +31,3 @@ export function prune(items: readonly Item[], now = Date.now()): Item[] {
 }
 
 export const live = (items: readonly Item[]) => items.filter((item) => item.deleted_at === undefined);
-
-export function unsent(items: readonly Item[], known: ReadonlyMap<string, string>): Item[] {
-  return items.filter((item) => known.get(item.id) !== item_key(item));
-}

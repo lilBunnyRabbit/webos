@@ -5,6 +5,16 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.6.0",
+    date: "2026-10-20",
+    title: "Scan, check, keep",
+    changes: [
+      { kind: NEW, apps: ["shopping-list"], text: "Share lists by QR code: the other phone scans them, sees every change, and keeps only what you tick. No live connection that drops on mobile data." },
+      { kind: NEW, apps: ["cards"], text: "Share any number of cards by QR: big lists cycle through a few codes, and the other phone reviews new and changed cards before adding them." },
+      { kind: IMPROVED, apps: ["shopping-list"], text: "An open list shows just its name at the top." },
+    ],
+  },
+  {
     version: "3.5.0",
     date: "2026-10-20",
     title: "Easier to read",
