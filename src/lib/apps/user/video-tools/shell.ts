@@ -9,10 +9,10 @@ import {
   type ShellService,
   type ShellSession,
 } from "$lib/core/api/services/shell/type";
-import { probe_video } from "./capture";
+import { probe_video } from "$kit/utils/video/capture";
 import { export_clip, type ClipSettings, type ClipSource } from "./jobs";
 import { is_video_name, type Quality } from "./kinds";
-import { clamp_range, format_time, Output, output_extension, output_name, parse_time, type Range } from "./plan";
+import { clamp_range, format_time, Output, output_extension, output_name, parse_time, type Range } from "$kit/utils/video/plan";
 
 const APP_ID = "video-tools";
 

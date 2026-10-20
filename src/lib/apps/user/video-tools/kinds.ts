@@ -1,6 +1,4 @@
-export const Quality = { LOW: "low", MEDIUM: "medium", HIGH: "high" } as const;
-export type Quality = (typeof Quality)[keyof typeof Quality];
-export const QUALITIES = Object.values(Quality) as [Quality, ...Quality[]];
+export { Quality, QUALITIES } from "$kit/utils/video/plan";
 
 export const GIF_FPS = { MIN: 5, MAX: 30, DEFAULT: 12 } as const;
 export const GIF_WIDTH = { MIN: 16, MAX: 1920, DEFAULT: 480 } as const;

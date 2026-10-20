@@ -20,7 +20,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { probe_video, type VideoInfo } from "./capture";
+  import { probe_video, type VideoInfo } from "$kit/utils/video/capture";
   import { export_clip, type ClipResult, type ClipSettings, type ClipSource } from "./jobs";
   import { GIF_FPS, GIF_WIDTH, Quality, VIDEO_ACCEPT, is_video_name } from "./kinds";
   import {
@@ -32,7 +32,7 @@
     format_time,
     gif_frame_count,
     gif_size,
-  } from "./plan";
+  } from "$kit/utils/video/plan";
   import Scrubber from "./scrubber.svelte";
 
   /** Videos don't say their frame rate, so a step is one 30 fps frame. */

@@ -1,5 +1,8 @@
 import { file_stem } from "$lib/core/api/services/files/path";
-import type { Quality } from "./kinds";
+
+export const Quality = { LOW: "low", MEDIUM: "medium", HIGH: "high" } as const;
+export type Quality = (typeof Quality)[keyof typeof Quality];
+export const QUALITIES = Object.values(Quality) as [Quality, ...Quality[]];
 
 export const Output = { WEBM: "webm", GIF: "gif", AUDIO: "audio" } as const;
 export type Output = (typeof Output)[keyof typeof Output];

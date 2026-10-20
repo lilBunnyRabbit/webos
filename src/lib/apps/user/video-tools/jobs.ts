@@ -10,8 +10,8 @@ import kernel, {
 import type { AppId } from "$lib/core/api/services/apps/type";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
-import { capture } from "./capture";
-import { audio_slices, decode_audio, WebmEncoder } from "./encode";
+import { capture } from "$kit/utils/video/capture";
+import { audio_slices, decode_audio, WebmEncoder } from "$kit/utils/video/encode";
 import { gif_local_frame, gif_start, GIF_TRAILER } from "./gif";
 import {
   even_size,
@@ -24,7 +24,7 @@ import {
   video_bitrate,
   type Range,
   type Size,
-} from "./plan";
+} from "$kit/utils/video/plan";
 import type { Quality } from "./kinds";
 import { map_pixels, median_cut } from "./quantize";
 

@@ -5,9 +5,9 @@ import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
 import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
-import { probe_video } from "./capture";
-import { decode_audio } from "./encode";
-import { make_video } from "./fixtures";
+import { probe_video } from "$kit/utils/video/capture";
+import { decode_audio } from "$kit/utils/video/encode";
+import { make_video } from "$kit/utils/video/fixtures";
 import { audio, gif, trim } from "./shell";
 
 let files: FilesService;

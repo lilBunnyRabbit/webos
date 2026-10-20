@@ -1,6 +1,6 @@
 <script lang="ts">
   import { clamp } from "$lib/core/utils";
-  import { format_time } from "./plan";
+  import { format_time } from "$kit/utils/video/plan";
 
   interface Props {
     duration: number;

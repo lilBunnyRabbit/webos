@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Quality } from "./kinds";
 import {
+  Quality,
   clamp_range,
   estimate_gif_bytes,
   even_size,
