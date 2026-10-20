@@ -2,7 +2,7 @@
   import { Button, Input } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { untrack } from "svelte";
-  import { COLOR_DOT, COLOR_NAME, ICON, ICON_NAME } from "./colors";
+  import { COLOR_DOT, COLOR_NAME, COLOR_TILE, ICON, ICON_NAME } from "./colors";
   import { LIST_COLORS, LIST_ICONS, ListIcon, type ListColor, type ListMeta } from "./data";
   import ListMark from "./list-mark.svelte";
 
@@ -73,7 +73,7 @@
             title={ICON_NAME[option]}
             class={cn(
               "grid aspect-square place-items-center rounded-xl ring-1 transition-colors ring-inset",
-              icon === option ? "bg-foreground text-background ring-foreground" : "text-foreground ring-foreground/15 hover:bg-foreground/6"
+              icon === option ? cn(COLOR_TILE[color], "ring-2 ring-current") : "text-foreground ring-foreground/15 hover:bg-foreground/6"
             )}
             onclick={() => (icon = option)}
           >

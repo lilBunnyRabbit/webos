@@ -609,6 +609,7 @@
         method={review_method}
         error={review_error}
         list_name={target?.name ?? ""}
+        open_keys={open_keys}
         onadd={add_reviewed}
         oncancel={close_side_view}
         onretry={() => void photo()}

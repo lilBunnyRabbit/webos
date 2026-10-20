@@ -65,7 +65,7 @@
             <Checkbox checked={picked.has(list.id)} onchange={(event) => toggle(list.id, event.currentTarget.checked)} class="size-5" />
             <ListMark {list} size="md" />
             <span class="min-w-0 flex-1 truncate font-medium">{list.name}</span>
-            <span class="font-mono text-2xs text-foreground/65 tabular-nums">{live(list.items).length} items</span>
+            <span class="font-mono text-2xs text-foreground/65 tabular-nums">{live(list.items).length} {live(list.items).length === 1 ? "item" : "items"}</span>
           </label>
         {/each}
       </div>

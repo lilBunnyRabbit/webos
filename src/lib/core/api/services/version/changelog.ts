@@ -14,6 +14,7 @@ export const CHANGELOG: Release[] = [
       { kind: IMPROVED, apps: ["shopping-list"], text: "An open list shows just its name at the top." },
       { kind: IMPROVED, apps: ["shopping-list"], text: "Editing an item opens a sheet over the list, so you stay where you were; Back closes it." },
       { kind: IMPROVED, apps: ["shopping-list"], text: "Clear done can be undone, and in the store the list stays calmer: bigger add bar, no buy-again row, and a tap on an item shows the swipe that ticks it." },
+      { kind: IMPROVED, apps: ["shopping-list"], text: "Reading a list from a photo marks the lines that are already on your list." },
     ],
   },
   {
