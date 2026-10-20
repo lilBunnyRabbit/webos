@@ -151,7 +151,12 @@
   async function edit(pad: Pad) {
     const result = await dialogs.show(
       PadDialog,
-      { pad: $state.snapshot(pad), keys: free_keys(board.pads, pad.id), preview: (draft: Pad) => void play({ ...draft, id: `preview-${draft.id}` }) },
+      {
+        pad: $state.snapshot(pad),
+        keys: free_keys(board.pads, pad.id),
+        preview: (draft: Pad) => void play({ ...draft, id: `preview-${draft.id}` }),
+        pick_image: () => win.pick_file({ accept: ["image/*"], title: "Pad image" }),
+      },
       { window: window_id }
     );
     player.stop(`preview-${pad.id}`);

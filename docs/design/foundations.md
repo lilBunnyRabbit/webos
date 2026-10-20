@@ -24,6 +24,10 @@ Brand rules that apply everywhere:
 
 For a coloured chip or icon tile, use the colour at 12–15% as the fill and the full colour as ink: `bg-error/12 text-error`. That's still one colour, not two touching.
 
+### User colours
+
+A colour the user picks for their own content is theirs, not the theme's, like the colours in a drawing. The one place UI takes it today is a Soundboard pad (owner exception, [brainstorm](../brainstorm/2026-10-20_soundboard-trim.md)): `color` is a token name or `#rrggbb`. Either way it goes into a `--pad` custom property (`var(--primary)` or the hex) and the tile uses the same alpha steps as the token tiles (`bg-(color:--pad)/18`, `ring-(color:--pad)/35`, `/38` playing). Chrome around it (the dialog, swatch rings, focus) stays on tokens.
+
 ### Opacity
 
 Text uses four levels and nothing else:

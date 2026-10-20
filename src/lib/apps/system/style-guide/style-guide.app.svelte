@@ -50,6 +50,8 @@
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
   import { QrFrames } from "$kit/components/qr-transfer";
+  import { Waveform, type Span } from "$kit/components/waveform";
+  import type { Pcm } from "$kit/utils/audio";
   import { encode_frames } from "$kit/utils/qr-transfer";
 
   const SECTIONS = [
@@ -99,6 +101,18 @@
   let pane = $state({ size: 160, collapsed: false });
   let split = $state(50);
   let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
+  const WAVE_RATE = 8000;
+  const wave: Pcm = {
+    sample_rate: WAVE_RATE,
+    channels: [
+      Float32Array.from({ length: WAVE_RATE * 2 }, (_, i) => {
+        const t = i / WAVE_RATE;
+        return Math.sin(2 * Math.PI * 180 * t) * Math.abs(Math.sin(Math.PI * t * 2.5)) * 0.9;
+      }),
+    ],
+  };
+  let trim = $state({ start: 0.2, end: 1.8 });
+  let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -387,6 +401,18 @@
               <CropFrame bind:rect={crop} bounds={{ width: 320, height: 200 }} />
             </div>
             <span class="font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(crop.width)} × {Math.round(crop.height)} at {Math.round(crop.x)}, {Math.round(crop.y)}</span>
+          </div>
+        </Section>
+        <Section
+          title="Waveform"
+          description="A sound to trim and cut, from $kit: drag the handles to trim, drag across the middle to select, Esc clears the selection. Soundboard's Edit audio uses it."
+          flush
+        >
+          <div class="flex flex-col gap-2">
+            <Waveform pcm={wave} bind:start={trim.start} bind:end={trim.end} bind:selection={wave_selection} playhead={1.4} label="Demo sound" class="max-w-sm" />
+            <span class="font-mono text-2xs text-foreground/80 tabular-nums"
+              >{trim.start.toFixed(2)}–{trim.end.toFixed(2)} s{wave_selection ? `, selected ${wave_selection.start.toFixed(2)}–${wave_selection.end.toFixed(2)} s` : ""}</span
+            >
           </div>
         </Section>
         <Section

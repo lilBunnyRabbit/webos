@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   BoardFileSchema,
   create_pad,
+  edited_name,
   EMPTY_FILE,
   find_board,
   play_action,
@@ -30,6 +31,7 @@ const pad = (id: string, key: string | null = null, sound = `${id}.wav`): Pad =>
   volume: 1,
   key,
   loop: false,
+  image: null,
 });
 
 describe("is_audio", () => {
@@ -69,7 +71,14 @@ describe("keys", () => {
 describe("create_pad", () => {
   test("labels from the file and cycles colours", () => {
     const first = create_pad([], "horn.wav", "horn.wav", "p1");
-    expect(first).toMatchObject({ label: "horn", sound: "horn.wav", key: "1", loop: false, volume: 1, color: PAD_COLORS[0] });
+    expect(first).toMatchObject({
+      label: "horn",
+      sound: "horn.wav",
+      key: "1",
+      loop: false,
+      volume: 1,
+      color: PAD_COLORS[0],
+    });
     expect(next_color(Array.from({ length: PAD_COLORS.length }, (_, i) => pad(String(i))))).toBe(PAD_COLORS[0]);
   });
 });
@@ -107,16 +116,41 @@ describe("sounds", () => {
 describe("schema", () => {
   test("accepts the empty file", () => expect(BoardFileSchema.safeParse(EMPTY_FILE).success).toBe(true));
   test("rejects unknown keys and colours", () => {
-    const bad = (patch: Partial<Pad>) => BoardFileSchema.safeParse({ version: 1, boards: [{ id: "b", name: "B", pads: [{ ...pad("a"), ...patch }] }] }).success;
+    const bad = (patch: Partial<Pad>) =>
+      BoardFileSchema.safeParse({ version: 1, boards: [{ id: "b", name: "B", pads: [{ ...pad("a"), ...patch }] }] })
+        .success;
     expect(bad({ key: "f1" })).toBe(false);
     expect(bad({ color: "error" as Pad["color"] })).toBe(false);
     expect(bad({ key: "q" })).toBe(true);
   });
-  test("needs at least one board", () => expect(BoardFileSchema.safeParse({ version: 1, boards: [] }).success).toBe(false));
+  test("takes a hex colour, not any string", () => {
+    const ok = (color: string) =>
+      BoardFileSchema.safeParse({ version: 1, boards: [{ id: "b", name: "B", pads: [{ ...pad("a"), color }] }] })
+        .success;
+    expect(ok("#1a2B3c")).toBe(true);
+    expect(ok("#123")).toBe(false);
+    expect(ok("red")).toBe(false);
+  });
+  test("an older pad without an image parses with none", () => {
+    const { image: _, ...old } = pad("a");
+    const parsed = BoardFileSchema.parse({ version: 1, boards: [{ id: "b", name: "B", pads: [old] }] });
+    expect(parsed.boards[0].pads[0].image).toBeNull();
+  });
+  test("needs at least one board", () =>
+    expect(BoardFileSchema.safeParse({ version: 1, boards: [] }).success).toBe(false));
+});
+
+test("edited_name", () => {
+  expect(edited_name("horn.mp3")).toBe("horn (edited).wav");
+  expect(edited_name("horn (edited).wav")).toBe("horn (edited).wav");
+  expect(edited_name("horn (edited) (2).wav")).toBe("horn (edited).wav");
 });
 
 test("unique_board_name", () => {
-  const boards = [{ id: "a", name: "My board", pads: [] }, { id: "b", name: "My board 2", pads: [] }];
+  const boards = [
+    { id: "a", name: "My board", pads: [] },
+    { id: "b", name: "My board 2", pads: [] },
+  ];
   expect(unique_board_name(boards, "My board")).toBe("My board 3");
   expect(unique_board_name(boards, "Party")).toBe("Party");
 });

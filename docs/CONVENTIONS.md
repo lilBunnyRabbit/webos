@@ -37,8 +37,9 @@ src/lib/
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── components/swipe-compare/ # SwipeCompare: wipe divider, zoom, pan, pinch
 │   ├── components/crop-frame/    # CropFrame: draggable crop over a picture, crop geometry
+│   ├── components/waveform/      # Waveform: sound peaks, trim handles, selection, playhead
 │   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
-│   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), view (2D camera math), history, qr, qr-scan, exif, p2p (WebRTC pairing by QR)
+│   └── utils/                    # image, image-format, codecs (AVIF/JXL wasm worker, SSIM), view (2D camera math), history, qr, qr-scan, exif, p2p (WebRTC pairing by QR), audio (PCM16 WAV, region cuts with crossfade, peaks)
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else

@@ -13,6 +13,11 @@ export const PadColor = {
 export type PadColor = (typeof PadColor)[keyof typeof PadColor];
 export const PAD_COLORS = Object.values(PadColor);
 
+export type HexColor = `#${string}`;
+export type PadTint = PadColor | HexColor;
+const HEX = /^#[0-9a-f]{6}$/i;
+export const is_hex = (value: unknown): value is HexColor => typeof value === "string" && HEX.test(value);
+
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
 export const PAD_KEYS: readonly string[] = [...DIGITS, ...LETTERS];
@@ -21,13 +26,14 @@ export const PadSchema = z.object({
   id: z.string().min(1),
   label: z.string(),
   sound: z.string().min(1),
-  color: z.enum(PadColor),
+  color: z.union([z.enum(PadColor), z.custom<HexColor>(is_hex)]),
   volume: z.number().min(0).max(1),
   key: z
     .string()
     .refine((key) => PAD_KEYS.includes(key))
     .nullable(),
   loop: z.boolean(),
+  image: z.string().nullable().default(null),
 });
 export type Pad = z.infer<typeof PadSchema>;
 
@@ -61,6 +67,11 @@ export function label_from_file(name: string): string {
   return (label || "Sound").slice(0, 40);
 }
 
+export function edited_name(sound: string): string {
+  const stem = file_stem(sound).replace(/ \(edited\)(?: \(\d+\))?$/, "") || "sound";
+  return `${stem} (edited).wav`;
+}
+
 export function used_keys(pads: readonly Pad[], except?: string): Set<string> {
   return new Set(pads.filter((pad) => pad.id !== except && pad.key !== null).map((pad) => pad.key!));
 }
@@ -88,6 +99,7 @@ export function create_pad(pads: readonly Pad[], sound: string, file_name: strin
     volume: 1,
     key: next_key(pads),
     loop: false,
+    image: null,
   };
 }
 

@@ -30,7 +30,7 @@ function wav(seconds = 0.2, rate = 8000): File {
   return new File([view.buffer], "beep.wav", { type: "audio/wav" });
 }
 
-const pad = (patch: Partial<Pad> = {}): Pad => ({ id: "p", label: "Beep", sound: "beep.wav", color: "primary", volume: 1, key: null, loop: false, ...patch });
+const pad = (patch: Partial<Pad> = {}): Pad => ({ id: "p", label: "Beep", sound: "beep.wav", color: "primary", volume: 1, key: null, loop: false, image: null, ...patch });
 
 let files: FilesService;
 let player: SoundPlayer | null = null;

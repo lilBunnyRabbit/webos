@@ -180,6 +180,8 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/components/code` | | CodeMirror setup and `CodeView` (Text Editor, Diff, Markdown to PDF, Funky DSL, Forms, SVG Workbench, API Client, Recipe Box) |
 | `$kit/components/crop-frame` | | `CropFrame` and its crop geometry (Image Editor, Shopping List, Style Guide). See [components](../design/components.md#app-kit) |
 | `$kit/components/swipe-compare` | | `SwipeCompare`: two snippets under a wipe divider with zoom, pan and pinch (Format Lab, Image Tools › Compare, Style Guide). See [components](../design/components.md#app-kit) |
+| `$kit/components/waveform` | | `Waveform`: peaks on a canvas, trim handles, a selection, a playhead (Soundboard, Style Guide). See [components](../design/components.md#app-kit) |
+| `$kit/utils/audio` | | Kernel-free PCM: `Pcm`, `pcm_of(AudioBuffer)`, `encode_wav` / `wav_blob` (16-bit PCM WAV, channels interleaved), `normalize_regions`, `subtract_regions`, `cut_regions` (keeps regions in order, each seam a 10 ms linear crossfade, so the result is shorter by that much per seam), `peaks` (Soundboard) |
 | `$kit/utils/view` | | 2D camera math: `View`, `Point`, `to_screen`, `to_image`, `clamp_scale`, `fit_view`, `zoom_view`, `pinch_view` (`SwipeCompare`, Image Tools, Jigsaw) |
 
 The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
