@@ -87,6 +87,7 @@ What are the implications of this decision?
 | [051](./051-ai-image-input.md) | AI Image Input | 2026-10-19 | Implemented |
 | [052](./052-p2p-pairing-in-kit.md) | P2P Pairing in the App Kit | 2026-10-19 | Implemented |
 | [053](./053-qr-data-transfer.md) | Data by QR, Reviewed Before It Lands | 2026-10-20 | Implemented |
+| [054](./054-ai-assistant-over-shell.md) | AI Assistant over Shell Commands | 2026-10-20 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
