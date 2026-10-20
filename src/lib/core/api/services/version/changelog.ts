@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.16.0",
+    date: "2026-10-21",
+    title: "All at once",
+    changes: [
+      { kind: NEW, apps: ["clock"], text: "Clock shows your timers, stopwatch and next alarm together on a new All tab, and its widget lists everything that's running." },
+    ],
+  },
+  {
     version: "3.15.3",
     date: "2026-10-21",
     title: "Eyes on the bird",

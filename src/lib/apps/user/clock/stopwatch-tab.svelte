@@ -7,7 +7,7 @@
     Pause as PauseIcon,
     Play as PlayIcon,
   } from "phosphor-svelte";
-  import { EMPTY_STOPWATCH, format_stopwatch, laps_of, stopwatch_elapsed, type StopwatchState } from "./clock";
+  import { EMPTY_STOPWATCH, format_stopwatch, lap_stopwatch, laps_of, stopwatch_elapsed, toggle_stopwatch, type StopwatchState } from "./clock";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   let { stopwatch, visible }: { stopwatch: { value: StopwatchState }; visible: boolean } = $props();
@@ -26,17 +26,8 @@
     return { best: Math.min(...splits), worst: Math.max(...splits) };
   });
 
-  function toggle() {
-    const now = Date.now();
-    const value = stopwatch.value;
-    stopwatch.value = running
-      ? { ...value, started_at: null, before_ms: stopwatch_elapsed(value, now) }
-      : { ...value, started_at: now };
-  }
-
-  function lap() {
-    stopwatch.value = { ...stopwatch.value, laps: [...stopwatch.value.laps, stopwatch_elapsed(stopwatch.value, Date.now())] };
-  }
+  const toggle = () => (stopwatch.value = toggle_stopwatch(stopwatch.value, Date.now()));
+  const lap = () => (stopwatch.value = lap_stopwatch(stopwatch.value, Date.now()));
 </script>
 
 <div class="grid h-full grid-rows-[auto_minmax(0,1fr)]">

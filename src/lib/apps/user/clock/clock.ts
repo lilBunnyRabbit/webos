@@ -41,11 +41,27 @@ export const TimerSchema = z.object({
 });
 export type Timer = z.infer<typeof TimerSchema>;
 
+export interface StopwatchState {
+  started_at: number | null;
+  before_ms: number;
+  laps: number[];
+}
+
+export const StopwatchSchema = z.object({
+  started_at: z.number().nullable(),
+  before_ms: z.number().min(0),
+  laps: z.array(z.number()),
+});
+
+export const EMPTY_STOPWATCH: StopwatchState = { started_at: null, before_ms: 0, laps: [] };
+
 export const ClockDataSchema = z.object({
   version: z.literal(1),
   zones: z.array(z.string()),
   alarms: z.array(AlarmSchema),
   timers: z.array(TimerSchema),
+  /** Optional: files from before it moved here lack it. A broken one is dropped rather than the whole file. */
+  stopwatch: StopwatchSchema.optional().catch(undefined),
 });
 export type ClockData = z.infer<typeof ClockDataSchema>;
 
@@ -193,20 +209,6 @@ export function finish_timer(timer: Timer): Timer {
   return { ...timer, end_at: null, remaining_ms: 0 };
 }
 
-export interface StopwatchState {
-  started_at: number | null;
-  before_ms: number;
-  laps: number[];
-}
-
-export const StopwatchSchema = z.object({
-  started_at: z.number().nullable(),
-  before_ms: z.number().min(0),
-  laps: z.array(z.number()),
-});
-
-export const EMPTY_STOPWATCH: StopwatchState = { started_at: null, before_ms: 0, laps: [] };
-
 /** Wall-clock based, so it keeps counting while the window is hidden or closed. */
 export function stopwatch_elapsed(state: StopwatchState, now: number): number {
   return state.before_ms + (state.started_at === null ? 0 : Math.max(0, now - state.started_at));
@@ -216,6 +218,16 @@ export interface Lap {
   n: number;
   split_ms: number;
   total_ms: number;
+}
+
+export function toggle_stopwatch(state: StopwatchState, now: number): StopwatchState {
+  return state.started_at === null
+    ? { ...state, started_at: now }
+    : { ...state, started_at: null, before_ms: stopwatch_elapsed(state, now) };
+}
+
+export function lap_stopwatch(state: StopwatchState, now: number): StopwatchState {
+  return { ...state, laps: [...state.laps, stopwatch_elapsed(state, now)] };
 }
 
 export function laps_of(state: StopwatchState): Lap[] {
@@ -232,6 +244,69 @@ export function format_stopwatch(ms: number): string {
   const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
   const seconds = String(total % 60).padStart(2, "0");
   return `${hours ? `${hours}:` : ""}${minutes}:${seconds}.${hundredths}`;
+}
+
+export function stopwatch_of(data: ClockData): StopwatchState {
+  return data.stopwatch ?? EMPTY_STOPWATCH;
+}
+
+export function is_stopwatch_active(state: StopwatchState): boolean {
+  return state.started_at !== null || state.before_ms > 0;
+}
+
+/**
+ * The stopwatch used to live in `app.clock.stopwatch` localStorage. Copies it into the data file unless the file
+ * already has one. True when the old key can go.
+ */
+export function migrate_stopwatch(data: ClockData, stored: StopwatchState | null): boolean {
+  if (!stored) return false;
+  data.stopwatch ??= stored;
+  return true;
+}
+
+export function running_count(data: ClockData): number {
+  const timers = data.timers.filter((timer) => timer.end_at !== null).length;
+  return timers + (stopwatch_of(data).started_at !== null ? 1 : 0);
+}
+
+export function landing_tab(requested: ClockTab | undefined, data: ClockData): ClockTab | null {
+  return requested === undefined && running_count(data) >= 2 ? ClockTab.ALL : null;
+}
+
+export const ActiveKind = { TIMER: "timer", STOPWATCH: "stopwatch", ALARM: "alarm" } as const;
+export type ActiveKind = (typeof ActiveKind)[keyof typeof ActiveKind];
+
+export type ActiveItem =
+  | { kind: typeof ActiveKind.TIMER; key: string; tab: ClockTab; timer: Timer }
+  | { kind: typeof ActiveKind.STOPWATCH; key: string; tab: ClockTab; stopwatch: StopwatchState }
+  | { kind: typeof ActiveKind.ALARM; key: string; tab: ClockTab; alarm: Alarm; at: number };
+
+function is_timer_active(timer: Timer): boolean {
+  const state = timer_state(timer);
+  return state === TimerState.RUNNING || state === TimerState.PAUSED;
+}
+
+export function active_items(data: ClockData, now: number): ActiveItem[] {
+  const timers = data.timers
+    .filter(is_timer_active)
+    .sort((a, b) => Number(a.end_at === null) - Number(b.end_at === null) || timer_remaining(a, now) - timer_remaining(b, now));
+  const items: ActiveItem[] = timers.map((timer) => ({ kind: ActiveKind.TIMER, key: `timer-${timer.id}`, tab: ClockTab.TIMERS, timer }));
+  const stopwatch = stopwatch_of(data);
+  if (is_stopwatch_active(stopwatch)) items.push({ kind: ActiveKind.STOPWATCH, key: "stopwatch", tab: ClockTab.STOPWATCH, stopwatch });
+  const upcoming = next_alarm(data.alarms, now);
+  if (upcoming) items.push({ kind: ActiveKind.ALARM, key: `alarm-${upcoming.alarm.id}`, tab: ClockTab.ALARMS, ...upcoming });
+  return items;
+}
+
+export function widget_slots(h: number): number {
+  return Math.max(2, 2 * h - 2);
+}
+
+/** Up to `slots` lines; when they don't all fit, the last one becomes "+N more". */
+export function fit_items<T>(items: T[], slots: number): { shown: T[]; more: number } {
+  if (items.length <= slots) return { shown: items, more: 0 };
+  const shown = items.slice(0, Math.max(0, slots - 1));
+  return { shown, more: items.length - shown.length };
 }
 
 export { CLOCK_PROPS, ClockFace, ClockTab };

@@ -2,14 +2,14 @@
   import kernel, { type AppsService, type WidgetProps, type WindowsService, WidgetStyle } from "$lib/core/api";
   import { cn, format_date, clamp, pad2 } from "$lib/core/utils";
   import { format_time } from "$kit/games";
-  import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
+  import { Alarm as AlarmIcon, Hourglass as HourglassIcon, SquaresFour as SquaresFourIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
-  import { APP_ID, ClockFace, ClockTab, format_hm, format_until, next_alarm, timer_remaining } from "./clock";
+  import { ActiveKind, active_items, APP_ID, ClockFace, ClockTab, fit_items, format_hm, format_until, stopwatch_elapsed, stopwatch_of, timer_remaining, widget_slots } from "./clock";
   import { open_clock_file, ring_while_alive } from "./ringer.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
-  let { props, style }: WidgetProps = $props();
+  let { props, size, style }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -20,20 +20,24 @@
 
   const ticker = new Ticker(
     () => !windows.page_hidden,
-    () => (timer ? 250 : 1000)
+    () => (fast ? 250 : 1000)
   );
   const face = $derived(props.face === ClockFace.DIGITAL ? ClockFace.DIGITAL : ClockFace.ANALOG);
   const date = $derived(new Date(ticker.now));
-  const upcoming = $derived(file.ready ? next_alarm(file.value.alarms, ticker.now) : null);
-  const timer = $derived.by(() => {
-    const running = file.ready ? file.value.timers.filter((entry) => entry.end_at !== null) : [];
-    running.sort((a, b) => (a.end_at ?? 0) - (b.end_at ?? 0));
-    return running[0] ?? null;
-  });
+  const items = $derived(file.ready ? active_items(file.value, ticker.now) : []);
+  const fast = $derived(file.ready && (file.value.timers.some((entry) => entry.end_at !== null) || stopwatch_of(file.value).started_at !== null));
+  const lines = $derived(fit_items(items, widget_slots(size.h)));
 
   // Straight on the wallpaper: no dial fill or divider, and a soft shadow so the digits read on any background.
   const bare = $derived(style === WidgetStyle.CLEAR);
   const weekday = $derived(date.toLocaleDateString("en-US", { weekday: "long" }));
+  const line_class = $derived(
+    cn(
+      "flex min-w-0 items-center justify-center gap-1.5 px-2 py-1 text-2xs hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none",
+      bare ? "rounded-lg text-foreground/85" : "text-foreground/65"
+    )
+  );
+  const VALUE = "font-mono font-medium text-foreground tabular-nums";
 </script>
 
 <div class={cn("grid h-full grid-rows-[minmax(0,1fr)_auto]", bare && "bare-text")}>
@@ -50,23 +54,37 @@
     </div>
   {/if}
 
-  <button
-    type="button"
-    class={cn(
-      "flex min-w-0 items-center justify-center gap-1.5 px-2 py-1.5 text-2xs hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none",
-      bare ? "rounded-lg text-foreground/85" : "border-t border-foreground/8 text-foreground/65"
-    )}
-    onclick={() => apps.launch(APP_ID, { tab: timer && !upcoming ? ClockTab.TIMERS : ClockTab.ALARMS })}
-  >
-    {#if upcoming}
-      <AlarmIcon class="size-3.5 shrink-0 text-primary" weight="fill" />
-      <span class="truncate"><span class="font-mono font-medium text-foreground tabular-nums">{format_hm(upcoming.at)}</span> · {upcoming.alarm.label || format_until(upcoming.at - ticker.now)}</span>
-    {:else if timer}
-      <TimerIcon class="size-3.5 shrink-0 text-primary" weight="fill" />
-      <span class="truncate"><span class="font-mono font-medium text-foreground tabular-nums">{format_time(timer_remaining(timer, ticker.now))}</span> · {timer.label || "Timer"}</span>
+  <ul class={cn("grid min-w-0", !bare && "border-t border-foreground/8")} aria-label="Running">
+    {#each lines.shown as item (item.key)}
+      <li class="grid">
+        <button type="button" class={line_class} onclick={() => apps.launch(APP_ID, { tab: item.tab })}>
+          {#if item.kind === ActiveKind.TIMER}
+            <HourglassIcon class="size-3.5 shrink-0 text-primary" weight="fill" />
+            <span class="truncate"><span class={VALUE}>{format_time(Math.ceil(timer_remaining(item.timer, ticker.now) / 1000) * 1000)}</span> · {item.timer.label || "Timer"}{item.timer.end_at === null ? ", paused" : ""}</span>
+          {:else if item.kind === ActiveKind.STOPWATCH}
+            <TimerIcon class="size-3.5 shrink-0 text-primary" weight="fill" />
+            <span class="truncate"><span class={VALUE}>{format_time(stopwatch_elapsed(item.stopwatch, ticker.now))}</span> · Stopwatch{item.stopwatch.started_at === null ? ", paused" : ""}</span>
+          {:else}
+            <AlarmIcon class="size-3.5 shrink-0 text-primary" weight="fill" />
+            <span class="truncate"><span class={VALUE}>{format_hm(item.at)}</span> · {item.alarm.label || format_until(item.at - ticker.now)}</span>
+          {/if}
+        </button>
+      </li>
     {:else}
-      <AlarmIcon class="size-3.5 shrink-0" />
-      <span class="truncate">No alarms set</span>
+      <li class="grid">
+        <button type="button" class={line_class} onclick={() => apps.launch(APP_ID, { tab: ClockTab.ALARMS })}>
+          <AlarmIcon class="size-3.5 shrink-0" />
+          <span class="truncate">No alarms set</span>
+        </button>
+      </li>
+    {/each}
+    {#if lines.more > 0}
+      <li class="grid">
+        <button type="button" class={line_class} onclick={() => apps.launch(APP_ID, { tab: ClockTab.ALL })}>
+          <SquaresFourIcon class="size-3.5 shrink-0" />
+          <span class="truncate">+{lines.more} more</span>
+        </button>
+      </li>
     {/if}
-  </button>
+  </ul>
 </div>

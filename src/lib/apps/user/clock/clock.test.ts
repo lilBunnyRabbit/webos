@@ -23,7 +23,18 @@ import {
   parse_alarm_time,
   parse_days,
   parse_duration,
+  ActiveKind,
+  active_items,
+  ClockDataSchema,
+  ClockTab,
+  EMPTY_CLOCK,
+  fit_items,
+  landing_tab,
+  migrate_stopwatch,
+  stopwatch_of,
+  widget_slots,
   type Alarm,
+  type ClockData,
   type Timer,
 } from "./clock";
 
@@ -244,5 +255,90 @@ describe("shell parsing", () => {
     expect(find_entry(entries, "ab", "timer")).toBe('timer id "ab" is ambiguous');
     expect(find_entry(entries, "TEA", "timer")).toBe('more than one timer is called "TEA"');
     expect(find_entry(entries, "zz", "timer")).toBe('no timer "zz"');
+  });
+});
+
+const clock = (patch: Partial<ClockData> = {}): ClockData => ({ ...structuredClone(EMPTY_CLOCK), ...patch });
+const timer = (id: string, patch: Partial<Timer> = {}): Timer => ({ id, label: "", duration_ms: 60_000, end_at: null, remaining_ms: 60_000, ...patch });
+
+describe("stopwatch in the data file", () => {
+  it("reads files without one, and drops a broken one instead of the file", () => {
+    const old = { version: 1, zones: ["Asia/Tokyo"], alarms: [], timers: [] };
+    const parsed = ClockDataSchema.parse(old);
+    expect(stopwatch_of(parsed)).toEqual({ started_at: null, before_ms: 0, laps: [] });
+    const broken = ClockDataSchema.parse({ ...old, stopwatch: { started_at: "soon" } });
+    expect(broken.zones).toEqual(["Asia/Tokyo"]);
+    expect(broken.stopwatch).toBeUndefined();
+  });
+
+  it("migrates the window storage stopwatch once, never over the file's own", () => {
+    const stored = { started_at: 5, before_ms: 100, laps: [50] };
+    const data = clock();
+    expect(migrate_stopwatch(data, stored)).toBe(true);
+    expect(data.stopwatch).toEqual(stored);
+
+    const has_own = clock({ stopwatch: { started_at: null, before_ms: 9, laps: [] } });
+    expect(migrate_stopwatch(has_own, stored)).toBe(true);
+    expect(has_own.stopwatch?.before_ms).toBe(9);
+
+    const nothing = clock();
+    expect(migrate_stopwatch(nothing, null)).toBe(false);
+    expect(nothing.stopwatch).toBeUndefined();
+  });
+});
+
+describe("landing tab", () => {
+  it("lands on All with two or more running things and no tab asked for", () => {
+    const running = timer("a", { end_at: 1_000 });
+    const two_timers = clock({ timers: [running, timer("b", { end_at: 2_000 })] });
+    const timer_and_stopwatch = clock({ timers: [running], stopwatch: { started_at: 1, before_ms: 0, laps: [] } });
+    expect(landing_tab(undefined, two_timers)).toBe(ClockTab.ALL);
+    expect(landing_tab(undefined, timer_and_stopwatch)).toBe(ClockTab.ALL);
+    expect(landing_tab(ClockTab.WORLD, two_timers)).toBeNull();
+  });
+
+  it("keeps the last tab with fewer, and doesn't count paused things", () => {
+    const paused_stopwatch = { started_at: null, before_ms: 500, laps: [] };
+    expect(landing_tab(undefined, clock({ timers: [timer("a", { end_at: 1_000 })] }))).toBeNull();
+    expect(landing_tab(undefined, clock({ timers: [timer("a", { end_at: 1_000 }), timer("b", { remaining_ms: 30_000 })], stopwatch: paused_stopwatch }))).toBeNull();
+  });
+});
+
+describe("active items", () => {
+  const now = at(2026, 10, 14, 12);
+
+  it("lists running then paused timers, the stopwatch with time on it, and the next alarm", () => {
+    const data = clock({
+      timers: [
+        timer("paused", { remaining_ms: 10_000 }),
+        timer("late", { end_at: now + 50_000 }),
+        timer("soon", { end_at: now + 5_000 }),
+        timer("idle"),
+        timer("done", { remaining_ms: 0 }),
+      ],
+      stopwatch: { started_at: null, before_ms: 1_200, laps: [] },
+      alarms: [alarm({ time: "18:00" })],
+    });
+    const items = active_items(data, now);
+    expect(items.map((item) => item.key)).toEqual(["timer-soon", "timer-late", "timer-paused", "stopwatch", "alarm-a"]);
+    expect(items.map((item) => item.tab)).toEqual([ClockTab.TIMERS, ClockTab.TIMERS, ClockTab.TIMERS, ClockTab.STOPWATCH, ClockTab.ALARMS]);
+    expect(items.at(-1)).toMatchObject({ kind: ActiveKind.ALARM, at: at(2026, 10, 14, 18) });
+  });
+
+  it("leaves out a reset stopwatch and switched-off alarms", () => {
+    expect(active_items(clock({ stopwatch: { started_at: null, before_ms: 0, laps: [] }, alarms: [alarm({ enabled: false })] }), now)).toEqual([]);
+  });
+});
+
+describe("widget lines", () => {
+  it("fits more lines in taller widgets", () => {
+    expect([2, 3, 4].map(widget_slots)).toEqual([2, 4, 6]);
+  });
+
+  it("shows everything that fits, else trades the last line for +N more", () => {
+    expect(fit_items([1, 2, 3], 3)).toEqual({ shown: [1, 2, 3], more: 0 });
+    expect(fit_items([1, 2, 3, 4], 3)).toEqual({ shown: [1, 2], more: 2 });
+    expect(fit_items([1, 2], 1)).toEqual({ shown: [], more: 2 });
+    expect(fit_items([], 1)).toEqual({ shown: [], more: 0 });
   });
 });

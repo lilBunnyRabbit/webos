@@ -347,6 +347,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Markdown to PDF: paged preview, templates, TOC, header/footer, export via print (2026-10-14)
 - [x] Work Hours: clock in/out, month view, printable time sheet, widget (2026-10-14)
 - [x] Pomodoro and Clock, two apps (2026-10-14)
+  - [x] Clock All tab and a widget that lists everything running (2026-10-21, [brainstorm](brainstorm/2026-10-21_clock-all-view.md), idea from LaxDOTexe): running timers, the stopwatch, the next alarm and world clocks on one tab, landed on when two or more things run; the stopwatch moved into `clock.json`, shared by every window; widget lines open their tab, "+N more" opens All
 - [x] Time Since (2026-10-14)
 - [x] Kanban, a personal "life" board (2026-10-14)
 - [x] Calendar, with Work Hours days and Kanban due dates (2026-10-14)

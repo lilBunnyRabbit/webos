@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService } from "$lib/core/api";
-  import { Button, Segmented, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
     Alarm as AlarmIcon,
@@ -8,11 +8,13 @@
     GlobeHemisphereWest as GlobeHemisphereWestIcon,
     Hourglass as HourglassIcon,
     Plus as PlusIcon,
+    SquaresFour as SquaresFourIcon,
     Sticker as StickerIcon,
     Timer as TimerIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
+  import AllTab from "./all-tab.svelte";
   import AlarmsTab from "./alarms-tab.svelte";
   import {
     ClockDataSchema,
@@ -20,14 +22,18 @@
     ClockTab,
     DATA_FILE,
     EMPTY_CLOCK,
-    EMPTY_STOPWATCH,
     format_hm,
     format_until,
+    landing_tab,
     laps_of,
+    migrate_stopwatch,
     next_alarm,
+    running_count,
+    stopwatch_of,
     StopwatchSchema,
     type Alarm,
     type AlarmDraft,
+    type StopwatchState,
   } from "./clock";
   import { ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
@@ -44,14 +50,32 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const file = storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema);
-  const stopwatch = storage.persisted("stopwatch", EMPTY_STOPWATCH, StopwatchSchema);
+  const stopwatch = {
+    get value(): StopwatchState {
+      return stopwatch_of(file.value);
+    },
+    set value(next: StopwatchState) {
+      file.value.stopwatch = next;
+    },
+  };
   const tab = storage.window<ClockTab>("tab", untrack(() => initial_tab ?? ClockTab.WORLD), z.enum(ClockTab));
+
+  let landed = false;
+  $effect(() => {
+    if (landed || !file.ready) return;
+    landed = true;
+    untrack(() => {
+      if (migrate_stopwatch(file.value, storage.get("stopwatch", StopwatchSchema))) storage.remove("stopwatch");
+      const landing = landing_tab(initial_tab, file.value);
+      if (landing) tab.value = landing;
+    });
+  });
 
   ring_while_alive(file);
   // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
   const ticker = new Ticker(
     () => win.is_visible,
-    () => (tab.value === ClockTab.TIMERS ? 250 : 1000)
+    () => (tab.value === ClockTab.TIMERS || tab.value === ClockTab.ALL ? 250 : 1000)
   );
 
   let adding_zone = $state(false);
@@ -61,6 +85,7 @@
   const can_pin = kernel.platform !== Platform.MOBILE;
 
   const tabs = [
+    { value: ClockTab.ALL, label: "All", icon: SquaresFourIcon },
     { value: ClockTab.WORLD, label: "World", icon: GlobeHemisphereWestIcon },
     { value: ClockTab.ALARMS, label: "Alarms", icon: AlarmIcon },
     { value: ClockTab.TIMERS, label: "Timer", icon: HourglassIcon },
@@ -127,7 +152,8 @@
 
 <div class="@container grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
   <Toolbar>
-    <Segmented bind:value={tab.value} options={tabs} label="View" size="sm" />
+    <Segmented bind:value={tab.value} options={tabs} label="View" size="sm" class="hidden @2xl:inline-flex" />
+    <Select bind:value={tab.value} options={tabs} size="sm" aria-label="View" class="w-32 @2xl:hidden" />
     <span class="flex-1"></span>
     {#if tab.value === ClockTab.WORLD && !adding_zone}
       {#if can_pin}
@@ -153,6 +179,21 @@
   <div class="min-h-0">
     {#if !file.ready}
       <div class="grid h-full place-items-center"><Spinner label="Loading" /></div>
+    {:else if tab.value === ClockTab.ALL}
+      <AllTab
+        {file}
+        now={ticker.now}
+        visible={win.is_visible}
+        onopen={(next) => (tab.value = next)}
+        onnewtimer={() => {
+          tab.value = ClockTab.TIMERS;
+          adding_timer = true;
+        }}
+        onnewalarm={() => {
+          tab.value = ClockTab.ALARMS;
+          new_alarm();
+        }}
+      />
     {:else if tab.value === ClockTab.WORLD}
       <WorldTab {file} now={ticker.now} bind:adding={adding_zone} />
     {:else if tab.value === ClockTab.ALARMS}
@@ -165,7 +206,10 @@
   </div>
 
   <StatusBar>
-    {#if tab.value === ClockTab.WORLD}
+    {#if tab.value === ClockTab.ALL}
+      {@const running = file.ready ? running_count(file.value) : 0}
+      <span class="truncate">{running ? `${running} running` : "Nothing running"}</span>
+    {:else if tab.value === ClockTab.WORLD}
       <span class="truncate">{home} · {format_utc_offset(zone_offset(ticker.now, home))}</span>
     {:else if tab.value === ClockTab.ALARMS}
       <span class="truncate">{upcoming ? `Next ${format_hm(upcoming.at)}, ${format_until(upcoming.at - ticker.now)}` : "No alarm set"}</span>

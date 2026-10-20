@@ -41,7 +41,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.archive.method` | `user/archive` | Compression method (`deflate` / `store`) |
 | `app.blocks.{mode,stats}` | `user/blocks` | Last mode; marathon and sprint stats, top five marathon scores |
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
-| `app.clock.stopwatch` | `user/clock` | Stopwatch state |
+| `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). Copied in once when the file has none, then removed |
 | `app.color-games.{mode,level,space,daily-recall,daily-odd-one-out,daily-gradient-sort,daily-hex-guess}` | `user/color-games` | Last mode; last practice level; Recall's slider space (HSB or OKLCH); each mode's daily attempt `{ day, state }`, so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |

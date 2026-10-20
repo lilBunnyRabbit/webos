@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const ClockTab = { WORLD: "world", ALARMS: "alarms", TIMERS: "timers", STOPWATCH: "stopwatch" } as const;
+export const ClockTab = { ALL: "all", WORLD: "world", ALARMS: "alarms", TIMERS: "timers", STOPWATCH: "stopwatch" } as const;
 export type ClockTab = (typeof ClockTab)[keyof typeof ClockTab];
 
 export const ClockFace = { ANALOG: "analog", DIGITAL: "digital" } as const;
