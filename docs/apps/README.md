@@ -18,6 +18,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [shopping-list.md](shopping-list.md) | Shopping List (`shopping-list`) | PP-OCRv5 photo reading on ONNX Runtime, word snapping, live WebRTC sync and merge, quantity parsing, suggestions |
 | [cards.md](cards.md) | Cards (`cards`) | Barcode formats and check digits, bwip-js drawn as one SVG path, scanning, the `WEBOS-CARDS:1:` share payload, `Cards.zip`, props |
 | [p2p-transfer.md](p2p-transfer.md) | P2P Transfer (`p2p-transfer`) | QR signalling (SDP packed into Base45, `$kit/utils/p2p`), the file transfer protocol, resume |
+| [font-maker.md](font-maker.md) | Font Maker (`font-maker`) | Stroke expansion to quadratic contours, the hand-written TrueType writer, `.fontmaker`, template corner marks, homography and scan guides |
 | [format-lab.md](format-lab.md) | Format Lab (`format-lab`) | jSquash codecs in a worker pool (`$kit/utils/codecs`), SSIM and the heatmap, AVIF and JPEG XL headers, `convert` |
 
 ## Page shape

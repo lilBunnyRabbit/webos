@@ -366,6 +366,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Cards (2026-10-19, [brainstorm](brainstorm/2026-10-19_cards.md)): loyalty card wallet, mobile first; every `BarcodeDetector` format plus number only, drawn by bwip-js (the app's own dependency, per-symbology imports) as theme-coloured SVG; per-format validation; scan by camera, photo, drop or paste; checkout mode with wake lock; pins, most used first, search; front/back WebP photos and notes in `/var/lib/apps/cards`; `Cards.zip` export and import, QR share of the list or one card (a link with the `import` prop); `card` prop opens a card at the checkout. Kit: `create_barcode_detector(formats)`, `detect_barcode()` and `CameraScan` report the format
   - [ ] Card widget for the desktop and phone home; shell commands (`card ls`, `card show`) if the prop proves too little
 - [x] Video Tools: trim to WebM, Video → GIF, audio extraction, by play-and-capture with its own WebM muxer and colour quantizer; `video trim|gif|audio` (2026-10-17). Merge not built
+- [x] Font Maker (2026-10-20, [ADR-055](adrs/055-font-maker.md), [brainstorm](brainstorm/2026-10-20_font-maker.md), idea from LaxDOTexe): handwriting to TrueType; draw each character with pen pressure on guides, or print a template, scan it (corner marks, homography) and trace over the guides; stroke expansion and a hand-written `.ttf` writer, live preview, `.fontmaker` files. Real phone photos of a filled sheet untested
+  - [ ] Kerning, auto-trace, OTF/CFF, variable weight (next session topics in the brainstorm)
 
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
