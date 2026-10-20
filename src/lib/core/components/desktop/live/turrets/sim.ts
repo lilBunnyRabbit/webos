@@ -175,7 +175,7 @@ export interface SimInput {
 export interface SimEvents {
   shots: number;
   hits: number;
-  /** Where bolts struck a wall this frame. */
+  /** Where bolts struck a wall this frame; the caller draws the sparks, above the walls. */
   impacts: Point[];
 }
 
@@ -288,7 +288,6 @@ export class TurretsSim {
       if (wall) {
         bolt.active = false;
         events.impacts.push(wall);
-        this.burst(wall, ParticleKind.SPARK);
       } else if (pointer && !sheltered && segment_distance(from, to, pointer) <= HIT_RADIUS) {
         bolt.active = false;
         this.burst(pointer, ParticleKind.PUFF);

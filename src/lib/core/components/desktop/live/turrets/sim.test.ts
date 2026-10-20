@@ -155,7 +155,7 @@ describe("TurretsSim", () => {
       expect(impact.x).toBeCloseTo(100);
       expect(impact.y).toBeCloseTo(50);
     }
-    expect(sim.particles.items.some((particle) => particle.kind === "spark")).toBe(true);
+    expect(sim.particles.any()).toBe(false);
   });
 
   test("shield: a widget takes a bolt where it enters", () => {

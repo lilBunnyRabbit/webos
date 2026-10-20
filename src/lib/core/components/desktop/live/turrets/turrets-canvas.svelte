@@ -5,6 +5,7 @@
   import { TurretsMode, type TurretsOptions } from "./options";
   import { BARREL_LENGTH, BOLT_LENGTH, PACES, ParticleKind, TurretsSim } from "./sim";
   import { PewSynth } from "./sound";
+  import { shield_impacts } from "./impacts";
 
   interface Props {
     context: LiveContext;
@@ -20,6 +21,8 @@
 
   const draws_turrets = $derived(layer === "background");
   const fires = $derived(options.mode === (layer === "background" ? TurretsMode.SHIELD : TurretsMode.FOLLOW));
+  /** The overlay in shield mode: only the sparks of bolts hitting a shield, drawn above it. */
+  const sparks_only = $derived(!draws_turrets && !fires);
   const pace = $derived(PACES[options.pace]);
 
   const sim = new TurretsSim();
@@ -48,6 +51,18 @@
     void fires;
     void pace;
     sim.reset();
+  });
+
+  $effect(() => {
+    if (!sparks_only || context.preview) return;
+    return shield_impacts.listen((at) => {
+      if (!canvas || context.paused) return;
+      sim.burst(local(at, canvas.getBoundingClientRect()), ParticleKind.SPARK);
+      if (!frame) {
+        last = 0;
+        frame = requestAnimationFrame(tick);
+      }
+    });
   });
 
   function local(point: Point, origin: DOMRect): Point {
@@ -140,12 +155,13 @@
     last = now;
 
     const { rect, turrets, unit } = scene(canvas);
-    const pointer = context.pointer ? local(context.pointer, rect) : null;
+    const pointer = context.pointer && !sparks_only ? local(context.pointer, rect) : null;
     const walls =
       fires && options.mode === TurretsMode.SHIELD
         ? [...context.windows, ...context.widgets].map((shield) => ({ x: shield.x - rect.x, y: shield.y - rect.y, width: shield.width, height: shield.height }))
         : null;
-    const events = sim.update(dt, { turrets, pointer, fire: fires, pace, walls, width: rect.width, height: rect.height });
+    const events = sim.update(dt, { turrets: sparks_only ? [] : turrets, pointer, fire: fires, pace, walls, width: rect.width, height: rect.height });
+    for (const at of events.impacts) shield_impacts.emit({ x: at.x + rect.x, y: at.y + rect.y });
 
     if (options.sound) {
       for (let shot = 0; shot < Math.min(events.shots, MAX_PEWS); shot++) synth.pew(pace.pitch, options.volume);
@@ -155,7 +171,7 @@
     const ctx = fit(canvas, rect);
     if (ctx) draw(ctx, rect, turrets, unit);
 
-    if (!context.paused && (context.pointer || sim.busy)) frame = requestAnimationFrame(tick);
+    if (!context.paused && ((context.pointer && !sparks_only) || sim.busy)) frame = requestAnimationFrame(tick);
     else last = 0;
   }
 
@@ -210,13 +226,11 @@
       still();
       return;
     }
-    if ((context.pointer || sim.busy) && !frame) {
+    if (((context.pointer && !sparks_only) || sim.busy) && !frame) {
       last = 0;
       frame = requestAnimationFrame(tick);
     }
   });
 </script>
 
-{#if draws_turrets || fires}
-  <canvas bind:this={canvas} class="absolute inset-0 size-full"></canvas>
-{/if}
+<canvas bind:this={canvas} class="absolute inset-0 size-full"></canvas>
