@@ -120,12 +120,16 @@
     for (const particle of sim.particles.items) {
       if (!particle.active) continue;
       const left = particle.life / particle.max_life;
+      const puff = particle.kind === ParticleKind.PUFF;
       ctx.globalAlpha = left;
-      ctx.fillStyle = particle.kind === ParticleKind.PUFF ? colours.accent : colours.primary;
+      ctx.fillStyle = puff ? colours.accent : colours.primary;
+      ctx.shadowColor = colours.primary;
+      ctx.shadowBlur = puff ? 0 : 6 * unit;
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, (particle.kind === ParticleKind.PUFF ? 2.5 : 1.5) * unit * (0.4 + 0.6 * left), 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, (puff ? 2.5 : 2) * unit * (0.4 + 0.6 * left), 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
   }
 
@@ -137,7 +141,10 @@
 
     const { rect, turrets, unit } = scene(canvas);
     const pointer = context.pointer ? local(context.pointer, rect) : null;
-    const walls = fires && options.mode === TurretsMode.SHIELD ? context.windows.map((win) => ({ x: win.x - rect.x, y: win.y - rect.y, width: win.width, height: win.height })) : null;
+    const walls =
+      fires && options.mode === TurretsMode.SHIELD
+        ? [...context.windows, ...context.widgets].map((shield) => ({ x: shield.x - rect.x, y: shield.y - rect.y, width: shield.width, height: shield.height }))
+        : null;
     const events = sim.update(dt, { turrets, pointer, fire: fires, pace, walls, width: rect.width, height: rect.height });
 
     if (options.sound) {

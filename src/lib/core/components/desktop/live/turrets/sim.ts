@@ -166,7 +166,7 @@ export interface SimInput {
   /** Fire at the pointer. Off on a layer that only draws turrets. */
   fire: boolean;
   pace: PaceConfig;
-  /** Bolts stop at these (shield mode); `null` lets them through. */
+  /** Shields: windows and widgets (shield mode). Bolts stop at them and a cursor over one can't be hit; `null` lets bolts through. */
   walls: Rect[] | null;
   width: number;
   height: number;
@@ -175,6 +175,8 @@ export interface SimInput {
 export interface SimEvents {
   shots: number;
   hits: number;
+  /** Where bolts struck a wall this frame. */
+  impacts: Point[];
 }
 
 export class TurretsSim {
@@ -225,7 +227,7 @@ export class TurretsSim {
 
   public burst(at: Point, kind: ParticleKind): void {
     const puff = kind === ParticleKind.PUFF;
-    const count = puff ? 10 : 5;
+    const count = puff ? 10 : 8;
     for (let index = 0; index < count; index++) {
       const particle = this.particles.take();
       if (!particle) return;
@@ -237,7 +239,7 @@ export class TurretsSim {
       particle.y = at.y;
       particle.vx = Math.cos(angle) * speed;
       particle.vy = Math.sin(angle) * speed;
-      particle.max_life = puff ? 0.3 : 0.18;
+      particle.max_life = puff ? 0.3 : 0.28;
       particle.life = particle.max_life;
     }
   }
@@ -245,8 +247,9 @@ export class TurretsSim {
   /** One frame: `dt` in seconds, capped so a stalled tab doesn't teleport bolts. */
   public update(dt: number, input: SimInput): SimEvents {
     const step = Math.min(dt, MAX_STEP);
-    const events: SimEvents = { shots: 0, hits: 0 };
+    const events: SimEvents = { shots: 0, hits: 0, impacts: [] };
     const { pointer, turrets } = input;
+    const sheltered = pointer !== null && (input.walls?.some((wall) => contains(wall, pointer)) ?? false);
     this.sync(turrets.length);
 
     this.turning = false;
@@ -284,8 +287,9 @@ export class TurretsSim {
       const wall = input.walls ? first_wall_hit(from, to, input.walls) : null;
       if (wall) {
         bolt.active = false;
+        events.impacts.push(wall);
         this.burst(wall, ParticleKind.SPARK);
-      } else if (pointer && segment_distance(from, to, pointer) <= HIT_RADIUS) {
+      } else if (pointer && !sheltered && segment_distance(from, to, pointer) <= HIT_RADIUS) {
         bolt.active = false;
         this.burst(pointer, ParticleKind.PUFF);
         events.hits++;

@@ -43,6 +43,7 @@
 
 <!-- The title strip is the widget's handle: select, drag, open and menu go through it; the body belongs to the app. -->
 <div
+  data-desktop-widget
   class={cn(
     "group/widget relative m-1 flex min-h-0 min-w-0 flex-col self-stretch justify-self-stretch overflow-hidden rounded-xl transition-opacity duration-150",
     widget_surface(item.style),

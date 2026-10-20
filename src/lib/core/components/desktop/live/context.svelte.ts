@@ -67,6 +67,17 @@ export class LiveContextState implements LiveContext {
     return rects;
   }
 
+  public get widgets(): DOMRect[] {
+    const surface = this.preview ? null : this.desktop.container.element;
+    if (!surface) return [];
+    const rects: DOMRect[] = [];
+    for (const element of surface.querySelectorAll("[data-desktop-widget]")) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) rects.push(rect);
+    }
+    return rects;
+  }
+
   /** Starts the listeners; returns their cleanup. A preview only tracks its host's size. */
   public attach(): () => void {
     const host = this.host();

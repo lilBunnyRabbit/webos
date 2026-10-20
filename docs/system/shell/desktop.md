@@ -76,6 +76,7 @@ interface LiveWallpaperEntry<T> {
 |-------|--------|
 | `pointer` | `pointermove` on `window` (passive), `null` after `pointerleave` on `<html>`. Moves over an iframe don't arrive |
 | `windows` | Measured on read: for each id in `windows.list()` that isn't minimized or popped out (ExtractService), the `[data-window-id]` element in `windows.container.element`. Measured rather than read from `bounds`, because a dragged window lives in the window's local move state and a snapped or maximized one in CSS |
+| `widgets` | Measured on read: every `[data-desktop-widget]` element (the widget's root in `desktop-widget.svelte`) in `desktop.container.element`. Empty in a preview |
 | `cells` | `dot_cells(desktop.container.bounds, .cell, .grid)`: `(columns + 1) × (rows + 1)` cells centred on the grid line crossings, the same points the `[data-dots]` CSS paints. A preview tiles its host in 14px cells instead |
 | `paused` | A preview, `document.hidden`, `document.fullscreenElement`, or any visible maximized window (not minimized, not popped out) |
 | `preview` | `wallpaper.svelte` got a `value` (Settings' thumbnails) |
@@ -88,12 +89,12 @@ Id `turrets`, by LaxDOTexe and lilBunnyRabbit. Every grid dot is a turret: a `fo
 
 | Option | Values | Default |
 |--------|--------|---------|
-| `mode` | `shield`: bolts on the background canvas, behind windows; a bolt entering any window rect stops there with a spark, so a cursor over a window is safe, and turrets under a window hold fire. `follow`: bolts on the overlay canvas, hitting the cursor anywhere, clicks still pass through | `shield` |
+| `mode` | `shield`: windows and widgets are shields. Bolts fly on the background canvas, behind them; a bolt entering a shield's rect stops at its edge with a spark. A cursor inside a shield is hidden: turrets still aim and fire at it, but no bolt can hit it. Turrets under a shield hold fire. `follow`: bolts on the overlay canvas, hitting the cursor anywhere, clicks still pass through | `shield` |
 | `pace` | `chill` every ~1.5 s, 1 turret, 260 px/s; `normal` every ~0.5 s, 3 turrets, 460 px/s; `frantic` every ~0.14 s, 6 turrets, 760 px/s. Intervals ±25% | `normal` |
 | `sound` | Off by default | `false` |
 | `volume` | 0–1 (the form shows 0–100) | `0.5` |
 
-Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. Wall: `first_wall_hit()` clips the step against each window rect (Liang–Barsky) → 5 `primary` sparks for 180 ms. Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
+Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. A cursor inside any wall is sheltered and skips the hit test, so a bolt stopping just short of a shield's edge can't reach a cursor just inside it. Wall: `first_wall_hit()` clips the step against each wall (window and widget rects, Liang–Barsky); the entry point gets 8 `primary` sparks with a `primary` glow for 280 ms (also returned as `impacts`). Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
 
 The background layer always draws the turrets and fires in shield mode; the overlay layer draws only in follow mode and fires there. Each layer has one canvas sized to `devicePixelRatio`, colours read through `read_tokens()` and re-read on a theme change. The `requestAnimationFrame` loop runs only while not paused and while the pointer is on the page or something still moves (bolts, particles, a turret turning); otherwise one still frame is drawn on resize, theme or option change. A pause also clears bolts in flight, so none hang over a maximized window. A mode or pace change starts clean. Destroy cancels the frame and closes the audio.
 

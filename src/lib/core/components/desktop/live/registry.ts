@@ -10,6 +10,8 @@ export interface LiveContext {
   readonly pointer: { x: number; y: number } | null;
   /** Visible windows, measured on read. */
   readonly windows: DOMRect[];
+  /** Desktop widgets, measured on read. */
+  readonly widgets: DOMRect[];
   /** The desktop grid as the dots tile it: one cell per dot, the dot at its centre. */
   readonly cells: DOMRect[];
   /** Tab hidden, a maximized window or a fullscreen element covers the desktop, or a preview. Draw nothing new. */

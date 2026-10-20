@@ -120,11 +120,12 @@ describe("TurretsSim", () => {
   };
 
   function run(sim: TurretsSim, input: SimInput, seconds: number) {
-    const totals = { shots: 0, hits: 0 };
+    const totals = { shots: 0, hits: 0, impacts: [] as { x: number; y: number }[] };
     for (let t = 0; t < seconds; t += 0.016) {
       const events = sim.update(0.016, input);
       totals.shots += events.shots;
       totals.hits += events.hits;
+      totals.impacts.push(...events.impacts);
     }
     return totals;
   }
@@ -144,12 +145,44 @@ describe("TurretsSim", () => {
     expect(bolt.vx).toBeCloseTo(100);
   });
 
-  test("shield: a window between turret and cursor takes every bolt, with sparks", () => {
+  test("shield: a window between turret and cursor takes every bolt, at its edge", () => {
     const sim = new TurretsSim(() => 0.5);
     const totals = run(sim, { ...base, walls: [{ x: 100, y: 0, width: 300, height: 100 }] }, 1.2);
     expect(totals.shots).toBeGreaterThan(0);
     expect(totals.hits).toBe(0);
+    expect(totals.impacts.length).toBeGreaterThan(0);
+    for (const impact of totals.impacts) {
+      expect(impact.x).toBeCloseTo(100);
+      expect(impact.y).toBeCloseTo(50);
+    }
     expect(sim.particles.items.some((particle) => particle.kind === "spark")).toBe(true);
+  });
+
+  test("shield: a widget takes a bolt where it enters", () => {
+    const sim = new TurretsSim(() => 0.5);
+    const widget = { x: 200, y: 20, width: 80, height: 60 };
+    sim.fire({ x: 0, y: 0 }, { x: 240, y: 60 }, 460);
+    const totals = run(sim, { ...base, pointer: null, walls: [widget] }, 1);
+    expect(totals.impacts.length).toBe(1);
+    expect(totals.impacts[0].x).toBeCloseTo(200);
+    expect(totals.impacts[0].y).toBeCloseTo(50);
+  });
+
+  test("shield: a cursor over a shield is hidden, even right at its edge", () => {
+    // Bolts step 7.36px a frame from x = 9, so one stops at 97.3: short of the shield, but within the hit radius of the cursor.
+    const sim = new TurretsSim(() => 0.5);
+    const totals = run(sim, { ...base, turrets: [{ x: 3, y: 50 }], pointer: { x: 101, y: 50 }, walls: [{ x: 100, y: 0, width: 80, height: 100 }] }, 3);
+    expect(totals.shots).toBeGreaterThan(0);
+    expect(totals.hits).toBe(0);
+    expect(totals.impacts.length).toBeGreaterThan(0);
+    expect(sim.particles.items.some((particle) => particle.active && particle.kind === "puff")).toBe(false);
+  });
+
+  test("shield: a cursor in the open next to a shield still gets hit", () => {
+    const sim = new TurretsSim(() => 0.5);
+    const totals = run(sim, { ...base, pointer: { x: 300, y: 50 }, walls: [{ x: 100, y: 70, width: 80, height: 30 }] }, 1.2);
+    expect(totals.hits).toBeGreaterThan(0);
+    expect(totals.impacts.length).toBe(0);
   });
 
   test("shield: a turret under a window holds fire", () => {

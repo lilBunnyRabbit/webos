@@ -11,6 +11,8 @@
 > - Settings shows live wallpapers in their own section after Wallpaper, per the one-section-per-topic pattern. About › Reset settings also clears `live_options`.
 > - Pew Pew clears bolts in flight when paused, so none stay frozen over a maximized window.
 
+> **Revision 2026-10-21: widgets are shields (owner feedback).** "The lasers should hit windows and widgets if the mouse is over them, not the mouse: you hide from them." `LiveContext` gains `widgets: DOMRect[]`, measured on read from each `[data-desktop-widget]` element in the desktop surface, like `windows`. Pew Pew's shield mode treats windows and widgets alike: a cursor inside either can't be hit (before, a bolt stopping just short of a window's edge could still reach a cursor within 6px inside it, and widgets weren't shields at all), and turrets under either hold fire. Bolts and their shield sparks stay on the background layer; the sparks got bigger, longer and a glow so they read at an edge even when partly behind it.
+
 ## Context
 LaxDOTexe proposed turrets on the grid dots that shoot at the mouse. Generalized: wallpapers that animate and react to the pointer and the windows. Discussion: [brainstorm](../brainstorm/2026-10-20_live-wallpapers.md).
 
