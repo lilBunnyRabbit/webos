@@ -74,7 +74,7 @@ App.svelte
 
 `os.svelte` gets the shell as a prop: `main.ts` awaits `load_shell(kernel.platform, kernel.mode)` (`components/platform-shell.ts`, the one shell branch: solo first, then platform) alongside `kernel.init()`, so only the shell this page needs downloads.
 
-The desktop, window manager and toast area share one grid cell, stacked with z-index. The taskbar gets the other cell. The `ov()` maps in `desktop-shell.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
+The desktop, window manager, a live wallpaper's overlay layer (ADR-057, only while one is active) and toast area share one grid cell, stacked with z-index in that order. The taskbar gets the other cell. The `ov()` maps in `desktop-shell.svelte` pick the cells from the taskbar position. The grid itself paints `background-darkest`, so the floating taskbar's transparent strip shows the same shade as the desktop. Details are in [shell/](shell/).
 
 ## Source map
 

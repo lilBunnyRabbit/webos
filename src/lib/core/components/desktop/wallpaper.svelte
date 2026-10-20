@@ -1,12 +1,18 @@
 <script lang="ts">
-  import kernel, { type FilesService, type SettingsService, type Wallpaper, type WallpaperFit } from "$lib/core/api";
+  import kernel, { WallpaperPreset, type FilesService, type SettingsService, type Wallpaper, type WallpaperFit } from "$lib/core/api";
+  import { Platform } from "$lib/core/api/kernel/platform";
 
   /** `value` draws a given wallpaper instead of the current one (Settings' previews). */
   let { value, class: class_name = "" }: { value?: Wallpaper; class?: string } = $props();
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const files = $derived(kernel.service<FilesService>("files"));
-  const wallpaper = $derived(value ?? settings.wallpaper);
+  const GRID: Wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
+  // Live wallpapers are desktop only (ADR-057); a phone carrying one from a backup draws the grid.
+  const wallpaper = $derived.by(() => {
+    const chosen = value ?? settings.wallpaper;
+    return chosen.kind === "live" && kernel.platform === Platform.MOBILE ? GRID : chosen;
+  });
   const image_path = $derived(wallpaper.kind === "image" ? wallpaper.path : null);
 
   let url = $state<string | null>(null);
@@ -49,6 +55,12 @@
     {/if}
   {:else}
     <div class="preset absolute inset-0" data-preset={wallpaper.kind === "preset" ? wallpaper.preset : "glow"}></div>
+    {#if wallpaper.kind === "live"}
+      {@const id = wallpaper.id}
+      {#await import("./live/live-layer.svelte") then { default: LiveLayer }}
+        <LiveLayer {id} layer="background" preview={value !== undefined} />
+      {/await}
+    {/if}
   {/if}
 </div>
 

@@ -1,4 +1,4 @@
-import type { Appearance, FileDefaults, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
+import type { Appearance, FileDefaults, LiveOptions, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { TaskbarPosition, TaskbarSize } from "./type";
 import { BRAND_DARK } from "./themes";
 import { DEFAULT_APPEARANCE, RADIUS_SCALE, SHADOW_STRENGTH, TEXT_SCALE } from "./appearance";
@@ -34,6 +34,7 @@ export class SettingsService implements ISettingsService {
   public wallpaper = $state<Wallpaper>(DEFAULT_WALLPAPER);
   public saved_themes = $state<SavedTheme[]>([]);
   public appearance = $state<Appearance>({ ...DEFAULT_APPEARANCE });
+  public live_options = $state<LiveOptions>({});
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -59,6 +60,7 @@ export class SettingsService implements ISettingsService {
       this.wallpaper = saved.wallpaper;
       this.saved_themes = saved.saved_themes;
       this.appearance = saved.appearance;
+      this.live_options = saved.live_options;
     }
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
@@ -95,6 +97,7 @@ export class SettingsService implements ISettingsService {
             wallpaper: this.wallpaper,
             saved_themes: this.saved_themes,
             appearance: this.appearance,
+            live_options: this.live_options,
           })
         );
       });

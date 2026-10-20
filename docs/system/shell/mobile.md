@@ -9,7 +9,7 @@ The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`
 ```
 mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touch-action: manipulation
 ├─ DialogsHost anchored="sheet"   menus as bottom sheets
-├─ main (stage)           container-type: size, isolate; the wallpaper (shell/desktop.md#wallpaper); logo mark watermark in the centre (presets only)
+├─ main (stage)           container-type: size, isolate; the wallpaper (shell/desktop.md#wallpaper); logo mark watermark in the centre (any wallpaper but an image; a live wallpaper draws as the grid here, ADR-057)
 │  ├─ mobile-home.svelte  pages + page dots + dock
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
 │  ├─ app-drawer.svelte   when open

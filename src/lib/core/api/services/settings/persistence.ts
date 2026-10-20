@@ -10,6 +10,7 @@ import {
   WallpaperPreset,
   type Appearance,
   type FileDefaults,
+  type LiveOptions,
   type SavedTheme,
   type Taskbar,
   type Theme,
@@ -19,6 +20,7 @@ import {
 import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
 import { PATHS } from "../files/hierarchy";
 import { DEFAULT_APPEARANCE } from "./appearance";
+import { LIVE_WALLPAPERS, live_options_of } from "$lib/core/components/desktop/live/registry";
 
 /** OS config lives in system storage (ADR-021). */
 export const SETTINGS_PATH = `${PATHS.etc}/settings.json`;
@@ -54,6 +56,7 @@ export interface PersistedSettings {
   wallpaper: Wallpaper;
   saved_themes: SavedTheme[];
   appearance: Appearance;
+  live_options: LiveOptions;
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -81,6 +84,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
       wallpaper: parse_wallpaper(data.wallpaper),
       saved_themes: parse_saved_themes(data.saved_themes),
       appearance: parse_appearance(data.appearance),
+      live_options: parse_live_options(data.live_options),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
@@ -133,12 +137,23 @@ const wallpaper_schema = z.discriminatedUnion("kind", [
     dim: z.number().min(0).max(0.6).catch(0),
     blur: z.number().min(0).max(20).catch(0),
   }),
+  z.object({ kind: z.literal("live"), id: z.string().refine((id) => Object.hasOwn(LIVE_WALLPAPERS, id)) }),
 ]);
 
 // Added after version 1 shipped, like file_defaults: a missing or broken value is the default, not a lost save.
 export function parse_wallpaper(saved: unknown): Wallpaper {
   const result = wallpaper_schema.safeParse(saved);
   return result.success ? result.data : DEFAULT_WALLPAPER;
+}
+
+// Additive; ids no longer in the registry are dropped, and each entry's own schema fills or fixes its fields.
+export function parse_live_options(saved: unknown): LiveOptions {
+  if (typeof saved !== "object" || saved === null) return {};
+  const options: LiveOptions = {};
+  for (const [id, value] of Object.entries(saved)) {
+    if (Object.hasOwn(LIVE_WALLPAPERS, id)) options[id] = live_options_of(id, value);
+  }
+  return options;
 }
 
 const appearance_schema = z.object({

@@ -60,6 +60,7 @@
     settings.file_defaults = {};
     settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
     settings.appearance = { ...DEFAULT_APPEARANCE };
+    settings.live_options = {};
   }
 </script>
 
@@ -201,7 +202,7 @@
   </Section>
 
   <Section title="Reset">
-    <SettingRow label="Reset settings" description="Brand Dark theme, default corners and motion, grid wallpaper, taskbar at the bottom, default apps forgotten. Saved themes and files are kept.">
+    <SettingRow label="Reset settings" description="Brand Dark theme, default corners and motion, grid wallpaper and live wallpaper options, taskbar at the bottom, default apps forgotten. Saved themes and files are kept.">
       <Button variant="danger" onclick={reset_settings}>
         <ArrowCounterClockwiseIcon /> Reset
       </Button>

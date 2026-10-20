@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_APPEARANCE } from "./appearance";
-import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_appearance, parse_settings, parse_wallpaper } from "./persistence";
+import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_appearance, parse_live_options, parse_settings, parse_wallpaper } from "./persistence";
+import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turrets/options";
 
 describe("parse_appearance", () => {
   test("keeps valid values", () => {
@@ -78,5 +79,25 @@ describe("taskbar size, auto-hide and seconds", () => {
   test("a save from before they existed, or unknown values, load as medium, always shown, no seconds", () => {
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { position: "top" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false, seconds: false });
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, taskbar: { size: "huge", auto_hide: "yes" } }))?.taskbar).toMatchObject({ size: "medium", auto_hide: false });
+  });
+});
+
+describe("live wallpapers", () => {
+  test("a registered id is kept, an unknown one is the grid", () => {
+    expect(parse_wallpaper({ kind: "live", id: "turrets" })).toEqual({ kind: "live", id: "turrets" });
+    expect(parse_wallpaper({ kind: "live", id: "gone" })).toEqual(DEFAULT_WALLPAPER);
+    expect(parse_wallpaper({ kind: "live", id: "toString" })).toEqual(DEFAULT_WALLPAPER);
+  });
+
+  test("options keep valid fields, fix broken ones, and drop unknown ids", () => {
+    expect(parse_live_options({ turrets: { mode: "follow", pace: "warp", sound: true, volume: 3 }, gone: { a: 1 } })).toEqual({
+      turrets: { ...DEFAULT_TURRETS_OPTIONS, mode: "follow", sound: true },
+    });
+  });
+
+  test("garbage options are the defaults", () => {
+    expect(parse_live_options({ turrets: "loud" })).toEqual({ turrets: DEFAULT_TURRETS_OPTIONS });
+    expect(parse_live_options(null)).toEqual({});
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.live_options).toEqual({});
   });
 });

@@ -6,11 +6,25 @@
   import Desktop from "./desktop/desktop.svelte";
   import ToastArea from "./notifications/toast-area.svelte";
   import DialogsHost from "./dialogs/dialogs-host.svelte";
+  import { LIVE_WALLPAPERS } from "./desktop/live/registry";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const position = $derived(settings.taskbar.position);
   // An auto-hidden taskbar overlays the screen (ADR-015), so the windows and the desktop get all of it.
   const area = $derived(settings.taskbar.auto_hide ? "overlay" : position);
+  const live = $derived(settings.wallpaper.kind === "live" && LIVE_WALLPAPERS[settings.wallpaper.id]?.overlay ? settings.wallpaper.id : null);
+  const stage = $derived(
+    ov(
+      {
+        top: "[grid-area:2/1]",
+        bottom: "[grid-area:1/1]",
+        left: "[grid-area:1/2]",
+        right: "[grid-area:1/1]",
+        overlay: "[grid-area:1/1]",
+      },
+      area
+    )
+  );
 </script>
 
 <div
@@ -28,39 +42,21 @@
     )
   )}
 >
-  <div
-    class={cn(
-      "relative z-0 overflow-hidden",
-      ov(
-        {
-          top: "[grid-area:2/1]",
-          bottom: "[grid-area:1/1]",
-          left: "[grid-area:1/2]",
-          right: "[grid-area:1/1]",
-          overlay: "[grid-area:1/1]",
-        },
-        area
-      )
-    )}
-  >
+  <div class={cn("relative z-0 overflow-hidden", stage)}>
     <Desktop />
   </div>
 
-  <WindowManager
-    class={cn(
-      "relative z-0 pointer-events-none",
-      ov(
-        {
-          top: "[grid-area:2/1]",
-          bottom: "[grid-area:1/1]",
-          left: "[grid-area:1/2]",
-          right: "[grid-area:1/1]",
-          overlay: "[grid-area:1/1]",
-        },
-        area
-      )
-    )}
-  />
+  <WindowManager class={cn("relative z-0 pointer-events-none", stage)} />
+
+  <!-- The live wallpaper's overlay (ADR-057): above windows, below toasts, the taskbar and dialogs; never takes the pointer. -->
+  {#if live}
+    {@const id = live}
+    <div class={cn("pointer-events-none relative z-0", stage)}>
+      {#await import("./desktop/live/live-layer.svelte") then { default: LiveLayer }}
+        <LiveLayer {id} layer="overlay" />
+      {/await}
+    </div>
+  {/if}
 
   <!-- Toasts gather in the corner nearest the tray (ADR-006 revision). -->
   <ToastArea

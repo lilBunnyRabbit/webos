@@ -90,6 +90,7 @@ What are the implications of this decision?
 | [054](./054-ai-assistant-over-shell.md) | AI Assistant over Shell Commands | 2026-10-20 | Implemented |
 | [055](./055-font-maker.md) | Font Maker | 2026-10-20 | Implemented |
 | [056](./056-birdseye.md) | Birdseye, Subject-Locked Video | 2026-10-20 | Implemented |
+| [057](./057-live-wallpapers.md) | Live Wallpapers | 2026-10-20 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

@@ -8,6 +8,7 @@ export default {
     "theme",
     "dark mode",
     "wallpaper",
+    "live wallpaper",
     "taskbar",
     "configuration",
     "control panel",

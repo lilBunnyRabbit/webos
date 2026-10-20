@@ -1,12 +1,13 @@
 # Desktop
 
-Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts), [ADR-011](../../adrs/011-desktop-enhancements.md) (multi-select built, wallpaper and auto-arrange not)
+Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/desktop.md), [apps](../services/apps.md) · ADR: [ADR-022](../../adrs/022-desktop-folder.md) (desktop folder, shortcuts), [ADR-011](../../adrs/011-desktop-enhancements.md) (multi-select built, wallpaper and auto-arrange not), [ADR-057](../../adrs/057-live-wallpapers.md) (live wallpapers)
 
 | File | Role |
 |------|------|
 | `desktop.svelte` | The CSS grid, the wallpaper and the grid preset's dots, measurement, keyboard, rendering of selection, marquee, drag targets and resize preview |
 | `desktop.handler.svelte.ts` | `DesktopHandler`: selection, marquee, widget resize and native drag and drop, exposed as `pointer_attachment()` and `drop_attachment()` like `window.handler.svelte.ts`. Takes a getter for the grid cells |
-| `wallpaper.svelte` | The wallpaper layer, shared with the phone home |
+| `wallpaper.svelte` | The wallpaper layer, shared with the phone home; mounts a live wallpaper's background layer |
+| `live/` | Live wallpapers (ADR-057), see [below](#live-wallpapers) |
 | `desktop-item.svelte` | One icon: a draggable button showing selected, dimmed and drop-target states; reports clicks, menus and drag start/end up |
 | `desktop-item-face.svelte` | Icon + label |
 | `desktop-widget.svelte` | One widget (ADR-034): a frame spanning `size.w × size.h` cells, a title strip as its handle and the app's lazy widget component as the body |
@@ -31,11 +32,73 @@ It sits in `desktop-shell.svelte` under the [window manager](window-manager.md),
 | Preset `glow` | A `background-dark` ellipse glowing from the top: shades of one surface, which the brand allows |
 | Preset `tint` | The glow plus one `primary` ellipse (30%) fading in from the bottom right: one brand colour into the surface, never a blend of two |
 | Preset `plain` | `background-darkest` only |
+| Live | The glow, then the entry's `background` layer ([live wallpapers](#live-wallpapers)). On the phone, the grid preset |
 | Image | The file at `path` as an object URL (revoked on change), `background-size` cover / contain / auto (tile repeats, center doesn't), `filter: blur()` with the layer grown by twice the blur so the edges don't fade, then `background-darkest` at `dim` opacity on top. A missing file draws the glow |
 
 The surface gets `data-wallpaper-image` while an image is set. An unlayered rule in `app.css` then gives every `[data-wallpaper-label]` (desktop and phone home labels) a `background/72` backing, so labels stay readable on any photo.
 
 Set from Settings › Appearance › Wallpaper, or "Set as wallpaper" on an image file (desktop, File Explorer, Media Preview), which calls `set_wallpaper()` in `components/files/file-actions.ts` → `settings.set_wallpaper_image(path)` with an error toast.
+
+## Live wallpapers
+
+ADR-057. A `Wallpaper` of `{ kind: "live", id }` draws one of the OS's built-in live wallpapers: animated, aware of the pointer and the windows. Desktop only: on the phone `wallpaper.svelte` draws the grid preset in its place, and Settings hides the section.
+
+Code in `components/desktop/live/`:
+
+| File | Contents |
+|------|----------|
+| `registry.ts` | `LIVE_WALLPAPERS` (id → `LiveWallpaperEntry`), `live_options_of(id, saved)`, the `LiveContext`, `LiveProps`, `LiveSettingsProps`, `LiveLayer` types. Imported by settings persistence, so it's in the boot chunk: names, authors, zod option schemas and `import()` stubs only |
+| `context.svelte.ts` | `LiveContextState`, the `LiveContext` a layer hands its component |
+| `live-layer.svelte` | Mounts one layer: loads the entry's `background` or `overlay` component, builds the context, parses the options from `settings.live_options` |
+| `geometry.ts` | `dot_cells()` (the grid dots' cells), `tile_cells()` (the thumbnail grid), `centre()`, `contains()` |
+| `theme.ts` | `read_tokens()` resolves tokens to colours a canvas can parse (a probe's computed `color`, since a token can be `oklch(from var(--primary) …)`); `watch_theme()` calls back when `<html>`'s `style` changes |
+| `turrets/` | Pew Pew: `options.ts` (schema), `sim.ts` (pure simulation), `sound.ts` (WebAudio synth), `turrets-canvas.svelte`, `turrets-background.svelte`, `turrets-overlay.svelte`, `turrets-settings.svelte` |
+
+An entry:
+
+```ts
+interface LiveWallpaperEntry<T> {
+  name: string;
+  authors?: AppAuthor[];               // the Settings byline, through app-byline
+  options: ZodType<T>;                 // a .catch per field, so parse({}) is the defaults
+  background: () => Promise<{ default: Component<LiveProps<T>> }>;
+  overlay?: () => Promise<{ default: Component<LiveProps<T>> }>;
+  settings?: () => Promise<{ default: Component<LiveSettingsProps<T>> }>;
+}
+```
+
+**Layers.** `wallpaper.svelte` imports `live/live-layer.svelte` with `import()` only while the wallpaper is live, and mounts the `background` layer above the preset glow (`data-preset="glow"`), so it sits behind the icons and windows. `desktop-shell.svelte` mounts the `overlay` layer, when the active entry has one, in a `pointer-events-none relative z-0` wrapper in the window manager's grid cell, after the window manager: above every window, below the toast area and taskbar (`z-1`) and the dialogs host (top layer). Both layers load lazily, so a desktop without a live wallpaper downloads none of this.
+
+**Context.** Coordinates are the page's (`clientX`, `getBoundingClientRect()`); a component subtracts its own rect.
+
+| Field | Source |
+|-------|--------|
+| `pointer` | `pointermove` on `window` (passive), `null` after `pointerleave` on `<html>`. Moves over an iframe don't arrive |
+| `windows` | Measured on read: for each id in `windows.list()` that isn't minimized or popped out (ExtractService), the `[data-window-id]` element in `windows.container.element`. Measured rather than read from `bounds`, because a dragged window lives in the window's local move state and a snapped or maximized one in CSS |
+| `cells` | `dot_cells(desktop.container.bounds, .cell, .grid)`: `(columns + 1) × (rows + 1)` cells centred on the grid line crossings, the same points the `[data-dots]` CSS paints. A preview tiles its host in 14px cells instead |
+| `paused` | A preview, `document.hidden`, `document.fullscreenElement`, or any visible maximized window (not minimized, not popped out) |
+| `preview` | `wallpaper.svelte` got a `value` (Settings' thumbnails) |
+
+**Options.** `live_options_of(id, settings.live_options[id])`: invalid fields fall back to their defaults, a missing entry is all defaults.
+
+### Pew Pew
+
+Id `turrets`, by LaxDOTexe and lilBunnyRabbit. Every grid dot is a turret: a `foreground` dot (30%) with a short barrel (45%) that turns toward the cursor at 9 rad/s, the short way round. Sizes scale with the cell (`unit` = cell / 40, clamped 0.5–1).
+
+| Option | Values | Default |
+|--------|--------|---------|
+| `mode` | `shield`: bolts on the background canvas, behind windows; a bolt entering any window rect stops there with a spark, so a cursor over a window is safe, and turrets under a window hold fire. `follow`: bolts on the overlay canvas, hitting the cursor anywhere, clicks still pass through | `shield` |
+| `pace` | `chill` every ~1.5 s, 1 turret, 260 px/s; `normal` every ~0.5 s, 3 turrets, 460 px/s; `frantic` every ~0.14 s, 6 turrets, 760 px/s. Intervals ±25% | `normal` |
+| `sound` | Off by default | `false` |
+| `volume` | 0–1 (the form shows 0–100) | `0.5` |
+
+Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. Wall: `first_wall_hit()` clips the step against each window rect (Liang–Barsky) → 5 `primary` sparks for 180 ms. Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
+
+The background layer always draws the turrets and fires in shield mode; the overlay layer draws only in follow mode and fires there. Each layer has one canvas sized to `devicePixelRatio`, colours read through `read_tokens()` and re-read on a theme change. The `requestAnimationFrame` loop runs only while not paused and while the pointer is on the page or something still moves (bolts, particles, a turret turning); otherwise one still frame is drawn on resize, theme or option change. A pause also clears bolts in flight, so none hang over a maximized window. A mode or pace change starts clean. Destroy cancels the frame and closes the audio.
+
+Sound (`sound.ts`, `PewSynth`): the AudioContext is made on the first `pointerdown` or `keydown` after sound is turned on, or at once when the page already had a gesture (`navigator.userActivation.hasBeenActive`). A pew is a square oscillator sweeping from 1400 Hz to 220 Hz over 0.13 s (times the pace's pitch: 0.8, 1, 1.3, ±6%) under a 5 ms attack and exponential decay; at most 3 per frame. A hit is a pop: 0.15 s of white noise through a lowpass falling from 1600 Hz to 300 Hz, decaying over 0.12 s.
+
+The thumbnail draws the turrets aimed at a point right of centre, and in shield mode three bolts on their way.
 
 ## Desktop item
 

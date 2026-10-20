@@ -11,7 +11,7 @@ That's all it does. It owns no state.
 
 ## Placement
 
-[desktop-shell.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy (the whole screen while the taskbar auto-hides). Its classes are `relative z-0 pointer-events-none`. Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
+[desktop-shell.svelte](../overview.md) mounts it in the same grid cell as the desktop and the toast area, the one the taskbar doesn't occupy (the whole screen while the taskbar auto-hides). Its classes are `relative z-0 pointer-events-none`. A live wallpaper's overlay layer comes after it in the same cell, so it paints above every window ([desktop](desktop.md#live-wallpapers)). Windows set `pointer-events-auto`, so clicks on empty space fall through to the desktop underneath. Windows are `position: absolute` against this element. Maximized means `100%` of it, and snap percentages are relative to it.
 
 ## Container measurement
 

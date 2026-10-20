@@ -166,6 +166,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Desktop icon multi-selection (marquee, Ctrl+Click, Shift+Click, Ctrl+A), group drag keeping its shape, drop into folders (2026-10-12)
 - [x] Desktop context menu (right-click on background and icons; ADR-025)
 - [x] Desktop wallpapers: token presets and a user image with fit, dim and blur, on the desktop and the phone home (2026-10-13). No free colour or gradient pickers (brand)
+- [x] Live wallpapers (ADR-057, 2026-10-21): a lazy registry of OS built-ins with a background layer and an overlay above windows, desktop only; the first is Pew Pew (LaxDOTexe's idea): grid-dot turrets firing at the cursor, shield and follow modes, three paces, optional synth sound. App-contributed wallpapers deferred
 - [x] Icon auto-arrange: one-shot Sort by Name, Kind, Date modified (2026-10-13)
 - [ ] Desktop icon settings (size, labels, grid spacing)
 

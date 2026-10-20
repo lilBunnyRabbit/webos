@@ -12,6 +12,8 @@ export interface SettingsService extends IService {
   saved_themes: SavedTheme[];
   /** Non-colour look: corners, shadows, text size and motion (ADR-015 revision). Not part of a theme, so presets and saved themes leave it alone. */
   appearance: Appearance;
+  /** Options of each live wallpaper used, by id, kept when switching away (ADR-057). Replace an entry wholesale; load parses each with its wallpaper's schema. */
+  live_options: LiveOptions;
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
 }
@@ -88,10 +90,16 @@ export const WallpaperFit = {
 } as const;
 export type WallpaperFit = (typeof WallpaperFit)[keyof typeof WallpaperFit];
 
+export type LiveWallpaperId = string;
+
+export type LiveOptions = Partial<Record<LiveWallpaperId, unknown>>;
+
 export type Wallpaper =
   | { kind: "preset"; preset: WallpaperPreset }
   /** `dim` 0–0.6 fades toward the theme's darkest surface; `blur` in px, 0–20. */
-  | { kind: "image"; path: string; fit: WallpaperFit; dim: number; blur: number };
+  | { kind: "image"; path: string; fit: WallpaperFit; dim: number; blur: number }
+  /** Desktop only: mobile draws the grid in its place (ADR-057). */
+  | { kind: "live"; id: LiveWallpaperId };
 
 export const AppearanceRadius = {
   SHARP: "sharp",

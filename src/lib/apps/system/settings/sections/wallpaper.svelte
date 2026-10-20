@@ -6,9 +6,15 @@
   import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
   import { cn } from "$lib/core/utils";
   import { Check as CheckIcon, Image as ImageIcon } from "phosphor-svelte";
+  import { Platform } from "$lib/core/api/kernel/platform";
+  import { LIVE_WALLPAPERS, live_options_of } from "$lib/core/components/desktop/live/registry";
+  import AppByline from "$lib/core/components/apps/app-byline.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const { window: win } = get_app_context();
+
+  const LIVE = Object.entries(LIVE_WALLPAPERS).map(([id, entry]) => ({ id, entry }));
+  const live = $derived(settings.wallpaper.kind === "live" ? { id: settings.wallpaper.id, entry: LIVE_WALLPAPERS[settings.wallpaper.id] } : null);
 
   const PRESETS: { preset: WallpaperPreset; label: string }[] = [
     { preset: WallpaperPreset.GRID, label: "Grid" },
@@ -82,7 +88,8 @@
         {@const value: Wallpaper = { kind: "preset", preset }}
         {@render tile(
           label,
-          settings.wallpaper.kind === "preset" && settings.wallpaper.preset === preset,
+          (settings.wallpaper.kind === "preset" && settings.wallpaper.preset === preset) ||
+            (settings.wallpaper.kind === "live" && kernel.platform === Platform.MOBILE && preset === WallpaperPreset.GRID),
           () => (settings.wallpaper = value),
           value,
           preset === WallpaperPreset.GRID
@@ -116,6 +123,29 @@
     {/if}
   </div>
 </Section>
+
+{#if kernel.platform !== Platform.MOBILE}
+  <Section title="Live wallpapers" description="Animated, and they react to the pointer and your windows. Desktop only." flush>
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
+        {#each LIVE as { id, entry } (id)}
+          {@const value: Wallpaper = { kind: "live", id }}
+          {@render tile(entry.name, live?.id === id, () => (settings.wallpaper = value), value)}
+        {/each}
+      </div>
+
+      {#if live?.entry}
+        {@const { id, entry } = live}
+        <AppByline manifest={entry} class="px-0.5" />
+        {#if entry.settings}
+          {#await entry.settings() then { default: Options }}
+            <Options value={live_options_of(id, settings.live_options[id])} onchange={(next) => (settings.live_options = { ...settings.live_options, [id]: next })} />
+          {/await}
+        {/if}
+      {/if}
+    </div>
+  </Section>
+{/if}
 
 <style>
   .dots::after {

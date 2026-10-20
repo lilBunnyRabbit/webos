@@ -65,7 +65,7 @@
   <!-- The stage is the size container cards and pages measure against (100cqw / 100cqh). -->
   <main class="relative isolate min-h-0 flex-1 [container-type:size]" data-wallpaper-image={settings.wallpaper.kind === "image" ? "" : undefined}>
     <Wallpaper />
-    {#if settings.wallpaper.kind === "preset"}
+    {#if settings.wallpaper.kind !== "image"}
     <LogoMark
       class="pointer-events-none absolute top-1/2 left-1/2 w-2/5 max-w-60 -translate-x-1/2 -translate-y-1/2 text-primary/10"
       aria-hidden="true"
