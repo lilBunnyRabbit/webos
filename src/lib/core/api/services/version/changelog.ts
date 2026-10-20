@@ -5,6 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.15.0",
+    date: "2026-10-21",
+    title: "Widgets your way",
+    changes: [
+      { kind: NEW, text: "Widgets come as a Card, Glass or Clear, which leaves just the content on your wallpaper: right-click a widget, or hold it on a phone, and pick Style." },
+    ],
+  },
+  {
     version: "3.14.0",
     date: "2026-10-21",
     title: "Pew pew",

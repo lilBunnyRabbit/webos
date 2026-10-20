@@ -48,6 +48,7 @@ import type {
   WidgetProps,
   WidgetSize,
   WidgetSizeLimits,
+  WidgetStyle,
   WindowId,
   WindowOptions,
   WindowsService,
@@ -129,6 +130,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "Platform",
       "ShellError",
       "ShortcutCategory",
+      "WidgetStyle",
       "WindowFlag",
       "arg",
       "default",
@@ -192,7 +194,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "resolve_token",
     ],
   ],
-  ["$lib/core/api/services/apps/type", () => import("$lib/core/api/services/apps/type"), ["AppCategory", "DailyRank"]],
+  ["$lib/core/api/services/apps/type", () => import("$lib/core/api/services/apps/type"), ["AppCategory", "DailyRank", "WidgetStyle"]],
   [
     "$lib/core/api/services/apps/helpers",
     () => import("$lib/core/api/services/apps/helpers"),
@@ -312,7 +314,7 @@ const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
 const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
-const widget_props_members: Members<WidgetProps, "name" | "props" | "size"> = true;
+const widget_props_members: Members<WidgetProps, "name" | "props" | "size" | "style"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
 const shell_contribution_members: Members<ShellContribution, "commands" | "completers" | "lazy" | "values"> = true;
@@ -382,6 +384,7 @@ type StableTypes = [
   WidgetProps,
   WidgetSize,
   WidgetSizeLimits,
+  WidgetStyle,
   WindowId,
   WindowOptions,
   WindowsService,

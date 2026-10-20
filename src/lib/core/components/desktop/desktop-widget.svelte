@@ -1,8 +1,9 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DesktopItem } from "$lib/core/api";
+  import kernel, { type AppsService, type DesktopItem, WidgetStyle } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
   import WidgetBody from "./widget-body.svelte";
+  import { widget_surface } from "./widget-style";
 
   type Widget = Extract<DesktopItem, { kind: "widget" }>;
 
@@ -37,12 +38,14 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const manifest = $derived(apps.get(item.app_id));
   const resizable = $derived(manifest?.widget_size !== undefined);
+  const clear = $derived(item.style === WidgetStyle.CLEAR);
 </script>
 
 <!-- The title strip is the widget's handle: select, drag, open and menu go through it; the body belongs to the app. -->
 <div
   class={cn(
-    "group/widget relative m-1 flex min-h-0 min-w-0 flex-col self-stretch justify-self-stretch overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-opacity duration-150",
+    "group/widget relative m-1 flex min-h-0 min-w-0 flex-col self-stretch justify-self-stretch overflow-hidden rounded-xl transition-opacity duration-150",
+    widget_surface(item.style),
     selected && "ring-primary/40 ring-2",
     dimmed && "opacity-40"
   )}
@@ -57,7 +60,8 @@
     class={cn(
       "flex h-6 shrink-0 cursor-grab items-center gap-1.5 border-b border-foreground/8 px-2 text-left text-2xs font-medium text-foreground/65 select-none",
       "hover:bg-foreground/6 focus-visible:bg-foreground/8 focus-visible:outline-none active:cursor-grabbing",
-      selected && "bg-primary/14 text-foreground/85 hover:bg-primary/18"
+      clear && "rounded-t-xl border-transparent bg-background-light/70 hover:bg-background-light/85 opacity-0 backdrop-blur-lg transition-opacity duration-150 group-focus-within/widget:opacity-100 group-hover/widget:opacity-100",
+      selected && "bg-primary/14 text-foreground/85 opacity-100 hover:bg-primary/18"
     )}
     onclick={onselect}
     ondblclick={onopen}
@@ -88,6 +92,7 @@
         "absolute right-0 bottom-0 grid size-6 cursor-nwse-resize place-items-end p-1 text-foreground/40 opacity-0 transition-opacity duration-150 hover:text-foreground/80",
         "group-focus-within/widget:opacity-100 group-hover/widget:opacity-100",
         (selected || resizing) && "opacity-100",
+        clear && "bare-text",
         resizing && "text-primary hover:text-primary"
       )}
       style:touch-action="none"

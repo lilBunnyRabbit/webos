@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type DesktopItem, type HomeSlot, type MobileDesktopService, type UiService } from "$lib/core/api";
+  import kernel, { type AppsService, type DesktopItem, type HomeSlot, type MobileDesktopService, type UiService, WidgetStyle } from "$lib/core/api";
   import { UiOverlay } from "$lib/core/api/services/ui/type";
   import type { WidgetSize } from "$lib/core/api/services/apps/type";
   import { clamp_widget_size } from "$lib/core/api/services/apps/widget";
@@ -8,6 +8,7 @@
   import { Plus as PlusIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import { background_menu } from "../desktop/desktop-actions";
   import WidgetBody from "../desktop/widget-body.svelte";
+  import { widget_surface } from "../desktop/widget-style";
   import { Button } from "../ui";
   import HomeIcon from "./home-icon.svelte";
   import { add_widget_menu, EDIT_HOME_ITEM, home_item_menu } from "./home-actions";
@@ -266,7 +267,9 @@
               data-home-name={item.name}
               {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, false, point, edit), ignore: "input, textarea, select, [contenteditable]" })}
               class={cn(
-                "relative m-1.5 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-opacity duration-150",
+                "relative m-1.5 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl transition-opacity duration-150",
+                widget_surface(item.style),
+                editing && item.style === WidgetStyle.CLEAR && "outline-1 -outline-offset-1 outline-foreground/30 outline-dashed",
                 editing && !resize && "motion-safe:animate-wiggle",
                 drag?.moving && drag.item.name === item.name && "opacity-30",
                 drop_before === item.name && "ring-2 ring-primary"

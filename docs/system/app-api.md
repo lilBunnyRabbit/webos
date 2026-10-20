@@ -108,9 +108,10 @@ The barrel exports nothing else. The window frame builds the context with `set_a
 
 | Name | Stable | Notes |
 |------|--------|-------|
-| `WidgetProps` | yes | `props` (validated against the manifest's `props`), `size` (`{ w, h }` cells), `name` (the `.widget` file) |
+| `WidgetProps` | yes | `props` (validated against the manifest's `props`), `size` (`{ w, h }` cells), `name` (the `.widget` file), `style` (the frame, a `WidgetStyle`; on `clear` nothing sits behind the content, so it should read on any wallpaper) |
+| `WidgetStyle` | yes | Const object `CARD` / `GLASS` / `CLEAR` (`card`, `glass`, `clear`). A new style is a minor |
 | `WidgetSize`, `WidgetSizeLimits` | yes | Spans 1–8, `min ≤ default ≤ max` |
-| `.widget` file format | yes | JSON `{ app, props?, w, h }` in `/home/Desktop`. Users' widgets live in these, so the format is a promise too |
+| `.widget` file format | yes | JSON `{ app, props?, w, h, style? }` in `/home/Desktop` (`style` missing or unknown reads as `card`). Users' widgets live in these, so the format is a promise too |
 | `badge` reading | yes | Read inside the shell UI's reactive scope. Back it with `createSubscriber`. `null` or `0` shows nothing |
 | A widget has no app context | yes | Use services through `kernel.service` |
 | Widget grid, resize grip, desktop layout | no | |
@@ -239,7 +240,7 @@ Users' data sits in these, so moving one is a major even when no code signature 
 | `localStorage` `app.{id}.{key}` | `storage.get/set/persisted`, `create_storage_handle` | JSON |
 | `/var/lib/apps/{id}/` | `storage.file`, `json_file(app_data_path(...))` | Whatever the app writes |
 | `/var/lib/games/plays.json` | Games kit | Version 1, `PlaysSchema` |
-| `/home/Desktop/*.widget` | `desktop.pin_widget`, the desktop | `{ app, props?, w, h }` |
+| `/home/Desktop/*.widget` | `desktop.pin_widget`, the desktop | `{ app, props?, w, h, style? }` |
 | `storage.window()` values | SessionService, with the window | Internal file; the promise is that values come back on restore if they pass the schema |
 
 ## Known gaps

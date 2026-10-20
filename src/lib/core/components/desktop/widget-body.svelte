@@ -34,12 +34,12 @@
 
 {#if component && !(component instanceof Promise)}
   {@const Widget = component}
-  <Widget props={widget_props ?? {}} {size} name={item.name} />
+  <Widget props={widget_props ?? {}} {size} name={item.name} style={item.style} />
 {:else if component}
   {#await component}
     <div class="grid h-full place-items-center"><Spinner /></div>
   {:then Widget}
-    <Widget props={widget_props ?? {}} {size} name={item.name} />
+    <Widget props={widget_props ?? {}} {size} name={item.name} style={item.style} />
   {:catch error}
     <LoadFailed {error} what="widget" compact />
   {/await}

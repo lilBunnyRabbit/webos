@@ -16,7 +16,7 @@ import {
   SquaresFour as SquaresFourIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
-import { remove_item, rename_item, show_properties, uninstall_item } from "../desktop/desktop-actions";
+import { apply_style_choice, remove_item, rename_item, show_properties, style_item, uninstall_item } from "../desktop/desktop-actions";
 import { uninstall_app } from "../apps/app-actions";
 
 const desktop = () => kernel.service<MobileDesktopService>("desktop");
@@ -40,6 +40,7 @@ export async function home_item_menu(item: DesktopItem, docked: boolean, anchor:
               : { id: "dock", label: "Add to dock", icon: PushPinIcon, disabled: desktop().dock_full },
           ]),
       EDIT_HOME_ITEM,
+      ...style_item(item),
       { separator: true },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon },
       { id: "delete", label: shortcut ? "Remove shortcut" : item.kind === "widget" ? "Remove widget" : "Delete", icon: TrashIcon, danger: true },
@@ -49,6 +50,7 @@ export async function home_item_menu(item: DesktopItem, docked: boolean, anchor:
     ],
     { anchor }
   );
+  if (apply_style_choice(item, choice)) return;
   if (choice === "open") desktop().open(item, { anchor });
   else if (choice === "dock") desktop().set_docked(item.name, true);
   else if (choice === "undock") desktop().set_docked(item.name, false);

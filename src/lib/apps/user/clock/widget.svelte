@@ -1,6 +1,6 @@
 <script lang="ts">
-  import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
-  import { format_date, clamp, pad2 } from "$lib/core/utils";
+  import kernel, { type AppsService, type WidgetProps, type WindowsService, WidgetStyle } from "$lib/core/api";
+  import { cn, format_date, clamp, pad2 } from "$lib/core/utils";
   import { format_time } from "$kit/games";
   import { Alarm as AlarmIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
@@ -9,7 +9,7 @@
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
-  let { props }: WidgetProps = $props();
+  let { props, style }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -31,26 +31,31 @@
     return running[0] ?? null;
   });
 
+  // Straight on the wallpaper: no dial fill or divider, and a soft shadow so the digits read on any background.
+  const bare = $derived(style === WidgetStyle.CLEAR);
   const weekday = $derived(date.toLocaleDateString("en-US", { weekday: "long" }));
 </script>
 
-<div class="grid h-full grid-rows-[minmax(0,1fr)_auto]">
+<div class={cn("grid h-full grid-rows-[minmax(0,1fr)_auto]", bare && "bare-text")}>
   {#if face === ClockFace.ANALOG}
     <div class="grid min-h-0 place-items-center p-2">
-      <AnalogFace now={ticker.now} class="h-full max-h-full max-w-full" />
+      <AnalogFace now={ticker.now} {bare} class="h-full max-h-full max-w-full" />
     </div>
   {:else}
     <div class="grid min-h-0 content-center justify-items-center gap-[2cqh] px-3 [container-type:size]">
       <p class="font-mono text-[min(19cqw,42cqh)] leading-none font-bold tabular-nums">
-        {pad2(date.getHours())}:{pad2(date.getMinutes())}<span class="text-[0.4em] font-normal text-foreground/55">:{pad2(date.getSeconds())}</span>
+        {pad2(date.getHours())}:{pad2(date.getMinutes())}<span class={cn("text-[0.4em] font-normal", bare ? "text-foreground/75" : "text-foreground/55")}>:{pad2(date.getSeconds())}</span>
       </p>
-      <p class="max-w-full truncate text-[clamp(0.6875rem,min(5.5cqw,12cqh),1.125rem)] text-foreground/65">{weekday}, {format_date(date)}</p>
+      <p class={cn("max-w-full truncate text-[clamp(0.6875rem,min(5.5cqw,12cqh),1.125rem)]", bare ? "text-foreground/85" : "text-foreground/65")}>{weekday}, {format_date(date)}</p>
     </div>
   {/if}
 
   <button
     type="button"
-    class="flex min-w-0 items-center justify-center gap-1.5 border-t border-foreground/8 px-2 py-1.5 text-2xs text-foreground/65 hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none"
+    class={cn(
+      "flex min-w-0 items-center justify-center gap-1.5 px-2 py-1.5 text-2xs hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none",
+      bare ? "rounded-lg text-foreground/85" : "border-t border-foreground/8 text-foreground/65"
+    )}
     onclick={() => apps.launch(APP_ID, { tab: timer && !upcoming ? ClockTab.TIMERS : ClockTab.ALARMS })}
   >
     {#if upcoming}

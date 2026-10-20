@@ -24,7 +24,7 @@ Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/short
 
 Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)):
 
-- **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `pin_widget`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
+- **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `pin_widget`, `set_widget_style`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
 - **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_items(moves)`, `resize_target`, `resize_widget`. The desktop shell (`desktop.svelte`) and this inspector use it.
 - **`MobileDesktopService`**: the mobile home: ordered pages and a dock. See [Mobile home](#mobile-home).
 
@@ -37,7 +37,7 @@ type DesktopGrid = Array<Array<DesktopItem | undefined>>; // grid[y][x], sparse;
 
 type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
-  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: { w: number; h: number } }
+  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: { w: number; h: number }; style: WidgetStyle }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };
 
@@ -50,7 +50,7 @@ type Positions = Record<string, Position>; // entry name → saved cell
 | Folder | `directory` |
 | File whose `file_extension()` is `.desktop` and whose body parses as a shortcut | `shortcut`: `label` is the name without `.desktop`, plus `app_id` and `props` from the file |
 | `.desktop` file that doesn't parse | `file` (shown with a file icon) |
-| `.widget` file that parses (`{ app, props?, w, h }`, spans 1–8, `apps/widget.ts`) | `widget` (ADR-034): `label` is the name without `.widget`, `size` is `{ w, h }` in cells, clamped into the app's `widget_size` (the file keeps its value until the user resizes) |
+| `.widget` file that parses (`{ app, props?, w, h, style? }`, spans 1–8, `apps/widget.ts`) | `widget` (ADR-034): `label` is the name without `.widget`, `size` is `{ w, h }` in cells, clamped into the app's `widget_size` (the file keeps its value until the user resizes); `style` is `card`, `glass` or `clear`, `card` when the file has none or an unknown value (the rest of the file still parses) |
 | `.widget` file that doesn't parse | `file` |
 | Any other file | `file`, `type` = the browser's MIME for it (`""` when unknown) |
 
@@ -84,13 +84,14 @@ Three layers of state turn the folder into a grid:
 | `names` | `() => string[]` | Entry names on the desktop, for name validation |
 | `pin` | `(app_id, props?) => Promise<string \| null>` | Writes `{manifest.name}.desktop` (`{ app_id, props }`) into `/home/Desktop`, auto-renamed on a clash (`Settings (1).desktop`). Returns the file name, or `null` for an unknown app id. No position is saved: the icon takes the first free cell. |
 | `pin_widget` | `(app_id, { label, props?, size? }) => Promise<string \| null>` | Writes `{label}.widget` into `/home/Desktop` (`/ \ :` in the label become spaces), auto-renamed on a clash. `size` defaults to the manifest's `widget_size.default` (2×2 without one) and is clamped into its range (`initial_widget_size`). `null` when the app has no `widget`. No position is saved: it takes the first place it fits. The entry is in `items()` as soon as the promise resolves, before the reload the write triggers, so a caller checking for an existing widget right after (pinning twice from the shell) sees it. Same on mobile, where it lands at the end of the home |
+| `set_widget_style` | `(name, style: WidgetStyle) => Promise<boolean>` | Sets the entry's style in memory at once and writes `style` into its `.widget` file (`DesktopFolder.write_widget_style`, on the same queue as size writes; everything else in the file kept). `false` when `name` isn't a widget. Same on mobile, and both platforms read the same file (ADR-034 revision 2026-10-21) |
 | `open` | `(item, options?: OpenOptions) => void` | `shortcut`, `widget` and `file` → `apps.open("/home/Desktop/{name}", options)`, so a shortcut re-reads its file and a missing target app gets the "Broken shortcut" (or "Broken widget") toast, as in File Explorer; a rejection goes to `console.error`. `directory` → `apps.launch("file-explorer", { path: "/home/Desktop/{name}" })`. |
 | `init` / `destroy` | IService | See Lifecycle |
 | `name`, `description`, `to_string()` | IService | `to_string()` says "`N` items", counting `entries` (hidden-by-size items included, dotfiles not). |
 
 ## State
 
-- `folder.entries`: `$state.raw<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()` (unchanged entries keep their object), by `write_widget()` (appends the new widget) and by `write_widget_size()`. Never mutated in place.
+- `folder.entries`: `$state.raw<DesktopItem[]>` on the `DesktopFolder`, replaced wholesale by its `reload()` (unchanged entries keep their object), by `write_widget()` (appends the new widget), `write_widget_size()` and `write_widget_style()`. Never mutated in place.
 - `positions`: `$state<Positions>`, replaced by the folder's `loaded` callback and `move_items()`.
 - `arranged`, `grid`: `$derived`, as in the Model table.
 - `container`: `$state.raw`, replaced wholesale.
@@ -167,7 +168,9 @@ Hidden items keep whatever position they had.
 
 **Sort** (`sort_moves`) leaves widgets out: they keep their place and the sorted icons flow around them when the moves resolve.
 
-**Widgets on the desktop** (`components/desktop/desktop-widget.svelte`). A frame spanning its cells, inset 4px. Its 24px title strip is the handle: a button carrying `data-desktop-name`, so selection, drag, Enter/F2/Delete, the item menu ("Remove widget") and double-click to open (launches the app with the widget's props, through `apps.open`) all work as for icons. The body (`data-widget-body`) belongs to the app's `manifest.widget` component, which gets `{ props, size, name }` with props validated against the manifest's `props`. The desktop ignores pointer-down, right-click and keys that come from inside a body, so a sticky's Mod+A selects its text, not the desktop. A missing app, an app without a widget, or props that fail validation show a one-line message instead.
+**Widgets on the desktop** (`components/desktop/desktop-widget.svelte`). A frame spanning its cells, inset 4px. Its 24px title strip is the handle: a button carrying `data-desktop-name`, so selection, drag, Enter/F2/Delete, the item menu ("Remove widget") and double-click to open (launches the app with the widget's props, through `apps.open`) all work as for icons. The body (`data-widget-body`) belongs to the app's `manifest.widget` component, which gets `{ props, size, name, style }` with props validated against the manifest's `props`. The desktop ignores pointer-down, right-click and keys that come from inside a body, so a sticky's Mod+A selects its text, not the desktop. A missing app, an app without a widget, or props that fail validation show a one-line message instead.
+
+**Widget styles** (ADR-034 revision 2026-10-21). The frame's surface comes from `widget_surface(style)` in `components/desktop/widget-style.ts`, shared with the phone home: `card` is `bg-background-light`, `shadow-raised` and a `foreground/10` ring; `glass` is `bg-background-light/50` with `backdrop-blur-lg` and a `foreground/8` ring, no shadow; `clear` has none of them. On `clear` the title strip is transparent and `opacity-0` until the widget is hovered, has focus inside or is selected, so it still takes drags, clicks and the keyboard; revealed, it gets a `bg-background-light/70` blurred backing so the label reads on any wallpaper. The grip already follows the same rule and gets the `.bare-text` shadow. Selection keeps its `primary/40` ring in every style, and a dragged widget dims as before. The widget's menu (`item_menu` in `desktop-actions.ts`) has Style › Card / Glass / Clear for a single widget, the current one marked with a check icon (`style_item`, `apply_style_choice`, shared with the phone's long-press menu). `.bare-text` (`app.css`) is the shadow for content sitting straight on the wallpaper: a soft dark drop shadow, plus a `--background` halo on a photo wallpaper.
 
 **Resizing widgets** (ADR-034 revision 2026-10-15). Only for apps with a manifest `widget_size`. A grip button sits on the frame's bottom-right corner (24px, outside the body, out of the tab order); it shows on hover, focus inside the widget, while selected and while resizing. Pointer-down on it selects the widget alone, focuses the desktop and captures the pointer. Each move adds `snap_cells(travel, cell)` (the pointer's travel rounded to whole cells) to the starting size and asks `resize_target`: the size is cut at the grid's right and bottom edge, clamped to `min`/`max`, and valid only if the widget still fits the grid and covers no other item. The target shows as an outline over the widget's cells with a `w × h` chip: `foreground/30` ring on `foreground/6` when valid, `error/60` on `error/10` with a solid `error` chip when refused. Losing capture (release, or anything else) writes a valid, changed size through `resize_widget`; a refused size writes nothing. Escape cancels.
 
@@ -186,6 +189,7 @@ Keyboard: with the widget's title strip focused, Shift+→/← grows or shrinks 
 | `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end), taking it out of the dock if it was there |
 | `set_docked` | `(name, docked, before?) => void` | Docks just before `before` (`null`/absent: the end); an already docked entry just moves. Ignored when full and for widgets. `docked: false` moves it back to the end of home |
 | `resize_widget` | `(name, size) => Promise<boolean>` | Clamps into the app's `widget_size` and writes `w`/`h` through `DesktopFolder.write_widget_size`, like the desktop. `false` when `name` isn't a widget of an app with a `widget_size` |
+| `set_widget_style` | `(name, style) => Promise<boolean>` | Same as the desktop's: writes `style` through `DesktopFolder.write_widget_style`; `false` when `name` isn't a widget |
 | `rename_item` | `(name, new_name)` | Swaps the name in the order and dock and saves before renaming, so the icon keeps its place |
 | base members | | Forward to `DesktopFolder` |
 

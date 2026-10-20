@@ -2,7 +2,7 @@ import type { DesktopGrid, DesktopItem, GridDesktopService } from "./type";
 import type { Bounds, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
 import { DesktopHelper, grid_items, type DesktopMove, type ResizeTarget } from "./helper";
-import type { WidgetSize } from "../apps/type";
+import type { WidgetSize, WidgetStyle } from "../apps/type";
 import { ADDITIONS_FILE, ADDITIONS_PATH, default_widgets, parse_additions, pending_widgets, serialize_additions } from "./additions";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
 import {
@@ -206,6 +206,13 @@ export class DesktopService implements GridDesktopService {
     // An unplaced widget's cell is recomputed on every fit; pinning it keeps the new span growing from where it's shown.
     this.pin_shown();
     await this.folder.write_widget_size(name, target.size);
+    return true;
+  }
+
+  public async set_widget_style(name: string, style: WidgetStyle): Promise<boolean> {
+    const entry = this.folder.get(name);
+    if (entry?.kind !== "widget") return false;
+    if (entry.style !== style) await this.folder.write_widget_style(name, style);
     return true;
   }
 

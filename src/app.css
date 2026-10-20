@@ -190,3 +190,13 @@
 [data-wallpaper-image] .bare-glyph {
   filter: drop-shadow(0 0 1px var(--background)) drop-shadow(0 1px 2px color-mix(in oklch, var(--background-darkest) 60%, transparent));
 }
+
+/* Clear widgets: thin text on a photo needs a wider halo than a glyph does. */
+.bare-text {
+  filter: drop-shadow(0 1px 2px color-mix(in oklch, var(--background-darkest) 70%, transparent));
+}
+
+[data-wallpaper-image] .bare-text {
+  filter: drop-shadow(0 0 1px var(--background)) drop-shadow(0 0 3px color-mix(in oklch, var(--background) 80%, transparent))
+    drop-shadow(0 1px 3px color-mix(in oklch, var(--background-darkest) 60%, transparent));
+}

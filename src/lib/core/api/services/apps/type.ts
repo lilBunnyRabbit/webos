@@ -204,6 +204,10 @@ export interface WidgetSizeLimits {
   default: WidgetSize;
 }
 
+/** A widget's frame on the desktop and the phone home, picked per widget from its menu (ADR-034 revision). */
+export const WidgetStyle = { CARD: "card", GLASS: "glass", CLEAR: "clear" } as const;
+export type WidgetStyle = (typeof WidgetStyle)[keyof typeof WidgetStyle];
+
 export interface WidgetProps {
   /** The widget file's props, already validated against the manifest's `props`. */
   props: AppProps;
@@ -211,6 +215,8 @@ export interface WidgetProps {
   size: WidgetSize;
   /** The `.widget` file's name in `/home/Desktop`. */
   name: string;
+  /** The frame it sits in. On `clear` there's no background behind it, so content should read on any wallpaper. */
+  style: WidgetStyle;
 }
 
 /** What `define_app` returns: a manifest before discovery knows its folder. */

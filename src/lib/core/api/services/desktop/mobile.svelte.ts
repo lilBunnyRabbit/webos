@@ -14,7 +14,7 @@ import {
 } from "./home-layout";
 import { LAYOUT_DIRECTORY_NAME, LAYOUT_PATH } from "./layout";
 import type { DesktopItem, MobileDesktopService as IMobileDesktopService } from "./type";
-import type { WidgetSize } from "../apps/type";
+import type { WidgetSize, WidgetStyle } from "../apps/type";
 import { clamp_widget_size } from "../apps/widget";
 
 export class MobileDesktopService implements IMobileDesktopService {
@@ -140,6 +140,13 @@ export class MobileDesktopService implements IMobileDesktopService {
     const next = clamp_widget_size(size, limits);
     if (next.w === entry.size.w && next.h === entry.size.h) return true;
     await this.folder.write_widget_size(name, next);
+    return true;
+  }
+
+  public async set_widget_style(name: string, style: WidgetStyle): Promise<boolean> {
+    const entry = this.folder.get(name);
+    if (entry?.kind !== "widget") return false;
+    if (entry.style !== style) await this.folder.write_widget_style(name, style);
     return true;
   }
 

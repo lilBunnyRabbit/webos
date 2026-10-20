@@ -1,7 +1,8 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils";
 
-  let { now, class: class_name }: { now: number; class?: string } = $props();
+  /** `bare` drops the dial's fill, for a widget sitting straight on the wallpaper. */
+  let { now, bare = false, class: class_name }: { now: number; bare?: boolean; class?: string } = $props();
 
   const date = $derived(new Date(now));
   const seconds = $derived(date.getSeconds());
@@ -11,7 +12,7 @@
 </script>
 
 <svg viewBox="-50 -50 100 100" class={cn("aspect-square", class_name)} role="img" aria-label="Analog clock">
-  <circle r="48" class="fill-background stroke-foreground/12" stroke-width="1" />
+  <circle r="48" class={bare ? "fill-none stroke-foreground/40" : "fill-background stroke-foreground/12"} stroke-width="1" />
   {#each ticks as tick (tick)}
     {@const hour = tick % 5 === 0}
     <line

@@ -1,7 +1,7 @@
 import type { IService } from "../../type";
 import type { Bounds, Dimensions, Position } from "$lib/core/utils/type";
 import type { AppId, AppProps, OpenOptions } from "..";
-import type { WidgetSize } from "../apps/type";
+import type { WidgetSize, WidgetStyle } from "../apps/type";
 import type { DesktopMove, ResizeTarget } from "./helper";
 import type { HomeSlot } from "./home-layout";
 
@@ -36,6 +36,12 @@ export interface DesktopService extends IService {
    * the same file.
    */
   pin_widget(app_id: AppId, options: { label: string; props?: AppProps; size?: WidgetSize }): Promise<string | null>;
+
+  /**
+   * Writes `style` into the `.widget` file `name`, shared by the desktop and the phone home. Resolves `false` when
+   * `name` isn't a widget.
+   */
+  set_widget_style(name: string, style: WidgetStyle): Promise<boolean>;
 
   /** Shortcut, widget or file → `apps.open` (a shortcut or widget launches its app), folder → File Explorer there. */
   open(item: DesktopItem, options?: OpenOptions): void;
@@ -114,6 +120,6 @@ export type DesktopGrid = Array<Array<DesktopItem | undefined>>;
 
 export type DesktopItem =
   | { kind: "shortcut"; name: string; label: string; app_id: AppId; props?: AppProps }
-  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: WidgetSize }
+  | { kind: "widget"; name: string; label: string; app_id: AppId; props?: AppProps; size: WidgetSize; style: WidgetStyle }
   | { kind: "file"; name: string; type: string }
   | { kind: "directory"; name: string };

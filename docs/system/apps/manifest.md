@@ -150,7 +150,7 @@ Quick Notes counts open todos (`badge.svelte.ts`).
 
 ### `widget` (ADR-034)
 
-A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells) and `name` (the file). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size? })`. See [desktop](../services/desktop.md#behaviour--invariants).
+A lazy component the desktop renders inside a widget frame for every `.widget` file naming this app. It gets `WidgetProps`: `props` (the file's, validated against the manifest's `props`), `size` (`{ w, h }` in cells), `name` (the file) and `style` (`card`, `glass` or `clear`, picked by the user; adapt on `clear`, where there's no background, as Clock does). It runs with no window and no app context; use services through `kernel.service`. Create widgets with `desktop.pin_widget(app_id, { label, props, size? })`. See [desktop](../services/desktop.md#behaviour--invariants).
 
 ### `widget_size` (ADR-034 revision 2026-10-15)
 

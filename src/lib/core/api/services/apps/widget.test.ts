@@ -1,5 +1,29 @@
 import { describe, expect, test } from "vitest";
-import { clamp_widget_size, initial_widget_size, widget_size_schema, WIDGET_FALLBACK_SIZE } from "./widget";
+import {
+  clamp_widget_size,
+  initial_widget_size,
+  parse_widget,
+  serialize_widget,
+  widget_size_schema,
+  WIDGET_FALLBACK_SIZE,
+} from "./widget";
+
+describe("widget files", () => {
+  const file = { app: "clock", w: 2, h: 2 };
+
+  test("a file without a style still parses, with none set (a card)", () => {
+    expect(parse_widget(JSON.stringify(file))).toEqual(file);
+  });
+
+  test("a known style round-trips", () => {
+    expect(parse_widget(serialize_widget({ ...file, style: "glass" }))).toEqual({ ...file, style: "glass" });
+  });
+
+  test("an unknown style falls back to none instead of breaking the file", () => {
+    expect(parse_widget(JSON.stringify({ ...file, style: "neon" }))).toEqual(file);
+    expect(parse_widget(JSON.stringify({ ...file, style: 3 }))).toEqual(file);
+  });
+});
 
 const limits = { min: { w: 2, h: 1 }, max: { w: 4, h: 3 }, default: { w: 3, h: 1 } };
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AppId, AppProps, WidgetSize, WidgetSizeLimits } from "./type";
+import { WidgetStyle, type AppId, type AppProps, type WidgetSize, type WidgetSizeLimits } from "./type";
 
 /** `.widget` files: an app's widget on the desktop, `w × h` grid cells (ADR-034). */
 export const WIDGET_EXTENSION = ".widget";
@@ -14,6 +14,8 @@ const widget_schema = z.object({
   props: z.record(z.string(), z.unknown()).optional(),
   w: span,
   h: span,
+  // A missing or unknown style reads as a card instead of breaking the whole file.
+  style: z.enum(WidgetStyle).optional().catch(undefined),
 });
 
 const within = (size: WidgetSize, min: WidgetSize, max: WidgetSize) =>
@@ -29,6 +31,8 @@ export interface WidgetFile {
   props?: AppProps;
   w: number;
   h: number;
+  /** Absent means `card`. */
+  style?: WidgetStyle;
 }
 
 export function parse_widget(text: string): WidgetFile | null {

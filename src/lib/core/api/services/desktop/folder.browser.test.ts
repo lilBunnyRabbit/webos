@@ -56,3 +56,28 @@ test("lists a pinned widget as soon as the write resolves", async () => {
   await vi.waitFor(async () => expect((await files.list(await folder.handle())).map((item) => item.name)).toEqual(["Sticky.widget"]));
   expect(folder.names()).toEqual(["Sticky.widget"]);
 });
+
+test("a widget's style is shown at once and kept in its file next to the size", async () => {
+  const manifest = { widget: async () => ({}) };
+  folder = new DesktopFolder({
+    files: () => files,
+    apps: () => ({ get: (id: string) => (id === "clock" ? manifest : undefined) }) as unknown as AppsService,
+    read_layout: async () => "{}",
+    seed: async () => {},
+    loaded: () => {},
+  });
+  await folder.init();
+  const name = await folder.write_widget("clock", { label: "Clock", size: { w: 3, h: 2 } });
+  if (!name) throw new Error("no widget written");
+  expect(folder.get(name)).toMatchObject({ style: "card" });
+
+  const written = folder.write_widget_style(name, "clear");
+  expect(folder.get(name)).toMatchObject({ style: "clear" });
+  await written;
+  await folder.write_widget_size(name, { w: 2, h: 2 });
+
+  const file = await files.get_file(`/home/Desktop/${name}`);
+  expect(JSON.parse((await file?.text()) ?? "")).toMatchObject({ app: "clock", w: 2, h: 2, style: "clear" });
+  flushSync();
+  await vi.waitFor(() => expect(folder.get(name)).toMatchObject({ style: "clear", size: { w: 2, h: 2 } }));
+});

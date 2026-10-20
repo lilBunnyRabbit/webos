@@ -35,7 +35,7 @@ describe("arrange_home", () => {
 });
 
 describe("paginate_spans", () => {
-  const widget = (name: string, w: number, h: number): DesktopItem => ({ kind: "widget", name, label: name, app_id: "x", size: { w, h } });
+  const widget = (name: string, w: number, h: number): DesktopItem => ({ kind: "widget", name, label: name, app_id: "x", size: { w, h }, style: "card" });
   const cells = (pages: ReturnType<typeof paginate_spans>) =>
     pages.map((page) => page.map(({ item, x, y, size }) => `${item.name}@${x},${y}:${size.w}x${size.h}`));
 

@@ -341,6 +341,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [x] Manifest badge (open todos), shown where the icon shows
   - [x] Desktop widgets (`.widget` files, multi-cell), stickies; on the phone home since 2026-10-19 (spans in the flow, resize in edit mode)
   - [x] Widget resizing: corner grip and Shift+arrows, per-app `widget_size` limits (2026-10-15)
+  - [x] Widget styles (2026-10-21, [brainstorm](brainstorm/2026-10-21_widget-styles.md), idea from LaxDOTexe): Card, Glass or Clear per widget from its menu, on the desktop and the phone home; stored in the `.widget` file, passed to the app as `WidgetProps.style`; Clock drops its panels and shadows its digits on Clear
   - [x] Wikilinks and backlinks
 - [x] Speed Reader — RSVP, adjustable WPM, position per file (2026-10-12). Video export not ported (mediabunny)
 - [x] Markdown to PDF: paged preview, templates, TOC, header/footer, export via print (2026-10-14)

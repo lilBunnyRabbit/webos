@@ -13,12 +13,15 @@ import kernel, {
   type WindowsService,
   DesktopHelper,
   DesktopSort,
+  WidgetStyle,
 } from "$lib/core/api";
 import { view_transition } from "$lib/core/utils/view-transition";
 import { window_transition } from "$lib/core/components/window/window-transition.svelte";
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
+  Check as CheckIcon,
+  PaintBrush as PaintBrushIcon,
   ClipboardText as ClipboardTextIcon,
   Copy as CopyIcon,
   Scissors as ScissorsIcon,
@@ -56,6 +59,34 @@ export function uninstall_item(item: DesktopItem): MenuItem[] {
   const manifest = apps().get(item.app_id);
   if (!manifest || manifest.system || !apps().is_installed(item.app_id)) return [];
   return [{ id: "uninstall", label: `Uninstall ${manifest.name}…`, icon: PackageIcon, danger: true }];
+}
+
+const STYLE_LABELS: Record<WidgetStyle, string> = {
+  [WidgetStyle.CARD]: "Card",
+  [WidgetStyle.GLASS]: "Glass",
+  [WidgetStyle.CLEAR]: "Clear",
+};
+const STYLE_PREFIX = "style:";
+
+/** "Style › Card / Glass / Clear" for a widget, the current one checked; else none. */
+export function style_item(item: DesktopItem): MenuItem[] {
+  if (item.kind !== "widget") return [];
+  const items = Object.values(WidgetStyle).map((style) => ({
+    id: `${STYLE_PREFIX}${style}`,
+    label: STYLE_LABELS[style],
+    icon: item.style === style ? CheckIcon : undefined,
+  }));
+  return [{ label: "Style", icon: PaintBrushIcon, items }];
+}
+
+/** Applies a `style_item` choice. Returns whether `choice` was one. */
+export function apply_style_choice(item: DesktopItem, choice: string | null): boolean {
+  const style = Object.values(WidgetStyle).find((entry) => choice === `${STYLE_PREFIX}${entry}`);
+  if (!style || item.kind !== "widget") return false;
+  desktop()
+    .set_widget_style(item.name, style)
+    .catch((error) => report_file_error(`Could not change the style of “${item.label}”`, error));
+  return true;
 }
 
 export function copy_items(items: DesktopItem[]): void {
@@ -193,6 +224,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
       ...(single ? [{ id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" }] : []),
       ...(single && !shortcut ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
+      ...(single ? style_item(item) : []),
       { separator: true },
       {
         id: "delete",
@@ -208,6 +240,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
     ],
     { anchor }
   );
+  if (apply_style_choice(item, choice)) return;
   if (choice === "open") open_items(items, anchor);
   else if (choice === "rename") rename_item(item);
   else if (choice === "copy") copy_items(items);

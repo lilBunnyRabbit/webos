@@ -7,8 +7,9 @@ import {
   serialize_widget,
   widget_label,
   WIDGET_EXTENSION,
+  type WidgetFile,
 } from "../apps/widget";
-import type { WidgetSize } from "../apps/type";
+import { WidgetStyle, type WidgetSize } from "../apps/type";
 import { file_extension } from "../apps/associations";
 import { PATHS } from "../files/hierarchy";
 import { available_name } from "../files/opfs";
@@ -43,7 +44,7 @@ export class DesktopFolder {
   private dispose_watch?: () => void;
   private reload_id = 0;
   private layout_loaded = false;
-  private size_writes: Promise<void> = Promise.resolve();
+  private widget_writes: Promise<void> = Promise.resolve();
 
   constructor(private options: DesktopFolderOptions) {}
 
@@ -139,10 +140,10 @@ export class DesktopFolder {
 
     const widget = file_extension(item.name) === WIDGET_EXTENSION && text !== null ? parse_widget(text) : null;
     if (widget) {
-      const { app, props, w, h } = widget;
+      const { app, props, w, h, style = WidgetStyle.CARD } = widget;
       // Clamped for display only; the file keeps what it says until the user resizes it.
       const size = clamp_widget_size({ w, h }, this.options.apps().get(app)?.widget_size);
-      return { kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size };
+      return { kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size, style };
     }
 
     const shortcut = file_extension(item.name) === SHORTCUT_EXTENSION && text !== null ? parse_shortcut(text) : null;
@@ -187,18 +188,30 @@ export class DesktopFolder {
     const size = clamp_widget_size({ w, h }, manifest.widget_size);
     this.entries = [
       ...this.entries.filter((entry) => entry.name !== name),
-      { kind: "widget", name, label: widget_label(name), app_id, props: options.props, size },
+      { kind: "widget", name, label: widget_label(name), app_id, props: options.props, size, style: WidgetStyle.CARD },
     ];
     return name;
   }
 
   public write_widget_size(name: string, size: WidgetSize): Promise<void> {
+    return this.write_widget_fields(name, { size }, { w: size.w, h: size.h });
+  }
+
+  public write_widget_style(name: string, style: WidgetStyle): Promise<void> {
+    return this.write_widget_fields(name, { style }, { style });
+  }
+
+  private write_widget_fields(
+    name: string,
+    entry_fields: { size?: WidgetSize; style?: WidgetStyle },
+    file_fields: Partial<WidgetFile>
+  ): Promise<void> {
     // Shown at once: the reload the write triggers lands later, and a second Shift+arrow must build on this size.
     this.entries = this.entries.map((entry) =>
-      entry.name === name && entry.kind === "widget" ? { ...entry, size } : entry
+      entry.name === name && entry.kind === "widget" ? { ...entry, ...entry_fields } : entry
     );
-    // Queued, so quick resizes reach the file in the order they were made.
-    this.size_writes = this.size_writes
+    // Queued, so quick changes reach the file in the order they were made.
+    this.widget_writes = this.widget_writes
       .catch(() => {})
       .then(async () => {
         const folder = await this.handle();
@@ -207,12 +220,9 @@ export class DesktopFolder {
         if (!widget) return;
         await this.options
           .files()
-          .create_file(folder, name, {
-            content: serialize_widget({ ...widget, w: size.w, h: size.h }),
-            overwrite: true,
-          });
+          .create_file(folder, name, { content: serialize_widget({ ...widget, ...file_fields }), overwrite: true });
       });
-    return this.size_writes;
+    return this.widget_writes;
   }
 
   public async remove(name: string): Promise<void> {
