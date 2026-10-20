@@ -134,7 +134,7 @@
       stroke-dasharray={line.strong ? undefined : "6 5"}
       vector-effect="non-scaling-stroke"
     />
-    <text x={BOX_WIDTH + PAD / 2 + 8} y={-line.y} dominant-baseline="middle" class="fill-foreground/45 font-mono" font-size="30">{LINE_LABELS[index]}</text>
+    <text x={BOX_WIDTH + PAD / 2} y={-line.y - 10} text-anchor="end" class="fill-foreground/45 font-mono" font-size="30">{LINE_LABELS[index]}</text>
   {/each}
 
   <g transform="scale(1 -1)">
@@ -161,7 +161,7 @@
           onpointermove={slide}
           onlostpointercapture={release}
         />
-        <circle cx={x} cy={-BOX.bottom - 30} r="22" class="fill-primary pointer-events-none" />
+        <circle cx={x} cy={-BOX.bottom - 30} r="30" class="fill-primary pointer-events-none" />
       </g>
     {/each}
   {/if}

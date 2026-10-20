@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Input } from "$lib/core/components/ui";
-  import { build_font, drawn_characters } from "./build";
+  import { build_font } from "./build";
   import type { FontProject } from "./model";
 
   interface Props {
@@ -12,7 +12,6 @@
 
   const family = `font-maker-${crypto.randomUUID()}`;
   let ready = $state(false);
-  const empty = $derived(drawn_characters(project).length === 0);
 
   $effect(() => {
     const snapshot = project;
@@ -43,11 +42,11 @@
 <div class="flex flex-col gap-2">
   <Input size="sm" bind:value={sample} aria-label="Sample text" placeholder="Type a sample" />
   <p
-    class="preview min-h-12 overflow-hidden rounded-md bg-background-darker px-3 py-2 text-3xl leading-tight break-words text-foreground ring-1 ring-foreground/8 ring-inset"
+    class="preview min-h-12 overflow-hidden rounded-md bg-background-darker px-3 py-2 text-2xl leading-tight @md:text-3xl break-words text-foreground ring-1 ring-foreground/8 ring-inset"
     style:font-family={ready ? `"${family}", var(--font-sans)` : "var(--font-sans)"}
     aria-live="off"
   >
     {sample || " "}
   </p>
-  {#if empty}<p class="text-2xs text-foreground/65">Letters you haven't drawn show in the system font.</p>{/if}
+  <p class="text-2xs text-foreground/65">Letters you haven't drawn show in the system font.</p>
 </div>

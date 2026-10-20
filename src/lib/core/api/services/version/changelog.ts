@@ -11,6 +11,7 @@ export const CHANGELOG: Release[] = [
     changes: [
       { kind: FIXED, apps: ["font-maker"], text: "Font Maker fits a phone screen instead of running off the right edge, and the scan screen keeps its title readable." },
       { kind: FIXED, text: "Crop and box handles are smaller, so small subjects stay visible." },
+      { kind: IMPROVED, apps: ["font-maker"], text: "Font Maker on a phone: guide labels no longer cut off, bigger width handles, and the screen doesn't jump after your first stroke." },
     ],
   },
   {
