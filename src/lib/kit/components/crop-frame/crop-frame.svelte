@@ -103,8 +103,18 @@
   }
 
   .box {
+    container: crop-box / size;
     outline: 1px solid var(--primary);
     touch-action: none;
+    --dot: 8px;
+    --hit: 24px;
+  }
+
+  @media (pointer: coarse) {
+    .box {
+      --dot: 12px;
+      --hit: 44px;
+    }
   }
 
   .box:focus-visible {
@@ -118,34 +128,23 @@
   }
 
   .handle {
-    --hit: 28px;
     position: absolute;
-    width: var(--hit);
-    height: var(--hit);
+    width: var(--dot);
+    height: var(--dot);
     translate: -50% -50%;
-    display: grid;
-    place-items: center;
+    background: var(--primary);
+    box-shadow: 0 0 0 1px var(--background-darkest);
     touch-action: none;
   }
 
-  .handle::after {
+  .handle::before {
     content: "";
-    width: 12px;
-    height: 12px;
-    border-radius: 9999px;
-    background: var(--primary);
-    box-shadow: 0 0 0 2px var(--background-darkest);
-  }
-
-  @media (pointer: coarse) {
-    .handle {
-      --hit: 44px;
-    }
-
-    .handle::after {
-      width: 16px;
-      height: 16px;
-    }
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--hit);
+    height: var(--hit);
+    translate: -50% -50%;
   }
 
   .handle[data-handle="nw"] { left: 0; top: 0; cursor: nwse-resize; }
@@ -156,4 +155,39 @@
   .handle[data-handle="s"] { left: 50%; top: 100%; cursor: ns-resize; }
   .handle[data-handle="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
   .handle[data-handle="w"] { left: 0; top: 50%; cursor: ew-resize; }
+
+  /* Below three hit areas a side, centred targets would cover the subject and leave nothing to move by: corners only, sitting and grabbing outside the box. */
+  @container crop-box (width < 72px) or (height < 72px) {
+    .thirds,
+    .handle:is([data-handle="n"], [data-handle="e"], [data-handle="s"], [data-handle="w"]) {
+      display: none;
+    }
+
+    .handle[data-handle="nw"] { translate: -100% -100%; }
+    .handle[data-handle="ne"] { translate: 0 -100%; }
+    .handle[data-handle="se"] { translate: 0 0; }
+    .handle[data-handle="sw"] { translate: -100% 0; }
+    .handle[data-handle="nw"]::before { translate: calc(-100% + var(--dot) / 2) calc(-100% + var(--dot) / 2); }
+    .handle[data-handle="ne"]::before { translate: calc(var(--dot) / -2) calc(-100% + var(--dot) / 2); }
+    .handle[data-handle="se"]::before { translate: calc(var(--dot) / -2) calc(var(--dot) / -2); }
+    .handle[data-handle="sw"]::before { translate: calc(-100% + var(--dot) / 2) calc(var(--dot) / -2); }
+  }
+
+  @media (pointer: coarse) {
+    @container crop-box (width < 132px) or (height < 132px) {
+      .thirds,
+      .handle:is([data-handle="n"], [data-handle="e"], [data-handle="s"], [data-handle="w"]) {
+        display: none;
+      }
+
+      .handle[data-handle="nw"] { translate: -100% -100%; }
+      .handle[data-handle="ne"] { translate: 0 -100%; }
+      .handle[data-handle="se"] { translate: 0 0; }
+      .handle[data-handle="sw"] { translate: -100% 0; }
+      .handle[data-handle="nw"]::before { translate: calc(-100% + var(--dot) / 2) calc(-100% + var(--dot) / 2); }
+      .handle[data-handle="ne"]::before { translate: calc(var(--dot) / -2) calc(-100% + var(--dot) / 2); }
+      .handle[data-handle="se"]::before { translate: calc(var(--dot) / -2) calc(var(--dot) / -2); }
+      .handle[data-handle="sw"]::before { translate: calc(-100% + var(--dot) / 2) calc(var(--dot) / -2); }
+    }
+  }
 </style>
