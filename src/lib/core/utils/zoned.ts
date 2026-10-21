@@ -1,3 +1,5 @@
+import { pad2 } from "./utils";
+
 /** `month` is 1–12. */
 export interface PlainDate {
   year: number;
@@ -93,13 +95,14 @@ export function format_date_key(date: PlainDate): string {
   return `${String(date.year).padStart(4, "0")}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
 }
 
+/** `7:30` or `07:30`, before midnight: the one wall-time parser, which `parse_time` and `parse_alarm_time` build on. */
 export function parse_plain_time(text: string): PlainTime | null {
-  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(text);
+  const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(text);
   return match ? { hours: Number(match[1]), minutes: Number(match[2]) } : null;
 }
 
 export function format_plain_time(time: PlainTime): string {
-  return `${String(time.hours).padStart(2, "0")}:${String(time.minutes).padStart(2, "0")}`;
+  return `${pad2(time.hours)}:${pad2(time.minutes)}`;
 }
 
 export function days_in_month(year: number, month: number): number {

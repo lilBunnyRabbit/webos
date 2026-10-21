@@ -428,8 +428,12 @@ export class SchedulerService implements ISchedulerService {
     }
   }
 
+  private target(job: Job) {
+    return job.open ?? { app: job.app };
+  }
+
   private route(job: Job): string {
-    const target = job.open ?? { app: job.app };
+    const target = this.target(job);
     return serialize_route({ kind: RouteKind.APP, id: target.app, props: target.props });
   }
 
@@ -573,7 +577,7 @@ export class SchedulerService implements ISchedulerService {
   }
 
   private open(job: Job): void {
-    const target = job.open ?? { app: job.app };
+    const target = this.target(job);
     try {
       this.apps_service.launch(target.app, target.props);
     } catch (error) {

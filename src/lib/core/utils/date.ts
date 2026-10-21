@@ -1,4 +1,5 @@
 import { pad2 } from "./utils";
+import { format_plain_time, parse_plain_time } from "./zoned";
 
 /** Local calendar day, `YYYY-MM-DD`. */
 export function day_key(date = new Date()): string {
@@ -42,10 +43,8 @@ export function resolve_day(text: string, today: string): string | null {
 
 /** `9`, `09`, `9:30`, `09:30` or `24:00` to `HH:MM`; `null` otherwise. */
 export function parse_time(text: string): string | null {
-  const match = /^(\d{1,2})(?::(\d{2}))?$/.exec(text.trim());
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2] ?? 0);
-  if (minutes > 59 || hours > 24 || (hours === 24 && minutes > 0)) return null;
-  return `${pad2(hours)}:${pad2(minutes)}`;
+  const value = text.trim();
+  if (value === "24" || value === "24:00") return "24:00";
+  const time = parse_plain_time(/^\d{1,2}$/.test(value) ? `${value}:00` : value);
+  return time && format_plain_time(time);
 }

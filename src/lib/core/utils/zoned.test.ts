@@ -70,7 +70,8 @@ describe("plain dates", () => {
 
   it("parses 24 h times", () => {
     expect(parse_plain_time("00:00")).toEqual({ hours: 0, minutes: 0 });
-    for (const bad of ["24:00", "7:30", "12:60"]) expect(parse_plain_time(bad)).toBeNull();
+    expect(parse_plain_time("7:30")).toEqual({ hours: 7, minutes: 30 });
+    for (const bad of ["24:00", "7:3", "730", "12:60"]) expect(parse_plain_time(bad)).toBeNull();
   });
 
   it("does calendar arithmetic", () => {

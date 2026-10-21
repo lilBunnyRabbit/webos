@@ -1,8 +1,6 @@
 <script lang="ts">
-  import type { Component } from "svelte";
-  import type { IconWeight } from "phosphor-svelte";
   import kernel, { type AppsService } from "$lib/core/api";
-  import { Button, Section } from "$lib/core/components/ui";
+  import { Button, Section, type IconComponent } from "$lib/core/components/ui";
   import { ArrowRight as ArrowRightIcon } from "phosphor-svelte";
   import type { Page } from "../ids";
   import { pages_for, RELATED } from "../pages";
@@ -15,7 +13,7 @@
   interface Link {
     key: string;
     label: string;
-    icon: Component<{ weight?: IconWeight; class?: string }>;
+    icon: IconComponent;
     external: boolean;
     run: () => void;
   }

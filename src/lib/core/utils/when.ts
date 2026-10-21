@@ -1,3 +1,4 @@
+import type { JobAt } from "../api/services/scheduler/type";
 import { add_days, format_date_key, format_plain_time, local_date, parse_date, parse_plain_time, wall_to_epoch, zoned_parts } from "./zoned";
 
 const MINUTE = 60_000;
@@ -13,16 +14,14 @@ export function parse_duration(text: string): number | null {
   return Number(hours) * UNITS.h + Number(minutes) * UNITS.m + Number(seconds) * UNITS.s || null;
 }
 
+/** `7:30`, `23:59`: an alarm needs the minutes. */
 export function parse_alarm_time(text: string): string | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  return hours < 24 && minutes < 60 ? `${String(hours).padStart(2, "0")}:${match[2]}` : null;
+  const time = parse_plain_time(text.trim());
+  return time && format_plain_time(time);
 }
 
 /** A moment the user typed: an absolute instant (`10m` from now), or a wall time in a zone. */
-export type When = { epoch: number } | { date: string; time: string; tz: string };
+export type When = JobAt;
 
 /**
  * `10m`, `1h30m` (from `now`), `18:30` (the next one), `today 18:30`, `tomorrow 9:00`, `2026-12-24 18:00`. Wall times

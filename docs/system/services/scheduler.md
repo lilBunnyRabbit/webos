@@ -207,7 +207,7 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 
 - Value type `job`: columns app, title, next, repeat; `next` is a date and time, `never` (armed, no occurrence left) or `off`. Click opens the job's `open` (or its app).
 - Completers: `job` (ids, title as detail) and `when` (`when_examples`: the next quarter hour about 30 min ahead, `10m`, `1h`, `tomorrow 9:00`).
-- Arg kinds `arg.job()` and `arg.when()` (`shell/arg.ts`). A `when` value is read with `parse_when(text, now, zone)` from `$lib/core/utils/when`: `10m`/`1h30m` (instant from now), `18:30` (the next one), `today 18:30`, `tomorrow 9:00`, `2026-12-24 18:00` (wall time in the zone; a dated time already past is `null`). `parse_duration` and `parse_alarm_time` moved there from Clock unchanged. No core command takes a `when` yet; it's for the alerting apps' commands.
+- Arg kinds `arg.job()` and `arg.when()` (`shell/arg.ts`). A `when` value is read with `parse_when(text, now, zone)` from `$lib/core/utils/when`: `10m`/`1h30m` (instant from now), `18:30` (the next one), `today 18:30`, `tomorrow 9:00`, `2026-12-24 18:00` (wall time in the zone; a dated time already past is `null`). `parse_duration` and `parse_alarm_time` moved there from Clock; `parse_alarm_time` and `date.ts` `parse_time` both build on `zoned.ts` `parse_plain_time`, the one wall-time parser. `When` is an alias of `JobAt`. No core command takes a `when` yet; it's for the alerting apps' commands.
 
 ## Apps on it
 
