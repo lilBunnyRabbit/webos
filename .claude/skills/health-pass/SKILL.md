@@ -44,7 +44,7 @@ Brief first (what was measured, the table's headline), then AskUserQuestion roun
 ## 5. Fix
 
 - One `app-builder` per independent fix group (core/shell, kit, docs), template [../app-request/build-prompt.md](../app-request/build-prompt.md), each told to re-measure with the harness and report before/after.
-- Merge per [../app-request/merge.md](../app-request/merge.md), push one by one.
+- Merge per [../app-request/merge.md](../app-request/merge.md); push in groups (perf fixes together, a risky infra change such as the service worker on its own).
 - Perf fixes users can feel get a `fixed`/`improved` changelog line; refactors and docs don't.
 
 ## 6. Record

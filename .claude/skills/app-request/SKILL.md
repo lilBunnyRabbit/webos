@@ -111,7 +111,7 @@ Docs are uncommitted at this point. The builder copies them into its worktree an
 
 ## 7. Merge
 
-One at a time, as each agent reports. The owner said "push one by one", so each merge ends in a push. Follow [merge.md](merge.md) exactly. After each push, tell the agents still running the new master version.
+One at a time, as each agent reports, merged locally. Push in groups (owner, 2026-10-21: "group the pushes if you can - not all in one but what makes sense"): a feature with its polish, a health or refactor batch, a risky infra change alone, a set of related new apps. Every push deploys and posts a release, so a group is a release. Follow [merge.md](merge.md) exactly. After each merge, tell the agents still running the new master version.
 
 ## 8. Report
 

@@ -1,6 +1,6 @@
 # Merge checklist
 
-Run once per finished `app-builder` agent, in the order they report. Never batch two merges into one push.
+Run once per finished `app-builder` agent, in the order they report. Pushes go in groups (see SKILL.md step 7): keep local history ordered so a group is a prefix, and push it with `git push origin <last-sha-of-group>:master` once its suite and UI check pass.
 
 ## Before
 
@@ -33,7 +33,7 @@ Run once per finished `app-builder` agent, in the order they report. Never batch
 
 ## Push and clean up
 
-- [ ] `git log --oneline -3`, then `git push origin master`.
+- [ ] When the group is complete: full `bun run test`, `git log --oneline origin/master..master`, then `git push origin <last-sha-of-group>:master`.
 - [ ] `git worktree remove --force <worktree>` and `git branch -D <branch>`.
 - [ ] `git stash pop` if stashed in this merge.
 - [ ] Tell every agent still running: "master is now at {version}; rebase before committing" (SendMessage).
