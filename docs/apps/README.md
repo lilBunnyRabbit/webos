@@ -23,6 +23,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [birdseye.md](birdseye.md) | Birdseye (`birdseye`) | NCC template tracking over a pyramid, lost frames and re-boxing, forward-backward smoothing, the locked render, WebM export through `$kit/utils/video` |
 | [proposals.md](proposals.md) | Proposals (`proposals`) | The run model (text and inline/block images), `.proposals.md` with escaping and hand-edit tolerance, the `contenteditable` editor, 1200 px WebP pictures, the sketch pad, Send |
 | [warren.md](warren.md) | Warren (`warren`) | Lexical used without a framework, the page-break node and measured sheets, Change everywhere in one undo step, `.warren`, the hand-written .docx (styles, numbering, page size) and the print page |
+| [unsaid.md](unsaid.md) | Unsaid (`unsaid`) | The card deck and seeded deals, the banned-word check (folding, cheap stems, 4-letter prefixes), the guess prompt and its schema, hits and scoring |
 
 ## Page shape
 

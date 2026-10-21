@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.28.0",
+    date: "2026-10-21",
+    title: "Unsaid",
+    changes: [
+      {
+        kind: NEW,
+        text: "Unsaid: describe a word without saying any of its five banned words, and AI running on your computer tries to guess it in as few clues as you can manage.",
+      },
+    ],
+  },
+  {
     version: "3.27.3",
     date: "2026-10-21",
     title: "Search apps right away on phones",
