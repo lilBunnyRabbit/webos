@@ -3,6 +3,15 @@
   import { cn } from "$lib/core/utils";
   import type { IconComponent } from "./types";
 
+  interface Props {
+    icon?: IconComponent;
+    title: string;
+    description?: string;
+    tone?: "muted" | "error";
+    actions?: Snippet;
+    class?: string;
+  }
+
   let {
     icon: Icon,
     title,
@@ -10,14 +19,7 @@
     tone = "muted",
     actions,
     class: class_name,
-  }: {
-    icon?: IconComponent;
-    title: string;
-    description?: string;
-    tone?: "muted" | "error";
-    actions?: Snippet;
-    class?: string;
-  } = $props();
+  }: Props = $props();
 </script>
 
 <div class={cn("flex h-full flex-col items-center justify-center gap-3 p-8 text-center", class_name)}>

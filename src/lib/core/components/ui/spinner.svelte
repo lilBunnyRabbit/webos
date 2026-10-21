@@ -2,7 +2,12 @@
   import { cn } from "$lib/core/utils";
   import { CircleNotch as CircleNotchIcon } from "phosphor-svelte";
 
-  let { label = "Loading", class: class_name }: { label?: string; class?: string } = $props();
+  interface Props {
+    label?: string;
+    class?: string;
+  }
+
+  let { label = "Loading", class: class_name }: Props = $props();
 </script>
 
 <span role="status" aria-label={label} class={cn("inline-flex text-foreground/65", class_name)}>

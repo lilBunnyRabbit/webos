@@ -3,16 +3,7 @@
   import { cn } from "$lib/core/utils";
   import { TARGETED_SECTION } from "./setting-anchor";
 
-  /** A titled group on an app's surface: heading, optional description, then content in a raised card. */
-  let {
-    title,
-    description,
-    actions,
-    flush = false,
-    setting,
-    class: class_name,
-    children,
-  }: {
+  interface Props {
     title?: string;
     description?: string;
     actions?: Snippet;
@@ -22,7 +13,18 @@
     setting?: string;
     class?: string;
     children: Snippet;
-  } = $props();
+  }
+
+  /** A titled group on an app's surface: heading, optional description, then content in a raised card. */
+  let {
+    title,
+    description,
+    actions,
+    flush = false,
+    setting,
+    class: class_name,
+    children,
+  }: Props = $props();
 </script>
 
 <section data-setting={setting} class={cn("flex flex-col gap-2.5 rounded-xl transition-[outline-color] duration-500", TARGETED_SECTION, class_name)}>

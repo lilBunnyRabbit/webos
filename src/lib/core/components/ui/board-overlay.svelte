@@ -2,17 +2,19 @@
   import type { Snippet } from "svelte";
   import { cn } from "$lib/core/utils";
 
+  interface Props {
+    title: string;
+    detail?: string;
+    class?: string;
+    children?: Snippet;
+  }
+
   let {
     title,
     detail,
     class: class_name,
     children,
-  }: {
-    title: string;
-    detail?: string;
-    class?: string;
-    children?: Snippet;
-  } = $props();
+  }: Props = $props();
 </script>
 
 <div

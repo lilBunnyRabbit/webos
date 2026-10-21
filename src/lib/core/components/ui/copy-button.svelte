@@ -6,6 +6,14 @@
   import type { ButtonVariants } from "./variants";
   import { error_message } from "$lib/core/utils";
 
+  interface Props {
+    text: string;
+    label?: string;
+    disabled?: boolean;
+    size?: ButtonVariants["size"];
+    class?: string;
+  }
+
   // Needs an app window around it: a failed copy is reported as that app.
   let {
     text,
@@ -13,7 +21,7 @@
     disabled = false,
     size = "sm",
     class: class_name,
-  }: { text: string; label?: string; disabled?: boolean; size?: ButtonVariants["size"]; class?: string } = $props();
+  }: Props = $props();
 
   const { app_id } = get_app_context();
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));

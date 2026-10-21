@@ -4,8 +4,13 @@
   import { qr_path } from "$kit/utils/qr";
   import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
 
+  interface Props {
+    frames: string[];
+    label: string;
+  }
+
   /** `frames` from `encode_frames`. More than one cycles on its own so the other phone's camera catches them all. */
-  let { frames, label }: { frames: string[]; label: string } = $props();
+  let { frames, label }: Props = $props();
 
   /** Slow enough for a camera to lock on, fast enough that a 5-code share takes about two seconds a round. */
   const CYCLE_MS = 400;

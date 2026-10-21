@@ -8,15 +8,7 @@
     icon?: IconComponent;
   }
 
-  let {
-    value = $bindable(),
-    options,
-    label,
-    size = "md",
-    id,
-    "aria-describedby": describedby,
-    class: class_name,
-  }: {
+  interface Props {
     value: T;
     options: Option[];
     label: string;
@@ -25,7 +17,17 @@
     id?: string;
     "aria-describedby"?: string;
     class?: string;
-  } = $props();
+  }
+
+  let {
+    value = $bindable(),
+    options,
+    label,
+    size = "md",
+    id,
+    "aria-describedby": describedby,
+    class: class_name,
+  }: Props = $props();
 
   // One shared name makes the radios a real group: a single Tab stop, arrow keys move the selection.
   const name = $props.id();

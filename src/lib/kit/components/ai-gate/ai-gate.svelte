@@ -17,19 +17,21 @@
   import { untrack } from "svelte";
   import { combine } from "./gate";
 
+  interface Props {
+    features: AiFeature[];
+    title: string;
+    icon?: IconComponent;
+    download?: string;
+    children: Snippet<[AiGateState]>;
+  }
+
   let {
     features,
     title,
     icon = SparkleIcon,
     download = "The first use downloads Chrome's AI model once, a few GB. It runs on this device after that, offline too.",
     children,
-  }: {
-    features: AiFeature[];
-    title: string;
-    icon?: IconComponent;
-    download?: string;
-    children: Snippet<[AiGateState]>;
-  } = $props();
+  }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
   let checked = $state(false);

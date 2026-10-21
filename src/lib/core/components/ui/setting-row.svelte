@@ -3,6 +3,15 @@
   import { cn } from "$lib/core/utils";
   import { TARGETED_ROW } from "./setting-anchor";
 
+  interface Props {
+    label: string;
+    description?: string;
+    /** An id search and deep links land on (`reveal_setting`). */
+    setting?: string;
+    class?: string;
+    children: Snippet<[{ id: string; describedby: string | undefined }]>;
+  }
+
   /**
    * Label and description on the left, the control on the right; stacks in narrow windows (container query). The
    * snippet receives the ids to put on the control, so it gets its accessible name and description from this row.
@@ -13,14 +22,7 @@
     setting,
     class: class_name,
     children,
-  }: {
-    label: string;
-    description?: string;
-    /** An id search and deep links land on (`reveal_setting`). */
-    setting?: string;
-    class?: string;
-    children: Snippet<[{ id: string; describedby: string | undefined }]>;
-  } = $props();
+  }: Props = $props();
 
   const uid = $props.id();
   const id = `${uid}-control`;
