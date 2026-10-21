@@ -48,6 +48,7 @@
   } from "phosphor-svelte";
   import { z } from "zod";
   import { reveal_setting } from "$lib/core/components/ui/setting-anchor";
+  import { ai_icon } from "$kit/components/ai-icon";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -152,7 +153,7 @@
       return manifest ? [{ manifest, version: "0.34.0" }] : [];
     })
   );
-  const ai_apps = $derived(["ask", "unsaid", "doodlehop", "alibi"].flatMap((id) => pick(id) ?? []));
+  const ai_icons = $derived(["terminal", "calculator", "text-editor", "file-explorer"].flatMap((id) => pick(id)?.icon ?? []).map((icon) => ai_icon(icon)));
   const AI_ICON_SIZES = ["size-4", "size-6", "size-9", "size-12"];
 </script>
 
@@ -472,15 +473,15 @@
           <div class="flex flex-col gap-3">
             {#each AI_ICON_SIZES as size (size)}
               <div class="flex items-center gap-4">
-                {#each ai_apps as manifest (manifest.id)}
-                  <span title={manifest.name}><manifest.icon class={size} weight="duotone" /></span>
+                {#each ai_icons as Icon, index (index)}
+                  <Icon class={size} weight="duotone" />
                 {/each}
                 <span class="font-mono text-2xs text-foreground/65">{size}</span>
               </div>
             {/each}
             <div class="flex w-fit items-center gap-4 rounded-lg bg-primary/15 px-3 py-2 text-primary">
-              {#each ai_apps as manifest (manifest.id)}
-                <manifest.icon class="size-6" weight="fill" />
+              {#each ai_icons as Icon, index (index)}
+                <Icon class="size-6" weight="fill" />
               {/each}
               <span class="font-mono text-2xs">primary ink</span>
             </div>
