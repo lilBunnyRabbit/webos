@@ -7,6 +7,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { version_plugin } from "./vite-plugin-version";
 import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
 import { core_modules } from "./vite-core-chunk";
+import { import_map_plugin } from "./vite-plugin-import-map";
 import path from "path";
 
 // The font is only discovered once the CSS has loaded; a preload starts it with the entry chunk. Hashed name, so build only.
@@ -55,6 +56,7 @@ export default defineConfig({
     //   },
     // }
     version_plugin(),
+    import_map_plugin(),
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
     VitePWA({
       registerType: "autoUpdate",

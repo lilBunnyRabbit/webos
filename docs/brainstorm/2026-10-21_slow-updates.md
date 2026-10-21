@@ -43,3 +43,19 @@ Investigation:
 
 ## Next session topics
 - If A can't break the cascade cleanly, look at import maps or unhashed filenames with content revisions.
+
+## Follow-up 2026-10-21: core changes still rename ~575 files
+
+Owner, updating 3.23.0 → 3.24.0: "why so many downloads?" (577 of 733 precache entries changed), then "shouldnt this be all on demand?"
+
+Investigation (both builds diffed): the 3.24.0 change touched `turrets/options.ts`, which `live/registry.ts:6` pulls into `core`. Core also lists the hashed names of the 83 chunks it lazy-loads in `__vite__mapDeps`, so a change to any of them renames core too (probe: markup-only edit to `turrets-overlay.svelte` → 576 entries). 570 chunks import `./core-<hash>.js` by name and are renamed with identical content. The 3.21.0 split only protects app-only edits (16-entry baseline). The overlay count is right: it counts only new manifest entries. `modulePreload: false` doesn't remove `mapDeps`.
+
+### Cascade fix: import map (decided)
+`index.html` carries a `<script type="importmap">` mapping a fixed specifier to core's hashed file; chunks import the fixed specifier, so a core change renames only core, `index.html` and what actually changed. Prototype first: Rollup may still fold dependency hashes into importers; if the import map can't stop it, fall back to the stable core name and report. Rejected: a stable `core.js` name (a load without the service worker can mix a cached old core with a new index for up to 10 minutes); moving live wallpapers out of core (fixes Pew edits only).
+Core's lazy-load name list (`mapDeps`) has the same effect and must be covered too.
+
+### On demand: keep precaching everything (decided)
+With the cascade fixed, updates are ~20 files and every app keeps working offline. Rejected for now: shell-only precache with a background warm-up, and pure on-demand (apps not opened since the update fail offline).
+
+### Action items
+- [x] Import map built (3.26.1): `vite-plugin-import-map.ts`; chunks import `@webos/core`, core's lazy imports and preload list go through the map, core renamed from its final code. Precache entries renamed vs a rebuild: `turrets/options.ts` line 583 → 17, `turrets-overlay.svelte` markup 583 → 17, one app 17 → 17. ADR-036 revision, overview Chunks, version page.

@@ -185,7 +185,7 @@ If the browser already installed the new worker before the click, `installing` a
 
 ### Update progress
 
-Why it's slow: a release renames most of the precache (606 of 765 files, about 5 MB, for a one-line change; see the [slow updates brainstorm](../../brainstorm/2026-10-21_slow-updates.md)), and Workbox's install fetches them **one at a time** (`PrecacheController.install`, workbox#2528), storing each in the precache cache as it lands and skipping any key already there.
+Why it was slow: a release renamed most of the precache (606 of 765 files, about 5 MB, for a one-line change; see the [slow updates brainstorm](../../brainstorm/2026-10-21_slow-updates.md)). Since the `core` chunk and its import map ([overview](../overview.md#build--deploy)) a release renames about 17 files, but Workbox's install fetches them **one at a time** (`PrecacheController.install`, workbox#2528), storing each in the precache cache as it lands and skipping any key already there.
 
 So the progress is read from Cache Storage, with no change to the worker (`precache.ts`, pure, unit-tested; the loop is `track_install` in the service):
 
