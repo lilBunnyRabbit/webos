@@ -172,27 +172,44 @@ The manifest (`VitePWA` in `vite.config.ts`) has what Chromium needs: `name`, `s
 
 ## Service worker
 
-Production builds register a Workbox SW through `VitePWA({ registerType: "autoUpdate" })` in `vite.config.ts` (`sw.js`, `workbox-*.js`, plus `registerSW.js` injected into `index.html`). The PWA is a goal in its own right: installable, standalone, offline. The manifest's `theme_color` and `background_color` are both Brand Dark `#17252C`, so a standalone launch doesn't flash white. Dev registers no SW.
+Production builds register our own service worker, `src/sw.ts`, built by `VitePWA({ strategies: "injectManifest", registerType: "autoUpdate" })` in `vite.config.ts` into one classic `sw.js` (Workbox's modules bundled in; `registerSW.js` injected into `index.html` registers it). workbox-build writes the precache manifest over `self.__WB_MANIFEST`. The PWA is a goal in its own right: installable, standalone, offline. The manifest's `theme_color` and `background_color` are both Brand Dark `#17252C`, so a standalone launch doesn't flash white. Dev registers no SW.
 
 Who does what:
 
-- **The SW** precaches the app shell (`js`, `mjs`, `css`, `html`, `woff2`, plus `includeAssets` and the manifest icons) and serves it, so the app boots offline. The codec `.wasm` (AVIF, JPEG XL; 2–3.5 MB each) and Shopping List's text reader (ONNX Runtime's 14 MB wasm and the 4.8 MB and 8 MB `.onnx` models) are left out of the precache so an install doesn't download them. A `CacheFirst` runtime rule (`runtimeCaching`, `.wasm` and `.onnx`) keeps each one in the `webos-wasm` cache the first time an app loads it, so those formats and reading a list from a photo then work offline. `maxEntries: 16` bounds it: the file names are content-hashed, so a release with new wasm adds entries and the oldest fall out. With `autoUpdate` the new worker skips waiting and claims open clients as soon as it installs. The browser also checks for a new `sw.js` on its own (on navigation, at most daily otherwise).
-- **Notification clicks.** The generated worker also pulls in `public/sw-notifications.js` through `workbox.importScripts` (`vite.config.ts`), which routes OS notification clicks to a WebOS tab or opens one ([scheduler › Notification clicks](scheduler.md#notification-clicks), ADR-062). It adds a `notificationclick` handler only: the precache manifest in `sw.js` keeps its shape, so `precache.ts` still parses it.
+- **The SW** precaches the app shell (`injectManifest.globPatterns`: `js`, `mjs`, `css`, `html`, `woff2`, plus `includeAssets` and the manifest icons) and serves it (`PrecacheRoute`, and a `NavigationRoute` to `index.html`), so the app boots offline. It calls `skipWaiting()` and `clientsClaim()`: a new worker takes over open tabs as soon as it installs. The browser also checks for a new `sw.js` on its own (on navigation, at most daily otherwise).
+- **Install** (`core/sw/install.ts`, pure, Node and browser tests). Workbox's own install fetches one file at a time and does a `cache.match` per file first (`PrecacheController.install`, workbox#2528). The worker uses Workbox's `PrecacheController` for the manifest, keys, activate cleanup and routing, but not its install listener: `install_precache()` reads the precache's keys once, keeps every entry already there, and downloads the missing ones through `run_limited` (`INSTALL_OPTIONS`: 12 in flight, 3 tries per file with 0.5 s then 1 s backoff, retries with `cache: "reload"`). Requests match Workbox's: `credentials: "same-origin"`, `cache: "reload"` for a revisioned (unhashed) entry such as `index.html`, `"default"` for hashed ones; a redirected response is stored as a plain copy. A file that fails every try fails the install, the worker goes `redundant`, and `apply_update()` takes the clearing path. The cache (`workbox-precache-v2-{scope}`) and its keys (`?__WB_REVISION__=`) are Workbox's, so a worker this one replaces, including the `generateSW` worker before 3.45.0, leaves its files for it; Workbox's `activate` then deletes the keys the new manifest doesn't list, and `cleanupOutdatedCaches()` drops older precache versions.
+- **Runtime caches** (`CacheFirst`, `registerRoute` in `sw.ts`), for files kept out of the install:
+  - `webos-wasm`: `.wasm` and `.onnx`, the codec wasm (AVIF, JPEG XL; 2–3.5 MB each) and Shopping List's text reader (ONNX Runtime's 14 MB wasm and the 4.8 MB and 8 MB models). `maxEntries: 16`: names are content-hashed, so a release with new wasm adds entries and the oldest fall out.
+  - `webos-fonts`: `.ttf` and `.ttc`, the built-in Burrow faces ([settings › Fonts](settings.md#fonts)), 200 responses only, 8 entries. Their URLs are content-hashed (`?url` imports from `src/assets/fonts/burrow/`), so a changed font is a new URL and reaches installs that cached the old one.
+  - `webos-mammoth`: `assets/mammoth-*.js`, Warren's `.docx` import (~100 KB gzipped). The chunk gets a fixed name prefix from `build.rollupOptions.output.chunkFileNames` (any chunk holding a module from `node_modules/mammoth/`) and `injectManifest.globIgnores` leaves it out of the precache. 200 only, 2 entries. Offline, a `.docx` import works once it has been used online.
+- **Notification clicks** (`core/sw/notification-clicks.ts`, `route_notification_clicks(self)`) route OS notification clicks to a WebOS tab or open one ([scheduler › Notification clicks](scheduler.md#notification-clicks), ADR-062). Message shapes come from `notifications/system.ts`, so page and worker share one definition.
 - **VersionService** decides *when the user is told*. `version.json` isn't precached and is fetched with `no-store`, so `check()` always sees the deployed build. Offline, the check is skipped (`navigator.onLine`) or its failed fetch ignored, so an offline boot logs nothing.
 - **`apply_update()`** bridges them. A plain reload would boot the old build from the precache. So it calls `registration.update()` to fetch the new `sw.js`, waits for that worker to activate (it skips waiting and claims this page), and only then reloads. The reload is served from the new precache, and offline keeps working afterwards.
 - **Fallback (2026-10-12).** GitHub Pages' CDN can keep serving the old `sw.js` for minutes after `version.json` changed. Then `update()` finds nothing, and the old flow reloaded into the same build, so "Update and reload" looked like it did nothing. Now that case unregisters this app's worker, deletes its scoped caches and reloads with a cache-busting query, so the next boot comes from the network and registers the new worker. Modelled on series-tracker's `applyUpdate`, minus its origin-wide wipe.
 
 If the browser already installed the new worker before the click, `installing` and `waiting` are both `null`, so it takes the fallback path: unregister, clear this app's caches, reload from the network. Slower than needed, but it ends on the new build either way.
 
+**Measured** (2026-10-21, local HTTP/2 server at 20 Mbps and 40 ms per request, gzip, Chromium; time from `update()` to the new worker activated):
+
+| Case | Files | Workbox install (3.44.0) | This install |
+|------|-------|--------------------------|--------------|
+| First install (page load to worker ready) | ~780 | 35.7 s | 12.0 s |
+| Update from 3.31.0, 12 versions back | ~630 (2.7 MB gz) | 30.1 s | 10.8 s |
+| One-line change | 17 (0.13 MB gz) | 2.06 s | 1.45 s |
+
+The ceiling is Chromium, not the pool: fetches made inside a worker's `install` event run at most ~3 at a time (the same fetches from an activated worker's `message` handler, or from a page, run 12 at a time; checked with a probe worker). 8, 12 and 16 in flight measured the same. Unthrottled, both installs take ~2 s.
+
 ### Update progress
 
-Why it was slow: a release renamed most of the precache (606 of 765 files, about 5 MB, for a one-line change; see the [slow updates brainstorm](../../brainstorm/2026-10-21_slow-updates.md)). Since the `core` chunk and its import map ([overview](../overview.md#build--deploy)) a release renames about 17 files, but Workbox's install fetches them **one at a time** (`PrecacheController.install`, workbox#2528), storing each in the precache cache as it lands and skipping any key already there.
+Why it was slow: a release renamed most of the precache (606 of 765 files, about 5 MB, for a one-line change; see the [slow updates brainstorm](../../brainstorm/2026-10-21_slow-updates.md)). Since the `core` chunk and its import map ([overview](../overview.md#build--deploy)) a release renames about 17 files; an update after a long break still renames hundreds, which the parallel install above addresses.
 
-So the progress is read from Cache Storage, with no change to the worker (`precache.ts`, pure, unit-tested; the loop is `track_install` in the service):
+The progress is read from Cache Storage (`precache.ts`, pure, unit-tested; the loop is `track_install` in the service):
 
 1. Before `registration.update()`, snapshot the keys of `workbox-precache-v2-{scope}` (`precache_cache_name`). The install starts as soon as `sw.js` arrives, so a later snapshot would miss files.
-2. Once there's a new worker, fetch its `scriptURL` (`cache: "no-cache"`; the old worker doesn't route it) and read the manifest out of `precacheAndRoute([{url:"…",revision:…}, …])` (`parse_precache_manifest`, a regex over `generateSW`'s output). Each entry's cache key mirrors Workbox's `createCacheKey` (`precache_key`: resolved against the script URL, `?__WB_REVISION__=` when it has a revision). The keys missing from the snapshot are the download (`keys_to_download`) and set `total`.
-3. Every 400 ms, count how many of them the cache now holds (`count_cached`) into `done`.
+2. Once there's a new worker, fetch its `scriptURL` (`cache: "no-cache"`; the old worker doesn't route it) and read the manifest workbox-build injected, `[{"revision":…,"url":"…"}, …]` with sorted keys (`parse_precache_manifest`, a regex). Each entry's cache key mirrors Workbox's `createCacheKey` (`precache_key`: resolved against the script URL, `?__WB_REVISION__=` when it has a revision). The keys missing from the snapshot are the download (`keys_to_download`) and set `total`.
+3. Every 400 ms, count how many of them the cache now holds (`count_cached`) into `done`. The install stores each file as it lands, several at once, so the count still climbs file by file.
+
+The one update from a `generateSW` build (3.44.0 or older) to this worker runs the old page's parser, which looked for `{url:"…",revision:…}`: it finds nothing and shows only the elapsed time. Every update after that counts files.
 
 Only files are counted, not bytes: the manifest Workbox writes has no sizes (workbox-build deletes `size` before writing it), and summing Content-Length or blob sizes would still leave the total unknown. If the manifest can't be parsed, `total` stays `null` and the overlay shows only the elapsed time.
 
@@ -211,7 +228,7 @@ A worker that activates at any point before those reloads as before. Restart now
 
 ## Divergence from ADR
 
-- ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above.
+- ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above. Revision 2026-10-21: the worker is WebOS's own (`injectManifest`) with a parallel install.
 - ADR-004 calls for a `CHANGELOG.md` fetched at runtime. ADR-026 replaced it with the bundled, typed `changelog.ts` (ADR-004 revision note).
 - ADR-038 limits `announced` to installed apps. The code keeps every introduced app that is still registered, installed or not, so Open installs it (ADR-040). Revision note 2026-10-18; the `announced` JSDoc in `type.ts` still says "Installed apps".
 
@@ -227,4 +244,5 @@ Contributes `version`, `changelog`, `install` and the `release` and `new-app` va
 - `update_available` is never cleared, even if a later check finds nothing newer.
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.
 - Progress counts files, not bytes; a few large chunks can make the bar move unevenly.
-- The manifest is read with a regex over `generateSW`'s minified output. A Workbox upgrade that writes it differently leaves only the elapsed time (no error).
+- The manifest is read with a regex over the JSON workbox-build injects. A Workbox upgrade that writes it differently leaves only the elapsed time (no error).
+- Chromium runs a worker's `install`-event fetches ~3 at a time, so the 12-wide pool is capped there; downloading from the page during `apply_update()` would lift it but means the page writing the worker's cache (not built).

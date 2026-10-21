@@ -1,6 +1,6 @@
 # NotificationsService
 
-Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/` (`system.ts`: OS notifications and their clicks, shared with [SchedulerService](scheduler.md); `public/sw-notifications.js`), `src/lib/core/components/notifications/` (`toast-area`, `notification-list`, `notification-item`) · Inspector: `inspector.svelte` (ADR-020)
+Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/` (`system.ts`: OS notifications and their clicks, shared with [SchedulerService](scheduler.md); the worker side is `src/lib/core/sw/notification-clicks.ts`), `src/lib/core/components/notifications/` (`toast-area`, `notification-list`, `notification-item`) · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -76,7 +76,7 @@ None. History is in memory and gone on reload (ADR-006 revision: actions are fun
 
 ### System notifications
 
-`show_system_notification()` in `system.ts` shows through the active service worker registration, which Android requires (`new Notification()` throws there) and which allows buttons. The notification's `data` is `{ source: "notifications", id, route: null, commands: [] }`: the actions are closures, so only the tab that sent it can run them. On click, `public/sw-notifications.js` asks each WebOS tab in turn, most recently focused first, whether it takes the click; this service answers yes only when the id is in its `all`, and the worker focuses that tab. When no tab takes it (the sender closed), the worker opens WebOS. Without an active worker (the dev server) it falls back to a page `Notification` without buttons. The protocol is described in full under [scheduler › Notification clicks](scheduler.md#notification-clicks).
+`show_system_notification()` in `system.ts` shows through the active service worker registration, which Android requires (`new Notification()` throws there) and which allows buttons. The notification's `data` is `{ source: "notifications", id, route: null, commands: [] }`: the actions are closures, so only the tab that sent it can run them. On click, the service worker (`core/sw/notification-clicks.ts`) asks each WebOS tab in turn, most recently focused first, whether it takes the click; this service answers yes only when the id is in its `all`, and the worker focuses that tab. When no tab takes it (the sender closed), the worker opens WebOS. Without an active worker (the dev server) it falls back to a page `Notification` without buttons. The protocol is described in full under [scheduler › Notification clicks](scheduler.md#notification-clicks).
 
 ### Notification center
 

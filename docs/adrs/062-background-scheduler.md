@@ -116,3 +116,6 @@ The first health pass measured the scheduler as the only new idle cost: one wake
 - **One read at boot.** The folder-revision effect's first run only subscribes.
 - `phase` is documented as a generic timed phase, not Pomodoro's; no behaviour change.
 - Leadership, the store lock and steal rules are otherwise unchanged. Not done: stopping the heartbeat when jobs exist but none is armed (left as a known gap).
+
+## Revision 2026-10-21: click routing inside the worker (health pass)
+`public/sw-notifications.js` and `workbox.importScripts` are gone: WebOS now builds its own service worker (`src/sw.ts`, ADR-004 revision), and the click routing moved into it as typed code, `core/sw/notification-clicks.ts`, importing its message shapes from `notifications/system.ts`. Behaviour is unchanged: same messages, same tab order, same `webos:ready` wait.

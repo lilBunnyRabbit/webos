@@ -2,6 +2,12 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-21: our own service worker ([health pass](../brainstorm/2026-10-21_health-pass.md), "Update speed")**
+> - VitePWA builds `src/sw.ts` (`strategies: "injectManifest"`) instead of generating the worker. Same precache globs, cache name and keys, `skipWaiting` + `clientsClaim`, navigation fallback and runtime caches, so a `generateSW` install updates into it and keeps its unchanged files.
+> - Its install reads the precache's keys once and downloads only the missing files, 12 at a time with 3 tries each (`core/sw/install.ts`), instead of Workbox's one at a time. Measured at 20 Mbps / 40 ms: an update from 12 versions back 30.1 → 10.8 s, a first install 35.7 → 12.0 s, a one-line change 2.06 → 1.45 s. Chromium runs fetches made in an `install` event only ~3 at a time, which is the ceiling now.
+> - The precache parser reads the JSON workbox-build injects. The single update from a `generateSW` build shows only elapsed time, since the old page's parser can't read the new shape.
+> - mammoth (Warren's `.docx` import) left the precache for a `CacheFirst` runtime cache, `webos-mammoth`. The Burrow fonts moved from `public/fonts/` to content-hashed asset URLs, so a fixed font reaches installs that cached the old one. Details in [version.md](../system/services/version.md#service-worker).
+
 > **Revision 2026-10-21: update progress ([brainstorm](../brainstorm/2026-10-21_slow-updates.md))**
 > - A release renames most of the precache and Workbox installs it one file at a time, so "Update and reload" could sit on a silent spinner, then the old 8 s timeout threw the half-done install away and cleared everything.
 > - The update screen now shows files done of the total and elapsed seconds. Progress is read from Cache Storage (the new `sw.js` manifest against the precache cache's keys), so the service worker is unchanged. Bytes aren't shown: the manifest Workbox writes has no sizes.

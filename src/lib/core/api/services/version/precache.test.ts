@@ -8,7 +8,7 @@ import {
   progress_line,
 } from "./precache";
 
-const SW = `define(["./workbox-2c58ddf2"],function(s){"use strict";self.skipWaiting(),s.clientsClaim(),s.precacheAndRoute([{url:"assets/index-Ab_c-1.js",revision:null},{url:"index.html",revision:"e9cd7f"},{url:"assets/x-Q.css",revision:null}],{}),s.cleanupOutdatedCaches()});`;
+const SW = `const n=new Fe;n.addToCacheList([{"revision":null,"url":"assets/index-Ab_c-1.js"},{"revision":"e9cd7f","url":"index.html"},{"revision":null,"url":"assets/x-Q.css"}]);self.skipWaiting();`;
 const SCRIPT = "https://x.github.io/webos/sw.js";
 
 describe("parse_precache_manifest", () => {

@@ -1,6 +1,6 @@
 # SchedulerService
 
-Key `scheduler` · Depends on: files, notifications, apps, shell · ADR: [062](../../adrs/062-background-scheduler.md) · Source: `src/lib/core/api/services/scheduler/`, `src/lib/core/api/services/notifications/system.ts`, `public/sw-notifications.js`, `src/lib/core/utils/zoned.ts`, `src/lib/core/utils/when.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `scheduler` · Depends on: files, notifications, apps, shell · ADR: [062](../../adrs/062-background-scheduler.md) · Source: `src/lib/core/api/services/scheduler/`, `src/lib/core/api/services/notifications/system.ts`, `src/lib/core/sw/notification-clicks.ts`, `src/lib/core/utils/zoned.ts`, `src/lib/core/utils/when.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -162,7 +162,7 @@ Found by a pass, at boot or later. The first pass after this tab starts leading 
 
 ## Notification clicks
 
-`public/sw-notifications.js`, pulled into the generated worker by `workbox.importScripts` (`vite.config.ts`). The precache manifest is unchanged, so VersionService's precache parser still reads it.
+`src/lib/core/sw/notification-clicks.ts`, wired into WebOS's own worker (`src/sw.ts`) by `route_notification_clicks(self)`; message shapes are imported from `notifications/system.ts` ([version › Service worker](version.md#service-worker)).
 
 On `notificationclick` the worker closes the notification and builds `{ type: "webos:notification-click", source, id, action, command, route }`, `command` being `data.commands[action]` for a button. Then:
 

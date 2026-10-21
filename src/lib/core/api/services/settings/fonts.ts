@@ -1,5 +1,7 @@
 import { PATHS } from "../files/hierarchy";
 import type { AppearanceFont, FontChoice, FontRole } from "./type";
+import burrow_italic_url from "../../../../../assets/fonts/burrow/burrow-italic-vf.ttf?url";
+import burrow_url from "../../../../../assets/fonts/burrow/burrow-vf.ttf?url";
 
 /** Font files the OS owns: choosing one copies it here, so moving or deleting the original doesn't break it. */
 export const FONT_DIRECTORY_NAME = "fonts";
@@ -9,8 +11,8 @@ export const FONT_EXTENSIONS = [".ttc", ".ttf", ".otf", ".woff", ".woff2"] as co
 export const FONT_FILE_ACCEPT = [...FONT_EXTENSIONS, "font/collection", "font/ttf", "font/otf", "font/woff", "font/woff2"];
 
 export interface BuiltinFace {
-  /** Under `public/`, fetched relative to the base URL on first use. */
-  path: string;
+  /** Content-hashed by the build, so a changed font reaches installs that cached the old one. Fetched on first use. */
+  url: string;
   /** A CSS `font-weight` descriptor: one weight, or a variable font's range. */
   weight: string;
   style: "normal" | "italic";
@@ -26,8 +28,8 @@ export const BUILTIN_FONTS: Record<string, BuiltinFont> = {
   burrow: {
     name: "Burrow",
     faces: [
-      { path: "fonts/burrow-vf.ttf", weight: "300 700", style: "normal" },
-      { path: "fonts/burrow-italic-vf.ttf", weight: "300 700", style: "italic" },
+      { url: burrow_url, weight: "300 700", style: "normal" },
+      { url: burrow_italic_url, weight: "300 700", style: "italic" },
     ],
   },
 };

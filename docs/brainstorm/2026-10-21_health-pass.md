@@ -64,7 +64,7 @@ CONVENTIONS allows inline prop types; `interface Props` required for kit/ui comp
 
 ## Action items
 - [x] Scheduler fixes (idle four, double boot read, phase wording, quiet offline version check)
-- [ ] Service worker: injectManifest + parallel install, mammoth runtime cache, versioned Burrow font URLs, import-map `\0` identity fix
+- [x] Service worker: injectManifest + parallel install, mammoth runtime cache, versioned Burrow font URLs, import-map `\0` identity fix (3.45.0). Measured at 20 Mbps / 40 ms over HTTP/2: update from 12 versions back 30.1 → 10.8 s, first install 35.7 → 12.0 s, one-line change 2.06 → 1.45 s. Chromium runs `install`-event fetches ~3 at a time, so 8/12/16 in flight measure the same; lifting that means the page downloading into the precache (owner call).
 - [x] Kit `report_error` + flash helper sweep; CONVENTIONS amend
 - [x] Fork + tidy: stand-in test apps, CI fork browser tests, interests/samples/Getting started guards, Style Guide ai_icon demo, video helpers to kit, WebM app name, duplicate parsers and types, Warren find effect, dead exports and imports, `scripts/perf/` harness (Soundboard still imports `VIDEO_ACCEPT` / `is_video_name` through Video Tools' re-export)
 

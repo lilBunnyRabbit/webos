@@ -15,6 +15,12 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** A module id as a path from the root: virtual ids drop Rollup's `\0` and a query, so the checkout's location never counts. */
+export function module_identity(id: string, root: string): string {
+  const file = id.replace(/^\0/, "").replace(/\?.*$/, "");
+  return (path.isAbsolute(file) ? path.relative(root, file) : file).split(path.sep).join("/");
+}
+
 function find_core<T extends Output>(files: T[], name: string): Exclude<T, Rollup.OutputAsset> | null {
   const found = files.filter(
     (file) => (!("type" in file) || file.type === "chunk") && "facadeModuleId" in file && file.name === name && file.facadeModuleId === null
@@ -92,7 +98,7 @@ export function import_map_plugin(name = "core"): Plugin[] {
           .filter((file): file is Rollup.OutputChunk => file.type === "chunk")
           .map((chunk) => {
             const owned = chunk.facadeModuleId ? [chunk.facadeModuleId] : [...chunk.moduleIds].sort();
-            const identity = short_hash(owned.map((id) => path.relative(root, id).split(path.sep).join("/")).join("\n"));
+            const identity = short_hash(owned.map((id) => module_identity(id, root)).join("\n"));
             return { chunk, identity };
           })
           .sort((a, b) => a.identity.localeCompare(b.identity));

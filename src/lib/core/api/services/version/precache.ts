@@ -3,12 +3,12 @@ export interface PrecacheEntry {
   revision: string | null;
 }
 
-// The shape `generateSW` writes into sw.js. If Workbox ever writes it differently, this finds nothing and the overlay
-// shows only the elapsed time.
-const ENTRY = /\{url:"([^"]+)",revision:(?:null|"([^"]*)")\}/g;
+// The JSON workbox-build's `injectManifest` writes over `self.__WB_MANIFEST` in sw.js, keys sorted. If it ever writes it
+// differently, this finds nothing and the overlay shows only the elapsed time.
+const ENTRY = /\{"revision":(?:null|"([^"]*)"),"url":"([^"]+)"\}/g;
 
 export function parse_precache_manifest(source: string): PrecacheEntry[] {
-  return Array.from(source.matchAll(ENTRY), ([, url, revision]) => ({ url, revision: revision ?? null }));
+  return Array.from(source.matchAll(ENTRY), ([, revision, url]) => ({ url, revision: revision ?? null }));
 }
 
 /** Mirrors workbox-precaching's `createCacheKey`. */
@@ -22,7 +22,7 @@ export function precache_cache_name(scope: string): string {
   return `workbox-precache-v2-${scope}`;
 }
 
-/** Workbox skips entries already in the cache, so only the rest are downloaded. */
+/** The worker's install skips entries already in the cache, so only the rest are downloaded. */
 export function keys_to_download(manifest: PrecacheEntry[], script_url: string, cached_before: Set<string>): string[] {
   return manifest.map((entry) => precache_key(entry, script_url)).filter((key) => !cached_before.has(key));
 }

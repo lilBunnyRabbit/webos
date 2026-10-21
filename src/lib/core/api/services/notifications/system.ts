@@ -1,8 +1,7 @@
-// OS notifications through the service worker, and the clicks `public/sw-notifications.js` hands back to a tab. Keep
-// the message shapes in step with that file.
+// OS notifications through the service worker, and the clicks `core/sw/notification-clicks.ts` hands back to a tab.
 
 export const CLICK_MESSAGE = "webos:notification-click";
-const READY_MESSAGE = "webos:ready";
+export const READY_MESSAGE = "webos:ready";
 
 export const ClickSource = {
   NOTIFICATIONS: "notifications",
