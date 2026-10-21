@@ -10,6 +10,10 @@ export const CHANGELOG: Release[] = [
     title: "Warren, finished",
     changes: [
       {
+        kind: NEW,
+        text: "Warren opens Word files: a .docx comes in as a new document with its headings, lists and bold, italic and underlined text, and tells you what it had to leave out.",
+      },
+      {
         kind: IMPROVED,
         text: "Warren can align paragraphs left, centre, right or justified, and has an underline button; Word and PDF exports keep both.",
       },

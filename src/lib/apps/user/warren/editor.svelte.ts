@@ -77,6 +77,13 @@ export class WarrenEditor {
     this.saved = 0;
   }
 
+  load_html(html: string) {
+    this.load(create_document());
+    ops.load_html(this.lexical, html);
+    this.reset_history();
+    this.json = this.lexical.getEditorState().toJSON() as unknown as EditorJson;
+  }
+
   reset() {
     this.load(create_document());
   }

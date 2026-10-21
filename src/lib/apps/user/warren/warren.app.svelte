@@ -4,7 +4,7 @@
   import { Button, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
-  import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { base_name, file_extension, parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
   import { print_html } from "$lib/core/utils/print";
   import {
@@ -30,7 +30,7 @@
   import { build_docx, DOCX_TYPE } from "./docx";
   import { BlockStyle, WarrenEditor } from "./editor.svelte";
   import { EXTENSION, serialize_document } from "./format";
-  import { document_file_name, read_document, stem_of, with_extension, write_file } from "./io";
+  import { document_file_name, read_document, read_file, stem_of, with_extension, write_file } from "./io";
   import { document_text } from "./model";
   import { Flow, PAGE_MM } from "./page";
   import { document_css, print_document } from "./print";
@@ -51,13 +51,15 @@
   const editor = new WarrenEditor((error) => report("Something went wrong in the editor", error));
 
   let file_path = $state<string | null>(null);
+  let draft = $state<{ name: string; folder: string } | null>(null);
   let loading = $state(false);
   let more = $state(false);
   let root = $state<HTMLElement | null>(null);
 
-  const file_name = $derived(file_path ? base_name(file_path) : document_file_name("Untitled"));
+  const file_name = $derived(file_path ? base_name(file_path) : (draft?.name ?? document_file_name("Untitled")));
   const stem = $derived(stem_of(file_name));
   const read_only = $derived(file_path !== null && is_system_path(file_path));
+  const folder = $derived(file_path && !read_only ? parent_path(file_path) : (draft?.folder ?? "/home/Documents"));
   const text = $derived(document_text(editor.json));
   const counts = $derived(count(text));
   const repeats = $derived(repeated_words(text));
@@ -93,10 +95,15 @@
     const id = ++open_request;
     loading = true;
     try {
+      if (file_extension(path) === ".docx") {
+        await import_docx(path, id);
+        return;
+      }
       const opened = await read_document(path);
       if (id !== open_request) return;
       editor.load(opened);
       file_path = path;
+      draft = null;
     } catch (reason) {
       if (id === open_request) report(`Couldn't open ${base_name(path)}`, reason);
     } finally {
@@ -104,9 +111,27 @@
     }
   }
 
+  // A Word file opens as a new, untitled document named after it; Save then asks where the .warren goes.
+  async function import_docx(path: string, id: number) {
+    const file = await read_file(path);
+    const { docx_to_html } = await import("./docx-import");
+    const imported = await docx_to_html(await file.arrayBuffer());
+    if (id !== open_request) return;
+    editor.load_html(imported.html);
+    file_path = null;
+    draft = { name: document_file_name(base_name(path)), folder: is_system_path(path) ? "/home/Documents" : parent_path(path) };
+    if (imported.left_out.length) {
+      notifications.notify(app_id, {
+        type: NotificationType.WARNING,
+        title: `Some of ${base_name(path)} didn't come across`,
+        message: `Left out: ${imported.left_out.join(", ")}.`,
+      });
+    }
+  }
+
   async function open() {
     if (!(await discard_ok())) return;
-    const chosen = await win.pick_file({ accept: [EXTENSION], start_path: file_path ? parent_path(file_path) : undefined, title: "Open in Warren" });
+    const chosen = await win.pick_file({ accept: [EXTENSION, ".docx", DOCX_TYPE], start_path: file_path ? parent_path(file_path) : undefined, title: "Open in Warren" });
     if (chosen) await load(chosen);
   }
 
@@ -114,6 +139,7 @@
     if (!(await discard_ok())) return;
     editor.reset();
     file_path = null;
+    draft = null;
     editor.focus();
   }
 
@@ -122,6 +148,7 @@
     try {
       await write_file(path, serialize_document(snapshot));
       file_path = path;
+      draft = null;
       editor.mark_saved();
       notifications.notify(app_id, { title: "Document saved", message: path });
       return true;
@@ -135,7 +162,7 @@
     const path = await win.pick_save({
       name: file_name,
       accept: [EXTENSION],
-      start_path: file_path && !read_only ? parent_path(file_path) : "/home/Documents",
+      start_path: folder,
       title: "Save document",
     });
     return path ? write(with_extension(path, EXTENSION)) : false;
@@ -149,7 +176,7 @@
     const path = await win.pick_save({
       name: `${stem}.docx`,
       accept: [".docx", DOCX_TYPE],
-      start_path: file_path && !read_only ? parent_path(file_path) : "/home/Documents",
+      start_path: folder,
       title: "Export for Word",
     });
     if (!path) return;

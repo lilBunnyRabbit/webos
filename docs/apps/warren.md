@@ -4,7 +4,7 @@ Id `warren` · Source: `src/lib/apps/user/warren/` · [brainstorm](../brainstorm
 
 ## What it does
 
-A word processor for CVs, letters and stories. Headings 1–3, bold, italic, underline, font size, alignment (left, centre, right, justify), bullet and numbered lists, word and character counts, user-placed page breaks on A4, Letter or A5 sheets, "Change everywhere" for a word, a list of the words used most, and synonyms from on-device AI where Chrome has it. Saves `.warren` files; exports `.docx` for Word and PDF through the print dialog. Idea from LaxDOTexe.
+A word processor for CVs, letters and stories. Headings 1–3, bold, italic, underline, font size, alignment (left, centre, right, justify), bullet and numbered lists, word and character counts, user-placed page breaks on A4, Letter or A5 sheets, "Change everywhere" for a word, a list of the words used most, and synonyms from on-device AI where Chrome has it. Saves `.warren` files; opens Word `.docx` files as new documents; exports `.docx` for Word and PDF through the print dialog. Idea from LaxDOTexe.
 
 ## How it works
 
@@ -60,6 +60,14 @@ Characters XML can't hold (C0 controls) are dropped. A browser test parses every
 
 **PDF** (`print.ts`): `print_document` builds a standalone page for `print_html`: `@page { size: A4|letter|A5 portrait; margin }`, Inter embedded with `@font-face`, Brand Light ink, and `div.break { break-before: page }`; an aligned block carries `style="text-align:…"`. `document_css(scope)` is shared with the editor, so heading sizes, list markers and spacing match what was typed. Rendered through Chromium's PDF printer, the sample is two Letter pages.
 
+### Import
+
+`docx-import.ts`, `lexical.ts:load_html`. A `.docx` goes through mammoth (`import()`ed on the first one opened, so it isn't in the app's chunk) to HTML, then `@lexical/html`'s `$generateNodesFromDOM` into a fresh editor. Style map on top of mammoth's defaults: `u => u` (mammoth ignores underline otherwise), `br[type='page'] => hr.page-break` (which `PageBreakNode.importDOM` turns into a page break), `Title` → h1, `Subtitle` → h2. Inline nodes left at the top level go into paragraphs; empty paragraphs are skipped (mammoth drops empty ones itself, so an empty one is what's left around a page break or a dropped picture).
+
+What comes across: headings (h4–h6 as h3), bold, italic, underline, strikethrough, line breaks, bullet and numbered lists with nesting, links (once Warren knows links), page-break characters. What doesn't: font sizes and fonts (mammoth drops them by design), alignment, `w:pageBreakBefore` (so Warren's own exported page breaks), pictures, table layout (cells become paragraphs), headers and footers. Pictures are counted through `convertImage`, tables found in the HTML and mammoth's warnings (unrecognised styles) counted, and any of those shows a warning toast naming what was left out.
+
+In the app a `.docx` opens as an untitled document named after the file (`CV.docx` → `CV.warren`), not dirty; Save goes to Save as, starting in the `.docx`'s folder. There's no shell import: it needs the DOM.
+
 Shared numbers are in `page.ts`: page sizes and margins (A4 and Letter 20 mm, A5 15 mm), body 11 pt, headings, line height, paragraph spacing.
 
 ## Data
@@ -72,7 +80,7 @@ Shared numbers are in `page.ts`: page sizes and margins (A4 and Letter 20 mm, A5
 
 `size` is `A4`, `Letter` or `A5`; `flow` is `sheets` or `continuous`. `editor` is Lexical's own `SerializedEditorState`; the envelope checks only `root` and that each node has a `type`, and Lexical's `parseEditorState` rejects anything else when the app opens it. A file from a newer format version is refused with a message. Saves go wherever the user picks (`/home/Documents` by default); the window title is the file name, unsaved changes mark the window dirty and closing asks.
 
-Props: `{ path }` (`FILE_PROPS`); `.warren` is associated, so `open x.warren` and a double-click open it.
+Props: `{ path }` (`FILE_PROPS`); `.warren` and `.docx` are associated, so `open x.warren` and a double-click open them. No other app lists `.docx`, so Warren is its only opener; a remembered default still wins.
 
 Shell (`commands.ts`, `shell.ts`), both reading the JSON without Lexical:
 
@@ -85,11 +93,12 @@ Path completion is filtered to `.warren`.
 
 ## Dependencies & licences
 
-`lexical`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, all exactly 0.52.0, MIT, in the app's own `package.json` (ADR-045). They pull in `@lexical/extension`, `@lexical/clipboard`, `@lexical/html` and friends at the same version and `@preact/signals-core`. All load with the app's lazy component: `warren.app` is 293 KB, 95 KB gz (production build, 2026-10-21); the boot chunk is unchanged.
+`lexical`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, all exactly 0.52.0, MIT, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. They pull in `@lexical/extension`, `@lexical/clipboard`, `@lexical/html` and friends at the same version and `@preact/signals-core`. All load with the app's lazy component: `warren.app` is 293 KB, 95 KB gz (production build, 2026-10-21); the boot chunk is unchanged.
 
 ## Limits
 
-- No spelling list (Chrome's underline only), no .docx or PDF import, no `.doc`.
+- No spelling list (Chrome's underline only), no PDF import, no `.doc`.
+- A `.docx` loses font sizes, alignment, pictures, tables and paragraph-property page breaks on import.
 - The .docx names Inter; Word without it substitutes a font, so line breaks can differ.
 - On a narrow window lines reflow differently from the printed page.
 - A Lexical upgrade that changes node JSON needs a migration under the envelope's `version`.

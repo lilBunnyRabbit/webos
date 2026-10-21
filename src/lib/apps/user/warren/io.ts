@@ -15,10 +15,14 @@ export function stem_of(path: string): string {
   return name.toLowerCase().endsWith(EXTENSION) ? name.slice(0, -EXTENSION.length) : file_stem(name);
 }
 
-export async function read_document(path: string): Promise<WarrenDocument> {
+export async function read_file(path: string): Promise<File> {
   const file = await kernel.service<FilesService>("files").get_file(path);
   if (!file) throw new Error(`File not found: ${path}`);
-  return parse_document(await file.text());
+  return file;
+}
+
+export async function read_document(path: string): Promise<WarrenDocument> {
+  return parse_document(await (await read_file(path)).text());
 }
 
 export async function write_file(path: string, content: string | Blob): Promise<void> {

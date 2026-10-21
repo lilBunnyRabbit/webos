@@ -3,7 +3,13 @@ import { PAGE_BREAK } from "./model";
 
 export class PageBreakNode extends DecoratorNode<null> {
   $config() {
-    return this.config(PAGE_BREAK, { extends: DecoratorNode });
+    return this.config(PAGE_BREAK, {
+      extends: DecoratorNode,
+      importDOM: {
+        hr: (element: HTMLElement) =>
+          element.classList.contains("page-break") ? { conversion: () => ({ node: $create_page_break() }), priority: 1 as const } : null,
+      },
+    });
   }
 
   createDOM(): HTMLElement {

@@ -1,4 +1,5 @@
 import { createEmptyHistoryState, registerHistory } from "@lexical/history";
+import { $generateNodesFromDOM } from "@lexical/html";
 import {
   $isListItemNode,
   $isListNode,
@@ -17,7 +18,9 @@ import {
   $createRangeSelection,
   $getRoot,
   $getSelection,
+  $isDecoratorNode,
   $isElementNode,
+  $isParagraphNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -34,6 +37,7 @@ import {
   type EditorState,
   type LexicalEditor,
   type LexicalNode,
+  type ParagraphNode,
   type RangeSelection,
   type TextNode,
 } from "lexical";
@@ -191,6 +195,30 @@ export function set_block(editor: LexicalEditor, style: BlockStyle, current: Blo
   editor.update(() => {
     $setBlocksType($getSelection(), () => (level ? $createHeadingNode(`h${level}`) : $createParagraphNode()));
   });
+}
+
+// Inline nodes left at the top (text after a list, say) go into paragraphs: the root holds blocks only. mammoth never writes
+// an empty paragraph, so an empty one here is what is left around a page break or a dropped picture.
+export function load_html(editor: LexicalEditor, html: string) {
+  editor.update(
+    () => {
+      const root = $getRoot();
+      root.clear();
+      let paragraph: ParagraphNode | null = null;
+      for (const node of $generateNodesFromDOM(editor, new DOMParser().parseFromString(html, "text/html"))) {
+        if ($isParagraphNode(node) && node.isEmpty()) continue;
+        if (($isElementNode(node) || $isDecoratorNode(node)) && !node.isInline()) {
+          root.append(node);
+          paragraph = null;
+        } else {
+          if (!paragraph) root.append((paragraph = $createParagraphNode()));
+          paragraph.append(node);
+        }
+      }
+      if (root.isEmpty()) root.append($createParagraphNode());
+    },
+    { tag: LOAD_TAG, discrete: true }
+  );
 }
 
 export function insert_page_break(editor: LexicalEditor) {

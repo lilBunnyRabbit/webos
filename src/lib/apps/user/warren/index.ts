@@ -10,7 +10,7 @@ export default define_app({
   version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.PRODUCTIVITY,
-  associations: [".warren"],
+  associations: [".warren", ".docx"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 400 } } },
