@@ -79,7 +79,7 @@ Seven `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`
 
 In solo mode `SoloVersionService` (`version/solo.svelte.ts`, ADR-047) replaces this class with an empty `init()`: no polling, no listeners, no introduction, no samples, no notices, and the seen marker isn't written, so the person's own WebOS still shows what's new. Changelog loading and `check()` still work on demand.
 
-No check runs at boot. The first check happens on the first tab-visible event (`last_check` starts at `0`), on the 30-minute tick, or when the Settings app button is clicked.
+`init()` starts one check at boot, not awaited, because a boot can be served from the precache of an older build. After that it checks when the tab becomes visible (throttled to once a minute through `last_check`), on the 30-minute tick, or when the Settings app button is clicked.
 
 ## Consumers
 

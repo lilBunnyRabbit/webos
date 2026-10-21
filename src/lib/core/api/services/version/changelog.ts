@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.32.1",
+    date: "2026-10-21",
+    title: "Updates found at start",
+    changes: [
+      {
+        kind: FIXED,
+        text: "WebOS checks for a new version as soon as it starts, instead of waiting until you switch back to its tab or half an hour passes.",
+      },
+    ],
+  },
+  {
     version: "3.32.0",
     date: "2026-10-21",
     title: "Notifications that reach you",

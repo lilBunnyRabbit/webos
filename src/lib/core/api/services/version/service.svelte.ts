@@ -108,6 +108,8 @@ export class VersionService implements IVersionService {
     this.poll_interval = setInterval(() => this.check(), POLL_INTERVAL);
     document.addEventListener("visibilitychange", this.on_visibility_change);
     window.addEventListener("vite:preloadError", this.on_preload_error);
+    // A boot can come from the precache of an older build; not awaited, so it never holds the splash.
+    void this.check();
 
     const file = await this.files_service.get_file(VERSION_STATE_PATH);
     const seen = file ? parse_seen(await file.text()) : null;
