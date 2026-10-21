@@ -5,7 +5,8 @@ import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
 import { version_plugin } from "./vite-plugin-version";
-import { phosphor_plugin } from "./vite-plugin-phosphor";
+import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
+import { core_modules } from "./vite-core-chunk";
 import path from "path";
 
 // The font is only discovered once the CSS has loaded; a preload starts it with the entry chunk. Hashed name, so build only.
@@ -30,6 +31,15 @@ function preload_font_plugin(file: RegExp): Plugin {
   };
 }
 
+// Change with every app edit or every build, so nothing that reaches them may sit in the shared `core` chunk.
+const VOLATILE = [
+  "src/lib/apps/index.ts",
+  "src/lib/core/api/services/version/build-info.ts",
+  "src/lib/core/api/services/version/changelog.ts",
+];
+const APP_INDEX = /\/apps\/(system|user)\/[^/]+\/index\.ts$/;
+const cores = new WeakMap<object, Set<string>>();
+
 // https://vite.dev/config/
 export default defineConfig({
   // Served from lilbunnyrabbit.github.io/webos/ (GitHub Pages project site).
@@ -38,6 +48,7 @@ export default defineConfig({
     tailwindcss(),
     phosphor_plugin(),
     svelte(),
+    phosphor_imports_plugin(),
     //   {
     //   compilerOptions: {
     //     runes: true,
@@ -100,8 +111,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
-        manualChunks(id) {
+        manualChunks(id, { getModuleInfo }) {
           if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
+          if (!cores.has(getModuleInfo)) {
+            cores.set(getModuleInfo, core_modules(getModuleInfo, path.resolve("src/main.ts"), VOLATILE, "src/lib/apps"));
+          }
+          if (cores.get(getModuleInfo)!.has(id)) return "core";
+          // What a manifest imports (icon, props, sections) is shared with its app's chunk; in the entry, every such app
+          // would be renamed with the registry.
+          if (getModuleInfo(id)?.importers.some((importer) => APP_INDEX.test(importer)) && !APP_INDEX.test(id)) {
+            return "app-boot";
+          }
         },
       },
     },

@@ -32,9 +32,14 @@ Investigation:
 
 ## Action items
 - A in one build agent; B in another (different files). Both bump the changelog, so the merger renumbers.
+  - [x] A built (3.21.0): `core` chunk (boot graph minus anything reaching app code, the registry, the build stamp or the changelog; `vite-core-chunk.ts`) and `app-boot` chunk (manifest icons, props, sections); the stamp read only in `version/build-info.ts`; `main.ts` calls `register_default_services()` before `kernel.init()`; phosphor imports rewritten per icon at build time. Renamed precache files: rebuild 606 → 16 (5.65 → 0.32 MB), one-line app change 606 → 17 (0.33 MB), version bump + changelog edit 606 → 17 (0.39 MB). Boot 171.8 (3.19.0) → 170.5 KB gz (3.21.0) (now counting preloaded chunks). Left: 12 apps import their own `index.ts` and rename every time; any OS change still renames every app.
   - [x] B built: files done of the total and elapsed seconds, read from Cache Storage with the service worker unchanged. No MB: the precache manifest has no sizes. Restart now after 8 s; automatic fallback after 20 s without a new file or 120 s in all; `update()` times out at 15 s.
 - docs/system: version page (B), and boot weight / build notes (A). ADR-036 and ADR-004 revision notes.
   - [x] B: version page (Update progress) and the ADR-004 revision note.
+  - [x] A: overview Build & deploy (Chunks, budget), kernel, version and backup pages; ADR-036 revision note.
+
+- Owner, 2026-10-21: the update screen stays at files only, with no MB (the workbox manifest drops sizes; a `manifestTransforms` entry could keep them, but it was declined).
+- Owner call pending: the 12 app chunks that still rename on every build because they import their own `index.ts`.
 
 ## Next session topics
 - If A can't break the cascade cleanly, look at import maps or unhashed filenames with content revisions.

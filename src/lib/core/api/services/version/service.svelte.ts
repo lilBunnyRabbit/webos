@@ -26,8 +26,7 @@ import {
   type VersionService as IVersionService,
 } from "./type";
 import { version_shell } from "./shell";
-
-declare const __VERSION_INFO__: VersionInfo;
+import { BUILD_INFO } from "./build-info";
 
 const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
@@ -50,7 +49,7 @@ export class VersionService implements IVersionService {
   inspector = () => import("./inspector.svelte");
   shell = () => version_shell(this, () => this.apps_service);
 
-  public info = $state<VersionInfo>(__VERSION_INFO__);
+  public info = $state<VersionInfo>(BUILD_INFO);
   public update_available = $state<VersionInfo | null>(null);
   public is_checking = $state(false);
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);

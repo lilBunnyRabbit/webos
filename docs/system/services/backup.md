@@ -26,7 +26,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
   home/…        etc/…        var/lib/…
 ```
 
-`backup.json` (`manifest.ts`, pretty-printed): `format` is `BACKUP_FORMAT` (`1`); `version` is the WebOS build (`__VERSION_INFO__.version`); `created` an ISO datetime; `areas` the areas it holds, at least one; `local_storage` the `app.*` keys and raw string values (empty unless `apps` is in `areas`). Folders get their own entries, so empty folders survive. Entries are deflated by the zip engine (`core/utils/zip`), which stores incompressible files as they are.
+`backup.json` (`manifest.ts`, pretty-printed): `format` is `BACKUP_FORMAT` (`1`); `version` is the WebOS build (`BUILD_INFO.version` from `services/version/build-info.ts`); `created` an ISO datetime; `areas` the areas it holds, at least one; `local_storage` the `app.*` keys and raw string values (empty unless `apps` is in `areas`). Folders get their own entries, so empty folders survive. Entries are deflated by the zip engine (`core/utils/zip`), which stores incompressible files as they are.
 
 `parse_manifest` checks `format` first: higher than `BACKUP_FORMAT` → "This backup comes from a newer WebOS (format N). Update WebOS, then restore it." Then the zod schema (`BackupManifestSchema`); any mismatch, including a non-`app.` key in `local_storage`, is "This backup is damaged: …". A migration only gets written once a format 2 exists.
 

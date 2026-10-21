@@ -2,6 +2,7 @@ import { mount, unmount } from "svelte";
 import "./app.css";
 import App from "./App.svelte";
 import kernel, { type AppsService, type BootStep, type DesktopService } from "./lib/core/api";
+import { register_default_services } from "./lib/core/api/kernel/init";
 import { load_shell } from "./lib/core/components/platform-shell";
 import "./lib/core/utils/install.svelte";
 
@@ -57,10 +58,12 @@ function warm() {
 
 async function main() {
   const [, { default: shell }] = await Promise.all([
-    kernel.init((step) => {
-      show_step(step);
-      warm();
-    }),
+    register_default_services(kernel).then(() =>
+      kernel.init((step) => {
+        show_step(step);
+        warm();
+      })
+    ),
     load_shell(kernel.platform, kernel.mode),
   ]);
 

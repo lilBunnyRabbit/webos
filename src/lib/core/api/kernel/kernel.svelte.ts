@@ -1,6 +1,5 @@
 import type { ServiceDescriptor, IService } from "../type";
 import { SvelteMap } from "svelte/reactivity";
-import { register_default_services } from "./init";
 import { detect_platform, type Platform } from "./platform";
 import { detect_mode, type Mode } from "./mode";
 
@@ -26,8 +25,6 @@ export class Kernel {
     if (this.is_initialized) {
       return this;
     }
-
-    await register_default_services(this);
 
     this.init_order = this.resolve_order();
     try {

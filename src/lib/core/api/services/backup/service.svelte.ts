@@ -2,6 +2,7 @@ import type { DialogsService, FilesService, Kernel, NotificationsService, TasksS
 import { TaskJobStatus } from "../tasks/type";
 import { format_bytes } from "$lib/core/utils";
 import { backup_shell } from "./shell";
+import { BUILD_INFO } from "../version/build-info";
 import { flush_writers } from "../files/latest-writer";
 import {
   BACKUP_AREAS,
@@ -11,8 +12,6 @@ import {
   type BackupSaved,
   type BackupService as IBackupService,
 } from "./type";
-
-declare const __VERSION_INFO__: { version: string };
 
 const logic = () => import("./backup");
 const manifest = () => import("./manifest");
@@ -64,7 +63,7 @@ export class BackupService implements IBackupService {
       const plan = {
         root: await this.files_service.get_root(),
         areas: picked,
-        meta: { version: __VERSION_INFO__.version, created },
+        meta: { version: BUILD_INFO.version, created },
         storage: localStorage,
         save: async (blob: Blob) => {
           const name = await run.save_to_device(target, blob, suggested);

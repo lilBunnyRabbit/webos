@@ -10,7 +10,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `info` | `info: VersionInfo` | The running build. Initialized from the compile-time constant `__VERSION_INFO__`. `$state`, but never reassigned. |
+| `info` | `info: VersionInfo` | The running build. Initialized from `BUILD_INFO` (`build-info.ts`), the only reader of the compile-time constant `__VERSION_INFO__`; it changes every build, so it stays out of the shared `core` chunk ([overview](../overview.md#build--deploy)). `$state`, but never reassigned. |
 | `update_available` | `update_available: VersionInfo \| null` | The remote info, set when `remote.buildTimestamp > info.buildTimestamp`. Never reset to `null`. |
 | `is_checking` | `is_checking: boolean` | True while a `check()` is in flight. |
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running. Fetches `${import.meta.env.BASE_URL}version.json` (`/webos/version.json` in production) with `cache: "no-store"`. A non-OK response is ignored silently. Network or parse errors go to `console.error`. Never throws. |

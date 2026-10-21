@@ -56,3 +56,35 @@ export function phosphor_plugin(): Plugin {
     },
   };
 }
+
+const BARREL_IMPORT = /import\s*\{([^}]*)\}\s*from\s*["']phosphor-svelte["'];?/g;
+
+/** `import { A, B as C } from "phosphor-svelte"` → one default import per icon file. */
+export function direct_icon_imports(code: string): string {
+  return code.replace(BARREL_IMPORT, (_, specifiers: string) =>
+    specifiers
+      .split(",")
+      .map((specifier) => specifier.trim())
+      .filter((specifier) => specifier.length > 0)
+      .map((specifier) => {
+        const [imported, local = imported] = specifier.split(/\s+as\s+/);
+        return `import ${local} from "phosphor-svelte/lib/${imported}";`;
+      })
+      .join("\n")
+  );
+}
+
+/**
+ * Rollup gives a manual chunk every static dependency of its modules, so one icon taken through the barrel would put
+ * every icon some app uses into `core` (`vite-core-chunk.ts`). Runs on the compiled module, after types are gone.
+ */
+export function phosphor_imports_plugin(): Plugin {
+  return {
+    name: "webos-phosphor-imports",
+    apply: "build",
+    transform(code, id) {
+      if (id.includes("/node_modules/") || !code.includes("phosphor-svelte")) return;
+      return { code: direct_icon_imports(code), map: null };
+    },
+  };
+}
