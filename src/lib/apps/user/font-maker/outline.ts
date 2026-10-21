@@ -16,6 +16,8 @@ interface Sample extends Vec {
 }
 
 const MIN_STEP = 3;
+const RESAMPLE_STEP = 0.12;
+const SMOOTH_PASSES = 3;
 const CORNER_TURN = (80 * Math.PI) / 180;
 const SHARP_TURN = (70 * Math.PI) / 180;
 const CAP_STEPS = 6;
@@ -74,6 +76,42 @@ export function rdp(points: readonly Vec[], tolerance: number): number[] {
   return kept;
 }
 
+function resample(points: Sample[], step: number): Sample[] {
+  const out: Sample[] = [points[0]];
+  let carried = 0;
+  for (let index = 1; index < points.length; index++) {
+    const from = points[index - 1];
+    const to = points[index];
+    const span = length(sub(to, from));
+    let at = step - carried;
+    while (at <= span) {
+      const t = at / span;
+      out.push({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, r: from.r + (to.r - from.r) * t });
+      at += step;
+    }
+    carried = span - (at - step);
+  }
+  const last = points[points.length - 1];
+  if (length(sub(last, out[out.length - 1])) > step / 3) out.push(last);
+  else out[out.length - 1] = last;
+  return out;
+}
+
+function smooth(points: Sample[]): Sample[] {
+  return points.map((sample, index) => {
+    if (index === 0 || index === points.length - 1) return sample;
+    const before = points[index - 1];
+    const after = points[index + 1];
+    return {
+      x: (before.x + sample.x * 2 + after.x) / 4,
+      y: (before.y + sample.y * 2 + after.y) / 4,
+      r: (before.r + sample.r * 2 + after.r) / 4,
+    };
+  });
+}
+
+// Mouse and touch points sit on a pixel grid, so a slow stroke is a staircase; offsetting that by a wide radius
+// swings the normals and beads the edges. Even spacing tied to the width plus a few passes flatten the steps first.
 function samples(stroke: Stroke, width: number): Sample[] {
   const deduped: Sample[] = [];
   for (const [x, y, pressure] of stroke) {
@@ -86,16 +124,9 @@ function samples(stroke: Stroke, width: number): Sample[] {
     deduped.push(sample);
   }
   if (deduped.length < 3) return deduped;
-  return deduped.map((sample, index) => {
-    if (index === 0 || index === deduped.length - 1) return sample;
-    const before = deduped[index - 1];
-    const after = deduped[index + 1];
-    return {
-      x: (before.x + sample.x * 2 + after.x) / 4,
-      y: (before.y + sample.y * 2 + after.y) / 4,
-      r: (before.r + sample.r * 2 + after.r) / 4,
-    };
-  });
+  let points = resample(deduped, Math.max(MIN_STEP, width * RESAMPLE_STEP));
+  for (let pass = 0; pass < SMOOTH_PASSES && points.length >= 3; pass++) points = smooth(points);
+  return points;
 }
 
 function split_at_corners(points: Sample[]): Sample[][] {
@@ -135,7 +166,10 @@ function side(points: Sample[], normals: Vec[], sign: 1 | -1): Vec[] {
   const out: Vec[] = [];
   let anchor = -1;
   points.forEach((point, index) => {
-    const candidate = { x: point.x + normals[index].x * point.r * sign, y: point.y + normals[index].y * point.r * sign };
+    const candidate = {
+      x: point.x + normals[index].x * point.r * sign,
+      y: point.y + normals[index].y * point.r * sign,
+    };
     if (anchor >= 0 && index < points.length - 1) {
       const center_step = sub(point, points[anchor]);
       if (dot(sub(candidate, out[out.length - 1]), center_step) <= 0) return;
@@ -154,7 +188,10 @@ function piece_outline(points: Sample[]): Vec[] {
   const total = points.reduce((sum, point, index) => (index ? sum + length(sub(point, points[index - 1])) : 0), 0);
   const widest = points.reduce((best, point) => (point.r > best.r ? point : best), points[0]);
   if (points.length < 2 || total < widest.r * 0.5) {
-    const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length, r: widest.r }), { x: 0, y: 0, r: 0 });
+    const center = points.reduce(
+      (sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length, r: widest.r }),
+      { x: 0, y: 0, r: 0 }
+    );
     return dot_contour(center);
   }
   const normals = points.map((_, index) => {
@@ -169,7 +206,12 @@ function piece_outline(points: Sample[]): Vec[] {
   const last = points[points.length - 1];
   const end_angle = Math.atan2(normals[points.length - 1].y, normals[points.length - 1].x);
   const start_angle = Math.atan2(-normals[0].y, -normals[0].x);
-  return [...left, ...arc(last, last.r, end_angle, CAP_STEPS), ...right.reverse(), ...arc(first, first.r, start_angle, CAP_STEPS)];
+  return [
+    ...left,
+    ...arc(last, last.r, end_angle, CAP_STEPS),
+    ...right.reverse(),
+    ...arc(first, first.r, start_angle, CAP_STEPS),
+  ];
 }
 
 export function signed_area(points: readonly Vec[]): number {
@@ -204,7 +246,10 @@ export function stroke_contours(stroke: Stroke, width = STROKE_WIDTH): Contour[]
   const points = samples(stroke, width);
   if (!points.length) return [];
   const pieces = points.length < 3 ? [points] : split_at_corners(points);
-  return pieces.map(piece_outline).map(to_contour).filter((contour): contour is Contour => contour !== null);
+  return pieces
+    .map(piece_outline)
+    .map(to_contour)
+    .filter((contour): contour is Contour => contour !== null);
 }
 
 export function glyph_contours(strokes: readonly Stroke[], width = STROKE_WIDTH): Contour[] {

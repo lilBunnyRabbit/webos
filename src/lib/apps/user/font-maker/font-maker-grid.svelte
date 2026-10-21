@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CHAR_SET_LABELS, CHAR_SETS, set_characters } from "./charsets";
-  import { BOX, BOX_HEIGHT, BOX_WIDTH, STROKE_WIDTH, is_drawn, type FontProject, type Stroke } from "./model";
+  import FontMakerGlyph from "./font-maker-glyph.svelte";
+  import { BOX, BOX_HEIGHT, BOX_WIDTH, is_drawn, stroke_width, type FontProject } from "./model";
 
   interface Props {
     project: FontProject;
@@ -10,6 +11,7 @@
 
   let { project, selected, onselect }: Props = $props();
   const uid = $props.id();
+  const width = $derived(stroke_width(project));
 
   const sections = $derived.by(() => {
     const seen = new Set<string>();
@@ -19,8 +21,6 @@
       return { set, chars, drawn: chars.filter((char) => is_drawn(project.glyphs[char])).length };
     });
   });
-
-  const polyline = (stroke: Stroke) => (stroke.length === 1 ? `M${stroke[0][0]} ${-stroke[0][1]}h0.1` : `M${stroke.map(([x, y]) => `${x} ${-y}`).join("L")}`);
 </script>
 
 <svg class="absolute size-0" aria-hidden="true">
@@ -51,18 +51,15 @@
             onclick={() => onselect(char)}
           >
             <span class={["absolute top-0.5 left-1 text-2xs", drawn ? "text-foreground/45" : "text-foreground/80"]}>{char}</span>
-            {#if glyph?.guide || drawn}
+            {#if drawn && glyph}
+              <FontMakerGlyph strokes={glyph.strokes} {width} class="absolute inset-0 size-full" />
+            {:else if glyph?.guide}
+              {@const mask = `guide-${uid}-${char.codePointAt(0)}`}
               <svg viewBox="{BOX.left} {-BOX.top} {BOX_WIDTH} {BOX_HEIGHT}" class="absolute inset-0 size-full" aria-hidden="true">
-                {#if glyph?.guide && !drawn}
-                  {@const mask = `guide-${uid}-${char.codePointAt(0)}`}
-                  <mask id={mask} maskUnits="userSpaceOnUse" x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT}>
-                    <image href={glyph.guide} x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT} preserveAspectRatio="none" filter="url(#invert-{uid})" />
-                  </mask>
-                  <rect x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT} class="fill-foreground" opacity="0.45" mask="url(#{mask})" />
-                {/if}
-                {#each glyph?.strokes ?? [] as stroke, index (index)}
-                  <path d={polyline(stroke)} class="stroke-foreground" fill="none" stroke-width={STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" />
-                {/each}
+                <mask id={mask} maskUnits="userSpaceOnUse" x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT}>
+                  <image href={glyph.guide} x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT} preserveAspectRatio="none" filter="url(#invert-{uid})" />
+                </mask>
+                <rect x={BOX.left} y={-BOX.top} width={BOX_WIDTH} height={BOX_HEIGHT} class="fill-foreground" opacity="0.45" mask="url(#{mask})" />
               </svg>
             {/if}
           </button>

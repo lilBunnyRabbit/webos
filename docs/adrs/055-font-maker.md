@@ -48,3 +48,13 @@ Built as decided ([app page](../apps/font-maker.md)). Choices the decision left 
 - **Extra glyphs.** Glyph 0 is a box `.notdef`; space also maps U+00A0.
 - **Orientation mark.** The template's top-left mark has a white hole, so a sideways or upside-down photo still maps to the right corners.
 - **Camera.** "Take a photo" calls `pick_device_files({ accept: ["image/*"], capture: "environment" })` (the `capture` option was added on 2026-10-21, replacing a local copy).
+
+## Revision 2026-10-21: width, speed pressure, spacing toggle
+- `FontProject` gains an optional `stroke?: { width: number }` (20..160, default 70), still format version 1. It drives drawing, the preview and the export ([brainstorm](../brainstorm/2026-10-21_font-maker-pen.md)).
+- Mouse and touch strokes can take pressure from speed, using the PDF Tools signature-pad model (fast is thin, smoothed). It is baked into each point's pressure value at draw time. A pen always uses real pressure. The Even / Speed choice is app storage.
+- The side-bearing handles appear only in "Edit spacing" mode (app storage, off by default), which also offers Reset to auto. Nudges apply whether the mode is on or off.
+- An "Undo" button sits next to Clear on the existing history; on touch, a two-finger tap on the canvas undoes too and cancels the stroke the first finger started.
+- A filmstrip of every character in the sets sits under the canvas: scroll-snapped, the current one centred and highlighted, tap to jump.
+- An empty box shows a ghost of its character in the UI font on the baseline, one size for all characters with its cap height at the project's cap height (lowercase follows the font's own proportions); a scan guide replaces it. Empty filmstrip tiles show the same ghost.
+- Bead fix: slow mouse strokes sit on a pixel staircase, and offsetting it by a wide radius swung the normals and beaded the edges. Samples are now resampled at even spacing (12 % of the width) and smoothed three times before offsetting, so the canvas, preview and export stay smooth.
+- Build notes: the speed range is pressure 0.1..0.8 (start 0.45), `max_speed` 5 font units per ms; the Left / Right nudge row shows only in Edit spacing mode, with Reset to auto there when a nudge exists; width slider drags preview live and commit one undo step on release.

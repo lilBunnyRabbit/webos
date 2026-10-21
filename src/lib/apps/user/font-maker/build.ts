@@ -1,5 +1,5 @@
 import { project_characters } from "./charsets";
-import { ASCENT, DESCENT, EM, SPACE_WIDTH, glyph_of, is_drawn, type FontProject, type Glyph } from "./model";
+import { ASCENT, DESCENT, EM, SPACE_WIDTH, STROKE_WIDTH, glyph_of, is_drawn, stroke_width, type FontProject, type Glyph } from "./model";
 import { contour_bounds, glyph_contours, type Contour } from "./outline";
 import { write_ttf, type TtfGlyph } from "./ttf";
 
@@ -9,8 +9,8 @@ export interface PlacedGlyph {
   offset: number;
 }
 
-export function place_glyph(glyph: Glyph, bearing: number): PlacedGlyph | null {
-  const contours = glyph_contours(glyph.strokes);
+export function place_glyph(glyph: Glyph, bearing: number, width = STROKE_WIDTH): PlacedGlyph | null {
+  const contours = glyph_contours(glyph.strokes, width);
   const bounds = contour_bounds(contours);
   if (!bounds) return null;
   const left = bearing + (glyph.lsb ?? 0);
@@ -46,7 +46,7 @@ export function build_font(project: FontProject, created?: Date): Uint8Array<Arr
     { codepoints: [0x20, 0xa0], contours: [], advance: SPACE_WIDTH },
   ];
   for (const char of drawn_characters(project)) {
-    const placed = place_glyph(glyph_of(project, char), project.metrics.bearing);
+    const placed = place_glyph(glyph_of(project, char), project.metrics.bearing, stroke_width(project));
     if (!placed) continue;
     glyphs.push({ codepoints: [char.codePointAt(0)!], contours: placed.contours, advance: placed.advance });
   }

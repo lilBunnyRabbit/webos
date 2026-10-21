@@ -3,7 +3,11 @@ import type { Stroke } from "./model";
 import { contour_bounds, contours_path, radius_of, rdp, signed_area, stroke_contours } from "./outline";
 
 const line = (x0: number, y0: number, x1: number, y1: number, pressure = 0.5, steps = 20): Stroke =>
-  Array.from({ length: steps + 1 }, (_, index) => [x0 + ((x1 - x0) * index) / steps, y0 + ((y1 - y0) * index) / steps, pressure]);
+  Array.from({ length: steps + 1 }, (_, index) => [
+    x0 + ((x1 - x0) * index) / steps,
+    y0 + ((y1 - y0) * index) / steps,
+    pressure,
+  ]);
 
 describe("rdp", () => {
   test("drops points on a straight line and keeps a corner", () => {
@@ -60,6 +64,27 @@ describe("stroke_contours", () => {
     expect(contours).toHaveLength(1);
     expect(signed_area(contours[0])).toBeLessThan(0);
     expect(contours[0].length).toBeLessThan(60);
+  });
+
+  test("a slow mouse line on a pixel staircase keeps smooth long sides", () => {
+    let seed = 7;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const ideal = (x: number) => 300 + (x - 100) * 0.1;
+    const stroke: Stroke = [];
+    for (let x = 100; x <= 700; ) {
+      stroke.push([x, Math.round(ideal(x) / 2.2) * 2.2, 0.8]);
+      if (random() < 0.7) x += 2.2;
+    }
+    const contours = stroke_contours(stroke, 140);
+    expect(contours).toHaveLength(1);
+    const long_sides = contours[0].filter((point) => point.x > 100 && point.x < 700);
+    for (const side of [long_sides.filter((point) => point.y > ideal(point.x)), long_sides.filter((point) => point.y < ideal(point.x))]) {
+      expect(side.length).toBeGreaterThan(0);
+      const steps = side.slice(1).map((point, index) => Math.sign(point.x - side[index].x));
+      expect(new Set(steps.filter(Boolean)).size).toBeLessThanOrEqual(1);
+      const offsets = side.map((point) => Math.abs(point.y - ideal(point.x)));
+      expect(Math.max(...offsets) - Math.min(...offsets)).toBeLessThan(4);
+    }
   });
 
   test("simplifies dense input", () => {

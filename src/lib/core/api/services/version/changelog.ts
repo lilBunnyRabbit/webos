@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.19.0",
+    date: "2026-10-21",
+    title: "Pen feel",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["font-maker"],
+        text: "Font Maker lets you set the line width, thins mouse and finger lines when you draw fast, hides the spacing edges until you want them, and adds an Undo button, two-finger tap to undo, a strip of letters to jump between and a faint letter to trace.",
+      },
+    ],
+  },
+  {
     version: "3.18.2",
     date: "2026-10-21",
     title: "Clear edges",

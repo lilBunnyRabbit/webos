@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CHAR_SETS } from "./charsets";
-import { ASCENT, DESCENT, EM, MAX_NUDGE, type FontProject, type Glyph, type Stroke } from "./model";
+import { ASCENT, DESCENT, EM, MAX_NUDGE, MAX_STROKE_WIDTH, MIN_STROKE_WIDTH, type FontProject, type Glyph, type Stroke } from "./model";
 
 export const VERSION = 1;
 export const EXTENSION = ".fontmaker";
@@ -32,6 +32,7 @@ const ProjectSchema = z.object({
       bearing: z.number().int().min(0).max(300),
     })
     .refine((metrics) => metrics.x <= metrics.cap, { message: "x-height is above the cap height" }),
+  stroke: z.object({ width: z.number().int().min(MIN_STROKE_WIDTH).max(MAX_STROKE_WIDTH) }).optional(),
   glyphs: z.record(z.string().refine((key) => [...key].length === 1, "keys are single characters"), GlyphSchema),
 });
 
@@ -51,8 +52,10 @@ export function parse_project(text: string): FontProject {
     const issue = result.error.issues[0];
     throw new Error(`This isn't a valid Font Maker file: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
-  const { name, sets, metrics, glyphs } = result.data;
-  return { version: VERSION, name, sets: [...new Set(sets)], metrics: { ...metrics, em: EM }, glyphs: glyphs as Record<string, Glyph> };
+  const { name, sets, metrics, stroke, glyphs } = result.data;
+  const project: FontProject = { version: VERSION, name, sets: [...new Set(sets)], metrics: { ...metrics, em: EM }, glyphs: glyphs as Record<string, Glyph> };
+  if (stroke) project.stroke = { width: stroke.width };
+  return project;
 }
 
 const round = (value: number, places: number) => {

@@ -9,7 +9,7 @@
     type NotificationsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { Button, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, Segmented, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
@@ -21,6 +21,7 @@
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowLeft as ArrowLeftIcon,
+    ArrowsOutLineHorizontal as ArrowsOutLineHorizontalIcon,
     Camera as CameraIcon,
     CaretDown as CaretDownIcon,
     CaretLeft as CaretLeftIcon,
@@ -45,6 +46,7 @@
   import { CHAR_SET_LABELS, set_characters, type CharSet } from "./charsets";
   import { FontEditor } from "./editor.svelte";
   import FontMakerCanvas from "./font-maker-canvas.svelte";
+  import FontMakerFilmstrip from "./font-maker-filmstrip.svelte";
   import FontMakerGrid from "./font-maker-grid.svelte";
   import FontMakerPreview from "./font-maker-preview.svelte";
   import FontMakerScan from "./font-maker-scan.svelte";
@@ -59,10 +61,16 @@
     create_project,
     glyph_of,
     has_guides,
+    MAX_STROKE_WIDTH,
+    MIN_STROKE_WIDTH,
+    reset_spacing,
     set_guides,
+    set_stroke_width,
+    stroke_width,
     update_glyph,
     type FontProject,
   } from "./model";
+  import { PRESSURE_MODES, PressureMode } from "./pressure";
   import { find_marks, type Quad } from "./scan";
   import { load_scan, scan_guides, type ScanImage } from "./scan-image";
   import { draw_template, PAGE, PNG_DPI, template_html, template_layout } from "./template";
@@ -77,6 +85,12 @@
 
   const sample = storage.persisted("sample", "The quick brown fox jumps over the lazy dog", z.string().max(500));
   const show_guide = storage.persisted("show-guide", true, z.boolean());
+  const pressure_mode = storage.persisted<PressureMode>("pressure", PressureMode.SPEED, z.enum(PRESSURE_MODES));
+  const edit_spacing = storage.persisted("edit-spacing", false, z.boolean());
+  const PRESSURE_OPTIONS = [
+    { value: PressureMode.EVEN, label: "Even" },
+    { value: PressureMode.SPEED, label: "Speed" },
+  ];
   const popover = $props.id();
   const mobile = kernel.platform === Platform.MOBILE;
 
@@ -87,12 +101,15 @@
   let pane = $state<"grid" | "editor">("grid");
   let scan = $state.raw<{ image: ScanImage; found: Quad | null; set: CharSet } | null>(null);
   let scanning = $state(false);
+  let width_draft = $state<number | null>(null);
 
   const project = $derived(editor.project);
   const file_name = $derived(file_path ? base_name(file_path) : project_file_name(project.name));
   const read_only = $derived(file_path !== null && is_system_path(file_path));
   const glyph = $derived(glyph_of(project, editor.char));
   const drawn = $derived(drawn_characters(project).length);
+  const width = $derived(width_draft ?? stroke_width(project));
+  const nudged = $derived(!!glyph.lsb || !!glyph.rsb);
   const code = $derived(`U+${editor.char.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`);
 
   $effect(() => win.set_title(file_name));
@@ -281,6 +298,12 @@
     editor.apply((value) => update_glyph(value, editor.char, (item) => ({ ...item, [side]: clamp_nudge((item[side] ?? 0) + delta) })));
   }
 
+  function commit_width(event: Event) {
+    const value = Number((event.currentTarget as HTMLInputElement).value);
+    width_draft = null;
+    editor.apply((current) => set_stroke_width(current, value));
+  }
+
   function select(char: string) {
     editor.char = char;
     pane = "editor";
@@ -384,7 +407,29 @@
         {#if glyph.guide}
           <IconButton label="Show guide" size="sm" pressed={show_guide.value} onclick={() => (show_guide.value = !show_guide.value)}><EyeIcon weight="bold" /></IconButton>
         {/if}
+        <Button size="sm" variant="quiet" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" />Undo</Button>
         <Button size="sm" variant="quiet" disabled={!glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" />Clear</Button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <label class="flex min-w-40 flex-1 items-center gap-2 text-ui">
+          <span class="text-foreground/65">Width</span>
+          <Slider
+            size="sm"
+            min={MIN_STROKE_WIDTH}
+            max={MAX_STROKE_WIDTH}
+            step={2}
+            value={width}
+            class="flex-1"
+            oninput={(event) => (width_draft = Number(event.currentTarget.value))}
+            onchange={commit_width}
+          />
+          <span class="w-7 text-right font-mono text-2xs tabular-nums">{width}</span>
+        </label>
+        <div class="flex items-center gap-1">
+          <Segmented size="sm" label="Mouse and touch line" options={PRESSURE_OPTIONS} bind:value={pressure_mode.value} />
+          <IconButton label="Edit spacing" size="sm" class="shrink-0" pressed={edit_spacing.value} onclick={() => (edit_spacing.value = !edit_spacing.value)}><ArrowsOutLineHorizontalIcon weight="bold" /></IconButton>
+        </div>
       </div>
 
       <div class="canvas-wrap min-h-48 flex-1 overflow-hidden rounded-lg bg-background ring-1 ring-foreground/8">
@@ -392,26 +437,37 @@
           char={editor.char}
           {glyph}
           metrics={project.metrics}
+          {width}
+          pressure_mode={pressure_mode.value}
+          edit_spacing={edit_spacing.value}
           show_guide={show_guide.value}
           onstroke={(stroke) => editor.apply((value) => add_stroke(value, editor.char, stroke))}
+          onundo={() => editor.undo()}
           onnudge={(lsb, rsb) => editor.apply((value) => update_glyph(value, editor.char, (item) => ({ ...item, lsb, rsb })))}
         />
       </div>
 
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui">
-        <span class="flex items-center gap-1">
-          <span class="text-foreground/65">Left</span>
-          <Button size="sm" variant="quiet" aria-label="Tighter on the left" onclick={() => nudge("lsb", -10)}>−</Button>
-          <span class="w-9 text-center font-mono text-2xs tabular-nums">{glyph.lsb ?? 0}</span>
-          <Button size="sm" variant="quiet" aria-label="Looser on the left" onclick={() => nudge("lsb", 10)}>+</Button>
-        </span>
-        <span class="flex items-center gap-1">
-          <span class="text-foreground/65">Right</span>
-          <Button size="sm" variant="quiet" aria-label="Tighter on the right" onclick={() => nudge("rsb", -10)}>−</Button>
-          <span class="w-9 text-center font-mono text-2xs tabular-nums">{glyph.rsb ?? 0}</span>
-          <Button size="sm" variant="quiet" aria-label="Looser on the right" onclick={() => nudge("rsb", 10)}>+</Button>
-        </span>
+      <FontMakerFilmstrip {project} characters={editor.characters} selected={editor.char} onselect={(char) => (editor.char = char)} />
+
+      {#if edit_spacing.value}
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui">
+          <span class="flex items-center gap-1">
+            <span class="text-foreground/65">Left</span>
+            <Button size="sm" variant="quiet" aria-label="Tighter on the left" onclick={() => nudge("lsb", -10)}>−</Button>
+            <span class="w-9 text-center font-mono text-2xs tabular-nums">{glyph.lsb ?? 0}</span>
+            <Button size="sm" variant="quiet" aria-label="Looser on the left" onclick={() => nudge("lsb", 10)}>+</Button>
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="text-foreground/65">Right</span>
+            <Button size="sm" variant="quiet" aria-label="Tighter on the right" onclick={() => nudge("rsb", -10)}>−</Button>
+            <span class="w-9 text-center font-mono text-2xs tabular-nums">{glyph.rsb ?? 0}</span>
+            <Button size="sm" variant="quiet" aria-label="Looser on the right" onclick={() => nudge("rsb", 10)}>+</Button>
+          </span>
+          {#if nudged}
+            <Button size="sm" variant="quiet" onclick={() => editor.apply((value) => reset_spacing(value, editor.char))}><ArrowCounterClockwiseIcon weight="bold" />Reset to auto</Button>
+        {/if}
       </div>
+      {/if}
 
       <FontMakerPreview {project} bind:sample={sample.value} />
     </section>

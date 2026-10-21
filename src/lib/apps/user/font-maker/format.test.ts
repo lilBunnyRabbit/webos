@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { CharSet } from "./charsets";
 import { parse_project, serialize_project } from "./format";
-import { add_stroke, clear_guides, create_project, set_guides } from "./model";
+import { add_stroke, clear_guides, create_project, reset_spacing, set_guides, set_stroke_width, STROKE_WIDTH, stroke_width, update_glyph } from "./model";
 
 describe("format", () => {
   test("round-trips a project and rounds stroke points", () => {
@@ -23,6 +23,24 @@ describe("format", () => {
     expect(() => parse_project(JSON.stringify({ ...create_project(), glyphs: { AB: { strokes: [] } } }))).toThrow(/glyphs\.AB/);
     const project = create_project();
     expect(() => parse_project(JSON.stringify({ ...project, metrics: { ...project.metrics, x: 900, cap: 700 } }))).toThrow(/x-height/);
+  });
+
+  test("stroke width is optional, kept and range-checked", () => {
+    const plain = parse_project(serialize_project(create_project()));
+    expect(plain.stroke).toBeUndefined();
+    expect(stroke_width(plain)).toBe(STROKE_WIDTH);
+    const wide = set_stroke_width(create_project(), 120);
+    expect(parse_project(serialize_project(wide)).stroke).toEqual({ width: 120 });
+    expect(set_stroke_width(wide, 120)).toBe(wide);
+    expect(stroke_width(set_stroke_width(wide, 999))).toBe(160);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), stroke: { width: 5 } }))).toThrow(/stroke\.width/);
+  });
+
+  test("reset spacing drops both nudges and keeps the strokes", () => {
+    const nudged = update_glyph(add_stroke(create_project(), "A", [[0, 0, 0.5]]), "A", (glyph) => ({ ...glyph, lsb: 20, rsb: -10 }));
+    const reset = reset_spacing(nudged, "A");
+    expect(reset.glyphs.A).toEqual({ strokes: [[[0, 0, 0.5]]] });
+    expect(reset_spacing(reset, "A")).toBe(reset);
   });
 
   test("guides are kept and cleared", () => {

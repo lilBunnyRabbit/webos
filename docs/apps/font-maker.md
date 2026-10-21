@@ -10,27 +10,38 @@ Turns handwriting into a TrueType font. Each character of the picked sets has a 
 
 ### Coordinates
 
-Everything is in font units, y up from the baseline, `units_per_em` 1000. The drawing box is fixed: x 0…1000, y 950…−250 (`model.ts:47`), the same rectangle as a template box and a guide crop, so a stroke, a printed box and a scanned crop line up without any per-project mapping. `metrics.cap`, `x` and `descender` only place the guide lines (on screen and on the template) and go into `OS/2` as `sCapHeight` / `sxHeight`; the font's ascent and descent are always 950 / 250, so lines are 1.2 em tall.
+Everything is in font units, y up from the baseline, `units_per_em` 1000. The drawing box is fixed: x 0…1000, y 950…−250 (`model.ts:54`), the same rectangle as a template box and a guide crop, so a stroke, a printed box and a scanned crop line up without any per-project mapping. `metrics.cap`, `x` and `descender` only place the guide lines (on screen and on the template) and go into `OS/2` as `sCapHeight` / `sxHeight`; the font's ascent and descent are always 950 / 250, so lines are 1.2 em tall.
 
 ### Strokes to outlines
 
-`outline.ts`. A stroke is `[x, y, pressure][]`; pressure comes from a pen, and mouse and touch get 0.5 (`font-maker-canvas.svelte`). At export, and live while drawing so the canvas shows what ships:
+`outline.ts`. A stroke is `[x, y, pressure][]`. The width is per font: `project.stroke.width`, 20–160, default 70 (`STROKE_WIDTH`), and it feeds the canvas, the live stroke, the grid and filmstrip thumbnails (as SVG polyline stroke width), the preview and the export, so changing it restyles everything already drawn. At export, and live while drawing so the canvas shows what ships:
 
 | Step | What | Where |
 |------|------|-------|
-| Clean | Drop points closer than 3 units, one 1-2-1 smoothing pass over position and radius | `outline.ts:77` |
-| Radius | `35 × (0.25 + 1.5 p)`: 35 units at p = 0.5, 9–61 over the pressure range | `outline.ts:25` |
+| Clean | Drop points closer than 3 units, resample at even spacing of 12 % of the width (at least 3 units), then three 1-2-1 smoothing passes over position and radius | `outline.ts:115` |
+| Radius | `width / 2 × (0.25 + 1.5 p)`: 35 units at p = 0.5 and width 70, 9–61 over the pressure range | `outline.ts:27` |
 | Split | RDP the centreline at 6 units; every vertex turning more than 80° cuts the stroke there, so a V becomes two overlapping pieces instead of a self-intersecting offset | `outline.ts:101` |
 | Offset | Each point moves ± its radius along the averaged normal. An offset point that would step backwards against the centreline is dropped, which removes the swallowtails on the inner side of tight curves | `outline.ts:134` |
 | Caps | Half circles of 6 steps at both ends; a stroke shorter than half its radius is a dot (8 points) | `outline.ts:117`, `outline.ts:126` |
 | Simplify | RDP each side at 1.5 units | `outline.ts:149` |
 | Quadratics | Points are rounded to integers and wound clockwise; every point is off-curve, so TrueType's implied midpoints make the outline a quadratic B-spline, except vertices turning more than 70°, which stay on-curve | `outline.ts:186` |
 
+Why resample and smooth three times: mouse and touch points sit on a pixel grid, so a slow stroke is a staircase of 2-unit steps. Offsetting that by a 50-unit radius swings each normal by up to 45° and beads the edges (seen on a slow, thick L). Even spacing tied to the width plus the passes flatten the steps before any offset; the RDP corner split still sees a real corner because it compares long chords. `outline.test.ts` checks that a pixel-staircase line keeps both long sides monotone and within 4 units of parallel.
+
+### Pressure
+
+`pressure.ts`, `font-maker-canvas.svelte`. A pen always sends its real `event.pressure`. Mouse and touch follow the app's Even / Speed toggle:
+
+- **Even:** 0.5 everywhere.
+- **Speed** (default): the PDF Tools signature-pad model, copied rather than shared. Speed between samples in font units per ms maps to a target pressure, 0.8 when still down to 0.1 at `max_speed` 5 or faster, and the value eases 35 % of the way toward each target, starting at 0.45. 5 units/ms is the signature pad's 2.2 scaled by the drawing box being about 2.2× its 600-unit width, so a stroke looks as thin and thick here as there.
+
+The canvas keeps each sample's `event.timeStamp` only while the pointer is down; the live stroke and the committed one are the same `speed_pressures` output, rounded to 0.01 and written into each point's pressure. No timestamps reach the file, so switching the toggle changes only new strokes.
+
 Why a B-spline over a least-squares quadratic fit: the offset polygon is already dense and smooth, the implied-midpoint rule is native to `glyf`, and it costs nothing. The curve passes slightly inside convex vertices (by a fraction of the 1.5-unit tolerance). Overlapping contours (strokes crossing, pieces of a split stroke) all wind the same way, so the nonzero fill rule unions them; no boolean path operations.
 
 ### Spacing
 
-`build.ts:12`. `advance = ink width + 2 × bearing + lsb + rsb`, with the ink shifted so its left edge sits at `bearing + lsb`. The project bearing (default 60, about 6 % of the em) applies on each side; `lsb` and `rsb` are the per-glyph nudges, ±400. The editor shows both edges as dashed handles: dragging one changes that side's nudge, and the − / + buttons step it by 10. Space (and U+00A0) is a fixed 260.
+`build.ts:12`. `advance = ink width + 2 × bearing + lsb + rsb`, with the ink shifted so its left edge sits at `bearing + lsb`. The project bearing (default 60, about 6 % of the em) applies on each side; `lsb` and `rsb` are the per-glyph nudges, ±400. The handles and the − / + buttons appear only with the "Edit spacing" toggle on (app storage, off by default), so drawing near the box edges never grabs a handle; with it off the nudges still apply. With it on, both edges show as dashed handles: dragging one changes that side's nudge, the − / + buttons step it by 10, and "Reset to auto" (shown when a nudge exists) drops both. Space (and U+00A0) is a fixed 260.
 
 ### TrueType writer
 
@@ -65,13 +76,16 @@ Guides show at 40 % behind the canvas and the grid cells through an SVG mask wit
 
 ### Editing
 
-`editor.svelte.ts`. One `History<FontProject>` (`$kit/utils/history`, 200 entries): every stroke, clear, nudge, guide import and settings change is one step, and undo works across characters. The project is immutable and unchanged glyphs are shared between entries. Dirty is "current entry is not the saved one", so undoing back to the saved state clears the dot.
+`editor.svelte.ts`. One `History<FontProject>` (`$kit/utils/history`, 200 entries): every stroke, clear, nudge, width change, guide import and settings change is one step, and undo works across characters. The width slider shows a draft while it's dragged and commits one step on `change`. Undo is in the top toolbar, as a labelled button next to Clear, and on touch as a two-finger tap on the canvas: the second finger cancels the first finger's live stroke, and both lifting within 350 ms of the first touch, each moved less than 12 px, undoes.
+
+- **Filmstrip** (`font-maker-filmstrip.svelte`): every character of the sets in a scroll-snapped row under the canvas, 40 × 48 px tiles. The current one is highlighted and scrolled to the middle on change; swipe or scroll to browse, tap to jump. ‹ › and `[` `]` still step.
+- **Ghost:** an empty box shows its character in `--font-sans` at low opacity on the baseline, its font size set to the cap height with `font-size-adjust: cap-height 1` so its capitals match the project's cap height; lowercase and digits follow the font's own proportions (one size for everything, no per-case heuristic). A scan guide replaces it. Empty filmstrip tiles use the same ghost through `font-maker-glyph.svelte`, which also draws the grid thumbnails. The project is immutable and unchanged glyphs are shared between entries. Dirty is "current entry is not the saved one", so undoing back to the saved state clears the dot.
 
 ## Data
 
-- **`.fontmaker`**, UTF-8 JSON, the ADR's shape: `{ version: 1, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, glyphs: { [char]: { strokes, lsb?, rsb?, guide? } } }`. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:38`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
+- **`.fontmaker`**, UTF-8 JSON, the ADR's shape: `{ version: 1, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, glyphs: { [char]: { strokes, lsb?, rsb?, guide? } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:38`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
 - **`.ttf`**: Export asks where, starting next to the project.
-- **App storage:** `app.font-maker.sample` (the preview text), `app.font-maker.show-guide`.
+- **App storage:** `app.font-maker.sample` (the preview text), `app.font-maker.show-guide`, `app.font-maker.pressure` (`even` | `speed`), `app.font-maker.edit-spacing`.
 - One B guide measured 1.7 KB as a data URL (2026-10-20, Chromium, the template PNG warped and re-photographed in a test page); a full sheet of guides is unmeasured.
 
 ## Dependencies & licences
@@ -80,7 +94,7 @@ None. zod is already approved (ADR-008).
 
 ## Limits
 
-- One fixed stroke weight (70 units at mid pressure); variable weight, kerning, OTF/CFF and auto-trace are out (ADR-055).
+- One stroke width per font, not per stroke; kerning, OTF/CFF and auto-trace are out (ADR-055).
 - Characters outside the four presets can't be added, and only BMP codepoints fit the format 4 `cmap`.
 - No hinting: small sizes rely on the rasteriser.
 - Corner finding was checked on synthetic photos (tilted, rotated 180°, rotated 4.6° on a grey table) only; real phone photos with shadows and glare are untested. Detection fails over to manual corners.
@@ -91,3 +105,4 @@ None. zod is already approved (ADR-008).
 
 - [Brainstorm 2026-10-20](../brainstorm/2026-10-20_font-maker.md): hand-written writer, draw plus scan, guides not auto-trace, presets, open-only shell.
 - [ADR-055](../adrs/055-font-maker.md): file format, writer, stroke expansion, scan guides, and its implementation revision.
+- [Brainstorm 2026-10-21](../brainstorm/2026-10-21_font-maker-pen.md): line width in the file, speed pressure, Edit spacing, Undo, filmstrip, ghost, bead fix.

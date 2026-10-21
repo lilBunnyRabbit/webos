@@ -18,11 +18,16 @@ export interface Metrics {
   bearing: number;
 }
 
+export interface StrokeStyle {
+  width: number;
+}
+
 export interface FontProject {
   version: 1;
   name: string;
   sets: CharSet[];
   metrics: Metrics;
+  stroke?: StrokeStyle;
   glyphs: Record<string, Glyph>;
 }
 
@@ -32,6 +37,8 @@ export const DESCENT = 250;
 export const BOX_WIDTH = 1000;
 export const SPACE_WIDTH = 260;
 export const STROKE_WIDTH = 70;
+export const MIN_STROKE_WIDTH = 20;
+export const MAX_STROKE_WIDTH = 160;
 export const MAX_NUDGE = 400;
 export const DEFAULT_PRESSURE = 0.5;
 
@@ -101,6 +108,21 @@ export function clear_guides(project: FontProject): FontProject {
 
 export function has_guides(project: FontProject): boolean {
   return Object.values(project.glyphs).some((glyph) => !!glyph.guide);
+}
+
+export function stroke_width(project: FontProject): number {
+  return project.stroke?.width ?? STROKE_WIDTH;
+}
+
+export function set_stroke_width(project: FontProject, width: number): FontProject {
+  const next = Math.round(Math.min(MAX_STROKE_WIDTH, Math.max(MIN_STROKE_WIDTH, width)));
+  return next === stroke_width(project) ? project : { ...project, stroke: { width: next } };
+}
+
+export function reset_spacing(project: FontProject, char: string): FontProject {
+  const glyph = project.glyphs[char];
+  if (!glyph?.lsb && !glyph?.rsb) return project;
+  return update_glyph(project, char, ({ lsb: _lsb, rsb: _rsb, ...rest }) => rest);
 }
 
 export function clamp_nudge(value: number): number {
