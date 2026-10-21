@@ -155,13 +155,14 @@ export class VersionService implements IVersionService {
   }
 
   async check(): Promise<void> {
-    if (this.is_checking) return;
+    if (this.is_checking || !navigator.onLine) return;
     this.is_checking = true;
     this.last_check = Date.now();
 
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store" });
-      if (!response.ok) return;
+      // Offline or unreachable is no error: the next poll asks again.
+      const response = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store" }).catch(() => null);
+      if (!response?.ok) return;
 
       const remote: VersionInfo = await response.json();
       if (remote.buildTimestamp > this.info.buildTimestamp) {

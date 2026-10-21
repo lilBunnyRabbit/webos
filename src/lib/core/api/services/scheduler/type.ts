@@ -9,7 +9,7 @@ export const JobKind = {
   ALARM: "alarm",
   TIMER: "timer",
   REMINDER: "reminder",
-  /** A Pomodoro phase ending. */
+  /** A timed phase ending, one step of a routine (a Pomodoro focus or break, an interval): a softer chime than a timer. */
   PHASE: "phase",
 } as const;
 export type JobKind = (typeof JobKind)[keyof typeof JobKind];

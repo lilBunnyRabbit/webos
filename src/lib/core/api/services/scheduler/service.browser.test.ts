@@ -8,6 +8,7 @@ import { NotificationsService } from "../notifications/service.svelte";
 import { CLICK_MESSAGE, ClickSource, type NotificationClick } from "../notifications/system";
 import { parse_registry, SCHEDULER_PATH, serialize_registry, type Registry } from "./persistence";
 import { SchedulerService } from "./service.svelte";
+import { CHANNEL } from "./store";
 import { FireOutcome, JobKind, type Job, type JobInput, type OnFire } from "./type";
 
 const MINUTE = 60_000;
@@ -73,6 +74,27 @@ async function on_disk(tab: Tab): Promise<Registry> {
 
 const reminder = (key: string, at: number, extra: Partial<JobInput> = {}): JobInput => ({ key, title: `Reminder ${key}`, at: { epoch: at }, kind: JobKind.REMINDER, ...extra });
 const titles = (tab: Tab) => tab.notifications.all.map((notification) => notification.title);
+interface ChannelMessage {
+  type: string;
+  count?: number;
+}
+
+const real_timeout = window.setTimeout.bind(window);
+const sleep = (ms: number) => new Promise((resolve) => real_timeout(resolve, ms));
+const reads = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.filter(([path]) => path === SCHEDULER_PATH).length;
+
+function set_visibility(state: DocumentVisibilityState): void {
+  Object.defineProperty(document, "visibilityState", { value: state, configurable: true });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
+function listen_channel(): ChannelMessage[] {
+  const messages: ChannelMessage[] = [];
+  const channel = new BroadcastChannel(CHANNEL);
+  channel.onmessage = (event: MessageEvent<ChannelMessage>) => void messages.push(event.data);
+  shutdowns.push(async () => channel.close());
+  return messages;
+}
 
 beforeEach(async () => {
   await opfs.clear_opfs();
@@ -83,6 +105,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
+  delete (document as { visibilityState?: unknown }).visibilityState;
   for (const shutdown of shutdowns.splice(0).reverse()) await shutdown();
 });
 
@@ -239,6 +263,7 @@ describe("firing", () => {
     await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
     const at = Date.now() + 10 * MINUTE;
     await tab.scheduler.schedule("clock", reminder("tea", at));
+    await sleep(200);
 
     vi.setSystemTime(at + 30_000);
     window.dispatchEvent(new Event("focus"));
@@ -336,6 +361,93 @@ describe("firing", () => {
     await vi.waitFor(() => expect(tab.scheduler.get("clock:wake")?.snooze_until).toBeUndefined());
     expect(titles(tab)).toEqual(["Wake"]);
     expect(tab.scheduler.get("clock:wake")).toMatchObject({ armed: true, last_fired: snooze });
+  });
+});
+
+describe("idle", () => {
+  test("boot reads the registry once before the first pass", async () => {
+    const read = vi.spyOn(FilesService.prototype, "get_file");
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    await sleep(200);
+    expect(reads(read)).toBe(2);
+  });
+
+  test("with no jobs the leader keeps no timer, and a focus or becoming visible reads nothing", async () => {
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    const timeouts = vi.spyOn(window, "setTimeout");
+    await tab.scheduler.schedule("clock", reminder("tea", Date.now() + 10 * MINUTE));
+    await vi.waitFor(() => expect(timeouts).toHaveBeenCalled());
+    await tab.scheduler.cancel("clock:tea");
+    await sleep(200);
+    timeouts.mockClear();
+
+    const read = vi.spyOn(tab.kernel.service<FilesService>("files"), "get_file");
+    window.dispatchEvent(new Event("focus"));
+    set_visibility("visible");
+    await sleep(200);
+    expect(reads(read)).toBe(0);
+    expect(timeouts).not.toHaveBeenCalled();
+    expect(tab.scheduler.is_leader).toBe(true);
+  });
+
+  test("the idle wake-up lands on the minute; a job due sooner sets the time", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    vi.setSystemTime(new Date("2026-10-21T10:00:20.000Z"));
+    const timeouts = vi.spyOn(window, "setTimeout");
+
+    await tab.scheduler.schedule("clock", reminder("later", Date.now() + 60 * MINUTE));
+    await sleep(200);
+    expect(timeouts).toHaveBeenLastCalledWith(expect.any(Function), 40_000);
+    await tab.scheduler.schedule("clock", reminder("soon", Date.now() + 50_000));
+    await sleep(200);
+    expect(timeouts).toHaveBeenLastCalledWith(expect.any(Function), 50_000);
+  });
+
+  test("becoming visible steals the lead once; going hidden runs no pass", async () => {
+    const a = await open_tab();
+    await vi.waitFor(() => expect(a.scheduler.is_leader).toBe(true));
+    await a.scheduler.schedule("clock", reminder("tea", Date.now() + 10 * MINUTE));
+    const b = await open_tab();
+    await vi.waitFor(() => expect(b.scheduler.is_leader).toBe(true));
+    await sleep(200);
+
+    const read = vi.spyOn(a.kernel.service<FilesService>("files"), "get_file");
+    set_visibility("hidden");
+    await sleep(200);
+    expect(reads(read)).toBe(0);
+
+    const requests = vi.spyOn(navigator.locks, "request");
+    set_visibility("visible");
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => expect(a.scheduler.is_leader || b.scheduler.is_leader).toBe(true));
+    await sleep(200);
+    const steals = requests.mock.calls.filter(([, options]) => typeof options === "object" && (options as LockOptions).steal);
+    expect(steals).toHaveLength(1);
+  });
+
+  test("becoming visible clears the badge only when one was set", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    const messages = listen_channel();
+    set_visibility("visible");
+    await sleep(200);
+    expect(messages).toEqual([]);
+
+    const at = Date.now() + 10 * MINUTE;
+    await tab.scheduler.schedule("clock", reminder("tea", at));
+    await vi.waitFor(() => expect(messages).toContainEqual({ type: "changed" }));
+    set_visibility("hidden");
+    vi.setSystemTime(at + 60 * MINUTE);
+    document.dispatchEvent(new Event("resume"));
+    await vi.waitFor(() => expect(messages).toContainEqual({ type: "badge", count: 1 }));
+
+    set_visibility("visible");
+    await vi.waitFor(() => expect(messages).toContainEqual({ type: "seen" }));
   });
 });
 

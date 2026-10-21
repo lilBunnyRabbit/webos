@@ -106,3 +106,13 @@ All four alerting apps are on the registry. Calendar's `remind_while_alive` loop
 - **No buttons.** A `cal snooze` button was left out: by the time it's pressed, the handler has moved `open` on to the next occurrence, so a snoozed repeat would open the wrong day, and the message's "in 15 min" would be wrong after a snooze.
 - **Every edit path** (Save, delete one occurrence, delete, `cal add`) calls `sync_reminder`: the same wall time and rule only updates the title and message, keeping the zone and `armed_at`; anything else schedules afresh; no reminder, or none left from now on, cancels. Uninstall is the scheduler's.
 - **Behaviour change:** a reminder whose time has already passed when it's saved doesn't fire for that occurrence (`armed_at`); the old check still showed it up to 15 minutes after the event started.
+
+## Revision 2026-10-21: idle work (health pass)
+The first health pass measured the scheduler as the only new idle cost: one wake-up, one lock and three OPFS reads a minute with no jobs at all, and a lock plus reads on every window focus. Owner's decisions in [the health pass](../brainstorm/2026-10-21_health-pass.md):
+- **Timer only while jobs exist**, superseding "min(next due, 60 s)" in Firing for an empty registry: with no jobs the leader keeps no timer, and a wake-up (focus, resume, pageshow, becoming visible) runs no pass. The first `schedule()`, a re-read or another tab's ping runs a pass, which arms it again.
+- **Heartbeat on the minute.** With jobs, a due occurrence less than 60 s away sets the timer; otherwise it's armed to the next minute boundary (`60 s - now % 60 s`, as the taskbar clock does), so a hidden tab's wake-up shares the clock's. Still a one-shot re-armed after each pass's I/O, never chained.
+- **No double steal, no pass on hidden.** Becoming visible fires visibilitychange and focus together; a steal still pending isn't requested again. visibilitychange to hidden does nothing.
+- **Badge.** `seen` is broadcast and `clearAppBadge` called only when a badge is up. Built within scope: the leader posts `{ type: "badge", count }` on the channel when it sets one, so any tab knows; a visible boot still clears unconditionally, because an installed app keeps its badge after the tab that set it closed.
+- **One read at boot.** The folder-revision effect's first run only subscribes.
+- `phase` is documented as a generic timed phase, not Pomodoro's; no behaviour change.
+- Leadership, the store lock and steal rules are otherwise unchanged. Not done: stopping the heartbeat when jobs exist but none is armed (left as a known gap).

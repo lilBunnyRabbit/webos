@@ -33,7 +33,7 @@ import {
 } from "./type";
 import type { AppId } from "../apps/type";
 
-/** The leader wakes at least this often, so a clock change or an edit nobody announced is seen within a minute. */
+/** While it has jobs, the leader wakes at least once a minute, on the minute, so a clock change or an edit nobody announced is seen. */
 const MAX_DELAY = 60_000;
 /** Wall clock and `performance.now()` drifting apart by more than this between wake-ups: the device slept or the clock moved. */
 const JUMP = 5_000;
@@ -44,7 +44,7 @@ const MISSED_TAG = "scheduler:missed";
 const SCHEDULER_FIELDS = ["armed_at", "last_fired", "missed_at"] as const;
 const CHIME_ORDER: JobKind[] = [JobKind.ALARM, JobKind.TIMER, JobKind.PHASE];
 
-type ChannelMessage = { type: "changed" } | { type: "seen" };
+type ChannelMessage = { type: "changed" } | { type: "seen" } | { type: "badge"; count: number };
 
 interface LockRequest {
   id: number;
@@ -111,7 +111,8 @@ export class SchedulerService implements ISchedulerService {
 
     const wake = () => this.wake();
     const on_visibility = () => {
-      if (document.visibilityState === "visible") this.seen();
+      if (document.visibilityState !== "visible") return;
+      this.seen();
       this.wake();
     };
     document.addEventListener("visibilitychange", on_visibility);
@@ -128,8 +129,14 @@ export class SchedulerService implements ISchedulerService {
     // Edits this tab makes another way (Terminal, Text Editor) bump the folder's revision; other tabs ping the channel.
     this.cleanups.push(
       $effect.root(() => {
+        let first = true;
         $effect(() => {
           this.files_service.revision(SCHEDULER_PATH.slice(0, SCHEDULER_PATH.lastIndexOf("/")));
+          // The first run only subscribes; init() already read the registry.
+          if (first) {
+            first = false;
+            return;
+          }
           untrack(() => void this.refresh());
         });
         // Uninstalling happens in one tab and isn't shared, so whichever full tab sees it drops the app's jobs.
@@ -141,7 +148,8 @@ export class SchedulerService implements ISchedulerService {
 
     this.cleanups.push(listen_clicks(ClickSource.SCHEDULER, (click) => this.on_click(click)));
     announce_ready();
-    if (document.visibilityState === "visible") this.seen();
+    // An installed app keeps its badge after the tab that set it closed, so a visible boot clears it whatever this tab knows.
+    if (document.visibilityState === "visible") this.clear_badge();
     this.join(this.may_steal());
   }
 
@@ -279,6 +287,7 @@ export class SchedulerService implements ISchedulerService {
   private on_channel(message: ChannelMessage): void {
     if (message.type === "changed") void this.refresh();
     else if (message.type === "seen") this.badge = 0;
+    else if (message.type === "badge") this.badge = message.count;
   }
 
   // Leadership (ADR-062): one tab per browser holds the lock and keeps the timer. A visible full tab takes it over;
@@ -331,8 +340,14 @@ export class SchedulerService implements ISchedulerService {
   private wake(): void {
     if (this.destroyed) return;
     this.check_jump();
-    if (this.is_leader) void this.process();
-    else if (this.may_steal()) this.join(true);
+    if (this.is_leader) {
+      if (this.jobs.length > 0) void this.process();
+    } else if (this.may_steal() && !this.stealing()) this.join(true);
+  }
+
+  /** Becoming visible fires visibilitychange and focus together; the second mustn't steal again. */
+  private stealing(): boolean {
+    return this.request !== null && this.request.abort === null && this.leading !== this.request.id;
   }
 
   private check_jump(): void {
@@ -343,11 +358,16 @@ export class SchedulerService implements ISchedulerService {
 
   private arm(): void {
     clearTimeout(this.timer);
-    if (!this.is_leader || this.destroyed) return;
+    // No jobs, nothing to fire or notice: a schedule, a re-read or another tab's ping runs a pass, which arms it again.
+    if (!this.is_leader || this.destroyed || this.jobs.length === 0) return;
+    const now = Date.now();
     const due = next_due(this.jobs);
-    const until_due = due === null ? MAX_DELAY : Math.min(Math.max(due - Date.now(), 0), MAX_DELAY);
-    const delay = this.failed ? Math.max(until_due, RETRY_DELAY) : until_due;
-    this.armed_wall = Date.now();
+    const until_due = due === null ? Infinity : Math.max(due - now, 0);
+    // The idle wake-up lands on the minute, so a hidden tab shares the taskbar clock's tick instead of adding its own.
+    const heartbeat = MAX_DELAY - (now % MAX_DELAY);
+    const next = until_due < MAX_DELAY ? until_due : heartbeat;
+    const delay = this.failed ? Math.max(next, RETRY_DELAY) : next;
+    this.armed_wall = now;
     this.armed_mono = performance.now();
     // Armed after a pass's storage I/O, never straight from the timer callback, so it isn't a chained timer that
     // Chrome throttles to once a minute in a hidden tab.
@@ -505,10 +525,15 @@ export class SchedulerService implements ISchedulerService {
     if (document.visibilityState !== "visible") {
       this.badge += missed.length;
       navigator.setAppBadge?.(this.badge).catch(() => {});
+      this.announce({ type: "badge", count: this.badge });
     }
   }
 
   private seen(): void {
+    if (this.badge > 0) this.clear_badge();
+  }
+
+  private clear_badge(): void {
     this.badge = 0;
     navigator.clearAppBadge?.().catch(() => {});
     this.announce({ type: "seen" });

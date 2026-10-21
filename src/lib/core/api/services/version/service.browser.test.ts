@@ -131,3 +131,27 @@ describe("VersionService at boot", () => {
     expect(show).not.toHaveBeenCalled();
   });
 });
+
+describe("VersionService update check", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test("offline or unreachable stays quiet; a broken version.json is still logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetch = vi.spyOn(window, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
+    const version = (await boot(current)).service<VersionService>("version");
+    await vi.waitFor(() => expect(version.is_checking).toBe(false));
+    await version.check();
+    expect(fetch).toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalledWith("Failed to check for updates:", expect.anything());
+
+    const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    fetch.mockClear();
+    await version.check();
+    expect(fetch).not.toHaveBeenCalled();
+
+    online.mockRestore();
+    fetch.mockResolvedValue(new Response("not json"));
+    await version.check();
+    expect(error).toHaveBeenCalledWith("Failed to check for updates:", expect.any(SyntaxError));
+  });
+});

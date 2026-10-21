@@ -52,6 +52,7 @@ type Repeat = { every: "day"; interval?: number } | { every: "week"; days: numbe
 - `until` is the last day it may fire on, inclusive; `skip` lists days it doesn't. Both `YYYY-MM-DD` in the job's zone; a skip names the occurrence's real day (a clamped 31 in February is `…-02-28`).
 - `actions` run as shell command lines in a WebOS tab ([shell](shell.md)), so they survive reloads and work from the service worker. `open` is what a body click opens; the owning app when absent.
 - `kind: "alarm"` sets `requireInteraction`: the notification stays until dismissed. The toast of an alarm also stays (`duration: null`).
+- `kind: "phase"` is a generic timed phase ending, one step of a routine (Pomodoro's focus and breaks today, any interval app tomorrow): it differs from `timer` only in its softer chime.
 - `silent: true` skips the in-page chime for that job (Pomodoro's Sound switch off). The OS notification isn't made silent: whether it sounds is the system's setting.
 
 ### Permission
@@ -99,17 +100,17 @@ Wall time to instant is `wall_to_epoch(date, time, zone)` in `src/lib/core/utils
 
 Web Locks, `webos:scheduler`, one holder per browser profile:
 
-- At init every tab requests the lock. A **full** tab that is visible requests it with `steal: true`, and steals again whenever it becomes visible while not leading (visibilitychange, focus, pageshow, resume). A **solo** tab and a hidden tab queue with a normal request. So the visible full tab leads, and when the leader closes, the next queued tab takes over.
+- At init every tab requests the lock. A **full** tab that is visible requests it with `steal: true`, and steals again whenever it becomes visible while not leading (visibilitychange, focus, pageshow, resume). Becoming visible fires visibilitychange and focus together, so a steal still pending (requested, not yet granted) isn't requested a second time. A **solo** tab and a hidden tab queue with a normal request. So the visible full tab leads, and when the leader closes, the next queued tab takes over.
 - A stolen tab stands down (timer cleared) and queues again.
 - `destroy()` aborts a queued request and releases a held lock.
 
-The leader keeps one `setTimeout` to `min(next due, 60 s)`. Each wake-up runs a **pass**, then re-arms:
+While there are jobs, the leader keeps one `setTimeout`: to the next due occurrence when it's less than 60 s away, otherwise to the next minute boundary (`60 s - now % 60 s`, the taskbar clock's tick), so a hidden tab's idle wake-up shares the clock's instead of adding its own. With no jobs there's no timer at all: the first `schedule()`, a re-read or another tab's ping runs a pass, which arms it again. Each wake-up runs a **pass**, then re-arms:
 
 1. Under the store lock: read `jobs.json`, `plan()`, write back if changed.
 2. Fire what fired, report what was missed (below), sync triggered notifications.
 3. Re-arm. The timer is set after the pass's storage I/O, never straight inside the timer callback, so Chrome doesn't count it as a chained timer and throttle it to once a minute in a hidden tab.
 
-Passes run one at a time; a request during one runs one more after it. A pass that throws (storage error) re-arms no sooner than 5 s instead of spinning on the job it couldn't record. Wake-ups also come from visibilitychange, `resume`, `pageshow`, `focus`, a registry change in this tab, and the BroadcastChannel. Each compares the wall clock against `performance.now()` since the last arm: more than 5 s apart sets `last_jump` (sleep or a changed clock); the pass itself is the same.
+Passes run one at a time; a request during one runs one more after it. A pass that throws (storage error) re-arms no sooner than 5 s instead of spinning on the job it couldn't record. Wake-ups also come from becoming visible (visibilitychange to `visible` only; going hidden does nothing), `resume`, `pageshow`, `focus`, a registry change in this tab, and the BroadcastChannel. A wake-up of a leader with no jobs runs no pass, so alt-tabbing with nothing scheduled takes no lock and reads no file. Each compares the wall clock against `performance.now()` since the last arm: more than 5 s apart sets `last_jump` (sleep or a changed clock); the pass itself is the same.
 
 ## Registry and cross-tab
 
@@ -117,7 +118,7 @@ Passes run one at a time; a request during one runs one more after it. A pass th
 
 - **Load.** Missing, not JSON, or another version: empty. A job that fails the schema is dropped alone with a warning, so one bad hand edit doesn't lose every alarm; a duplicate id keeps the first. The next write leaves them out.
 - **Write.** `RegistryStore.transact()` (`store.ts`) takes the `webos:scheduler-store` lock, re-reads the file, applies the change, writes it through a `LatestWriter` (seeded with the text just read, so a write equal to what another tab left on disk is skipped correctly) and awaits it, then releases. Every mutation and every pass goes through it, so two tabs never overwrite each other's changes and a leader handover can't fire one occurrence twice: the second pass reads the first one's `last_fired` or `missed_at`.
-- **Others.** After a write the tab posts `{ type: "changed" }` on the `webos:scheduler` BroadcastChannel; the others re-read. An edit made in this tab another way (Terminal, Text Editor) bumps the folder's revision, which also re-reads. Re-reading skips identical text.
+- **Others.** After a write the tab posts `{ type: "changed" }` on the `webos:scheduler` BroadcastChannel; the others re-read. An edit made in this tab another way (Terminal, Text Editor) bumps the folder's revision, which also re-reads; the revision effect's first run only subscribes, since `init()` has just read the file. Re-reading skips identical text.
 
 ## Firing
 
@@ -126,7 +127,7 @@ For each fired job:
 - An OS notification through `registration.showNotification` (`notifications/system.ts`): `tag` = job id, `renotify: true` (a fired daily alarm replacing yesterday's still alerts), `requireInteraction` for alarms, `timestamp` = the occurrence, `actions` from the job's labels, `data = { source: "scheduler", id, route, commands }` where `route` is `#/app/{open.app}?{open.props}`. Only when permission is granted; never asks.
 - When this tab is visible, also a toast from the job's app: its actions run their command through `shell.execute`, plus Open (`apps.launch(open)`).
 
-**Chime.** After the pass, when it fired a job of kind `alarm`, `timer` or `phase` that isn't `silent` and the page has had a user gesture since load (`navigator.userActivation.hasBeenActive`, browsers keep audio off until then), the leader plays one chime from `chime.ts` (loaded on first use): a bright two-note call three times for alarms and timers, one soft pair for a phase. One per pass, the loudest kind that fired, so jobs due together don't stack. Without a gesture, the OS notification's sound carries it. Apps play nothing themselves.
+**Chime.** After the pass, when it fired a job of kind `alarm`, `timer` or `phase` that isn't `silent` and the page has had a user gesture since load (`navigator.userActivation.hasBeenActive`, browsers keep audio off until then), the leader plays one chime from `chime.ts` (loaded on first use): a bright two-note call three times for alarms and timers, one soft pair for a phase (any app's timed phase, not only Pomodoro's). One per pass, the loudest kind that fired, so jobs due together don't stack. Without a gesture, the OS notification's sound carries it. Apps play nothing themselves.
 
 Without an active service worker (the dev server) the helper uses a page `Notification` without buttons; its click goes to this tab's own click listeners.
 
@@ -157,7 +158,7 @@ Found by a pass, at boot or later. The first pass after this tab starts leading 
 - One OS notification "N missed while WebOS was closed" (tag `scheduler:missed`) with the titles as its body.
 - A notification-center entry per job ("Missed · due …", warning, its toast hidden at once) and one summary toast.
 - The job's `missed_at` is set in the same write, so the app's on-fire handler, or the app opened later, learns about it (a Pomodoro phase pauses and shows when it ended) and clears it. Also appended to `missed` (this tab, memory only).
-- When the tab is hidden, `navigator.setAppBadge(count)`, adding up across passes. Becoming visible clears it (`clearAppBadge`) and tells other tabs (`{ type: "seen" }`) to reset their count. On a tab that isn't an installed app the call does nothing.
+- When the tab is hidden, `navigator.setAppBadge(count)`, adding up across passes, and `{ type: "badge", count }` on the channel so every tab knows a badge is up. A tab becoming visible while a badge is up clears it (`clearAppBadge`) and tells the others (`{ type: "seen" }`) to reset their count; with no badge it does neither. A visible boot always clears it, since an installed app keeps its badge after the tab that set it closed. On a tab that isn't an installed app the calls do nothing.
 
 ## Notification clicks
 
@@ -186,14 +187,14 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 
 ## Lifecycle
 
-`init()`: reads the registry, opens the channel, adds the wake-up listeners, the folder-revision effect and the click listener, posts `webos:ready` to the worker, clears the badge when visible, requests the lock. `destroy()`: clears the timer, drops the lock request or releases the lock, closes the channel, removes every listener. A pass still in flight finishes its write; its error is not reported once destroyed.
+`init()`: reads the registry, opens the channel, adds the wake-up listeners, the folder-revision effect and the click listener, posts `webos:ready` to the worker, clears the badge when visible, requests the lock. The registry is read once: the folder-revision effect's first run doesn't re-read, and the first pass reads it under the store lock. `destroy()`: clears the timer, drops the lock request or releases the lock, closes the channel, removes every listener. A pass still in flight finishes its write; its error is not reported once destroyed.
 
 ## Persistence
 
 | Where | What |
 |-------|------|
 | `/var/lib/scheduler/jobs.json` | The registry, above |
-| memory | `missed`, the badge count, which triggered notifications the leader knows of |
+| memory | `missed`, the badge count (kept in step across tabs by `badge` and `seen` messages), which triggered notifications the leader knows of |
 
 ## Shell
 
@@ -246,9 +247,11 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - Added beyond the ADR's API: `missed`, `last_jump`, `triggers`, `is_leader`.
 - Job gains `silent`, and apps gain the manifest's `on_fire` hook (owner follow-up, ADR-062 revision 2026-10-21).
 - The missed summary says "asleep" instead of "closed" when it's found after this tab's first pass.
+- The timer runs only while jobs exist and its idle wake-up lands on the minute; a leader with no jobs runs no pass on a wake-up; going hidden wakes nothing; a pending steal isn't repeated; the badge is cleared only when one is up (health pass, ADR-062 revision 2026-10-21).
 
 ## Known gaps
 
+- The idle heartbeat runs while any job exists, armed or not: a registry of only switched-off alarms still wakes the leader once a minute (on the minute) to catch a clock change it has nothing to fire for.
 - Nothing fires with every tab closed unless Triggers is on. On Android a background tab is frozen within about a minute, so only the foreground tab fires.
 - With Triggers on, a job delivered by its trigger while every tab was closed is still reported missed at the next boot: the registry never heard it fired.
 - Whether Chrome replaces a shown notification immediately when a triggered one with the same tag is added (rather than when it triggers) is unverified.
