@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { flushSync } from "svelte";
-import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
-import * as opfs from "../files/opfs";
-import { FilesService } from "../files/service.svelte";
-import type { NotificationsService, NotifyOptions } from "../notifications/type";
-import { build_family } from "$lib/apps/user/font-maker/build";
-import { add_stroke, create_project, type Stroke } from "$lib/apps/user/font-maker/model";
-import { FONT_DIRECTORY } from "./fonts";
-import { SettingsService } from "./service.svelte";
+import { boot_test_kernel, stub_service } from "$lib/core/api/kernel/test-kernel";
+import * as opfs from "$lib/core/api/services/files/opfs";
+import { FilesService } from "$lib/core/api/services/files/service.svelte";
+import type { NotificationsService, NotifyOptions } from "$lib/core/api/services/notifications/type";
+import { build_family } from "./build";
+import { add_stroke, create_project, type Stroke } from "./model";
+import { FONT_DIRECTORY } from "$lib/core/api/services/settings/fonts";
+import { SettingsService } from "$lib/core/api/services/settings/service.svelte";
 
 let shutdown: () => Promise<void>;
 let notified: NotifyOptions[] = [];
