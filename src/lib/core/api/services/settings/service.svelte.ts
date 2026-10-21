@@ -8,7 +8,7 @@ import { NotificationType, type NotificationsService } from "../notifications/ty
 import { PATHS } from "../files/hierarchy";
 import { base_name } from "../files/path";
 import { untrack } from "svelte";
-import type { FaceSource } from "./font-loader";
+import type { FaceSource } from "$lib/core/utils/font-loader";
 import { LatestWriter } from "../files/latest-writer";
 import { write_var_lib } from "../desktop/folder.svelte";
 import {
@@ -190,17 +190,12 @@ export class SettingsService implements ISettingsService {
 
   private async font_sources(choice: Exclude<FontChoice, { kind: "default" }>): Promise<FaceSource[]> {
     if (choice.kind === "builtin") {
-      return Promise.all(
-        BUILTIN_FONTS[choice.id].faces.map(async (face) => {
-          const response = await fetch(`${import.meta.env.BASE_URL}${face.path}`);
-          if (!response.ok) throw new Error(`The built-in font didn't download (${response.status})`);
-          return { bytes: new Uint8Array(await response.arrayBuffer()), descriptors: { weight: face.weight, style: face.style } };
-        })
-      );
+      const { fetch_faces } = await import("$lib/core/utils/font-loader");
+      return fetch_faces(BUILTIN_FONTS[choice.id].faces);
     }
     const file = await this.files_service.get_file(`${FONT_DIRECTORY}/${choice.name}`);
     if (!file) throw new Error(`${choice.name} isn't in ${FONT_DIRECTORY} any more`);
-    const { file_faces } = await import("./font-loader");
+    const { file_faces } = await import("$lib/core/utils/font-loader");
     return file_faces(new Uint8Array(await file.arrayBuffer()));
   }
 
@@ -221,7 +216,7 @@ export class SettingsService implements ISettingsService {
     }
     try {
       const sources = await this.font_sources(choice);
-      const { load_faces } = await import("./font-loader");
+      const { load_faces } = await import("$lib/core/utils/font-loader");
       const family = `webos-${role}-${request}`;
       const faces = await load_faces(family, sources);
       if (request !== this.font_requests[role]) return;
