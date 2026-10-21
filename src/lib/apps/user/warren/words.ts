@@ -19,8 +19,22 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export interface MatchOptions {
+  /** Only where the query isn't part of a longer word. */
+  whole: boolean;
+  /** Give each replacement the case of what it replaces (all caps, capitalised). */
+  keep_case: boolean;
+}
+
+export const WORD_MATCH: MatchOptions = { whole: true, keep_case: true };
+export const TEXT_MATCH: MatchOptions = { whole: false, keep_case: false };
+
+export function match_pattern(query: string, whole: boolean): RegExp {
+  return new RegExp(whole ? `(?<!${LETTER})${escape(query)}(?!${LETTER})` : escape(query), "giu");
+}
+
 export function word_pattern(word: string): RegExp {
-  return new RegExp(`(?<!${LETTER})${escape(word)}(?!${LETTER})`, "giu");
+  return match_pattern(word, true);
 }
 
 export interface Range {
@@ -28,10 +42,14 @@ export interface Range {
   end: number;
 }
 
-/** Whole words only, ignoring case: "fast" finds "Fast" but not "breakfast". */
+/** Ignoring case; `whole` keeps "fast" from finding "breakfast". */
+export function find_matches(text: string, query: string, whole: boolean): Range[] {
+  if (!query) return [];
+  return [...text.matchAll(match_pattern(query, whole))].map((match) => ({ start: match.index, end: match.index + match[0].length }));
+}
+
 export function find_word(text: string, word: string): Range[] {
-  if (!word) return [];
-  return [...text.matchAll(word_pattern(word))].map((match) => ({ start: match.index, end: match.index + match[0].length }));
+  return find_matches(text, word, true);
 }
 
 export function match_case(replacement: string, found: string): string {
@@ -41,19 +59,24 @@ export function match_case(replacement: string, found: string): string {
   return replacement;
 }
 
-export function replace_word(text: string, word: string, replacement: string): { text: string; count: number } {
+export function replace_matches(text: string, query: string, replacement: string, options: MatchOptions): { text: string; count: number } {
+  if (!query) return { text, count: 0 };
   let replaced = 0;
-  const next = text.replace(word_pattern(word), (found) => {
+  const next = text.replace(match_pattern(query, options.whole), (found) => {
     replaced++;
-    return match_case(replacement, found);
+    return options.keep_case ? match_case(replacement, found) : replacement;
   });
   return { text: next, count: replaced };
 }
 
-/** Where `offset` lands after `replace_word`; inside a replaced word it moves to that word's end. */
-export function map_offset(text: string, word: string, replacement: string, offset: number): number {
+export function replace_word(text: string, word: string, replacement: string): { text: string; count: number } {
+  return replace_matches(text, word, replacement, WORD_MATCH);
+}
+
+/** Where `offset` lands after `replace_matches`; inside a replaced match it moves to that match's end. */
+export function map_offset(text: string, query: string, replacement: string, offset: number, whole = true): number {
   let shift = 0;
-  for (const { start, end } of find_word(text, word)) {
+  for (const { start, end } of find_matches(text, query, whole)) {
     if (end <= offset) shift += replacement.length - (end - start);
     else if (start < offset) return start + shift + replacement.length;
     else break;

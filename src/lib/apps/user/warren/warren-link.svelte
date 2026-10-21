@@ -8,10 +8,10 @@
     id: string;
     anchor: string;
     editor: WarrenEditor;
-    sheet: boolean;
+    placement: "anchor" | "center" | "sheet";
   }
 
-  let { id, anchor, editor, sheet }: Props = $props();
+  let { id, anchor, editor, placement }: Props = $props();
 
   let popover = $state<HTMLElement>();
   let value = $state("");
@@ -43,7 +43,7 @@
   bind:this={popover}
   {id}
   popover="auto"
-  class={["link-popover m-0 rounded-xl bg-background-lighter p-3 text-foreground shadow-popover", sheet ? "sheet" : "w-80"]}
+  class={["link-popover m-0 rounded-xl bg-background-lighter p-3 text-foreground shadow-popover", placement]}
   style="position-anchor: {anchor}"
   ontoggle={(event) => {
     if (event.newState !== "open") return;
@@ -68,7 +68,17 @@
 </div>
 
 <style>
-  .link-popover:not(.sheet) {
+  .link-popover {
+    width: min(20rem, calc(100vw - 2rem));
+  }
+
+  .link-popover.center {
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+  }
+
+  .link-popover.anchor {
     position-area: bottom span-right;
     position-try-fallbacks: flip-block, flip-inline;
     margin-block: 4px;

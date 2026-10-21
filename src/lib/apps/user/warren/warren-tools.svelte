@@ -9,6 +9,7 @@
     FileDoc as FileDocIcon,
     FilePdf as FilePdfIcon,
     Link as LinkIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
     ListBullets as ListBulletsIcon,
     ListNumbers as ListNumbersIcon,
     Scissors as ScissorsIcon,
@@ -39,9 +40,10 @@
     onchanged: (count: number, word: string) => void;
     onlink: () => void;
     link_anchor: string;
+    onfind: () => void;
   }
 
-  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor }: Props = $props();
+  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -161,9 +163,23 @@
     <IconButton label="Italic (Mod+I)" pressed={editor.italic} onpointerdown={keep_focus} onclick={() => editor.toggle_italic()}><TextItalicIcon weight="bold" /></IconButton>
     <IconButton label="Underline (Mod+U)" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
     <IconButton label={editor.link ? "Edit link" : "Add link"} pressed={!!editor.link} style="anchor-name: {link_anchor}" onpointerdown={keep_focus} onclick={onlink}><LinkIcon weight="bold" /></IconButton>
+  </div>
+  <div class="flex items-center gap-1">
     <Select
       size="sm"
-      class="ml-auto w-24"
+      class="min-w-0 flex-1"
+      aria-label="Document font"
+      title="Font for the whole document. Add fonts in Settings › Appearance › Fonts."
+      value={encode_font(editor.page.font)}
+      options={font_options}
+      onchange={(event) => {
+        editor.set_page({ font: decode_font(event.currentTarget.value) });
+        editor.focus();
+      }}
+    />
+    <Select
+      size="sm"
+      class="w-24 shrink-0"
       aria-label="Font size"
       value={String(editor.size)}
       options={size_options}
@@ -173,14 +189,6 @@
       }}
     />
   </div>
-  <Select
-    size="sm"
-    aria-label="Document font"
-    title="Font for the whole document. Add fonts in Settings › Appearance › Fonts."
-    value={encode_font(editor.page.font)}
-    options={font_options}
-    onchange={(event) => editor.set_page({ font: decode_font(event.currentTarget.value) })}
-  />
 {/snippet}
 
 {#snippet paragraph_group()}
@@ -211,6 +219,7 @@
 {/snippet}
 
 {#snippet words_group()}
+  <Button size="sm" onclick={onfind}><MagnifyingGlassIcon weight="bold" />Find and replace</Button>
   <p class="font-mono text-2xs text-foreground/80 tabular-nums">{counts.words.toLocaleString("en")} words · {counts.characters.toLocaleString("en")} characters</p>
   <div class="flex flex-col gap-1.5">
     {#if word}

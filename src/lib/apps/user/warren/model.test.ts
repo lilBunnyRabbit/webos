@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAMPLE } from "./fixture";
 import { create_document, parse_document, serialize_document } from "./format";
 import { blocks_of, document_text, font_size, normalize_url, safe_url } from "./model";
-import { count, find_word, map_offset, match_case, repeated_words, replace_word, word_at } from "./words";
+import { count, find_matches, find_word, map_offset, match_case, repeated_words, replace_matches, replace_word, TEXT_MATCH, word_at } from "./words";
 
 describe("format", () => {
   it("round-trips a document", () => {
@@ -102,6 +102,15 @@ describe("words", () => {
   it("replaces in the case of what it replaces", () => {
     expect(replace_word("Fast fast FAST breakfast", "fast", "quick")).toEqual({ text: "Quick quick QUICK breakfast", count: 3 });
     expect(match_case("quick", "F")).toBe("Quick");
+  });
+
+  it("finds and replaces text inside words too, literally", () => {
+    expect(find_matches("Fast breakfast", "fast", false).map((range) => range.start)).toEqual([0, 10]);
+    expect(find_matches("Fast breakfast", "fast", true).map((range) => range.start)).toEqual([0]);
+    expect(find_matches("a.b axb", ".", false)).toHaveLength(1);
+    expect(replace_matches("Fast breakfast", "fast", "slow", TEXT_MATCH)).toEqual({ text: "slow breakslow", count: 2 });
+    expect(replace_matches("Fast breakfast", "fast", "slow", { whole: true, keep_case: true })).toEqual({ text: "Slow breakfast", count: 1 });
+    expect(replace_matches("x", "", "y", TEXT_MATCH)).toEqual({ text: "x", count: 0 });
   });
 
   it("moves offsets past replaced words", () => {

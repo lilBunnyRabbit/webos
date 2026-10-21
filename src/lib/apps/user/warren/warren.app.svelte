@@ -35,6 +35,7 @@
   import { Flow, PAGE_MM } from "./page";
   import { BODY_FAMILY, document_css, print_document } from "./print";
   import { fill_sheets } from "./sheets";
+  import WarrenFind from "./warren-find.svelte";
   import WarrenLink from "./warren-link.svelte";
   import WarrenTools from "./warren-tools.svelte";
   import { face_css } from "./fonts";
@@ -85,7 +86,27 @@
   const link_id = `warren-link-${uid}`;
   const link_anchor = `--warren-link-${uid}`;
 
+  const find_input_id = `warren-find-input-${uid}`;
+  let finding = $state(false);
+
+  function open_find() {
+    more = false;
+    if (!finding) {
+      finding = true;
+      return;
+    }
+    const input = document.getElementById(find_input_id);
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+      input.select();
+    }
+  }
+
+  let link_placement = $state<"anchor" | "center" | "sheet">("anchor");
+
+  // From the More sheet the button goes away with the sheet, so there is nothing to anchor to.
   function open_link() {
+    link_placement = mobile ? "sheet" : more ? "center" : "anchor";
     more = false;
     document.getElementById(link_id)?.showPopover();
   }
@@ -144,7 +165,7 @@
 
   $effect(() => win.set_title(file_name));
   $effect(() => win.set_dirty(editor.dirty, { save }));
-  $effect(() => win.on_back(() => (more ? ((more = false), true) : false)));
+  $effect(() => win.on_back(() => (more ? ((more = false), true) : finding ? ((finding = false), editor.focus(), true) : false)));
 
   function report(title: string, reason: unknown) {
     notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
@@ -356,6 +377,7 @@
       scoped("save", "mod+s", "Save", save),
       scoped("save-as", "mod+shift+s", "Save as…", save_as),
       scoped("print", "mod+p", "Print or save as PDF", export_pdf),
+      scoped("find", "mod+f", "Find and replace", open_find),
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
@@ -378,7 +400,7 @@
 
   <div class="body grid min-h-0">
     <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
-      <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} />
+      <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} onfind={open_find} />
     </aside>
 
     <div class="flex min-h-0 min-w-0 flex-col">
@@ -402,6 +424,10 @@
         <div class="flex-1"></div>
         <IconButton label="More tools" size="sm" onclick={() => (more = true)}><DotsThreeIcon weight="bold" /></IconButton>
       </div>
+
+      {#if finding}
+        <WarrenFind {editor} input_id={find_input_id} onclose={() => (finding = false)} onreplaced={changed} />
+      {/if}
 
       <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow}>
         <div
@@ -453,7 +479,7 @@
       >
         <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
         <div class="min-h-0 flex-1 overflow-y-auto">
-          <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} />
+          <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} onfind={open_find} />
         </div>
         <div class="flex justify-end border-t border-foreground/8 p-2">
           <Button variant="primary" onclick={() => (more = false)}>Done</Button>
@@ -461,7 +487,7 @@
       </div>
     </div>
   {/if}
-  <WarrenLink id={link_id} anchor={link_anchor} {editor} sheet={mobile} />
+  <WarrenLink id={link_id} anchor={link_anchor} {editor} placement={link_placement} />
 </div>
 
 <style>

@@ -151,6 +151,31 @@ export class WarrenEditor {
     return ops.change_everywhere(this.lexical, word, replacement);
   }
 
+  find(query: string, whole: boolean): ops.Match[] {
+    return ops.find_all(this.lexical.getEditorState(), query, whole);
+  }
+
+  next_after_selection(matches: ops.Match[]): number {
+    return ops.next_after_selection(this.lexical.getEditorState(), matches);
+  }
+
+  select_match(match: ops.Match) {
+    ops.select_match(this.lexical, match);
+    this.lexical.focus();
+  }
+
+  replace_match(match: ops.Match, query: string, replacement: string) {
+    ops.replace_match(this.lexical, match, query, replacement);
+  }
+
+  replace_all(query: string, replacement: string, whole: boolean): number {
+    return ops.replace_all(this.lexical, query, replacement, { whole, keep_case: false }, true);
+  }
+
+  element_of(match: ops.Match): HTMLElement | null {
+    return this.lexical.getElementByKey(match.key);
+  }
+
   select_next(word: string) {
     ops.select_next(this.lexical, word);
     this.lexical.focus();

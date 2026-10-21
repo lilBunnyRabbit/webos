@@ -18,6 +18,7 @@ import {
   $createParagraphNode,
   $createRangeSelection,
   $createTextNode,
+  $getNodeByKey,
   $getRoot,
   $getSelection,
   $isDecoratorNode,
@@ -33,12 +34,14 @@ import {
   COMMAND_PRIORITY_LOW,
   createEditor,
   HISTORY_PUSH_TAG,
+  SKIP_DOM_SELECTION_TAG,
   INDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   type EditorState,
   type LexicalEditor,
   type LexicalNode,
+  type NodeKey,
   type ParagraphNode,
   type RangeSelection,
   type TextNode,
@@ -46,7 +49,7 @@ import {
 import { Align, align_of, font_size } from "./model";
 import { $create_page_break, PageBreakNode } from "./page-break-node";
 import { BASE_PT, HEADING_PT } from "./page";
-import { find_word, is_word, map_offset, replace_word, word_at } from "./words";
+import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
 
 // Lexical's `$` functions live here: Svelte reserves the prefix in `.svelte.ts` modules.
 
@@ -258,7 +261,8 @@ export function insert_page_break(editor: LexicalEditor) {
 }
 
 // One update pushed as its own history entry, so a single Undo brings every occurrence back.
-export function change_everywhere(editor: LexicalEditor, word: string, replacement: string): number {
+// `elsewhere`: the user is typing in another field (the find bar), so the DOM selection, and focus, stay there.
+export function replace_all(editor: LexicalEditor, query: string, replacement: string, options: MatchOptions, elsewhere = false): number {
   let changed = 0;
   editor.update(
     () => {
@@ -266,36 +270,79 @@ export function change_everywhere(editor: LexicalEditor, word: string, replaceme
       const points = $isRangeSelection(selection) ? [selection.anchor, selection.focus].filter((point) => point.type === "text") : [];
       for (const node of $getRoot().getAllTextNodes()) {
         const before = node.getTextContent();
-        const result = replace_word(before, word, replacement);
+        const result = replace_matches(before, query, replacement, options);
         if (!result.count) continue;
-        const moved = points.filter((point) => point.key === node.getKey()).map((point) => [point, map_offset(before, word, replacement, point.offset)] as const);
+        const moved = points
+          .filter((point) => point.key === node.getKey())
+          .map((point) => [point, map_offset(before, query, replacement, point.offset, options.whole)] as const);
         node.setTextContent(result.text);
         for (const [point, offset] of moved) point.set(node.getKey(), offset, "text");
         changed += result.count;
       }
     },
-    { tag: HISTORY_PUSH_TAG, discrete: true }
+    { tag: elsewhere ? [HISTORY_PUSH_TAG, SKIP_DOM_SELECTION_TAG] : HISTORY_PUSH_TAG, discrete: true }
   );
   return changed;
 }
 
-export function select_next(editor: LexicalEditor, word: string) {
-  editor.update(() => {
-    const nodes = $getRoot().getAllTextNodes();
-    const hits = nodes.flatMap((node, index) => find_word(node.getTextContent(), word).map((range) => ({ node, index, ...range })));
-    if (!hits.length) return;
+export function change_everywhere(editor: LexicalEditor, word: string, replacement: string): number {
+  return replace_all(editor, word, replacement, WORD_MATCH);
+}
+
+export interface Match {
+  key: NodeKey;
+  start: number;
+  end: number;
+}
+
+/** Every match in document order. Like Change everywhere, a match never spans two text runs. */
+export function find_all(state: EditorState, query: string, whole: boolean): Match[] {
+  return state.read(() =>
+    $getRoot()
+      .getAllTextNodes()
+      .flatMap((node) => find_matches(node.getTextContent(), query, whole).map((range) => ({ key: node.getKey(), ...range })))
+  );
+}
+
+/** The first match at or after the selection's end, wrapping to the first. */
+export function next_after_selection(state: EditorState, matches: Match[]): number {
+  if (!matches.length) return -1;
+  return state.read(() => {
     const selection = $getSelection();
-    let hit = hits[0];
-    if ($isRangeSelection(selection)) {
-      const end = selection.isBackward() ? selection.anchor : selection.focus;
-      const at = nodes.findIndex((node) => node.is(end.getNode()));
-      hit = hits.find((candidate) => candidate.index > at || (candidate.index === at && candidate.start >= end.offset)) ?? hits[0];
-    }
+    if (!$isRangeSelection(selection)) return 0;
+    const end = selection.isBackward() ? selection.anchor : selection.focus;
+    const order = $getRoot().getAllTextNodes().map((node) => node.getKey());
+    const at = order.indexOf(end.key);
+    const index = matches.findIndex((match) => {
+      const position = order.indexOf(match.key);
+      return position > at || (position === at && match.start >= end.offset);
+    });
+    return index < 0 ? 0 : index;
+  });
+}
+
+export function select_match(editor: LexicalEditor, match: Match) {
+  editor.update(() => {
     const range = $createRangeSelection();
-    range.anchor.set(hit.node.getKey(), hit.start, "text");
-    range.focus.set(hit.node.getKey(), hit.end, "text");
+    range.anchor.set(match.key, match.start, "text");
+    range.focus.set(match.key, match.end, "text");
     $setSelection(range);
   });
+}
+
+export function select_next(editor: LexicalEditor, word: string) {
+  const state = editor.getEditorState();
+  const matches = find_all(state, word, true);
+  if (matches.length) select_match(editor, matches[next_after_selection(state, matches)]);
+}
+
+/** Replaces one match, if the text there is still what was found. */
+export function replace_match(editor: LexicalEditor, match: Match, query: string, replacement: string) {
+  editor.update(() => {
+    const node = $getNodeByKey(match.key);
+    if (!$isTextNode(node) || node.getTextContent().slice(match.start, match.end).toLowerCase() !== query.toLowerCase()) return;
+    node.spliceText(match.start, match.end - match.start, replacement, false);
+  }, { tag: SKIP_DOM_SELECTION_TAG, discrete: true });
 }
 
 export function replace_word_here(editor: LexicalEditor, replacement: string) {

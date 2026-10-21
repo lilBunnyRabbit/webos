@@ -36,3 +36,13 @@ LaxDOTexe asked for a free word processor for CVs, letters and stories ([brainst
 - **History:** Lexical can't undo the first change after its history is cleared, so loading a document seeds the history with the loaded state.
 - **.docx:** a page break becomes `pageBreakBefore` on the next paragraph; the document names Inter, which Word substitutes when it's missing. Core properties (`docProps/core.xml`) are included.
 - **Shell:** `doc count` yields a `doc-count` value (name, words, characters; open launches Warren); `doc export` without `--docx` fails asking for a format.
+
+## Revision 2026-10-21: finalize
+Scope from the [finalize follow-up](../brainstorm/2026-10-21_warren.md#follow-up-2026-10-21-finalize): alignment and underline, .docx import, one body font, links, find and replace.
+
+- **Format `version: 2`:** `page.font?: FontChoice` (Settings' type: `default`, `builtin`, `file` in `/etc/fonts`) and `link` nodes. Every save writes 2; a version 1 file opens unchanged; a Warren from before refuses 2 with its "newer Warren" message. A `default` font is dropped on read, so it never sits in a file.
+- **Packages:** `@lexical/html` and `@lexical/link` at exactly 0.52.0, and `mammoth` 1.13.0, app-scoped. mammoth is `import()`ed on the first `.docx` (its own ~99 KB gz chunk); `warren.app` grew from 95 to 104 KB gz; the boot chunk is unchanged.
+- **.docx import:** `.docx` joined the associations (no other app lists it, so nothing is taken over; a remembered default still wins). mammoth's HTML gets a style map for underline, page-break characters (`hr.page-break`, which `PageBreakNode.importDOM` reads) and Title/Subtitle. Alignment and `w:pageBreakBefore` (what Warren's own export writes) don't come back: mammoth doesn't expose them to the HTML. The notice counts pictures, tables and mammoth's warnings.
+- **Links:** `LinkNode` is registered without `registerLink` (it wants the extension signals); the toolbar calls `$toggleLink` or edits the link at the caret. Mod+K isn't bound: it's the OS launcher, and a window shortcut would win over it inside Warren. Only `http`, `https` and `mailto` reach the exports.
+- **Font loading:** the font loader moved from `settings/font-loader.ts` to `core/utils/font-loader.ts` (with `fetch_faces` for built-ins) so Warren loads the same faces; each window registers its own family name. The PDF embeds the faces as `data:` URLs; the .docx names the family (a file font by its file name) and the export warns that Word substitutes it.
+- **Find and replace** shares `find_matches` / `replace_matches` with Change everywhere and paints matches with the CSS Custom Highlight API; replacing from the bar skips the DOM selection so focus stays in the bar.

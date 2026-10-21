@@ -92,6 +92,23 @@ describe("editor", () => {
     dispose();
   });
 
+  test("finds text, replaces one match and then all of them", async () => {
+    const { editor, dispose } = editor_with();
+    await tick();
+    const matches = editor.find("fast", false);
+    expect(matches).toHaveLength(3);
+    expect(editor.find("fast", true)).toHaveLength(2);
+    editor.replace_match(matches[0], "fast", "slow");
+    expect(document_text(editor.json)).toContain("A slow learner, very fast\nBreakfast");
+    expect(editor.next_after_selection(editor.find("fast", false))).toBe(0);
+    expect(editor.replace_all("fast", "quick", false)).toBe(2);
+    expect(document_text(editor.json)).toContain("A slow learner, very quick\nBreakquick");
+    editor.undo();
+    await tick();
+    expect(document_text(editor.json)).toContain("very fast\nBreakfast");
+    dispose();
+  });
+
   test("underlines the selection and aligns its paragraph", async () => {
     const { editor, root, dispose } = editor_with();
     await tick();

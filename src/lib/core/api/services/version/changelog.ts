@@ -18,6 +18,10 @@ export const CHANGELOG: Release[] = [
         text: "Warren documents can have links, kept when you paste and in Word and PDF exports, and one font for the whole document: Inter, Burrow or any font you added in Settings.",
       },
       {
+        kind: NEW,
+        text: "Warren has find and replace: press Ctrl+F (Cmd+F on a Mac) to step through every match and replace one or all of them.",
+      },
+      {
         kind: IMPROVED,
         text: "Warren can align paragraphs left, centre, right or justified, and has an underline button; Word and PDF exports keep both.",
       },
