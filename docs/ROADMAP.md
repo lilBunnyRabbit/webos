@@ -10,6 +10,8 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
+**Next (owner, 2026-10-21): App store.** The owner builds it, next. Apps load into the cache only when installed, only installed apps show, per-app versions, auto-update when closed (the [import map](brainstorm/2026-10-21_slow-updates.md) already keeps an app's chunks apart from core). Needs a brainstorm and an ADR first; see Needs Brainstorm.
+
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
    - [x] Error boundaries: a crashing app shows an error in its window, not a dead OS (`<svelte:boundary>` in `window-content.svelte`)
@@ -22,7 +24,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 7. [-] **Deep linking + share** (ADR-010, [brainstorm](brainstorm/2026-10-14_deep-linking.md)): app links and titlebar Copy link done 2026-10-14. Solo links (one app alone) done 2026-10-18 (ADR-047). File links, workspace, demo presets and mobile share deferred: almost every app's props are an OPFS path the receiving machine doesn't have
 8. [x] **Mobile shell** (ADR-016), pulled forward by the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_mobile-shell.md)). Core shell and apps pass done; OS back gesture done 2026-10-14 ([brainstorm](brainstorm/2026-10-14_os-back.md)): `ui.back()` plus a history guard, desktop too
 
-**Parked** (no consumer or nothing breaks without it; revisit only on demand): single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, app store, Shadow DOM isolation.
+**Parked** (no consumer or nothing breaks without it; revisit only on demand): single-instance apps (ADR-014 revision), `get_state` / `kernel.swap`, WindowHandle status bar (the kit `StatusBar` covers it), theme sharing via URL, Shadow DOM isolation.
 
 ---
 
@@ -626,7 +628,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [ ] App isolation via Shadow DOM
 - [ ] Kernel custom events with zod-validated payloads
 - [ ] Window events for file upload (and similar app-level events)
-- [ ] "App store": load apps into cache, only show loaded apps, per-app versions, auto-update when closed
+- [ ] "App store" (next, owner builds it): load apps into cache, only show loaded apps, per-app versions, auto-update when closed
 
 ---
 
