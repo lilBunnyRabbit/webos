@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.26.0",
+    date: "2026-10-21",
+    title: "Warren",
+    introduces: ["warren"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren is a word processor for CVs, letters and stories: headings, lists and page breaks on real pages, word counts always in view, one click to change a word everywhere, and Word or PDF when you're done.",
+      },
+    ],
+  },
+  {
     version: "3.25.0",
     date: "2026-10-21",
     title: "Files by light",

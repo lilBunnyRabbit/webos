@@ -218,6 +218,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | hid-lab | `hid ls` (unavailable without WebHID) | `hid-device` values (name, ids, usage, collections, opened; open → Keyboard & HID Lab, HID section) |
 | forms | `form link <path> [-c]`, `form answer <code>` | `link`: the form's solo link as `text` (`-c` copies it too), stamping the form id into the file first; path completion filtered to `.form.md`. `answer`: saves an answer code (or old answer link) beside its form, found by id under `/home`, and says where |
 | algorithms | `algo list [group]`, `algo <id> [input…]` | `algorithm` values (id, group, average, space; open → Algorithms on it); `algo` checks the input against the algorithm's parser before launching with `{ section, input }`; id completion from the catalog |
+| warren | `doc count <path>`, `doc export <path> --docx` | `doc-count` values (name, words, characters; open → Warren); `doc export` yields the `file` written beside the document (`name.docx`, a free name when taken); both read the `.warren` JSON without loading the editor; path completion filtered to `.warren` |
 
 Window commands accept the first characters of a window id. Their values show 8. With no ids and nothing piped they act on the focused window.
 

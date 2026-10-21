@@ -1,0 +1,12 @@
+{
+  "name": "@webos/warren",
+  "private": true,
+  "dependencies": {
+    "@lexical/history": "0.52.0",
+    "@lexical/list": "0.52.0",
+    "@lexical/rich-text": "0.52.0",
+    "@lexical/selection": "0.52.0",
+    "@lexical/utils": "0.52.0",
+    "lexical": "0.52.0"
+  }
+}
