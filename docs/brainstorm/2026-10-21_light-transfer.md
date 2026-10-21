@@ -20,3 +20,6 @@ Investigation: kit `qr-transfer` (ADR-053) sends JSON as `WQ1` Base45 frames, 24
 ## Next session topics
 - Multiple files per run
 - Real phone-to-phone speed measurement
+
+## Follow-up 2026-10-21: repair degrees (decided)
+The build draws repair degrees from robust soliton over 30 % of k, scaled up (ADR-060 revision): 1.43× k frames at 20 % missed against 2.3–2.8× for plain robust soliton. Owner: keep it.
