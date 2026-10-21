@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { AiAvailability, type AiService } from "$lib/core/api";
+  import kernel, { AiAvailability, BUILTIN_FONTS, FONT_DIRECTORY, type AiService, type FilesService, type FontChoice, type SettingsService } from "$lib/core/api";
+  import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { Button, IconButton, Input, Segmented, Select, Spinner } from "$lib/core/components/ui";
   import { error_message } from "$lib/core/utils";
   import {
@@ -7,6 +8,7 @@
     CaretRight as CaretRightIcon,
     FileDoc as FileDocIcon,
     FilePdf as FilePdfIcon,
+    Link as LinkIcon,
     ListBullets as ListBulletsIcon,
     ListNumbers as ListNumbersIcon,
     Scissors as ScissorsIcon,
@@ -35,11 +37,44 @@
     ontoggle: (group: string, open: boolean) => void;
     onexport: (format: "docx" | "pdf") => void;
     onchanged: (count: number, word: string) => void;
+    onlink: () => void;
+    link_anchor: string;
   }
 
-  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged }: Props = $props();
+  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const files = $derived(kernel.service<FilesService>("files"));
+
+  let installed = $state<string[]>([]);
+
+  $effect(() => {
+    void files.revision(FONT_DIRECTORY);
+    void files.revision(PATHS.etc);
+    let stale = false;
+    settings.installed_fonts().then((names) => !stale && (installed = names));
+    return () => (stale = true);
+  });
+
+  const encode_font = (choice: FontChoice | undefined) =>
+    !choice || choice.kind === "default" ? "default" : choice.kind === "builtin" ? `builtin:${choice.id}` : `file:${choice.name}`;
+
+  function decode_font(value: string): FontChoice | undefined {
+    if (value.startsWith("builtin:")) return { kind: "builtin", id: value.slice(8) };
+    if (value.startsWith("file:")) return { kind: "file", name: value.slice(5) };
+    return undefined;
+  }
+
+  const font_options = $derived.by(() => {
+    const current = editor.page.font;
+    const names = current?.kind === "file" && !installed.includes(current.name) ? [...installed, current.name] : installed;
+    return [
+      { value: "default", label: "Inter" },
+      ...Object.entries(BUILTIN_FONTS).map(([id, font]) => ({ value: `builtin:${id}`, label: font.name })),
+      ...names.map((name) => ({ value: `file:${name}`, label: name.replace(/\.[^.]+$/, "") })),
+    ];
+  });
   const ai_on = $derived(ai.features.prompt !== AiAvailability.NO);
 
   const SIZE_OPTIONS = FONT_SIZES.map((size) => ({ value: String(size), label: `${size} pt` }));
@@ -125,6 +160,7 @@
     <IconButton label="Bold (Mod+B)" pressed={editor.bold} onpointerdown={keep_focus} onclick={() => editor.toggle_bold()}><TextBIcon weight="bold" /></IconButton>
     <IconButton label="Italic (Mod+I)" pressed={editor.italic} onpointerdown={keep_focus} onclick={() => editor.toggle_italic()}><TextItalicIcon weight="bold" /></IconButton>
     <IconButton label="Underline (Mod+U)" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
+    <IconButton label={editor.link ? "Edit link" : "Add link"} pressed={!!editor.link} style="anchor-name: {link_anchor}" onpointerdown={keep_focus} onclick={onlink}><LinkIcon weight="bold" /></IconButton>
     <Select
       size="sm"
       class="ml-auto w-24"
@@ -137,6 +173,14 @@
       }}
     />
   </div>
+  <Select
+    size="sm"
+    aria-label="Document font"
+    title="Font for the whole document. Add fonts in Settings › Appearance › Fonts."
+    value={encode_font(editor.page.font)}
+    options={font_options}
+    onchange={(event) => editor.set_page({ font: decode_font(event.currentTarget.value) })}
+  />
 {/snippet}
 
 {#snippet paragraph_group()}

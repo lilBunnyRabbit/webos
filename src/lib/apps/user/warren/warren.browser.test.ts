@@ -59,6 +59,39 @@ describe("editor", () => {
     dispose();
   });
 
+  test("links the selection, edits the link and removes it", async () => {
+    const { editor, root, dispose } = editor_with();
+    await tick();
+    editor.select_next("learner");
+    editor.set_link("https://example.com/me");
+    await tick();
+    expect(editor.link).toBe("https://example.com/me");
+    expect(root.querySelector("a[href='https://example.com/me']")?.textContent).toBe("learner");
+    editor.set_link("https://example.com/you");
+    await tick();
+    expect(blocks_of(editor.json)[1].kind === "paragraph" && blocks_of(editor.json)[1]).toMatchObject({ runs: expect.arrayContaining([expect.objectContaining({ text: "learner", link: "https://example.com/you" })]) });
+    editor.set_link(null);
+    await tick();
+    expect(root.querySelector("a[href*='example.com/you']")).toBeNull();
+    expect(document_text(editor.json)).toBe(document_text(SAMPLE.editor));
+    dispose();
+  });
+
+  test("keeps links that come in as HTML, as a paste does", async () => {
+    const { editor, dispose } = editor_with();
+    editor.load_html(`<p>See <a href="https://example.com">my site</a> and <a href="javascript:alert(1)">this</a>.</p>`);
+    await tick();
+    const [paragraph] = blocks_of(editor.json);
+    expect(paragraph.kind === "paragraph" && paragraph.runs.map((run) => [run.text, run.link])).toEqual([
+      ["See ", null],
+      ["my site", "https://example.com"],
+      [" and ", null],
+      ["this", null],
+      [".", null],
+    ]);
+    dispose();
+  });
+
   test("underlines the selection and aligns its paragraph", async () => {
     const { editor, root, dispose } = editor_with();
     await tick();
@@ -86,7 +119,9 @@ test("the .docx parts are well-formed XML and every relationship resolves", asyn
     parts.set(entry.name, xml);
   }
   const targets = (name: string, base: string) =>
-    [...parts.get(name)!.getElementsByTagName("Relationship")].map((relationship) => base + relationship.getAttribute("Target"));
+    [...parts.get(name)!.getElementsByTagName("Relationship")]
+      .filter((relationship) => relationship.getAttribute("TargetMode") !== "External")
+      .map((relationship) => base + relationship.getAttribute("Target"));
   for (const target of [...targets("_rels/.rels", ""), ...targets("word/_rels/document.xml.rels", "word/")]) expect(parts.has(target), target).toBe(true);
 });
 
@@ -108,6 +143,11 @@ describe("shell", () => {
 
   afterAll(() => {
     kernel.services.delete("files");
+  });
+
+  test("doc count reads a version 1 file too", async () => {
+    await files.create_file(await files.get_directory("/home"), "Old.warren", { content: JSON.stringify({ ...JSON.parse(serialize_document(SAMPLE)), version: 1 }) });
+    expect(await count_document(context({ path: "Old.warren" }))).toMatchObject({ words: 14, characters: 68 });
   });
 
   test("doc count reads words and characters from the file", async () => {

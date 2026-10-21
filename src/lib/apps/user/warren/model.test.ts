@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE } from "./fixture";
 import { create_document, parse_document, serialize_document } from "./format";
-import { blocks_of, document_text, font_size } from "./model";
+import { blocks_of, document_text, font_size, normalize_url, safe_url } from "./model";
 import { count, find_word, map_offset, match_case, repeated_words, replace_word, word_at } from "./words";
 
 describe("format", () => {
@@ -13,8 +13,44 @@ describe("format", () => {
   it("rejects what isn't a Warren document", () => {
     expect(() => parse_document("nope")).toThrow("isn't JSON");
     expect(() => parse_document(JSON.stringify({ version: 1, page: { size: "A3", flow: "sheets" }, editor: SAMPLE.editor }))).toThrow("page.size");
-    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 2 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 3 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "builtin", id: "nope" } } }))).toThrow("page.font");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, editor: { root: { type: "paragraph", children: [] } } }))).toThrow("editor.root.type");
+  });
+});
+
+describe("format versions", () => {
+  it("opens a version 1 file and saves it as version 2", () => {
+    const opened = parse_document(JSON.stringify({ ...SAMPLE, version: 1 }));
+    expect(opened.version).toBe(2);
+    expect(JSON.parse(serialize_document(opened)).version).toBe(2);
+  });
+
+  it("keeps the body font, and drops a default one", () => {
+    const burrow = { ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "builtin" as const, id: "burrow" } } };
+    expect(parse_document(serialize_document(burrow)).page.font).toEqual({ kind: "builtin", id: "burrow" });
+    const file = { ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "file" as const, name: "Hop.ttc" } } };
+    expect(parse_document(serialize_document(file)).page.font).toEqual({ kind: "file", name: "Hop.ttc" });
+    const plain = { ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "default" as const } } };
+    expect(parse_document(serialize_document(plain)).page).toEqual(SAMPLE.page);
+  });
+});
+
+describe("links", () => {
+  it("turns what was typed into a web or mail link", () => {
+    expect(normalize_url("example.com/cv")).toBe("https://example.com/cv");
+    expect(normalize_url(" http://a.b ")).toBe("http://a.b");
+    expect(normalize_url("jane@example.com")).toBe("mailto:jane@example.com");
+    expect(normalize_url("mailto:jane@example.com")).toBe("mailto:jane@example.com");
+    expect(normalize_url("javascript:alert(1)")).toBeNull();
+    expect(normalize_url("not a link")).toBeNull();
+    expect(normalize_url("word")).toBeNull();
+  });
+
+  it("lets only web and mail links out", () => {
+    expect(safe_url("https://x.y")).toBe("https://x.y");
+    expect(safe_url("data:text/html,hi")).toBeNull();
+    expect(safe_url(undefined)).toBeNull();
   });
 });
 
@@ -28,9 +64,12 @@ describe("blocks_of", () => {
       ["very", true, false, null],
       [" fast", false, true, 14],
       ["\n", false, false, null],
-      ["Breakfast fan.", false, false, null],
+      ["Breakfast ", false, false, null],
+      ["fan", false, false, null],
+      [".", false, false, null],
     ]);
     expect(blocks.map((block) => block.kind !== "page-break" && block.align)).toEqual(["center", null, null, null, "right", false, null, null]);
+    expect(paragraph.kind === "paragraph" && paragraph.runs.map((run) => run.link)).toEqual([null, null, null, null, null, "https://example.com/?a=1&b=2", null]);
     const [one, nested, two] = blocks.slice(2, 5);
     expect([one, nested, two].map((block) => block.kind === "item" && [block.list, block.level, block.list_id])).toEqual([
       ["number", 0, 1],

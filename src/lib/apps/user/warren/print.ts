@@ -1,16 +1,19 @@
 import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
 import { escape_html } from "$lib/core/utils";
 import type { DocNode, WarrenDocument } from "./format";
-import { align_of, BOLD, font_size, ITALIC, PAGE_BREAK, STRIKETHROUGH, UNDERLINE } from "./model";
+import { align_of, BOLD, font_size, LINK_TYPES, safe_url, ITALIC, PAGE_BREAK, STRIKETHROUGH, UNDERLINE } from "./model";
 import { BASE_PT, HEADING_PT, LINE_HEIGHT, PAGE_MM, PageSize, PARAGRAPH_AFTER_PT } from "./page";
 
 const CSS_SIZE: Record<PageSize, string> = { A4: "A4", Letter: "letter", A5: "A5" };
 const CSP = `default-src 'none'; style-src 'unsafe-inline'; font-src 'self' data: blob:`;
 
 // Shared with the editor, so what prints is what was typed.
-export function document_css(scope: string): string {
+export const BODY_FAMILY = "warren-body";
+
+/** `family` is a CSS family list item: a quoted name, or `var(…)` in the editor. */
+export function document_css(scope: string, family = "Inter"): string {
   return `
-${scope}{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:${BASE_PT}pt;line-height:${LINE_HEIGHT};overflow-wrap:break-word;white-space:pre-wrap}
+${scope}{font-family:${family},Inter,ui-sans-serif,system-ui,sans-serif;font-size:${BASE_PT}pt;line-height:${LINE_HEIGHT};overflow-wrap:break-word;white-space:pre-wrap}
 ${scope} p{margin:0 0 ${PARAGRAPH_AFTER_PT}pt}
 ${scope} h1,${scope} h2,${scope} h3,${scope} h4,${scope} h5,${scope} h6{font-weight:700;line-height:1.2;margin:${HEADING_PT[3] * 0.8}pt 0 ${PARAGRAPH_AFTER_PT}pt;break-after:avoid}
 ${scope} h1{font-size:${HEADING_PT[1]}pt;margin-top:${HEADING_PT[1] * 0.8}pt}
@@ -25,6 +28,7 @@ ${scope} ul ul{list-style-type:circle}${scope} ul ul ul{list-style-type:square}
 ${scope} ol ol{list-style-type:lower-alpha}${scope} ol ol ol{list-style-type:lower-roman}
 ${scope} li.nested{list-style:none}
 ${scope} strong,${scope} b{font-weight:700}
+${scope} a{color:var(--link,currentColor);text-decoration:underline}
 `;
 }
 
@@ -46,7 +50,9 @@ function inline_html(nodes: DocNode[] | undefined): string {
       if (node.type === "text") return text_html(node);
       if (node.type === "tab") return "\t";
       if (node.type === "linebreak") return "<br>";
-      return node.children ? inline_html(node.children) : "";
+      if (!node.children) return "";
+      const url = LINK_TYPES.includes(node.type) ? safe_url(node.url) : null;
+      return url ? `<a href="${escape_html(url)}">${inline_html(node.children)}</a>` : inline_html(node.children);
     })
     .join("");
 }
@@ -87,14 +93,16 @@ export function body_html(document: WarrenDocument): string {
     .join("");
 }
 
-export function print_document(document: WarrenDocument, title: string, inter_url: string): string {
+/** `body_faces` is the document font's `@font-face` rules for `BODY_FAMILY`; without it the page is set in Inter. */
+export function print_document(document: WarrenDocument, title: string, inter_url: string, body_faces = ""): string {
   const page = PAGE_MM[document.page.size];
   const style =
     `@font-face{font-family:Inter;src:url("${inter_url}") format("woff2");font-weight:100 900}` +
+    body_faces +
     `@page{size:${CSS_SIZE[document.page.size]} portrait;margin:${page.margin}mm}` +
-    `html,body{margin:0;padding:0;background:none;color:${BRAND_LIGHT.foreground};-webkit-print-color-adjust:exact;print-color-adjust:exact}` +
+    `html,body{--link:${BRAND_LIGHT.primary};margin:0;padding:0;background:none;color:${BRAND_LIGHT.foreground};-webkit-print-color-adjust:exact;print-color-adjust:exact}` +
     `.break{break-before:page;height:0}` +
-    document_css(".doc");
+    document_css(".doc", body_faces ? `"${BODY_FAMILY}"` : "Inter");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escape_html(title)}</title>

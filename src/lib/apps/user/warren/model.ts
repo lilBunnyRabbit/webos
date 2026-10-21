@@ -1,6 +1,7 @@
 import type { DocNode, EditorJson } from "./format";
 
 export const PAGE_BREAK = "page-break";
+export const LINK_TYPES = ["link", "autolink"];
 
 // Lexical's TextNode format bits.
 export const BOLD = 1;
@@ -16,6 +17,7 @@ export interface Run {
   strike: boolean;
   /** Points; `null` is the block's own size. */
   size: number | null;
+  link: string | null;
 }
 
 export const ListKind = { BULLET: "bullet", NUMBER: "number" } as const;
@@ -45,7 +47,7 @@ export function font_size(style: string | undefined): number | null {
   return Number.isFinite(value) && value > 0 ? Math.round(value * 2) / 2 : null;
 }
 
-function runs_of(nodes: DocNode[] | undefined): Run[] {
+function runs_of(nodes: DocNode[] | undefined, link: string | null = null): Run[] {
   const runs: Run[] = [];
   for (const node of nodes ?? []) {
     if (node.type === "text" || node.type === "tab") {
@@ -57,14 +59,29 @@ function runs_of(nodes: DocNode[] | undefined): Run[] {
         underline: (format & UNDERLINE) !== 0,
         strike: (format & STRIKETHROUGH) !== 0,
         size: font_size(node.style),
+        link,
       });
     } else if (node.type === "linebreak") {
-      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, size: null });
+      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, size: null, link });
     } else if (node.children) {
-      runs.push(...runs_of(node.children));
+      runs.push(...runs_of(node.children, LINK_TYPES.includes(node.type) ? safe_url(node.url) : link));
     }
   }
   return runs;
+}
+
+/** Only web and mail links leave Warren: anything else (`javascript:`, `data:`) is dropped from exports. */
+export function safe_url(url: string | undefined): string | null {
+  return url && /^(https?:|mailto:)/i.test(url.trim()) ? url.trim() : null;
+}
+
+/** What the user typed into the link field, as a link: a bare `example.com` becomes `https://example.com`. */
+export function normalize_url(text: string): string | null {
+  const value = text.trim();
+  if (!value || /\s/.test(value)) return null;
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) return safe_url(value);
+  if (/^[^@/]+@[^@/]+\.[^@/]+$/.test(value)) return `mailto:${value}`;
+  return /^[^/]+\.[^/]+/.test(value) ? `https://${value}` : null;
 }
 
 function heading_level(tag: string | undefined): 1 | 2 | 3 {

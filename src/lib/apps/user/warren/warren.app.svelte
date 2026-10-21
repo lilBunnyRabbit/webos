@@ -27,15 +27,20 @@
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
-  import { build_docx, DOCX_TYPE } from "./docx";
+  import { build_docx, DOCX_TYPE, font_name } from "./docx";
   import { BlockStyle, WarrenEditor } from "./editor.svelte";
   import { EXTENSION, serialize_document } from "./format";
-  import { document_file_name, read_document, read_file, stem_of, with_extension, write_file } from "./io";
+  import { document_file_name, font_sources, read_document, read_file, stem_of, with_extension, write_file } from "./io";
   import { document_text } from "./model";
   import { Flow, PAGE_MM } from "./page";
-  import { document_css, print_document } from "./print";
+  import { BODY_FAMILY, document_css, print_document } from "./print";
   import { fill_sheets } from "./sheets";
+  import WarrenLink from "./warren-link.svelte";
   import WarrenTools from "./warren-tools.svelte";
+  import { face_css } from "./fonts";
+  import { load_faces, type FaceSource } from "$lib/core/utils/font-loader";
+  import { font_label } from "$lib/core/api/services/settings/fonts";
+  import type { FontChoice } from "$lib/core/api/services/settings/type";
   import { count, repeated_words } from "./words";
 
   const { path: initial_path }: { path?: string } = $props();
@@ -75,7 +80,67 @@
     { value: BlockStyle.H2, label: "Heading 2" },
     { value: BlockStyle.H3, label: "Heading 3" },
   ];
-  const DOC_CSS = document_css(".warren-doc");
+  const DOC_CSS = document_css(".warren-doc", "var(--doc-font,Inter)");
+  const uid = $props.id();
+  const link_id = `warren-link-${uid}`;
+  const link_anchor = `--warren-link-${uid}`;
+
+  function open_link() {
+    more = false;
+    document.getElementById(link_id)?.showPopover();
+  }
+
+  let body = $state.raw<{ family: string; sources: FaceSource[] } | null>(null);
+  let body_faces: FontFace[] = [];
+  let font_request = 0;
+  const font_key = $derived(JSON.stringify(editor.page.font ?? null));
+
+  function drop_faces() {
+    for (const face of body_faces) document.fonts.delete(face);
+    body_faces = [];
+  }
+
+  // Each window registers its own family, so two documents in two fonts don't fight over one name.
+  $effect(() => {
+    const choice = JSON.parse(font_key) as FontChoice | null;
+    const request = ++font_request;
+    if (!choice || choice.kind === "default") {
+      drop_faces();
+      body = null;
+      return;
+    }
+    void (async () => {
+      try {
+        const sources = await font_sources(choice);
+        const family = `warren-${window_id}-${request}`;
+        const faces = await load_faces(family, sources);
+        if (request !== font_request) return;
+        drop_faces();
+        for (const face of faces) document.fonts.add(face);
+        body_faces = faces;
+        body = { family, sources };
+      } catch (reason) {
+        if (request !== font_request) return;
+        body = null;
+        notifications.notify(app_id, {
+          type: NotificationType.WARNING,
+          title: `Couldn't load ${font_label(choice, "sans")}`,
+          message: `${error_message(reason)}. Showing Inter instead.`,
+        });
+      }
+    })();
+  });
+
+  async function print_faces(): Promise<string> {
+    const choice = editor.page.font;
+    if (!choice || choice.kind === "default") return "";
+    if (body) return face_css(BODY_FAMILY, body.sources);
+    try {
+      return face_css(BODY_FAMILY, await font_sources(choice));
+    } catch {
+      return "";
+    }
+  }
 
   $effect(() => win.set_title(file_name));
   $effect(() => win.set_dirty(editor.dirty, { save }));
@@ -182,8 +247,18 @@
     if (!path) return;
     const target = with_extension(path, ".docx");
     try {
-      await write_file(target, await build_docx(editor.snapshot(), stem));
-      notifications.notify(app_id, { title: "Exported for Word", message: target });
+      const snapshot = editor.snapshot();
+      await write_file(target, await build_docx(snapshot, stem));
+      const font = snapshot.page.font;
+      if (font && font.kind !== "default") {
+        notifications.notify(app_id, {
+          type: NotificationType.WARNING,
+          title: "Exported for Word",
+          message: `${target}. Word shows ${font_name(font)} only where it's installed; elsewhere it picks a similar font.`,
+        });
+      } else {
+        notifications.notify(app_id, { title: "Exported for Word", message: target });
+      }
     } catch (reason) {
       report("Couldn't export the document", reason);
     }
@@ -191,7 +266,7 @@
 
   async function export_pdf() {
     try {
-      await print_html(print_document(editor.snapshot(), stem, inter_url), { title: stem });
+      await print_html(print_document(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
     } catch (reason) {
       report("Couldn't print the document", reason);
     }
@@ -266,7 +341,11 @@
   onMount(() => {
     const path = untrack(() => initial_path);
     if (path) void load(path);
-    return () => editor.destroy();
+    return () => {
+      font_request++;
+      drop_faces();
+      editor.destroy();
+    };
   });
 
   $effect(() => {
@@ -299,7 +378,7 @@
 
   <div class="body grid min-h-0">
     <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
-      <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} />
+      <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} />
     </aside>
 
     <div class="flex min-h-0 min-w-0 flex-col">
@@ -327,7 +406,7 @@
       <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow}>
         <div
           class="paper"
-          style="{PAPER_VARS};--page-width:{page.width}mm;--page-margin:{page.margin}mm"
+          style="{PAPER_VARS};--page-width:{page.width}mm;--page-margin:{page.margin}mm{body ? `;--doc-font:'${body.family}'` : ''}"
           onclick={(event) => event.target === event.currentTarget && editor.focus()}
           role="presentation"
         >
@@ -374,7 +453,7 @@
       >
         <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
         <div class="min-h-0 flex-1 overflow-y-auto">
-          <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} />
+          <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} />
         </div>
         <div class="flex justify-end border-t border-foreground/8 p-2">
           <Button variant="primary" onclick={() => (more = false)}>Done</Button>
@@ -382,6 +461,7 @@
       </div>
     </div>
   {/if}
+  <WarrenLink id={link_id} anchor={link_anchor} {editor} sheet={mobile} />
 </div>
 
 <style>
@@ -414,6 +494,7 @@
   }
 
   .paper {
+    --link: var(--primary);
     width: min(var(--page-width), 100cqi - 1.5rem);
     margin: 0 auto;
     padding: min(var(--page-margin), 7cqi);

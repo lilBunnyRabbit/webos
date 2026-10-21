@@ -15,6 +15,7 @@ export class WarrenEditor {
   italic = $state(false);
   underline = $state(false);
   align = $state<Align>(Align.LEFT);
+  link = $state<string | null>(null);
   block = $state<BlockStyle>(BlockStyle.PARAGRAPH);
   size = $state(BASE_PT);
   word = $state("");
@@ -46,6 +47,7 @@ export class WarrenEditor {
       this.italic = format.italic;
       this.underline = format.underline;
       this.align = format.align;
+      this.link = format.link;
       this.block = format.block;
       this.size = format.size;
       this.word = format.word;
@@ -127,6 +129,10 @@ export class WarrenEditor {
 
   set_align(align: Align) {
     this.lexical.dispatchCommand(FORMAT_ELEMENT_COMMAND, align);
+  }
+
+  set_link(url: string | null) {
+    ops.set_link(this.lexical, url);
   }
 
   set_size(points: number) {

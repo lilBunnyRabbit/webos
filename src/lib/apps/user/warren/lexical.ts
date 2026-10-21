@@ -1,5 +1,6 @@
 import { createEmptyHistoryState, registerHistory } from "@lexical/history";
 import { $generateNodesFromDOM } from "@lexical/html";
+import { $createLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link";
 import {
   $isListItemNode,
   $isListNode,
@@ -16,6 +17,7 @@ import { $findMatchingParent, $insertNodeToNearestRoot, mergeRegister } from "@l
 import {
   $createParagraphNode,
   $createRangeSelection,
+  $createTextNode,
   $getRoot,
   $getSelection,
   $isDecoratorNode,
@@ -70,6 +72,8 @@ export interface Format {
   italic: boolean;
   underline: boolean;
   align: Align;
+  /** The URL of the link the selection starts in. */
+  link: string | null;
   block: BlockStyle;
   size: number;
   word: string;
@@ -123,7 +127,7 @@ function $in_list(): boolean {
 
 export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: () => void; reset_history: () => void } {
   const history = createEmptyHistoryState();
-  const editor = createEditor({ namespace: "warren", nodes: [HeadingNode, ListNode, ListItemNode, PageBreakNode], theme: THEME, onError: hooks.on_error });
+  const editor = createEditor({ namespace: "warren", nodes: [HeadingNode, ListNode, ListItemNode, LinkNode, PageBreakNode], theme: THEME, onError: hooks.on_error });
   const dispose = mergeRegister(
     registerRichText(editor),
     registerList(editor),
@@ -169,6 +173,7 @@ export function read_format(state: EditorState): Format | null {
       italic: selection.hasFormat("italic"),
       underline: selection.hasFormat("underline"),
       align: $align_of(selection.anchor.getNode()),
+      link: $findMatchingParent(selection.anchor.getNode(), $isLinkNode)?.getURL() ?? null,
       block,
       size,
       word: word ? word.node.getTextContent().slice(word.start, word.end) : "",
@@ -219,6 +224,31 @@ export function load_html(editor: LexicalEditor, html: string) {
     },
     { tag: LOAD_TAG, discrete: true }
   );
+}
+
+/**
+ * Links the selection to `url`, or changes the link the caret is in; with nothing selected outside a link it inserts the
+ * URL as linked text. `null` removes the link.
+ */
+export function set_link(editor: LexicalEditor, url: string | null) {
+  editor.update(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return;
+    const link = $findMatchingParent(selection.anchor.getNode(), $isLinkNode);
+    if (selection.isCollapsed() && link) {
+      if (url) link.setURL(url);
+      else {
+        for (const child of link.getChildren()) link.insertBefore(child);
+        link.remove();
+      }
+      return;
+    }
+    if (selection.isCollapsed()) {
+      if (url) selection.insertNodes([$createLinkNode(url).append($createTextNode(url))]);
+      return;
+    }
+    $toggleLink(url);
+  });
 }
 
 export function insert_page_break(editor: LexicalEditor) {

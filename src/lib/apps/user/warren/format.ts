@@ -1,7 +1,9 @@
+import { BUILTIN_FONTS, is_font_file_name } from "$lib/core/api/services/settings/fonts";
 import { z } from "zod";
 import { DEFAULT_PAGE, FLOWS, PAGE_SIZES, type PageSettings } from "./page";
 
-export const VERSION = 1;
+// 2 added `page.font` and link nodes; a version 1 file reads as it is.
+export const VERSION = 2;
 export const EXTENSION = ".warren";
 
 // Read loosely: the shell and the exports walk the JSON without loading Lexical.
@@ -14,6 +16,7 @@ export interface DocNode {
   tag?: string;
   listType?: string;
   start?: number;
+  url?: string;
 }
 
 export interface EditorJson {
@@ -37,13 +40,20 @@ const NodeSchema: z.ZodType<DocNode> = z.lazy(() =>
       tag: z.string().optional(),
       listType: z.string().optional(),
       start: z.number().optional(),
+      url: z.string().optional(),
     })
     .loose()
 );
 
+const FontSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("default") }),
+  z.object({ kind: z.literal("builtin"), id: z.string().refine((id) => id in BUILTIN_FONTS, "isn't a built-in font") }),
+  z.object({ kind: z.literal("file"), name: z.string().refine(is_font_file_name, "isn't a font file name") }),
+]);
+
 const DocumentSchema = z.object({
   version: z.number().int().min(1),
-  page: z.object({ size: z.enum(PAGE_SIZES), flow: z.enum(FLOWS) }),
+  page: z.object({ size: z.enum(PAGE_SIZES), flow: z.enum(FLOWS), font: FontSchema.optional() }),
   editor: z.object({ root: z.object({ type: z.literal("root"), children: z.array(NodeSchema) }).loose() }).loose(),
 });
 
@@ -80,7 +90,8 @@ export function parse_document(text: string): WarrenDocument {
     const issue = result.error.issues[0];
     throw new Error(`This isn't a valid Warren document: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
-  return { version: VERSION, page: result.data.page, editor: result.data.editor as EditorJson };
+  const { font, ...page } = result.data.page;
+  return { version: VERSION, page: font && font.kind !== "default" ? { ...page, font } : page, editor: result.data.editor as EditorJson };
 }
 
 export function serialize_document(document: WarrenDocument): string {

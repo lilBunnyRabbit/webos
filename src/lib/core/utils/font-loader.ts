@@ -54,7 +54,7 @@ export interface FaceSource {
   descriptors?: FontFaceDescriptors;
 }
 
-function descriptors_of(bytes: Uint8Array): FontFaceDescriptors {
+export function descriptors_of(bytes: Uint8Array): FontFaceDescriptors {
   const style = sfnt_style(bytes);
   if (!style) return {};
   return { weight: style.weights ? `${style.weights[0]} ${style.weights[1]}` : String(style.weight), style: style.italic ? "italic" : "normal" };

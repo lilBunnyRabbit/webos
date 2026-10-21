@@ -10,7 +10,7 @@ export const SAMPLE: WarrenDocument = {
   editor: {
     root: block("root", [
       block("heading", [text("Jane & Co <CV>")], { tag: "h1", format: "center" }),
-      block("paragraph", [text("A fast learner, "), text("very", 1), text(" fast", 2, "font-size: 14pt;"), { type: "linebreak", version: 1 } as DocNode, text("Breakfast fan.")]),
+      block("paragraph", [text("A fast learner, "), text("very", 1), text(" fast", 2, "font-size: 14pt;"), { type: "linebreak", version: 1 } as DocNode, text("Breakfast "), block("link", [text("fan")], { url: "https://example.com/?a=1&b=2", rel: null, target: null, title: null }), text(".")]),
       block("list", [
         block("listitem", [text("One")], { value: 1 }),
         block("listitem", [block("list", [block("listitem", [text("Nested")], { value: 1 })], { listType: "bullet", start: 1, tag: "ul" })], { value: 2 }),

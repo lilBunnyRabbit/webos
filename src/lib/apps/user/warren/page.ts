@@ -1,3 +1,5 @@
+import type { FontChoice } from "$lib/core/api/services/settings/type";
+
 export const PageSize = { A4: "A4", LETTER: "Letter", A5: "A5" } as const;
 export type PageSize = (typeof PageSize)[keyof typeof PageSize];
 export const PAGE_SIZES = Object.values(PageSize);
@@ -9,6 +11,8 @@ export const FLOWS = Object.values(Flow);
 export interface PageSettings {
   size: PageSize;
   flow: Flow;
+  /** The body font; absent is Inter. */
+  font?: FontChoice;
 }
 
 export const DEFAULT_PAGE: PageSettings = { size: PageSize.A4, flow: Flow.SHEETS };

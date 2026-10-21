@@ -14,6 +14,10 @@ export const CHANGELOG: Release[] = [
         text: "Warren opens Word files: a .docx comes in as a new document with its headings, lists and bold, italic and underlined text, and tells you what it had to leave out.",
       },
       {
+        kind: NEW,
+        text: "Warren documents can have links, kept when you paste and in Word and PDF exports, and one font for the whole document: Inter, Burrow or any font you added in Settings.",
+      },
+      {
         kind: IMPROVED,
         text: "Warren can align paragraphs left, centre, right or justified, and has an underline button; Word and PDF exports keep both.",
       },
