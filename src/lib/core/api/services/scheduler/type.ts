@@ -68,6 +68,8 @@ export interface Job {
   /** What a click on the notification opens; the owning app when absent. */
   open?: JobOpen;
   kind: JobKind;
+  /** No in-page chime when it fires; the OS notification still sounds as the system's settings say. */
+  silent?: boolean;
 }
 
 /** What an app passes to `schedule()`: the id becomes `"{app}:{key}"`. */
@@ -79,6 +81,17 @@ export interface JobInput extends Omit<Job, "id" | "app" | "armed" | "armed_at" 
 
 /** `armed_at` and `last_fired` are the scheduler's; `missed_at` may only be cleared. */
 export type JobPatch = Partial<Omit<Job, "id" | "app" | "armed_at" | "last_fired" | "missed_at">> & { missed_at?: undefined };
+
+export const FireOutcome = { FIRED: "fired", MISSED: "missed" } as const;
+export type FireOutcome = (typeof FireOutcome)[keyof typeof FireOutcome];
+
+export interface JobFire {
+  outcome: FireOutcome;
+  due: number;
+}
+
+/** Called in the leader tab after the notification, with the job as the registry holds it after that pass. */
+export type OnFire = (job: Job, fire: JobFire) => void | Promise<void>;
 
 export interface MissedJob {
   id: JobId;

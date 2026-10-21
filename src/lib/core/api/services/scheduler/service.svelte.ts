@@ -1,6 +1,6 @@
 import { untrack } from "svelte";
 import type { AppsService, FilesService, Kernel, NotificationsService, ShellService } from "$lib/core/api";
-import { format_datetime } from "$lib/core/utils";
+import { error_message, format_datetime } from "$lib/core/utils";
 import { Mode } from "../../kernel/mode";
 import { NotificationType } from "../notifications/type";
 import {
@@ -21,8 +21,10 @@ import { JobSchema, SCHEDULER_PATH, type Registry } from "./persistence";
 import { scheduler_shell } from "./shell";
 import { CHANNEL, LEADER_LOCK, RegistryStore, type Change } from "./store";
 import {
+  FireOutcome,
   JobKind,
   type Job,
+  type JobFire,
   type JobId,
   type JobInput,
   type JobPatch,
@@ -85,6 +87,7 @@ export class SchedulerService implements ISchedulerService {
   private first_pass = true;
   private badge = 0;
   private triggered: Map<JobId, number> | null = null;
+  private handlers: Promise<void> = Promise.resolve();
 
   private files_service!: FilesService;
   private notifications_service!: NotificationsService;
@@ -385,9 +388,18 @@ export class SchedulerService implements ISchedulerService {
 
       const closed = this.first_pass;
       this.first_pass = false;
-      for (const { job, due } of transaction.result.fired) void this.fire(job, due);
-      this.chime(transaction.result.fired.map(({ job }) => job.kind));
-      if (transaction.result.missed.length > 0) this.report_missed(transaction.result.missed, closed);
+      const { fired, missed } = transaction.result;
+      const after = (id: JobId) => transaction.registry.jobs.find((job) => job.id === id);
+      for (const { job, due } of fired) {
+        const shown = this.fire(job, due);
+        this.hand_off(after(job.id) ?? job, { outcome: FireOutcome.FIRED, due }, shown);
+      }
+      this.chime(fired.filter(({ job }) => !job.silent).map(({ job }) => job.kind));
+      if (missed.length > 0) this.report_missed(missed, closed);
+      for (const { id, due } of missed) {
+        const job = after(id);
+        if (job) this.hand_off(job, { outcome: FireOutcome.MISSED, due });
+      }
       await this.sync_triggers();
     } catch (error) {
       if (this.destroyed) return;
@@ -430,6 +442,28 @@ export class SchedulerService implements ISchedulerService {
         ...(job.actions ?? []).map((action) => ({ label: action.label, on_click: () => void this.shell_service.execute(action.command) })),
         { label: "Open", on_click: () => this.open(job) },
       ],
+    });
+  }
+
+  // Handlers run one at a time, in firing order, off the pass: a slow one never holds up the timer, and two jobs of one
+  // app never race each other.
+  private hand_off(job: Job, fire: JobFire, shown: Promise<void> = Promise.resolve()): void {
+    const load = this.apps_service.get(job.app)?.on_fire;
+    if (!load) return;
+    this.handlers = this.handlers.then(async () => {
+      await shown;
+      if (this.destroyed) return;
+      try {
+        const { default: handle } = await load();
+        await handle(job, fire);
+      } catch (error) {
+        console.error(`[SchedulerService] ${job.app} failed handling ${job.id}:`, error);
+        this.notifications_service.notify(job.app, {
+          type: NotificationType.ERROR,
+          title: `Couldn't finish “${job.title || job.id}”`,
+          message: error_message(error),
+        });
+      }
     });
   }
 

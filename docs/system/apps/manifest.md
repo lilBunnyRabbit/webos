@@ -1,6 +1,6 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `meta.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `meta.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`, and usually a `meta.ts` with its display text. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
@@ -41,6 +41,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `daily_rank` | `DailyRank` (`time`, `score-asc`, `score-desc`), or `DailyRanks` (mode id → `DailyRank`) | no, default `time` | How a game's daily results rank in `/var/lib/games/plays.json`: by time, or by the score passed to `tracker.daily(day, ms, score)`, lower or higher first, time breaking a tie (ADR-035). Game Hub shows the score with the time. A record gives the game one daily per mode (ADR-050): `tracker.daily(day, ms, score, mode)` stores under `{app_id}/{mode}`, ranked by that mode's entry, and Game Hub lists a row per mode ("Color Games · Recall", the id in sentence case) that launches with `{ daily, mode }`. Import `DailyRank` from `$lib/core/api/services/apps/type` (or `$kit/games/daily`, which re-exports it) |
 | `shell` | `() => import("./commands")` | no | Commands, completers and value types that work with no window open, loaded on first use (ADR-034) |
 | `badge` | `() => number \| null` | no | Count on the app's icon wherever it shows, even with no window open (ADR-034) |
+| `on_fire` | `() => Promise<{ default: OnFire }>` | no | Runs when one of the app's scheduler jobs fires or is missed, with nothing of the app loaded ([below](#on_fire-adr-062), ADR-062) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
 | `default_widget` | `boolean` | no | Puts the app's widget on every desktop once, at `widget_size.default` ([desktop](../services/desktop.md)). Removing it sticks. Needs `widget` |
@@ -147,6 +148,21 @@ export const badge = () => (subscribe(), open);
 ```
 
 Quick Notes counts open todos (`badge.svelte.ts`).
+
+### `on_fire` (ADR-062)
+
+What runs when one of the app's scheduler jobs fires or is counted as missed, with no window, widget or anything else of the app loaded. `on_fire: () => import("./on-fire")`, the module default-exporting an `OnFire`:
+
+```ts
+import type { OnFire } from "$lib/core/api";
+
+const on_fire: OnFire = async (job, { outcome, due }) => {
+  // outcome: "fired" | "missed"; due: the occurrence (the job's last_fired or missed_at)
+};
+export default on_fire;
+```
+
+The leader tab loads it on first use and calls it once per occurrence, after the notification, one handler at a time. A throw becomes an error toast from the app; it isn't retried. It runs like a shell command: no app context, services through `kernel.service`, app data through `json_file`. Pomodoro counts a phase's end and schedules the next phase in it. Details: [scheduler](../services/scheduler.md#on-fire-hook).
 
 ### `widget` (ADR-034)
 

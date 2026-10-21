@@ -24,7 +24,7 @@ const text = (jobs: unknown[], extra: object = {}) => JSON.stringify({ version: 
 
 describe("parse_registry", () => {
   it("round-trips a registry", () => {
-    const registry: Registry = { version: 1, jobs: [alarm, { id: "x:t", app: "x", title: "T", at: { epoch: 5 }, armed: false, kind: "timer" }] };
+    const registry: Registry = { version: 1, jobs: [alarm, { id: "x:t", app: "x", title: "T", at: { epoch: 5 }, armed: false, kind: "timer", silent: true }] };
     expect(parse_registry(serialize_registry(registry))).toEqual(registry);
   });
 
@@ -51,6 +51,7 @@ describe("parse_registry", () => {
       { ...alarm, id: "clock:week", repeat: { every: "week", days: [7] } },
       { ...alarm, id: "clock:kind", kind: "nag" },
       { ...alarm, id: "clock:until", repeat: { every: "day", until: "soon" } },
+      { ...alarm, id: "clock:silent", silent: "yes" },
     ];
     expect(parse_registry(text([...bad, alarm])).jobs).toEqual([alarm]);
   });

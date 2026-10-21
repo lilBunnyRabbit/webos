@@ -11,13 +11,17 @@ const notifications = () => kernel.service<NotificationsService>("notifications"
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
 
 const RETEXT_DELAY = 800;
+const READY_TIMEOUT = 5000;
 
 const same_texts = (job: Job, input: ReturnType<typeof logic.phase_input>) =>
-  job.title === input.title && job.message === input.message && JSON.stringify(job.actions ?? []) === JSON.stringify(input.actions ?? []);
+  job.title === input.title &&
+  job.message === input.message &&
+  Boolean(job.silent) === Boolean(input.silent) &&
+  JSON.stringify(job.actions ?? []) === JSON.stringify(input.actions ?? []);
 
-// One per page, shared by every window, the widget and shell commands. The scheduler fires the phase end; this counts
-// it and starts what follows. It holds itself while a phase runs, so an auto-started next phase follows in this tab
-// even after the window closes.
+// One per page, shared by every window, the widget, shell commands and the on-fire handler, so an end is counted once
+// per tab: `plan.settled` stops a second count. The scheduler's on-fire handler counts an end and starts what follows
+// with nothing of Pomodoro loaded; an open window counts it too, the moment it sees the job end.
 class PomodoroTimer {
   readonly file = json_file(app_data_path(APP_ID, "timer.json"), EMPTY_TIMER, TimerFileSchema);
   readonly stats = json_file(app_data_path(APP_ID, "stats.json"), EMPTY_STATS, StatsFileSchema);
@@ -26,19 +30,12 @@ class PomodoroTimer {
   // The job this tab is writing, shown until the registry has it, so the ring doesn't flash idle in between.
   private overlay = $state<{ job: PhaseJob | null } | null>(null);
   private queue: Promise<void> = Promise.resolve();
-  private disposed = false;
   private dispose_root: () => void;
 
-  constructor(private readonly drop: (timer: PomodoroTimer) => void) {
+  constructor() {
     this.dispose_root = detached_root(() => {
       $effect(() => {
         if (this.ready && this.resolved) untrack(() => void this.settle());
-      });
-
-      $effect(() => {
-        if (!this.ready || this.run.status !== Status.RUNNING) return;
-        untrack(() => this.refs++);
-        return () => queueMicrotask(() => !this.disposed && this.drop(this));
       });
 
       $effect(() => {
@@ -47,9 +44,9 @@ class PomodoroTimer {
         if (!job?.armed || !("epoch" in job.at)) return;
         const input = logic.phase_input(this.run, this.settings, this.task);
         if (same_texts(job, input)) return;
-        const { title, message, actions } = input;
+        const { title, message, actions, silent } = input;
         const id = setTimeout(
-          () => void this.enqueue(async () => void (scheduler().get(JOB_ID)?.armed && (await scheduler().update(JOB_ID, { title, message, actions })))),
+          () => void this.enqueue(async () => void (scheduler().get(JOB_ID)?.armed && (await scheduler().update(JOB_ID, { title, message, actions, silent })))),
           RETEXT_DELAY
         );
         return () => clearTimeout(id);
@@ -59,6 +56,14 @@ class PomodoroTimer {
 
   get ready(): boolean {
     return this.file.ready && this.stats.ready;
+  }
+
+  async loaded(): Promise<boolean> {
+    for (let waited = 0; !this.ready; waited += 25) {
+      if (waited >= READY_TIMEOUT) return false;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    return true;
   }
 
   get settings(): Settings {
@@ -172,7 +177,6 @@ class PomodoroTimer {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.dispose_root();
     this.file.release();
     this.stats.release();
@@ -188,7 +192,7 @@ function drop(timer: PomodoroTimer): void {
 }
 
 export function acquire_timer(): { timer: PomodoroTimer; release: () => void } {
-  const timer = (shared ??= new PomodoroTimer(drop));
+  const timer = (shared ??= new PomodoroTimer());
   timer.refs++;
   let released = false;
   return {

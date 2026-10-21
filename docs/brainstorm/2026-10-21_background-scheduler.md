@@ -86,8 +86,15 @@ None. Owner: "We dont need migration no one uses it yet". The `migrated` marker 
 ### Chime (decided)
 Builder 2 left the in-page chime to the apps (Clock and Recipe Box watched `last_fired` from their windows), so nothing chimed with the app closed. Owner: the scheduler plays it, per kind, in the leader tab after a user gesture; Clock's and Recipe Box's app-hosted chime is removed and Pomodoro gets none, so it never doubles. Rejected: an `on_fired` subscription on the scheduler, a `define_app` on-fire hook, the OS notification's sound only.
 
-### Pomodoro auto-start with Pomodoro loaded nowhere (open)
-Builder 3: a phase end is counted and an auto-started next phase scheduled by Pomodoro's page-level timer, in any tab where Pomodoro is loaded; the starting tab keeps it loaded while a phase runs. With Pomodoro loaded in no tab (reload, starting tab closed), the end rings but the next phase is scheduled only when Pomodoro next loads, so an auto-started break doesn't ring its end. Closing it needs app code at fire time: the same `on_fired` / `define_app` hook the owner hasn't decided.
+### Pomodoro auto-start with Pomodoro loaded nowhere (decided)
+Builder 3: a phase end is counted and an auto-started next phase scheduled by Pomodoro's page-level timer, in any tab where Pomodoro is loaded; the starting tab keeps it loaded while a phase runs. With Pomodoro loaded in no tab (reload, starting tab closed), the end rings but the next phase is scheduled only when Pomodoro next loads, so an auto-started break doesn't ring its end. Closing it needs app code at fire time.
+
+Decided (owner, 2026-10-21): a `define_app` on-fire hook. The manifest gains `on_fire?: () => Promise<{ default: (job, ctx) => void | Promise<void> }>`, lazy like `shell` and `badge`, nothing added to the boot chunk. When the leader fires a job, or counts it as missed, it lazy-imports the app's handler and calls it with the job and whether it fired or was missed, after the notification. Errors are caught and logged or toasted and never break the scheduler. Pomodoro counts the ended phase and chains the auto-started next one in its handler, so both work with nothing of Pomodoro loaded; counting stays idempotent through the plan's `settled` marker, so the handler and an open window never count one end twice. Calendar (builder 4) can use the same hook for reminders. Rejected: an `on_fired` subscription on the scheduler (the app's code must be loaded to subscribe); leaving the gap.
+
+### Per-job mute (decided)
+Builder 3 removed Pomodoro's Sound switch because the scheduler chimed for every phase and a Job had no mute. Owner, 2026-10-21: Job gains `silent?: boolean`; the scheduler skips its in-page chime for silent jobs, and the OS notification follows the OS's settings. Pomodoro's Sound switch returns, off by default as before, so its phase jobs are silent unless Sound is on, with its "Play the chime" button.
+
+Built the same day: see the ADR revision "on-fire hook and per-job mute". The handler's argument also carries `due` (the occurrence), for a reminder app with repeating jobs. `on_fire` is listed in the app API as not yet stable, since `Job` isn't on the stable surface.
 
 ## Key takeaways
 - Nothing can fire with every tab closed except the flagged Triggers API; the scheduler says so honestly and summarises what it missed.
@@ -97,8 +104,9 @@ Builder 3: a phase end is counted and an auto-started next phase scheduled by Po
 ## Action items
 1. [x] Builder 1: service core (ADR-062). Done 2026-10-21; decisions it had to make are in the ADR's revision note.
 2. [x] Builder 2: Clock alarms and timers, Recipe Box. Done 2026-10-21; see the ADR revision. Open: who plays the in-page chime with no app window open (a scheduler fired hook or a manifest callback, both new API).
-3. [x] Builder 3: Pomodoro. Done 2026-10-21; see the ADR revision. The scheduler plays the chime for every app (owner). Open: auto-start chaining with Pomodoro loaded in no tab.
-4. [ ] Builder 4: Calendar.
+3. [x] Builder 3: Pomodoro. Done 2026-10-21; see the ADR revision. The scheduler plays the chime for every app (owner).
+4. [x] Follow-up: `define_app` on-fire hook, Pomodoro counting and chaining in it, per-job `silent` and Pomodoro's Sound switch back. Done 2026-10-21.
+5. [ ] Builder 4: Calendar (reminders can use `on_fire`).
 
 ## Next session topics
 - Kanban due dates and a generic `remind` command.

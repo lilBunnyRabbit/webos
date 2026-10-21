@@ -210,8 +210,19 @@ describe("plan and job", () => {
     expect(phase_input(brk, settings, "")).toMatchObject({ title: "Break over", actions: [{ label: "Start focus" }, { label: "Skip" }] });
   });
 
+  it("keeps the phase end silent unless Sound is on", () => {
+    const focus = start(IDLE_RUN, settings, 0);
+    expect(phase_input(focus, settings, "").silent).toBe(true);
+    expect(phase_input(focus, { ...settings, sound: true }, "").silent).toBe(false);
+  });
+
   it("drops a file from before the scheduler down to idle", () => {
     const old = { version: 1, settings: { ...settings, sound: true }, run: { ...IDLE_RUN, status: "running", ends_at: 5 }, task: "x" };
-    expect(TimerFileSchema.parse(old)).toEqual({ version: 1, settings, plan: IDLE_PLAN, ended: null, task: "x" });
+    expect(TimerFileSchema.parse(old)).toEqual({ version: 1, settings: { ...settings, sound: true }, plan: IDLE_PLAN, ended: null, task: "x" });
+  });
+
+  it("reads a file saved while there was no Sound switch with the sound off", () => {
+    const { sound: _, ...without } = settings;
+    expect(TimerFileSchema.parse({ version: 1, settings: without, plan: IDLE_PLAN, ended: null, task: "" }).settings.sound).toBe(false);
   });
 });

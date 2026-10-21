@@ -16,6 +16,7 @@ export default define_app({
     },
   },
   shell: () => import("./commands"),
+  on_fire: () => import("./on-fire"),
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 2, h: 2 }, max: { w: 4, h: 4 }, default: { w: 2, h: 2 } },
   component: () => import("./pomodoro.app.svelte"),

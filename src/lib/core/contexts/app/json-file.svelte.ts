@@ -25,6 +25,8 @@ export function app_data_path(app_id: string, name = ""): string {
 const RECENT_WRITES = 8;
 
 const cells = new Map<string, JsonFileCell<unknown>>();
+// The last holder's final write, still in flight: a new holder of that path reads only after it lands.
+const closing = new Map<string, Promise<void>>();
 
 const files = () => kernel.service<FilesService>("files");
 const serialize = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
@@ -75,6 +77,11 @@ class JsonFileCell<T> {
     // Disk lags behind a write in flight: reading now would undo it. A sibling file's write in the same folder triggers this.
     if (this.writer.busy) {
       await this.writer.idle();
+      if (seq !== this.load_seq) return;
+    }
+    const previous = closing.get(this.path);
+    if (previous) {
+      await previous;
       if (seq !== this.load_seq) return;
     }
     let text: string | null;
@@ -144,7 +151,11 @@ class JsonFileCell<T> {
     const text = serialize($state.snapshot(this.value));
     if (this.ready && text !== this.last) this.writer.write(text);
     // A new holder of this path reads the disk: the save can't wait for its delay.
-    this.writer.flush();
+    if (this.writer.busy) {
+      const done = this.writer.idle();
+      closing.set(this.path, done);
+      void done.finally(() => closing.get(this.path) === done && closing.delete(this.path));
+    }
     this.dispose_root();
   }
 }

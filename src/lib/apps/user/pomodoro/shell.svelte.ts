@@ -4,15 +4,10 @@ import { APP_ID, Status, status_text } from "./pomodoro";
 import { last_days } from "./stats";
 import { acquire_timer, type PomodoroTimer } from "./timer.svelte";
 
-const READY_TIMEOUT = 5000;
-
 async function with_timer<T>(action: (timer: PomodoroTimer) => T | Promise<T>): Promise<T> {
   const { timer, release } = acquire_timer();
   try {
-    for (let waited = 0; !timer.ready; waited += 25) {
-      if (waited >= READY_TIMEOUT) throw new ShellError("pomo: the timer didn't load");
-      await new Promise((resolve) => setTimeout(resolve, 25));
-    }
+    if (!(await timer.loaded())) throw new ShellError("pomo: the timer didn't load");
     await timer.settle();
     return await action(timer);
   } finally {

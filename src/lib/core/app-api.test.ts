@@ -274,6 +274,7 @@ const manifest_fields: Members<
   | "license"
   | "meta"
   | "name"
+  | "on_fire"
   | "preview"
   | "props"
   | "repository"

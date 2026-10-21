@@ -4,6 +4,7 @@ import type { IService } from "../../type";
 import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
+import type { OnFire } from "../scheduler/type";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -128,6 +129,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * shows nothing.
    */
   badge?: () => number | null;
+  /** Lazy so it costs no boot weight: the leader tab loads it the first time one of the app's jobs fires or is missed. */
+  on_fire?: () => Promise<{ default: OnFire }>;
   /** What the app renders on the desktop for its `.widget` files (ADR-034). Props are validated against `props`. */
   widget?: () => Promise<{ default: Component<WidgetProps> }>;
   /**

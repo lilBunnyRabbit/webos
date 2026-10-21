@@ -43,6 +43,7 @@ interface Job {
   actions?: { label: string; command: string }[];   // at most 2
   open?: { app: string; props?: Record<string, unknown> };
   kind: "alarm" | "timer" | "reminder" | "phase";
+  silent?: boolean;          // no in-page chime; the OS notification still follows the system's sound settings
 }
 type Repeat = { every: "day"; interval?: number } | { every: "week"; days: number[] } | { every: "month"; day: number } | { every: "year" };
 ```
@@ -51,6 +52,7 @@ type Repeat = { every: "day"; interval?: number } | { every: "week"; days: numbe
 - `until` is the last day it may fire on, inclusive; `skip` lists days it doesn't. Both `YYYY-MM-DD` in the job's zone; a skip names the occurrence's real day (a clamped 31 in February is `…-02-28`).
 - `actions` run as shell command lines in a WebOS tab ([shell](shell.md)), so they survive reloads and work from the service worker. `open` is what a body click opens; the owning app when absent.
 - `kind: "alarm"` sets `requireInteraction`: the notification stays until dismissed. The toast of an alarm also stays (`duration: null`).
+- `silent: true` skips the in-page chime for that job (Pomodoro's Sound switch off). The OS notification isn't made silent: whether it sounds is the system's setting.
 
 ### Permission
 
@@ -124,9 +126,29 @@ For each fired job:
 - An OS notification through `registration.showNotification` (`notifications/system.ts`): `tag` = job id, `renotify: true` (a fired daily alarm replacing yesterday's still alerts), `requireInteraction` for alarms, `timestamp` = the occurrence, `actions` from the job's labels, `data = { source: "scheduler", id, route, commands }` where `route` is `#/app/{open.app}?{open.props}`. Only when permission is granted; never asks.
 - When this tab is visible, also a toast from the job's app: its actions run their command through `shell.execute`, plus Open (`apps.launch(open)`).
 
-**Chime.** After the pass, when it fired a job of kind `alarm`, `timer` or `phase` and the page has had a user gesture since load (`navigator.userActivation.hasBeenActive`, browsers keep audio off until then), the leader plays one chime from `chime.ts` (loaded on first use): a bright two-note call three times for alarms and timers, one soft pair for a phase. One per pass, the loudest kind that fired, so jobs due together don't stack. Without a gesture, the OS notification's sound carries it. Apps play nothing themselves.
+**Chime.** After the pass, when it fired a job of kind `alarm`, `timer` or `phase` that isn't `silent` and the page has had a user gesture since load (`navigator.userActivation.hasBeenActive`, browsers keep audio off until then), the leader plays one chime from `chime.ts` (loaded on first use): a bright two-note call three times for alarms and timers, one soft pair for a phase. One per pass, the loudest kind that fired, so jobs due together don't stack. Without a gesture, the OS notification's sound carries it. Apps play nothing themselves.
 
 Without an active service worker (the dev server) the helper uses a page `Notification` without buttons; its click goes to this tab's own click listeners.
+
+## On-fire hook
+
+An app that has to act when its job fires, with nothing of it loaded, declares a handler in its manifest ([manifest](../apps/manifest.md#on_fire-adr-062)):
+
+```ts
+define_app({ /* … */ on_fire: () => import("./on-fire") });
+
+// on-fire.ts
+const on_fire: OnFire = async (job, { outcome, due }) => { /* … */ };
+export default on_fire;
+```
+
+- **Who calls it.** Only the leader, from its pass: once per fired occurrence (`outcome: "fired"`, `due` = the job's new `last_fired`) and once per occurrence counted as missed (`"missed"`, `due` = its `missed_at`). Every occurrence is planned under the store lock, so across tabs and leader handovers it's called once.
+- **When.** After the notification: for a fired job once the OS notification (and, in a visible tab, the toast) is shown; for a missed one after the missed summary. The handler gets the job as the registry holds it after the pass (a one-shot already disarmed).
+- **Order.** Handlers run one at a time on a queue of their own, in firing order, so a slow one never holds up the timer or the next pass, and two jobs of one app don't race. The module loads on first use (`apps.get(app).on_fire()`), so nothing joins the boot chunk.
+- **Errors.** A throw or rejection, from loading the module or from the handler, is logged and shown as an error toast from the app ("Couldn't finish “{title}”"); the queue carries on. Never retried.
+- **Nothing more.** There's no handler for a job whose app isn't registered, and none in a follower tab. In solo a leading solo tab runs every app's handler (manifests are all registered there).
+
+Pomodoro uses it to count a phase's end and chain the next one ([below](#pomodoro)). Calendar's reminders can use it the same way.
 
 ## Missed
 
@@ -134,7 +156,7 @@ Found by a pass, at boot or later. The first pass after this tab starts leading 
 
 - One OS notification "N missed while WebOS was closed" (tag `scheduler:missed`) with the titles as its body.
 - A notification-center entry per job ("Missed · due …", warning, its toast hidden at once) and one summary toast.
-- The job's `missed_at` is set in the same write, so an app opened later still learns about it (a Pomodoro phase pauses and shows when it ended), then clears it. Also appended to `missed` (this tab, memory only).
+- The job's `missed_at` is set in the same write, so the app's on-fire handler, or the app opened later, learns about it (a Pomodoro phase pauses and shows when it ended) and clears it. Also appended to `missed` (this tab, memory only).
 - When the tab is hidden, `navigator.setAppBadge(count)`, adding up across passes. Becoming visible clears it (`clearAppBadge`) and tells other tabs (`{ type: "seen" }`) to reset their count. On a tab that isn't an installed app the call does nothing.
 
 ## Notification clicks
@@ -201,15 +223,18 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 ### Pomodoro
 
 - **State** comes from the job and `timer.json`'s plan together (`run_of` in `pomodoro/pomodoro.ts`): an armed job is running and ends at `at.epoch`; otherwise the plan's `left` says paused; otherwise idle. Pause writes `left` first and then disarms the job; reset, skip and choose cancel it; start or resume schedules it afresh. While a write is in flight the page's timer shows the job it's writing, so nothing flashes idle.
-- **Counting an end.** A job that fired (`last_fired`, disarmed) or was missed (`missed_at`) and isn't the plan's `settled` end is counted by Pomodoro's page-level timer (`timer.svelte.ts`) in any tab where Pomodoro is loaded: a focus goes into `stats.json`, `settled` is set, and the next phase follows `settle` (auto-started from the old end, or idle, as before). Every action and every `pomo` command counts first. Two tabs counting the same end write the same result; `settled` stops a second count in one tab.
-- **Chaining.** The page-level timer holds itself while a phase runs, so the tab that started a phase (window, widget or `pomo start`) chains an auto-started break or focus after the window closes. With Pomodoro loaded in no tab, the end still rings, but it's counted and the next phase scheduled only when Pomodoro next loads (see Known gaps).
+- **Counting an end.** A job that fired (`last_fired`, disarmed) or was missed (`missed_at`) and isn't the plan's `settled` end gets counted: a focus goes into `stats.json`, `settled` is set, and the next phase follows `settle` (auto-started from the old end, or idle). One page-level timer per tab (`timer.svelte.ts`) does it, shared by the window, the widget, the `pomo` commands and the on-fire handler, through one queue; `settled` makes a second count in that tab a no-op.
+- **Who counts.** The on-fire handler (`on-fire.ts`), in the leader tab, with nothing of Pomodoro loaded: it takes the page-level timer (a fresh one reads both files), counts, schedules the auto-started phase or cancels the job, and lets go. So an auto-started break rings its own end with Pomodoro closed everywhere, and a phase missed while WebOS was closed is paused at the next boot, not when Pomodoro next opens. A tab with Pomodoro loaded also counts the moment its registry shows the end, so its window doesn't wait for the handler; every action and `pomo` command counts first, so a button pressed right at the end sees the right phase. In the leader tab both go through the same timer and count once. Another tab with Pomodoro loaded counts from the same files and writes the same result.
+- **Holding.** The page-level timer is released with its last window, widget or command; nothing keeps it loaded while a phase runs.
 - **Missed.** The next phase waits paused at its full length, whatever auto-start says; `timer.json`'s `ended` shows "Focus ended at 14:02" in the window and in `pomo status` until the next action. `missed_at` is cleared with `update(id, { missed_at: undefined })`, leaving the disarmed job as the paused phase's slot.
 - **Text.** Title "Focus done[: task]" or "Break over"; the message and buttons say what follows: "Time for a short break." with Start break and Skip, or "Short break started, 5 min." with Skip break (Pause after a break). While a phase runs, a settings or task change updates the job's text after 0.8 s.
+- **Sound.** The job is `silent` unless Pomodoro's Sound switch is on (off by default); switching it during a phase updates the job with the text. "Play the chime" next to it plays the scheduler's phase chime (`scheduler/chime.ts`, imported on click), which also counts as the gesture audio needs.
 
 ## Divergence from ADR
 
 - Job gains `armed_at` and `missed_at`; the registry loses `migrated` and there's no migration (owner follow-up, ADR-062 revision 2026-10-21).
 - Added beyond the ADR's API: `missed`, `last_jump`, `triggers`, `is_leader`.
+- Job gains `silent`, and apps gain the manifest's `on_fire` hook (owner follow-up, ADR-062 revision 2026-10-21).
 - The missed summary says "asleep" instead of "closed" when it's found after this tab's first pass.
 
 ## Known gaps
@@ -217,6 +242,7 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - Nothing fires with every tab closed unless Triggers is on. On Android a background tab is frozen within about a minute, so only the foreground tab fires.
 - With Triggers on, a job delivered by its trigger while every tab was closed is still reported missed at the next boot: the registry never heard it fired.
 - Whether Chrome replaces a shown notification immediately when a triggered one with the same tag is added (rather than when it triggers) is unverified.
-- Apps learn a job fired only by watching `jobs`; no app code runs at fire time. So a Pomodoro phase that ends with Pomodoro loaded in no tab is counted, and an auto-started next phase scheduled, only when Pomodoro next loads: the break's end doesn't ring meanwhile. A fired hook (scheduler subscription or a `define_app` hook) would be new public API, left to the owner.
-- There's no per-job mute: every alarm, timer and phase chimes after a gesture. Pomodoro's old Sound switch is gone.
+- An on-fire handler that throws isn't retried; the app sees the end again only through `jobs`. A leader tab closed while a handler runs leaves that occurrence unhandled (the next leader doesn't redo it).
+- App files (`json_file`) don't sync across tabs. A tab with Pomodoro loaded that misses the moment a phase ended (frozen in the background on Android, say) and then sees the next phase already scheduled by the leader shows its stale plan until it reloads.
+- `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.
 - `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.

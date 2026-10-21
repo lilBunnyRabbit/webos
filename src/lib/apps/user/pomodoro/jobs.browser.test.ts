@@ -1,12 +1,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest";
 import kernel, { type IService } from "$lib/core/api";
 import { stub_service } from "$lib/core/api/kernel/test-kernel";
-import { clear_opfs } from "$lib/core/api/services/files/opfs";
+import { clear_opfs, write_file } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
 import { SchedulerService } from "$lib/core/api/services/scheduler/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
-import { JOB_ID, Phase, Status } from "./pomodoro";
+import manifest from "./index";
+import * as logic from "./pomodoro";
+import { APP_ID, DEFAULT_SETTINGS, IDLE_RUN, JOB_ID, Phase, Status } from "./pomodoro";
 import { skip, start, status } from "./shell.svelte";
 import { acquire_timer } from "./timer.svelte";
 
@@ -44,7 +46,7 @@ beforeEach(async () => {
   await files.init();
   notifications = new NotificationsService();
   use("notifications", notifications);
-  use("apps", stub_service("apps", { launch: vi.fn(), get: () => undefined, is_installed: () => true }));
+  use("apps", stub_service("apps", { launch: vi.fn(), get: (id: string) => (id === APP_ID ? manifest : undefined), is_installed: () => true }));
   use("shell", stub_service("shell", { execute }));
   scheduler = new SchedulerService(kernel);
   await scheduler.init();
@@ -70,6 +72,21 @@ const titles = () => notifications.all.map((notification) => notification.title)
 async function wake_at(at: number): Promise<void> {
   vi.setSystemTime(at);
   window.dispatchEvent(new Event("focus"));
+}
+
+const TIMER_PATH = "/var/lib/apps/pomodoro/timer.json";
+const STATS_PATH = "/var/lib/apps/pomodoro/stats.json";
+
+async function write_json(path: string, value: unknown): Promise<void> {
+  const segments = path.split("/").filter(Boolean);
+  let handle = await files.get_root();
+  for (const segment of segments.slice(0, -1)) handle = await handle.getDirectoryHandle(segment, { create: true });
+  await write_file(await handle.getFileHandle(segments.at(-1)!, { create: true }), JSON.stringify(value));
+}
+
+async function read_json(path: string) {
+  const file = await files.get_file(path);
+  return file ? JSON.parse(await file.text()) : null;
 }
 
 async function stats() {
@@ -154,4 +171,54 @@ test("a phase missed while WebOS was closed pauses the next one and says when it
 
   expect(await start(context({ task: [] }))).toMatch(/^Short break · 5:00 left/);
   expect(scheduler.get(JOB_ID)).toMatchObject({ armed: true, title: "Break over" });
+});
+
+test("with Pomodoro loaded nowhere, an ended focus is counted and the auto-started break rings its end", async () => {
+  const settings = { ...DEFAULT_SETTINGS, auto_breaks: true };
+  const run = logic.start(IDLE_RUN, settings, Date.now());
+  const end = run.ends_at!;
+  await write_json(TIMER_PATH, { version: 1, settings, plan: logic.plan_of(run, null), ended: null, task: "" });
+  await scheduler.schedule(APP_ID, logic.phase_input(run, settings, ""));
+
+  await wake_at(end + 1_000);
+  await vi.waitFor(() => expect(scheduler.get(JOB_ID)).toMatchObject({ armed: true, at: { epoch: end + 5 * MINUTE }, title: "Break over" }));
+  await vi.waitFor(async () => expect((await read_json(STATS_PATH))?.days["2026-10-16"]).toEqual({ sessions: 1, ms: 25 * MINUTE }));
+  await vi.waitFor(async () => expect((await read_json(TIMER_PATH)).plan).toMatchObject({ phase: Phase.SHORT, round: 1, settled: end }));
+
+  await wake_at(end + 5 * MINUTE);
+  await vi.waitFor(() => expect(titles()).toEqual(["Break over", "Focus done"]));
+  await vi.waitFor(() => expect(scheduler.get(JOB_ID)).toBeUndefined());
+  await vi.waitFor(async () => expect((await read_json(TIMER_PATH)).plan).toMatchObject({ phase: Phase.FOCUS, left: null, settled: end + 5 * MINUTE }));
+  expect((await read_json(STATS_PATH)).days["2026-10-16"].sessions).toBe(1);
+});
+
+test("an open window and the on-fire handler count one end once", async () => {
+  const { timer, release } = acquire_timer();
+  try {
+    await vi.waitFor(() => expect(timer.ready).toBe(true));
+    await timer.start(false);
+    const end = Date.now() + 25 * MINUTE;
+
+    await wake_at(end + 1_000);
+    await vi.waitFor(() => expect(timer.run).toMatchObject({ phase: Phase.SHORT, status: Status.IDLE }));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(timer.stats.value.days["2026-10-16"]).toEqual({ sessions: 1, ms: 25 * MINUTE });
+    expect(timer.file.value.plan.settled).toBe(end);
+  } finally {
+    release();
+  }
+});
+
+test("a phase job is silent unless Sound is on, and switching it follows a running phase", async () => {
+  const { timer, release } = acquire_timer();
+  try {
+    await vi.waitFor(() => expect(timer.ready).toBe(true));
+    await timer.start(false);
+    expect(scheduler.get(JOB_ID)?.silent).toBe(true);
+    timer.file.value.settings.sound = true;
+    await vi.waitFor(() => expect(scheduler.get(JOB_ID)?.silent).toBe(false), { timeout: 3_000 });
+  } finally {
+    timer.file.value.settings.sound = false;
+    release();
+  }
 });

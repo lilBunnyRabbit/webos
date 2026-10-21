@@ -8,7 +8,7 @@ import { NotificationsService } from "../notifications/service.svelte";
 import { CLICK_MESSAGE, ClickSource, type NotificationClick } from "../notifications/system";
 import { parse_registry, SCHEDULER_PATH, serialize_registry, type Registry } from "./persistence";
 import { SchedulerService } from "./service.svelte";
-import { JobKind, type Job, type JobInput } from "./type";
+import { FireOutcome, JobKind, type Job, type JobInput, type OnFire } from "./type";
 
 const MINUTE = 60_000;
 const shutdowns: Array<() => Promise<void>> = [];
@@ -24,6 +24,7 @@ interface Tab {
 
 const USER_APPS = new Set(["cards", "kanban"]);
 const installed = new SvelteSet<string>();
+const handlers: Record<string, ReturnType<typeof vi.fn<OnFire>>> = {};
 
 async function open_tab(): Promise<Tab> {
   const launch = vi.fn();
@@ -33,7 +34,8 @@ async function open_tab(): Promise<Tab> {
     notifications: NotificationsService,
     apps: stub_service("apps", {
       launch,
-      get: (id: string) => (USER_APPS.has(id) ? { system: false } : id === "settings" ? { system: true } : undefined) as never,
+      get: (id: string) =>
+        (USER_APPS.has(id) ? { system: false, on_fire: async () => ({ default: handlers[id] }) } : id === "settings" ? { system: true } : undefined) as never,
       is_installed: (id: string) => !USER_APPS.has(id) || installed.has(id),
     }),
     shell: stub_service("shell", { execute }),
@@ -76,6 +78,7 @@ beforeEach(async () => {
   await opfs.clear_opfs();
   installed.clear();
   for (const id of USER_APPS) installed.add(id);
+  for (const id of USER_APPS) handlers[id] = vi.fn<OnFire>();
 });
 
 afterEach(async () => {
@@ -279,6 +282,50 @@ describe("firing", () => {
     const before = tab.scheduler.next("clock:wake");
     await tab.scheduler.update("clock:wake", { missed_at: undefined });
     expect(tab.scheduler.next("clock:wake")).toBe(before);
+  });
+
+  test("the app's on-fire handler runs after the notification, with the job as fired", async () => {
+    const tab = await open_tab();
+    const seen: string[][] = [];
+    handlers.kanban.mockImplementation(() => void seen.push(titles(tab)));
+    const at = Date.now() + 150;
+    await tab.scheduler.schedule("kanban", reminder("due", at));
+
+    await vi.waitFor(() => expect(handlers.kanban).toHaveBeenCalledOnce());
+    const [job, fire] = handlers.kanban.mock.calls[0];
+    expect(fire).toEqual({ outcome: FireOutcome.FIRED, due: at });
+    expect(job).toMatchObject({ id: "kanban:due", armed: false, last_fired: at });
+    expect(seen).toEqual([["Reminder due"]]);
+  });
+
+  test("a missed job reaches the handler as missed; a handler that throws is reported and the next still runs", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    handlers.cards.mockRejectedValue(new Error("board gone"));
+    const at = Date.now() + 10 * MINUTE;
+    await tab.scheduler.schedule("cards", reminder("a", at));
+    await tab.scheduler.schedule("kanban", reminder("b", at));
+
+    vi.setSystemTime(at + 60 * MINUTE);
+    document.dispatchEvent(new Event("resume"));
+    await vi.waitFor(() => expect(handlers.kanban).toHaveBeenCalledOnce());
+    expect(handlers.kanban.mock.calls[0][0]).toMatchObject({ id: "kanban:b", missed_at: at });
+    expect(handlers.kanban.mock.calls[0][1]).toEqual({ outcome: FireOutcome.MISSED, due: at });
+    expect(tab.notifications.all.find((entry) => entry.title === "Couldn't finish “Reminder a”")?.message).toBe("board gone");
+    expect(tab.scheduler.is_leader).toBe(true);
+  });
+
+  test("an app without a handler, or a follower tab, runs none", async () => {
+    const a = await open_tab();
+    const b = await open_tab();
+    await vi.waitFor(() => expect(b.scheduler.is_leader).toBe(true));
+    await a.scheduler.schedule("clock", reminder("tea", Date.now() + 100));
+    await a.scheduler.schedule("kanban", reminder("due", Date.now() + 100));
+    await vi.waitFor(() => expect(a.scheduler.get("kanban:due")?.armed).toBe(false));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(handlers.kanban).toHaveBeenCalledOnce();
   });
 
   test("a snooze fires once, then the rule carries on", async () => {

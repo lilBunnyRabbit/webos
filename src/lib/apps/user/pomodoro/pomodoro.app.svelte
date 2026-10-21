@@ -1,11 +1,11 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type DesktopService, type NotificationsService } from "$lib/core/api";
+  import kernel, { JobKind, NotificationType, Platform, type DesktopService, type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Input, Section, Segmented, SettingRow, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, Sticker, Timer } from "phosphor-svelte";
+  import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";
   import { z } from "zod";
   import { ended_text, format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, type Settings } from "./pomodoro";
   import Ring from "./ring.svelte";
@@ -127,6 +127,10 @@
   async function allow_notifications() {
     await notifications.request_system();
     permission = Notification.permission;
+  }
+
+  async function play_chime() {
+    (await import("$lib/core/api/services/scheduler/chime")).play_chime(JobKind.PHASE);
   }
 
   async function clear_stats() {
@@ -256,7 +260,13 @@
         </Section>
 
         <Section title="Alerts" description="How a phase end reaches you.">
-          <SettingRow label="Browser notifications" description="Phase ends show even with Pomodoro closed, while WebOS is open in a tab. A chime plays once you've clicked on the page.">
+          <SettingRow label="Sound" description="A soft chime at the end of each phase, once you've clicked somewhere in WebOS.">
+            {#snippet children({ id, describedby })}
+              <IconButton label="Play the chime" size="sm" onclick={play_chime}><SpeakerHigh /></IconButton>
+              <Switch {id} aria-describedby={describedby} bind:checked={timer.file.value.settings.sound} />
+            {/snippet}
+          </SettingRow>
+          <SettingRow label="Browser notifications" description="Phase ends show even with Pomodoro closed, while WebOS is open in a tab.">
             {#snippet children({ id, describedby })}
               {#if permission === "granted"}
                 <span {id} class="text-ui text-foreground/65">Allowed</span>

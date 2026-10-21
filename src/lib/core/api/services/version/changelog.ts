@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.38.0",
+    date: "2026-10-21",
+    title: "Pomodoro keeps going",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Pomodoro counts a finished focus and starts the next phase by itself even with Pomodoro closed, so an automatic break still tells you when it's over.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Pomodoro's Sound switch is back: phase ends chime only when it's on, and a button lets you hear the chime first.",
+      },
+    ],
+  },
+  {
     version: "3.37.0",
     date: "2026-10-21",
     title: "Settings, easier to find your way",

@@ -63,6 +63,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `restore` | yes | `false` keeps windows out of saved sessions |
 | `shell` | yes | `() => import("./commands")`, the module default-exporting a `ShellContribution`. [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
+| `on_fire` | not yet | `() => import("./on-fire")`, the module default-exporting an `OnFire` `(job, { outcome, due })`, called by the scheduler when one of the app's jobs fires or is missed ([manifest](apps/manifest.md#on_fire-adr-062)). Internal until the scheduler's `Job` is on the stable surface |
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
 | `system` | no | Set by discovery for `src/lib/apps/system/`, never written by an app |
 

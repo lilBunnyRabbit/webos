@@ -39,6 +39,7 @@ export const JobSchema = z
     actions: z.array(z.object({ label: z.string().min(1), command: z.string().min(1) })).max(MAX_ACTIONS).optional(),
     open: z.object({ app: z.string().min(1), props: z.record(z.string(), z.unknown()).optional() }).optional(),
     kind: z.enum([JobKind.ALARM, JobKind.TIMER, JobKind.REMINDER, JobKind.PHASE]),
+    silent: z.boolean().optional(),
   })
   .refine((job) => job.id.startsWith(`${job.app}:`) && job.id.length > job.app.length + 1, "id must be {app}:{key}")
   .refine((job) => !job.repeat || !("epoch" in job.at), "a repeating job needs a wall time, not an epoch");

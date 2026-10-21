@@ -36,6 +36,7 @@ export const SettingsSchema = z.object({
   long_every: z.number().int().min(2).max(12),
   auto_breaks: z.boolean(),
   auto_focus: z.boolean(),
+  sound: z.boolean().default(false),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
@@ -46,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   long_every: 4,
   auto_breaks: false,
   auto_focus: false,
+  sound: false,
 };
 
 // What the UI and the transitions work on. Only the plan (phase, round, time left while paused, length) is stored;
@@ -181,7 +183,7 @@ export interface Settled {
 }
 
 // An auto-started next phase begins at the old end, so a late check doesn't stretch it. If it would already be over
-// too (nobody had Pomodoro loaded through it), it waits idle instead: time nobody was there for is never counted.
+// too (its end was counted that late), it waits idle instead: time nobody was there for is never counted.
 export function settle(run: Run, settings: Settings, now: number): Settled {
   if (run.status !== Status.RUNNING || run.ends_at === null || run.ends_at > now) return { run, completed: null };
 
@@ -252,7 +254,7 @@ export function phase_input(run: Run, settings: Settings, task: string): JobInpu
         { label: focus_done ? "Start break" : "Start focus", command: "pomo start" },
         { label: "Skip", command: "pomo skip" },
       ];
-  return { key: JOB_KEY, kind: JobKind.PHASE, at: { epoch: run.ends_at ?? 0 }, title, message, actions };
+  return { key: JOB_KEY, kind: JobKind.PHASE, at: { epoch: run.ends_at ?? 0 }, title, message, actions, silent: !settings.sound };
 }
 
 export function ended_text(ended: Ended): string {
