@@ -10,7 +10,7 @@ export default define_app({
   version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
-  associations: [".ttf", ".otf", ".woff", ".woff2", "font/ttf", "font/otf", "font/woff", "font/woff2"],
+  associations: [".ttf", ".otf", ".woff", ".woff2", ".ttc", "font/ttf", "font/otf", "font/woff", "font/woff2", "font/collection"],
   props: z.object({ path: z.string().optional() }),
   defaults: {
     constraints: {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { THEME_PRESETS, type AppsService, type InspectorProps, type SettingsService } from "$lib/core/api";
+  import kernel, { font_label, THEME_PRESETS, type AppsService, type InspectorProps, type SettingsService } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
 
   let { service, detailed }: InspectorProps<SettingsService> = $props();
@@ -16,6 +16,7 @@
   <InspectorStat label="Theme" value={preset?.name ?? "Custom"} />
   <InspectorStat label="Taskbar" value={`${service.taskbar.position} · ${service.taskbar.size}${service.taskbar.auto_hide ? " · auto-hide" : ""}${service.taskbar.seconds ? " · seconds" : ""}`} />
   <InspectorStat label="File defaults" value={defaults.length} />
+  <InspectorStat label="Fonts" value={`${font_label(service.appearance.font.sans, "sans")} · ${font_label(service.appearance.font.mono, "mono")}`} />
 </InspectorStats>
 
 {#if detailed}

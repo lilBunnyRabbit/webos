@@ -30,6 +30,7 @@
   import WallpaperSection from "./wallpaper.svelte";
   import GenerateSection from "./generate.svelte";
   import InterfaceSection from "./interface.svelte";
+  import FontsSection from "./fonts.svelte";
   import ThemeImport from "./theme-import.svelte";
   import { serialize_theme_file, THEME_FILE_EXTENSION, theme_file_name } from "../theme-file";
 
@@ -209,6 +210,8 @@
   </details>
 
   <InterfaceSection />
+
+  <FontsSection />
 
   <WallpaperSection />
 </div>

@@ -1,5 +1,6 @@
 import type { FilesService } from "../files/type";
 import { PATHS } from "../files/hierarchy";
+import BURROW from "./samples/Burrow.fontmaker?raw";
 
 export const SAMPLES_FOLDER = "Samples";
 
@@ -15,6 +16,7 @@ These are sample files. Open them, change them, delete them: they're yours.
 - **Bouncing ball.hopsprite** opens in Hopsprite, the pixel art editor. Opening it installs the app.
 - **Fruit.csv** opens as a table you can sort.
 - **Sunset.svg** opens in Media Preview.
+- **Burrow.fontmaker** opens in Font Maker. It's Burrow, WebOS's own font, drawn as strokes: change a letter and use it as the app font.
 
 Right-click any file for Open with, Rename, Compress or Save to disk.
 
@@ -105,6 +107,7 @@ export function sample_files(): SampleFile[] {
     { name: "Bouncing ball.hopsprite", content: bouncing_ball() },
     { name: "Fruit.csv", content: FRUIT },
     { name: "Sunset.svg", content: SUNSET },
+    { name: "Burrow.fontmaker", content: BURROW },
   ];
 }
 

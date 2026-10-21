@@ -73,6 +73,12 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-wasm", expiration: { maxEntries: 16 } },
           },
+          // Built-in app fonts (Burrow): about 0.5 MB, so cached when first chosen instead of in every install.
+          {
+            urlPattern: /\/fonts\/[^/]+\.(ttf|ttc)$/,
+            handler: "CacheFirst",
+            options: { cacheName: "webos-fonts", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
+          },
         ],
       },
       manifest: {

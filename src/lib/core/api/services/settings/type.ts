@@ -16,6 +16,15 @@ export interface SettingsService extends IService {
   live_options: LiveOptions;
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
+  /**
+   * Copies a font file (a path or a device file; `.ttc`, `.ttf`, `.otf`, `.woff`, `.woff2`) to `/etc/fonts/`, replacing
+   * one with the same name, and makes it the font of `role`. Every face of a collection loads with its own weight and style.
+   */
+  use_font(role: FontRole, source: string | File): Promise<void>;
+  /** Deletes a font from `/etc/fonts/`; a role that used it goes back to the default. */
+  remove_font(name: string): Promise<void>;
+  /** Font files in `/etc/fonts/`, by name. */
+  installed_fonts(): Promise<string[]>;
 }
 
 export type FileDefaults = Record<string, AppId>;
@@ -135,4 +144,17 @@ export interface Appearance {
   motion: AppearanceMotion;
   shadow: AppearanceShadow;
   text: AppearanceText;
+  font: AppearanceFont;
 }
+
+/** `sans` is the UI font (`--font-sans`), `mono` the code font (`--font-mono`). */
+export const FontRole = {
+  SANS: "sans",
+  MONO: "mono",
+} as const;
+export type FontRole = (typeof FontRole)[keyof typeof FontRole];
+
+/** Inter or Hack, a font that ships with WebOS (`BUILTIN_FONTS`), or a family file copied into `/etc/fonts`. */
+export type FontChoice = { kind: "default" } | { kind: "builtin"; id: string } | { kind: "file"; name: string };
+
+export type AppearanceFont = Record<FontRole, FontChoice>;

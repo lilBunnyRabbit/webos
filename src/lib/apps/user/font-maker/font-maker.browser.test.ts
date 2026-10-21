@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
-import { build_font, place_glyph } from "./build";
+import { split_collection } from "$lib/core/utils/font-collection";
+import { build_family, build_font, build_variable, place_glyph } from "./build";
 import { CharSet } from "./charsets";
-import { add_stroke, create_project, DEFAULT_METRICS, glyph_of, type Stroke } from "./model";
+import { add_stroke, create_project, DEFAULT_METRICS, glyph_of, set_weights, type Stroke } from "./model";
 import { find_marks } from "./scan";
 import { load_scan, scan_guides } from "./scan-image";
 import { draw_template, PAGE, PNG_DPI, template_layout } from "./template";
@@ -54,3 +55,57 @@ test("a filled-in template scans back into guides for the written boxes", async 
     URL.revokeObjectURL(scan.url);
   }
 });
+
+function family_project() {
+  let project = create_project("Family Hand");
+  project = add_stroke(project, "o", line(100, 0, 100, 480));
+  project = add_stroke(project, "o", line(100, 480, 400, 480));
+  return set_weights(project, [
+    { weight: 300, scale: 0.6 },
+    { weight: 400, scale: 1 },
+    { weight: 700, scale: 1.7 },
+  ]);
+}
+
+async function width_of(family: string, weight: number, style = "normal"): Promise<number> {
+  const context = new OffscreenCanvas(10, 10).getContext("2d")!;
+  context.font = `${style} ${weight} 100px "${family}"`;
+  await document.fonts.load(context.font, "o");
+  return context.measureText("o").width;
+}
+
+test("a collection loads only its first face, so each split face is registered with its weight and style", async () => {
+  const project = family_project();
+  const ttc = build_family(project);
+  const faces: FontFace[] = [new FontFace("fm-direct", ttc)];
+  split_collection(ttc).forEach((bytes, index) => faces.push(new FontFace("fm-split", bytes, { weight: String([300, 400, 700][index % 3]), style: index >= 3 ? "italic" : "normal" })));
+  await Promise.all(faces.map((face) => face.load()));
+  faces.forEach((face) => document.fonts.add(face));
+  try {
+    const light = await width_of("fm-split", 300);
+    expect(await width_of("fm-direct", 700)).toBeCloseTo(light, 1);
+    const regular = await width_of("fm-split", 400);
+    const bold = await width_of("fm-split", 700);
+    expect(regular).toBeGreaterThan(light);
+    expect(bold).toBeGreaterThan(regular);
+    expect(await width_of("fm-split", 400, "italic")).toBeCloseTo(regular, 1);
+  } finally {
+    faces.forEach((face) => document.fonts.delete(face));
+  }
+});
+
+test("the variable font interpolates between weights", async () => {
+  const project = family_project();
+  const face = new FontFace("fm-variable", build_variable(project), { weight: "300 700" });
+  await face.load();
+  document.fonts.add(face);
+  try {
+    const widths = await Promise.all([300, 400, 550, 700].map((weight) => width_of("fm-variable", weight)));
+    expect(widths[0]).toBeLessThan(widths[1]);
+    expect(widths[1]).toBeLessThan(widths[2]);
+    expect(widths[2]).toBeLessThan(widths[3]);
+  } finally {
+    document.fonts.delete(face);
+  }
+});
+

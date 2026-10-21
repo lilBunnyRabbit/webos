@@ -58,7 +58,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 
 | Key | Class | `dependencies` |
 |-----|-------|----------------|
-| `settings` | `SettingsService` | `files` |
+| `settings` | `SettingsService` | `files`, `notifications` |
 | `windows` | `WindowsService` | none |
 | `files` | `FilesService` | none |
 | `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps`, `session` |
@@ -97,13 +97,13 @@ files, notifications, dialogs, apps, session ───────► version
 
 ### Init order
 
-`resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files`, so `files` is pushed before it. With the registrations above, the order is:
+`resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files` and `notifications`, so both are pushed before it. With the registrations above, the order is:
 
 ```
-files → settings → windows → notifications → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → tasks → backup → ai → router → version
+files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → tasks → backup → ai → router → version
 ```
 
-Shutdown runs the reverse: `version → router → ai → backup → tasks → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → notifications → windows → settings → files`.
+Shutdown runs the reverse: `version → router → ai → backup → tasks → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 

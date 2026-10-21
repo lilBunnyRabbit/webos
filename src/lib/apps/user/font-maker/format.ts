@@ -1,22 +1,41 @@
 import { z } from "zod";
 import { CHAR_SETS } from "./charsets";
-import { ASCENT, DESCENT, EM, MAX_NUDGE, MAX_STROKE_WIDTH, MIN_STROKE_WIDTH, type FontProject, type Glyph, type Stroke } from "./model";
+import {
+  ASCENT,
+  DEFAULT_SLANT,
+  DEFAULT_WEIGHTS,
+  DESCENT,
+  EM,
+  MAX_NUDGE,
+  MAX_SCALE,
+  MAX_SLANT,
+  MAX_STROKE_WIDTH,
+  MIN_SCALE,
+  MIN_STROKE_WIDTH,
+  type FontProject,
+  type Glyph,
+  type Stroke,
+} from "./model";
 
-export const VERSION = 1;
+export const VERSION = 2;
 export const EXTENSION = ".fontmaker";
 
 const Coordinate = z.number().finite().min(-2 * EM).max(2 * EM);
 const Point = z.tuple([Coordinate, Coordinate, z.number().min(0).max(1)]);
 const Nudge = z.number().int().min(-MAX_NUDGE).max(MAX_NUDGE);
+const Strokes = z.array(z.array(Point).min(1));
+const Weight = z.number().int().min(100).max(900).multipleOf(100);
 
 const GlyphSchema = z.object({
-  strokes: z.array(z.array(Point).min(1)),
+  strokes: Strokes,
   lsb: Nudge.optional(),
   rsb: Nudge.optional(),
   guide: z
     .string()
     .regex(/^data:image\/(webp|png|jpeg);base64,/)
     .optional(),
+  weights: z.record(z.string().regex(/^[1-9]00$/, "weights are 100 to 900"), Strokes).optional(),
+  italic: Strokes.optional(),
 });
 
 const ProjectSchema = z.object({
@@ -33,6 +52,15 @@ const ProjectSchema = z.object({
     })
     .refine((metrics) => metrics.x <= metrics.cap, { message: "x-height is above the cap height" }),
   stroke: z.object({ width: z.number().int().min(MIN_STROKE_WIDTH).max(MAX_STROKE_WIDTH) }).optional(),
+  weights: z
+    .array(z.object({ weight: Weight, scale: z.number().min(MIN_SCALE).max(MAX_SCALE) }))
+    .min(1)
+    .refine((weights) => new Set(weights.map((item) => item.weight)).size === weights.length, "weights repeat")
+    .optional(),
+  italic: z
+    .object({ slant: z.number().min(0).max(MAX_SLANT) })
+    .nullable()
+    .optional(),
   glyphs: z.record(z.string().refine((key) => [...key].length === 1, "keys are single characters"), GlyphSchema),
 });
 
@@ -52,8 +80,17 @@ export function parse_project(text: string): FontProject {
     const issue = result.error.issues[0];
     throw new Error(`This isn't a valid Font Maker file: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
-  const { name, sets, metrics, stroke, glyphs } = result.data;
-  const project: FontProject = { version: VERSION, name, sets: [...new Set(sets)], metrics: { ...metrics, em: EM }, glyphs: glyphs as Record<string, Glyph> };
+  const { name, sets, metrics, stroke, weights, italic, glyphs } = result.data;
+  const project: FontProject = {
+    version: VERSION,
+    name,
+    sets: [...new Set(sets)],
+    metrics: { ...metrics, em: EM },
+    // Version 1 had one face; it opens with the default family (Regular, Bold and their italics) like a new project.
+    weights: (weights ?? DEFAULT_WEIGHTS).map((item) => ({ ...item })).sort((a, b) => a.weight - b.weight),
+    italic: italic === undefined ? { slant: DEFAULT_SLANT } : italic,
+    glyphs: glyphs as Record<string, Glyph>,
+  };
   if (stroke) project.stroke = { width: stroke.width };
   return project;
 }
@@ -70,7 +107,10 @@ function compact(stroke: Stroke): Stroke {
 export function serialize_project(project: FontProject): string {
   const glyphs: Record<string, Glyph> = {};
   for (const [char, glyph] of Object.entries(project.glyphs)) {
-    glyphs[char] = { ...glyph, strokes: glyph.strokes.map(compact) };
+    const out: Glyph = { ...glyph, strokes: glyph.strokes.map(compact) };
+    if (glyph.weights) out.weights = Object.fromEntries(Object.entries(glyph.weights).map(([weight, strokes]) => [weight, strokes.map(compact)]));
+    if (glyph.italic) out.italic = glyph.italic.map(compact);
+    glyphs[char] = out;
   }
   return JSON.stringify({ ...project, version: VERSION, glyphs });
 }

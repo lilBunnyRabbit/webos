@@ -150,3 +150,13 @@ Decided with the owner ([brainstorm](../brainstorm/2026-10-16_taskbar-polish.md)
 - **Auto-hide is an overlay revealed with CSS.** The bar leaves its grid track and goes `position: fixed`, slid off its edge but for 4px. `:hover`, `:focus-within` and `:has(:popover-open)` reveal it; `transition-delay: 2s` hides it. One `dragenter` handler sets `data-reveal` so drag to pin works, and a window item sets `data-reveal` while a window minimizes into it, so the bar is in place for the fly-in. Windows and maximize get the full screen, and flush mode is off. Rejected: a reserved 4px track with a JS `revealed` state.
 - Revealing when an app requests attention waits on a `request_attention` API that doesn't exist.
 - Ways in: Settings › Taskbar (a Size segmented control, an Auto-hide switch, both shown in the preview) and `taskbar position|size|autohide` in the shell, which print the current value with no argument.
+
+## Revision 2026-10-21 (app fonts)
+
+Decided with the owner ([brainstorm](../brainstorm/2026-10-21_app-font.md)). `Appearance` gains `font: { sans: FontChoice, mono: FontChoice }`, `FontChoice = { kind: "default" } | { kind: "builtin", id } | { kind: "file", name }`, additive in `/etc/settings.json` with a per-role fallback to `default`.
+
+- **Copies in `/etc/fonts/`.** Choosing a font file copies it there (`use_font(role, path | File)`), so moving or deleting the original doesn't break it and backups carry it. A family is one file: a `.ttc` whose faces are split into single-face buffers when loading, because Chromium's `FontFace` only loads a collection's first face. Each face registers with its own weight and style, so CSS bold and italic use real faces.
+- **Built-in Burrow**, made with Font Maker, ships in `public/fonts/` and loads as two variable faces (upright and italic, `wght` 300–700), since the UI uses 500 and 600 as well. They aren't precached; a Workbox runtime rule caches `/fonts/*.ttf|ttc` CacheFirst (`webos-fonts`) on first use, so a built-in works offline once chosen.
+- **Off the boot path.** The loader is a lazy module; Inter and Hack paint first and the chosen family swaps in. `--font-sans` / `--font-mono` read `--app-font-sans` / `--app-font-mono`, falling back to Inter and Hack, so `@theme inline` utilities follow at runtime.
+- **A broken or missing font** falls back to the default with an error notification: SettingsService now depends on `notifications`.
+- Ways in: Settings › Appearance › Fonts (UI font and code font pickers, a font file per role, installed fonts with Remove), Font Viewer and Font Maker "Use as app font". No shell commands.

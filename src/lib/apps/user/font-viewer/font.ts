@@ -1,4 +1,4 @@
-export const FONT_ACCEPT = [".ttf", ".otf", ".woff", ".woff2", "font/ttf", "font/otf", "font/woff", "font/woff2"];
+export const FONT_ACCEPT = [".ttf", ".otf", ".woff", ".woff2", ".ttc", "font/ttf", "font/otf", "font/woff", "font/woff2", "font/collection"];
 
 export const FontFormat = {
   TRUETYPE: "TrueType",

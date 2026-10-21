@@ -16,6 +16,7 @@ Every place the OS stores data in the browser, as of the current code. There's n
 | OPFS | `/var/lib/apps/installed.json` | AppsService (`apps/installed.ts`) | JSON `{ version, installed: [app id] }`, sorted, user apps only, pretty-printed | `1` | zod; missing or invalid → not decided yet, so `init()` works out the list again ([apps](services/apps.md#persistence), ADR-040). Unknown ids dropped on load | Every install and uninstall, through `LatestWriter` |
 | OPFS | `/var/lib/shell/history` | ShellService | Plain text, one command line per line, oldest first | n/a | Empty lines dropped; capped at the last 1000 on read | Every line typed into a session (not shortcut or palette runs), through `LatestWriter`. [Details](services/shell.md#persistence) |
 | OPFS | `/var/lib/wallpaper/` | SettingsService (`set_wallpaper_image`) | The current wallpaper image, copied in as `{base36 time}-{name}` | n/a | Anything but the current image is deleted at boot and after each new image | Choosing an image. [Details](services/settings.md) |
+| OPFS | `/etc/fonts/` | SettingsService (`use_font`, `remove_font`) | Font files chosen as the UI or code font, copied in under their own name (`.ttc .ttf .otf .woff .woff2`) | n/a | Read when a role loads; a missing or unreadable file puts the role back on the default with a notification. Never pruned | "Use as app font" in Settings, Font Viewer or Font Maker; removed in Settings › Fonts. [Details](services/settings.md#fonts) |
 | OPFS | `/var/lib/desktop/additions.json` | DesktopService (`desktop/additions.ts`) | JSON `{ version, applied: [id] }`: default widgets already placed | `1` | zod; invalid → none applied, so the defaults are placed again | After placing default widgets at boot (ADR-034, owner 2026-10-14) |
 | OPFS | `/var/lib/desktop/layout.json` | DesktopService (`desktop/layout.ts`) | JSON `{ version, positions: { [entry name]: { x, y } } }`, pretty-printed | `1` | zod: wrong version or shape → no positions (icons take free cells). Stale names pruned on the next move | Seeding, and every icon move |
 | OPFS | `/var/lib/desktop/home-layout.json` | MobileDesktopService (`desktop/home-layout.ts`), mobile only | JSON `{ version, order: [entry name], dock: [entry name] }` (dock at most 4), pretty-printed | `1` | zod: wrong version or shape → folder order, empty dock. Stale names pruned on the next change | Seeding on mobile, every reorder, dock change and rename. [Details](services/desktop.md#mobile-home) |
@@ -114,7 +115,7 @@ interface StorageHandle {
 
 | Thing | Survives? | Notes |
 |-------|-----------|-------|
-| Theme, saved themes, taskbar position and pins, Open-with defaults, wallpaper, live wallpaper options | Yes | `/etc/settings.json`, the image in `/var/lib/wallpaper/` |
+| Theme, saved themes, taskbar position and pins, Open-with defaults, wallpaper, live wallpaper options, app fonts | Yes | `/etc/settings.json`, the image in `/var/lib/wallpaper/`, the font files in `/etc/fonts/` |
 | App data stored via `storage` | Yes | `app.{id}.*` |
 | Files and folders | Yes | OPFS. Lasts longer if `persist()` was granted. The browser may evict it otherwise. |
 | `/tmp` contents | **No** | Emptied at every boot, `/tmp/device/` included |
@@ -134,7 +135,7 @@ interface StorageHandle {
 
 ## Conventions
 
-The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/var/lib/desktop/{layout,home-layout,additions,pew}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/apps/installed.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
+The rule for persisted service state ([CONVENTIONS → Services](../CONVENTIONS.md#services)) is the file system (ADR-021): config in `/etc/{service}.json`, state in `/var/lib/{service}/`, versioned JSON written through FilesService, with parse and serialize as pure functions beside the service. Always validate on load. Today that's `/etc/settings.json`, `/etc/fonts/` (font files), `/var/lib/desktop/{layout,home-layout,additions,pew}.json`, `/var/lib/session/session.json`, `/var/lib/version/state.json`, `/var/lib/apps/installed.json`, `/var/lib/shell/history` (plain text), `/var/lib/wallpaper/` (the image itself) and `/var/lib/games/plays.json`; app data lives in `/var/lib/apps/{id}/`. Frequently written files go through `LatestWriter`. Only app storage (`app.{id}.*`) stays in localStorage. App data bigger than settings goes in `/var/lib/apps/{app-id}/` through `storage.file()` (ADR-035).
 
 ## Backups
 

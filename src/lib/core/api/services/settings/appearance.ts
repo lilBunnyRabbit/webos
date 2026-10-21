@@ -1,3 +1,4 @@
+import { DEFAULT_APPEARANCE_FONT } from "./fonts";
 import { AppearanceMotion, AppearanceRadius, AppearanceShadow, AppearanceText, type Appearance } from "./type";
 
 export const DEFAULT_APPEARANCE: Appearance = {
@@ -5,6 +6,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   motion: AppearanceMotion.SYSTEM,
   shadow: AppearanceShadow.DEFAULT,
   text: AppearanceText.M,
+  font: DEFAULT_APPEARANCE_FONT,
 };
 
 /** Multiplier on every `@theme` radius except `rounded-full`, written as `--radius-scale` on `<html>`. */

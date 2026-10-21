@@ -7,9 +7,11 @@
     type DialogsService,
     type FilesService,
     type NotificationsService,
+    type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { Button, IconButton, Segmented, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { FontRole } from "$lib/core/api/services/settings/type";
+  import { Button, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
@@ -38,11 +40,12 @@
     Printer as PrinterIcon,
     Scan as ScanIcon,
     SlidersHorizontal as SlidersHorizontalIcon,
+    TextAa as TextAaIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
-  import { build_font, drawn_characters } from "./build";
+  import { build_face, build_family, build_variable, drawn_characters, family_name, variable_blockers } from "./build";
   import { CHAR_SET_LABELS, set_characters, type CharSet } from "./charsets";
   import { FontEditor } from "./editor.svelte";
   import FontMakerCanvas from "./font-maker-canvas.svelte";
@@ -61,14 +64,24 @@
     create_project,
     glyph_of,
     has_guides,
+    is_redrawn,
+    layer_strokes,
     MAX_STROKE_WIDTH,
     MIN_STROKE_WIDTH,
+    project_faces,
+    REGULAR_LAYER,
+    regular_weight,
+    reset_layer,
     reset_spacing,
     set_guides,
     set_stroke_width,
     stroke_width,
+    style_name,
     update_glyph,
+    WEIGHT_NAMES,
+    type Face,
     type FontProject,
+    type Layer,
   } from "./model";
   import { PRESSURE_MODES, PressureMode } from "./pressure";
   import { find_marks, type Quad } from "./scan";
@@ -103,12 +116,31 @@
   let scanning = $state(false);
   let width_draft = $state<number | null>(null);
 
+  let layer_key = $state("");
+
   const project = $derived(editor.project);
   const file_name = $derived(file_path ? base_name(file_path) : project_file_name(project.name));
   const read_only = $derived(file_path !== null && is_system_path(file_path));
   const glyph = $derived(glyph_of(project, editor.char));
   const drawn = $derived(drawn_characters(project).length);
   const width = $derived(width_draft ?? stroke_width(project));
+  const layers = $derived(layer_options(project));
+  const layer = $derived(layers.find((option) => option.value === layer_key) ?? layers.find((option) => option.layer.kind === "regular")!);
+  const layer_scale = $derived(project.weights.find((item) => item.weight === (layer.layer.kind === "weight" ? layer.layer.weight : regular_weight(project)))?.scale ?? 1);
+  const canvas_width = $derived(Math.max(1, Math.round(width * layer_scale)));
+  const canvas_glyph = $derived({ ...glyph, strokes: layer_strokes(glyph, layer.layer) });
+  const redrawn = $derived(is_redrawn(glyph, layer.layer));
+
+  function layer_options(current: FontProject): { value: string; label: string; layer: Layer }[] {
+    const regular = regular_weight(current);
+    const options = current.weights.map((item) => ({
+      value: String(item.weight),
+      label: `${WEIGHT_NAMES[item.weight] ?? item.weight} ${item.weight}`,
+      layer: item.weight === regular ? REGULAR_LAYER : ({ kind: "weight", weight: item.weight } as Layer),
+    }));
+    if (current.italic) options.push({ value: "italic", label: "Italic", layer: { kind: "italic" } });
+    return options;
+  }
   const nudged = $derived(!!glyph.lsb || !!glyph.rsb);
   const code = $derived(`U+${editor.char.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`);
 
@@ -193,21 +225,26 @@
     return file_path && !read_only ? write(file_path) : save_as();
   }
 
-  async function export_font() {
-    if (!drawn) {
-      notifications.notify(app_id, { type: NotificationType.WARNING, title: "Nothing to export yet", message: "Draw at least one character first." });
-      return;
-    }
+  function has_ink(): boolean {
+    if (drawn) return true;
+    notifications.notify(app_id, { type: NotificationType.WARNING, title: "Nothing to export yet", message: "Draw at least one character first." });
+    return false;
+  }
+
+  const safe_name = (name: string) => name.replace(/[\\/:*?"<>|]/g, "-").trim() || "Untitled";
+
+  async function save_font(name: string, extension: ".ttf" | ".ttc", build: () => Uint8Array<ArrayBuffer>) {
+    const type = extension === ".ttc" ? "font/collection" : "font/ttf";
     const path = await win.pick_save({
-      name: `${file_stem(file_name) || project.name}.ttf`,
-      accept: [".ttf", "font/ttf"],
+      name: `${name}${extension}`,
+      accept: [extension, type],
       start_path: file_path && !read_only ? parent_path(file_path) : "/home",
       title: "Export font",
     });
     if (!path) return;
-    const target = with_extension(path, ".ttf");
+    const target = with_extension(path, extension);
     try {
-      await write_file(target, new Blob([build_font(editor.project)], { type: "font/ttf" }));
+      await write_file(target, new Blob([build()], { type }));
       notifications.notify(app_id, {
         title: "Font exported",
         message: `${drawn} ${drawn === 1 ? "character" : "characters"} · ${target}`,
@@ -216,6 +253,72 @@
     } catch (reason) {
       report("Couldn't export the font", reason);
     }
+  }
+
+  function export_variable(italic: boolean) {
+    const snapshot = editor.project;
+    const blocked = variable_blockers(snapshot, italic);
+    if (blocked.length) {
+      notifications.notify(app_id, {
+        type: NotificationType.WARNING,
+        title: "Can't make a variable font",
+        message: `These letters are redrawn with a different number of strokes than the regular ones: ${blocked.join(" ")}. Redraw them with the same strokes, or pick Use regular.`,
+      });
+      return;
+    }
+    const stem = safe_name(file_stem(file_name) || project.name);
+    void save_font(italic ? `${stem}-Italic-VF` : `${stem}-VF`, ".ttf", () => build_variable(snapshot, italic));
+  }
+
+  async function use_as_app_font(role: FontRole) {
+    const snapshot = editor.project;
+    try {
+      const family = family_name(snapshot);
+      const file = new File([build_family(snapshot)], `${safe_name(family)}.ttc`, { type: "font/collection" });
+      await kernel.service<SettingsService>("settings").use_font(role, file);
+      notifications.notify(app_id, { title: role === FontRole.SANS ? `${family} is the UI font` : `${family} is the code font`, message: "Change it back in Settings › Appearance." });
+    } catch (reason) {
+      report("Couldn't use the font", reason);
+    }
+  }
+
+  async function export_menu(event: MouseEvent) {
+    const faces = project_faces(project);
+    const single = project.weights.length < 2;
+    const face_id = (face: Face) => `face:${face.weight}:${face.italic ? "i" : ""}`;
+    const choice = await dialogs.menu(
+      [
+        { id: "family", label: "Font family (.ttc)", icon: ExportIcon },
+        { label: "One face (.ttf)", items: faces.map((face) => ({ id: face_id(face), label: style_name(face.weight, face.italic) })) },
+        {
+          label: "Variable font (.ttf)",
+          items: [
+            { id: "variable:upright", label: "Upright", disabled: single },
+            ...(project.italic ? [{ id: "variable:italic", label: "Italic", disabled: single }] : []),
+          ],
+        },
+        { separator: true },
+        {
+          label: "Use as app font",
+          icon: TextAaIcon,
+          items: [
+            { id: "app:sans", label: "UI font" },
+            { id: "app:mono", label: "Code font" },
+          ],
+        },
+      ],
+      { anchor: anchor_of(event) }
+    );
+    if (!choice || !has_ink()) return;
+    const snapshot = editor.project;
+    const stem = safe_name(file_stem(file_name) || project.name);
+    if (choice === "family") void save_font(stem, ".ttc", () => build_family(snapshot));
+    else if (choice.startsWith("face:")) {
+      const face = faces.find((item) => face_id(item) === choice)!;
+      void save_font(`${stem}-${style_name(face.weight, face.italic).replaceAll(" ", "")}`, ".ttf", () => build_face(snapshot, face));
+    } else if (choice.startsWith("variable:")) export_variable(choice === "variable:italic");
+    else if (choice === "app:sans") void use_as_app_font(FontRole.SANS);
+    else if (choice === "app:mono") void use_as_app_font(FontRole.MONO);
   }
 
   async function print_template(set: CharSet) {
@@ -291,7 +394,7 @@
   }
 
   async function clear_glyph() {
-    editor.apply((value) => clear_strokes(value, editor.char));
+    editor.apply((value) => clear_strokes(value, editor.char, layer.layer));
   }
 
   function nudge(side: "lsb" | "rsb", delta: number) {
@@ -388,7 +491,9 @@
     <div class="flex-1"></div>
     <IconButton label="Scan a filled-in sheet" size="sm" class="shrink-0" disabled={scanning} onclick={scan_menu}><ScanIcon weight="bold" /></IconButton>
     <IconButton label="Font settings" size="sm" class="shrink-0" popovertarget="settings-{popover}" style="anchor-name: --settings-{popover}"><SlidersHorizontalIcon weight="bold" /></IconButton>
-    <Button size="sm" class="shrink-0" onclick={export_font}><ExportIcon weight="bold" /><span class="hidden @md:inline">Export font</span></Button>
+    <Button size="sm" class="shrink-0 gap-1 pr-1.5" aria-label="Export" onclick={export_menu}>
+      <ExportIcon weight="bold" /><span class="hidden @md:inline">Export</span><CaretDownIcon weight="bold" class="size-3 opacity-65" />
+    </Button>
   </Toolbar>
 
   <div class="body grid min-h-0">
@@ -408,8 +513,22 @@
           <IconButton label="Show guide" size="sm" pressed={show_guide.value} onclick={() => (show_guide.value = !show_guide.value)}><EyeIcon weight="bold" /></IconButton>
         {/if}
         <Button size="sm" variant="quiet" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" />Undo</Button>
-        <Button size="sm" variant="quiet" disabled={!glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" />Clear</Button>
+        <Button size="sm" variant="quiet" disabled={!canvas_glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" />Clear</Button>
       </div>
+
+      {#if layers.length > 1}
+        <div class="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-ui">
+          <Select size="sm" class="w-36" aria-label="Face to draw" options={layers.map(({ value, label }) => ({ value, label }))} value={layer.value} onchange={(event) => (layer_key = event.currentTarget.value)} />
+          {#if layer.layer.kind !== "regular"}
+            {#if redrawn}
+              <span class="text-foreground/65">Redrawn for {layer.label}</span>
+              <Button size="sm" variant="quiet" onclick={() => editor.apply((value) => reset_layer(value, editor.char, layer.layer))}><ArrowCounterClockwiseIcon weight="bold" />Use regular</Button>
+            {:else}
+              <span class="min-w-0 flex-1 text-2xs text-foreground/65">Shows the regular strokes; drawing here redraws {editor.char} for {layer.label}.</span>
+            {/if}
+          {/if}
+        </div>
+      {/if}
 
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <label class="flex min-w-40 flex-1 items-center gap-2 text-ui">
@@ -435,13 +554,13 @@
       <div class="canvas-wrap min-h-48 flex-1 overflow-hidden rounded-lg bg-background ring-1 ring-foreground/8">
         <FontMakerCanvas
           char={editor.char}
-          {glyph}
+          glyph={canvas_glyph}
           metrics={project.metrics}
-          {width}
+          width={canvas_width}
           pressure_mode={pressure_mode.value}
           edit_spacing={edit_spacing.value}
           show_guide={show_guide.value}
-          onstroke={(stroke) => editor.apply((value) => add_stroke(value, editor.char, stroke))}
+          onstroke={(stroke) => editor.apply((value) => add_stroke(value, editor.char, stroke, layer.layer))}
           onundo={() => editor.undo()}
           onnudge={(lsb, rsb) => editor.apply((value) => update_glyph(value, editor.char, (item) => ({ ...item, lsb, rsb })))}
         />

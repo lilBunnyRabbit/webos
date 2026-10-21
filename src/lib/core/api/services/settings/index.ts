@@ -4,3 +4,4 @@ export * from "./taskbar";
 export * from "./random-theme";
 export * from "./saved-themes";
 export * from "./appearance";
+export * from "./fonts";

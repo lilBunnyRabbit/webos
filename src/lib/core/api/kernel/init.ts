@@ -63,7 +63,7 @@ export async function register_default_services(kernel: Kernel) {
 
   kernel.register("settings", {
     instance: SettingsService,
-    dependencies: ["files"],
+    dependencies: ["files", "notifications"],
   });
 
   kernel.register<IWindowsService>("windows", {

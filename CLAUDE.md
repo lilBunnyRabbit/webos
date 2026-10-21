@@ -31,7 +31,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 
 | Key | Service | Purpose | Depends on |
 |-----|---------|---------|------------|
-| `settings` | SettingsService | Theme tokens, taskbar position and quick launch pins, file defaults, persisted in `/etc/settings.json` | files |
+| `settings` | SettingsService | Theme tokens, taskbar position and quick launch pins, file defaults, persisted in `/etc/settings.json`; UI and code font (built-in Burrow or a family file in `/etc/fonts`), loaded lazily as `FontFace`s | files, notifications |
 | `windows` | WindowsService | Window lifecycle, geometry, z-order, snap. `MobileWindowsService` on mobile (ADR-016) | none |
 | `files` | FilesService | OPFS: `opfs.ts` → `DirectoryHandler` → service (ADR-005). Unix-lite hierarchy `/home /etc /var /tmp` built in `init()`, per-directory `revision(path)` (ADR-021) | none |
 | `version` | VersionService (`SoloVersionService` in solo, ADR-047) | `version.json` polling (ADR-004), changelog, seen marker in `/var/lib/version/state.json`, first-boot introduction (ADR-026), new-app announcements after the Restore answer (ADR-038). Registered last so the intro stacks above Restore | files, notifications, dialogs, apps, session |

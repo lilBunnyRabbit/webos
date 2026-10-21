@@ -17,7 +17,7 @@ export const merge_theme = EditorView.theme({
   "&.cm-editor.cm-merge-a .cm-changedLineGutter, &.cm-editor .cm-deletedLineGutter": { background: "var(--error)" },
   "&.cm-editor .cm-collapsedLines": {
     padding: "0.25rem 1rem",
-    fontFamily: '"Inter", ui-sans-serif, system-ui, sans-serif',
+    fontFamily: "var(--font-sans)",
     fontSize: "0.75rem",
     color: "color-mix(in oklch, var(--foreground) 65%, transparent)",
     background: "var(--background-light)",

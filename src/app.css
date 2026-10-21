@@ -50,8 +50,9 @@
   --color-info: var(--info);
   --color-mark-ears: oklch(0.949 0.0939 122.47);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Hack", ui-monospace, monospace;
+  /* Settings › Appearance › Font writes --app-font-sans / --app-font-mono on <html>: the chosen family, then Inter or Hack. */
+  --font-sans: var(--app-font-sans, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--app-font-mono, "Hack"), ui-monospace, monospace;
 
   /* Type scale (docs/design/foundations.md). `ui` is the default for controls and dense app UI. */
   --text-2xs: 0.6875rem;

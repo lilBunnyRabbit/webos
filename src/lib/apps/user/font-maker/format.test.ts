@@ -1,7 +1,26 @@
 import { describe, expect, test } from "vitest";
 import { CharSet } from "./charsets";
 import { parse_project, serialize_project } from "./format";
-import { add_stroke, clear_guides, create_project, reset_spacing, set_guides, set_stroke_width, STROKE_WIDTH, stroke_width, update_glyph } from "./model";
+import {
+  add_stroke,
+  clear_guides,
+  clear_strokes,
+  create_project,
+  face_strokes,
+  layer_strokes,
+  regular_weight,
+  reset_layer,
+  reset_spacing,
+  set_guides,
+  set_slant,
+  set_stroke_width,
+  set_weights,
+  STROKE_WIDTH,
+  stroke_width,
+  update_glyph,
+  type Layer,
+  type Stroke,
+} from "./model";
 
 describe("format", () => {
   test("round-trips a project and rounds stroke points", () => {
@@ -18,7 +37,7 @@ describe("format", () => {
 
   test("refuses a newer version, non-JSON and bad shapes", () => {
     expect(() => parse_project("nope")).toThrow(/isn't JSON/);
-    expect(() => parse_project(JSON.stringify({ ...create_project(), version: 2 }))).toThrow(/newer Font Maker/);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), version: 3 }))).toThrow(/newer Font Maker/);
     expect(() => parse_project(JSON.stringify({ ...create_project(), sets: ["klingon"] }))).toThrow(/sets/);
     expect(() => parse_project(JSON.stringify({ ...create_project(), glyphs: { AB: { strokes: [] } } }))).toThrow(/glyphs\.AB/);
     const project = create_project();
@@ -41,6 +60,47 @@ describe("format", () => {
     const reset = reset_spacing(nudged, "A");
     expect(reset.glyphs.A).toEqual({ strokes: [[[0, 0, 0.5]]] });
     expect(reset_spacing(reset, "A")).toBe(reset);
+  });
+
+  test("a version 1 file opens with the default weights and italic", () => {
+    const { weights: _weights, italic: _italic, ...v1 } = { ...create_project("Old"), version: 1 };
+    const parsed = parse_project(JSON.stringify(v1));
+    expect(parsed.version).toBe(2);
+    expect(parsed.weights).toEqual([
+      { weight: 400, scale: 1 },
+      { weight: 700, scale: 1.7 },
+    ]);
+    expect(parsed.italic).toEqual({ slant: 10 });
+  });
+
+  test("weights, italic and per-face redraws round-trip; bad weights are refused", () => {
+    const dot: Stroke = [[1.234, 2, 0.5]];
+    let project = set_slant(set_weights(create_project(), [{ weight: 700, scale: 1.6 }, { weight: 300, scale: 0.6 }, { weight: 400, scale: 1 }]), null);
+    project = add_stroke(project, "a", dot);
+    project = add_stroke(project, "a", dot, { kind: "weight", weight: 700 });
+    project = add_stroke(project, "a", dot, { kind: "italic" });
+    const parsed = parse_project(serialize_project(project));
+    expect(parsed.weights.map((item) => item.weight)).toEqual([300, 400, 700]);
+    expect(parsed.italic).toBeNull();
+    expect(parsed.glyphs.a.weights?.["700"]).toHaveLength(2);
+    expect(parsed.glyphs.a.weights?.["700"][0][0]).toEqual([1.2, 2, 0.5]);
+    expect(parsed.glyphs.a.italic).toHaveLength(2);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), weights: [{ weight: 450, scale: 1 }] }))).toThrow(/weights/);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), weights: [] }))).toThrow(/weights/);
+  });
+
+  test("a redraw starts from the regular strokes, and resetting it falls back to them", () => {
+    const bold: Layer = { kind: "weight", weight: 700 };
+    let project = add_stroke(create_project(), "o", [[0, 0, 0.5]]);
+    project = add_stroke(project, "o", [[5, 5, 0.5]], bold);
+    expect(layer_strokes(project.glyphs.o, bold)).toHaveLength(2);
+    expect(project.glyphs.o.strokes).toHaveLength(1);
+    expect(face_strokes(project.glyphs.o, { weight: 700, italic: false })).toHaveLength(2);
+    expect(face_strokes(project.glyphs.o, { weight: 400, italic: true })).toHaveLength(1);
+    const cleared = clear_strokes(project, "o", bold);
+    expect(cleared.glyphs.o.weights?.["700"]).toEqual([]);
+    expect(reset_layer(cleared, "o", bold).glyphs.o.weights).toBeUndefined();
+    expect(regular_weight(set_weights(create_project(), [{ weight: 300, scale: 0.6 }, { weight: 500, scale: 1.2 }]))).toBe(300);
   });
 
   test("guides are kept and cleared", () => {

@@ -4,7 +4,7 @@ Id `font-maker` · Source: `src/lib/apps/user/font-maker/` · [brainstorm](../br
 
 ## What it does
 
-Turns handwriting into a TrueType font. Each character of the picked sets has a box; draw in it with a pen, finger or mouse, or print a template, fill it in by hand, photograph it and trace over the scanned letter. A sample line previews the font as it grows, and Export writes a `.ttf` that Font Viewer, documents and other apps can use. Idea from LaxDOTexe.
+Turns handwriting into a font family. Each character of the picked sets has a box; draw in it with a pen, finger or mouse, or print a template, fill it in by hand, photograph it and trace over the scanned letter. One drawing gives every weight (Light, Regular, Bold, any of 100–900) and an italic; any letter can be redrawn for one weight or for italic. A sample line previews the face you pick as it grows. Export writes the family as a `.ttc`, one face as a `.ttf`, or a variable font, and "Use as app font" makes it the UI or code font. Burrow, the font WebOS ships, is a Font Maker project in the samples. Idea from LaxDOTexe.
 
 ## How it works
 
@@ -18,13 +18,13 @@ Everything is in font units, y up from the baseline, `units_per_em` 1000. The dr
 
 | Step | What | Where |
 |------|------|-------|
-| Clean | Drop points closer than 3 units, resample at even spacing of 12 % of the width (at least 3 units), then three 1-2-1 smoothing passes over position and radius | `outline.ts:115` |
+| Clean | Drop points closer than 3 units, resample to an even count along the stroke (its length over 12 % of the project width, at least 3 points), then three 1-2-1 smoothing passes over position and radius. Every weight of a glyph gets the count the regular strokes set | `outline.ts:138` |
 | Radius | `width / 2 × (0.25 + 1.5 p)`: 35 units at p = 0.5 and width 70, 9–61 over the pressure range | `outline.ts:27` |
 | Split | RDP the centreline at 6 units; every vertex turning more than 80° cuts the stroke there, so a V becomes two overlapping pieces instead of a self-intersecting offset | `outline.ts:101` |
-| Offset | Each point moves ± its radius along the averaged normal. An offset point that would step backwards against the centreline is dropped, which removes the swallowtails on the inner side of tight curves | `outline.ts:134` |
+| Offset | Each point moves ± its radius along the averaged normal. An offset point that would step backwards against the centreline is pinned to the last good one, which removes the swallowtails on the inner side of tight curves and keeps the point count the same at every weight | `outline.ts:192` |
 | Caps | Half circles of 6 steps at both ends; a stroke shorter than half its radius is a dot (8 points) | `outline.ts:117`, `outline.ts:126` |
-| Simplify | RDP each side at 1.5 units | `outline.ts:149` |
-| Quadratics | Points are rounded to integers and wound clockwise; every point is off-curve, so TrueType's implied midpoints make the outline a quadratic B-spline, except vertices turning more than 70°, which stay on-curve | `outline.ts:186` |
+| Simplify | RDP each side at 1.5 units, per weight; a point any weight keeps is kept in all of them | `outline.ts:222` |
+| Quadratics | Points are rounded to integers and wound clockwise; every point is off-curve, so TrueType's implied midpoints make the outline a quadratic B-spline, except vertices turning more than 70°, which stay on-curve | `outline.ts:265` |
 
 Why resample and smooth three times: mouse and touch points sit on a pixel grid, so a slow stroke is a staircase of 2-unit steps. Offsetting that by a 50-unit radius swings each normal by up to 45° and beads the edges (seen on a slow, thick L). Even spacing tied to the width plus the passes flatten the steps before any offset; the RDP corner split still sees a real corner because it compares long chords. `outline.test.ts` checks that a pixel-staircase line keeps both long sides monotone and within 4 units of parallel.
 
@@ -41,11 +41,11 @@ Why a B-spline over a least-squares quadratic fit: the offset polygon is already
 
 ### Spacing
 
-`build.ts:12`. `advance = ink width + 2 × bearing + lsb + rsb`, with the ink shifted so its left edge sits at `bearing + lsb`. The project bearing (default 60, about 6 % of the em) applies on each side; `lsb` and `rsb` are the per-glyph nudges, ±400. The handles and the − / + buttons appear only with the "Edit spacing" toggle on (app storage, off by default), so drawing near the box edges never grabs a handle; with it off the nudges still apply. With it on, both edges show as dashed handles: dragging one changes that side's nudge, the − / + buttons step it by 10, and "Reset to auto" (shown when a nudge exists) drops both. Space (and U+00A0) is a fixed 260.
+`build.ts:30`. `advance = ink width + 2 × bearing + lsb + rsb`, with the ink shifted so its left edge sits at `bearing + lsb`. The project bearing (default 60, about 6 % of the em) applies on each side; `lsb` and `rsb` are the per-glyph nudges, ±400. The handles and the − / + buttons appear only with the "Edit spacing" toggle on (app storage, off by default), so drawing near the box edges never grabs a handle; with it off the nudges still apply. With it on, both edges show as dashed handles: dragging one changes that side's nudge, the − / + buttons step it by 10, and "Reset to auto" (shown when a nudge exists) drops both. Space (and U+00A0) is a fixed 260.
 
 ### TrueType writer
 
-`ttf.ts`. Hand-written, about 400 lines, ten tables in tag order: `OS/2 cmap glyf head hhea hmtx loca maxp name post`.
+`ttf.ts`. Hand-written, about 500 lines, ten tables in tag order: `OS/2 cmap glyf head hhea hmtx loca maxp name post`, plus `fvar` and `gvar` for a variable font.
 
 | Table | Notes |
 |-------|-------|
@@ -53,14 +53,39 @@ Why a B-spline over a least-squares quadratic fit: the offset polygon is already
 | `loca` | Long offsets (`indexToLocFormat` 1) |
 | `cmap` | One (3, 1) format 4 subtable; runs of consecutive codepoints with consecutive glyph ids share a segment through `idDelta`, `idRangeOffset` is always 0. BMP only, which every preset is |
 | `hmtx` | One metric per glyph; `lsb` = the glyph's `xMin` (head flag bit 1) |
-| `OS/2` | Version 4, weight 400, `USE_TYPO_METRICS`, typo and win metrics from the ascent and descent, Unicode range bits for the blocks the presets touch, code pages 1252 and 1250 |
-| `name` | Windows (3, 1, 0x409) IDs 1–6: family = project name, "Regular", a unique id, full name, "Version 1.000", a PostScript name (ASCII letters, digits and `-`, plus `-Regular`) |
-| `post` | Version 3, no glyph names |
-| `head` | `checkSumAdjustment` = `0xB1B0AFBA` − the whole font's checksum, written last |
+| `OS/2` | Version 4, `usWeightClass` = the face's weight, `fsSelection` ITALIC / BOLD (700 only) / REGULAR (upright and not 700) plus `USE_TYPO_METRICS`, typo and win metrics from the ascent and descent, Unicode range bits for the blocks the presets touch, code pages 1252 and 1250 |
+| `name` | Windows (3, 1, 0x409). Regular, Italic, Bold and Bold Italic: ID 1 = project name, ID 2 = the style. Other weights: ID 1 = "Name Light", ID 2 = Regular or Italic, ID 16 = project name, ID 17 = the style. ID 4 full name, ID 6 PostScript name (ASCII letters, digits and `-`, then `-LightItalic` and so on). A variable font adds 256 "Weight" and one name per instance |
+| `post` | Version 3, no glyph names; `italicAngle` = −slant for italic faces |
+| `head` | `macStyle` bold (700) and italic bits; `checkSumAdjustment` = `0xB1B0AFBA` − the whole font's checksum, written last. `hhea` caret slope 1000 : 1000·tan(slant) for italic |
 
 Glyph 0 is `.notdef` (a box), glyph 1 the space; then every drawn character of the picked sets in set order. Empty boxes are left out, so text falls back to another font for them.
 
-Checked by `build.test.ts` (Font Viewer's `read_font` reads family, style, weight, glyph count and codepoints back; every table checksum and the whole-font checksum hold) and `font-maker.browser.test.ts` (Chromium's `FontFace` loads it, which runs the font through its sanitizer, and `measureText` matches the advance).
+Checked by `build.test.ts` (Font Viewer's `read_font` reads family, style, weight, glyph count and codepoints back; every table checksum and the whole-font checksum hold; style bits per face) and `font-maker.browser.test.ts` (Chromium's `FontFace` loads it, which runs the font through its sanitizer, and `measureText` matches the advance). The collection and variable fonts were also read with fontTools 4.60 (every table decompiles; `instantiateVariableFont` at 300, 400, 550 and 700 gives growing advances and bounds), on 2026-10-21, not in CI.
+
+### Weights and italic
+
+`model.ts`, `build.ts:62`. A project lists its weights (`{ weight, scale }`, 100–900, scale 0.3–3 × the stroke width) and an optional italic slant. The **regular weight** is the listed weight nearest 400: its faces use the plain strokes, the canvas draws it by default, and a variable font's default instance sits there.
+
+- **Redraws.** The editor's face picker switches the canvas between the weights and Italic. In a weight or Italic, the canvas shows what that face uses at its width; the first stroke drawn there copies the strokes it showed into a redraw (`glyph.weights["700"]` or `glyph.italic`) and adds the new one. "Use regular" drops the redraw. Clear in a redraw leaves an empty redraw, so that face has no ink for the letter until something is drawn or the redraw is dropped. A face uses the italic redraw, else its weight's redraw, else the regular strokes; one italic redraw serves every weight.
+- **Italic.** Every italic face is the upright outline sheared by the slant around half the x-height, after spacing (`build.ts:47`), so italic advances equal upright ones and the letters lean about their middle. Italic redraws are drawn upright on the same canvas and slanted the same way.
+- **Outlines line up across weights.** `outline_weights` outlines a glyph at all weights in one go (`glyph_masters` → `stroke_masters`, `outline.ts:287`): the regular strokes decide each stroke's sample count, where it splits at corners, whether it's a dot, its winding and which points stay on-curve. Every weight then has the same contours with the same point counts, so a static face and the variable font's instance at that weight are the same outline. A redraw with the same number of strokes stays compatible; a different count (or an empty redraw) doesn't, and those letters block the variable font.
+
+### Families, collections and variable fonts
+
+- **Family (`.ttc`).** `build_family` (`build.ts:146`) writes one face per weight, upright then italic, and packs them with `write_collection` (`$lib/core/utils/font-collection.ts`): a `ttcf` header, every face's table directory, then each face's tables. Tables aren't shared between faces.
+- **One face (`.ttf`).** `build_face`; the preview uses it for the picked weight and italic toggle.
+- **Variable font.** `build_variable` (`build.ts:164`), upright or italic. `fvar`: one `wght` axis from the lightest to the heaviest weight, default at the regular weight, an instance per listed weight. `gvar` (`ttf.ts:312`): for each glyph, one tuple per non-default weight with an embedded peak at its normalized position and an intermediate region reaching to its neighbours (or 0), so weights in between interpolate between the two nearest masters. Deltas cover every point (shared point numbers "all") plus the four phantom points, where the second carries the advance change. No `HVAR`, `avar` or `STAT`. `variable_blockers` lists letters that block it; Export says which.
+- **Chromium loads only the first face of a collection.** Measured in `font-maker.browser.test.ts`: a `FontFace` from the `.ttc` renders the first (Light) face whatever weight is asked. `split_collection` rebuilds each face as a standalone font, byte for byte what `build_face` writes; Settings registers each with `FontFace(family, bytes, { weight, style })`.
+- **Use as app font.** Export › Use as app font › UI font or Code font builds the family and calls `SettingsService.use_font(role, file)`, which copies `{Name}.ttc` to `/etc/fonts/` and applies it. Applying again after editing replaces the copy.
+
+### Burrow
+
+WebOS's own font: a monoline, rounded-cap family (Light 300, Regular 400, Bold 700, each upright and italic) drawn as a real `.fontmaker` project (`src/lib/core/api/services/version/samples/Burrow.fontmaker`, seeded into `Samples` on first boot) and built by this code into `public/fonts/burrow.ttc`, `burrow-vf.ttf` and `burrow-italic-vf.ttf`. Metrics: cap 700, x-height 520, descender 210, ascender ink 745, bearing 62, stroke width 76 with Light × 0.62 and Bold × 1.58, slant 9°.
+
+- The strokes came from a generator script (kept out of the repo): centrelines of lines, superellipse arcs and cubics. Every letter of Light and Bold is a redraw with the same strokes moved inward by the weight's half-width, so x-height, cap height and baseline stay put as the line gets thicker (scaling the width alone would push Bold ink 21 units past every guide). The redraws keep the stroke counts, so the variable font builds.
+- Character: round caps everywhere, dots 18 % heavier than the stroke (`i`, `j`, punctuation, diaeresis), a tail on `l` and `t`, a double-storey `a` upright and a single-storey `a` as the only italic redraw. Digits are tabular within a unit at Regular (nudges set from each digit's ink width); the `1` has a foot so it fills that width instead of floating in it. Superscripts, ordinals, fractions and `™` are scaled-down letters drawn at pressure 0.3 (a line about 0.7× as wide), so they stay open at Bold instead of filling in.
+- Covers all four sets (283 characters). Accented letters are the base strokes plus mark strokes from the Unicode decomposition (`ı` and `ȷ` under marks on i and j; ď ľ ť Ľ get an apostrophe).
+- **Byte check.** `burrow.browser.test.ts` builds the sample with the date `2026-10-21` and compares it with the three shipped files. Builds are deterministic per JavaScript engine, not across them: Bun (JavaScriptCore) rounds some `Math.sin` / `Math.tan` results differently from V8, which moves a few rounded points. The shipped files are built under V8 (Vitest in Node or Chromium), the same engine the app runs in.
 
 ### Template and scan
 
@@ -83,8 +108,8 @@ Guides show at 40 % behind the canvas and the grid cells through an SVG mask wit
 
 ## Data
 
-- **`.fontmaker`**, UTF-8 JSON, the ADR's shape: `{ version: 1, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, glyphs: { [char]: { strokes, lsb?, rsb?, guide? } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:38`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
-- **`.ttf`**: Export asks where, starting next to the project.
+- **`.fontmaker`**, UTF-8 JSON, format version 2: `{ version: 2, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, weights: { weight, scale }[], italic: { slant } | null, glyphs: { [char]: { strokes, lsb?, rsb?, guide?, weights?: { "700": strokes }, italic?: strokes } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160; weights are 100–900 in hundreds, unique, scale 0.3–3; slant 0–25°. Version 1 files (no `weights`, no `italic`) open with Regular 400 × 1, Bold 700 × 1.7 and a 10° italic, and save as version 2. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:45`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
+- **Export**: Font family (`.ttc`, `font/collection`), One face (`.ttf`, named `{Name}-BoldItalic.ttf` and so on), Variable font (`{Name}-VF.ttf`, `{Name}-Italic-VF.ttf`), each asking where, starting next to the project. Use as app font writes nothing in `/home`: Settings keeps its copy in `/etc/fonts/`.
 - **App storage:** `app.font-maker.sample` (the preview text), `app.font-maker.show-guide`, `app.font-maker.pressure` (`even` | `speed`), `app.font-maker.edit-spacing`.
 - One B guide measured 1.7 KB as a data URL (2026-10-20, Chromium, the template PNG warped and re-photographed in a test page); a full sheet of guides is unmeasured.
 
@@ -94,7 +119,10 @@ None. zod is already approved (ADR-008).
 
 ## Limits
 
-- One stroke width per font, not per stroke; kerning, OTF/CFF and auto-trace are out (ADR-055).
+- One stroke width per face, not per stroke; kerning, OTF/CFF, hinting, `HVAR`/`STAT` and auto-trace are out (ADR-055).
+- One italic redraw serves every weight, at that weight's width; a letter can't have a different italic per weight.
+- A redraw with a different number of strokes blocks the variable font for that style; static faces always build.
+- CSS asking for a weight the family doesn't have (500 between 400 and 700) gets the nearest face, not an interpolation, unless the variable font is used.
 - Characters outside the four presets can't be added, and only BMP codepoints fit the format 4 `cmap`.
 - No hinting: small sizes rely on the rasteriser.
 - Corner finding was checked on synthetic photos (tilted, rotated 180°, rotated 4.6° on a grey table) only; real phone photos with shadows and glare are untested. Detection fails over to manual corners.
@@ -106,3 +134,4 @@ None. zod is already approved (ADR-008).
 - [Brainstorm 2026-10-20](../brainstorm/2026-10-20_font-maker.md): hand-written writer, draw plus scan, guides not auto-trace, presets, open-only shell.
 - [ADR-055](../adrs/055-font-maker.md): file format, writer, stroke expansion, scan guides, and its implementation revision.
 - [Brainstorm 2026-10-21](../brainstorm/2026-10-21_font-maker-pen.md): line width in the file, speed pressure, Edit spacing, Undo, filmstrip, ghost, bead fix.
+- [Brainstorm 2026-10-21, app font](../brainstorm/2026-10-21_app-font.md): Use as app font, families (weights, italic, `.ttc`, variable), Burrow; ADR-055 revision of the same day.

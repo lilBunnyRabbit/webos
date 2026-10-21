@@ -1,19 +1,40 @@
+import { style_name, WEIGHT_NAMES } from "./model";
 import { contour_bounds, type Bounds, type Contour } from "./outline";
+
+export interface TtfMaster {
+  contours: Contour[];
+  advance: number;
+}
 
 export interface TtfGlyph {
   codepoints: number[];
   contours: Contour[];
   advance: number;
+  /** One per `variation.masters` entry, point for point the same as `contours`. */
+  masters?: TtfMaster[];
+}
+
+export interface TtfVariation {
+  min: number;
+  max: number;
+  /** Weights of the glyphs' `masters`, in order; the font's own weight is the default. */
+  masters: number[];
+  instances: number[];
 }
 
 export interface TtfFont {
   family: string;
+  weight: number;
+  italic: boolean;
+  /** Degrees, for the caret and `post.italicAngle`. */
+  slant: number;
   units_per_em: number;
   ascent: number;
   descent: number;
   cap_height: number;
   x_height: number;
   glyphs: TtfGlyph[];
+  variation?: TtfVariation;
   created?: Date;
 }
 
@@ -159,20 +180,33 @@ function utf16(text: string): Uint8Array {
   return writer.done();
 }
 
-export function postscript_name(family: string): string {
-  const ascii = family.normalize("NFKD").replace(/[^A-Za-z0-9-]/g, "").slice(0, 50);
-  return `${ascii || "FontMaker"}-Regular`;
+/** Regular, Italic, Bold and Bold Italic share the family name; other weights get it as the typographic family (IDs 16, 17). */
+function is_ribbi(weight: number): boolean {
+  return weight === 400 || weight === 700;
 }
 
-function name_table(family: string): Uint8Array {
+export function postscript_name(family: string, style = "Regular"): string {
+  const ascii = family.normalize("NFKD").replace(/[^A-Za-z0-9-]/g, "").slice(0, 50);
+  return `${ascii || "FontMaker"}-${style.replaceAll(" ", "")}`;
+}
+
+function name_table(font: TtfFont): Uint8Array {
+  const style = style_name(font.weight, font.italic);
+  const ps = postscript_name(font.family, style);
+  const ribbi = is_ribbi(font.weight);
   const entries: [number, string][] = [
-    [1, family],
-    [2, "Regular"],
-    [3, `${postscript_name(family)};Font Maker`],
-    [4, family],
+    [1, ribbi ? font.family : `${font.family} ${WEIGHT_NAMES[font.weight] ?? font.weight}`],
+    [2, ribbi ? style : font.italic ? "Italic" : "Regular"],
+    [3, `${ps};Font Maker`],
+    [4, style === "Regular" ? font.family : `${font.family} ${style}`],
     [5, "Version 1.000"],
-    [6, postscript_name(family)],
+    [6, ps],
   ];
+  if (!ribbi) entries.push([16, font.family], [17, style]);
+  if (font.variation) {
+    entries.push([256, "Weight"]);
+    font.variation.instances.forEach((weight, index) => entries.push([257 + index, style_name(weight, font.italic)]));
+  }
   const encoded = entries.map(([id, text]) => [id, utf16(text)] as const);
   const writer = new ByteWriter().u16(0).u16(encoded.length).u16(6 + encoded.length * 12);
   let offset = 0;
@@ -232,11 +266,102 @@ function unicode_ranges(codes: readonly number[]): [number, number, number, numb
   return ranges;
 }
 
-const TAG_ORDER = ["OS/2", "cmap", "glyf", "head", "hhea", "hmtx", "loca", "maxp", "name", "post"];
+const fixed = (value: number) => Math.round(value * 65536) >>> 0;
+const f2dot14 = (value: number) => Math.round(value * 16384);
+
+/** Where a weight sits on the normalized axis: −1 at the lightest, 0 at the default, 1 at the heaviest. */
+export function normalize_weight(weight: number, base: number, min: number, max: number): number {
+  if (weight < base) return min === base ? 0 : (weight - base) / (base - min);
+  if (weight > base) return max === base ? 0 : (weight - base) / (max - base);
+  return 0;
+}
+
+function fvar_table(base: number, variation: TtfVariation): Uint8Array {
+  const writer = new ByteWriter().u16(1).u16(0).u16(16).u16(2).u16(1).u16(20).u16(variation.instances.length).u16(8);
+  writer.tag("wght").u32(fixed(variation.min)).u32(fixed(base)).u32(fixed(variation.max)).u16(0).u16(256);
+  variation.instances.forEach((weight, index) => writer.u16(257 + index).u16(0).u32(fixed(weight)));
+  return writer.done();
+}
+
+function pack_deltas(writer: ByteWriter, deltas: readonly number[]) {
+  let index = 0;
+  while (index < deltas.length) {
+    const kind = deltas[index] === 0 ? 0 : Math.abs(deltas[index]) <= 127 ? 1 : 2;
+    let end = index + 1;
+    while (end < deltas.length && end - index < 64) {
+      const value = deltas[end];
+      const next = value === 0 ? 0 : Math.abs(value) <= 127 ? 1 : 2;
+      if (next > kind) break;
+      end++;
+    }
+    const run = end - index;
+    if (kind === 0) writer.u8(0x80 | (run - 1));
+    else if (kind === 1) {
+      writer.u8(run - 1);
+      for (let at = index; at < end; at++) writer.i8(deltas[at]);
+    } else {
+      writer.u8(0x40 | (run - 1));
+      for (let at = index; at < end; at++) writer.i16(deltas[at]);
+    }
+    index = end;
+  }
+}
+
+// One tuple per master with an intermediate region running to its neighbours, so weights in between interpolate
+// piecewise between the two nearest masters instead of all at once.
+function gvar_table(font: TtfFont, variation: TtfVariation): Uint8Array {
+  const peaks = variation.masters.map((weight) => normalize_weight(weight, font.weight, variation.min, variation.max));
+  const regions = peaks.map((peak) => {
+    const same_side = peaks.filter((other) => Math.sign(other) === Math.sign(peak));
+    const inner = same_side.filter((other) => Math.abs(other) < Math.abs(peak));
+    const outer = same_side.filter((other) => Math.abs(other) > Math.abs(peak));
+    const near = inner.length ? inner.reduce((a, b) => (Math.abs(a) > Math.abs(b) ? a : b)) : 0;
+    const far = outer.length ? outer.reduce((a, b) => (Math.abs(a) < Math.abs(b) ? a : b)) : peak;
+    return peak > 0 ? { start: near, peak, end: far } : { start: far, peak, end: near };
+  });
+
+  const data: Uint8Array[] = font.glyphs.map((glyph) => {
+    const masters = glyph.masters;
+    const base = glyph.contours.flat();
+    if (!masters || !base.length) return new Uint8Array(0);
+    const header_size = 4 + 2 * 3;
+    const headers = new ByteWriter();
+    const body = new ByteWriter().u8(0);
+    masters.forEach((master, index) => {
+      const points = master.contours.flat();
+      const xs = [...points.map((point, at) => point.x - base[at].x), 0, Math.round(master.advance) - Math.round(glyph.advance), 0, 0];
+      const ys = [...points.map((point, at) => point.y - base[at].y), 0, 0, 0, 0];
+      const deltas = new ByteWriter();
+      pack_deltas(deltas, xs);
+      pack_deltas(deltas, ys);
+      const region = regions[index];
+      headers.u16(deltas.length).u16(0x8000 | 0x4000).i16(f2dot14(region.peak)).i16(f2dot14(region.start)).i16(f2dot14(region.end));
+      body.bytes(deltas.done());
+    });
+    const writer = new ByteWriter().u16(0x8000 | masters.length).u16(4 + header_size * masters.length);
+    return writer.bytes(headers.done()).bytes(body.done()).pad(2).done();
+  });
+
+  const offsets_size = (font.glyphs.length + 1) * 4;
+  const array_offset = 20 + offsets_size;
+  const writer = new ByteWriter().u16(1).u16(0).u16(1).u16(0).u32(array_offset).u16(font.glyphs.length).u16(1).u32(array_offset);
+  let offset = 0;
+  for (const entry of data) {
+    writer.u32(offset);
+    offset += entry.length;
+  }
+  writer.u32(offset);
+  for (const entry of data) writer.bytes(entry);
+  return writer.done();
+}
 
 export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
   const encoded = font.glyphs.map((glyph) => encode_glyph(glyph.contours));
   const created = font.created ?? new Date();
+  const caret_rise = font.italic ? 1000 : 1;
+  const caret_run = font.italic ? Math.round(1000 * Math.tan((font.slant * Math.PI) / 180)) : 0;
+  const bold_bit = font.weight === 700 ? 0x20 : 0;
+  const fs_selection = (font.italic ? 0x01 : 0) | bold_bit | (!font.italic && !bold_bit ? 0x40 : 0) | 0x80;
 
   const glyf = new ByteWriter();
   const loca = new ByteWriter();
@@ -294,7 +419,7 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
     .i16(total.y_min)
     .i16(total.x_max)
     .i16(total.y_max)
-    .u16(0)
+    .u16((font.weight === 700 ? 1 : 0) | (font.italic ? 2 : 0))
     .u16(8)
     .i16(2)
     .i16(1)
@@ -309,8 +434,8 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
     .i16(min_lsb)
     .i16(min_rsb)
     .i16(max_extent)
-    .i16(1)
-    .i16(0)
+    .i16(caret_rise)
+    .i16(caret_run)
     .i16(0)
     .i16(0)
     .i16(0)
@@ -336,7 +461,7 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
   const os2 = new ByteWriter()
     .u16(4)
     .i16(advance_count ? Math.round(advance_sum / advance_count) : 0)
-    .u16(400)
+    .u16(font.weight)
     .u16(5)
     .u16(0)
     .i16(650)
@@ -354,7 +479,7 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
   for (const range of ranges) os2.u32(range);
   os2
     .tag("NONE")
-    .u16(0x00c0)
+    .u16(fs_selection)
     .u16(codes.length ? Math.min(codes[0], 0xffff) : 0)
     .u16(codes.length ? Math.min(codes[codes.length - 1], 0xffff) : 0)
     .i16(font.ascent)
@@ -370,7 +495,8 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
     .u16(32)
     .u16(1);
 
-  const post = new ByteWriter().u32(0x00030000).u32(0).i16(-100).i16(50).u32(0).u32(0).u32(0).u32(0).u32(0);
+  const italic_angle = font.italic ? Math.round(-font.slant * 65536) : 0;
+  const post = new ByteWriter().u32(0x00030000).u32(italic_angle).i16(-100).i16(50).u32(0).u32(0).u32(0).u32(0).u32(0);
 
   const tables: Record<string, Uint8Array> = {
     "OS/2": os2.done(),
@@ -381,9 +507,14 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
     hmtx: hmtx.done(),
     loca: loca.done(),
     maxp: maxp.done(),
-    name: name_table(font.family),
+    name: name_table(font),
     post: post.done(),
   };
+  if (font.variation) {
+    tables.fvar = fvar_table(font.weight, font.variation);
+    tables.gvar = gvar_table(font, font.variation);
+  }
+  const TAG_ORDER = Object.keys(tables).sort();
 
   const count = TAG_ORDER.length;
   const search_range = 16 * 2 ** Math.floor(Math.log2(count));

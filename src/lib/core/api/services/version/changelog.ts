@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.27.0",
+    date: "2026-10-21",
+    title: "Burrow",
+    changes: [
+      {
+        kind: NEW,
+        text: "Pick the font WebOS uses for text and for code in Settings › Appearance, including Burrow, a rounded font made for WebOS in Font Maker, or any font file you have.",
+      },
+      {
+        kind: NEW,
+        text: "Font Maker makes whole families: light, bold and italic from one drawing, letters redrawn per weight, and exports as a font family, single faces or a variable font, or straight into WebOS as its font.",
+      },
+    ],
+  },
+  {
     version: "3.26.1",
     date: "2026-10-21",
     title: "Lighter updates",

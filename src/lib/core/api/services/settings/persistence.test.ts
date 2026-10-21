@@ -5,7 +5,7 @@ import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turre
 
 describe("parse_appearance", () => {
   test("keeps valid values", () => {
-    expect(parse_appearance({ radius: "sharp", motion: "off", shadow: "strong", text: "l" })).toEqual({ radius: "sharp", motion: "off", shadow: "strong", text: "l" });
+    expect(parse_appearance({ radius: "sharp", motion: "off", shadow: "strong", text: "l" })).toEqual({ ...DEFAULT_APPEARANCE, radius: "sharp", motion: "off", shadow: "strong", text: "l" });
   });
 
   test("an unknown value falls back on its own field only", () => {
@@ -17,6 +17,15 @@ describe("parse_appearance", () => {
   test("nothing or garbage is the default", () => {
     expect(parse_appearance(undefined)).toEqual(DEFAULT_APPEARANCE);
     expect(parse_appearance("round")).toEqual(DEFAULT_APPEARANCE);
+  });
+
+  test("keeps a font choice per role, and a broken one falls back on its own", () => {
+    const font = { sans: { kind: "builtin", id: "burrow" }, mono: { kind: "file", name: "Hand.ttc" } };
+    expect(parse_appearance({ font }).font).toEqual(font);
+    expect(parse_appearance({ font: { ...font, mono: { kind: "file", name: "../etc/settings.json" } } }).font).toEqual({ sans: font.sans, mono: { kind: "default" } });
+    expect(parse_appearance({ font: { sans: { kind: "builtin", id: "gone" }, mono: font.mono } }).font).toEqual({ sans: { kind: "default" }, mono: font.mono });
+    expect(parse_appearance({ font: { sans: { kind: "file", name: "notes.txt" } } }).font).toEqual({ sans: { kind: "default" }, mono: { kind: "default" } });
+    expect(parse_appearance({ radius: "round", font: "Burrow" })).toEqual({ ...DEFAULT_APPEARANCE, radius: "round" });
   });
 
   test("settings saved before appearance existed load with the default", () => {

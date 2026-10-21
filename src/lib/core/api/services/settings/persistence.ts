@@ -20,6 +20,7 @@ import {
 import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
 import { PATHS } from "../files/hierarchy";
 import { DEFAULT_APPEARANCE } from "./appearance";
+import { BUILTIN_FONTS, DEFAULT_FONT, is_font_file_name } from "./fonts";
 import { LIVE_WALLPAPERS, live_options_of } from "$lib/core/components/desktop/live/registry";
 
 /** OS config lives in system storage (ADR-021). */
@@ -156,11 +157,22 @@ export function parse_live_options(saved: unknown): LiveOptions {
   return options;
 }
 
+const font_choice_schema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("default") }),
+    z.object({ kind: z.literal("builtin"), id: z.string().refine((id) => Object.hasOwn(BUILTIN_FONTS, id)) }),
+    z.object({ kind: z.literal("file"), name: z.string().refine(is_font_file_name) }),
+  ])
+  .catch(DEFAULT_FONT);
+
 const appearance_schema = z.object({
   radius: z.enum(Object.values(AppearanceRadius)).catch(DEFAULT_APPEARANCE.radius),
   motion: z.enum(Object.values(AppearanceMotion)).catch(DEFAULT_APPEARANCE.motion),
   shadow: z.enum(Object.values(AppearanceShadow)).catch(DEFAULT_APPEARANCE.shadow),
   text: z.enum(Object.values(AppearanceText)).catch(DEFAULT_APPEARANCE.text),
+  font: z
+    .object({ sans: font_choice_schema, mono: font_choice_schema })
+    .catch(DEFAULT_APPEARANCE.font),
 });
 
 // Additive like the wallpaper; each field falls back on its own, so one bad value doesn't reset the others.
