@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { cn } from "$lib/core/utils";
+  import { TARGETED_ROW } from "./setting-anchor";
 
   /**
    * Label and description on the left, the control on the right; stacks in narrow windows (container query). The
@@ -9,11 +10,14 @@
   let {
     label,
     description,
+    setting,
     class: class_name,
     children,
   }: {
     label: string;
     description?: string;
+    /** An id search and deep links land on (`reveal_setting`). */
+    setting?: string;
     class?: string;
     children: Snippet<[{ id: string; describedby: string | undefined }]>;
   } = $props();
@@ -23,7 +27,7 @@
   const describedby = $derived(description ? `${uid}-description` : undefined);
 </script>
 
-<div class={cn("@container", class_name)}>
+<div data-setting={setting} class={cn("@container rounded-xl transition-[background-color,box-shadow] duration-500", TARGETED_ROW, class_name)}>
   <div class="flex flex-col gap-2 px-4 py-3 @md:flex-row @md:items-center @md:justify-between @md:gap-6">
     <div class="min-w-0">
       <label for={id} class="block text-ui font-medium">{label}</label>

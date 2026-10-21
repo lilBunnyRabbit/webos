@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { cn } from "$lib/core/utils";
+  import { TARGETED_SECTION } from "./setting-anchor";
 
   /** A titled group on an app's surface: heading, optional description, then content in a raised card. */
   let {
@@ -8,6 +9,7 @@
     description,
     actions,
     flush = false,
+    setting,
     class: class_name,
     children,
   }: {
@@ -16,12 +18,14 @@
     actions?: Snippet;
     /** Content without the card around it. */
     flush?: boolean;
+    /** An id search and deep links land on (`reveal_setting`). */
+    setting?: string;
     class?: string;
     children: Snippet;
   } = $props();
 </script>
 
-<section class={cn("flex flex-col gap-2.5", class_name)}>
+<section data-setting={setting} class={cn("flex flex-col gap-2.5 rounded-xl transition-[outline-color] duration-500", TARGETED_SECTION, class_name)}>
   {#if title || actions}
     <header class="flex items-end justify-between gap-4 px-0.5">
       <div class="min-w-0">
