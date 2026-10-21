@@ -66,6 +66,7 @@
   const EDGE_PX = 32;
   const TICK_PX = 72;
   const LONG_PRESS_MS = 400;
+  const FOCUS_MARGIN = 56;
 
   const Marker = { START: "start", END: "end", FROM: "from", TO: "to" } as const;
   type Marker = (typeof Marker)[keyof typeof Marker];
@@ -83,7 +84,7 @@
   let height = $state(0);
   let zoom = $state(1);
   let scroll = $state(0);
-  let active = $state<Marker | null>(null);
+  let chosen = $state<Marker>(Marker.START);
 
   const limit = $derived(max_zoom(duration, width, pcm.sample_rate));
   const view = $derived<Viewport>({ zoom, scroll, width, duration });
@@ -91,7 +92,8 @@
   const step = $derived(tick_step(px_per_second(view), TICK_PX));
   const marks = $derived(ticks(visible, step));
   const zoomed = $derived(zoom > 1);
-  const active_value = $derived(active ? value_of(active) : null);
+  // The nudges always have a marker, so the toolbar never changes shape under a finger: the last one grabbed, else the trim start.
+  const active = $derived(value_of(chosen) === null ? Marker.START : chosen);
 
   $effect(() => {
     void Object.values(settings.theme);
@@ -172,7 +174,8 @@
   function nudge(marker: Marker, direction: number, big = false) {
     const value = value_of(marker);
     if (value === null) return;
-    place(marker, value + nudge_step(visible.end - visible.start) * (big ? 10 : 1) * direction);
+    const next = value + nudge_step(visible.end - visible.start) * (big ? 10 : 1) * direction;
+    place(marker, Math.round(next * pcm.sample_rate) / pcm.sample_rate);
     reveal(value_of(marker) ?? value);
   }
 
@@ -256,6 +259,7 @@
         if (press?.pointer_id !== pointer_id) return;
         press = null;
         start_drag(element, pointer_id, x, "select", true);
+        chosen = Marker.TO;
         const anchor = drag!.anchor;
         selection = { start: anchor, end: Math.min(end, anchor + 2 / (px_per_second(view) || 1)) };
       }, LONG_PRESS_MS);
@@ -264,14 +268,15 @@
     }
     event.preventDefault();
     start_drag(element, event.pointerId, event.clientX, "select", false);
-    element.focus();
+    // Esc clears from the keyboard; focusing after a touch would only draw the focus ring.
+    if (event.pointerType === "mouse") element.focus();
   }
 
   function marker_down(event: PointerEvent, marker: Marker) {
     if (drag || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.stopPropagation();
     event.preventDefault();
-    active = marker;
+    chosen = marker;
     const element = event.currentTarget as HTMLElement;
     element.focus();
     start_drag(element, event.pointerId, event.clientX, marker, false);
@@ -296,6 +301,7 @@
     if (!drag.moved) return;
     const other = clamp(time_at(drag.client_x), start, end);
     selection = { start: Math.min(drag.anchor, other), end: Math.max(drag.anchor, other) };
+    chosen = other < drag.anchor ? Marker.FROM : Marker.TO;
   }
 
   function edge_scroll() {
@@ -355,39 +361,38 @@
 </script>
 
 <div class={cn("waveform grid gap-1.5", class_name)} role="group" aria-label={label}>
-  <div class="flex flex-wrap items-center justify-end gap-1">
-    {#if active && active_value !== null}
-      {@const marker = active}
-      <div class="mr-auto flex items-center gap-0.5">
-        <IconButton label="Move {NAMES[marker].toLowerCase()} earlier" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(marker, -1)}>
-          <LeftIcon weight="bold" />
-        </IconButton>
-        <span class="min-w-22 text-center font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums" aria-live="polite"
-          >{SHORT[marker]} {exact(active_value)}</span
-        >
-        <IconButton label="Move {NAMES[marker].toLowerCase()} later" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(marker, 1)}>
-          <RightIcon weight="bold" />
-        </IconButton>
-      </div>
-    {/if}
-    <IconButton label="Zoom out" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => zoom_by(1 / ZOOM_STEP)}>
-      <ZoomOutIcon weight="bold" />
-    </IconButton>
-    <IconButton label="Zoom in" size="sm" class="pointer-coarse:size-11" disabled={zoom >= limit} onclick={() => zoom_by(ZOOM_STEP)}>
-      <ZoomInIcon weight="bold" />
-    </IconButton>
-    <IconButton
-      label="Zoom to selection"
-      size="sm"
-      class="pointer-coarse:size-11"
-      disabled={!selection}
-      onclick={() => selection && apply(zoom_to(selection, width, duration, limit))}
-    >
-      <ZoomSelectionIcon weight="bold" />
-    </IconButton>
-    <IconButton label="Fit the whole sound" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => apply({ zoom: 1, scroll: 0 })}>
-      <FitIcon weight="bold" />
-    </IconButton>
+  <div class="flex flex-wrap items-center gap-1">
+    <div class="mr-auto flex items-center gap-0.5">
+      <IconButton label="Move {NAMES[active].toLowerCase()} earlier" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, -1)}>
+        <LeftIcon weight="bold" />
+      </IconButton>
+      <span class="min-w-22 text-center font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums" aria-live="polite"
+        >{SHORT[active]} {exact(value_of(active) ?? 0)}</span
+      >
+      <IconButton label="Move {NAMES[active].toLowerCase()} later" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, 1)}>
+        <RightIcon weight="bold" />
+      </IconButton>
+    </div>
+    <div class="ml-auto flex items-center gap-1">
+      <IconButton label="Zoom out" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => zoom_by(1 / ZOOM_STEP)}>
+        <ZoomOutIcon weight="bold" />
+      </IconButton>
+      <IconButton label="Zoom in" size="sm" class="pointer-coarse:size-11" disabled={zoom >= limit} onclick={() => zoom_by(ZOOM_STEP)}>
+        <ZoomInIcon weight="bold" />
+      </IconButton>
+      <IconButton
+        label="Zoom to selection"
+        size="sm"
+        class="pointer-coarse:size-11"
+        disabled={!selection}
+        onclick={() => selection && apply(zoom_to(selection, width, duration, limit, Math.min(FOCUS_MARGIN, width * 0.15)))}
+      >
+        <ZoomSelectionIcon weight="bold" />
+      </IconButton>
+      <IconButton label="Fit the whole sound" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => apply({ zoom: 1, scroll: 0 })}>
+        <FitIcon weight="bold" />
+      </IconButton>
+    </div>
   </div>
 
   <div
@@ -397,15 +402,14 @@
     onscroll={() => (scroll = scroller?.scrollLeft ?? 0)}
     {@attach gestures}
   >
-    <div bind:this={content} class="relative" style:width="{zoom * 100}%">
+    <div bind:this={content} class="relative" style:width="{zoom * 100}%" style:--content="{width * zoom}px">
       {#snippet tab(marker: Marker, value: number)}
         <div
-          class="tab absolute inset-y-0 grid cursor-ew-resize place-items-center focus-visible:outline-none"
+          class="tab absolute inset-y-0 cursor-ew-resize focus-visible:outline-none"
           data-marker={marker}
+          data-active={marker === active ? "" : undefined}
           data-side={marker === Marker.START || marker === Marker.FROM ? "before" : "after"}
-          style:left={marker === Marker.START || marker === Marker.FROM
-            ? `clamp(var(--hit), ${percent(value)}, 100%)`
-            : `clamp(0px, ${percent(value)}, calc(100% - var(--hit)))`}
+          style:--at="{duration ? (value / duration) * width * zoom : 0}px"
           role="slider"
           tabindex="0"
           aria-label={NAMES[marker]}
@@ -416,7 +420,7 @@
           onpointerdown={(event) => marker_down(event, marker)}
           onpointermove={move}
           onlostpointercapture={finish}
-          onfocus={() => (active = marker)}
+          onfocus={() => (chosen = marker)}
           onkeydown={(event) => marker_key(event, marker)}
         >
           <span class="grip"></span>
@@ -433,7 +437,7 @@
         {#each marks as mark (mark)}
           <span class="pointer-events-none absolute bottom-0 h-1.5 w-px bg-foreground/30" style:left={percent(mark)}></span>
           <span
-            class="pointer-events-none absolute top-1 pl-1 font-mono text-2xs leading-none whitespace-nowrap text-foreground/80 tabular-nums"
+            class="pointer-events-none absolute top-0.5 pl-1 font-mono text-2xs leading-none whitespace-nowrap text-foreground/80 tabular-nums"
             style:left={percent(mark)}
             aria-hidden="true">{tick_label(mark, step, duration >= 60)}</span
           >
@@ -525,27 +529,47 @@
     background: var(--cottontail);
   }
 
+  /* Tabs sit outside their line like brackets (start and From to the left, End and To to the right), so they never cover each other.
+     At either end of the sound the hit area and the grip slide inside the content instead of leaving their line. */
   .tab {
     --hit: 28px;
+    --grip: 12px;
+    left: var(--left);
     width: var(--hit);
     touch-action: none;
   }
 
-  /* Each tab sits outside its line, like a bracket, so the start and end tabs never cover each other. */
   .tab[data-side="before"] {
-    translate: -100% 0;
-    justify-items: end;
+    --left: clamp(0px, var(--at) - var(--hit), var(--content) - var(--hit));
+    --grip-left: clamp(0px, var(--at) - var(--grip), var(--content) - var(--grip));
   }
 
   .tab[data-side="after"] {
-    justify-items: start;
+    --left: clamp(0px, var(--at), var(--content) - var(--hit));
+    --grip-left: clamp(0px, var(--at), var(--content) - var(--grip));
   }
 
   .tab .grip {
-    width: 12px;
+    position: absolute;
+    left: calc(var(--grip-left) - var(--left));
+    width: var(--grip);
     height: 18px;
     background: var(--primary);
     box-shadow: 0 0 0 1px var(--background-darkest);
+  }
+
+  /* Each grip hangs off the wave's edge: the trim tabs from below it, the selection tabs from above it, clear of the ruler's labels. */
+  .tab[data-marker="start"] .grip,
+  .tab[data-marker="end"] .grip {
+    top: 0;
+  }
+
+  .tab[data-marker="from"] .grip,
+  .tab[data-marker="to"] .grip {
+    bottom: 0;
+    height: 14px;
+    background: color-mix(in oklch, var(--primary) 22%, var(--background-darker));
+    box-shadow: inset 0 0 0 1.5px var(--primary);
   }
 
   .tab[data-side="before"] .grip {
@@ -556,10 +580,9 @@
     border-radius: 0 4px 4px 0;
   }
 
-  .tab[data-marker="from"] .grip,
-  .tab[data-marker="to"] .grip {
-    background: color-mix(in oklch, var(--primary) 22%, var(--background-darker));
-    box-shadow: inset 0 0 0 1.5px var(--primary);
+  .tab[data-active] .grip {
+    outline: 1px solid var(--primary);
+    outline-offset: 1px;
   }
 
   .tab:focus-visible .grip {
@@ -567,16 +590,19 @@
   }
 
   @media (pointer: coarse) {
+    /* 44px of target plus the strip's 1px border. */
     .strip {
-      height: 44px;
+      height: 45px;
     }
 
     .tab {
       --hit: 44px;
+      --grip: 16px;
     }
 
-    .tab .grip {
-      width: 16px;
+    .tab .grip,
+    .tab[data-marker="from"] .grip,
+    .tab[data-marker="to"] .grip {
       height: 26px;
     }
   }

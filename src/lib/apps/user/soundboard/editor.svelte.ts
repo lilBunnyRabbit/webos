@@ -66,7 +66,8 @@ export class SoundEditor {
     this.stop();
     const length = pcm_length(pcm);
     const rate = pcm.sample_rate;
-    const at_end = this.end >= this.duration;
+    const before = this.duration;
+    const at_end = this.end >= before;
     this.pcm = cut_regions(
       pcm,
       subtract_regions(
@@ -78,7 +79,8 @@ export class SoundEditor {
     this.segments = remove_span(this.segments, selection, CROSSFADE_SECONDS);
     this.spliced = true;
     this.selection = null;
-    this.end = at_end ? this.duration : Math.min(this.duration, this.end - (selection.end - selection.start));
+    // The seam's crossfade shortens the sound too, so the end moves by what the cut really removed.
+    this.end = at_end ? this.duration : Math.min(this.duration, this.end - (before - this.duration));
     this.start = Math.min(this.start, this.end);
   }
 

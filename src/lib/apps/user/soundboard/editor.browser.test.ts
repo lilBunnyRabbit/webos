@@ -32,6 +32,12 @@ test("trims, deletes a middle span and renders a shorter WAV", async () => {
     expect(editor.duration).toBeCloseTo(full, 5);
     expect(editor.changed).toBe(false);
 
+    editor.end = 0.9;
+    editor.selection = { start: 0.4, end: 0.6 };
+    editor.delete_selection();
+    expect(editor.end).toBeCloseTo(0.9 - 0.2 - 0.01, 5);
+    editor.reset();
+
     editor.selection = { start: 0.3, end: 0.7 };
     editor.keep_selection();
     expect(editor.selection).toBeNull();

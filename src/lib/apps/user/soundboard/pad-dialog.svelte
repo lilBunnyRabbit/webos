@@ -17,7 +17,7 @@
     Trash as TrashIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import { onDestroy, untrack } from "svelte";
+  import { onDestroy, tick, untrack } from "svelte";
   import { edited_name, is_hex, PAD_COLORS, type PadColor } from "./board";
   import { SWATCH } from "./colors";
   import { SoundEditor } from "./editor.svelte";
@@ -184,8 +184,12 @@
   <details
     class="group grid gap-2"
     ontoggle={(event) => {
-      if (event.currentTarget.open) void open_editor();
-      else editor.stop();
+      const details = event.currentTarget;
+      if (!details.open) return editor.stop();
+      void open_editor().then(async () => {
+        await tick();
+        if (details.open) details.scrollIntoView({ block: "nearest" });
+      });
     }}
   >
     <summary class="flex cursor-pointer list-none items-center gap-1.5 py-1 text-ui text-foreground/80 [&::-webkit-details-marker]:hidden">

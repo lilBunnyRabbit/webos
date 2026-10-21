@@ -17,6 +17,10 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "Trim points in Soundboard are thin lines you move by tabs below the sound, so your finger never hides the spot, with arrow buttons to nudge them precisely.",
       },
+      {
+        kind: FIXED,
+        text: "Cutting a part out of a Soundboard sound no longer keeps a sliver of sound past the end you trimmed to, and the trim tabs stay on their lines at the very start and end.",
+      },
     ],
   },
   {

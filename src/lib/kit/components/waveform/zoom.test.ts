@@ -56,8 +56,23 @@ describe("zoom_to", () => {
     expect(visible_span({ ...view, ...next })).toEqual({ start: 2, end: 4 });
   });
 
-  test("a span shorter than the limit allows stays as wide as the limit", () => {
-    expect(zoom_to({ start: 5, end: 5.001 }, 400, 10, 20).zoom).toBe(20);
+  test("a span shorter than the limit allows stays as wide as the limit, centred", () => {
+    const next = zoom_to({ start: 5, end: 5.002 }, 400, 10, 20);
+    expect(next.zoom).toBe(20);
+    const shown = visible_span({ ...view, ...next });
+    expect((shown.start + shown.end) / 2).toBeCloseTo(5.001, 6);
+  });
+
+  test("leaves the margin either side so the edge tabs stay in view", () => {
+    const next = zoom_to({ start: 2, end: 4 }, 400, 10, 100, 50);
+    expect(next.zoom).toBe(3.75);
+    const pps = (400 * next.zoom) / 10;
+    expect(2 * pps - next.scroll).toBeCloseTo(50, 6);
+    expect(4 * pps - next.scroll).toBeCloseTo(350, 6);
+  });
+
+  test("a margin never takes more than half the viewport", () => {
+    expect(zoom_to({ start: 2, end: 4 }, 100, 10, 100, 80).zoom).toBe(2.5);
   });
 });
 

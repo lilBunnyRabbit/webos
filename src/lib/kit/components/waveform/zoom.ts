@@ -53,12 +53,14 @@ export function zoom_at(view: Viewport, zoom: number, anchor: number, limit: num
   return { zoom: next, scroll: clamp_scroll(time * next_pps - anchor, view.width, next) };
 }
 
-export function zoom_to(span: TimeSpan, width: number, duration: number, limit: number): ZoomState {
+/** Fits `span` with `margin` px either side, so the tabs outside its edges stay in view; centred when the zoom limit stops short. */
+export function zoom_to(span: TimeSpan, width: number, duration: number, limit: number, margin = 0): ZoomState {
   const length = span.end - span.start;
-  if (length <= 0 || duration <= 0) return { zoom: 1, scroll: 0 };
-  const zoom = clamp(duration / length, 1, Math.max(1, limit));
+  if (length <= 0 || duration <= 0 || width <= 0) return { zoom: 1, scroll: 0 };
+  const room = Math.max(1, width - 2 * Math.min(margin, width / 4));
+  const zoom = clamp((duration * room) / (length * width), 1, Math.max(1, limit));
   const pps = (width * zoom) / duration;
-  return { zoom, scroll: clamp_scroll(span.start * pps, width, zoom) };
+  return { zoom, scroll: clamp_scroll(((span.start + span.end) / 2) * pps - width / 2, width, zoom) };
 }
 
 export interface Pinch {
