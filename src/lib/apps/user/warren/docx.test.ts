@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entry_blob, read_zip } from "$lib/core/utils/zip/read";
 import { build_docx, docx_parts, document_xml, escape_xml, numbering_xml } from "./docx";
-import { SAMPLE } from "./fixture";
+import { SAMPLE, SAMPLE_V3 } from "./fixture";
 import { face_css, font_format } from "./fonts";
 import { BODY_FAMILY, body_html, print_document } from "./print";
 
@@ -45,6 +45,25 @@ describe("docx", () => {
     expect(xml).toContain(`<w:num w:numId="2"><w:abstractNumId w:val="0"/><w:lvlOverride w:ilvl="1">`);
   });
 
+  it("writes strikethrough, sub- and superscript, rules and check lists", () => {
+    const xml = document_xml(SAMPLE_V3);
+    expect(xml).toContain(`<w:r><w:rPr><w:vertAlign w:val="subscript"/></w:rPr><w:t xml:space="preserve">2</w:t></w:r>`);
+    expect(xml).toContain(`<w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:t xml:space="preserve">2</w:t></w:r>`);
+    expect(xml).toContain(`<w:r><w:rPr><w:strike/></w:rPr><w:t xml:space="preserve"> old</w:t></w:r>`);
+    expect(xml).toContain(`<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr></w:pPr></w:p>`);
+    expect(xml).toContain(`<w:p><w:r><w:t xml:space="preserve">☑ </w:t></w:r><w:r><w:t xml:space="preserve">Pack</w:t></w:r>`);
+    expect(xml).toContain(`<w:t xml:space="preserve">☐ </w:t></w:r><w:r><w:t xml:space="preserve">Go</w:t>`);
+    expect(numbering_xml(SAMPLE_V3)).not.toContain("<w:num ");
+  });
+
+  it("orders run properties as the schema wants", () => {
+    const xml = document_xml({
+      ...SAMPLE_V3,
+      editor: { root: { type: "root", children: [{ type: "paragraph", children: [{ type: "text", text: "x", format: 1 | 4 | 8 | 64, style: "font-size: 9pt" }] }] } },
+    });
+    expect(xml).toContain(`<w:rPr><w:b/><w:bCs/><w:strike/><w:sz w:val="18"/><w:szCs w:val="18"/><w:u w:val="single"/><w:vertAlign w:val="superscript"/></w:rPr>`);
+  });
+
   it("drops characters XML can't hold", () => {
     expect(escape_xml("a\u0001b\u0008c & \"d\"")).toBe("abc &amp; &quot;d&quot;");
   });
@@ -60,6 +79,13 @@ describe("print", () => {
     expect(body_html(SAMPLE)).toMatch(/<p><br><\/p>$/);
     expect(body_html(SAMPLE)).toContain(`Breakfast <a href="https://example.com/?a=1&amp;b=2">fan</a>.`);
     expect(html).toContain(`font-family:Inter,Inter`);
+  });
+
+  it("prints rules, check lists and sub- and superscript", () => {
+    const html = body_html(SAMPLE_V3);
+    expect(html).toContain(`H<sub>2</sub>O and E=mc<sup>2</sup><s> old</s>`);
+    expect(html).toContain(`<hr><ul class="wr-check"><li class="wr-checked">Pack</li><li class="wr-unchecked">Go</li></ul>`);
+    expect(print_document(SAMPLE_V3, "Plan", "/inter.woff2")).toContain(".doc li.wr-checked::before");
   });
 
   it("embeds the document font inline", () => {

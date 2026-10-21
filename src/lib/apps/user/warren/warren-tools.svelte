@@ -1,11 +1,14 @@
 <script lang="ts">
   import kernel, { AiAvailability, BUILTIN_FONTS, FONT_DIRECTORY, type AiService, type FilesService, type FontChoice, type SettingsService } from "$lib/core/api";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
-  import { Button, IconButton, Input, Segmented, Select, Spinner } from "$lib/core/components/ui";
+  import { Button, IconButton, Input, Segmented, Select, Spinner, Switch } from "$lib/core/components/ui";
   import { error_message } from "$lib/core/utils";
   import {
     ArrowsClockwise as ArrowsClockwiseIcon,
     CaretRight as CaretRightIcon,
+    Eraser as EraserIcon,
+    ListChecks as ListChecksIcon,
+    Minus as MinusIcon,
     FileDoc as FileDocIcon,
     FilePdf as FilePdfIcon,
     Link as LinkIcon,
@@ -20,14 +23,18 @@
     TextAlignLeft as TextAlignLeftIcon,
     TextAlignRight as TextAlignRightIcon,
     TextItalic as TextItalicIcon,
+    TextStrikethrough as TextStrikethroughIcon,
+    TextSubscript as TextSubscriptIcon,
+    TextSuperscript as TextSuperscriptIcon,
     TextUnderline as TextUnderlineIcon,
   } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { z } from "zod";
   import { BlockStyle, type WarrenEditor } from "./editor.svelte";
   import { Align } from "./model";
+  import { GOAL_MAX } from "./format";
   import { FLOWS, FONT_SIZES, PAGE_SIZES, type Flow, type PageSize } from "./page";
-  import { find_word, type Counts, type Repeat } from "./words";
+  import { find_word, reading_minutes, type Counts, type Repeat } from "./words";
 
   interface Props {
     editor: WarrenEditor;
@@ -41,9 +48,15 @@
     onlink: () => void;
     link_anchor: string;
     onfind: () => void;
+    /** Counts of the selected text; `null` for a caret. */
+    selection: Counts | null;
+    smart: boolean;
+    onsmart: (on: boolean) => void;
+    /** A heading was picked in the outline. */
+    ongo: (key: string) => void;
   }
 
-  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind }: Props = $props();
+  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind, selection, smart, onsmart, ongo }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -89,6 +102,11 @@
     { value: Align.RIGHT, label: "Align right", icon: TextAlignRightIcon },
     { value: Align.JUSTIFY, label: "Justify", icon: TextAlignJustifyIcon },
   ];
+  const SCRIPT_BUTTONS = [
+    { label: "Strikethrough (Mod+Shift+X)", icon: TextStrikethroughIcon, pressed: () => editor.strike, run: () => editor.toggle_strike() },
+    { label: "Subscript (Mod+Shift+,)", icon: TextSubscriptIcon, pressed: () => editor.subscript, run: () => editor.toggle_subscript() },
+    { label: "Superscript (Mod+Shift+.)", icon: TextSuperscriptIcon, pressed: () => editor.superscript, run: () => editor.toggle_superscript() },
+  ];
   const STYLES = [
     { value: BlockStyle.PARAGRAPH, label: "Body" },
     { value: BlockStyle.H1, label: "H1" },
@@ -108,6 +126,14 @@
   );
 
   const keep_focus = (event: PointerEvent) => event.preventDefault();
+  const smart_id = $props.id();
+
+  function commit_goal(field: HTMLInputElement) {
+    const value = Math.round(Number(field.value.trim()));
+    const goal = field.value.trim() && Number.isFinite(value) && value > 0 ? Math.min(value, GOAL_MAX) : null;
+    editor.set_goal(goal);
+    field.value = goal ? String(goal) : "";
+  }
 
   function change_everywhere() {
     const target = replacement.trim();
@@ -165,6 +191,12 @@
     <IconButton label={editor.link ? "Edit link" : "Add link"} pressed={!!editor.link} style="anchor-name: {link_anchor}" onpointerdown={keep_focus} onclick={onlink}><LinkIcon weight="bold" /></IconButton>
   </div>
   <div class="flex items-center gap-1">
+    {#each SCRIPT_BUTTONS as button (button.label)}
+      <IconButton label={button.label} pressed={button.pressed()} onpointerdown={keep_focus} onclick={button.run}><button.icon weight="bold" /></IconButton>
+    {/each}
+    <IconButton label="Clear formatting (Mod+\)" onpointerdown={keep_focus} onclick={() => editor.clear_formatting()}><EraserIcon weight="bold" /></IconButton>
+  </div>
+  <div class="flex items-center gap-1">
     <Select
       size="sm"
       class="min-w-0 flex-1"
@@ -189,6 +221,10 @@
       }}
     />
   </div>
+  <label for={smart_id} class="flex min-h-8 cursor-pointer items-center justify-between gap-2 text-ui pointer-coarse:min-h-11">
+    <span>Smart quotes and dashes <span class="block text-2xs text-foreground/65">“curly” quotes, -- to –, ... to …</span></span>
+    <Switch id={smart_id} checked={smart} onchange={(event) => onsmart(event.currentTarget.checked)} />
+  </label>
 {/snippet}
 
 {#snippet paragraph_group()}
@@ -202,14 +238,18 @@
       <IconButton label={item.label} class="w-full" pressed={editor.align === item.value} onpointerdown={keep_focus} onclick={() => editor.set_align(item.value)}><item.icon weight="bold" /></IconButton>
     {/each}
   </div>
-  <div class="grid grid-cols-2 gap-1">
-    <Button size="sm" variant="quiet" pressed={editor.block === BlockStyle.BULLET} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.BULLET)}>
+  <div class="grid grid-cols-3 gap-1">
+    <Button size="sm" variant="quiet" class="px-1" pressed={editor.block === BlockStyle.BULLET} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.BULLET)}>
       <ListBulletsIcon weight="bold" />Bullets
     </Button>
-    <Button size="sm" variant="quiet" pressed={editor.block === BlockStyle.NUMBER} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.NUMBER)}>
+    <Button size="sm" variant="quiet" class="px-1" pressed={editor.block === BlockStyle.NUMBER} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.NUMBER)}>
       <ListNumbersIcon weight="bold" />Numbers
     </Button>
+    <Button size="sm" variant="quiet" class="px-1" pressed={editor.block === BlockStyle.CHECK} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.CHECK)}>
+      <ListChecksIcon weight="bold" />Checks
+    </Button>
   </div>
+  <Button size="sm" onpointerdown={keep_focus} onclick={() => editor.insert_rule()}><MinusIcon weight="bold" />Insert horizontal line</Button>
 {/snippet}
 
 {#snippet page_group()}
@@ -220,7 +260,24 @@
 
 {#snippet words_group()}
   <Button size="sm" onclick={onfind}><MagnifyingGlassIcon weight="bold" />Find and replace</Button>
-  <p class="font-mono text-2xs text-foreground/80 tabular-nums">{counts.words.toLocaleString("en")} words · {counts.characters.toLocaleString("en")} characters</p>
+  <p class="font-mono text-2xs text-foreground/80 tabular-nums">
+    {counts.words.toLocaleString("en")} words · {counts.characters.toLocaleString("en")} characters{counts.words ? ` · ${reading_minutes(counts.words)} min read` : ""}
+    {#if selection}<br />Selected: {selection.words.toLocaleString("en")} words · {selection.characters.toLocaleString("en")} characters{/if}
+  </p>
+  <label class="flex items-center justify-between gap-2 text-ui">
+    <span>Word goal</span>
+    <Input
+      size="sm"
+      class="w-24 text-right tabular-nums"
+      type="number"
+      min="1"
+      max={GOAL_MAX}
+      inputmode="numeric"
+      placeholder="None"
+      value={editor.goal ?? ""}
+      onchange={(event) => commit_goal(event.currentTarget)}
+    />
+  </label>
   <div class="flex flex-col gap-1.5">
     {#if word}
       <p class="text-ui">
@@ -272,6 +329,26 @@
   {/if}
 {/snippet}
 
+{#snippet outline_group()}
+  {#if editor.outline.length}
+    <nav class="flex flex-col" aria-label="Outline">
+      {#each editor.outline as heading (heading.key)}
+        <button
+          type="button"
+          class="flex h-8 min-w-0 items-center rounded-md pr-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-11"
+          class:font-semibold={heading.level === 1}
+          style="padding-left: {0.5 + (heading.level - 1) * 0.875}rem"
+          onclick={() => ongo(heading.key)}
+        >
+          <span class="truncate">{heading.text || "Untitled heading"}</span>
+        </button>
+      {/each}
+    </nav>
+  {:else}
+    <p class="text-2xs text-foreground/65">Headings show up here. Click one to jump to it.</p>
+  {/if}
+{/snippet}
+
 {#snippet export_group()}
   <div class="grid grid-cols-2 gap-1">
     <Button size="sm" onclick={() => onexport("docx")}><FileDocIcon weight="bold" />Word</Button>
@@ -285,4 +362,5 @@
   {@render group("page", "Page", page_group)}
   {@render group("words", "Words", words_group)}
   {@render group("export", "Export", export_group)}
+  {@render group("outline", "Outline", outline_group)}
 </div>

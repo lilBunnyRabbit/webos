@@ -15,6 +15,7 @@ const CODE_KEYS: Record<string, string> = {
   Slash: "/",
   Comma: ",",
   Period: ".",
+  Backslash: "\\",
   Escape: "esc",
   Enter: "enter",
   Space: "space",

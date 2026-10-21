@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { SAMPLE } from "./fixture";
+import { SAMPLE, SAMPLE_V3 } from "./fixture";
 import { create_document, parse_document, serialize_document } from "./format";
-import { blocks_of, document_text, font_size, normalize_url, safe_url } from "./model";
-import { count, find_matches, find_word, map_offset, match_case, repeated_words, replace_matches, replace_word, TEXT_MATCH, word_at } from "./words";
+import { blocks_of, document_text, font_size, has_text, normalize_url, safe_url } from "./model";
+import { smarten } from "./typography";
+import { count, find_matches, find_word, map_offset, match_case, reading_minutes, repeated_words, replace_matches, replace_word, TEXT_MATCH, word_at } from "./words";
 
 describe("format", () => {
   it("round-trips a document", () => {
@@ -13,17 +14,26 @@ describe("format", () => {
   it("rejects what isn't a Warren document", () => {
     expect(() => parse_document("nope")).toThrow("isn't JSON");
     expect(() => parse_document(JSON.stringify({ version: 1, page: { size: "A3", flow: "sheets" }, editor: SAMPLE.editor }))).toThrow("page.size");
-    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 3 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 4 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, goal: -3 }))).toThrow("goal");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "builtin", id: "nope" } } }))).toThrow("page.font");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, editor: { root: { type: "paragraph", children: [] } } }))).toThrow("editor.root.type");
   });
 });
 
 describe("format versions", () => {
-  it("opens a version 1 file and saves it as version 2", () => {
-    const opened = parse_document(JSON.stringify({ ...SAMPLE, version: 1 }));
-    expect(opened.version).toBe(2);
-    expect(JSON.parse(serialize_document(opened)).version).toBe(2);
+  it("opens version 1 and 2 files and saves them as version 3", () => {
+    for (const version of [1, 2]) {
+      const opened = parse_document(JSON.stringify({ ...SAMPLE, version }));
+      expect(opened.version).toBe(3);
+      expect(opened.goal).toBeUndefined();
+      expect(JSON.parse(serialize_document(opened)).version).toBe(3);
+    }
+  });
+
+  it("keeps the word goal", () => {
+    expect(parse_document(serialize_document(SAMPLE_V3))).toEqual(SAMPLE_V3);
+    expect(JSON.parse(serialize_document(SAMPLE)).goal).toBeUndefined();
   });
 
   it("keeps the body font, and drops a default one", () => {
@@ -68,7 +78,7 @@ describe("blocks_of", () => {
       ["fan", false, false, null],
       [".", false, false, null],
     ]);
-    expect(blocks.map((block) => block.kind !== "page-break" && block.align)).toEqual(["center", null, null, null, "right", false, null, null]);
+    expect(blocks.map((block) => has_text(block) && block.align)).toEqual(["center", null, null, null, "right", false, null, null]);
     expect(paragraph.kind === "paragraph" && paragraph.runs.map((run) => run.link)).toEqual([null, null, null, null, null, "https://example.com/?a=1&b=2", null]);
     const [one, nested, two] = blocks.slice(2, 5);
     expect([one, nested, two].map((block) => block.kind === "item" && [block.list, block.level, block.list_id])).toEqual([
@@ -89,7 +99,62 @@ describe("blocks_of", () => {
   });
 });
 
+describe("format 3 blocks", () => {
+  it("reads rules, check items and sub- and superscript runs", () => {
+    const blocks = blocks_of(SAMPLE_V3.editor);
+    expect(blocks.map((block) => block.kind)).toEqual(["heading", "paragraph", "rule", "item", "item"]);
+    const paragraph = blocks[1];
+    expect(paragraph.kind === "paragraph" && paragraph.runs.map((run) => [run.text, run.script, run.strike])).toEqual([
+      ["H", null, false],
+      ["2", "sub", false],
+      ["O and E=mc", null, false],
+      ["2", "super", false],
+      [" old", null, true],
+    ]);
+    expect(blocks.slice(3).map((block) => block.kind === "item" && [block.list, block.checked])).toEqual([
+      ["check", true],
+      ["check", false],
+    ]);
+    expect(document_text(SAMPLE_V3.editor)).toBe("Plan\nH2O and E=mc2 old\nPack\nGo");
+  });
+});
+
+describe("smart punctuation", () => {
+  const typed = (text: string) => {
+    const result = smarten(text, text.length);
+    return result ? text.slice(0, result.start) + result.text + text.slice(result.end) : text;
+  };
+
+  it("curls quotes by what comes before", () => {
+    expect(typed('"')).toBe("“");
+    expect(typed('said "')).toBe("said “");
+    expect(typed('“Hi"')).toBe("“Hi”");
+    expect(typed("don'")).toBe("don’");
+    expect(typed("('")).toBe("(‘");
+    expect(typed("rock 'n'")).toBe("rock 'n’");
+  });
+
+  it("turns hyphens into dashes and three dots into an ellipsis", () => {
+    expect(typed("a-")).toBe("a-");
+    expect(typed("a--")).toBe("a–");
+    expect(typed("a–-")).toBe("a—");
+    expect(typed("wait...")).toBe("wait…");
+    expect(typed("wait..")).toBe("wait..");
+  });
+
+  it("leaves URLs alone and only looks at the typed character", () => {
+    expect(smarten("see https://a.b/x--", 19)).toBeNull();
+    expect(smarten("www.a--", 7)).toBeNull();
+    expect(smarten('a "b', 3)).toEqual({ start: 2, end: 3, text: "“" });
+    expect(smarten("", 0)).toBeNull();
+  });
+});
+
 describe("words", () => {
+  it("estimates reading time", () => {
+    expect([reading_minutes(0), reading_minutes(10), reading_minutes(460), reading_minutes(1000)]).toEqual([0, 1, 2, 4]);
+  });
+
   it("counts words and characters without line ends", () => {
     expect(count("Don't stop—well-known 42 times.\nNext")).toEqual({ words: 6, characters: 35 });
     expect(count("")).toEqual({ words: 0, characters: 0 });

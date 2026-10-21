@@ -1,11 +1,12 @@
 import { FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND, type LexicalEditor } from "lexical";
 import { create_document, VERSION, type EditorJson, type WarrenDocument } from "./format";
 import * as ops from "./lexical";
-import { BlockStyle } from "./lexical";
+import { BlockStyle, LIST_STYLES } from "./lexical";
 import { Align } from "./model";
 import { BASE_PT, DEFAULT_PAGE, type PageSettings } from "./page";
 
-export { BlockStyle };
+export { BlockStyle, LIST_STYLES };
+export type { Heading } from "./lexical";
 
 export class WarrenEditor {
   readonly lexical: LexicalEditor;
@@ -14,11 +15,17 @@ export class WarrenEditor {
   bold = $state(false);
   italic = $state(false);
   underline = $state(false);
+  strike = $state(false);
+  subscript = $state(false);
+  superscript = $state(false);
   align = $state<Align>(Align.LEFT);
   link = $state<string | null>(null);
   block = $state<BlockStyle>(BlockStyle.PARAGRAPH);
   size = $state(BASE_PT);
   word = $state("");
+  selected = $state("");
+  outline = $state.raw<ops.Heading[]>([]);
+  goal = $state<number | null>(null);
   can_undo = $state(false);
   can_redo = $state(false);
   private revision = $state(0);
@@ -28,17 +35,20 @@ export class WarrenEditor {
 
   readonly dirty = $derived(this.revision !== this.saved);
 
-  constructor(on_error: (error: Error) => void) {
+  /** `smart`: whether typed quotes, dashes and dots become typographic ones, asked on each keystroke. */
+  constructor(on_error: (error: Error) => void, smart: () => boolean = () => true) {
     const { editor, dispose, reset_history } = ops.create_lexical({
       on_error,
       on_can_undo: (value) => (this.can_undo = value),
       on_can_redo: (value) => (this.can_redo = value),
+      smart,
     });
     this.lexical = editor;
     this.reset_history = reset_history;
     const stop = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
       if (dirtyElements.size || dirtyLeaves.size) {
         this.json = editorState.toJSON() as unknown as EditorJson;
+        this.outline = ops.outline(editorState);
         if (!tags.has(ops.LOAD_TAG)) this.revision++;
       }
       const format = ops.read_format(editorState);
@@ -46,13 +56,18 @@ export class WarrenEditor {
       this.bold = format.bold;
       this.italic = format.italic;
       this.underline = format.underline;
+      this.strike = format.strike;
+      this.subscript = format.subscript;
+      this.superscript = format.superscript;
       this.align = format.align;
       this.link = format.link;
       this.block = format.block;
       this.size = format.size;
       this.word = format.word;
+      this.selected = format.selected;
     });
     this.json = editor.getEditorState().toJSON() as unknown as EditorJson;
+    this.outline = ops.outline(editor.getEditorState());
     this.dispose = () => {
       stop();
       dispose();
@@ -74,7 +89,9 @@ export class WarrenEditor {
     this.lexical.setEditorState(state, { tag: ops.LOAD_TAG });
     this.reset_history();
     this.json = state.toJSON() as unknown as EditorJson;
+    this.outline = ops.outline(state);
     this.page = { ...document.page };
+    this.goal = document.goal ?? null;
     this.revision = 0;
     this.saved = 0;
   }
@@ -91,11 +108,22 @@ export class WarrenEditor {
   }
 
   snapshot(): WarrenDocument {
-    return { version: VERSION, page: { ...this.page }, editor: this.lexical.getEditorState().toJSON() as unknown as EditorJson };
+    return {
+      version: VERSION,
+      page: { ...this.page },
+      ...(this.goal ? { goal: this.goal } : {}),
+      editor: this.lexical.getEditorState().toJSON() as unknown as EditorJson,
+    };
   }
 
   mark_saved() {
     this.saved = this.revision;
+  }
+
+  set_goal(goal: number | null) {
+    if (goal === this.goal) return;
+    this.goal = goal;
+    this.revision++;
   }
 
   set_page(page: Partial<PageSettings>) {
@@ -125,6 +153,33 @@ export class WarrenEditor {
 
   toggle_underline() {
     this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+  }
+
+  toggle_strike() {
+    this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
+  }
+
+  toggle_subscript() {
+    this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "subscript");
+  }
+
+  toggle_superscript() {
+    this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "superscript");
+  }
+
+  clear_formatting() {
+    ops.clear_formatting(this.lexical);
+  }
+
+  insert_rule() {
+    ops.insert_rule(this.lexical);
+  }
+
+  /** Scrolls a heading into view and puts the caret at its start; `focus` false keeps a phone's keyboard down. */
+  go_to(key: string, focus: boolean) {
+    this.lexical.getElementByKey(key)?.scrollIntoView({ block: "start", behavior: "smooth" });
+    ops.caret_to(this.lexical, key);
+    if (focus) this.lexical.focus();
   }
 
   set_align(align: Align) {

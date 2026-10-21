@@ -23,6 +23,7 @@ describe("code_key", () => {
     expect(code_key("Digit3")).toBe("3");
     expect(code_key("ArrowLeft")).toBe("left");
     expect(code_key("Backquote")).toBe("`");
+    expect(code_key("Backslash")).toBe("\\");
     expect(code_key("F2")).toBe("f2");
     expect(code_key("ShiftLeft")).toBeNull();
   });

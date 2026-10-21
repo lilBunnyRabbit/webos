@@ -11,6 +11,12 @@ export function count(text: string): Counts {
   return { words: text.match(WORD)?.length ?? 0, characters: [...text.replace(/\n/g, "")].length };
 }
 
+const WORDS_PER_MINUTE = 230;
+
+export function reading_minutes(words: number): number {
+  return words ? Math.max(1, Math.round(words / WORDS_PER_MINUTE)) : 0;
+}
+
 export function is_word(text: string): boolean {
   return new RegExp(`^${WORD.source}$`, "u").test(text);
 }

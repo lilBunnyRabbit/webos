@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.43.0",
+    date: "2026-10-21",
+    title: "Warren gets polished",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren adds strikethrough, subscript, superscript and clear formatting, horizontal lines, checklists, an outline of your headings to jump around, reading time, selection counts and a word goal per document.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren turns straight quotes into curly ones, -- into a dash and ... into an ellipsis as you type (switch it off in the Text tools), and its spelling underline follows your theme.",
+      },
+    ],
+  },
+  {
     version: "3.42.0",
     date: "2026-10-21",
     title: "Quieter in the background",

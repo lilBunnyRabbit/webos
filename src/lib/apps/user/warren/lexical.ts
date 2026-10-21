@@ -1,10 +1,19 @@
-import { buildEditorFromExtensions, effect, getExtensionDependencyFromEditor, InitialStateExtension } from "@lexical/extension";
+import {
+  buildEditorFromExtensions,
+  effect,
+  getExtensionDependencyFromEditor,
+  HorizontalRuleExtension,
+  InitialStateExtension,
+  INSERT_HORIZONTAL_RULE_COMMAND,
+} from "@lexical/extension";
 import { HistoryExtension } from "@lexical/history";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { $createLinkNode, $isLinkNode, $toggleLink, LinkExtension } from "@lexical/link";
 import {
   $isListItemNode,
   $isListNode,
+  CheckListExtension,
+  INSERT_CHECK_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
   ListExtension,
@@ -27,11 +36,14 @@ import {
   $isTextNode,
   $setSelection,
   CLEAR_HISTORY_COMMAND,
+  COLLABORATION_TAG,
   COMMAND_PRIORITY_EDITOR,
   configExtension,
   defineExtension,
+  HISTORIC_TAG,
   HISTORY_MERGE_TAG,
   HISTORY_PUSH_TAG,
+  PASTE_TAG,
   SKIP_DOM_SELECTION_TAG,
   INDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
@@ -46,6 +58,8 @@ import {
   type TextNode,
 } from "lexical";
 import { Align, align_of, font_size } from "./model";
+import { CHECK_CLASS } from "./print";
+import { smarten } from "./typography";
 import { $create_page_break, PageBreakExtension } from "./page-break-node";
 import { BASE_PT, HEADING_PT } from "./page";
 import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
@@ -59,6 +73,7 @@ export const BlockStyle = {
   H3: "h3",
   BULLET: "bullet",
   NUMBER: "number",
+  CHECK: "check",
 } as const;
 export type BlockStyle = (typeof BlockStyle)[keyof typeof BlockStyle];
 
@@ -66,25 +81,41 @@ export const LOAD_TAG = "warren-load";
 
 const THEME = {
   text: { underline: "wr-underline", strikethrough: "wr-strike", underlineStrikethrough: "wr-underline wr-strike" },
-  list: { nested: { listitem: "nested" } },
+  list: { nested: { listitem: "nested" }, checklist: CHECK_CLASS.list, listitemChecked: CHECK_CLASS.checked, listitemUnchecked: CHECK_CLASS.unchecked },
+  hr: "wr-rule",
 };
+
+export const LIST_STYLES: readonly BlockStyle[] = [BlockStyle.BULLET, BlockStyle.NUMBER, BlockStyle.CHECK];
 
 export interface Format {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  strike: boolean;
+  subscript: boolean;
+  superscript: boolean;
   align: Align;
   /** The URL of the link the selection starts in. */
   link: string | null;
   block: BlockStyle;
   size: number;
   word: string;
+  /** The selected text; empty for a caret. */
+  selected: string;
+}
+
+export interface Heading {
+  key: NodeKey;
+  level: 1 | 2 | 3;
+  text: string;
 }
 
 export interface Hooks {
   on_error: (error: Error) => void;
   on_can_undo: (value: boolean) => void;
   on_can_redo: (value: boolean) => void;
+  /** Whether typed quotes, dashes and dots become typographic ones. */
+  smart: () => boolean;
 }
 
 export function heading_of(style: BlockStyle): 1 | 2 | 3 | null {
@@ -93,7 +124,10 @@ export function heading_of(style: BlockStyle): 1 | 2 | 3 | null {
 
 function $block_style(node: LexicalNode): BlockStyle {
   const list = $findMatchingParent(node, $isListNode);
-  if (list) return list.getListType() === "number" ? BlockStyle.NUMBER : BlockStyle.BULLET;
+  if (list) {
+    const type = list.getListType();
+    return type === "number" ? BlockStyle.NUMBER : type === "check" ? BlockStyle.CHECK : BlockStyle.BULLET;
+  }
   const top = node.getTopLevelElement();
   if ($isHeadingNode(top)) {
     const tag = top.getTag();
@@ -138,6 +172,8 @@ export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: 
       // Opening a document would announce every heading in it.
       configExtension(HeadingAnnounceExtension, { disabled: true }),
       ListExtension,
+      CheckListExtension,
+      HorizontalRuleExtension,
       LinkExtension,
       PageBreakExtension,
       configExtension(HistoryExtension, { delay: 400 }),
@@ -148,6 +184,10 @@ export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: 
       return mergeRegister(
         effect(() => hooks.on_can_undo(canUndo.value)),
         effect(() => hooks.on_can_redo(canRedo.value)),
+        editor.registerUpdateListener(({ editorState, prevEditorState, tags }) => {
+          if (!hooks.smart() || editor.isComposing() || SKIP_SMART.some((tag) => tags.has(tag))) return;
+          smart_typing(editor, editorState, prevEditorState);
+        }),
         editor.registerCommand(
           KEY_TAB_COMMAND,
           (event) => {
@@ -171,6 +211,35 @@ export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: 
   return { editor, dispose: () => editor.dispose(), reset_history };
 }
 
+const SKIP_SMART = [HISTORIC_TAG, HISTORY_PUSH_TAG, PASTE_TAG, COLLABORATION_TAG, LOAD_TAG];
+
+// One character typed at a caret: the node's text grew by exactly that character, just before the caret. The
+// replacement is pushed as its own history entry, so Undo gives back what was typed.
+function smart_typing(editor: LexicalEditor, state: EditorState, previous: EditorState) {
+  const typed = state.read(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") return null;
+    const node = selection.anchor.getNode();
+    if (!$isTextNode(node) || $findMatchingParent(node, $isLinkNode)) return null;
+    const offset = selection.anchor.offset;
+    const text = node.getTextContent();
+    const before = previous.read(() => $getNodeByKey(node.getKey())?.getTextContent());
+    if (before === undefined || text.length !== before.length + 1 || text.slice(0, offset - 1) + text.slice(offset) !== before) return null;
+    const replacement = smarten(text, offset);
+    return replacement && { key: node.getKey(), replacement };
+  });
+  if (!typed) return;
+  editor.update(
+    () => {
+      const node = $getNodeByKey(typed.key);
+      if (!$isTextNode(node)) return;
+      const { start, end, text } = typed.replacement;
+      node.spliceText(start, end - start, text, true);
+    },
+    { tag: HISTORY_PUSH_TAG }
+  );
+}
+
 export function read_format(state: EditorState): Format | null {
   return state.read(() => {
     const selection = $getSelection();
@@ -183,11 +252,15 @@ export function read_format(state: EditorState): Format | null {
       bold: selection.hasFormat("bold"),
       italic: selection.hasFormat("italic"),
       underline: selection.hasFormat("underline"),
+      strike: selection.hasFormat("strikethrough"),
+      subscript: selection.hasFormat("subscript"),
+      superscript: selection.hasFormat("superscript"),
       align: $align_of(selection.anchor.getNode()),
       link: $findMatchingParent(selection.anchor.getNode(), $isLinkNode)?.getURL() ?? null,
       block,
       size,
       word: word ? word.node.getTextContent().slice(word.start, word.end) : "",
+      selected: selection.isCollapsed() ? "" : selection.getTextContent(),
     };
   });
 }
@@ -199,11 +272,17 @@ export function set_size(editor: LexicalEditor, points: number) {
   });
 }
 
+const LIST_COMMANDS = {
+  [BlockStyle.BULLET]: INSERT_UNORDERED_LIST_COMMAND,
+  [BlockStyle.NUMBER]: INSERT_ORDERED_LIST_COMMAND,
+  [BlockStyle.CHECK]: INSERT_CHECK_LIST_COMMAND,
+};
+
 export function set_block(editor: LexicalEditor, style: BlockStyle, current: BlockStyle) {
-  const in_list = current === BlockStyle.BULLET || current === BlockStyle.NUMBER;
-  if (style === BlockStyle.BULLET || style === BlockStyle.NUMBER) {
+  const in_list = LIST_STYLES.includes(current);
+  if (style === BlockStyle.BULLET || style === BlockStyle.NUMBER || style === BlockStyle.CHECK) {
     if (current === style) editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
-    else editor.dispatchCommand(style === BlockStyle.BULLET ? INSERT_UNORDERED_LIST_COMMAND : INSERT_ORDERED_LIST_COMMAND, undefined);
+    else editor.dispatchCommand(LIST_COMMANDS[style], undefined);
     return;
   }
   if (in_list) editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
@@ -259,6 +338,50 @@ export function set_link(editor: LexicalEditor, url: string | null) {
       return;
     }
     $toggleLink(url);
+  });
+}
+
+export function insert_rule(editor: LexicalEditor) {
+  editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+}
+
+/** Drops character formatting (bold … superscript) and font sizes from the selection; links and paragraph styles stay. */
+export function clear_formatting(editor: LexicalEditor) {
+  editor.update(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return;
+    if (selection.isCollapsed()) {
+      selection.setFormat(0);
+      selection.setStyle("");
+      return;
+    }
+    for (const node of selection.extract()) {
+      if (!$isTextNode(node)) continue;
+      node.setFormat(0);
+      node.setStyle("");
+    }
+    selection.setFormat(0);
+    selection.setStyle("");
+  });
+}
+
+export function outline(state: EditorState): Heading[] {
+  return state.read(() =>
+    $getRoot()
+      .getChildren()
+      .filter($isHeadingNode)
+      .map((node) => {
+        const tag = node.getTag();
+        return { key: node.getKey(), level: tag === "h1" ? 1 : tag === "h2" ? 2 : 3, text: node.getTextContent().trim() };
+      })
+  );
+}
+
+/** Puts the caret at the start of a block. */
+export function caret_to(editor: LexicalEditor, key: NodeKey) {
+  editor.update(() => {
+    const node = $getNodeByKey(key);
+    if ($isElementNode(node)) node.selectStart();
   });
 }
 

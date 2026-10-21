@@ -5,18 +5,19 @@ import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { entry_blob, read_zip } from "$lib/core/utils/zip/read";
 import { build_docx } from "./docx";
-import { WarrenEditor } from "./editor.svelte";
-import { SAMPLE } from "./fixture";
+import { BlockStyle, WarrenEditor } from "./editor.svelte";
+import { SAMPLE, SAMPLE_V3 } from "./fixture";
 import { parse_document, serialize_document } from "./format";
+import { $getSelection, $isRangeSelection } from "lexical";
 import { Align, blocks_of, document_text } from "./model";
 import { count_document, export_document } from "./shell";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function editor_with(document = SAMPLE) {
+function editor_with(document = SAMPLE, smart = () => true) {
   const editor = new WarrenEditor((error) => {
     throw error;
-  });
+  }, smart);
   const root = window.document.createElement("div");
   root.contentEditable = "true";
   window.document.body.append(root);
@@ -128,6 +129,119 @@ describe("editor", () => {
     dispose();
   });
 
+  test("strikes, lowers, raises and clears the selection's formatting", async () => {
+    const { editor, dispose } = editor_with();
+    await tick();
+    editor.select_next("learner");
+    editor.toggle_bold();
+    editor.toggle_strike();
+    editor.toggle_subscript();
+    await tick();
+    expect([editor.bold, editor.strike, editor.subscript, editor.superscript]).toEqual([true, true, true, false]);
+    editor.toggle_superscript();
+    await tick();
+    expect([editor.subscript, editor.superscript]).toEqual([false, true]);
+    const run = () => {
+      const paragraph = blocks_of(editor.json)[1];
+      return paragraph.kind === "paragraph" ? paragraph.runs.find((item) => item.text.includes("learner")) : undefined;
+    };
+    expect(run()).toMatchObject({ bold: true, strike: true, script: "super" });
+    editor.select_next("fast");
+    editor.set_size(18);
+    editor.select_next("learner");
+    editor.clear_formatting();
+    await tick();
+    expect(run()).toMatchObject({ bold: false, strike: false, script: null, size: null });
+    expect(document_text(editor.json)).toBe(document_text(SAMPLE.editor));
+    dispose();
+  });
+
+  test("makes a check list, inserts a horizontal line and keeps both in the file", async () => {
+    const { editor, root, dispose } = editor_with();
+    await tick();
+    editor.select_next("learner");
+    editor.set_block(BlockStyle.CHECK);
+    await tick();
+    expect(editor.block).toBe(BlockStyle.CHECK);
+    expect(root.querySelector("ul.wr-check > li.wr-unchecked")).not.toBeNull();
+    editor.insert_rule();
+    await tick();
+    expect(root.querySelector("hr.wr-rule")).not.toBeNull();
+    const saved = parse_document(serialize_document(editor.snapshot()));
+    const kinds = blocks_of(saved.editor).map((block) => (block.kind === "item" ? `${block.kind}:${block.list}` : block.kind));
+    expect(kinds).toContain("item:check");
+    expect(kinds).toContain("rule");
+    const reopened = editor_with(saved);
+    await tick();
+    expect(reopened.root.querySelector("hr.wr-rule")).not.toBeNull();
+    expect(reopened.root.querySelector("li.wr-unchecked")).not.toBeNull();
+    reopened.dispose();
+    dispose();
+  });
+
+  test("opens a format 3 file with its goal and lists its headings", async () => {
+    const { editor, root, dispose } = editor_with(SAMPLE_V3);
+    await tick();
+    expect(editor.goal).toBe(500);
+    expect(root.querySelector("li.wr-checked")).not.toBeNull();
+    expect(editor.outline.map((heading) => [heading.level, heading.text])).toEqual([[2, "Plan"]]);
+    editor.set_goal(800);
+    expect(editor.dirty).toBe(true);
+    expect(editor.snapshot().goal).toBe(800);
+    editor.set_goal(null);
+    expect(editor.snapshot().goal).toBeUndefined();
+    dispose();
+  });
+
+  test("jumps to a heading from the outline", async () => {
+    const { editor, dispose } = editor_with();
+    await tick();
+    const [heading] = editor.outline;
+    expect(heading).toMatchObject({ level: 1, text: "Jane & Co <CV>" });
+    editor.select_next("learner");
+    editor.go_to(heading.key, false);
+    await tick();
+    const at = editor.lexical.getEditorState().read(() => {
+      const selection = $getSelection();
+      return $isRangeSelection(selection) ? selection.anchor.getNode().getTopLevelElement()?.getKey() : null;
+    });
+    expect(at).toBe(heading.key);
+    dispose();
+  });
+
+  test("curls quotes and makes dashes as you type, and Undo gives back what was typed", async () => {
+    let on = true;
+    const { editor, dispose } = editor_with(SAMPLE, () => on);
+    await tick();
+    const type = (text: string) => {
+      for (const character of text) {
+        editor.lexical.update(
+          () => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) selection.insertText(character);
+          },
+          { discrete: true }
+        );
+      }
+    };
+    editor.select_next("learner");
+    editor.lexical.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) selection.removeText();
+    }, { discrete: true });
+    type(`"ok" -- it's...`);
+    await tick();
+    expect(document_text(editor.json)).toContain("A fast “ok” – it’s…, very fast");
+    editor.undo();
+    await tick();
+    expect(document_text(editor.json)).toContain("A fast “ok” – it’s..., very fast");
+    on = false;
+    type(`"`);
+    await tick();
+    expect(document_text(editor.json)).toContain(`it’s...", very`);
+    dispose();
+  });
+
   test("underlines the selection and aligns its paragraph", async () => {
     const { editor, root, dispose } = editor_with();
     await tick();
@@ -179,6 +293,12 @@ describe("shell", () => {
 
   afterAll(() => {
     kernel.services.delete("files");
+  });
+
+  test("doc count reads a format 3 file", async () => {
+    await files.create_file(await files.get_directory("/home"), "Plan.warren", { content: serialize_document(SAMPLE_V3) });
+    expect(await count_document(context({ path: "Plan.warren" }))).toMatchObject({ words: 8 });
+    expect(await export_document(context({ path: "Plan.warren", docx: true }))).toMatchObject({ path: "/home/Plan.docx" });
   });
 
   test("doc count reads a version 1 file too", async () => {

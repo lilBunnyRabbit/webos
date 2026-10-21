@@ -1,6 +1,7 @@
 import type { DocNode, EditorJson } from "./format";
 
 export const PAGE_BREAK = "page-break";
+export const RULE = "horizontalrule";
 export const LINK_TYPES = ["link", "autolink"];
 
 // Lexical's TextNode format bits.
@@ -8,6 +9,11 @@ export const BOLD = 1;
 export const ITALIC = 1 << 1;
 export const STRIKETHROUGH = 1 << 2;
 export const UNDERLINE = 1 << 3;
+export const SUBSCRIPT = 1 << 5;
+export const SUPERSCRIPT = 1 << 6;
+
+export const Script = { SUB: "sub", SUPER: "super" } as const;
+export type Script = (typeof Script)[keyof typeof Script];
 
 export interface Run {
   text: string;
@@ -15,12 +21,13 @@ export interface Run {
   italic: boolean;
   underline: boolean;
   strike: boolean;
+  script: Script | null;
   /** Points; `null` is the block's own size. */
   size: number | null;
   link: string | null;
 }
 
-export const ListKind = { BULLET: "bullet", NUMBER: "number" } as const;
+export const ListKind = { BULLET: "bullet", NUMBER: "number", CHECK: "check" } as const;
 export type ListKind = (typeof ListKind)[keyof typeof ListKind];
 
 export const Align = { LEFT: "left", CENTER: "center", RIGHT: "right", JUSTIFY: "justify" } as const;
@@ -30,8 +37,20 @@ export const ALIGNS = Object.values(Align);
 export type Block =
   | { kind: "paragraph"; align: Align | null; runs: Run[] }
   | { kind: "heading"; level: 1 | 2 | 3; align: Align | null; runs: Run[] }
-  | { kind: "item"; list: ListKind; level: number; list_id: number; start: number; align: Align | null; runs: Run[] }
-  | { kind: "page-break" };
+  | { kind: "item"; list: ListKind; level: number; list_id: number; start: number; checked: boolean; align: Align | null; runs: Run[] }
+  | { kind: "page-break" }
+  | { kind: "rule" };
+
+/** Blocks that hold text, as opposed to page breaks and rules. */
+export type TextBlock = Exclude<Block, { kind: "page-break" } | { kind: "rule" }>;
+
+export function has_text(block: Block): block is TextBlock {
+  return block.kind !== "page-break" && block.kind !== "rule";
+}
+
+export function script_of(format: number): Script | null {
+  return format & SUBSCRIPT ? Script.SUB : format & SUPERSCRIPT ? Script.SUPER : null;
+}
 
 // Lexical's "start" and "end" are left and right here: Warren has no right-to-left text.
 export function align_of(node: DocNode): Align | null {
@@ -58,11 +77,12 @@ function runs_of(nodes: DocNode[] | undefined, link: string | null = null): Run[
         italic: (format & ITALIC) !== 0,
         underline: (format & UNDERLINE) !== 0,
         strike: (format & STRIKETHROUGH) !== 0,
+        script: script_of(format),
         size: font_size(node.style),
         link,
       });
     } else if (node.type === "linebreak") {
-      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, size: null, link });
+      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link });
     } else if (node.children) {
       runs.push(...runs_of(node.children, LINK_TYPES.includes(node.type) ? safe_url(node.url) : link));
     }
@@ -95,18 +115,19 @@ export function blocks_of(editor: EditorJson): Block[] {
 
   const list = (node: DocNode, level: number) => {
     const id = ++lists;
-    const kind = node.listType === "number" ? ListKind.NUMBER : ListKind.BULLET;
+    const kind = node.listType === "number" ? ListKind.NUMBER : node.listType === "check" ? ListKind.CHECK : ListKind.BULLET;
     const start = typeof node.start === "number" && node.start > 0 ? Math.floor(node.start) : 1;
     for (const item of node.children ?? []) {
       const nested = (item.children ?? []).filter((child) => child.type === "list");
       const inline = (item.children ?? []).filter((child) => child.type !== "list");
-      if (inline.length || !nested.length) blocks.push({ kind: "item", list: kind, level, list_id: id, start, align: align_of(item), runs: runs_of(inline) });
+      if (inline.length || !nested.length) blocks.push({ kind: "item", list: kind, level, list_id: id, start, checked: kind === ListKind.CHECK && item.checked === true, align: align_of(item), runs: runs_of(inline) });
       for (const child of nested) list(child, level + 1);
     }
   };
 
   for (const node of editor.root.children) {
     if (node.type === PAGE_BREAK) blocks.push({ kind: "page-break" });
+    else if (node.type === RULE) blocks.push({ kind: "rule" });
     else if (node.type === "heading") blocks.push({ kind: "heading", level: heading_level(node.tag), align: align_of(node), runs: runs_of(node.children) });
     else if (node.type === "list") list(node, 0);
     else blocks.push({ kind: "paragraph", align: align_of(node), runs: runs_of(node.children) });
@@ -116,6 +137,6 @@ export function blocks_of(editor: EditorJson): Block[] {
 
 export function document_text(editor: EditorJson): string {
   return blocks_of(editor)
-    .flatMap((block) => (block.kind === "page-break" ? [] : [block.runs.map((run) => run.text).join("")]))
+    .flatMap((block) => (has_text(block) ? [block.runs.map((run) => run.text).join("")] : []))
     .join("\n");
 }

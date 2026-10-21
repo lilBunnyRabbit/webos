@@ -3,7 +3,7 @@ import { build_docx } from "./docx";
 import { word_like_docx } from "./docx-fixture";
 import { docx_to_html, left_out } from "./docx-import";
 import { WarrenEditor } from "./editor.svelte";
-import { SAMPLE } from "./fixture";
+import { SAMPLE, SAMPLE_V3 } from "./fixture";
 import { blocks_of, document_text } from "./model";
 
 function editor_from(html: string) {
@@ -15,6 +15,15 @@ function editor_from(html: string) {
 }
 
 describe("docx import", () => {
+  it("reads format 3 exports back: strikethrough, sub- and superscript, check glyphs", async () => {
+    const { html, left_out: dropped } = await docx_to_html(await (await build_docx(SAMPLE_V3, "Plan")).arrayBuffer());
+    expect(html).toContain("H<sub>2</sub>O and E=mc<sup>2</sup><s> old</s>");
+    expect(html).toContain("☑ Pack");
+    expect(dropped).toEqual([]);
+    const editor = editor_from(html);
+    expect(document_text(editor.json)).toBe("Plan\nH2O and E=mc2 old\n☑ Pack\n☐ Go");
+  });
+
   it("reads Warren's own .docx back as headings, runs and lists", async () => {
     const { html, left_out: dropped } = await docx_to_html(await (await build_docx(SAMPLE, "CV")).arrayBuffer());
     expect(html).toContain("<h1>Jane &amp; Co &lt;CV&gt;</h1>");

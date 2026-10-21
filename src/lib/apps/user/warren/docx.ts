@@ -3,7 +3,7 @@ import type { FontChoice } from "$lib/core/api/services/settings/type";
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip } from "$lib/core/utils/zip/write";
 import type { WarrenDocument } from "./format";
-import { blocks_of, ListKind, type Align, type Block, type Run } from "./model";
+import { blocks_of, has_text, ListKind, type Script, type Align, type Block, type Run, type TextBlock } from "./model";
 import { BASE_PT, HEADING_PT, LINE_HEIGHT, PAGE_MM, PARAGRAPH_AFTER_PT, mm_to_twips } from "./page";
 
 export const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -16,6 +16,10 @@ const LEVELS = 9;
 const BULLETS = ["•", "◦", "▪"];
 const NUMBERS = ["decimal", "lowerLetter", "lowerRoman"];
 const JUSTIFICATION: Record<Align, string> = { left: "left", center: "center", right: "right", justify: "both" };
+const VERT_ALIGN: Record<Script, string> = { sub: "subscript", super: "superscript" };
+const CHECK_INDENT = 360;
+// A rule is an empty paragraph with a bottom border, which is what Word itself writes for "---".
+const RULE_BORDER = `<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>`;
 
 export function escape_xml(text: string): string {
   return text
@@ -34,14 +38,16 @@ export function font_name(font: FontChoice | undefined): string {
   return font ? font_label(font, "sans") : "Inter";
 }
 
+// `w:rPr` children have a fixed order in the schema: style, bold, italic, strike, size, underline, vertical alignment.
 function run_xml(run: Run): string {
   const props = [
     run.link && `<w:rStyle w:val="Hyperlink"/>`,
     run.bold && "<w:b/><w:bCs/>",
     run.italic && "<w:i/><w:iCs/>",
     run.strike && "<w:strike/>",
-    run.underline && `<w:u w:val="single"/>`,
     run.size !== null && `<w:sz w:val="${half_points(run.size)}"/><w:szCs w:val="${half_points(run.size)}"/>`,
+    run.underline && `<w:u w:val="single"/>`,
+    run.script && `<w:vertAlign w:val="${VERT_ALIGN[run.script]}"/>`,
   ]
     .filter(Boolean)
     .join("");
@@ -56,7 +62,7 @@ function run_xml(run: Run): string {
 export function link_ids(blocks: Block[]): Map<string, string> {
   const ids = new Map<string, string>();
   for (const block of blocks) {
-    if (block.kind === "page-break") continue;
+    if (!has_text(block)) continue;
     for (const run of block.runs) if (run.link && !ids.has(run.link)) ids.set(run.link, `rIdLink${ids.size + 1}`);
   }
   return ids;
@@ -83,7 +89,7 @@ interface Numbering {
 function numbering_of(blocks: Block[]): Numbering {
   const numbering: Numbering = { nums: [], by_list: new Map() };
   for (const block of blocks) {
-    if (block.kind !== "item" || numbering.by_list.has(block.list_id)) continue;
+    if (block.kind !== "item" || block.list === ListKind.CHECK || numbering.by_list.has(block.list_id)) continue;
     const id = numbering.nums.length + 1;
     numbering.nums.push({ id, abstract: block.list === ListKind.NUMBER ? 1 : 0, level: block.level, start: block.start });
     numbering.by_list.set(block.list_id, id);
@@ -91,17 +97,29 @@ function numbering_of(blocks: Block[]): Numbering {
   return numbering;
 }
 
-function paragraph_xml(block: Exclude<Block, { kind: "page-break" }>, numbering: Numbering, links: Map<string, string>, break_before: boolean): string {
-  // `w:pPr` children have a fixed order in the schema: style, page break, numbering, justification.
+function check_run(checked: boolean): Run {
+  return { text: checked ? "☑ " : "☐ ", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link: null };
+}
+
+function paragraph_xml(block: TextBlock, numbering: Numbering, links: Map<string, string>, break_before: boolean): string {
+  // `w:pPr` children have a fixed order in the schema: style, page break, numbering, indent, justification.
   const props: string[] = [];
+  const check = block.kind === "item" && block.list === ListKind.CHECK;
   if (block.kind === "heading") props.push(`<w:pStyle w:val="Heading${block.level}"/>`);
-  if (block.kind === "item") props.push(`<w:pStyle w:val="ListParagraph"/>`);
+  // A check item is a plain paragraph: List Paragraph without numbering reads as an unknown style on import.
+  if (block.kind === "item" && !check) props.push(`<w:pStyle w:val="ListParagraph"/>`);
   if (break_before) props.push("<w:pageBreakBefore/>");
-  if (block.kind === "item") {
+  if (block.kind === "item" && !check) {
     props.push(`<w:numPr><w:ilvl w:val="${Math.min(block.level, LEVELS - 1)}"/><w:numId w:val="${numbering.by_list.get(block.list_id)}"/></w:numPr>`);
   }
+  if (check && block.level > 0) props.push(`<w:ind w:left="${CHECK_INDENT * 2 * block.level}"/>`);
   if (block.align) props.push(`<w:jc w:val="${JUSTIFICATION[block.align]}"/>`);
-  return `<w:p>${props.length ? `<w:pPr>${props.join("")}</w:pPr>` : ""}${runs_xml(block.runs, links)}</w:p>`;
+  const runs = check ? [check_run(block.checked), ...block.runs] : block.runs;
+  return `<w:p>${props.length ? `<w:pPr>${props.join("")}</w:pPr>` : ""}${runs_xml(runs, links)}</w:p>`;
+}
+
+function rule_xml(break_before: boolean): string {
+  return `<w:p><w:pPr>${break_before ? "<w:pageBreakBefore/>" : ""}${RULE_BORDER}</w:pPr></w:p>`;
 }
 
 export function document_xml(document: WarrenDocument): string {
@@ -116,7 +134,7 @@ export function document_xml(document: WarrenDocument): string {
       pending_break = true;
       continue;
     }
-    body.push(paragraph_xml(block, numbering, links, pending_break));
+    body.push(block.kind === "rule" ? rule_xml(pending_break) : paragraph_xml(block, numbering, links, pending_break));
     pending_break = false;
   }
   if (pending_break) body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);

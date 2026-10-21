@@ -28,7 +28,7 @@
   import { z } from "zod";
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
   import { build_docx, DOCX_TYPE, font_name } from "./docx";
-  import { BlockStyle, WarrenEditor } from "./editor.svelte";
+  import { BlockStyle, LIST_STYLES, WarrenEditor } from "./editor.svelte";
   import { EXTENSION, serialize_document } from "./format";
   import { document_file_name, font_sources, read_document, read_file, stem_of, with_extension, write_file } from "./io";
   import { document_text } from "./model";
@@ -42,7 +42,7 @@
   import { load_faces, type FaceSource } from "$lib/core/utils/font-loader";
   import { font_label } from "$lib/core/api/services/settings/fonts";
   import type { FontChoice } from "$lib/core/api/services/settings/type";
-  import { count, repeated_words } from "./words";
+  import { count, reading_minutes, repeated_words } from "./words";
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
@@ -55,7 +55,12 @@
   const groups = storage.persisted<Record<string, boolean>>("groups", {}, z.record(z.string(), z.boolean()));
   const mobile = kernel.platform === Platform.MOBILE;
 
-  const editor = new WarrenEditor((error) => report_error(app_id, "Something went wrong in the editor", error));
+  const smart = storage.persisted<boolean>("smart", true, z.boolean());
+
+  const editor = new WarrenEditor(
+    (error) => report_error(app_id, "Something went wrong in the editor", error),
+    () => smart.value
+  );
 
   let file_path = $state<string | null>(null);
   let draft = $state<{ name: string; folder: string } | null>(null);
@@ -70,6 +75,8 @@
   const text = $derived(document_text(editor.json));
   const counts = $derived(count(text));
   const repeats = $derived(repeated_words(text));
+  const selection = $derived(editor.selected ? count(editor.selected) : null);
+  const goal_progress = $derived(editor.goal ? Math.min(1, counts.words / editor.goal) : null);
   const page = $derived(PAGE_MM[editor.page.size]);
   const sheets = $derived(editor.page.flow === Flow.SHEETS);
 
@@ -375,12 +382,42 @@
       scoped("save-as", "mod+shift+s", "Save as…", save_as),
       scoped("print", "mod+p", "Print or save as PDF", export_pdf),
       scoped("find", "mod+f", "Find and replace", open_find),
+      scoped("strike", "mod+shift+x", "Strikethrough", () => editor.toggle_strike()),
+      scoped("subscript", "mod+shift+,", "Subscript", () => editor.toggle_subscript()),
+      scoped("superscript", "mod+shift+.", "Superscript", () => editor.toggle_superscript()),
+      scoped("clear-formatting", "mod+\\", "Clear formatting", () => editor.clear_formatting()),
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
 
   const keep_focus = (event: PointerEvent) => event.preventDefault();
+
+  // On a phone the jump closes the More sheet and keeps the keyboard down.
+  function go_to(key: string) {
+    more = false;
+    editor.go_to(key, !mobile);
+  }
 </script>
+
+{#snippet tools()}
+  <WarrenTools
+    {editor}
+    {text}
+    {counts}
+    {repeats}
+    {selection}
+    open={groups.value}
+    ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })}
+    onexport={export_as}
+    onchanged={changed}
+    onlink={open_link}
+    {link_anchor}
+    onfind={open_find}
+    smart={smart.value}
+    onsmart={(on) => (smart.value = on)}
+    ongo={go_to}
+  />
+{/snippet}
 
 <svelte:element this={"style"}>{DOC_CSS}</svelte:element>
 
@@ -397,7 +434,7 @@
 
   <div class="body grid min-h-0">
     <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
-      <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} onfind={open_find} />
+      {@render tools()}
     </aside>
 
     <div class="flex min-h-0 min-w-0 flex-col">
@@ -409,7 +446,7 @@
           size="sm"
           class="w-28 min-w-0"
           aria-label="Paragraph style"
-          value={editor.block === BlockStyle.BULLET || editor.block === BlockStyle.NUMBER ? BlockStyle.PARAGRAPH : editor.block}
+          value={LIST_STYLES.includes(editor.block) ? BlockStyle.PARAGRAPH : editor.block}
           options={STYLE_OPTIONS}
           onchange={(event) => {
             editor.set_block(event.currentTarget.value as BlockStyle);
@@ -453,9 +490,27 @@
   </div>
 
   <StatusBar>
-    <span>{counts.words.toLocaleString("en")} {counts.words === 1 ? "word" : "words"}</span>
-    <span>{counts.characters.toLocaleString("en")} {counts.characters === 1 ? "character" : "characters"}</span>
-    <span class="hidden @sm:inline">{editor.page.size}</span>
+    <span>{selection ? `${selection.words.toLocaleString("en")} of ` : ""}{counts.words.toLocaleString("en")} {counts.words === 1 && !selection ? "word" : "words"}</span>
+    {#if goal_progress !== null && editor.goal}
+      <span class="flex shrink-0 items-center gap-1.5" title="Word goal: {editor.goal.toLocaleString('en')}">
+        <span
+          class="relative h-1.5 w-12 overflow-hidden rounded-full bg-foreground/12"
+          role="progressbar"
+          aria-label="Word goal"
+          aria-valuemin={0}
+          aria-valuemax={editor.goal}
+          aria-valuenow={Math.min(counts.words, editor.goal)}
+        >
+          <span class="absolute inset-y-0 left-0 rounded-full {goal_progress >= 1 ? 'bg-success' : 'bg-primary'}" style="width: {goal_progress * 100}%"></span>
+        </span>
+        <span>{Math.round(goal_progress * 100)}%</span>
+      </span>
+    {/if}
+    {#if counts.words}<span class="hidden @md:inline">{reading_minutes(counts.words)} min read</span>{/if}
+    <span class="hidden @sm:inline">
+      {selection ? `${selection.characters.toLocaleString("en")} of ` : ""}{counts.characters.toLocaleString("en")} {counts.characters === 1 && !selection ? "character" : "characters"}
+    </span>
+    <span class="hidden @lg:inline">{editor.page.size}</span>
   </StatusBar>
 
   {#if more}
@@ -476,7 +531,7 @@
       >
         <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
         <div class="min-h-0 flex-1 overflow-y-auto">
-          <WarrenTools {editor} {text} {counts} {repeats} open={groups.value} ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })} onexport={export_as} onchanged={changed} onlink={open_link} {link_anchor} onfind={open_find} />
+          {@render tools()}
         </div>
         <div class="flex justify-end border-t border-foreground/8 p-2">
           <Button variant="primary" onclick={() => (more = false)}>Done</Button>
@@ -593,7 +648,49 @@
   }
 
   .warren-doc :global(.page-break.selected),
-  .warren-doc :global(.page-break:focus) {
+  .warren-doc :global(.page-break:focus),
+  .warren-doc :global(.wr-rule.selected) {
     outline: 2px solid var(--cottontail);
+  }
+
+  .warren-doc :global(.wr-rule) {
+    cursor: default;
+  }
+
+  .warren-doc::spelling-error,
+  .warren-doc :global(*::spelling-error) {
+    text-decoration: wavy underline var(--error);
+    text-decoration-skip-ink: none;
+  }
+
+  .warren-doc::grammar-error,
+  .warren-doc :global(*::grammar-error) {
+    text-decoration: wavy underline var(--info);
+    text-decoration-skip-ink: none;
+  }
+
+  .warren-doc :global(.wr-checked),
+  .warren-doc :global(.wr-unchecked) {
+    cursor: text;
+  }
+
+  .warren-doc :global(.wr-checked)::before,
+  .warren-doc :global(.wr-unchecked)::before {
+    cursor: pointer;
+  }
+
+  /* Lexical toggles a check when the tap lands within 32 px of the box, so a 44 px row makes a 44 px target. */
+  @media (pointer: coarse) {
+    .warren-doc :global(li.wr-checked:not(.nested)),
+    .warren-doc :global(li.wr-unchecked:not(.nested)) {
+      min-height: 2.75rem;
+      padding-top: calc((2.75rem - 1lh) / 2);
+    }
+
+    .warren-doc :global(li.wr-checked:not(.nested))::before,
+    .warren-doc :global(li.wr-unchecked:not(.nested))::before,
+    .warren-doc :global(li.wr-checked:not(.nested))::after {
+      translate: 0 calc((2.75rem - 1lh) / 2);
+    }
   }
 </style>

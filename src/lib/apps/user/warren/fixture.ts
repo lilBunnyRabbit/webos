@@ -22,3 +22,20 @@ export const SAMPLE: WarrenDocument = {
     ]) as WarrenDocument["editor"]["root"],
   },
 };
+
+export const SAMPLE_V3: WarrenDocument = {
+  version: VERSION,
+  page: { size: "A4", flow: "sheets" },
+  goal: 500,
+  editor: {
+    root: block("root", [
+      block("heading", [text("Plan")], { tag: "h2" }),
+      block("paragraph", [text("H"), text("2", 32), text("O and E=mc"), text("2", 64), text(" old", 4)]),
+      { type: "horizontalrule", version: 1 } as DocNode,
+      block("list", [
+        block("listitem", [text("Pack")], { value: 1, checked: true }),
+        block("listitem", [text("Go")], { value: 2, checked: false }),
+      ], { listType: "check", start: 1, tag: "ul" }),
+    ]) as WarrenDocument["editor"]["root"],
+  },
+};

@@ -49,3 +49,13 @@ Scope from the [finalize follow-up](../brainstorm/2026-10-21_warren.md#follow-up
 
 ## Revision 2026-10-21: Lexical Extensions
 From the [ultra functional follow-up](../brainstorm/2026-10-21_warren.md#follow-up-2026-10-21-ultra-functional). The editor is built with `buildEditorFromExtensions` (`@lexical/extension`, pinned at 0.52.0 in the app's `package.json`): rich text, list, link, history and a page-break extension under one root extension. The deprecated `CAN_UNDO_COMMAND` / `CAN_REDO_COMMAND` listeners are gone; the toolbar follows `HistoryExtension`'s `canUndo` / `canRedo` signals. `LinkNode` now comes with `LinkExtension` (its transform and `TOGGLE_LINK_COMMAND`). Rich text's heading announcements are configured off, so nothing a user notices changed.
+
+## Revision 2026-10-21: wave A
+Wave A of the [ultra functional follow-up](../brainstorm/2026-10-21_warren.md#follow-up-2026-10-21-ultra-functional), no new dependency:
+
+- **Format `version: 3`:** `goal?: number` in the envelope (the word goal, per document), `horizontalrule` nodes (`HorizontalRuleExtension` from `@lexical/extension`), check lists (`CheckListExtension`, `listType: "check"`, `checked`) and the sub/superscript format bits. Versions 1 and 2 open; a Warren before 3 refuses 3. `doc count` and `doc export` read it.
+- **Formatting:** strikethrough, subscript, superscript and clear formatting (character formats and font sizes; links and paragraph styles stay) in the Text group, so the More sheet too. Window shortcuts Mod+Shift+X, Mod+Shift+, , Mod+Shift+. and Mod+\. Mod+, (Google Docs' subscript) is the OS's Settings, so sub and superscript moved to Shift. Mod+\ needed `Backslash` in the shortcut key table (`shortcuts/keys.ts`).
+- **.docx:** `w:strike`, `w:vertAlign`, run properties now in the schema's order (underline after size); a rule is a paragraph with a bottom border; a check item is a plain paragraph starting with ☐/☑ (List Paragraph without numbering made mammoth report an unknown style). PDF: `<hr>`, `<sub>`, `<sup>`, check boxes drawn in `document_css`, shared with the editor.
+- **Outline** is a sidebar group (and so a More-sheet section), last in the list. **Stats:** reading time (230 wpm), selection counts, the goal as a bar and percentage in the status bar.
+- **Smart punctuation** runs from an update listener, not a text transform: only one character typed at the caret is looked at, and the replacement is its own history entry, so Undo gives back the straight character. The toggle is in the Text group (app storage `smart`), as Warren has no settings page.
+- **Spelling underline:** `::spelling-error` / `::grammar-error` in the paper's `--error` / `--info`.

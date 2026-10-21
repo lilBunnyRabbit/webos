@@ -2,9 +2,10 @@ import { BUILTIN_FONTS, is_font_file_name } from "$lib/core/api/services/setting
 import { z } from "zod";
 import { DEFAULT_PAGE, FLOWS, PAGE_SIZES, type PageSettings } from "./page";
 
-// 2 added `page.font` and link nodes; a version 1 file reads as it is.
-export const VERSION = 2;
+// 2 added `page.font` and link nodes; 3 added `goal`, horizontal rules, check lists and sub/superscript. Older files read as they are.
+export const VERSION = 3;
 export const EXTENSION = ".warren";
+export const GOAL_MAX = 1_000_000;
 
 // Read loosely: the shell and the exports walk the JSON without loading Lexical.
 export interface DocNode {
@@ -17,6 +18,7 @@ export interface DocNode {
   listType?: string;
   start?: number;
   url?: string;
+  checked?: boolean;
 }
 
 export interface EditorJson {
@@ -26,6 +28,8 @@ export interface EditorJson {
 export interface WarrenDocument {
   version: typeof VERSION;
   page: PageSettings;
+  /** Word goal, shown as progress in the status bar. */
+  goal?: number;
   editor: EditorJson;
 }
 
@@ -41,6 +45,7 @@ const NodeSchema: z.ZodType<DocNode> = z.lazy(() =>
       listType: z.string().optional(),
       start: z.number().optional(),
       url: z.string().optional(),
+      checked: z.boolean().optional(),
     })
     .loose()
 );
@@ -54,6 +59,7 @@ const FontSchema = z.discriminatedUnion("kind", [
 const DocumentSchema = z.object({
   version: z.number().int().min(1),
   page: z.object({ size: z.enum(PAGE_SIZES), flow: z.enum(FLOWS), font: FontSchema.optional() }),
+  goal: z.number().int().positive().max(GOAL_MAX).optional(),
   editor: z.object({ root: z.object({ type: z.literal("root"), children: z.array(NodeSchema) }).loose() }).loose(),
 });
 
@@ -91,9 +97,15 @@ export function parse_document(text: string): WarrenDocument {
     throw new Error(`This isn't a valid Warren document: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
   const { font, ...page } = result.data.page;
-  return { version: VERSION, page: font && font.kind !== "default" ? { ...page, font } : page, editor: result.data.editor as EditorJson };
+  const { goal } = result.data;
+  return {
+    version: VERSION,
+    page: font && font.kind !== "default" ? { ...page, font } : page,
+    ...(goal ? { goal } : {}),
+    editor: result.data.editor as EditorJson,
+  };
 }
 
 export function serialize_document(document: WarrenDocument): string {
-  return JSON.stringify({ version: VERSION, page: document.page, editor: document.editor });
+  return JSON.stringify({ version: VERSION, page: document.page, goal: document.goal, editor: document.editor });
 }

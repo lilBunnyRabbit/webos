@@ -46,7 +46,7 @@ interface RunShortcut {       // apps, until they can register commands
 
 ### Keys
 
-`"mod+shift+k"`: modifiers in any order (`normalize` sorts them to `mod, ctrl, alt, shift, meta`), then one key. `mod` is Cmd on macOS/iOS and Ctrl elsewhere; on macOS `ctrl` is the Control key, elsewhere `meta` is Win. Keys come from `KeyboardEvent.code` (`KeyW` → `w`, `ArrowUp` → `up`, `Backquote` → `` ` ``, `Slash` → `/`, `Comma` → `,`, `F2` → `f2`, …), so the layout and Option-modified characters on macOS don't change what matches. `format_keys(keys, mac)` gives the display parts: `⌘ ⌃ ⌥ ⇧` on macOS, `Ctrl Alt Shift Win` elsewhere, arrows as `↑ ↓ ← →`.
+`"mod+shift+k"`: modifiers in any order (`normalize` sorts them to `mod, ctrl, alt, shift, meta`), then one key. `mod` is Cmd on macOS/iOS and Ctrl elsewhere; on macOS `ctrl` is the Control key, elsewhere `meta` is Win. Keys come from `KeyboardEvent.code` (`KeyW` → `w`, `ArrowUp` → `up`, `Backquote` → `` ` ``, `Slash` → `/`, `Comma` → `,`, `Backslash` → `\`, `F2` → `f2`, …), so the layout and Option-modified characters on macOS don't change what matches. `format_keys(keys, mac)` gives the display parts: `⌘ ⌃ ⌥ ⇧` on macOS, `Ctrl Alt Shift Win` elsewhere, arrows as `↑ ↓ ← →`.
 
 ## State
 
