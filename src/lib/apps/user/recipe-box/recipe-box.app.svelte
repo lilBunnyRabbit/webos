@@ -26,7 +26,6 @@
   import ScaleControls from "./scale-controls.svelte";
   import TableView from "./table-view.svelte";
   import { CookTimers } from "./timers.svelte";
-  import { ring_while_alive } from "$lib/apps/user/clock/ringer.svelte";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -74,7 +73,6 @@
     () => (path ? { title, path } : null),
     () => win.is_visible
   );
-  ring_while_alive(APP_ID);
 
   function report(title: string, reason: unknown) {
     notifications.notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) });

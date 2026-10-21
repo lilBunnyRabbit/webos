@@ -83,6 +83,12 @@ None. Owner: "We dont need migration no one uses it yet". The `migrated` marker 
 ### Missed jobs (decided)
 `missed_at?: number` on Job, written when the scheduler counts a job as missed; the owning app reads and clears it (Pomodoro uses it to pause and show "ended at"). Rejected: deriving it from `last_fired` against `at`, and the in-memory `missed` list alone (gone after a reload, and only in the leader tab).
 
+### Chime (decided)
+Builder 2 left the in-page chime to the apps (Clock and Recipe Box watched `last_fired` from their windows), so nothing chimed with the app closed. Owner: the scheduler plays it, per kind, in the leader tab after a user gesture; Clock's and Recipe Box's app-hosted chime is removed and Pomodoro gets none, so it never doubles. Rejected: an `on_fired` subscription on the scheduler, a `define_app` on-fire hook, the OS notification's sound only.
+
+### Pomodoro auto-start with Pomodoro loaded nowhere (open)
+Builder 3: a phase end is counted and an auto-started next phase scheduled by Pomodoro's page-level timer, in any tab where Pomodoro is loaded; the starting tab keeps it loaded while a phase runs. With Pomodoro loaded in no tab (reload, starting tab closed), the end rings but the next phase is scheduled only when Pomodoro next loads, so an auto-started break doesn't ring its end. Closing it needs app code at fire time: the same `on_fired` / `define_app` hook the owner hasn't decided.
+
 ## Key takeaways
 - Nothing can fire with every tab closed except the flagged Triggers API; the scheduler says so honestly and summarises what it missed.
 - One store, one leader, one timer, one place that knows repeat rules.
@@ -91,7 +97,7 @@ None. Owner: "We dont need migration no one uses it yet". The `migrated` marker 
 ## Action items
 1. [x] Builder 1: service core (ADR-062). Done 2026-10-21; decisions it had to make are in the ADR's revision note.
 2. [x] Builder 2: Clock alarms and timers, Recipe Box. Done 2026-10-21; see the ADR revision. Open: who plays the in-page chime with no app window open (a scheduler fired hook or a manifest callback, both new API).
-3. [ ] Builder 3: Pomodoro.
+3. [x] Builder 3: Pomodoro. Done 2026-10-21; see the ADR revision. The scheduler plays the chime for every app (owner). Open: auto-start chaining with Pomodoro loaded in no tab.
 4. [ ] Builder 4: Calendar.
 
 ## Next session topics

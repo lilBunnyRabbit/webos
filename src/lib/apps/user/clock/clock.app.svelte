@@ -38,7 +38,6 @@
     type StopwatchState,
   } from "./clock";
   import { attempt, delete_alarm as remove_alarm } from "./jobs";
-  import { ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import TimersTab from "./timers-tab.svelte";
@@ -77,7 +76,6 @@
     });
   });
 
-  ring_while_alive(app_id);
   // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
   const ticker = new Ticker(
     () => win.is_visible,

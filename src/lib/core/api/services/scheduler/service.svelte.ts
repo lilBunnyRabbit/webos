@@ -40,6 +40,7 @@ const RETRY_DELAY = 5_000;
 const MAX_MISSED = 50;
 const MISSED_TAG = "scheduler:missed";
 const SCHEDULER_FIELDS = ["armed_at", "last_fired", "missed_at"] as const;
+const CHIME_ORDER: JobKind[] = [JobKind.ALARM, JobKind.TIMER, JobKind.PHASE];
 
 type ChannelMessage = { type: "changed" } | { type: "seen" };
 
@@ -385,6 +386,7 @@ export class SchedulerService implements ISchedulerService {
       const closed = this.first_pass;
       this.first_pass = false;
       for (const { job, due } of transaction.result.fired) void this.fire(job, due);
+      this.chime(transaction.result.fired.map(({ job }) => job.kind));
       if (transaction.result.missed.length > 0) this.report_missed(transaction.result.missed, closed);
       await this.sync_triggers();
     } catch (error) {
@@ -429,6 +431,14 @@ export class SchedulerService implements ISchedulerService {
         { label: "Open", on_click: () => this.open(job) },
       ],
     });
+  }
+
+  // One chime per pass, the loudest kind that fired, so jobs due together don't stack. Browsers keep audio off until
+  // the page has had a click; without one the OS notification's sound carries it.
+  private chime(kinds: JobKind[]): void {
+    const kind = CHIME_ORDER.find((candidate) => kinds.includes(candidate));
+    if (!kind || !navigator.userActivation.hasBeenActive) return;
+    void import("./chime").then((module) => module.play_chime(kind));
   }
 
   private async shown_by_trigger(id: JobId, due: number): Promise<boolean> {

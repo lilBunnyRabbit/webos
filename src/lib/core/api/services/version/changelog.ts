@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.35.0",
+    date: "2026-10-21",
+    title: "Pomodoro on its own",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Pomodoro tells you a focus or break is over even with its window closed, with Start and Skip right on the notification, and a phase that ended while WebOS was closed waits paused with the time it ended.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Alarms, timers and Pomodoro phases chime in WebOS even with their app closed, once you've clicked anywhere on the page.",
+      },
+    ],
+  },
+  {
     version: "3.34.0",
     date: "2026-10-21",
     title: "A mark for AI apps",

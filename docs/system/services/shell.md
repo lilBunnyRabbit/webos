@@ -186,7 +186,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | nurikabe | `nurikabe daily [day]` | opens the daily puzzle |
 | sokoban | `sokoban daily [day]` | opens the daily level |
 | letterer | `letterer daily [day]` | opens the daily word |
-| pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values |
+| pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values; `pomo start`, `pomo skip` and `pomo pause` are the phase notification's buttons |
 | getting-started | `tour [topic]` | none |
 | clock | `clock [tab]`, `clock pin [-f]`, `time [zone]`, `alarm ls\|add\|on\|off\|rm`, `alarm snooze <alarm> [duration]` (default `10m`), `alarm stop <alarm>`, `timer <duration> [label…]`, `timer ls\|restart\|stop` | `alarm` / `timer` values, `text`; `zone` completer. Alarms and timers are scheduler jobs; `alarm snooze\|stop` and `timer restart\|stop` are their notification buttons |
 | time-since | `since`, `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>` | `counter` values; `counter` completer |

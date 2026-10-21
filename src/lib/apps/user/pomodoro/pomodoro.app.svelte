@@ -5,10 +5,9 @@
   import { format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
-  import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, SpeakerHigh, Sticker, Timer } from "phosphor-svelte";
+  import { ArrowCounterClockwise, ChartBar, Gear, Pause, Play, SkipForward, Sticker, Timer } from "phosphor-svelte";
   import { z } from "zod";
-  import { chime, prime_audio } from "./chime";
-  import { format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, type Settings } from "./pomodoro";
+  import { ended_text, format_clock, is_break, Phase, PHASE_LABELS, PHASES, progress, remaining_ms, Status, type Settings } from "./pomodoro";
   import Ring from "./ring.svelte";
   import { day_stats, format_minutes, last_days, streak, totals } from "./stats";
   import { acquire_timer } from "./timer.svelte";
@@ -78,12 +77,11 @@
         return;
       }
     }
-    timer.choose(phase);
+    void timer.choose(phase);
   }
 
   function toggle() {
-    if (running) timer.pause();
-    else timer.start();
+    void (running ? timer.pause() : timer.start());
   }
 
   const can_pin = kernel.platform !== Platform.MOBILE;
@@ -183,14 +181,18 @@
           </Ring>
         </div>
 
+        {#if timer.ended}
+          <p class="text-ui text-foreground/65" role="status">{ended_text(timer.ended)}</p>
+        {/if}
+
         <Input bind:value={() => timer.task, (task) => (timer.task = task ?? "")} class="max-w-xs text-center" placeholder="What are you focusing on?" aria-label="Task" maxlength={120} />
 
         <div class="flex items-center gap-3">
-          <IconButton label="Reset" size="md" onclick={() => timer.reset()} disabled={run.status === Status.IDLE}><ArrowCounterClockwise weight="bold" /></IconButton>
+          <IconButton label="Reset" size="md" onclick={() => void timer.reset()} disabled={run.status === Status.IDLE}><ArrowCounterClockwise weight="bold" /></IconButton>
           <Button variant="primary" size="lg" class="min-w-32" onclick={toggle}>
             {#if running}<Pause weight="fill" /> Pause{:else if run.status === Status.PAUSED}<Play weight="fill" /> Resume{:else}<Play weight="fill" /> Start{/if}
           </Button>
-          <IconButton label={`Skip to ${PHASE_LABELS[run.phase === Phase.FOCUS ? (run.round + 1 >= settings.long_every ? Phase.LONG : Phase.SHORT) : Phase.FOCUS].toLowerCase()}`} size="md" onclick={() => timer.skip()}>
+          <IconButton label={`Skip to ${PHASE_LABELS[run.phase === Phase.FOCUS ? (run.round + 1 >= settings.long_every ? Phase.LONG : Phase.SHORT) : Phase.FOCUS].toLowerCase()}`} size="md" onclick={() => void timer.skip()}>
             <SkipForward weight="bold" />
           </IconButton>
         </div>
@@ -254,20 +256,7 @@
         </Section>
 
         <Section title="Alerts" description="How a phase end reaches you.">
-          <SettingRow label="Sound" description="A soft chime at the end of each phase.">
-            {#snippet children({ id, describedby })}
-              <IconButton
-                label="Play the chime"
-                size="sm"
-                onclick={() => {
-                  prime_audio();
-                  chime();
-                }}><SpeakerHigh /></IconButton
-              >
-              <Switch {id} aria-describedby={describedby} bind:checked={timer.file.value.settings.sound} />
-            {/snippet}
-          </SettingRow>
-          <SettingRow label="Browser notifications" description="Phase ends show outside the tab while it's in the background.">
+          <SettingRow label="Browser notifications" description="Phase ends show even with Pomodoro closed, while WebOS is open in a tab. A chime plays once you've clicked on the page.">
             {#snippet children({ id, describedby })}
               {#if permission === "granted"}
                 <span {id} class="text-ui text-foreground/65">Allowed</span>

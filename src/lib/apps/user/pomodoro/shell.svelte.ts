@@ -6,74 +6,53 @@ import { acquire_timer, type PomodoroTimer } from "./timer.svelte";
 
 const READY_TIMEOUT = 5000;
 
-let holding = false;
-
-// A phase started from the shell with no window or widget open would have nobody to end and announce it.
-function hold_while_running(): void {
-  if (holding) return;
-  holding = true;
-  const { timer, release } = acquire_timer();
-  const stop = $effect.root(() => {
-    $effect(() => {
-      if (!timer.ready || timer.run.status === Status.RUNNING) return;
-      queueMicrotask(() => {
-        stop();
-        release();
-        holding = false;
-      });
-    });
-  });
-}
-
-async function with_timer<T>(action: (timer: PomodoroTimer) => T): Promise<T> {
+async function with_timer<T>(action: (timer: PomodoroTimer) => T | Promise<T>): Promise<T> {
   const { timer, release } = acquire_timer();
   try {
     for (let waited = 0; !timer.ready; waited += 25) {
       if (waited >= READY_TIMEOUT) throw new ShellError("pomo: the timer didn't load");
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
-    timer.settle();
-    const result = action(timer);
-    if (timer.run.status === Status.RUNNING) hold_while_running();
-    return result;
+    await timer.settle();
+    return await action(timer);
   } finally {
     release();
   }
 }
 
-const status_of = (timer: PomodoroTimer) => status_text(timer.run, timer.settings, timer.task, Date.now());
+const status_of = (timer: PomodoroTimer) => status_text(timer.run, timer.settings, timer.task, Date.now(), timer.ended);
 
 export function open_app(): void {
   kernel.service<AppsService>("apps").launch(APP_ID);
 }
 
 export function start({ args }: CommandContext<{ task: string[] }>): Promise<string> {
-  return with_timer((timer) => {
+  return with_timer(async (timer) => {
     const task = args.task.join(" ").trim();
     if (task) timer.task = task;
-    timer.start(false);
+    await timer.start(false);
     return status_of(timer);
   });
 }
 
 export function pause(): Promise<string> {
-  return with_timer((timer) => {
+  return with_timer(async (timer) => {
     if (timer.run.status !== Status.RUNNING) throw new ShellError("pomo pause: the timer isn't running");
-    timer.pause();
+    await timer.pause();
     return status_of(timer);
   });
 }
 
 export function skip(): Promise<string> {
-  return with_timer((timer) => {
-    timer.skip();
+  return with_timer(async (timer) => {
+    await timer.skip();
     return status_of(timer);
   });
 }
 
 export function reset(): Promise<string> {
-  return with_timer((timer) => {
-    timer.reset();
+  return with_timer(async (timer) => {
+    await timer.reset();
     return status_of(timer);
   });
 }

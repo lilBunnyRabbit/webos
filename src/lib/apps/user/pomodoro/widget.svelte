@@ -36,7 +36,7 @@
         </span>
         <span class="font-mono text-[19cqi] leading-none font-medium tabular-nums" role="timer">{format_time(remaining_ms(run, timer.settings, now))}</span>
         <div class="flex items-center gap-1">
-          <IconButton label={running ? "Pause" : "Start"} variant={running ? "secondary" : "primary"} size="sm" onclick={() => (running ? timer.pause() : timer.start())}>
+          <IconButton label={running ? "Pause" : "Start"} variant={running ? "secondary" : "primary"} size="sm" onclick={() => void (running ? timer.pause() : timer.start())}>
             {#if running}<Pause weight="fill" />{:else}<Play weight="fill" />{/if}
           </IconButton>
           <IconButton label="Open Pomodoro" size="sm" onclick={() => apps.launch(APP_ID)}><ArrowSquareOut /></IconButton>

@@ -21,7 +21,6 @@
     widget_slots,
   } from "./clock";
   import { open_clock_file } from "./jobs";
-  import { ring_while_alive } from "./ringer.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
   let { props, size, style }: WidgetProps = $props();
@@ -32,7 +31,6 @@
 
   const file = open_clock_file();
   $effect(() => () => file.release());
-  ring_while_alive(APP_ID);
 
   const ticker = new Ticker(
     () => !windows.page_hidden,
