@@ -1,6 +1,5 @@
 import { ShellError } from "$lib/core/api/services/shell/type";
 import { EventColor, minutes_of, new_id, time_of, type CalendarEvent, type Repeat } from "./calendar";
-import { pad2 } from "$lib/core/utils";
 import { resolve_day, parse_time } from "$lib/core/utils/date";
 import { reminder_plan } from "./reminders";
 

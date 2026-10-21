@@ -3,7 +3,7 @@ import { is_valid_zone, parse_date } from "$lib/core/utils/zoned";
 import { JobKind, type Job } from "./type";
 
 export const SCHEDULER_PATH = "/var/lib/scheduler/jobs.json";
-export const MAX_ACTIONS = 2;
+const MAX_ACTIONS = 2;
 
 const DateText = z.string().refine((text) => parse_date(text) !== null, "not a YYYY-MM-DD day");
 const TimeText = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "not an HH:MM time");

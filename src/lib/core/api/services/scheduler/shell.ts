@@ -23,7 +23,7 @@ function value(scheduler: SchedulerService, job: Job): JobValue {
   return { $type: "job", id: job.id, app: job.app, title: job.title, kind: job.kind, next: scheduler.next(job.id), repeat: format_repeat(job.repeat), armed: job.armed };
 }
 
-export function find_job(jobs: Job[], typed: string): Job {
+function find_job(jobs: Job[], typed: string): Job {
   const exact = jobs.find((job) => job.id === typed);
   if (exact) return exact;
   const by_id = jobs.filter((job) => job.id.startsWith(typed));

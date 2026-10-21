@@ -3,7 +3,7 @@ import { LatestWriter } from "../files/latest-writer";
 import { parse_registry, SCHEDULER_PATH, serialize_registry, type Registry } from "./persistence";
 
 export const LEADER_LOCK = "webos:scheduler";
-export const STORE_LOCK = "webos:scheduler-store";
+const STORE_LOCK = "webos:scheduler-store";
 export const CHANNEL = "webos:scheduler";
 
 export interface Transaction<T> {

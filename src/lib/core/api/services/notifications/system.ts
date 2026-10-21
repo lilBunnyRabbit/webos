@@ -2,7 +2,7 @@
 // the message shapes in step with that file.
 
 export const CLICK_MESSAGE = "webos:notification-click";
-export const READY_MESSAGE = "webos:ready";
+const READY_MESSAGE = "webos:ready";
 
 export const ClickSource = {
   NOTIFICATIONS: "notifications",
@@ -95,7 +95,7 @@ export function supports_triggers(): boolean {
   return "Notification" in globalThis && "showTrigger" in Notification.prototype;
 }
 
-export function is_click(data: unknown): data is NotificationClick {
+function is_click(data: unknown): data is NotificationClick {
   return typeof data === "object" && data !== null && (data as { type?: unknown }).type === CLICK_MESSAGE;
 }
 
