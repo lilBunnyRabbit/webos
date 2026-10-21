@@ -49,6 +49,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Path-string identity system (segments[] + derived path string)
 - [x] Multi-window sync: each `DirectoryHandler` watches its folder's and ancestors' `files.revision()` (ADR-021); a gone folder sends the explorer to the nearest parent ([brainstorm](brainstorm/2026-10-12_explorer-sync.md))
 - [ ] Cross-tab file sync: FileSystemObserver vs BroadcastChannel relay (brainstorm first)
+  - [ ] App data files (`json_file`) announce changes to other tabs, so an app open in one tab sees what another tab's scheduler leader or `on_fire` handler wrote (owner, 2026-10-21; [scheduler brainstorm](brainstorm/2026-10-21_background-scheduler.md))
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [x] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
   - [x] Window-scoped dialogs + confirm/prompt sheets

@@ -113,3 +113,7 @@ Built the same day: see the ADR revision "on-fire hook and per-job mute". The ha
 - Removing migrated leftovers from app files.
 - .ics import (would bring RRULE).
 - A tiny push backend if the owner ever accepts one.
+
+### on_fire stability and cross-tab app data (decided)
+`on_fire` stays internal ("not yet stable" in app-api.md) until Calendar has used it; then the shape (and the `Job` type it receives) is promised. Rejected: stable from 3.38.
+App data files not syncing between tabs (an app open in one tab can show a stale view after another tab's leader or `on_fire` handler wrote) goes onto the ROADMAP under Cross-tab file sync, fixed for every app at once. Rejected: a Pomodoro-only staleness check; leaving it.
