@@ -67,3 +67,10 @@ A Send button with two choices: the whole notebook, or this proposal only (as it
 - Kinds (app, feature, bug) with their own sections.
 - Status coming back to Lax (owner marks shipped, sends back).
 - A generic notebook, if a second use shows up.
+
+## Follow-up 2026-10-21: GitHub proposal form
+Owner wanted proposals to open as a pre-filled GitHub issue. Pre-filling from the app doesn't carry pictures: data URIs don't render on GitHub, and links get cut off around 8,000 characters. Decided instead:
+- a plain `proposal.yml` issue form with the 8 sections as fields, where pictures are pasted straight in;
+- linked from Settings › About as "Propose an app".
+
+The app stays for now. Ask LaxDOTexe which one he actually uses, and retire the app later if it's GitHub.

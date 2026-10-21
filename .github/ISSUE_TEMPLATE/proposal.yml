@@ -1,0 +1,51 @@
+name: App proposal
+description: Pitch a new app, or a big addition to one. Every field is optional; paste or drag pictures straight in.
+title: "[Proposal] "
+labels: [proposal]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What's annoying or missing today?
+  - type: textarea
+    id: does
+    attributes:
+      label: What it does
+      description: The core action, in one sentence.
+    validations:
+      required: true
+  - type: textarea
+    id: picture
+    attributes:
+      label: Picture
+      description: A sketch, a screenshot, or the tool it's like. Paste or drag images here.
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: Does it open, make or save files? Which formats?
+  - type: textarea
+    id: example
+    attributes:
+      label: Real example
+      description: One concrete time you'd use it.
+  - type: textarea
+    id: scope
+    attributes:
+      label: First vs later
+      description: The smallest useful version, and what can wait.
+  - type: textarea
+    id: phone
+    attributes:
+      label: Phone
+      description: Does it matter on a phone? How does touch work?
+  - type: input
+    id: feel
+    attributes:
+      label: Feel and name
+      description: The mood, the vibe, a name idea.
+  - type: input
+    id: version
+    attributes:
+      label: Version

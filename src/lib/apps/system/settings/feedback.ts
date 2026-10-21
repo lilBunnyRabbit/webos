@@ -5,6 +5,7 @@ export const REPOSITORY = "https://github.com/lilbunnyrabbit/webos";
 export const FeedbackKind = {
   FEATURE: "feature",
   BUG: "bug",
+  PROPOSAL: "proposal",
 } as const;
 export type FeedbackKind = (typeof FeedbackKind)[keyof typeof FeedbackKind];
 

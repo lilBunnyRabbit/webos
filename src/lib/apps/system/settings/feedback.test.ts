@@ -12,6 +12,12 @@ describe("issue_url", () => {
     expect(url.searchParams.has("platform")).toBe(false);
   });
 
+  test("opens the app proposal form", () => {
+    const url = new URL(issue_url(FeedbackKind.PROPOSAL, INFO, "desktop"));
+    expect(url.searchParams.get("template")).toBe("proposal.yml");
+    expect(url.searchParams.has("platform")).toBe(false);
+  });
+
   test("adds the platform to a bug report", () => {
     const url = new URL(issue_url(FeedbackKind.BUG, INFO, "mobile · Chrome"));
     expect(url.searchParams.get("template")).toBe("bug.yml");

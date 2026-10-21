@@ -29,6 +29,7 @@
     Lightbulb as LightbulbIcon,
     Link as LinkIcon,
     Play as PlayIcon,
+    RocketLaunch as RocketLaunchIcon,
     Sparkle as SparkleIcon,
   } from "phosphor-svelte";
 
@@ -139,6 +140,11 @@
     <SettingRow label="Request a feature" description="An idea for WebOS or one of its apps.">
       <Button onclick={() => open_issue(FeedbackKind.FEATURE)}>
         <LightbulbIcon /> Request <ArrowSquareOutIcon class="size-3.5" />
+      </Button>
+    </SettingRow>
+    <SettingRow label="Propose an app" description="A fuller pitch for a new app, with room for sketches and screenshots.">
+      <Button onclick={() => open_issue(FeedbackKind.PROPOSAL)}>
+        <RocketLaunchIcon /> Propose <ArrowSquareOutIcon class="size-3.5" />
       </Button>
     </SettingRow>
     <SettingRow label="Report a bug" description="Something that doesn't work. Your version and platform are filled in.">
