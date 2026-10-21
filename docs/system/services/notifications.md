@@ -19,7 +19,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `hide_toast(id)` | `(id): void` | Hides the toast, clears its timer, keeps it in history |
 | `mark_read(id)` | `(id): void` | |
 | `mark_all_read()` | `(): void` | |
-| `request_system()` | `(): Promise<boolean>` | Asks for browser notification permission if not decided yet. Call it from a click (Pomodoro's Start) so the prompt isn't blocked. Resolves whether `system` alerts can show |
+| `request_system()` | `(): Promise<boolean>` | Asks for browser notification permission if not decided yet. Call it from a click (Pomodoro's Start, Clock's Save and Start, Recipe Box's timer buttons, Settings › Notifications' Allow) so the prompt isn't blocked; an app does it before `scheduler.schedule()` ([scheduler](scheduler.md#permission)). Resolves whether `system` alerts can show |
 
 `NotifyOptions`:
 

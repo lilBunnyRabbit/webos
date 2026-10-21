@@ -81,7 +81,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 ### Dependency graph
 
 ```
-files ──────────────────────────────────────────────► settings
+files, notifications ───────────────────────────────► settings
 windows ────────────────────────────────────────────► dialogs
 windows, notifications, files, settings, dialogs ───► apps
 files, apps ────────────────────────────────────────► desktop
@@ -102,10 +102,10 @@ files, notifications, dialogs, apps, session ───────► version
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files` and `notifications`, so both are pushed before it. With the registrations above, the order is:
 
 ```
-files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → tasks → backup → ai → router → version
+files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → backup → ai → router → version
 ```
 
-Shutdown runs the reverse: `version → router → ai → backup → tasks → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
+Shutdown runs the reverse: `version → router → ai → backup → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
@@ -129,7 +129,7 @@ Which services implement which hooks today:
 |---------|--------|-----------|
 | settings | read `/etc/settings.json` (import + remove legacy `webos.settings` / v0 `settings`), start token + save effects | dispose effects |
 | version | start 30-min poll, `visibilitychange` listener; read `/var/lib/version/state.json`, then request the introduction (first boot) or toast "Updated to vX" and, once Restore is answered, announce the apps those releases introduce ([version](services/version.md#release-notes-and-introduction)) | clear both |
-| notifications | none | clear toast timers |
+| notifications | listen for clicks on its OS notifications (`listen_clicks`, [notifications](services/notifications.md#system-notifications)) | stop listening, clear toast timers |
 | dialogs | register the close prompt with windows (save-changes sheet, ADR-029), start the effect that resolves a closed window's sheets ([dialogs](services/dialogs.md)) | dispose both, resolve every open entry `null` |
 | files | `ensure_hierarchy`: create the folder layout, migrate a flat root once, empty `/tmp` ([files](services/files.md#hierarchy)) | none |
 | desktop | list `/home/Desktop`, read `/var/lib/desktop/layout.json`, seed on first boot (from v0 pins if any), start the revision watcher; the desktop variant then adds default widgets not yet recorded in `/var/lib/desktop/additions.json` ([desktop](services/desktop.md#lifecycle)) | dispose the watcher |
@@ -139,6 +139,7 @@ Which services implement which hooks today:
 | ui | `pointerup` / `keydown` (capture) listeners that arm the back guard, and a `popstate` listener ([ui](services/ui.md#back)) | remove them |
 | windows (both, in `BaseWindowsService`) | `beforeunload` listener (warns while a window is dirty, ADR-029), `visibilitychange` listener (page hidden state) | remove them |
 | shortcuts | register the OS defaults, global `keydown` listener ([shortcuts](services/shortcuts.md)) | remove the listener, dispose the defaults |
+| scheduler | read `/var/lib/scheduler/jobs.json`, open the `webos:scheduler` BroadcastChannel, wake-up listeners (`visibilitychange`, `resume`, `pageshow`, `focus`), the folder-revision and uninstalled-app effects, the notification-click listener, post `webos:ready` to the service worker, request the leader lock **without awaiting it** ([scheduler](services/scheduler.md#lifecycle)) | clear the timer, abort the lock request or release the lock, close the channel, remove every listener and effect |
 | apps, clipboard, tasks, backup | none | none |
 | ai | asks the browser which features it has, **without awaiting** (every feature reads `no` until it answers) ([ai](services/ai.md#lifecycle)); the mobile variant has no `init` | destroy kept model sessions |
 | extract | `pointerdown` / `keydown` (capture) listeners on `window` for `input_inside`, an `$effect.root` that closes a closed window's mini window; while one is out, a `pagehide` listener and two `MutationObserver`s ([extract](services/extract.md)) | dispose it, close the mini window |

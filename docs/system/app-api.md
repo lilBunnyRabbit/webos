@@ -170,7 +170,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/games`, `games/time`, `games/daily`, `games/direction` | All of it, see [Games kit](#games-kit) | |
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
 | `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |
-| `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite) |
+| `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite, Doodlehop) |
 | `$kit/utils/qr`, `$kit/utils/qr-scan.svelte` | | QR encode, barcode and QR detect (`create_barcode_detector`, `detect_barcode` with the format), `CameraScan` (QR Reader, QR Studio, P2P Transfer, Cards) |
 | `$kit/utils/exif` | | The EXIF reader (Metadata, PDF Tools) |
 | `$kit/utils/base45` | | RFC 9285 Base45 (`to_base45`, `from_base45`): bytes as QR alphanumeric characters (pairing codes, QR transfer) |

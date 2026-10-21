@@ -168,7 +168,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | router | `link [id] [-c] [-s]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |
-| scheduler | `sched ls [app]` (yields `job` values, soonest first), `sched rm <job>` | `job`, `when` | `job` (click opens the job's app) |
+| scheduler | `sched ls [app]` (yields `job` values, soonest first), `sched rm <job>` | `job`, `when` | `job` (click opens the job's `open` target, else its app) |
 | ai | `summarize [--type tldr\|key-points\|teaser\|headline] [--length short\|medium\|long]`, `translate --to <lang> [--from <lang>]`, `lang`; each hidden where its feature answers `no` (ADR-046) | `language` | `language` |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |

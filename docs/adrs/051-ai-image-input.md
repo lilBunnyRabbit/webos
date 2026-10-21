@@ -27,7 +27,7 @@ Shopping List's fallback reader is now PP-OCRv5 (mobile detector, Latin recognis
 
 ## Revision 2026-10-21
 
-`extract()` takes pictures too ([ADR-061](./061-ai-games.md)): a picture in any message opens a `prompt-image` session with `expectedInputs` and the `responseConstraint`, destroyed after the call like the text path, so it never takes one of the kept chat slots. The last message is sent as `[{ role, content: parts }]`, the shape `prompt()` sends. Whether Chrome accepts a picture together with `responseConstraint` couldn't be checked when this landed (the build machine's Chrome had no Prompt API); Doodlehop checks it first.
+`extract()` takes pictures too ([ADR-061](./061-ai-games.md)): a picture in any message opens a `prompt-image` session with `expectedInputs` and the `responseConstraint`, destroyed after the call like the text path, so it never takes one of the kept chat slots. The last message is sent as `[{ role, content: parts }]`, the shape `prompt()` sends. Whether Chrome accepts a picture together with `responseConstraint` couldn't be checked when this landed (the build machine's Chrome had no Prompt API), and is still unverified: Doodlehop shipped tested only against a stubbed `LanguageModel` (ADR-061, Doodlehop revision).
 
 ## Consequences
 

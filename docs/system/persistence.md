@@ -49,8 +49,8 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.color-games.{mode,level,space,daily-recall,daily-odd-one-out,daily-gradient-sort,daily-hex-guess}` | `user/color-games` | Last mode; last practice level; Recall's slider space (HSB or OKLCH); each mode's daily attempt `{ day, state }`, so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
-| `app.doodlehop.best` | `user/doodlehop` | Best round `{ recognised, ms }`: most words, then least drawing time |
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
+| `app.doodlehop.best` | `user/doodlehop` | Best round `{ recognised, ms }`: most words, then least drawing time |
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
@@ -80,6 +80,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.tic-tac-toe.{stats,mode}` | `user/tic-tac-toe` | Win/loss/draw counts; last mode |
 | `app.time-since.sort` | `user/time-since` | Counter sort |
 | `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
+| `app.unsaid.best` | `user/unsaid` | Lowest round score (`number` or `null`) |
 | `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity |
 | `app.word-search.{stats,daily,game,difficulty}` | `user/word-search` | Stats; daily puzzle; game in progress; last difficulty |
 | `app.letterer.{stats,variant,game,daily}` | `user/letterer` | Stats per mode and length; last mode, length, boards and hard mode; game in progress; daily word |
@@ -129,6 +130,7 @@ interface StorageHandle {
 | Recently closed windows (Alt+Shift+T) | No | SessionService memory, last 10 |
 | Desktop icons | Yes | They're the entries of `/home/Desktop` |
 | Desktop icon positions | Yes, once moved | `/var/lib/desktop/layout.json`. Icons never moved take the first free cells again |
+| Scheduled alarms, timers and reminders | Yes | `/var/lib/scheduler/jobs.json`. What came due while every tab was closed is summed up as missed at the next boot; the in-memory `missed` list and the app badge count don't survive ([scheduler](services/scheduler.md#missed)) |
 | Notification history | **No** | NotificationsService `all` is in-memory |
 | Clipboard contents | **No** | ClipboardService is in memory, like a real OS clipboard |
 | Open dialogs | **No** | DialogsService `stack` is in-memory |
@@ -154,4 +156,5 @@ BackupService (ADR-037, [backup](services/backup.md)) zips three areas into one 
 | App data | Uninstall a user app with its data (Uninstall… in the App Library, the start menu, the desktop or the phone home and drawer): its `app.{id}.*` keys and `/var/lib/apps/{id}/` ([apps](services/apps.md#public-api)). System apps' keys have no UI |
 | Restore a backup | Settings → Backup → Restore…, or `backup restore`: replaces `/home`, `/etc`, `/var/lib` and the `app.*` keys for each area the backup holds, then reloads ([backup](services/backup.md)) |
 | Files | `kernel.service("files").clear()` (→ `opfs.clear_opfs()`, then rebuilds the empty hierarchy and marker; no UI caller), or DevTools → Application → Storage (the hierarchy comes back on the next boot) |
+| Scheduled jobs | `sched rm <job>` one at a time, or each app's own delete (Clock's alarms and timers, Recipe Box's Stop). Uninstalling an app drops its jobs. Deleting `/var/lib/scheduler/jobs.json` empties the registry on the next re-read ([scheduler](services/scheduler.md#registry-and-cross-tab)) |
 | SW / caches | No UI. DevTools → Application → Storage. `apply_update()` replaces the precache with the new build's, it doesn't wipe it. |

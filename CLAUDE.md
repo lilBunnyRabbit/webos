@@ -99,7 +99,7 @@ Ask about each of these that applies, with a concrete proposal per option:
 
 - **Commands.** Which commands the service contributes in its `shell.ts` through `IService.shell()`: names (Unix verb for files, `noun verb` group for a domain), args (zod and `arg.*` kinds), what they yield, and `available()`.
 - **Values.** Whether its data should flow as a tagged value type (`columns`, `text`, `cell`, `open`), so `ls`-style output, `where`, `sort` and clicking all work. It can also extend another service's type, like apps adding `open` to `file`.
-- **Completion.** Whether a new arg kind needs a completer (`path`, `app`, `window` and `theme` exist).
+- **Completion.** Whether a new arg kind needs a completer (`path`, `app`, `window`, `theme`, `task`, `job` and `when` exist).
 - **Shortcuts.** A new OS action gets its logic as a command, and its key binding goes in `shortcuts/defaults.ts` as `command: "…"`, never a new `run`.
 - **Apps.** Apps contribute global commands through `define_app({ shell })` (ADR-034); a service wins an id clash. Window-scoped app commands are deferred, so in-app shortcuts still use `run`. For a new app, ask:
   - whether a service command covers it (like `app launch x`, or `open` with its file type);
@@ -187,6 +187,9 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `birdseye` | `docs/apps/birdseye.md` |
 | `proposals` | `docs/apps/proposals.md` |
 | `warren` | `docs/apps/warren.md` |
+| `unsaid` | `docs/apps/unsaid.md` |
+| `alibi` | `docs/apps/alibi.md` |
+| `doodlehop` | `docs/apps/doodlehop.md` |
 | `unsaid` | `docs/apps/unsaid.md` |
 | `alibi` | `docs/apps/alibi.md` |
 | `doodlehop` | `docs/apps/doodlehop.md` |

@@ -12,14 +12,14 @@ Code owns every rule: the deck, the banned-word check, matching and scoring are 
 
 ### Cards
 
-`cards.ts` holds 150 hand-written cards, 25 in each of six categories (`card.ts`), in our own wording. Targets and banned words are single lowercase words; a deck test checks that, plus five distinct banned words per card, none of them sharing the target's stem. The deck is a dynamic `import()` in the app, so it's its own chunk.
+`cards.ts` holds 150 hand-written cards, 25 in each of six categories (`card.ts`), in our own wording. Targets are single lowercase words and banned words single words; a deck test checks that, plus five distinct banned words per card, none of them sharing the target's stem. The deck is a dynamic `import()` in the app, so it's its own chunk.
 
 `deal(seed, deck)` shuffles a copy with `create_rng(seed)` and takes the first 5. A seed replays the same cards for as long as the deck is unchanged; editing `cards.ts` changes what old seeds deal.
 
 ### Words and stems (`words.ts`)
 
 - **Fold:** NFKD, strip combining marks, lowercase. `Pöny` is `pony`.
-- **Tokens:** runs of letters (`\p{L}`), so spaces, digits, hyphens and apostrophes all split. Each token keeps its offsets in the typed text, for highlighting.
+- **Tokens:** runs of letters and combining marks (`[\p{L}\p{M}]`), folded, so spaces, digits, hyphens and apostrophes all split. Each token keeps its offsets in the typed text, for highlighting.
 - **Stem:** one suffix off, the first that fits from `ies → y`, `ing`, `es`, `ed`, `er`, `ly`, `s`, only when 3 or more letters are left; then a final `e` and a doubled last letter are dropped (when more than 3 letters remain). So `bake`, `baked`, `baker`, `baking` all stem to `bak`, `run` and `running` to `run`, `fly` and `flies` to `fly`.
 
 ### The banned-word check

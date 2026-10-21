@@ -37,7 +37,7 @@ The browser's globals are typed in `built-in-ai.d.ts`, since TypeScript's DOM li
 
 ## Lifecycle
 
-- `init()`: asks the browser for all four features **without awaiting**, so boot never waits on it. Until it answers, everything reads `no` and the shell commands stay hidden for that moment.
+- `init()`: asks the browser for all five features (`prompt-image` included) **without awaiting**, so boot never waits on it. Until it answers, everything reads `no` and the shell commands and `AiGate` checks stay hidden for that moment.
 - `destroy()`: destroys every kept session.
 - `MobileAiService` has neither.
 
