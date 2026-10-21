@@ -162,7 +162,7 @@ const on_fire: OnFire = async (job, { outcome, due }) => {
 export default on_fire;
 ```
 
-The leader tab loads it on first use and calls it once per occurrence, after the notification, one handler at a time. A throw becomes an error toast from the app; it isn't retried. It runs like a shell command: no app context, services through `kernel.service`, app data through `json_file`. Pomodoro counts a phase's end and schedules the next phase in it. Details: [scheduler](../services/scheduler.md#on-fire-hook).
+The leader tab loads it on first use and calls it once per occurrence, after the notification, one handler at a time. A throw becomes an error toast from the app; it isn't retried. It runs like a shell command: no app context, services through `kernel.service`, app data through `json_file`. Pomodoro counts a phase's end and schedules the next phase in it; Calendar points a repeating reminder's click at the next occurrence's day, or cancels a finished one. Details: [scheduler](../services/scheduler.md#on-fire-hook).
 
 ### `widget` (ADR-034)
 

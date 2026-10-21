@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService, type SchedulerService } from "$lib/core/api";
   import { KANBAN_APP_ID } from "$lib/apps/user/kanban/data";
   import { day_minutes, format_hours, WORK_HOURS_APP_ID } from "$lib/apps/user/work-hours/data";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -37,7 +37,6 @@
     month_title,
     months_in,
     new_draft,
-    next_reminder,
     range,
     skip_occurrence,
     SourcesSchema,
@@ -51,7 +50,9 @@
   } from "./calendar";
   import EventEditor from "./event-editor.svelte";
   import MonthView from "./month-view.svelte";
-  import { KanbanSource, remind_while_alive, WorkHoursSource } from "./store.svelte";
+  import { attempt, cancel_reminder, sync_reminder } from "./jobs";
+  import { next_reminder } from "./reminders";
+  import { KanbanSource, WorkHoursSource } from "./store.svelte";
   import type { CalendarActions, DaySources } from "./view";
   import WeekView from "./week-view.svelte";
   import { day_key } from "$lib/core/utils/date";
@@ -63,14 +64,13 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = storage.file(EVENTS_FILE, EMPTY_EVENTS, EventsFileSchema);
   const sources = storage.persisted("sources", DEFAULT_SOURCES, SourcesSchema);
   const view = storage.window<View>("view", untrack(() => initial_view ?? View.MONTH), z.enum(View));
   const anchor = storage.window<string>("anchor", untrack(() => initial_day ?? day_key(new Date())), DaySchema);
   let selected = $state(untrack(() => anchor.value));
-
-  remind_while_alive(file);
 
   const ticker = new Ticker(() => win.is_visible, 30_000);
   const now = $derived(ticker.now);
@@ -135,6 +135,7 @@
     if (previous) file.value.events = file.value.events.map((entry) => (entry.id === event.id ? event : entry));
     else file.value.events = [...file.value.events, event];
     if (event.reminder !== null) void notifications.request_system();
+    attempt("Couldn't set the reminder", sync_reminder(event));
     selected = event.day;
     draft = null;
   }
@@ -145,11 +146,14 @@
     const target = file.value.events.find((event) => event.id === id);
     if (!target) return;
     if (only) {
-      file.value.events = file.value.events.map((event) => (event.id === id ? skip_occurrence($state.snapshot(event), only) : event));
+      const skipped = skip_occurrence($state.snapshot(target), only);
+      file.value.events = file.value.events.map((event) => (event.id === id ? skipped : event));
+      attempt("Couldn't update the reminder", sync_reminder(skipped));
     } else {
       const what = target.repeat ? `every occurrence of “${target.title}”` : `“${target.title}”`;
       if (!(await win.confirm(`Delete ${what}?`, { confirm_label: "Delete", danger: true }))) return;
       file.value.events = file.value.events.filter((event) => event.id !== id);
+      attempt("Couldn't remove the reminder", cancel_reminder(id));
     }
     draft = null;
   }
@@ -205,8 +209,7 @@
       }
       const name = await desktop.pin_widget(app_id, { label: "Today" });
       if (!name) throw new Error("The desktop is full");
-      void notifications.request_system();
-      notifications.notify(app_id, { title: "Calendar added to the desktop", message: "It shows today and keeps reminders coming with this window closed." });
+      notifications.notify(app_id, { title: "Calendar added to the desktop", message: "It shows today's events and the next reminder." });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });
     }
@@ -226,7 +229,7 @@
   const range_worked = $derived(
     sources.value.work_hours ? visible_days.filter((day) => view.value !== View.MONTH || month_of(day) === month).reduce((sum, day) => sum + day_minutes(work.day(day)), 0) : 0
   );
-  const upcoming = $derived(file.ready ? next_reminder(file.value.events, now) : null);
+  const upcoming = $derived(next_reminder(scheduler.list(app_id), now));
 
   const views = [
     { value: View.MONTH, label: "Month", icon: SquaresFourIcon },
@@ -295,9 +298,10 @@
       {range_events === 1 ? "event" : "events"}{#if range_worked > 0}{` · worked ${format_hours(range_worked)} h`}{/if}
     </span>
     {#if upcoming}
+      {@const at = new Date(upcoming.at)}
       <span class="ml-auto hidden truncate @md:inline">
-        Next reminder {format_day(upcoming.occurrence.day, { month: "short", day: "numeric" })}
-        {time_of(new Date(upcoming.at).getHours() * 60 + new Date(upcoming.at).getMinutes())} · {upcoming.occurrence.event.title}
+        Next reminder {format_day(day_key(at), { month: "short", day: "numeric" })}
+        {time_of(at.getHours() * 60 + at.getMinutes())} · {upcoming.job.title}
       </span>
     {/if}
   </StatusBar>

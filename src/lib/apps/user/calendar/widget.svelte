@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type WidgetProps, type WindowsService } from "$lib/core/api";
+  import kernel, { type AppsService, type SchedulerService, type WidgetProps, type WindowsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { Bell as BellIcon } from "phosphor-svelte";
@@ -9,24 +9,23 @@
     day_title,
     expand,
     format_day,
-    next_reminder,
     time_label,
     time_of,
     until_label,
   } from "./calendar";
   import { EVENT_DOT } from "./colors";
-  import { open_events, remind_while_alive } from "./store.svelte";
+  import { next_reminder } from "./reminders";
+  import { open_events } from "./store.svelte";
   import { day_key } from "$lib/core/utils/date";
 
-  // Hosts reminders too, so a widget on the desktop keeps them coming with no Calendar window open.
   let { size }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = open_events();
   $effect(() => () => file.release());
-  remind_while_alive(file);
 
   const ticker = new Ticker(() => !windows.page_hidden, 30_000);
   const now = $derived(ticker.now);
@@ -34,7 +33,7 @@
   const today = $derived(day_key(new Date(now)));
   const week = $derived(size.h >= 4);
   const events = $derived(file.ready ? expand(file.value.events, today, add_days(today, week ? 6 : 0)) : []);
-  const upcoming = $derived(file.ready ? next_reminder(file.value.events, now) : null);
+  const upcoming = $derived(next_reminder(scheduler.list(APP_ID), now));
 </script>
 
 <div class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
@@ -70,7 +69,7 @@
     {#if upcoming}
       {@const at = new Date(upcoming.at)}
       <span class="truncate"
-        ><span class="font-mono font-medium text-foreground tabular-nums">{time_of(at.getHours() * 60 + at.getMinutes())}</span> · {upcoming.occurrence.event.title}, {until_label(
+        ><span class="font-mono font-medium text-foreground tabular-nums">{time_of(at.getHours() * 60 + at.getMinutes())}</span> · {upcoming.job.title}, {until_label(
           upcoming.at - now
         )}</span
       >

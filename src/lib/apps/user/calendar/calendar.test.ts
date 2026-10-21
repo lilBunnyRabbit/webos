@@ -4,7 +4,6 @@ import {
   add_months,
   at,
   draft_error,
-  due_reminder,
   event_from_draft,
   EventColor,
   EventsFileSchema,
@@ -13,7 +12,6 @@ import {
   month_grid,
   months_in,
   new_draft,
-  next_reminder,
   occurrences,
   Repeat,
   skip_occurrence,
@@ -45,7 +43,6 @@ function event(patch: Partial<CalendarEvent> = {}): CalendarEvent {
     notes: "",
     color: EventColor.PRIMARY,
     reminder: null,
-    last_notified: null,
     ...patch,
   };
 }
@@ -142,43 +139,6 @@ describe("occurrences", () => {
       "2026-10-14"
     );
     expect(list.map((entry) => entry.event.id)).toEqual(["all", "early", "late"]);
-  });
-});
-
-describe("reminders", () => {
-  const reminded = event({ start: "10:00", end: "11:00", reminder: 15 });
-
-  it("is due from the reminder time until shortly after the start", () => {
-    expect(due_reminder(reminded, at("2026-10-14", "09:44"))).toBeNull();
-    expect(due_reminder(reminded, at("2026-10-14", "09:45"))?.occurrence.day).toBe("2026-10-14");
-    expect(due_reminder(reminded, at("2026-10-14", "10:10"))).not.toBeNull();
-    expect(due_reminder(reminded, at("2026-10-14", "10:20"))).toBeNull();
-  });
-
-  it("fires once per occurrence", () => {
-    const now = at("2026-10-14", "09:50");
-    const due = due_reminder(reminded, now)!;
-    expect(due_reminder({ ...reminded, last_notified: due.occurrence.start }, now)).toBeNull();
-  });
-
-  it("moves on to the next occurrence of a repeating event", () => {
-    const daily = { ...reminded, repeat: { every: Repeat.DAILY, until: null }, last_notified: at("2026-10-14", "10:00") };
-    expect(due_reminder(daily, at("2026-10-15", "09:46"))?.occurrence.day).toBe("2026-10-15");
-  });
-
-  it("counts an all-day reminder from 09:00 and keeps it until the day ends", () => {
-    const all_day = event({ all_day: true, reminder: 1440 });
-    expect(due_reminder(all_day, at("2026-10-13", "08:59"))).toBeNull();
-    expect(due_reminder(all_day, at("2026-10-13", "09:00"))?.at).toBe(at("2026-10-13", "09:00"));
-    expect(due_reminder(all_day, at("2026-10-14", "23:00"))).not.toBeNull();
-    expect(due_reminder(all_day, at("2026-10-15", "00:01"))).toBeNull();
-  });
-
-  it("finds the next reminder across events", () => {
-    const other = event({ id: "e2", day: "2026-10-14", start: "09:30", end: "10:00", reminder: 0 });
-    expect(next_reminder([reminded, other], at("2026-10-14", "08:00"))?.occurrence.event.id).toBe("e2");
-    expect(next_reminder([reminded, other], at("2026-10-14", "09:40"))?.occurrence.event.id).toBe("e1");
-    expect(next_reminder([reminded, other], at("2026-10-14", "11:00"))).toBeNull();
   });
 });
 

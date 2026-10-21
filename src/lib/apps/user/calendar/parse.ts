@@ -2,6 +2,7 @@ import { ShellError } from "$lib/core/api/services/shell/type";
 import { EventColor, minutes_of, new_id, time_of, type CalendarEvent, type Repeat } from "./calendar";
 import { pad2 } from "$lib/core/utils";
 import { resolve_day, parse_time } from "$lib/core/utils/date";
+import { reminder_plan } from "./reminders";
 
 const UNITS: Record<string, number> = { w: 10080, d: 1440, h: 60, m: 1 };
 
@@ -50,7 +51,7 @@ export function event_from_args(args: AddArgs, today: string): CalendarEvent {
   const reminder = args.remind === undefined ? null : parse_duration(args.remind);
   if (args.remind !== undefined && reminder === null)
     throw new ShellError(`cal add: "${args.remind}" isn't a duration; use minutes, 1h or 1d`);
-  return {
+  const event: CalendarEvent = {
     id: new_id(),
     title,
     day,
@@ -62,6 +63,8 @@ export function event_from_args(args: AddArgs, today: string): CalendarEvent {
     notes: "",
     color: EventColor.PRIMARY,
     reminder,
-    last_notified: null,
   };
+  const plan = reminder_plan(event);
+  if (plan.kind === "unsupported") throw new ShellError(`cal add: ${plan.reason.charAt(0).toLowerCase()}${plan.reason.slice(1)}`);
+  return event;
 }

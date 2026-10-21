@@ -148,7 +148,7 @@ export default on_fire;
 - **Errors.** A throw or rejection, from loading the module or from the handler, is logged and shown as an error toast from the app ("Couldn't finish “{title}”"); the queue carries on. Never retried.
 - **Nothing more.** There's no handler for a job whose app isn't registered, and none in a follower tab. In solo a leading solo tab runs every app's handler (manifests are all registered there).
 
-Pomodoro uses it to count a phase's end and chain the next one ([below](#pomodoro)). Calendar's reminders can use it the same way.
+Pomodoro uses it to count a phase's end and chain the next one ([below](#pomodoro)). Calendar uses it to point a repeating reminder's body click at the next occurrence's day ([below](#calendar)).
 
 ## Missed
 
@@ -215,10 +215,11 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 | Clock | `clock:alarm-{id}`, kind `alarm`: a one-off is `{ date, time, tz }` the next time the clock reads it, a repeating one starts today with `{ every: "week", days }`; tz is the device's when it's made. `clock:timer-{id}`, kind `timer`, `{ epoch }` | `alarm snooze {id}` (Snooze 10 min), `alarm stop {id}`; `timer restart {id}`, `timer stop {id}` | Clock on Alarms or Timer | `clock.json`: `alarms` and `timers` by job id: the label, a timer's length, and its time left while paused or reset (`left_ms`) |
 | Recipe Box | `recipe-box:timer-{id}`, kind `timer`, `{ epoch }`, title the step's timer name, message the recipe | `recipe timer stop {key}` (Stop) | Recipe Box on that recipe (`open.props.path`) | nothing |
 | Pomodoro | `pomodoro:phase`, kind `phase`, `{ epoch }`: the running phase's end; disarmed while paused | `pomo start` (Start break / Start focus), `pomo skip` (Skip, Skip break), `pomo pause` (Pause) | Pomodoro | `timer.json`: settings, task, the plan (phase, round, `left` while paused, `total`, the `settled` end) and a missed phase's `ended`; `stats.json` |
+| Calendar | `calendar:reminder-{event id}`, kind `reminder`: `{ date, time, tz }` of the first occurrence's reminder, tz the device's when it's made; `repeat` is the event's rule moved back by the reminder's whole days | none | Calendar on the day of the occurrence it's for (`open.props.day`) | `events.json`: every event detail, including the reminder's minutes; nothing about when it last fired |
 
 - **Clock timer state** comes from the job first: armed is running (ends at `at.epoch`); otherwise `left_ms` says paused or reset, and no `left_ms` is done. Each change writes the job and the extras in the order that keeps that true in between: start arms first, pause and reset write `left_ms` first.
 - **Switching a one-off alarm back on** re-times it to the next time the clock reads its time, in its own zone. `alarm stop` drops a snooze and switches a one-off off when nothing is left to ring; `alarm snooze` arms the job with `snooze_until`, so a one-off that already rang rings once more.
-- **Permission.** Clock's Save and Start, Recipe Box's timer buttons and Pomodoro's Start (window and widget) call `notifications.request_system()` in the click, before scheduling.
+- **Permission.** Clock's Save and Start, Recipe Box's timer buttons and Pomodoro's Start (window and widget) and Calendar's Save of an event with a reminder call `notifications.request_system()` in the click, before scheduling.
 
 ### Pomodoro
 
@@ -229,6 +230,15 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - **Missed.** The next phase waits paused at its full length, whatever auto-start says; `timer.json`'s `ended` shows "Focus ended at 14:02" in the window and in `pomo status` until the next action. `missed_at` is cleared with `update(id, { missed_at: undefined })`, leaving the disarmed job as the paused phase's slot.
 - **Text.** Title "Focus done[: task]" or "Break over"; the message and buttons say what follows: "Time for a short break." with Start break and Skip, or "Short break started, 5 min." with Skip break (Pause after a break). While a phase runs, a settings or task change updates the job's text after 0.8 s.
 - **Sound.** The job is `silent` unless Pomodoro's Sound switch is on (off by default); switching it during a phase updates the job with the text. "Play the chime" next to it plays the scheduler's phase chime (`scheduler/chime.ts`, imported on click), which also counts as the gesture audio needs.
+
+### Calendar
+
+- **Mapping** (`calendar/reminders.ts`, Node-tested). The reminder's wall time is the event's start (09:00 all day) minus its minutes, carried onto earlier days as needed: 00:30 with 1 hour is 23:30 the day before, `shift` 1. The job's `at.date` is the first occurrence's day minus `shift`, and its rule is the event's moved back by `shift` days: daily is `day`, weekly is `week` on the reminder's weekday, monthly is `month` on the day it lands on (or `31`, the month's end, when it always lands on the previous month's last day), yearly is `year`. `until` and every `skip` move back by `shift` too, so they stay one to one with the event's days.
+- **Exactness.** A shifted monthly or yearly rule is checked against the scheduler's own `next_occurrence` (in UTC) over 48 months or 8 years, against Calendar's own occurrences. When it doesn't match (a day ahead of a monthly event on the 29th–31st, a week ahead of one on the 1st–7th, a day ahead of a yearly event on 29 February or of 1 March from a non-leap year), nothing is scheduled: the editor shows why under Reminder and won't save, and `cal add` fails with the same reason. A reminder on the event's day always maps.
+- **Edit paths.** Saving an event, deleting one occurrence (`skip`), and `cal add` call `sync_reminder(event)` (`calendar/jobs.ts`); deleting an event cancels its job. A change that keeps the reminder's wall time and rule only updates the job's title and message, so it keeps its zone and `armed_at`; any other change schedules it afresh in the device's zone; no reminder, or none left from now on, cancels it.
+- **On fire** (`on-fire.ts`). After each fired or missed reminder the handler reads the event and points `open.props.day` at the next pending occurrence's day; with none left (a one-off, or past `until`) it cancels the job instead of leaving it disarmed. It uses the job, not `due`.
+- **Text.** Title the event's; message its time and how far ahead the reminder is, the same for every occurrence: "14:30–15:30 · in 15 min", "All day · tomorrow". No buttons: a snooze would fire after the handler has moved `open` on to the next occurrence.
+- **Next reminder** in the status bar and on the widget is the soonest pending `calendar:` job.
 
 ## Divergence from ADR
 
@@ -245,4 +255,7 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - An on-fire handler that throws isn't retried; the app sees the end again only through `jobs`. A leader tab closed while a handler runs leaves that occurrence unhandled (the next leader doesn't redo it).
 - App files (`json_file`) don't sync across tabs. A tab with Pomodoro loaded that misses the moment a phase ended (frozen in the background on Android, say) and then sees the next phase already scheduled by the leader shows its stale plan until it reloads.
 - `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.
-- `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.
+- Calendar reminders count in wall time, not elapsed time: across a DST change between a reminder and its event, "1 day before" is the same clock time the day before (23 or 25 h), and "1 hour before" an event at 03:30 on a spring-forward night fires at 03:30. The old in-app check subtracted milliseconds.
+- A Calendar reminder whose shifted rule the scheduler can't express isn't scheduled (above); the editor refuses it.
+- A reminder created after its time has passed for the next occurrence never fires for that occurrence (`armed_at`); the old in-app check still showed it until 15 min after the event started.
+- A Calendar reminder fired while the leader closes before the handler runs keeps `open` on the day it just fired for; the next reminder opens that day.

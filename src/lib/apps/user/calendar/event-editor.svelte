@@ -4,6 +4,7 @@
   import { Check as CheckIcon, Trash as TrashIcon } from "phosphor-svelte";
   import { draft_error, EVENT_COLORS, format_day, REMINDER_OPTIONS, Repeat, repeat_label, type EventDraft } from "./calendar";
   import { COLOR_NAMES, EVENT_DOT } from "./colors";
+  import { reminder_error } from "./reminders";
 
   let {
     draft = $bindable(),
@@ -20,7 +21,8 @@
   } = $props();
 
   let tried = $state(false);
-  const error = $derived(draft_error(draft));
+  const reminder_problem = $derived(reminder_error(draft));
+  const error = $derived(draft_error(draft) ?? reminder_problem);
 
   const REPEATS = [
     { value: "none", label: "Does not repeat" },
@@ -95,6 +97,9 @@
       <span class={overline}>Reminder</span>
       <Select bind:value={draft.reminder} options={reminders} />
     </label>
+    {#if reminder_problem}
+      <p class="-mt-3 text-2xs text-error">{reminder_problem}</p>
+    {/if}
 
     <fieldset class="grid gap-1.5">
       <legend class={cn(overline, "mb-1.5")}>Colour</legend>

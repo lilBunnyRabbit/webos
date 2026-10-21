@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { DAY, View } from "./props";
 import { pad2 } from "$lib/core/utils";
-import { day_key } from "$lib/core/utils/date";
 
 export { CALENDAR_PROPS, View } from "./props";
 
@@ -54,10 +53,8 @@ export const EventSchema = z.object({
   skip: z.array(DaySchema),
   notes: z.string(),
   color: z.enum(EventColor),
-  /** Minutes before the start; an all-day event counts from 09:00 on its day. `null`: no reminder. */
+  /** Minutes before the start; an all-day event counts from 09:00 on its day. `null`: no reminder. It fires as the scheduler job `calendar:reminder-{id}`. */
   reminder: z.number().int().min(0).nullable(),
-  /** Start (ms) of the last occurrence a reminder fired for, so every window and the widget fire it once. */
-  last_notified: z.number().nullable(),
 });
 export type CalendarEvent = z.infer<typeof EventSchema>;
 
@@ -254,54 +251,6 @@ export function group_by_day<T extends { day: string }>(items: T[]): Map<string,
 }
 
 export const ALL_DAY_REMINDER_BASE = "09:00";
-/** A reminder noticed after its event started (WebOS was closed) still fires within this, then it's dropped. */
-export const LATE_MS = 15 * 60_000;
-
-export function reminder_at(event: CalendarEvent, day: string): number | null {
-  if (event.reminder === null) return null;
-  const base = event.all_day ? at(day, ALL_DAY_REMINDER_BASE) : at(day, event.start);
-  return base - event.reminder * 60_000;
-}
-
-export interface DueReminder {
-  occurrence: Occurrence;
-  at: number;
-}
-
-/**
- * The earliest occurrence of `event` whose reminder time has come and that wasn't announced yet. A timed occurrence
- * that started more than `LATE_MS` ago is past saving; an all-day one until its day ends.
- */
-export function due_reminder(event: CalendarEvent, now: number): DueReminder | null {
-  if (event.reminder === null) return null;
-  const today = day_key(new Date(now));
-  const span = Math.ceil(event.reminder / 1440) + 1;
-  for (const day of occurrences(event, add_days(today, -1), add_days(today, span))) {
-    const found = occurrence(event, day);
-    const when = reminder_at(event, day)!;
-    if (when > now) return null;
-    if ((event.all_day ? found.end : found.start + LATE_MS) < now) continue;
-    if (event.last_notified !== null && found.start <= event.last_notified) continue;
-    return { occurrence: found, at: when };
-  }
-  return null;
-}
-
-export function next_reminder(events: CalendarEvent[], now: number): DueReminder | null {
-  let best: DueReminder | null = null;
-  const today = day_key(new Date(now));
-  for (const event of events) {
-    if (event.reminder === null) continue;
-    const span = Math.ceil(event.reminder / 1440) + 1;
-    for (const day of occurrences(event, today, add_days(today, span + 31))) {
-      const when = reminder_at(event, day)!;
-      if (when <= now) continue;
-      if (!best || when < best.at) best = { occurrence: occurrence(event, day), at: when };
-      break;
-    }
-  }
-  return best;
-}
 
 export const REMINDER_OPTIONS: { value: string; label: string }[] = [
   { value: "none", label: "No reminder" },
@@ -498,7 +447,6 @@ export function event_from_draft(draft: EventDraft, previous: CalendarEvent | nu
     notes: draft.notes,
     color: draft.color,
     reminder,
-    last_notified: previous?.last_notified ?? null,
   };
   return event;
 }

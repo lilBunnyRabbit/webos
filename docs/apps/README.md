@@ -26,6 +26,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [unsaid.md](unsaid.md) | Unsaid (`unsaid`) | The card deck and seeded deals, the banned-word check (folding, cheap stems, 4-letter prefixes), the guess prompt and its schema, hits and scoring |
 | [alibi.md](alibi.md) | Alibi (`alibi`) | The seeded case generator (templates, beats, the flipped statement, evidence cards), the suspect sheet sent to the model and what it never sees, judging and score, the save |
 | [doodlehop.md](doodlehop.md) | Doodlehop (`doodlehop`) | When a guess is asked (stroke end, idle, one in flight, merged strokes), the cropped black-on-white PNG snapshot, the `extract()` call with a word-list enum, matching and scoring in code |
+| [calendar.md](calendar.md) | Calendar (`calendar`) | Repeat rules and their occurrences (month-end clamping, 29 February, skip, until), how a reminder becomes a scheduler job (the day shift, the exactness check, `on_fire`), the events file |
 
 ## Page shape
 

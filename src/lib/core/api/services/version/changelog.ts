@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.39.0",
+    date: "2026-10-21",
+    title: "Calendar reminders, always on time",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Calendar reminders now arrive with Calendar closed and no widget on the desktop, as long as WebOS is open in a tab, and clicking one opens Calendar on that event's day.",
+      },
+    ],
+  },
+  {
     version: "3.38.0",
     date: "2026-10-21",
     title: "Pomodoro keeps going",

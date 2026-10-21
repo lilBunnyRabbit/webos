@@ -1,12 +1,8 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import type { CommandContext, Tagged } from "$lib/core/api/services/shell/type";
-import { live_file } from "$lib/core/contexts/app";
 import {
   add_days,
   APP_ID,
-  EMPTY_EVENTS,
-  EVENTS_PATH,
-  EventsFileSchema,
   expand,
   format_day,
   time_label,
@@ -14,8 +10,7 @@ import {
 } from "./calendar";
 import { day_arg, event_from_args, type AddArgs } from "./parse";
 import { day_key } from "$lib/core/utils/date";
-
-const events = live_file(EVENTS_PATH, EMPTY_EVENTS, EventsFileSchema);
+import { events_file, sync_reminder } from "./jobs";
 
 export function event_value({ event, day }: Pick<Occurrence, "event" | "day">): Tagged {
   return {
@@ -40,7 +35,7 @@ function* listed(found: Occurrence[], empty: string): Generator<Tagged | string>
 export async function* on_day({ args }: CommandContext<{ day?: string }>): AsyncGenerator<Tagged | string> {
   const day = day_arg(args.day, "cal", day_key(new Date()));
   yield* listed(
-    expand((await events.read()).events, day, day),
+    expand((await events_file.read()).events, day, day),
     `nothing on ${format_day(day, { weekday: "long", month: "short", day: "numeric" })}`
   );
 }
@@ -48,14 +43,15 @@ export async function* on_day({ args }: CommandContext<{ day?: string }>): Async
 export async function* agenda({ args }: CommandContext<{ days: number }>): AsyncGenerator<Tagged | string> {
   const today = day_key(new Date());
   yield* listed(
-    expand((await events.read()).events, today, add_days(today, args.days - 1)),
+    expand((await events_file.read()).events, today, add_days(today, args.days - 1)),
     `nothing in the next ${args.days === 1 ? "day" : `${args.days} days`}`
   );
 }
 
 export async function add({ args }: CommandContext<AddArgs>): Promise<Tagged> {
   const event = event_from_args(args, day_key(new Date()));
-  await events.edit((file) => ({ ...file, events: [...file.events, event] }));
+  await events_file.edit((file) => ({ ...file, events: [...file.events, event] }));
+  await sync_reminder(event);
   return event_value({ event, day: event.day });
 }
 
