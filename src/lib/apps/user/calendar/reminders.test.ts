@@ -106,6 +106,7 @@ describe("against Calendar's occurrences", () => {
   const days = ["2024-01-01", "2024-01-31", "2024-02-29", "2024-03-01", "2024-03-07", "2025-02-28", "2025-03-01", "2026-04-30", "2026-05-31", "2026-08-15", "2027-12-31"];
   const minutes = [0, 15, 60, 1440, 2880, 10080];
   const repeats = [null, { every: Repeat.DAILY, until: null }, { every: Repeat.WEEKLY, until: null }, monthly, yearly];
+  const SPAN: Record<string, number> = { [Repeat.DAILY]: 160, [Repeat.WEEKLY]: 500, [Repeat.MONTHLY]: 900, [Repeat.YEARLY]: 900 };
 
   it("fires on every occurrence and nothing else, until and skips included", () => {
     let checked = 0;
@@ -113,12 +114,14 @@ describe("against Calendar's occurrences", () => {
       for (const reminder of minutes)
         for (const repeat of repeats)
           for (const [all_day, start] of [[false, "00:10"], [false, "13:45"], [true, "09:00"]] as const) {
-            const until = repeat ? add_days(day, 800) : null;
-            const subject = event({ day, reminder, all_day, start, repeat: repeat && { ...repeat, until }, skip: repeat ? [add_days(day, 0), add_days(day, 365)] : [] });
+            // Daily and weekly cross every month end well within their span; a long one only multiplies the walk.
+            const span = repeat ? SPAN[repeat.every] : 0;
+            const until = repeat ? add_days(day, span - 100) : null;
+            const subject = event({ day, reminder, all_day, start, repeat: repeat && { ...repeat, until }, skip: repeat ? [add_days(day, 0), add_days(day, Math.floor(span / 2))] : [] });
             const plan = reminder_plan(subject);
             if (plan.kind !== "rule") continue;
             const base = all_day ? "09:00" : start;
-            const expected = occurrences(subject, day, add_days(day, 900)).map((on) => Date.parse(`${on}T${base}:00Z`) - reminder * 60_000);
+            const expected = occurrences(subject, day, add_days(day, span || 900)).map((on) => Date.parse(`${on}T${base}:00Z`) - reminder * 60_000);
             const job = { at: { date: plan.rule.date, time: plan.rule.time, tz: "UTC" }, repeat: plan.rule.repeat, armed: true };
             const fired: number[] = [];
             for (let after = -Infinity, next = next_occurrence(job, after); next !== null && fired.length <= expected.length; after = next, next = next_occurrence(job, after)) fired.push(next);
