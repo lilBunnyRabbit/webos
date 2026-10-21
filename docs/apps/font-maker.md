@@ -14,7 +14,7 @@ Everything is in font units, y up from the baseline, `units_per_em` 1000. The dr
 
 ### Strokes to outlines
 
-`outline.ts`. A stroke is `[x, y, pressure][]`. The width is per font: `project.stroke.width`, 20–160, default 70 (`STROKE_WIDTH`), and it feeds the canvas, the live stroke, the grid and filmstrip thumbnails (as SVG polyline stroke width), the preview and the export, so changing it restyles everything already drawn. At export, and live while drawing so the canvas shows what ships:
+`outline.ts`. A stroke is `[x, y, pressure][]`. The width is per font: `project.stroke.width`, 20–160, default 70 (`STROKE_WIDTH`), and it feeds the canvas, the live stroke, the grid and filmstrip thumbnails (the same pressure outlines as the canvas, through `glyph_contours`), the preview and the export, so changing it restyles everything already drawn. At export, and live while drawing so the canvas shows what ships:
 
 | Step | What | Where |
 |------|------|-------|
