@@ -282,7 +282,7 @@ Another app's packages are reached through that app's module, not by importing t
 | `bun run check` | `svelte-check` + `tsc`. Must stay at 0 errors |
 | `bun run build` | Production build (also writes `version.json`) |
 | `bun run test` | Vitest, both projects: `unit` (Node) and `browser` (Chromium through Playwright). First run needs `bunx playwright install chromium` |
-| `bun run test:unit` | Node project only. CI runs this before `build` |
+| `bun run test:unit` | Node project only. CI runs this before `build`; the fork job also runs the core, kit and system app browser tests |
 | `bun run budget` | After a build: entry chunk gz size against the 190 KB budget. CI runs it after `build` |
 | `bun run og` | Renders `scripts/og/og.html` to `public/og.png` (the 1200×630 link preview card) through Playwright |
 

@@ -12,6 +12,10 @@
 > - `IService.destroy?()` may return a promise. `boot_test_kernel().shutdown()` is async and awaits each service's `destroy()`; ShellService's returns its pending history save. The production kernel still doesn't await.
 > - Replaces the `vi.waitFor` retry around `clear_opfs()` in the shell tests and the `shell.remember` stub in the mounts tests.
 
+> **Revision 2026-10-21: core browser tests in CI's fork job** (owner, [brainstorm](../brainstorm/2026-10-21_health-pass.md))
+> - The `fork` job (user apps deleted) installs Playwright Chromium and runs the browser tests under `src/lib/core`, `src/lib/kit` and `src/lib/apps/system`. The `deploy` job still runs unit tests only.
+> - Core tests never launch a real user app: `TestAppsService` (`services/apps/test-apps.ts`) drops the user apps and registers stand-ins (`example` with props, `board` with a widget, `notes` with shell commands, `game`). The version tests mock `./changelog` with a fixture.
+
 ## Context
 
 There were no tests. Services grew subtle: session restore, directory revisions, DirectoryHandler's coalesced reloads. Refactors relied on manual browser checks. The riskiest layer, OPFS, exists only in a real browser, and the bugs so far were browser behaviour that a fake wouldn't reproduce. Brainstorm: [2026-10-12 Testing strategy](../brainstorm/2026-10-12_testing-strategy.md).
@@ -51,6 +55,6 @@ There were no tests. Services grew subtle: session restore, directory revisions,
 - Unit tests gate every deploy.
 
 ### Negative
-- Browser tests run only locally; a push can break them without CI noticing.
+- Browser tests outside core, kit and system apps run only locally; a push can break them without CI noticing.
 - Three dev dependencies and a local Chromium download.
 - Service tests build a real Kernel by hand (`boot_test_kernel`); see the revision note.
