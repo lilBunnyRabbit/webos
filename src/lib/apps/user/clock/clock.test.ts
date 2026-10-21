@@ -20,9 +20,7 @@ import {
   timer_state,
   TimerState,
   find_entry,
-  parse_alarm_time,
   parse_days,
-  parse_duration,
   ActiveKind,
   active_items,
   ClockDataSchema,
@@ -220,22 +218,6 @@ describe("stopwatch", () => {
 });
 
 describe("shell parsing", () => {
-  it("reads durations", () => {
-    expect(parse_duration("5m")).toBe(5 * 60_000);
-    expect(parse_duration("1h30m")).toBe(90 * 60_000);
-    expect(parse_duration("1h30m15s")).toBe(90 * 60_000 + 15_000);
-    expect(parse_duration("90s")).toBe(90_000);
-    expect(parse_duration("10")).toBe(10 * 60_000);
-    expect(parse_duration("2H")).toBe(2 * 3_600_000);
-    for (const bad of ["", "0", "0m", "5x", "m", "30m1h", "1.5h"]) expect(parse_duration(bad)).toBeNull();
-  });
-
-  it("reads alarm times", () => {
-    expect(parse_alarm_time("7:30")).toBe("07:30");
-    expect(parse_alarm_time("23:59")).toBe("23:59");
-    for (const bad of ["24:00", "7:60", "730", "7:3", "a:bc"]) expect(parse_alarm_time(bad)).toBeNull();
-  });
-
   it("reads repeat days", () => {
     expect(parse_days("weekdays")).toEqual([1, 2, 3, 4, 5]);
     expect(parse_days("Weekends")).toEqual([0, 6]);

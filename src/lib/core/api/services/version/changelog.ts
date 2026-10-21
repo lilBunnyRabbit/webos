@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.32.0",
+    date: "2026-10-21",
+    title: "Notifications that reach you",
+    changes: [
+      {
+        kind: NEW,
+        text: "Settings has a Notifications page that shows whether WebOS may notify you, asks for it, and sends a test, and the Terminal can list and cancel everything scheduled with sched ls and sched rm.",
+      },
+      {
+        kind: FIXED,
+        text: "System notifications now show on Android, with their buttons, and clicking one brings you back to WebOS.",
+      },
+    ],
+  },
+  {
     version: "3.31.0",
     date: "2026-10-21",
     title: "Italics per weight and kerning",

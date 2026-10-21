@@ -6,6 +6,7 @@
   import Appearance from "./sections/appearance.svelte";
   import Backup from "./sections/backup.svelte";
   import Files from "./sections/files.svelte";
+  import Notifications from "./sections/notifications.svelte";
   import Taskbar from "./sections/taskbar.svelte";
   import WhatsNew from "./sections/whats-new.svelte";
   import Roadmap from "./sections/roadmap.svelte";
@@ -38,6 +39,8 @@
         <Files />
       {:else if section.value === "shortcuts"}
         <Shortcuts />
+      {:else if section.value === "notifications"}
+        <Notifications />
       {:else if section.value === "backup"}
         <Backup />
       {:else if section.value === "whats-new"}

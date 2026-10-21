@@ -23,6 +23,7 @@ import { RouterService } from "../services/router/service.svelte";
 import { ShellService } from "../services/shell/service.svelte";
 import { BackupService } from "../services/backup/service.svelte";
 import { TasksService } from "../services/tasks/service.svelte";
+import { SchedulerService } from "../services/scheduler/service.svelte";
 
 // Phones and tablets get their own windows, desktop and an AI service that answers "no" (ADR-016, ADR-046); the other
 // platform's code is never downloaded (ADR-036).
@@ -127,6 +128,12 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register("shortcuts", {
     instance: ShortcutsService,
     dependencies: ["windows", "dialogs", "shell"],
+  });
+
+  // Solo uses the same class: a solo tab joins the leader lock but never steals it (ADR-062).
+  kernel.register("scheduler", {
+    instance: SchedulerService,
+    dependencies: ["files", "notifications", "apps", "shell"],
   });
 
   kernel.register("tasks", {

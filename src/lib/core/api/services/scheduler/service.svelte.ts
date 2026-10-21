@@ -1,0 +1,534 @@
+import { untrack } from "svelte";
+import type { AppsService, FilesService, Kernel, NotificationsService, ShellService } from "$lib/core/api";
+import { format_datetime } from "$lib/core/utils";
+import { Mode } from "../../kernel/mode";
+import { NotificationType } from "../notifications/type";
+import {
+  active_registration,
+  announce_ready,
+  ClickSource,
+  listen_clicks,
+  permission,
+  show_system_notification,
+  show_triggered_notification,
+  supports_triggers,
+  type NotificationClick,
+  type SystemNotificationOptions,
+} from "../notifications/system";
+import { parse_hash, RouteKind, serialize_route } from "../router/route";
+import { next_due, pending, plan } from "./occurrence";
+import { JobSchema, SCHEDULER_PATH, type Registry } from "./persistence";
+import { scheduler_shell } from "./shell";
+import { CHANNEL, LEADER_LOCK, RegistryStore, type Change } from "./store";
+import {
+  JobKind,
+  type Job,
+  type JobId,
+  type JobInput,
+  type JobPatch,
+  type MissedJob,
+  type SchedulerService as ISchedulerService,
+} from "./type";
+import type { AppId } from "../apps/type";
+
+/** The leader wakes at least this often, so a clock change or an edit nobody announced is seen within a minute. */
+const MAX_DELAY = 60_000;
+/** Wall clock and `performance.now()` drifting apart by more than this between wake-ups: the device slept or the clock moved. */
+const JUMP = 5_000;
+/** A failed pass (storage error) retries no sooner than this, instead of spinning on a due job it can't record. */
+const RETRY_DELAY = 5_000;
+const MAX_MISSED = 50;
+const MISSED_TAG = "scheduler:missed";
+const SCHEDULER_FIELDS = ["armed_at", "last_fired", "missed_at"] as const;
+
+type ChannelMessage = { type: "changed" } | { type: "seen" };
+
+interface LockRequest {
+  id: number;
+  abort: AbortController | null;
+}
+
+export class SchedulerService implements ISchedulerService {
+  name = "SchedulerService";
+  description = "Fires scheduled notifications for every app while any WebOS tab lives";
+  inspector = () => import("./inspector.svelte");
+  shell = () => scheduler_shell(this, (job) => this.open(job));
+
+  to_string(): string {
+    return `SchedulerService: ${this.jobs.length} jobs, ${this.is_leader ? "leader" : "follower"}`;
+  }
+
+  public jobs = $state.raw<Job[]>([]);
+  public is_leader = $state(false);
+  public triggers = $state(false);
+  public missed = $state.raw<MissedJob[]>([]);
+  public last_jump = $state<number | null>(null);
+
+  private text: string | null = null;
+  private readonly store = new RegistryStore(() => this.files_service);
+  private channel: BroadcastChannel | null = null;
+  private cleanups: Array<() => void> = [];
+
+  private request: LockRequest | null = null;
+  private leading: number | null = null;
+  private release: (() => void) | null = null;
+  private sequence = 0;
+  private destroyed = false;
+
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private armed_wall = 0;
+  private armed_mono = 0;
+  private processing: Promise<void> | null = null;
+  private again = false;
+  private failed = false;
+  private first_pass = true;
+  private badge = 0;
+  private triggered: Map<JobId, number> | null = null;
+
+  private files_service!: FilesService;
+  private notifications_service!: NotificationsService;
+  private apps_service!: AppsService;
+  private shell_service!: ShellService;
+
+  constructor(private kernel: Kernel) {
+    this.files_service = $derived(this.kernel.service<FilesService>("files"));
+    this.notifications_service = $derived(this.kernel.service<NotificationsService>("notifications"));
+    this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
+    this.shell_service = $derived(this.kernel.service<ShellService>("shell"));
+  }
+
+  async init(): Promise<void> {
+    this.triggers = supports_triggers();
+    const { registry, text } = await this.store.read();
+    this.apply(registry, text);
+
+    this.channel = new BroadcastChannel(CHANNEL);
+    this.channel.onmessage = (event: MessageEvent<ChannelMessage>) => this.on_channel(event.data);
+
+    const wake = () => this.wake();
+    const on_visibility = () => {
+      if (document.visibilityState === "visible") this.seen();
+      this.wake();
+    };
+    document.addEventListener("visibilitychange", on_visibility);
+    document.addEventListener("resume", wake);
+    window.addEventListener("pageshow", wake);
+    window.addEventListener("focus", wake);
+    this.cleanups.push(() => {
+      document.removeEventListener("visibilitychange", on_visibility);
+      document.removeEventListener("resume", wake);
+      window.removeEventListener("pageshow", wake);
+      window.removeEventListener("focus", wake);
+    });
+
+    // Edits this tab makes another way (Terminal, Text Editor) bump the folder's revision; other tabs ping the channel.
+    this.cleanups.push(
+      $effect.root(() => {
+        $effect(() => {
+          this.files_service.revision(SCHEDULER_PATH.slice(0, SCHEDULER_PATH.lastIndexOf("/")));
+          untrack(() => void this.refresh());
+        });
+        // Uninstalling happens in one tab and isn't shared, so whichever full tab sees it drops the app's jobs.
+        $effect(() => {
+          if (this.jobs.some((job) => this.uninstalled(job.app))) untrack(() => void this.drop_uninstalled());
+        });
+      })
+    );
+
+    this.cleanups.push(listen_clicks(ClickSource.SCHEDULER, (click) => this.on_click(click)));
+    announce_ready();
+    if (document.visibilityState === "visible") this.seen();
+    this.join(this.may_steal());
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    clearTimeout(this.timer);
+    this.request?.abort?.abort();
+    this.release?.();
+    this.channel?.close();
+    for (const cleanup of this.cleanups.splice(0)) cleanup();
+  }
+
+  public get(id: JobId): Job | undefined {
+    return this.jobs.find((job) => job.id === id);
+  }
+
+  public list(app?: AppId): Job[] {
+    return app === undefined ? this.jobs : this.jobs.filter((job) => job.app === app);
+  }
+
+  public next(id: JobId): number | null {
+    const job = this.get(id);
+    return job ? pending(job) : null;
+  }
+
+  public async schedule(app: AppId, input: JobInput): Promise<Job> {
+    const job = this.build(app, input, Date.now());
+    return this.mutate((registry) => {
+      const index = registry.jobs.findIndex((item) => item.id === job.id);
+      const jobs = index === -1 ? [...registry.jobs, job] : registry.jobs.map((item, at) => (at === index ? job : item));
+      return { next: { ...registry, jobs }, result: job };
+    });
+  }
+
+  public async update(id: JobId, patch: JobPatch): Promise<Job | null> {
+    const now = Date.now();
+    return this.mutate((registry) => {
+      const index = registry.jobs.findIndex((item) => item.id === id);
+      if (index === -1) return { next: null, result: null };
+      const job = this.patched(registry.jobs[index], patch, now);
+      return { next: { ...registry, jobs: registry.jobs.map((item, at) => (at === index ? job : item)) }, result: job };
+    });
+  }
+
+  public async cancel(id: JobId): Promise<boolean> {
+    return this.mutate((registry) => {
+      const jobs = registry.jobs.filter((job) => job.id !== id);
+      return jobs.length === registry.jobs.length ? { next: null, result: false } : { next: { ...registry, jobs }, result: true };
+    });
+  }
+
+  private build(app: AppId, input: JobInput, now: number): Job {
+    const { key, armed = true, ...rest } = input;
+    const job = { ...rest, id: `${app}:${key}`, app, armed } as Job;
+    for (const field of SCHEDULER_FIELDS) delete job[field];
+    if (armed) job.armed_at = now;
+    return this.validate(job);
+  }
+
+  private patched(current: Job, patch: JobPatch, now: number): Job {
+    const job: Job = { ...current };
+    for (const [key, value] of Object.entries(patch) as [keyof Job, unknown][]) {
+      if (key === "id" || key === "app" || key === "armed_at" || key === "last_fired") continue;
+      if (value === undefined) delete job[key];
+      else if (key !== "missed_at") Object.assign(job, { [key]: value });
+    }
+    const retimed =
+      ("at" in patch && JSON.stringify(patch.at) !== JSON.stringify(current.at)) ||
+      ("repeat" in patch && JSON.stringify(patch.repeat) !== JSON.stringify(current.repeat));
+    if (job.armed && (retimed || !current.armed)) job.armed_at = now;
+    // Clearing a repeating job's missed_at mustn't bring back the occurrences it skipped.
+    if (current.missed_at !== undefined && job.missed_at === undefined && job.repeat) {
+      job.armed_at = Math.max(job.armed_at ?? -Infinity, current.missed_at + 1);
+    }
+    return this.validate(job);
+  }
+
+  /** A user app taken out of the installed list. Never in solo: a solo link opens apps that were never installed. */
+  private uninstalled(app: AppId): boolean {
+    if (this.kernel.mode !== Mode.FULL) return false;
+    const manifest = this.apps_service.get(app);
+    return manifest !== undefined && !this.apps_service.is_installed(app);
+  }
+
+  private async drop_uninstalled(): Promise<void> {
+    try {
+      await this.mutate((registry) => {
+        const jobs = registry.jobs.filter((job) => !this.uninstalled(job.app));
+        return { next: jobs.length === registry.jobs.length ? null : { ...registry, jobs }, result: undefined };
+      });
+    } catch (error) {
+      if (!this.destroyed) console.warn("[SchedulerService] Couldn't drop an uninstalled app's jobs:", error);
+    }
+  }
+
+  private validate(job: Job): Job {
+    const result = JobSchema.safeParse(job);
+    if (!result.success) {
+      const issues = result.error.issues.map((issue) => `${issue.path.join(".") || "job"}: ${issue.message}`).join("; ");
+      throw new Error(`[SchedulerService] Invalid job ${job.id}: ${issues}`);
+    }
+    return job;
+  }
+
+  private async mutate<T>(change: (registry: Registry) => Change<T>): Promise<T> {
+    const transaction = await this.store.transact(change);
+    this.apply(transaction.registry, transaction.text);
+    if (transaction.written) this.announce({ type: "changed" });
+    if (this.is_leader) void this.process();
+    return transaction.result;
+  }
+
+  private apply(registry: Registry, text: string | null): void {
+    if (text === this.text) return;
+    this.text = text;
+    this.jobs = registry.jobs;
+  }
+
+  private async refresh(): Promise<void> {
+    if (this.destroyed) return;
+    try {
+      const { registry, text } = await this.store.read();
+      if (text === this.text) return;
+      this.apply(registry, text);
+      if (this.is_leader) void this.process();
+    } catch (error) {
+      console.warn("[SchedulerService] Couldn't re-read the jobs:", error);
+    }
+  }
+
+  private announce(message: ChannelMessage): void {
+    this.channel?.postMessage(message);
+  }
+
+  private on_channel(message: ChannelMessage): void {
+    if (message.type === "changed") void this.refresh();
+    else if (message.type === "seen") this.badge = 0;
+  }
+
+  // Leadership (ADR-062): one tab per browser holds the lock and keeps the timer. A visible full tab takes it over;
+  // a solo tab only queues, so it leads when no full tab is open.
+
+  private may_steal(): boolean {
+    return this.kernel.mode === Mode.FULL && document.visibilityState === "visible";
+  }
+
+  private join(steal: boolean): void {
+    if (this.destroyed) return;
+    const previous = this.request;
+    const request: LockRequest = { id: ++this.sequence, abort: steal ? null : new AbortController() };
+    this.request = request;
+    previous?.abort?.abort();
+
+    // A steal can't carry a signal (Web Locks spec); it's granted at once anyway.
+    const options: LockOptions = steal ? { steal: true } : { signal: request.abort!.signal };
+    navigator.locks
+      .request(LEADER_LOCK, options, () => {
+        if (this.request !== request || this.destroyed) return;
+        this.leading = request.id;
+        this.lead();
+        return new Promise<void>((resolve) => (this.release = resolve));
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) console.warn("[SchedulerService] Lock request failed:", error);
+      })
+      .finally(() => {
+        if (this.leading === request.id) this.stand_down();
+        // Stolen by another tab: queue again, to lead once it's gone.
+        if (this.request === request && !this.destroyed) this.join(false);
+      });
+  }
+
+  private lead(): void {
+    this.is_leader = true;
+    this.triggered = null;
+    void this.process();
+  }
+
+  private stand_down(): void {
+    this.leading = null;
+    this.is_leader = false;
+    clearTimeout(this.timer);
+    this.release?.();
+    this.release = null;
+  }
+
+  private wake(): void {
+    if (this.destroyed) return;
+    this.check_jump();
+    if (this.is_leader) void this.process();
+    else if (this.may_steal()) this.join(true);
+  }
+
+  private check_jump(): void {
+    if (!this.is_leader || this.armed_mono === 0) return;
+    const drift = Date.now() - this.armed_wall - (performance.now() - this.armed_mono);
+    if (Math.abs(drift) > JUMP) this.last_jump = Date.now();
+  }
+
+  private arm(): void {
+    clearTimeout(this.timer);
+    if (!this.is_leader || this.destroyed) return;
+    const due = next_due(this.jobs);
+    const until_due = due === null ? MAX_DELAY : Math.min(Math.max(due - Date.now(), 0), MAX_DELAY);
+    const delay = this.failed ? Math.max(until_due, RETRY_DELAY) : until_due;
+    this.armed_wall = Date.now();
+    this.armed_mono = performance.now();
+    // Armed after a pass's storage I/O, never straight from the timer callback, so it isn't a chained timer that
+    // Chrome throttles to once a minute in a hidden tab.
+    this.timer = setTimeout(() => {
+      this.check_jump();
+      void this.process();
+    }, delay);
+  }
+
+  private process(): Promise<void> {
+    if (this.processing) {
+      this.again = true;
+      return this.processing;
+    }
+    this.processing = (async () => {
+      do {
+        this.again = false;
+        await this.pass();
+      } while (this.again && this.is_leader && !this.destroyed);
+    })().finally(() => {
+      this.processing = null;
+      this.arm();
+    });
+    return this.processing;
+  }
+
+  private async pass(): Promise<void> {
+    if (!this.is_leader || this.destroyed) return;
+    const now = Date.now();
+    try {
+      const transaction = await this.store.transact((registry) => {
+        const result = plan(registry.jobs, now);
+        return { next: result.changed ? { ...registry, jobs: result.jobs } : null, result };
+      });
+      this.failed = false;
+      this.apply(transaction.registry, transaction.text);
+      if (transaction.written) this.announce({ type: "changed" });
+
+      const closed = this.first_pass;
+      this.first_pass = false;
+      for (const { job, due } of transaction.result.fired) void this.fire(job, due);
+      if (transaction.result.missed.length > 0) this.report_missed(transaction.result.missed, closed);
+      await this.sync_triggers();
+    } catch (error) {
+      if (this.destroyed) return;
+      this.failed = true;
+      console.error("[SchedulerService] A scheduler pass failed:", error);
+    }
+  }
+
+  private route(job: Job): string {
+    const target = job.open ?? { app: job.app };
+    return serialize_route({ kind: RouteKind.APP, id: target.app, props: target.props });
+  }
+
+  private notification_options(job: Job, due: number): SystemNotificationOptions {
+    return {
+      body: job.message,
+      tag: job.id,
+      data: { source: ClickSource.SCHEDULER, id: job.id, route: this.route(job), commands: (job.actions ?? []).map((action) => action.command) },
+      actions: job.actions?.map((action) => action.label),
+      require_interaction: job.kind === JobKind.ALARM,
+      renotify: true,
+      timestamp: due,
+    };
+  }
+
+  private async fire(job: Job, due: number): Promise<void> {
+    try {
+      if (!(this.triggers && (await this.shown_by_trigger(job.id, due)))) {
+        await show_system_notification(job.title, this.notification_options(job, due));
+      }
+    } catch (error) {
+      console.warn(`[SchedulerService] Couldn't show ${job.id}:`, error);
+    }
+    if (document.visibilityState !== "visible") return;
+    this.notifications_service.notify(job.app, {
+      title: job.title,
+      message: job.message,
+      duration: job.kind === JobKind.ALARM ? null : undefined,
+      actions: [
+        ...(job.actions ?? []).map((action) => ({ label: action.label, on_click: () => void this.shell_service.execute(action.command) })),
+        { label: "Open", on_click: () => this.open(job) },
+      ],
+    });
+  }
+
+  private async shown_by_trigger(id: JobId, due: number): Promise<boolean> {
+    const registration = await active_registration();
+    const shown = (await registration?.getNotifications({ tag: id })) ?? [];
+    return shown.some((notification) => notification.timestamp === due);
+  }
+
+  private report_missed(missed: MissedJob[], closed: boolean): void {
+    this.missed = [...this.missed, ...missed].slice(-MAX_MISSED);
+    const title = `${missed.length} missed while WebOS was ${closed ? "closed" : "asleep"}`;
+    const body = missed.map((job) => job.title || job.id).join(", ");
+
+    for (const job of missed) {
+      const id = this.notifications_service.notify(job.app, {
+        title: job.title || job.id,
+        message: `Missed · due ${format_datetime(job.due)}`,
+        type: NotificationType.WARNING,
+      });
+      this.notifications_service.hide_toast(id);
+    }
+    this.notifications_service.notify("scheduler", { title, message: body, type: NotificationType.WARNING });
+    show_system_notification(title, {
+      body,
+      tag: MISSED_TAG,
+      data: { source: ClickSource.SCHEDULER, id: MISSED_TAG, route: null, commands: [] },
+      renotify: true,
+    }).catch((error) => console.warn("[SchedulerService] Couldn't show the missed summary:", error));
+
+    if (document.visibilityState !== "visible") {
+      this.badge += missed.length;
+      navigator.setAppBadge?.(this.badge).catch(() => {});
+    }
+  }
+
+  private seen(): void {
+    this.badge = 0;
+    navigator.clearAppBadge?.().catch(() => {});
+    this.announce({ type: "seen" });
+  }
+
+  private async sync_triggers(): Promise<void> {
+    if (!this.triggers || !this.is_leader || permission() !== "granted") return;
+    const registration = await active_registration();
+    if (!registration) return;
+
+    if (this.triggered === null) {
+      this.triggered = new Map();
+      for (const notification of await registration.getNotifications({ includeTriggered: true })) {
+        if (notification.showTrigger) this.triggered.set(notification.tag, notification.showTrigger.timestamp);
+      }
+    }
+
+    const now = Date.now();
+    const wanted = new Map<JobId, { job: Job; due: number }>();
+    for (const job of this.jobs) {
+      const due = pending(job);
+      if (due !== null && due > now) wanted.set(job.id, { job, due });
+    }
+
+    for (const [id, at] of this.triggered) {
+      if (wanted.get(id)?.due === at) continue;
+      for (const notification of await registration.getNotifications({ tag: id, includeTriggered: true })) {
+        if (notification.showTrigger) notification.close();
+      }
+      this.triggered.delete(id);
+    }
+    for (const [id, { job, due }] of wanted) {
+      if (this.triggered.get(id) === due) continue;
+      await show_triggered_notification(job.title, due, this.notification_options(job, due));
+      this.triggered.set(id, due);
+    }
+  }
+
+  private open(job: Job): void {
+    const target = job.open ?? { app: job.app };
+    try {
+      this.apps_service.launch(target.app, target.props);
+    } catch (error) {
+      console.warn(`[SchedulerService] Couldn't open ${target.app}:`, error);
+    }
+  }
+
+  /**
+   * A full tab takes every click: it runs the button's command or opens the route. A solo tab takes only a body click
+   * for its own app; anything else opens full WebOS from the worker.
+   */
+  private on_click(click: NotificationClick): boolean {
+    const route = click.route ? parse_hash(click.route) : null;
+    if (this.kernel.mode === Mode.SOLO) {
+      return click.command === null && route !== null && route.id === parse_hash(location.hash)?.id;
+    }
+    if (click.command !== null) void this.shell_service.execute(click.command);
+    else if (route) {
+      try {
+        this.apps_service.launch(route.id, route.props);
+      } catch (error) {
+        console.warn(`[SchedulerService] Couldn't open ${route.id}:`, error);
+      }
+    }
+    return true;
+  }
+}

@@ -8,6 +8,9 @@ export const ArgKind = {
   COMMAND: "command",
   THEME: "theme",
   TASK: "task",
+  JOB: "job",
+  /** `10m`, `18:30`, `tomorrow 9:00`: read with `parse_when` (`$lib/core/utils/when`). */
+  WHEN: "when",
 } as const;
 
 /** A string arg tagged with a completion kind: `arg.path()`. */
@@ -17,4 +20,6 @@ export const arg = {
   app: () => arg.kind(ArgKind.APP),
   window: () => arg.kind(ArgKind.WINDOW),
   task: () => arg.kind(ArgKind.TASK),
+  job: () => arg.kind(ArgKind.JOB),
+  when: () => arg.kind(ArgKind.WHEN),
 };

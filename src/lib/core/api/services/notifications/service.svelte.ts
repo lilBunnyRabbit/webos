@@ -9,6 +9,7 @@ import type {
 } from "./type";
 import { NotificationType } from "./type";
 import { notifications_shell } from "./shell";
+import { ClickSource, listen_clicks, show_system_notification, type NotificationClick } from "./system";
 
 const DEFAULT_DURATION = 5000;
 const MAX_HISTORY = 50;
@@ -30,7 +31,14 @@ export class NotificationsService implements INotificationsService {
   public toasts = $derived(this.all.filter((notification) => this.toast_ids.includes(notification.id)));
   public unread_count = $derived(this.all.filter((notification) => !notification.read).length);
 
+  private stop_clicks?: () => void;
+
+  init() {
+    this.stop_clicks = listen_clicks(ClickSource.NOTIFICATIONS, (click) => this.on_system_click(click));
+  }
+
   destroy() {
+    this.stop_clicks?.();
     for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
@@ -64,12 +72,25 @@ export class NotificationsService implements INotificationsService {
 
   private async show_system(id: NotificationId, options: NotifyOptions): Promise<void> {
     if (!(await this.request_system())) return;
-    const notification = new Notification(options.title, { body: options.message, tag: id });
-    notification.onclick = () => {
-      window.focus();
-      this.mark_read(id);
-      notification.close();
-    };
+    try {
+      await show_system_notification(options.title, {
+        body: options.message,
+        tag: id,
+        data: { source: ClickSource.NOTIFICATIONS, id, route: null, commands: [] },
+        actions: options.actions?.map((action) => action.label),
+      });
+    } catch (error) {
+      console.warn("[NotificationsService] Couldn't show a system notification:", error);
+    }
+  }
+
+  /** Only the tab that sent it holds its actions, so only that tab takes the click. */
+  private on_system_click(click: NotificationClick): boolean {
+    const notification = this.all.find((item) => item.id === click.id);
+    if (!notification) return false;
+    this.mark_read(click.id);
+    if (click.action !== null) notification.actions?.[click.action]?.on_click();
+    return true;
   }
 
   public update(id: NotificationId, update: NotificationUpdate): void {

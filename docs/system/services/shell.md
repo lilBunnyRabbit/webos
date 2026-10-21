@@ -9,7 +9,7 @@ The command system behind the OS shortcuts, the [Terminal](../system-apps.md#ter
 | File | Contents |
 |------|----------|
 | `type.ts` | `ShellService`, `ShellContribution`, `Command`, `CommandContext`, `Value` / `Tagged` / `ValueType`, `Completer`, `ShellSession`, `Entry`, `ShellError` |
-| `arg.ts` | `arg.path()`, `arg.app()`, `arg.window()`, `arg.task()`, `arg.kind(kind)`: zod strings tagged with a completion kind (`meta({ kind })`) |
+| `arg.ts` | `arg.path()`, `arg.app()`, `arg.window()`, `arg.task()`, `arg.job()`, `arg.when()`, `arg.kind(kind)`: zod strings tagged with a completion kind (`meta({ kind })`) |
 | `define.ts` | `define_command()`: types `run` from the schema, then erases it |
 | `tokenize.ts` | Pure: tokens with positions, quotes, escapes, `|`; `split_stages`; `escape` |
 | `parse.ts` | Pure: `fields()` reads a zod object, `resolve()` (longest prefix), `bind()`, `usage()` |
@@ -168,6 +168,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | router | `link [id] [-c] [-s]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |
+| scheduler | `sched ls [app]` (yields `job` values, soonest first), `sched rm <job>` | `job`, `when` | `job` (click opens the job's app) |
 | ai | `summarize [--type tldr\|key-points\|teaser\|headline] [--length short\|medium\|long]`, `translate --to <lang> [--from <lang>]`, `lang`; each hidden where its feature answers `no` (ADR-046) | `language` | `language` |
 | ui | `ui launcher`, `ui notifications`, `ui switcher` (mobile) | | |
 | shortcuts | `shortcuts`, `shortcuts sheet` | | `shortcut` |

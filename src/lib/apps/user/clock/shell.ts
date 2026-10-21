@@ -1,6 +1,7 @@
 import kernel, { type AppsService, type DesktopService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { format_time } from "$kit/games";
+import { parse_alarm_time, parse_duration } from "$lib/core/utils/when";
 import {
   APP_ID,
   check_alarm,
@@ -11,9 +12,7 @@ import {
   format_hm,
   format_until,
   new_id,
-  parse_alarm_time,
   parse_days,
-  parse_duration,
   repeat_label,
   start_timer,
   timer_remaining,

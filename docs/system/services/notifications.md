@@ -1,6 +1,6 @@
 # NotificationsService
 
-Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/`, `src/lib/core/components/notifications/` (`toast-area`, `notification-list`, `notification-item`) · Inspector: `inspector.svelte` (ADR-020)
+Key `notifications` · Depends on: none · ADR: [006](../../adrs/006-notifications-service.md) · Source: `src/lib/core/api/services/notifications/` (`system.ts`: OS notifications and their clicks, shared with [SchedulerService](scheduler.md); `public/sw-notifications.js`), `src/lib/core/components/notifications/` (`toast-area`, `notification-list`, `notification-item`) · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -31,7 +31,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `icon` | `Component` | type icon | Replaces the type icon in the toast |
 | `duration` | `number \| null` | `5000`; for `"progress"`, no auto-hide | Toast lifetime in ms. `null` keeps the toast until closed. History is unaffected |
 | `actions` | `NotificationAction[]` | | `{ label, on_click }`. Clicking runs `on_click` then hides the toast |
-| `system` | `boolean` | `false` | While the tab is hidden, also a browser `Notification` (title, message, `tag` = id). Asks for permission on first use; denied → toast only. Clicking it focuses the tab and marks it read (ADR-035) |
+| `system` | `boolean` | `false` | While the tab is hidden, also an OS notification (title, message, `tag` = id, the actions as buttons) through the service worker's `registration.showNotification` (ADR-035, ADR-062). Asks for permission on first use; denied → toast only. A click goes back to this tab, which is focused, marks it read and runs the clicked button's `on_click` ([system notifications](#system-notifications)) |
 | `progress` | `number \| null` | | `0`–`1` determinate bar, `-1` indeterminate (pulsing) bar, `null`/absent no bar |
 
 `NotificationUpdate` can change `title`, `message`, `type`, `progress`, `actions`. Not `duration` or `icon`.
@@ -61,7 +61,7 @@ There's no `success` level, although the theme has a `success` token. Non-error 
 
 ## Lifecycle
 
-No `init()`. `destroy()` clears all pending timers.
+`init()` starts listening for clicks on its system notifications (`listen_clicks`). `destroy()` stops that and clears all pending timers.
 
 ## Persistence
 
@@ -73,6 +73,10 @@ None. History is in memory and gone on reload (ADR-006 revision: actions are fun
 - `update()` that switches a `"progress"` notification to another type, when the caller never set `duration` and the toast is still showing, starts the default 5 s timer. So `notify({ type: "progress" })` → `update({ type: "info" })` stays up while working and hides 5 s after it finishes.
 - A caller-set `duration` on a progress toast is a fixed lifetime from `notify`. `update()` never restarts it.
 - The toast's close button calls `hide_toast`, not `dismiss`.
+
+### System notifications
+
+`show_system_notification()` in `system.ts` shows through the active service worker registration, which Android requires (`new Notification()` throws there) and which allows buttons. The notification's `data` is `{ source: "notifications", id, route: null, commands: [] }`: the actions are closures, so only the tab that sent it can run them. On click, `public/sw-notifications.js` asks each WebOS tab in turn, most recently focused first, whether it takes the click; this service answers yes only when the id is in its `all`, and the worker focuses that tab. When no tab takes it (the sender closed), the worker opens WebOS. Without an active worker (the dev server) it falls back to a page `Notification` without buttons. The protocol is described in full under [scheduler › Notification clicks](scheduler.md#notification-clicks).
 
 ### Notification center
 
@@ -105,6 +109,7 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 | `VersionService` | `"version"` | Updated to a new version (sticky, "What's new"), a new version is ready (sticky, "Update and reload") |
 | `ShellService.execute()` | `"shell"` | A command run from a shortcut or the palette failed (error) |
 | `notify` command | `"shell"` | Whatever the user asked for |
+| [SchedulerService](scheduler.md) | the job's app; `"scheduler"` | A job fired while the tab is visible (its buttons run shell commands, plus Open; an alarm's toast stays); "N missed while WebOS was closed" (warning) plus one hidden entry per missed job |
 
 ## Divergence from ADR
 
@@ -118,4 +123,4 @@ Contributes `notify <title> [message] [--type info|warning|error]` (sent from ap
 
 - No toast tap action: a toast doesn't open the center or the sending app.
 - `app_id` is shown in the center, not in the toast.
-- `system` alerts depend on a timer firing in a hidden tab, which Chrome throttles to about once a minute: up to a minute late.
+- `system` alerts depend on a timer firing in a hidden tab, which Chrome throttles to about once a minute: up to a minute late. Scheduled alerts go through [SchedulerService](scheduler.md) instead.

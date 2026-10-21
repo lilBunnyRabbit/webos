@@ -74,6 +74,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `tasks` | `TasksService` | `notifications` |
 | `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows`, `tasks` |
 | `ai` | `AiService` | `files`, `tasks`, `notifications`. `MobileAiService` on mobile, picked by `platform_services` (ADR-046) |
+| `scheduler` | `SchedulerService` | `files`, `notifications`, `apps`, `shell`. The same class in solo (ADR-062) |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 | `extract` | `ExtractService` | `windows`, `dialogs`, `notifications`. Desktop only: registered by `platform_services` (ADR-043) |
 
@@ -88,6 +89,7 @@ windows, apps, files, dialogs, notifications ───────► session
 files, dialogs, notifications ──────────────────────► shell
 windows, dialogs, shell ────────────────────────────► shortcuts
 notifications ──────────────────────────────────────► tasks
+files, notifications, apps, shell ──────────────────► scheduler
 files, dialogs, notifications, windows, tasks ──────► backup
 files, tasks, notifications ────────────────────────► ai
 windows, apps, session, clipboard, notifications ───► router

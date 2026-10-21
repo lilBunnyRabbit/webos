@@ -16,3 +16,4 @@ export * from "./backup";
 export * from "./tasks";
 export * from "./extract";
 export * from "./ai";
+export * from "./scheduler";

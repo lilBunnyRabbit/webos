@@ -46,6 +46,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/tasks.md](services/tasks.md) | `tasks` |
 | [services/extract.md](services/extract.md) | `extract` (desktop only) |
 | [services/ai.md](services/ai.md) | `ai` |
+| [services/scheduler.md](services/scheduler.md) | `scheduler` |
 
 ### Shell
 

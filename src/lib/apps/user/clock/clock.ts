@@ -311,26 +311,6 @@ export function fit_items<T>(items: T[], slots: number): { shown: T[]; more: num
 
 export { CLOCK_PROPS, ClockFace, ClockTab };
 
-const UNITS: Record<string, number> = { h: 3_600_000, m: MINUTE, s: 1000 };
-
-/** `5m`, `1h30m`, `90s`; a bare number is minutes. Null when it isn't one, or is zero. */
-export function parse_duration(text: string): number | null {
-  const input = text.trim().toLowerCase();
-  if (/^\d+$/.test(input)) return Number(input) * MINUTE || null;
-  const match = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(input);
-  if (!match || !input) return null;
-  const [, hours = "0", minutes = "0", seconds = "0"] = match;
-  return Number(hours) * UNITS.h + Number(minutes) * UNITS.m + Number(seconds) * UNITS.s || null;
-}
-
-export function parse_alarm_time(text: string): string | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  return hours < 24 && minutes < 60 ? `${String(hours).padStart(2, "0")}:${match[2]}` : null;
-}
-
 const DAY_SETS: Record<string, number[]> = {
   weekdays: [1, 2, 3, 4, 5],
   weekends: [0, 6],
