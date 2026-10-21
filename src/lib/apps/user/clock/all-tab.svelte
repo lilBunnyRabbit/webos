@@ -95,13 +95,13 @@
 {#snippet header(Icon: Component, title: string, tab: ClockTab, label: string)}
   <button
     type="button"
-    class="flex min-h-9 w-full min-w-0 items-center gap-2 rounded-t-xl px-3 text-2xs tracking-wide text-foreground/65 uppercase hover:bg-foreground/4 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:min-h-11"
+    class="flex min-h-10 w-full min-w-0 items-center gap-2 rounded-t-xl px-3 text-sm font-semibold hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:min-h-11"
     aria-label={label}
     onclick={() => onopen(tab)}
   >
-    <Icon class="size-3.5 shrink-0" weight="fill" />
+    <Icon class="size-4 shrink-0 text-foreground/65" weight="fill" />
     <span class="min-w-0 flex-1 truncate text-left">{title}</span>
-    <CaretRightIcon class="size-3.5 shrink-0" />
+    <CaretRightIcon class="size-3.5 shrink-0 text-foreground/65" />
   </button>
 {/snippet}
 
@@ -125,11 +125,11 @@
         {@const progress = 1 - remaining / timer.duration_ms}
         {@const paused = timer.end_at === null}
         {@const name = timer.label || format_duration(timer.duration_ms)}
-        <li class="grid rounded-xl bg-background-light">
+        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
           {@render header(HourglassIcon, name, ClockTab.TIMERS, `Open timers (${name})`)}
           <div class="grid gap-2 px-3 pb-3">
             <div class="flex items-baseline gap-2">
-              <p class={cn("font-mono text-3xl font-medium tabular-nums", paused && "text-foreground/65")}>{format_time(Math.ceil(remaining / 1000) * 1000)}</p>
+              <p class={cn("font-mono text-3xl font-medium tabular-nums", paused && "text-foreground/80")}>{format_time(Math.ceil(remaining / 1000) * 1000)}</p>
               {#if paused}<Badge>Paused</Badge>{/if}
             </div>
             <div class="h-1 overflow-hidden rounded-full bg-foreground/10" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
@@ -148,10 +148,10 @@
       {/each}
 
       {#if !idle}
-        <li class="grid rounded-xl bg-background-light">
+        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
           {@render header(TimerIcon, stopwatch.laps.length ? `Stopwatch · ${stopwatch.laps.length} lap${stopwatch.laps.length === 1 ? "" : "s"}` : "Stopwatch", ClockTab.STOPWATCH, "Open the stopwatch")}
           <div class="grid gap-2 px-3 pb-3">
-            <p class={cn("font-mono text-3xl font-medium tabular-nums", !running && "text-foreground/65")} aria-live="off">{format_stopwatch(elapsed)}</p>
+            <p class={cn("font-mono text-3xl font-medium tabular-nums", !running && "text-foreground/80")} aria-live="off">{format_stopwatch(elapsed)}</p>
             <div class="flex items-center gap-2">
               <Button size="sm" variant={running ? "secondary" : "primary"} onclick={() => set_stopwatch(toggle_stopwatch(stopwatch, Date.now()))}>
                 {#if running}<PauseIcon weight="bold" />Pause{:else}<PlayIcon weight="bold" />{elapsed > 0 ? "Resume" : "Start"}{/if}
@@ -168,7 +168,7 @@
 
       {#if upcoming}
         {@const alarm = upcoming.alarm}
-        <li class="grid rounded-xl bg-background-light">
+        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
           {@render header(AlarmIcon, "Next alarm", ClockTab.ALARMS, "Open alarms")}
           <div class="flex items-center gap-3 px-3 pb-3">
             <span class="grid min-w-0 flex-1">
@@ -182,7 +182,7 @@
         </li>
       {/if}
 
-      <li class="grid rounded-xl bg-background-light">
+      <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
         {@render header(GlobeHemisphereWestIcon, "World clock", ClockTab.WORLD, "Open the world clock")}
         <ul class="grid gap-x-4 px-3 pb-2 @md:grid-cols-2" aria-label="Cities">
           <li class="flex min-h-8 items-center gap-2 text-ui">

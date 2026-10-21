@@ -57,7 +57,7 @@
     <div class="mx-auto grid max-w-md gap-5 p-4 @md:p-6">
       <h2 class="text-lg font-medium">{draft.id ? "Edit alarm" : "New alarm"}</h2>
       <label class="grid gap-1.5">
-        <span class="text-2xs tracking-wide text-foreground/65 uppercase">Time</span>
+        <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Time</span>
         <input
           type="time"
           required
@@ -66,7 +66,7 @@
         />
       </label>
       <fieldset class="grid gap-1.5">
-        <legend class="mb-1.5 text-2xs tracking-wide text-foreground/65 uppercase">Repeat · {repeat_label(draft.days)}</legend>
+        <legend class="mb-1.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Repeat · {repeat_label(draft.days)}</legend>
         <div class="grid grid-cols-7 gap-1">
           {#each WEEK as entry (entry.day)}
             <Button variant="quiet" size="md" class="px-0" pressed={draft.days.includes(entry.day)} title={entry.short} aria-label={entry.short} onclick={() => toggle_day(entry.day)}>
@@ -76,7 +76,7 @@
         </div>
       </fieldset>
       <label class="grid gap-1.5">
-        <span class="text-2xs tracking-wide text-foreground/65 uppercase">Label</span>
+        <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Label</span>
         <Input bind:value={draft.label} placeholder="Optional, like Wake up" maxlength={60} />
       </label>
       <div class="flex items-center gap-2">
@@ -97,7 +97,7 @@
     <ul class="mx-auto grid max-w-2xl gap-1 p-2 @md:p-4" aria-label="Alarms">
       {#each alarms as { alarm, check } (alarm.id)}
         {@const on = alarm.enabled || check.snoozed}
-        <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3">
+        <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3 ring-1 ring-foreground/8">
           <button type="button" class="grid min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left hover:bg-foreground/4 focus-visible:bg-primary/12 focus-visible:outline-none" onclick={() => edit(alarm)}>
             <span class={cn("font-mono text-3xl leading-tight font-medium tabular-nums", !on && "text-foreground/45")}>{alarm.time}</span>
             <span class="truncate text-2xs text-foreground/65">
