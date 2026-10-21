@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.31.0",
+    date: "2026-10-21",
+    title: "Italics per weight",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Font Maker lets you redraw a letter for each italic face, Light Italic and Bold Italic included, and lists every face in the drawing picker.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Burrow's light and bold italic a now sits on the same line as the letters around it.",
+      },
+    ],
+  },
+  {
     version: "3.30.0",
     date: "2026-10-21",
     title: "Doodlehop",

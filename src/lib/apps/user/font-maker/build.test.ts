@@ -3,7 +3,7 @@ import { read_font, FontFormat } from "../font-viewer/font";
 import { split_collection } from "$lib/core/utils/font-collection";
 import { build_face, build_family, build_font, build_variable, place_glyph, variable_blockers } from "./build";
 import { CharSet } from "./charsets";
-import { add_stroke, create_project, set_weights, type FontProject, type Stroke } from "./model";
+import { add_stroke, create_project, set_weights, update_glyph, type FontProject, type Stroke } from "./model";
 import { checksum } from "./ttf";
 
 const line = (x0: number, y0: number, x1: number, y1: number): Stroke =>
@@ -133,5 +133,16 @@ describe("build_variable", () => {
     expect(variable_blockers(project)).toEqual(["o"]);
     expect(() => build_variable(project)).toThrow(/o/);
     expect(variable_blockers(project, true)).toEqual(["o"]);
+  });
+
+  test("an italic redraw for one weight changes only that face and keeps the italic variable font when its stroke count matches", () => {
+    const redrawn = update_glyph(sample(), "o", (glyph) => ({ ...glyph, italics: { "700": [line(260, 30, 260, 450)] } }));
+    expect(variable_blockers(redrawn, true)).toEqual([]);
+    expect(equal_bytes(build_face(redrawn, { weight: 700, italic: true }, DATE), build_face(sample(), { weight: 700, italic: true }, DATE))).toBe(false);
+    expect(equal_bytes(build_face(redrawn, { weight: 400, italic: true }, DATE), build_face(sample(), { weight: 400, italic: true }, DATE))).toBe(true);
+    expect(equal_bytes(build_face(redrawn, { weight: 700, italic: false }, DATE), build_face(sample(), { weight: 700, italic: false }, DATE))).toBe(true);
+    const extra = update_glyph(sample(), "o", (glyph) => ({ ...glyph, italics: { "700": [...glyph.strokes, line(0, 0, 10, 300)] } }));
+    expect(variable_blockers(extra, true)).toEqual(["o"]);
+    expect(variable_blockers(extra)).toEqual([]);
   });
 });

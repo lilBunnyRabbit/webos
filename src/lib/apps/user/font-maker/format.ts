@@ -17,7 +17,7 @@ import {
   type Stroke,
 } from "./model";
 
-export const VERSION = 2;
+export const VERSION = 3;
 export const EXTENSION = ".fontmaker";
 
 const Coordinate = z.number().finite().min(-2 * EM).max(2 * EM);
@@ -25,6 +25,7 @@ const Point = z.tuple([Coordinate, Coordinate, z.number().min(0).max(1)]);
 const Nudge = z.number().int().min(-MAX_NUDGE).max(MAX_NUDGE);
 const Strokes = z.array(z.array(Point).min(1));
 const Weight = z.number().int().min(100).max(900).multipleOf(100);
+const Redraws = z.record(z.string().regex(/^[1-9]00$/, "redraws are for weights 100 to 900"), Strokes);
 
 const GlyphSchema = z.object({
   strokes: Strokes,
@@ -34,8 +35,9 @@ const GlyphSchema = z.object({
     .string()
     .regex(/^data:image\/(webp|png|jpeg);base64,/)
     .optional(),
-  weights: z.record(z.string().regex(/^[1-9]00$/, "weights are 100 to 900"), Strokes).optional(),
+  weights: Redraws.optional(),
   italic: Strokes.optional(),
+  italics: Redraws.optional(),
 });
 
 const ProjectSchema = z.object({
@@ -104,12 +106,15 @@ function compact(stroke: Stroke): Stroke {
   return stroke.map(([x, y, pressure]) => [round(x, 1), round(y, 1), round(pressure, 2)]);
 }
 
+const compact_redraws = (redraws: Record<string, Stroke[]>) => Object.fromEntries(Object.entries(redraws).map(([weight, strokes]) => [weight, strokes.map(compact)]));
+
 export function serialize_project(project: FontProject): string {
   const glyphs: Record<string, Glyph> = {};
   for (const [char, glyph] of Object.entries(project.glyphs)) {
     const out: Glyph = { ...glyph, strokes: glyph.strokes.map(compact) };
-    if (glyph.weights) out.weights = Object.fromEntries(Object.entries(glyph.weights).map(([weight, strokes]) => [weight, strokes.map(compact)]));
+    if (glyph.weights) out.weights = compact_redraws(glyph.weights);
     if (glyph.italic) out.italic = glyph.italic.map(compact);
+    if (glyph.italics) out.italics = compact_redraws(glyph.italics);
     glyphs[char] = out;
   }
   return JSON.stringify({ ...project, version: VERSION, glyphs });

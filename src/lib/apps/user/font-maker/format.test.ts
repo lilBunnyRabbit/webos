@@ -7,6 +7,8 @@ import {
   clear_strokes,
   create_project,
   face_strokes,
+  fallback_layer,
+  is_redrawn,
   layer_strokes,
   regular_weight,
   reset_layer,
@@ -37,7 +39,7 @@ describe("format", () => {
 
   test("refuses a newer version, non-JSON and bad shapes", () => {
     expect(() => parse_project("nope")).toThrow(/isn't JSON/);
-    expect(() => parse_project(JSON.stringify({ ...create_project(), version: 3 }))).toThrow(/newer Font Maker/);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), version: 4 }))).toThrow(/newer Font Maker/);
     expect(() => parse_project(JSON.stringify({ ...create_project(), sets: ["klingon"] }))).toThrow(/sets/);
     expect(() => parse_project(JSON.stringify({ ...create_project(), glyphs: { AB: { strokes: [] } } }))).toThrow(/glyphs\.AB/);
     const project = create_project();
@@ -65,7 +67,7 @@ describe("format", () => {
   test("a version 1 file opens with the default weights and italic", () => {
     const { weights: _weights, italic: _italic, ...v1 } = { ...create_project("Old"), version: 1 };
     const parsed = parse_project(JSON.stringify(v1));
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.weights).toEqual([
       { weight: 400, scale: 1 },
       { weight: 700, scale: 1.7 },
@@ -101,6 +103,45 @@ describe("format", () => {
     expect(cleared.glyphs.o.weights?.["700"]).toEqual([]);
     expect(reset_layer(cleared, "o", bold).glyphs.o.weights).toBeUndefined();
     expect(regular_weight(set_weights(create_project(), [{ weight: 300, scale: 0.6 }, { weight: 500, scale: 1.2 }]))).toBe(300);
+  });
+
+  test("a version 2 file opens, keeps its redraws and saves as version 3", () => {
+    const dot: Stroke = [[1, 2, 0.5]];
+    const v2 = { ...add_stroke(add_stroke(create_project(), "a", dot), "a", dot, { kind: "italic" }), version: 2 };
+    const parsed = parse_project(JSON.stringify(v2));
+    expect(parsed.glyphs.a.italic).toHaveLength(2);
+    expect(JSON.parse(serialize_project(parsed)).version).toBe(3);
+  });
+
+  test("an italic redraw per weight wins over the shared italic, which wins over the weight's redraw", () => {
+    const at = (x: number): Stroke => [[x, 0, 0.5]];
+    const bold_italic: Layer = { kind: "italic", weight: 700 };
+    let project = add_stroke(create_project(), "a", at(1));
+    project = add_stroke(project, "a", at(2), { kind: "weight", weight: 700 });
+    expect(layer_strokes(project.glyphs.a, bold_italic)).toEqual([at(1), at(2)]);
+    expect(fallback_layer(project.glyphs.a, bold_italic)).toEqual({ kind: "weight", weight: 700 });
+    project = add_stroke(project, "a", at(3), { kind: "italic" });
+    expect(face_strokes(project.glyphs.a, { weight: 700, italic: true })).toEqual([at(1), at(3)]);
+    expect(fallback_layer(project.glyphs.a, bold_italic)).toEqual({ kind: "italic" });
+    expect(is_redrawn(project.glyphs.a, bold_italic)).toBe(false);
+
+    project = add_stroke(project, "a", at(4), bold_italic);
+    expect(project.glyphs.a.italics?.["700"]).toEqual([at(1), at(3), at(4)]);
+    expect(face_strokes(project.glyphs.a, { weight: 700, italic: true })).toEqual([at(1), at(3), at(4)]);
+    expect(face_strokes(project.glyphs.a, { weight: 400, italic: true })).toEqual([at(1), at(3)]);
+    expect(face_strokes(project.glyphs.a, { weight: 700, italic: false })).toEqual([at(1), at(2)]);
+
+    const parsed = parse_project(serialize_project(project));
+    expect(parsed.glyphs.a.italics).toEqual({ "700": [at(1), at(3), at(4)] });
+    expect(() => parse_project(JSON.stringify({ ...project, glyphs: { a: { strokes: [], italics: { "750": [] } } } }))).toThrow(/italics/);
+
+    const cleared = clear_strokes(project, "a", bold_italic);
+    expect(cleared.glyphs.a.italics).toEqual({ "700": [] });
+    expect(face_strokes(cleared.glyphs.a, { weight: 700, italic: true })).toEqual([]);
+    const reset = reset_layer(project, "a", bold_italic);
+    expect(reset.glyphs.a.italics).toBeUndefined();
+    expect(reset.glyphs.a.italic).toEqual([at(1), at(3)]);
+    expect(reset_layer(reset, "a", bold_italic)).toBe(reset);
   });
 
   test("guides are kept and cleared", () => {

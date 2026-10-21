@@ -64,8 +64,10 @@
     create_project,
     glyph_of,
     has_guides,
+    fallback_layer,
     is_redrawn,
     layer_strokes,
+    layer_weight,
     MAX_STROKE_WIDTH,
     MIN_STROKE_WIDTH,
     project_faces,
@@ -126,10 +128,11 @@
   const width = $derived(width_draft ?? stroke_width(project));
   const layers = $derived(layer_options(project));
   const layer = $derived(layers.find((option) => option.value === layer_key) ?? layers.find((option) => option.layer.kind === "regular")!);
-  const layer_scale = $derived(project.weights.find((item) => item.weight === (layer.layer.kind === "weight" ? layer.layer.weight : regular_weight(project)))?.scale ?? 1);
+  const layer_scale = $derived(project.weights.find((item) => item.weight === layer_weight(project, layer.layer))?.scale ?? 1);
   const canvas_width = $derived(Math.max(1, Math.round(width * layer_scale)));
   const canvas_glyph = $derived({ ...glyph, strokes: layer_strokes(glyph, layer.layer) });
   const redrawn = $derived(is_redrawn(glyph, layer.layer));
+  const fallback = $derived(fallback_name(fallback_layer(glyph, layer.layer)));
 
   function layer_options(current: FontProject): { value: string; label: string; layer: Layer }[] {
     const regular = regular_weight(current);
@@ -138,8 +141,22 @@
       label: `${WEIGHT_NAMES[item.weight] ?? item.weight} ${item.weight}`,
       layer: item.weight === regular ? REGULAR_LAYER : ({ kind: "weight", weight: item.weight } as Layer),
     }));
-    if (current.italic) options.push({ value: "italic", label: "Italic", layer: { kind: "italic" } });
+    if (current.italic) {
+      for (const item of current.weights) {
+        options.push({
+          value: `italic:${item.weight}`,
+          label: `${style_name(item.weight, true)} ${item.weight}`,
+          layer: item.weight === regular ? { kind: "italic" } : { kind: "italic", weight: item.weight },
+        });
+      }
+    }
     return options;
+  }
+
+  function fallback_name(target: Layer): string {
+    if (target.kind === "italic") return "Italic";
+    if (target.kind === "weight") return WEIGHT_NAMES[target.weight] ?? String(target.weight);
+    return "regular";
   }
   const nudged = $derived(!!glyph.lsb || !!glyph.rsb);
   const code = $derived(`U+${editor.char.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`);
@@ -518,13 +535,13 @@
 
       {#if layers.length > 1}
         <div class="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-ui">
-          <Select size="sm" class="w-36" aria-label="Face to draw" options={layers.map(({ value, label }) => ({ value, label }))} value={layer.value} onchange={(event) => (layer_key = event.currentTarget.value)} />
+          <Select size="sm" class="w-44" aria-label="Face to draw" options={layers.map(({ value, label }) => ({ value, label }))} value={layer.value} onchange={(event) => (layer_key = event.currentTarget.value)} />
           {#if layer.layer.kind !== "regular"}
             {#if redrawn}
               <span class="text-foreground/65">Redrawn for {layer.label}</span>
-              <Button size="sm" variant="quiet" onclick={() => editor.apply((value) => reset_layer(value, editor.char, layer.layer))}><ArrowCounterClockwiseIcon weight="bold" />Use regular</Button>
+              <Button size="sm" variant="quiet" onclick={() => editor.apply((value) => reset_layer(value, editor.char, layer.layer))}><ArrowCounterClockwiseIcon weight="bold" />Use {fallback}</Button>
             {:else}
-              <span class="min-w-0 flex-1 text-2xs text-foreground/65">Shows the regular strokes; drawing here redraws {editor.char} for {layer.label}.</span>
+              <span class="min-w-0 flex-1 text-2xs text-foreground/65">Shows the {fallback} strokes; drawing here redraws {editor.char} for {layer.label}.</span>
             {/if}
           {/if}
         </div>

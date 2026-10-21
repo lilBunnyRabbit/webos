@@ -12,6 +12,8 @@ export interface Glyph {
   weights?: Record<string, Stroke[]>;
   /** Redraw for the italic faces, drawn upright and slanted like everything else. */
   italic?: Stroke[];
+  /** Italic redraws for one weight, keyed like `weights`; they win over `italic`. */
+  italics?: Record<string, Stroke[]>;
 }
 
 export interface Metrics {
@@ -39,7 +41,7 @@ export interface Italic {
 }
 
 export interface FontProject {
-  version: 2;
+  version: 3;
   name: string;
   sets: CharSet[];
   metrics: Metrics;
@@ -55,7 +57,8 @@ export interface Face {
   italic: boolean;
 }
 
-export type Layer = { kind: "regular" } | { kind: "weight"; weight: number } | { kind: "italic" };
+/** `italic` without a weight is the shared italic redraw, the one the regular weight's italic face draws. */
+export type Layer = { kind: "regular" } | { kind: "weight"; weight: number } | { kind: "italic"; weight?: number };
 
 export const EM = 1000;
 export const ASCENT = 950;
@@ -102,7 +105,7 @@ export const BOX_HEIGHT = BOX.top - BOX.bottom;
 
 export function create_project(name = "My Handwriting"): FontProject {
   return {
-    version: 2,
+    version: 3,
     name,
     sets: [CharSet.BASIC_LATIN],
     metrics: { ...DEFAULT_METRICS },
@@ -127,7 +130,8 @@ function prune(glyph: Glyph): Glyph | null {
   if (glyph.guide) kept.guide = glyph.guide;
   if (glyph.weights && Object.keys(glyph.weights).length) kept.weights = glyph.weights;
   if (glyph.italic) kept.italic = glyph.italic;
-  return kept.strokes.length || kept.lsb || kept.rsb || kept.guide || kept.weights || kept.italic ? kept : null;
+  if (glyph.italics && Object.keys(glyph.italics).length) kept.italics = glyph.italics;
+  return kept.strokes.length || kept.lsb || kept.rsb || kept.guide || kept.weights || kept.italic || kept.italics ? kept : null;
 }
 
 export function set_glyph(project: FontProject, char: string, glyph: Glyph): FontProject {
@@ -149,25 +153,38 @@ export function regular_weight(project: FontProject): number {
   return project.weights.reduce((best, item) => (Math.abs(item.weight - 400) < Math.abs(best - 400) ? item.weight : best), project.weights[0].weight);
 }
 
+const has_redraw = (redraws: Record<string, Stroke[]> | undefined, weight: number) => !!redraws && Object.hasOwn(redraws, weight);
+
 export function layer_strokes(glyph: Glyph, layer: Layer): Stroke[] {
-  if (layer.kind === "italic") return glyph.italic ?? glyph.strokes;
+  if (layer.kind === "italic") {
+    if (layer.weight === undefined) return glyph.italic ?? glyph.strokes;
+    return face_strokes(glyph, { weight: layer.weight, italic: true });
+  }
   if (layer.kind === "weight") return glyph.weights?.[layer.weight] ?? glyph.strokes;
   return glyph.strokes;
 }
 
+export function fallback_layer(glyph: Glyph, layer: Layer): Layer {
+  if (layer.kind !== "italic" || layer.weight === undefined) return REGULAR_LAYER;
+  if (glyph.italic) return { kind: "italic" };
+  return has_redraw(glyph.weights, layer.weight) ? { kind: "weight", weight: layer.weight } : REGULAR_LAYER;
+}
+
 export function is_redrawn(glyph: Glyph, layer: Layer): boolean {
-  if (layer.kind === "italic") return !!glyph.italic;
-  if (layer.kind === "weight") return !!glyph.weights && Object.hasOwn(glyph.weights, layer.weight);
+  if (layer.kind === "italic") return layer.weight === undefined ? !!glyph.italic : has_redraw(glyph.italics, layer.weight);
+  if (layer.kind === "weight") return has_redraw(glyph.weights, layer.weight);
   return false;
 }
 
-/** The italic redraw wins, then the weight's redraw, then the regular strokes. */
+/** The weight's italic redraw wins, then the shared italic redraw, then the weight's redraw, then the regular strokes. */
 export function face_strokes(glyph: Glyph, face: Face): Stroke[] {
+  if (face.italic && glyph.italics && has_redraw(glyph.italics, face.weight)) return glyph.italics[face.weight];
   if (face.italic && glyph.italic) return glyph.italic;
   return glyph.weights?.[face.weight] ?? glyph.strokes;
 }
 
 function with_layer(glyph: Glyph, layer: Layer, strokes: Stroke[]): Glyph {
+  if (layer.kind === "italic" && layer.weight !== undefined) return { ...glyph, italics: { ...glyph.italics, [layer.weight]: strokes } };
   if (layer.kind === "italic") return { ...glyph, italic: strokes };
   if (layer.kind === "weight") return { ...glyph, weights: { ...glyph.weights, [layer.weight]: strokes } };
   return { ...glyph, strokes };
@@ -185,9 +202,14 @@ export function clear_strokes(project: FontProject, char: string, layer: Layer =
 export function reset_layer(project: FontProject, char: string, layer: Layer): FontProject {
   if (!is_redrawn(glyph_of(project, char), layer)) return project;
   return update_glyph(project, char, (glyph) => {
-    if (layer.kind === "italic") {
+    if (layer.kind === "italic" && layer.weight === undefined) {
       const { italic: _italic, ...rest } = glyph;
       return rest;
+    }
+    if (layer.kind === "italic") {
+      if (!glyph.italics) return glyph;
+      const { [layer.weight!]: _dropped, ...italics } = glyph.italics;
+      return { ...glyph, italics };
     }
     if (layer.kind !== "weight" || !glyph.weights) return glyph;
     const { [layer.weight]: _dropped, ...weights } = glyph.weights;
@@ -226,7 +248,7 @@ export function weight_width(project: FontProject, weight: number): number {
 }
 
 export function layer_weight(project: FontProject, layer: Layer): number {
-  return layer.kind === "weight" ? layer.weight : regular_weight(project);
+  return layer.kind !== "regular" && layer.weight !== undefined ? layer.weight : regular_weight(project);
 }
 
 export function project_faces(project: FontProject): Face[] {

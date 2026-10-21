@@ -21,7 +21,7 @@ Owner asked for the Font Maker next-session items ([font maker](2026-10-20_font-
 
 ## Action items
 - [x] E: Bold ª/º fixed 2026-10-21. Moving the bar alone (y=285, top ink at Regular's 327) opened the gap from 28/27 to 43/42 units, but the Bold ª still read as a dark lump at 18 px with its counter nearly closed, so the 700 redraws also went to pressure 0.22 with the bar at y=292 (top ink still 327): gap 51 (ª) and 49 (º), Regular 44, Light 56. Fonts rebuilt under V8.
-- [ ] D: italics per weight.
+- [x] D: italics per weight, 2026-10-21. `italics?: Record<weight, Stroke[]>`, format 3. The regular weight's italic face keeps drawing the shared `italic`, so it still serves every italic face without its own redraw; Light Italic, Bold Italic and the rest draw `italics[w]`. Burrow's Light and Bold Italic `a` are the italic `a` moved inward like the other weight redraws: Bold Italic `a` went from 22 units above and 23 below the Bold Italic `o` to 0 and 1, Light Italic from 15 and 14 inside to 0. Fonts rebuilt under V8.
 - [ ] A: kerning.
 
 ## Next session topics
