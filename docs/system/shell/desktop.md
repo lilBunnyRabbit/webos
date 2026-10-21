@@ -53,7 +53,7 @@ Code in `components/desktop/live/`:
 | `live-layer.svelte` | Mounts one layer: loads the entry's `background` or `overlay` component, builds the context, parses the options from `settings.live_options` |
 | `geometry.ts` | `dot_cells()` (the grid dots' cells), `tile_cells()` (the thumbnail grid), `centre()`, `contains()` |
 | `theme.ts` | `read_tokens()` resolves tokens to colours a canvas can parse (a probe's computed `color`, since a token can be `oklch(from var(--primary) …)`); `watch_theme()` calls back when `<html>`'s `style` changes |
-| `turrets/` | Pew Pew: `options.ts` (schema), `sim.ts` (pure simulation), `impacts.ts` (shield hits from the background layer to the overlay), `damage.ts` (damage model and store), `sound.ts` (WebAudio synth), `turrets-canvas.svelte`, `turrets-background.svelte`, `turrets-overlay.svelte`, `turrets-settings.svelte` |
+| `turrets/` | Pew Pew: `options.ts` (schema), `sim.ts` (pure simulation), `impacts.ts` (shield hits from the background layer to the overlay), `damage.ts` (damage model and store), `dodge.ts` (Dodge clock, record format), `dodge.svelte.ts` (`DodgeGame`), `dodge-hud.svelte`, `sound.ts` (WebAudio synth), `turrets-canvas.svelte`, `turrets-background.svelte`, `turrets-overlay.svelte`, `turrets-settings.svelte` |
 
 An entry:
 
@@ -89,19 +89,27 @@ Id `turrets`, by LaxDOTexe and lilBunnyRabbit. Every grid dot is a turret: a `fo
 
 | Option | Values | Default |
 |--------|--------|---------|
-| `mode` | `shield`: windows and widgets are shields. Bolts fly on the background canvas, behind them; a bolt entering a shield's rect stops at its edge with a spark drawn on the overlay, above the shield. A cursor inside a shield is hidden: turrets still aim and fire at it, but no bolt can hit it. Turrets under a shield hold fire. `follow`: bolts on the overlay canvas, hitting the cursor anywhere, clicks still pass through | `shield` |
+| `mode` | `shield`: windows and widgets are shields. Bolts fly on the background canvas, behind them; a bolt entering a shield's rect stops at its edge with a spark drawn on the overlay, above the shield. A cursor inside a shield is hidden: turrets still aim and fire at it, but no bolt can hit it. Turrets under a shield hold fire. `follow`: bolts on the overlay canvas, hitting the cursor anywhere, clicks still pass through. `dodge`: fires like `follow` and keeps a survival clock ([Dodge](#dodge)) | `shield` |
 | `pace` | `chill` every ~1.5 s, 1 turret, 260 px/s; `normal` every ~0.5 s, 3 turrets, 460 px/s; `frantic` every ~0.14 s, 6 turrets, 760 px/s. Intervals ±25% | `normal` |
 | `sound` | Off by default | `false` |
 | `volume` | 0–1 (the form shows 0–100) | `0.5` |
-| `damage` | Shield hits chip the window or widget they struck ([damage](#damage)). The switch is disabled in follow mode, where nothing is a shield | `false` |
+| `damage` | Shield hits chip the window or widget they struck ([damage](#damage)). The switch is disabled in follow and dodge mode, where nothing is a shield | `false` |
 
 Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. A cursor inside any wall is sheltered and skips the hit test, so a bolt stopping just short of a shield's edge can't reach a cursor just inside it. Wall: `first_wall_hit()` clips the step against each wall (window and widget rects, Liang–Barsky); `update()` returns the entry points as `impacts` (`WallHit`: the point, the wall's `id` and the `edge` it came through, `nearest_edge()`), the background layer emits them in page coordinates through `shield_impacts`, and the overlay bursts 8 glowing `primary` sparks there for 280 ms. Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
 
-The background layer always draws the turrets and fires in shield mode; the overlay layer fires in follow mode, and in shield mode only draws the shield sparks, its loop running only while they live. Each layer has one canvas sized to `devicePixelRatio`, colours read through `read_tokens()` and re-read on a theme change. The `requestAnimationFrame` loop runs only while not paused and while the pointer is on the page or something still moves (bolts, particles, a turret turning); otherwise one still frame is drawn on resize, theme or option change. A pause also clears bolts in flight, so none hang over a maximized window. A mode or pace change starts clean. Destroy cancels the frame and closes the audio.
+The background layer always draws the turrets and fires in shield mode; the overlay layer fires in follow and dodge mode, and in shield mode only draws the shield sparks, its loop running only while they live. Each layer has one canvas sized to `devicePixelRatio`, colours read through `read_tokens()` and re-read on a theme change. The `requestAnimationFrame` loop runs only while not paused and while the pointer is on the page or something still moves (bolts, particles, a turret turning); otherwise one still frame is drawn on resize, theme or option change. A pause also clears bolts in flight, so none hang over a maximized window. A mode or pace change starts clean. Destroy cancels the frame and closes the audio.
 
 Sound (`sound.ts`, `PewSynth`): the AudioContext is made on the first `pointerdown` or `keydown` after sound is turned on, or at once when the page already had a gesture (`navigator.userActivation.hasBeenActive`). A pew is a square oscillator sweeping from 1400 Hz to 220 Hz over 0.13 s (times the pace's pitch: 0.8, 1, 1.3, ±6%) under a 5 ms attack and exponential decay; at most 3 per frame. A hit is a pop: 0.15 s of white noise through a lowpass falling from 1600 Hz to 300 Hz, decaying over 0.12 s.
 
 The thumbnail draws the turrets aimed at a point right of centre, and in shield mode three bolts on their way.
+
+#### Dodge
+
+A game on the wallpaper (idea from LaxDOTexe): bolts fly on the overlay as in `follow`, and a clock counts how long the cursor goes without a hit. Never-ending and optional: it just records.
+
+- **Clock.** `advance(elapsed, { dt_ms, running, hits })` in `dodge.ts`, pure. It counts only while `running`: the cursor is on the page (`context.pointer` set) and the wallpaper isn't paused (tab hidden, fullscreen, a maximized window). Any hit resets it to 0. A step is capped at 100 ms, so a stalled frame adds no time. The overlay's frame loop steps it with the frame's `dt` and the sim's `events.hits`; an effect calls `pause()` when the pointer leaves or the context pauses, since the loop may already have stopped.
+- **Best.** `DodgeGame` (`dodge.svelte.ts`) holds the run and the best, `$state` rounded to the tenth the HUD shows. The best lives in `/var/lib/desktop/pew.json`, `{ version: 1, best_ms, at }` (`at` in epoch ms), zod-validated (`parse_record()`; missing or invalid → no best). It's read when Dodge starts, not at boot, and nothing is written before that read. Writes go through `LatestWriter` (500 ms debounce): once a second while a run is beating the best, and exact when that run ends (hit, pointer leaves, pause). Leaving Dodge ends the run and flushes. In OPFS, so a backup's App data carries it.
+- **HUD.** `dodge-hud.svelte`, on the overlay layer (so `pointer-events: none` and below the taskbar and toasts): "Time" and "Best" in `font-mono text-2xs tabular-nums` on `bg-background/70`, best in `primary`. Top right; bottom right when the taskbar is on top, where toasts come in at the top right. Hidden while paused, so it doesn't sit over a maximized window. Not drawn in the Settings thumbnail (the overlay never mounts there).
 
 #### Damage
 

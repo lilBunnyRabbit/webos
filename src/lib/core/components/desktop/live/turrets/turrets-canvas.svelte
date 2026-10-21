@@ -7,6 +7,9 @@
   import { PewSynth } from "./sound";
   import { shield_impacts } from "./impacts";
   import { bite_outline, damage_store, type Bite } from "./damage";
+  import kernel, { type FilesService } from "$lib/core/api";
+  import { DodgeGame } from "./dodge.svelte";
+  import DodgeHud from "./dodge-hud.svelte";
 
   interface Props {
     context: LiveContext;
@@ -21,14 +24,17 @@
   const MAX_PEWS = 3;
 
   const draws_turrets = $derived(layer === "background");
-  const fires = $derived(options.mode === (layer === "background" ? TurretsMode.SHIELD : TurretsMode.FOLLOW));
+  const fires = $derived(layer === "background" ? options.mode === TurretsMode.SHIELD : options.mode !== TurretsMode.SHIELD);
   /** The overlay in shield mode: only the sparks of bolts hitting a shield, drawn above it. */
   const sparks_only = $derived(!draws_turrets && !fires);
   const pace = $derived(PACES[options.pace]);
   /** Only shield hits chip, so Follow mode never damages anything. */
   const damages = $derived(sparks_only && options.damage && options.mode === TurretsMode.SHIELD && !context.preview);
 
+  const dodging = $derived(!draws_turrets && options.mode === TurretsMode.DODGE && !context.preview);
+
   const sim = new TurretsSim();
+  const game = new DodgeGame(() => kernel.service<FilesService>("files"));
   const synth = new PewSynth();
 
   let canvas = $state<HTMLCanvasElement | null>(null);
@@ -50,9 +56,20 @@
     synth.close();
   });
 
+  $effect(() => {
+    if (!dodging) return;
+    void game.load();
+    return () => game.stop();
+  });
+
+  $effect(() => {
+    if (dodging && (context.pointer === null || context.paused)) game.pause();
+  });
+
   // A mode or pace change starts clean, so a bolt fired under the old rules doesn't hang in the wrong layer.
   $effect(() => {
     void fires;
+    void options.mode;
     void pace;
     sim.reset();
   });
@@ -250,6 +267,7 @@
         ? [...context.windows, ...context.widgets].map(({ id, rect: shield }) => ({ id, x: shield.x - rect.x, y: shield.y - rect.y, width: shield.width, height: shield.height }))
         : null;
     const events = sim.update(dt, { turrets: sparks_only ? [] : turrets, pointer, fire: fires, pace, walls, width: rect.width, height: rect.height });
+    if (dodging) game.step({ dt_ms: dt * 1000, running: context.pointer !== null && !context.paused, hits: events.hits });
     for (const impact of events.impacts) shield_impacts.emit({ ...impact, x: impact.x + rect.x, y: impact.y + rect.y });
 
     if (options.sound) {
@@ -324,3 +342,6 @@
 </script>
 
 <canvas bind:this={canvas} class="absolute inset-0 size-full"></canvas>
+{#if dodging && !context.paused}
+  <DodgeHud {game} />
+{/if}

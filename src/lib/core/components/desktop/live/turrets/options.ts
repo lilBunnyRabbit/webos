@@ -3,6 +3,7 @@ import { z } from "zod";
 export const TurretsMode = {
   SHIELD: "shield",
   FOLLOW: "follow",
+  DODGE: "dodge",
 } as const;
 export type TurretsMode = (typeof TurretsMode)[keyof typeof TurretsMode];
 

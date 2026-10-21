@@ -9,6 +9,7 @@
   const MODES = [
     { value: TurretsMode.SHIELD, label: "Shield" },
     { value: TurretsMode.FOLLOW, label: "Follow" },
+    { value: TurretsMode.DODGE, label: "Dodge" },
   ];
 
   const PACES = [
@@ -17,13 +18,19 @@
     { value: TurretsPace.FRANTIC, label: "Frantic" },
   ];
 
+  const MODE_DESCRIPTIONS: Record<TurretsMode, string> = {
+    [TurretsMode.SHIELD]: "Windows are walls: bolts stop at their edges.",
+    [TurretsMode.FOLLOW]: "Bolts fly over windows and reach the cursor anywhere.",
+    [TurretsMode.DODGE]: "A game: bolts fly over windows and a clock in the corner counts how long you last. A hit starts it again; your best is kept.",
+  };
+
   function update(change: Partial<TurretsOptions>) {
     onchange({ ...value, ...change });
   }
 </script>
 
 <div class="flex flex-col gap-1">
-  <SettingRow label="Mode" description={value.mode === TurretsMode.SHIELD ? "Windows are walls: bolts stop at their edges." : "Bolts fly over windows and reach the cursor anywhere."}>
+  <SettingRow label="Mode" description={MODE_DESCRIPTIONS[value.mode]}>
     {#snippet children({ id, describedby })}
       <Segmented {id} aria-describedby={describedby} label="Mode" size="sm" options={MODES} bind:value={() => value.mode, (mode) => update({ mode })} />
     {/snippet}
@@ -53,7 +60,7 @@
   </SettingRow>
   <SettingRow
     label="Damage"
-    description={value.mode === TurretsMode.SHIELD ? "Lasers chip windows and widgets. Only for looks, gone on reload." : "Shield mode only: in Follow mode bolts hit nothing."}
+    description={value.mode === TurretsMode.SHIELD ? "Lasers chip windows and widgets. Only for looks, gone on reload." : "Shield mode only: in Follow and Dodge bolts hit nothing."}
   >
     {#snippet children({ id, describedby })}
       <Button size="sm" variant="quiet" onclick={() => damage_store.clear()}>Repair everything</Button>
