@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, IconButton } from "$lib/core/components/ui";
+  import { Button } from "$lib/core/components/ui";
   import { Waveform } from "$kit/components/waveform";
   import { ArrowCounterClockwise as ResetIcon, ArrowsInLineHorizontal as KeepIcon, Play as PlayIcon, Scissors as ScissorsIcon, Stop as StopIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
@@ -36,10 +36,10 @@
     if (element.paused) element.play().catch(() => {});
   });
 
-  const time = (seconds: number) => seconds.toFixed(2);
+  const BAR = "min-w-0 gap-1 px-1 pointer-coarse:h-11";
 </script>
 
-<div class="grid gap-2">
+<div class="grid gap-3">
   {#if video}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
@@ -54,24 +54,40 @@
     ></video>
   {/if}
   <Waveform pcm={editor.pcm!} bind:start={editor.start} bind:end={editor.end} bind:selection={editor.selection} playhead={editor.playhead} {label} />
-  <p class="flex flex-wrap justify-between gap-x-3 font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums">
-    <span>{time(editor.start)}–{time(editor.end)} s</span>
-    {#if editor.selection}<span>selected {time(editor.selection.end - editor.selection.start)} s</span>{/if}
-    <span>{time(editor.end - editor.start)} of {time(editor.duration)} s</span>
-  </p>
-  <p class="text-2xs text-foreground/80">Drag the tabs under the sound to trim. Drag along the ruler (or across the sound with a mouse, or touch and hold it) to select a part, then keep only it or delete it. Pinch or Ctrl+scroll to zoom.</p>
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="grid grid-cols-4 gap-1.5" role="toolbar" aria-label="Edit the sound">
     {#if editor.playing}
-      <Button size="sm" variant="quiet" class="pointer-coarse:h-11" onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
+      <Button variant="secondary" size="sm" class={BAR} onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
     {:else}
-      <Button size="sm" variant="quiet" class="pointer-coarse:h-11" onclick={() => editor.play()}><PlayIcon weight="fill" /> {editor.selection ? "Play selection" : "Play"}</Button>
+      {@const name = editor.selection ? "Play selection" : "Play"}
+      <Button variant="secondary" size="sm" class={BAR} aria-label={name} title={name} onclick={() => editor.play()}><PlayIcon weight="fill" /> Play</Button>
     {/if}
-    <Button size="sm" variant="quiet" class="pointer-coarse:h-11" disabled={!editor.selection} onclick={() => editor.keep_selection()}><KeepIcon weight="bold" /> Keep selection</Button>
-    <Button size="sm" variant="quiet" class="pointer-coarse:h-11" disabled={!editor.selection} onclick={() => editor.delete_selection()}><ScissorsIcon weight="bold" /> Delete selection</Button>
-    <IconButton label="Undo edits" size="sm" class="pointer-coarse:size-11" disabled={!editor.changed} onclick={() => editor.reset()}><ResetIcon weight="bold" /></IconButton>
-    {#if actions}
-      <span class="flex-1"></span>
-      {@render actions()}
-    {/if}
+    <Button
+      variant="secondary"
+      size="sm"
+      class={BAR}
+      aria-label="Keep selection"
+      title="Keep only the selection"
+      disabled={!editor.selection}
+      onclick={() => editor.keep_selection()}
+    >
+      <KeepIcon weight="bold" /> Keep
+    </Button>
+    <Button
+      variant="secondary"
+      size="sm"
+      class={BAR}
+      aria-label="Delete selection"
+      title="Delete the selection"
+      disabled={!editor.selection}
+      onclick={() => editor.delete_selection()}
+    >
+      <ScissorsIcon weight="bold" /> Delete
+    </Button>
+    <Button variant="secondary" size="sm" class={BAR} aria-label="Undo edits" title="Undo all edits" disabled={!editor.changed} onclick={() => editor.reset()}>
+      <ResetIcon weight="bold" /> Undo
+    </Button>
   </div>
+  {#if actions}
+    <div class="flex flex-wrap items-center justify-end gap-2">{@render actions()}</div>
+  {/if}
 </div>

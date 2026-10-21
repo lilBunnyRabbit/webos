@@ -78,5 +78,12 @@ Build notes: trim tabs in a strip below the wave, selection tabs in the ruler st
 ## Polish pass (2026-10-21)
 The owner asked for deep testing of the editor on desktop and touch. Found and fixed within the decided design: selection tabs covered the ruler's labels (grips now hang off the wave's edge, labels above); tabs at either end of the sound sat off their line (they slide inside and keep touching it); Zoom to selection put both selection tabs just off screen (it leaves room either side now); the nudge readout appeared only after a tab was grabbed and its appearance re-wrapped the toolbar under the finger on a phone (always shown now, for the last marker grabbed or the trim start, the active tab ringed); a touch on the wave drew a focus ring; cutting the middle kept 10 ms past the trim end (the crossfade wasn't counted); Edit audio opened below the dialog's fold. Measured on a 5-minute stereo sound: zoom from fit to one pixel per sample and scrolling at that zoom ran at 60 fps with no long tasks, on desktop and in a 390 px touch emulation.
 
+## Mobile layout redesign (2026-10-21)
+The owner, from a phone: "The audio edit works great now just the ux on mobile is terrible for the whole thing - buttons all over the place". The video sheet stacked a lone nudge readout, a separate right-aligned zoom row, the wave, two readouts, a four-line help paragraph, then Play and Keep on one row and Delete and Undo on another. Restructured, same on desktop and mobile:
+- Waveform: one row above the wave (zoom tray at the start, an (i) help popover at the end), the wave, one readout line below it (◀ active marker ▶ at the start, kept length or selection length at the end). The help paragraph moved into the popover.
+- Editor: one action bar, a four-column grid of equal secondary buttons (Play/Stop, Keep, Delete, Undo, short labels, full names as accessible name and tooltip). Disabled ones stay in place as filled buttons at the kit's disabled opacity, so they read as buttons that are off and the bar never reflows.
+- Video sheet: the intro sentence joined the header. Both dialogs' footers stick to the bottom of the sheet.
+- Stayed app-local: an equal-width action bar has one user, so no kit component.
+
 ## Next session topics
 - When a pad moves to an edited sound, its original copy stays in the sounds folder with no pad using it. Delete it then, keep it for undo, or offer "Revert to original"?

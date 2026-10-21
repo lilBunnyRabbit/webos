@@ -15,6 +15,7 @@
     ArrowsOutLineHorizontal as FitIcon,
     CaretLeft as LeftIcon,
     CaretRight as RightIcon,
+    Info as InfoIcon,
     MagnifyingGlassMinus as ZoomOutIcon,
     MagnifyingGlassPlus as ZoomInIcon,
     Selection as ZoomSelectionIcon,
@@ -73,6 +74,8 @@
   const NAMES: Record<Marker, string> = { start: "Trim start", end: "Trim end", from: "Selection start", to: "Selection end" };
   const SHORT: Record<Marker, string> = { start: "Start", end: "End", from: "From", to: "To" };
 
+  const uid = $props.id();
+  const help_id = `waveform-help-${uid}`;
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const duration = $derived(pcm_length(pcm) / pcm.sample_rate || 0);
   const index = $derived(peak_index(pcm));
@@ -361,19 +364,8 @@
 </script>
 
 <div class={cn("waveform grid gap-1.5", class_name)} role="group" aria-label={label}>
-  <div class="flex flex-wrap items-center gap-1">
-    <div class="mr-auto flex items-center gap-0.5">
-      <IconButton label="Move {NAMES[active].toLowerCase()} earlier" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, -1)}>
-        <LeftIcon weight="bold" />
-      </IconButton>
-      <span class="min-w-22 text-center font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums" aria-live="polite"
-        >{SHORT[active]} {exact(value_of(active) ?? 0)}</span
-      >
-      <IconButton label="Move {NAMES[active].toLowerCase()} later" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, 1)}>
-        <RightIcon weight="bold" />
-      </IconButton>
-    </div>
-    <div class="ml-auto flex items-center gap-1">
+  <div class="flex items-center gap-2">
+    <div class="flex items-center gap-0.5 rounded-lg bg-foreground/5 p-0.5" role="group" aria-label="Zoom">
       <IconButton label="Zoom out" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => zoom_by(1 / ZOOM_STEP)}>
         <ZoomOutIcon weight="bold" />
       </IconButton>
@@ -393,6 +385,9 @@
         <FitIcon weight="bold" />
       </IconButton>
     </div>
+    <IconButton label="How to edit the sound" size="sm" class="ml-auto pointer-coarse:size-11" popovertarget={help_id} style="anchor-name: --{help_id}">
+      <InfoIcon weight="bold" />
+    </IconButton>
   </div>
 
   <div
@@ -496,6 +491,31 @@
       </div>
     </div>
   </div>
+  <div class="flex items-center gap-2">
+    <div class="flex items-center gap-0.5">
+      <IconButton label="Move {NAMES[active].toLowerCase()} earlier" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, -1)}>
+        <LeftIcon weight="bold" />
+      </IconButton>
+      <span class="min-w-24 text-center font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums" aria-live="polite"
+        >{SHORT[active]} {exact(value_of(active) ?? 0)}</span
+      >
+      <IconButton label="Move {NAMES[active].toLowerCase()} later" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(active, 1)}>
+        <RightIcon weight="bold" />
+      </IconButton>
+    </div>
+    <span class="ml-auto font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums">
+      {#if selection}<span class="text-primary">{seconds(selection.end - selection.start)}</span> selected{:else}{(end - start).toFixed(2)} of {seconds(duration)}{/if}
+    </span>
+  </div>
+
+  <div id={help_id} popover="auto" class="help m-0 w-72 max-w-[calc(100vw-2rem)] rounded-xl bg-background-lighter p-3 text-2xs text-foreground/80 shadow-popover" style="position-anchor: --{help_id}">
+    <ul class="grid list-disc gap-1.5 pl-4">
+      <li><span class="text-foreground">Trim:</span> drag the tabs below the sound.</li>
+      <li><span class="text-foreground">Select:</span> drag along the ruler, or across the sound with a mouse. On touch, zoomed in, touch and hold the sound, then drag. A tap or Esc clears it.</li>
+      <li><span class="text-foreground">Fine-tune:</span> ‹ › or the arrow keys move the marker last grabbed (Shift for ten steps).</li>
+      <li><span class="text-foreground">Zoom:</span> pinch, Ctrl+scroll or the buttons; scroll sideways to move along.</li>
+    </ul>
+  </div>
 </div>
 
 <style>
@@ -506,6 +526,12 @@
 
   .strip {
     height: 28px;
+  }
+
+  .help {
+    position-area: bottom span-left;
+    position-try-fallbacks: top span-left, bottom span-right;
+    margin-block: 6px;
   }
 
   .trimmed {

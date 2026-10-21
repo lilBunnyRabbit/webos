@@ -104,7 +104,7 @@
 </script>
 
 <form
-  class="grid max-h-[calc(100cqh-2rem)] w-[min(26rem,calc(100cqw-2rem))] gap-4 overflow-y-auto rounded-2xl bg-background-lighter p-5 shadow-popover"
+  class="grid max-h-[calc(100cqh-2rem)] w-[min(26rem,calc(100cqw-2rem))] gap-4 overflow-y-auto scroll-pb-20 rounded-2xl bg-background-lighter p-5 shadow-popover"
   onsubmit={submit}
 >
   <h2 class="text-sm font-semibold">Edit pad</h2>
@@ -215,7 +215,7 @@
     </div>
   </details>
 
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="sticky -bottom-5 -mx-5 -mb-5 flex flex-wrap items-center gap-2 border-t border-foreground/8 bg-background-lighter px-5 py-3">
     <IconButton label="Delete pad" class="text-error hover:text-error" onclick={() => resolve({ action: "delete" })}><TrashIcon weight="bold" /></IconButton>
     <Button variant="quiet" onclick={() => preview({ ...draft, loop: false })}><PlayIcon weight="fill" /> Preview</Button>
     <span class="flex-1"></span>

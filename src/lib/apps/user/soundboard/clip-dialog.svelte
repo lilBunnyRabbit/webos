@@ -70,18 +70,18 @@
 </script>
 
 <form
-  class="grid max-h-[calc(100cqh-2rem)] w-[min(34rem,calc(100cqw-2rem))] gap-4 overflow-y-auto rounded-2xl bg-background-lighter p-5 shadow-popover"
+  class="grid max-h-[calc(100cqh-2rem)] w-[min(34rem,calc(100cqw-2rem))] gap-4 overflow-y-auto scroll-pb-20 rounded-2xl bg-background-lighter p-5 shadow-popover"
   onsubmit={submit}
 >
   <div class="grid min-w-0 gap-1">
     <h2 class="text-sm font-semibold">New pad from a video</h2>
     <p class="truncate font-mono text-2xs text-foreground/80" title={file.name}>{file.name}</p>
+    <p class="text-2xs text-foreground/80">Keep the part you want on the pad. The video isn't changed.</p>
   </div>
 
   {#if failed}
     <p class="text-ui text-error">Couldn't read the sound: {failed}</p>
   {:else if editor.pcm}
-    <p class="text-ui text-foreground/80">Keep only the part you want on the pad. The video stays as it is.</p>
     <SoundEditorPanel {editor} label="Sound from the video" video={url} />
   {:else}
     <div class="grid h-40 place-content-center justify-items-center gap-2 rounded-lg bg-background-darker px-4 text-center">
@@ -96,7 +96,7 @@
 
   {#if save_error}<p class="text-ui text-error">{save_error}</p>{/if}
 
-  <div class="flex flex-wrap items-center justify-end gap-2">
+  <div class="sticky -bottom-5 -mx-5 -mb-5 flex flex-wrap items-center justify-end gap-2 border-t border-foreground/8 bg-background-lighter px-5 py-3">
     <Button variant="quiet" onclick={() => resolve(null)}>Cancel</Button>
     <Button variant="primary" type="submit" disabled={!editor.pcm || saving}>{saving ? "Adding…" : "Add pad"}</Button>
   </div>

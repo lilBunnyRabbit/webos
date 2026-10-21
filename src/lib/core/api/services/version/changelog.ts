@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.45.0",
+    date: "2026-10-21",
+    title: "A tidier sound editor",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["soundboard"],
+        text: "Soundboard's sound editor is tidier on phones: zoom sits above the sound, the fine-tune arrows and length below it, and Play, Keep, Delete and Undo share one row, with the tips behind an info button.",
+      },
+    ],
+  },
+  {
     version: "3.44.0",
     date: "2026-10-21",
     title: "Daily puzzles",
