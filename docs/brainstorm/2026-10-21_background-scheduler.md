@@ -125,3 +125,7 @@ Options:
 ### on_fire stability and cross-tab app data (decided)
 `on_fire` stays internal ("not yet stable" in app-api.md) until Calendar has used it; then the shape (and the `Job` type it receives) is promised. Rejected: stable from 3.38.
 App data files not syncing between tabs (an app open in one tab can show a stale view after another tab's leader or `on_fire` handler wrote) goes onto the ROADMAP under Cross-tab file sync, fixed for every app at once. Rejected: a Pomodoro-only staleness check; leaving it.
+
+### Calendar reminders the rules can't express (decided)
+Keep the refusal (owner: "I wouldn't complicate this now"): the editor explains why and won't save; DST stays wall-clock for reminders. Rejected for now: a `before` lead time on Job; one-shot jobs per occurrence re-timed in `on_fire`.
+`on_fire` becomes stable app API once Job's shape settles (it held unchanged for Calendar); with no lead-time change planned, it stays "not yet stable" until the next Job change or an explicit promotion.
