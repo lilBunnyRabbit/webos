@@ -18,11 +18,16 @@
   let query = $state("");
   let replacement = $state("");
   let whole = $state(false);
-  let current = $state(0);
 
   const matches = $derived.by(() => {
     void editor.json;
     return query ? editor.find(query, whole) : [];
+  });
+  // A new query or Whole word starts at the match after the cursor; stepping and replacing then move it. Edits don't.
+  let current = $derived.by(() => {
+    void query;
+    void whole;
+    return untrack(() => Math.max(0, editor.next_after_selection(matches)));
   });
   const index = $derived(matches.length ? Math.min(current, matches.length - 1) : -1);
   const status = $derived(!query ? "" : matches.length ? `${index + 1} of ${matches.length}` : "No results");
@@ -32,12 +37,6 @@
   const HIGHLIGHT_CSS =
     `::highlight(${all_name}){background-color:color-mix(in oklch,var(--primary) 22%,transparent)}` +
     `::highlight(${current_name}){background-color:color-mix(in oklch,var(--primary) 50%,transparent)}`;
-
-  $effect(() => {
-    void query;
-    void whole;
-    untrack(() => (current = Math.max(0, editor.next_after_selection(matches))));
-  });
 
   function range_of(match: Match): Range | null {
     const element = editor.element_of(match);
