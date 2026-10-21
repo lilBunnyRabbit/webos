@@ -161,7 +161,7 @@ export type SnapZone = (typeof SnapZone)[keyof typeof SnapZone];
 ## Svelte 5
 
 - Runes only. No `export let`, no `$:`, no `createEventDispatcher`, no stores.
-- Props: `interface Props` + `let { ... }: Props = $props()`. `$bindable()` only where two-way binding is the point.
+- Props: an inline type on `$props()` is fine in an app (`let { path }: { path?: string } = $props()`). Components in the UI kit (`$lib/core/components/ui`) and the app kit (`$kit/components`) declare `interface Props` + `let { ... }: Props = $props()`, or `type Props = …` when it intersects element attributes or variants. `$bindable()` only where two-way binding is the point.
 - `$derived` for anything computable. `$effect` only for real side effects (DOM, timers, storage), and it must return its cleanup.
 - `$state.raw` for objects that get replaced wholesale and aren't mutated (`container` bounds).
 - Collections: `SvelteMap`, `SvelteSet`, `Flags<T>` (flag sets), `Order<T>` (z-order).

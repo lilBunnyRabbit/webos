@@ -65,7 +65,7 @@ CONVENTIONS allows inline prop types; `interface Props` required for kit/ui comp
 ## Action items
 - [ ] Scheduler fixes (idle four, double boot read, phase wording, quiet offline version check)
 - [ ] Service worker: injectManifest + parallel install, mammoth runtime cache, versioned Burrow font URLs, import-map `\0` identity fix
-- [ ] Kit `report_error` + flash helper sweep; CONVENTIONS amend
+- [x] Kit `report_error` + flash helper sweep; CONVENTIONS amend
 - [ ] Fork + tidy: stand-in test apps, CI fork browser tests, interests/samples/Getting started guards, Style Guide ai_icon demo, video helpers to kit, WebM app name, duplicate parsers and types, Warren find effect, dead exports and imports, `scripts/perf/` harness
 
 ## Next session topics
