@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CHAR_SETS } from "./charsets";
+import { MAX_MANUAL_KERN, pair_chars } from "./kerning";
 import {
   ASCENT,
   DEFAULT_SLANT,
@@ -63,6 +64,12 @@ const ProjectSchema = z.object({
     .object({ slant: z.number().min(0).max(MAX_SLANT) })
     .nullable()
     .optional(),
+  kerning: z
+    .object({
+      auto: z.boolean(),
+      pairs: z.record(z.string().refine((key) => pair_chars(key) !== null, "kerning keys are two characters"), z.number().int().min(-MAX_MANUAL_KERN).max(MAX_MANUAL_KERN)).optional(),
+    })
+    .optional(),
   glyphs: z.record(z.string().refine((key) => [...key].length === 1, "keys are single characters"), GlyphSchema),
 });
 
@@ -82,7 +89,7 @@ export function parse_project(text: string): FontProject {
     const issue = result.error.issues[0];
     throw new Error(`This isn't a valid Font Maker file: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
-  const { name, sets, metrics, stroke, weights, italic, glyphs } = result.data;
+  const { name, sets, metrics, stroke, weights, italic, kerning, glyphs } = result.data;
   const project: FontProject = {
     version: VERSION,
     name,
@@ -94,6 +101,7 @@ export function parse_project(text: string): FontProject {
     glyphs: glyphs as Record<string, Glyph>,
   };
   if (stroke) project.stroke = { width: stroke.width };
+  if (kerning) project.kerning = kerning.pairs ? { auto: kerning.auto, pairs: { ...kerning.pairs } } : { auto: kerning.auto };
   return project;
 }
 

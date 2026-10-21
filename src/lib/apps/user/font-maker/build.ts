@@ -17,8 +17,9 @@ import {
   type FontProject,
   type Glyph,
 } from "./model";
+import { auto_pair_kern, face_kerning, kerning_target, pair_chars, type Profiled } from "./kerning";
 import { contour_bounds, glyph_contours, glyph_masters, type Contour } from "./outline";
-import { write_ttf, type TtfGlyph } from "./ttf";
+import { MAX_KERN_PAIRS, write_ttf, type TtfGlyph, type TtfKernPair } from "./ttf";
 
 export interface PlacedGlyph {
   contours: Contour[];
@@ -123,18 +124,45 @@ function font_base(project: FontProject, face: Face, created?: Date) {
   };
 }
 
+// The `kern` table can't vary by weight, so a variable font carries its default weight's pairs.
+function kern_pairs(project: FontProject, outlines: ReadonlyMap<string, WeightOutlines>, index: number, first_glyph: number): TtfKernPair[] {
+  const placed = new Map<string, Profiled>();
+  for (const [char, outline] of outlines) {
+    const glyph = outline.placed[index];
+    if (glyph) placed.set(char, glyph);
+  }
+  const ids = new Map([...placed.keys()].map((char, at) => [char, first_glyph + at]));
+  const pairs = face_kerning(project.kerning, placed, kerning_target(project.metrics.bearing), MAX_KERN_PAIRS);
+  return [...pairs].map(([pair, value]) => {
+    const [left, right] = pair_chars(pair)!;
+    return { left: ids.get(left)!, right: ids.get(right)!, value };
+  });
+}
+
 function write_face(project: FontProject, face: Face, outlines: ReadonlyMap<string, WeightOutlines>, created?: Date): Uint8Array<ArrayBuffer> {
   const index = project.weights.findIndex((item) => item.weight === face.weight);
   const glyphs = fixed_glyphs();
+  const kerning = kern_pairs(project, outlines, index, glyphs.length);
   for (const [char, outline] of outlines) {
     const placed = outline.placed[index];
     if (placed) glyphs.push({ codepoints: [char.codePointAt(0)!], contours: placed.contours, advance: placed.advance });
   }
-  return write_ttf({ ...font_base(project, face, created), glyphs });
+  return write_ttf({ ...font_base(project, face, created), glyphs, kerning });
 }
 
 function outlines_of(project: FontProject, italic: boolean): Map<string, WeightOutlines> {
   return new Map(drawn_characters(project).map((char) => [char, outline_weights(project, char, italic)]));
+}
+
+/** What auto kerning gives a pair in one face, 0 with auto off or a letter not drawn. */
+export function auto_kern_of(project: FontProject, face: Face, first: string, second: string): number {
+  if (!project.kerning?.auto) return 0;
+  const drawn = drawn_characters(project);
+  if (!drawn.includes(first) || !drawn.includes(second)) return 0;
+  const index = project.weights.findIndex((item) => item.weight === face.weight);
+  const left = outline_weights(project, first, face.italic).placed[index];
+  const right = outline_weights(project, second, face.italic).placed[index];
+  return left && right ? auto_pair_kern(first, second, left, right, kerning_target(project.metrics.bearing)) : 0;
 }
 
 export function build_face(project: FontProject, face: Face = { weight: regular_weight(project), italic: false }, created?: Date): Uint8Array<ArrayBuffer> {
@@ -172,6 +200,7 @@ export function build_variable(project: FontProject, italic = false, created?: D
   const base = weights.indexOf(regular);
   const others = weights.map((_, index) => index).filter((index) => index !== base);
   const glyphs = fixed_glyphs();
+  const kerning = kern_pairs(project, outlines, base, glyphs.length);
   for (const [char, outline] of outlines) {
     const placed = outline.placed[base]!;
     glyphs.push({
@@ -184,6 +213,7 @@ export function build_variable(project: FontProject, italic = false, created?: D
   return write_ttf({
     ...font_base(project, { weight: regular, italic }, created),
     glyphs,
+    kerning,
     variation: { min: weights[0], max: weights[weights.length - 1], masters: others.map((index) => weights[index]), instances: weights },
   });
 }

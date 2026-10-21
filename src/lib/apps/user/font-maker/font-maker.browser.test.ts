@@ -2,16 +2,17 @@ import { expect, test } from "vitest";
 import { split_collection } from "$lib/core/utils/font-collection";
 import { build_family, build_font, build_variable, place_glyph } from "./build";
 import { CharSet } from "./charsets";
-import { add_stroke, create_project, DEFAULT_METRICS, glyph_of, set_weights, type Stroke } from "./model";
+import { add_stroke, create_project, DEFAULT_METRICS, glyph_of, set_auto_kerning, set_weights, type Stroke } from "./model";
 import { find_marks } from "./scan";
 import { load_scan, scan_guides } from "./scan-image";
 import { draw_template, PAGE, PNG_DPI, template_layout } from "./template";
+import { write_ttf, type TtfGlyph } from "./ttf";
 
 const line = (x0: number, y0: number, x1: number, y1: number): Stroke =>
   Array.from({ length: 11 }, (_, index) => [x0 + ((x1 - x0) * index) / 10, y0 + ((y1 - y0) * index) / 10, 0.5]);
 
 test("the browser loads the exported font and spaces glyphs by their advance", async () => {
-  let project = create_project("Browser Hand");
+  let project = set_auto_kerning(create_project("Browser Hand"), false);
   project = add_stroke(project, "A", line(100, 0, 300, 700));
   project = add_stroke(project, "A", line(300, 700, 500, 0));
   const bytes = build_font(project);
@@ -109,3 +110,35 @@ test("the variable font interpolates between weights", async () => {
   }
 });
 
+
+test("Chromium applies a legacy kern table: AV with a negative pair measures narrower than A plus V", async () => {
+  const box = (x0: number, x1: number) => [
+    [
+      { x: x0, y: 0, on: true },
+      { x: x0, y: 700, on: true },
+      { x: x1, y: 700, on: true },
+      { x: x1, y: 0, on: true },
+    ],
+  ];
+  const glyphs: TtfGlyph[] = [
+    { codepoints: [], contours: [], advance: 500 },
+    { codepoints: [0x20], contours: [], advance: 260 },
+    { codepoints: [0x41], contours: box(50, 550), advance: 600 },
+    { codepoints: [0x56], contours: box(50, 550), advance: 600 },
+  ];
+  const base = { family: "Kern Test", weight: 400, italic: false, slant: 0, units_per_em: 1000, ascent: 950, descent: 250, cap_height: 700, x_height: 480, glyphs };
+  const faces = [new FontFace("fm-kern", write_ttf({ ...base, kerning: [{ left: 2, right: 3, value: -200 }] })), new FontFace("fm-unkerned", write_ttf(base))];
+  await Promise.all(faces.map((face) => face.load()));
+  faces.forEach((face) => document.fonts.add(face));
+  try {
+    const context = new OffscreenCanvas(10, 10).getContext("2d")!;
+    context.font = "100px fm-kern";
+    expect(context.measureText("A").width).toBeCloseTo(60, 0);
+    expect(context.measureText("AV").width).toBeCloseTo(100, 0);
+    expect(context.measureText("VA").width).toBeCloseTo(120, 0);
+    context.font = "100px fm-unkerned";
+    expect(context.measureText("AV").width).toBeCloseTo(120, 0);
+  } finally {
+    faces.forEach((face) => document.fonts.delete(face));
+  }
+});

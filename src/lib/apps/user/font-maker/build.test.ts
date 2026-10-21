@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { read_font, FontFormat } from "../font-viewer/font";
 import { split_collection } from "$lib/core/utils/font-collection";
-import { build_face, build_family, build_font, build_variable, place_glyph, variable_blockers } from "./build";
+import { auto_kern_of, build_face, build_family, build_font, build_variable, place_glyph, variable_blockers } from "./build";
 import { CharSet } from "./charsets";
 import { add_stroke, create_project, set_weights, update_glyph, type FontProject, type Stroke } from "./model";
 import { checksum } from "./ttf";
@@ -144,5 +144,58 @@ describe("build_variable", () => {
     const extra = update_glyph(sample(), "o", (glyph) => ({ ...glyph, italics: { "700": [...glyph.strokes, line(0, 0, 10, 300)] } }));
     expect(variable_blockers(extra, true)).toEqual(["o"]);
     expect(variable_blockers(extra)).toEqual([]);
+  });
+});
+
+describe("kerning", () => {
+  const kern_of = (bytes: Uint8Array) => {
+    const kern = tables(bytes).get("kern");
+    if (!kern) return null;
+    const pairs = new Map<string, number>();
+    for (let index = 0; index < kern.getUint16(10); index++) {
+      const at = 18 + index * 6;
+      pairs.set(`${kern.getUint16(at)},${kern.getUint16(at + 2)}`, kern.getInt16(at + 4));
+    }
+    return { pairs, length: kern.getUint16(6), coverage: kern.getUint16(8) };
+  };
+  const project = () => ({ ...sample(), kerning: { auto: false, pairs: { AA: -40 } } });
+
+  test("a file without kerning settings builds no kern table", () => {
+    const { kerning: _kerning, ...rest } = sample();
+    expect(kern_of(build_font(rest))).toBeNull();
+  });
+
+  test("writes a sorted format 0 subtable with the manual pair by glyph id", () => {
+    const kern = kern_of(build_font(project()))!;
+    expect(kern.coverage).toBe(1);
+    expect(kern.length).toBe(14 + 6);
+    expect(kern.pairs).toEqual(new Map([["2,2", -40]]));
+    expect(checksum(build_font(project(), DATE))).toBe(0xb1b0afba);
+  });
+
+  test("auto kerning is measured per face: the italic shear and each weight get their own", () => {
+    const auto = { ...sample(), kerning: { auto: true } };
+    const upright = kern_of(build_face(auto, { weight: 400, italic: false }))!;
+    const italic = kern_of(build_face(auto, { weight: 400, italic: true }))!;
+    const bold = kern_of(build_face(auto, { weight: 700, italic: false }))!;
+    expect(upright.pairs.size).toBeGreaterThan(0);
+    expect(italic.pairs).not.toEqual(upright.pairs);
+    expect(bold.pairs).not.toEqual(upright.pairs);
+  });
+
+  test("every face of a family and the variable font carry kerning, the variable font its default weight's", () => {
+    const auto = { ...three_weights(), kerning: { auto: true } };
+    for (const face of split_collection(build_family(auto, DATE))) expect(kern_of(face)).not.toBeNull();
+    expect(kern_of(build_variable(auto, false, DATE))!.pairs).toEqual(kern_of(build_face(auto, { weight: 400, italic: false }, DATE))!.pairs);
+  });
+
+  test("the editor's auto value for a pair is what the face writes", () => {
+    const auto = { ...sample(), kerning: { auto: true } };
+    const face = { weight: 400, italic: true };
+    const written = kern_of(build_face(auto, face))!.pairs;
+    expect(auto_kern_of(auto, face, "A", "o")).toBe(written.get("2,3") ?? 0);
+    expect(auto_kern_of(auto, face, "o", "A")).toBe(written.get("3,2") ?? 0);
+    expect(auto_kern_of({ ...auto, kerning: { auto: false } }, face, "A", "o")).toBe(0);
+    expect(auto_kern_of(auto, face, "A", "B")).toBe(0);
   });
 });

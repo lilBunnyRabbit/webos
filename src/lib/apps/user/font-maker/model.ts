@@ -1,4 +1,5 @@
 import { CharSet } from "./charsets";
+import { MAX_MANUAL_KERN, type Kerning } from "./kerning";
 
 export type StrokePoint = [x: number, y: number, pressure: number];
 export type Stroke = StrokePoint[];
@@ -49,6 +50,8 @@ export interface FontProject {
   weights: FontWeight[];
   /** `null`: upright faces only. */
   italic: Italic | null;
+  /** Absent in files from before kerning: those build without a `kern` table. */
+  kerning?: Kerning;
   glyphs: Record<string, Glyph>;
 }
 
@@ -111,6 +114,7 @@ export function create_project(name = "My Handwriting"): FontProject {
     metrics: { ...DEFAULT_METRICS },
     weights: DEFAULT_WEIGHTS.map((weight) => ({ ...weight })),
     italic: { slant: DEFAULT_SLANT },
+    kerning: { auto: true },
     glyphs: {},
   };
 }
@@ -287,4 +291,22 @@ export function reset_spacing(project: FontProject, char: string): FontProject {
 
 export function clamp_nudge(value: number): number {
   return Math.round(Math.min(MAX_NUDGE, Math.max(-MAX_NUDGE, value)));
+}
+
+export function kern_adjustment(project: FontProject, pair: string): number {
+  return project.kerning?.pairs?.[pair] ?? 0;
+}
+
+export function set_auto_kerning(project: FontProject, auto: boolean): FontProject {
+  return { ...project, kerning: { ...project.kerning, auto } };
+}
+
+export function set_kern_adjustment(project: FontProject, pair: string, value: number): FontProject {
+  const next = Math.round(Math.min(MAX_MANUAL_KERN, Math.max(-MAX_MANUAL_KERN, value)));
+  if (next === kern_adjustment(project, pair)) return project;
+  const { [pair]: _dropped, ...pairs } = project.kerning?.pairs ?? {};
+  if (next) pairs[pair] = next;
+  const kerning: Kerning = { auto: project.kerning?.auto ?? false };
+  if (Object.keys(pairs).length) kerning.pairs = pairs;
+  return { ...project, kerning };
 }

@@ -7,8 +7,12 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.31.0",
     date: "2026-10-21",
-    title: "Italics per weight",
+    title: "Italics per weight and kerning",
     changes: [
+      {
+        kind: NEW,
+        text: "Font Maker kerns your font: letter pairs like AV and To move closer on their own, and tapping between two letters in the preview lets you nudge that pair yourself.",
+      },
       {
         kind: IMPROVED,
         text: "Font Maker lets you redraw a letter for each italic face, Light Italic and Bold Italic included, and lists every face in the drawing picker.",

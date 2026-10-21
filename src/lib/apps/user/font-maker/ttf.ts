@@ -22,6 +22,15 @@ export interface TtfVariation {
   instances: number[];
 }
 
+export interface TtfKernPair {
+  left: number;
+  right: number;
+  value: number;
+}
+
+/** A format 0 subtable's length is a u16, so (65535 − 14) / 6 pairs fit. */
+export const MAX_KERN_PAIRS = 10920;
+
 export interface TtfFont {
   family: string;
   weight: number;
@@ -35,6 +44,8 @@ export interface TtfFont {
   x_height: number;
   glyphs: TtfGlyph[];
   variation?: TtfVariation;
+  /** Glyph index pairs for a legacy `kern` table; one set for the whole font, so a variable font can't vary it. */
+  kerning?: TtfKernPair[];
   created?: Date;
 }
 
@@ -355,6 +366,24 @@ function gvar_table(font: TtfFont, variation: TtfVariation): Uint8Array {
   return writer.done();
 }
 
+export function kern_table(pairs: readonly TtfKernPair[]): Uint8Array {
+  const sorted = [...pairs].sort((a, b) => a.left - b.left || a.right - b.right).slice(0, MAX_KERN_PAIRS);
+  const count = sorted.length;
+  const power = count ? 2 ** Math.floor(Math.log2(count)) : 0;
+  const writer = new ByteWriter()
+    .u16(0)
+    .u16(1)
+    .u16(0)
+    .u16(14 + count * 6)
+    .u16(0x0001)
+    .u16(count)
+    .u16(power * 6)
+    .u16(count ? Math.log2(power) : 0)
+    .u16((count - power) * 6);
+  for (const pair of sorted) writer.u16(pair.left).u16(pair.right).i16(pair.value);
+  return writer.done();
+}
+
 export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
   const encoded = font.glyphs.map((glyph) => encode_glyph(glyph.contours));
   const created = font.created ?? new Date();
@@ -510,6 +539,7 @@ export function write_ttf(font: TtfFont): Uint8Array<ArrayBuffer> {
     name: name_table(font),
     post: post.done(),
   };
+  if (font.kerning?.length) tables.kern = kern_table(font.kerning);
   if (font.variation) {
     tables.fvar = fvar_table(font.weight, font.variation);
     tables.gvar = gvar_table(font, font.variation);

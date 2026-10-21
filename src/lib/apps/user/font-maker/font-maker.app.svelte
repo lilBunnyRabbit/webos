@@ -605,7 +605,7 @@
       </div>
       {/if}
 
-      <FontMakerPreview {project} bind:sample={sample.value} />
+      <FontMakerPreview {project} bind:sample={sample.value} onchange={(change) => editor.apply(change)} />
     </section>
 
     {#if loading}

@@ -13,7 +13,10 @@ import {
   regular_weight,
   reset_layer,
   reset_spacing,
+  set_auto_kerning,
   set_guides,
+  set_kern_adjustment,
+  kern_adjustment,
   set_slant,
   set_stroke_width,
   set_weights,
@@ -148,5 +151,23 @@ describe("format", () => {
     const guided = set_guides(create_project(), new Map([["a", "data:image/webp;base64,AAAA"]]));
     expect(parse_project(serialize_project(guided)).glyphs.a.guide).toBe("data:image/webp;base64,AAAA");
     expect(clear_guides(guided).glyphs).toEqual({});
+  });
+
+  test("kerning: new projects kern automatically, older files don't, pairs round-trip and are checked", () => {
+    expect(create_project().kerning).toEqual({ auto: true });
+    const { kerning: _kerning, ...old } = { ...create_project(), version: 2 };
+    expect(parse_project(JSON.stringify(old)).kerning).toBeUndefined();
+    let project = set_kern_adjustment(create_project(), "AV", -30);
+    project = set_kern_adjustment(project, "To", 999);
+    expect(project.kerning).toEqual({ auto: true, pairs: { AV: -30, To: 400 } });
+    expect(kern_adjustment(project, "AV")).toBe(-30);
+    expect(set_kern_adjustment(project, "AV", -30)).toBe(project);
+    expect(parse_project(serialize_project(project)).kerning).toEqual({ auto: true, pairs: { AV: -30, To: 400 } });
+    project = set_kern_adjustment(set_kern_adjustment(project, "AV", 0), "To", 0);
+    expect(project.kerning).toEqual({ auto: true });
+    expect(set_auto_kerning(project, false).kerning).toEqual({ auto: false });
+    expect(set_kern_adjustment({ ...create_project(), kerning: undefined }, "AV", 10).kerning).toEqual({ auto: false, pairs: { AV: 10 } });
+    expect(() => parse_project(JSON.stringify({ ...create_project(), kerning: { auto: true, pairs: { ABC: 10 } } }))).toThrow(/kerning/);
+    expect(() => parse_project(JSON.stringify({ ...create_project(), kerning: { auto: true, pairs: { AV: 1.5 } } }))).toThrow(/kerning/);
   });
 });

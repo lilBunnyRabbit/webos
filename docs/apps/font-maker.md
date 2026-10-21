@@ -4,7 +4,7 @@ Id `font-maker` · Source: `src/lib/apps/user/font-maker/` · [brainstorm](../br
 
 ## What it does
 
-Turns handwriting into a font family. Each character of the picked sets has a box; draw in it with a pen, finger or mouse, or print a template, fill it in by hand, photograph it and trace over the scanned letter. One drawing gives every weight (Light, Regular, Bold, any of 100–900) and an italic; any letter can be redrawn for any face, upright or italic. A sample line previews the face you pick as it grows. Export writes the family as a `.ttc`, one face as a `.ttf`, or a variable font, and "Use as app font" makes it the UI or code font. Burrow, the font WebOS ships, is a Font Maker project in the samples. Idea from LaxDOTexe.
+Turns handwriting into a font family. Each character of the picked sets has a box; draw in it with a pen, finger or mouse, or print a template, fill it in by hand, photograph it and trace over the scanned letter. One drawing gives every weight (Light, Regular, Bold, any of 100–900) and an italic; any letter can be redrawn for any face, upright or italic. A sample line previews the face you pick as it grows, kerned: pairs like AV and To close up on their own, and tapping between two letters there adjusts that pair. Export writes the family as a `.ttc`, one face as a `.ttf`, or a variable font, and "Use as app font" makes it the UI or code font. Burrow, the font WebOS ships, is a Font Maker project in the samples. Idea from LaxDOTexe.
 
 ## How it works
 
@@ -43,9 +43,20 @@ Why a B-spline over a least-squares quadratic fit: the offset polygon is already
 
 `build.ts:30`. `advance = ink width + 2 × bearing + lsb + rsb`, with the ink shifted so its left edge sits at `bearing + lsb`. The project bearing (default 60, about 6 % of the em) applies on each side; `lsb` and `rsb` are the per-glyph nudges, ±400. The handles and the − / + buttons appear only with the "Edit spacing" toggle on (app storage, off by default), so drawing near the box edges never grabs a handle; with it off the nudges still apply. With it on, both edges show as dashed handles: dragging one changes that side's nudge, the − / + buttons step it by 10, and "Reset to auto" (shown when a nudge exists) drops both. Space (and U+00A0) is a fixed 260.
 
+### Kerning
+
+`kerning.ts`, `build.ts` (`kern_pairs`), `font-maker-preview.svelte`. Auto kerning is measured per face at build time from the placed outlines (after the italic shear, at that weight's width), so every face gets its own pairs and nothing auto is stored.
+
+- **Profiles.** Each glyph's contour points, as a closed polygon, are cut into 20-unit horizontal bands from y −1000 up; each band keeps the ink's leftmost and rightmost x, or nothing. The polygon includes off-curve points, which lie at most the 1.5-unit RDP tolerance outside the curve.
+- **Pair.** Only bands where both glyphs have ink count: gap(y) = the left glyph's advance − its right edge + the right glyph's left edge. With `closest` the smallest gap and `mean` the mean of the gaps each capped at `closest + 80` (`DEPTH`, so a round side's hollow doesn't drag the pair in), `seen = 0.6 × closest + 0.4 × mean`, and the kern is `0.7 × (target − seen)` (`STRENGTH`: closes most of the difference, not all), never letting the closest ink come nearer than `0.6 × target` (`CLEARANCE`), clamped to ±120 and rounded. `target = 2 × bearing`, the gap two straight stems have. Kerns under 10 are dropped. "To" can tuck the o under the T's bar because the bar's bands have no o ink; glyphs sharing no band ("'" and ".") aren't kerned.
+- **Which pairs.** Drawn letters, decimal digits and punctuation without a Unicode decomposition (`kerning_candidate`): accented letters would mostly repeat their base's pairs. Digit–digit pairs are skipped so tabular figures stay tabular, and punctuation–punctuation pairs so they don't crowd out letter pairs. Burrow's Regular measured 8411 auto pairs (17 ms in Node, 2026-10-21). Over the cap the strongest win.
+- **Manual.** `kerning.pairs["AV"]` adds to the auto value (or stands alone with auto off) and may name any two drawn characters, accented ones included. A pair whose sum is 0 is dropped.
+- **Table.** A legacy `kern` table, version 0, one format 0 subtable (coverage 0x0001, horizontal), pairs sorted by left then right glyph id. The subtable's length is a u16, so at most 10920 pairs (`MAX_KERN_PAIRS`), about 64 KB per face at the cap. `font-maker.browser.test.ts` proves Chromium applies it: "AV" with a −200 pair measures 100 px at 100 px against 120 px without the table. The table can't vary by weight, so a variable font carries its regular weight's pairs (GPOS would be needed for more; out of scope).
+- **Editor.** The preview line is one text node; a tap or click finds the gap with `document.caretPositionFromPoint`, the two letters get a CSS Custom Highlight (`font-maker-kern`, one `Highlight` shared by all Font Maker windows, each adding only its own range), and ← → move the gap when the line has focus. Under it: an Auto kerning switch, the pair with − / + (10 units, 44 px on touch), the total in use, "Auto n" and Reset (drops the manual value). The total comes from `auto_kern_of`, the same measurement the face writes. Every change is one undo step.
+
 ### TrueType writer
 
-`ttf.ts`. Hand-written, about 500 lines, ten tables in tag order: `OS/2 cmap glyf head hhea hmtx loca maxp name post`, plus `fvar` and `gvar` for a variable font.
+`ttf.ts`. Hand-written, about 550 lines, ten tables in tag order: `OS/2 cmap glyf head hhea hmtx loca maxp name post`, plus `kern` when the project kerns and `fvar` and `gvar` for a variable font.
 
 | Table | Notes |
 |-------|-------|
@@ -56,6 +67,7 @@ Why a B-spline over a least-squares quadratic fit: the offset polygon is already
 | `OS/2` | Version 4, `usWeightClass` = the face's weight, `fsSelection` ITALIC / BOLD (700 only) / REGULAR (upright and not 700) plus `USE_TYPO_METRICS`, typo and win metrics from the ascent and descent, Unicode range bits for the blocks the presets touch, code pages 1252 and 1250 |
 | `name` | Windows (3, 1, 0x409). Regular, Italic, Bold and Bold Italic: ID 1 = project name, ID 2 = the style. Other weights: ID 1 = "Name Light", ID 2 = Regular or Italic, ID 16 = project name, ID 17 = the style. ID 4 full name, ID 6 PostScript name (ASCII letters, digits and `-`, then `-LightItalic` and so on). A variable font adds 256 "Weight" and one name per instance |
 | `post` | Version 3, no glyph names; `italicAngle` = −slant for italic faces |
+| `kern` | Version 0, one format 0 subtable; see Kerning. Left out when no pair is kerned |
 | `head` | `macStyle` bold (700) and italic bits; `checkSumAdjustment` = `0xB1B0AFBA` − the whole font's checksum, written last. `hhea` caret slope 1000 : 1000·tan(slant) for italic |
 
 Glyph 0 is `.notdef` (a box), glyph 1 the space; then every drawn character of the picked sets in set order. Empty boxes are left out, so text falls back to another font for them.
@@ -108,7 +120,7 @@ Guides show at 40 % behind the canvas and the grid cells through an SVG mask wit
 
 ## Data
 
-- **`.fontmaker`**, UTF-8 JSON, format version 3: `{ version: 3, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, weights: { weight, scale }[], italic: { slant } | null, glyphs: { [char]: { strokes, lsb?, rsb?, guide?, weights?: { "700": strokes }, italic?: strokes, italics?: { "700": strokes } } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160; weights are 100–900 in hundreds, unique, scale 0.3–3; slant 0–25°. Version 1 files (no `weights`, no `italic`) open with Regular 400 × 1, Bold 700 × 1.7 and a 10° italic; version 1 and 2 files save as version 3. Version 3 added `italics`, and kerning will add an optional field to the same version; the bump exists so an older Font Maker refuses the file instead of dropping the new fields on save. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:45`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
+- **`.fontmaker`**, UTF-8 JSON, format version 3: `{ version: 3, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, weights: { weight, scale }[], italic: { slant } | null, kerning?: { auto, pairs?: { "AV": -20 } }, glyphs: { [char]: { strokes, lsb?, rsb?, guide?, weights?: { "700": strokes }, italic?: strokes, italics?: { "700": strokes } } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160; weights are 100–900 in hundreds, unique, scale 0.3–3; slant 0–25°. `kerning` is written by new projects as `{ auto: true }`; a file without it (every file from before kerning, Burrow's sample included) builds no `kern` table until Auto is switched on or a pair is set. Pair keys are two characters, values integers ±400. Version 1 files (no `weights`, no `italic`) open with Regular 400 × 1, Bold 700 × 1.7 and a 10° italic; version 1 and 2 files save as version 3. Version 3 added `italics` and `kerning`; the bump exists so an older Font Maker refuses the file instead of dropping the new fields on save. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:45`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
 - **Export**: Font family (`.ttc`, `font/collection`), One face (`.ttf`, named `{Name}-BoldItalic.ttf` and so on), Variable font (`{Name}-VF.ttf`, `{Name}-Italic-VF.ttf`), each asking where, starting next to the project. Use as app font writes nothing in `/home`: Settings keeps its copy in `/etc/fonts/`.
 - **App storage:** `app.font-maker.sample` (the preview text), `app.font-maker.show-guide`, `app.font-maker.pressure` (`even` | `speed`), `app.font-maker.edit-spacing`.
 - One B guide measured 1.7 KB as a data URL (2026-10-20, Chromium, the template PNG warped and re-photographed in a test page); a full sheet of guides is unmeasured.
@@ -119,7 +131,8 @@ None. zod is already approved (ADR-008).
 
 ## Limits
 
-- One stroke width per face, not per stroke; kerning, OTF/CFF, hinting, `HVAR`/`STAT` and auto-trace are out (ADR-055).
+- One stroke width per face, not per stroke; OTF/CFF, hinting, `HVAR`/`STAT`, GPOS and auto-trace are out (ADR-055).
+- Kerning can't vary by weight in a variable font (regular weight's pairs throughout), and at the 10920-pair cap a face carries about 64 KB of `kern`. Auto kerning reads only horizontal bands both letters share, so it doesn't see diagonal closeness between bands; the clearance and the ±120 cap bound the damage.
 - A redraw with a different number of strokes blocks the variable font for that style; static faces always build.
 - CSS asking for a weight the family doesn't have (500 between 400 and 700) gets the nearest face, not an interpolation, unless the variable font is used.
 - Characters outside the four presets can't be added, and only BMP codepoints fit the format 4 `cmap`.
@@ -133,4 +146,5 @@ None. zod is already approved (ADR-008).
 - [Brainstorm 2026-10-20](../brainstorm/2026-10-20_font-maker.md): hand-written writer, draw plus scan, guides not auto-trace, presets, open-only shell.
 - [ADR-055](../adrs/055-font-maker.md): file format, writer, stroke expansion, scan guides, and its implementation revision.
 - [Brainstorm 2026-10-21](../brainstorm/2026-10-21_font-maker-pen.md): line width in the file, speed pressure, Edit spacing, Undo, filmstrip, ghost, bead fix.
+- [Brainstorm 2026-10-21, kerning](../brainstorm/2026-10-21_font-maker-kerning.md): Bold ordinals, italics per weight, format 3, kerning.
 - [Brainstorm 2026-10-21, app font](../brainstorm/2026-10-21_app-font.md): Use as app font, families (weights, italic, `.ttc`, variable), Burrow; ADR-055 revision of the same day.
