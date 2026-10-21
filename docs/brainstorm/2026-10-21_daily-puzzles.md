@@ -18,7 +18,10 @@ Rules confirmed from LinkedIn help and press (investigation report): Queens (one
 
 ## Action items
 - [x] Hutches (built 2026-10-21, [page](../apps/hutches.md))
-- [ ] Sun & Moon (parallel), then Plots (region kit's second user), then Hop (path kit), the word game, Sudoku 6×6.
+- [x] Sun & Moon (built 2026-10-21, [page](../apps/sun-and-moon.md))
+- [x] Hop (built 2026-10-21, [page](../apps/hop.md))
+- [x] The word game, named **Tunnels** by the owner (built 2026-10-21, [page](../apps/tunnels.md))
+- [ ] Plots (region kit's second user), Sudoku 6×6
 
 ## Next session topics
 - Star Battle (2★) as a Hutches mode; Binairo row rule as a Sun & Moon mode.

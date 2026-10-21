@@ -8,7 +8,23 @@ export const CHANGELOG: Release[] = [
     version: "3.44.0",
     date: "2026-10-21",
     title: "Daily puzzles",
+    introduces: ["hutches", "sun-and-moon", "hop", "tunnels"],
     changes: [
+      {
+        kind: NEW,
+        apps: ["hutches"],
+        text: "Hutches is a new daily logic puzzle: place one rabbit per row, column and meadow without two rabbits touching, with hints that explain the next step.",
+      },
+      {
+        kind: NEW,
+        apps: ["sun-and-moon"],
+        text: "Sun & Moon, a daily logic puzzle: fill the grid with suns and moons, half of each in every row and column, never three alike in a row, and every = and × obeyed, with hints that tell you why.",
+      },
+      {
+        kind: NEW,
+        apps: ["tunnels"],
+        text: "Tunnels is a new daily word puzzle: trace the hidden words that wind through a grid of letters until every letter belongs to one.",
+      },
       {
         kind: NEW,
         apps: ["hop"],
@@ -36,12 +52,8 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.42.0",
     date: "2026-10-21",
-    title: "Hutches, and quieter in the background",
+    title: "Quieter in the background",
     changes: [
-      {
-        kind: NEW,
-        text: "Hutches is a new daily logic puzzle: place one rabbit per row, column and meadow without two rabbits touching, with hints that explain the next step.",
-      },
       {
         kind: IMPROVED,
         text: "WebOS does less in the background when you have no alarms, timers or reminders set, and no longer reports an error when it can't check for updates while you're offline.",
