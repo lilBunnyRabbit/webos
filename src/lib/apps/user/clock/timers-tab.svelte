@@ -2,7 +2,7 @@
   import { Badge, Button, IconButton, Input } from "$lib/core/components/ui";
   import { format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
-  import { ArrowCounterClockwise, Pause, Play, Trash } from "phosphor-svelte";
+  import { ArrowCounterClockwise, Pause, PencilSimple, Play, Trash } from "phosphor-svelte";
   import { format_duration, MINUTE, new_id, pause_timer, reset_timer, start_timer, timer_remaining, timer_state, TimerState, type Timer } from "./clock";
   import type { ClockFile } from "./ringer.svelte";
 
@@ -88,16 +88,19 @@
           {@const progress = 1 - remaining / timer.duration_ms}
           <li class="grid gap-2 rounded-xl bg-background-light p-3">
             <div class="flex min-w-0 items-center gap-2">
-              <Input
-                value={timer.label}
-                size="sm"
-                class="min-w-0 flex-1 bg-transparent px-1 font-medium ring-transparent pointer-fine:hover:ring-foreground/20 focus-visible:ring-foreground/30"
-                placeholder={format_duration(timer.duration_ms)}
-                aria-label="Timer name"
-                maxlength={40}
-                onchange={(event) => update(timer, { ...timer, label: event.currentTarget.value.trim() })}
-                onkeydown={(event) => event.key === "Enter" && event.currentTarget.blur()}
-              />
+              <label class="group flex min-w-0 flex-1 items-center gap-1">
+                <Input
+                  value={timer.label}
+                  size="sm"
+                  class="min-w-0 flex-1 bg-transparent px-1 font-medium ring-transparent pointer-fine:hover:ring-foreground/20 focus-visible:ring-foreground/30"
+                  placeholder={format_duration(timer.duration_ms)}
+                  aria-label="Timer name"
+                  maxlength={40}
+                  onchange={(event) => update(timer, { ...timer, label: event.currentTarget.value.trim() })}
+                  onkeydown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+                />
+                <PencilSimple class="size-3.5 shrink-0 text-foreground/45 group-focus-within:hidden" aria-hidden="true" />
+              </label>
               {#if state === TimerState.DONE}<Badge tone="success">Done</Badge>{:else if state === TimerState.PAUSED}<Badge>Paused</Badge>{/if}
               <IconButton label="Delete timer" size="sm" onclick={() => remove(timer)}><Trash /></IconButton>
             </div>
