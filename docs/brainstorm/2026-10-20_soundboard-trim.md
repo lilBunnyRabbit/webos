@@ -32,6 +32,7 @@ Beyond the seven theme swatches, a pad can have any hex colour. This is user con
 ## Action items
 - Build: pad image and free colour; kit WAV and region utilities with Node tests, the waveform component, the Soundboard pad dialog section, changelog.
 - [x] Pads from a part of a video: trim sheet with a video preview, saved as a WAV pad (2026-10-21)
+- [x] Keep selection: the inverse of Delete selection, drops everything outside the selection (2026-10-21)
 
 ## Implementation notes (2026-10-20)
 - Pads point at a board-owned copy (`/var/lib/apps/soundboard/sounds/{name}`), not a path, so the edit is written into that folder as `name (edited).wav` (a free name). The original copy stays. No `/home/Music` fallback was needed.
@@ -60,6 +61,9 @@ The sheet shows the video muted above the waveform. Dragging a trim handle or a 
 
 ### Shell
 No new commands. `sb add` on a video says to open it in Soundboard, since picking the part needs the sheet.
+
+## Follow-up: keep selection (2026-10-21)
+The owner: "i want the option to delete out of my selection so a button that would keep the current interval". Keep selection, beside Delete selection in the shared editor panel (pad dialog and video sheet), moves the trim handles to the selection edges. Nothing is cut, so the video mapping needs no change; Undo edits reverts it like any edit.
 
 ## Next session topics
 - When a pad moves to an edited sound, its original copy stays in the sounds folder with no pad using it. Delete it then, keep it for undo, or offer "Revert to original"?

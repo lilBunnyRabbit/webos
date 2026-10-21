@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, IconButton } from "$lib/core/components/ui";
   import { Waveform } from "$kit/components/waveform";
-  import { ArrowCounterClockwise as ResetIcon, Play as PlayIcon, Scissors as ScissorsIcon, Stop as StopIcon } from "phosphor-svelte";
+  import { ArrowCounterClockwise as ResetIcon, ArrowsInLineHorizontal as KeepIcon, Play as PlayIcon, Scissors as ScissorsIcon, Stop as StopIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import type { SoundEditor } from "./editor.svelte";
   import { moved_mark, type Marks } from "./timeline";
@@ -59,15 +59,16 @@
     {#if editor.selection}<span>selected {time(editor.selection.end - editor.selection.start)} s</span>{/if}
     <span>{time(editor.end - editor.start)} of {time(editor.duration)} s</span>
   </p>
-  <p class="text-2xs text-foreground/80">Drag the handles to trim. Drag across the middle to select a part to delete.</p>
+  <p class="text-2xs text-foreground/80">Drag the handles to trim. Drag across the middle to select a part, then keep only it or delete it.</p>
   <div class="flex flex-wrap items-center gap-2">
     {#if editor.playing}
-      <Button size="sm" variant="quiet" onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
+      <Button size="sm" variant="quiet" class="pointer-coarse:h-11" onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
     {:else}
-      <Button size="sm" variant="quiet" onclick={() => editor.play()}><PlayIcon weight="fill" /> {editor.selection ? "Play selection" : "Play"}</Button>
+      <Button size="sm" variant="quiet" class="pointer-coarse:h-11" onclick={() => editor.play()}><PlayIcon weight="fill" /> {editor.selection ? "Play selection" : "Play"}</Button>
     {/if}
-    <Button size="sm" variant="quiet" disabled={!editor.selection} onclick={() => editor.delete_selection()}><ScissorsIcon weight="bold" /> Delete selection</Button>
-    <IconButton label="Undo edits" size="sm" disabled={!editor.changed} onclick={() => editor.reset()}><ResetIcon weight="bold" /></IconButton>
+    <Button size="sm" variant="quiet" class="pointer-coarse:h-11" disabled={!editor.selection} onclick={() => editor.keep_selection()}><KeepIcon weight="bold" /> Keep selection</Button>
+    <Button size="sm" variant="quiet" class="pointer-coarse:h-11" disabled={!editor.selection} onclick={() => editor.delete_selection()}><ScissorsIcon weight="bold" /> Delete selection</Button>
+    <IconButton label="Undo edits" size="sm" class="pointer-coarse:size-11" disabled={!editor.changed} onclick={() => editor.reset()}><ResetIcon weight="bold" /></IconButton>
     {#if actions}
       <span class="flex-1"></span>
       {@render actions()}

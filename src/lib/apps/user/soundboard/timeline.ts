@@ -49,6 +49,16 @@ export interface Marks {
   selection: Segment | null;
 }
 
+/** The trim narrowed to the selection: nothing is cut, so edited time and the segments stay as they are. */
+export function keep_span(marks: Marks): Marks {
+  if (!marks.selection) return marks;
+  return {
+    start: Math.max(marks.start, marks.selection.start),
+    end: Math.min(marks.end, marks.selection.end),
+    selection: null,
+  };
+}
+
 /** The mark the user just moved, so the preview can show that moment; `null` when nothing moved. */
 export function moved_mark(before: Marks, after: Marks): number | null {
   if (after.selection) {

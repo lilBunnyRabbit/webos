@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { moved_mark, remove_span, source_time } from "./timeline";
+import { keep_span, moved_mark, remove_span, source_time } from "./timeline";
 
 const whole = [{ start: 0, end: 10 }];
 
@@ -51,6 +51,30 @@ describe("source_time", () => {
   });
 
   test("clamps past the end", () => expect(source_time(whole, 12, 0)).toBe(10));
+});
+
+describe("keep_span", () => {
+  test("moves the trim to the selection and clears it", () => {
+    expect(keep_span({ start: 0.5, end: 9, selection: { start: 2, end: 4 } })).toEqual({ start: 2, end: 4, selection: null });
+  });
+
+  test("stays inside the trim", () => {
+    expect(keep_span({ start: 3, end: 5, selection: { start: 2, end: 6 } })).toEqual({ start: 3, end: 5, selection: null });
+  });
+
+  test("without a selection nothing changes", () => {
+    const marks = { start: 1, end: 9, selection: null };
+    expect(keep_span(marks)).toBe(marks);
+  });
+
+  test("after a cut, the kept part still maps to the same video time", () => {
+    const segments = remove_span(whole, { start: 2, end: 4 }, 0.01);
+    const selection = { start: 1.5, end: 5 };
+    const kept = keep_span({ start: 0, end: 7.99, selection });
+    expect(source_time(segments, kept.start, 0.01)).toBe(source_time(segments, selection.start, 0.01));
+    expect(source_time(segments, kept.end, 0.01)).toBeCloseTo(7.01, 5);
+    expect(source_time(segments, kept.start, 0.01)).toBe(1.5);
+  });
 });
 
 describe("moved_mark", () => {

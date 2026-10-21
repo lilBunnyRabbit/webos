@@ -31,6 +31,18 @@ test("trims, deletes a middle span and renders a shorter WAV", async () => {
     editor.reset();
     expect(editor.duration).toBeCloseTo(full, 5);
     expect(editor.changed).toBe(false);
+
+    editor.selection = { start: 0.3, end: 0.7 };
+    editor.keep_selection();
+    expect(editor.selection).toBeNull();
+    expect(editor.start).toBeCloseTo(0.3, 5);
+    expect(editor.end).toBeCloseTo(0.7, 5);
+    expect(editor.duration).toBeCloseTo(full, 5);
+    const kept = await new OfflineAudioContext(1, 1, 8000).decodeAudioData(await editor.render()!.arrayBuffer());
+    expect(kept.duration).toBeCloseTo(0.4, 2);
+
+    editor.reset();
+    expect(editor.changed).toBe(false);
   } finally {
     editor.dispose();
   }

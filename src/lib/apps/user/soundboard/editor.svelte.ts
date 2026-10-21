@@ -1,6 +1,6 @@
 import type { Span } from "$kit/components/waveform";
 import { CROSSFADE_SECONDS, cut_regions, pcm_length, pcm_of, subtract_regions, wav_blob, type Pcm } from "$kit/utils/audio";
-import { remove_span, source_time, type Segment } from "./timeline";
+import { keep_span, remove_span, source_time, type Segment } from "./timeline";
 
 export class SoundEditor {
   pcm = $state.raw<Pcm | null>(null);
@@ -80,6 +80,15 @@ export class SoundEditor {
     this.selection = null;
     this.end = at_end ? this.duration : Math.min(this.duration, this.end - (selection.end - selection.start));
     this.start = Math.min(this.start, this.end);
+  }
+
+  keep_selection(): void {
+    if (!this.selection) return;
+    this.stop();
+    const { start, end } = keep_span({ start: this.start, end: this.end, selection: this.selection });
+    this.selection = null;
+    this.start = start;
+    this.end = end;
   }
 
   play(): void {
