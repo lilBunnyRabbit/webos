@@ -21,7 +21,12 @@ Ground rules:
 2. **Baseline ref:** the argument; else the commit recorded at the top of the latest `*_health-pass.md` (or the 2026-10-17 performance pass); say which one and why.
 3. **Head ref:** current master.
 4. Build both into the scratchpad (never into the repo): `git worktree add <scratch>/base <ref>`, `bun install`, `bun run build`; same for head. Note `bun run budget` for both.
-5. Measurement harness: `scripts/perf/` (Playwright + CDP, Chromium, against `vite preview` of each `dist`). If it doesn't exist yet, the boot auditor creates it in its report as a proposed file set; the first builder of the pass commits it (`chore:`), so later passes reuse the same measurements. Every auditor uses the harness rather than ad-hoc scripts once it exists.
+5. Measurement harness: `scripts/perf/` (Playwright + CDP, Chromium). Every auditor uses it rather than ad-hoc scripts; a missing measurement gets added to it, not to a scratch file. Each script takes `--base` and `--head` as a built `dist` dir (served with `vite preview` on 5210 and up) or a URL, `--runs`, `--out` (default `$TMPDIR/webos-perf`, point it at the scratchpad), interleaves base and head per run, and prints its options with `--help`:
+   - `node scripts/perf/boot.mjs --base=<scratch>/base/dist --head=<scratch>/head/dist`: splash end, settle, per-service init, long tasks, TBT, requests, JS heap; first, repeat, repeat-sw, mobile-first at 1× and 4×, slow 4G at 4×. 7 runs.
+   - `node scripts/perf/idle.mjs … --minutes=3`: wake-ups, locks, OPFS, channel posts, script ms per minute; visible, hidden, two tabs, focus and visibility events; heap growth over open/close cycles. Rounds run in parallel, about `--minutes` + 2 min each.
+   - `node scripts/perf/interaction.mjs … --block-version`: frame p95/max, long tasks and main-thread ms for open, drag, resize, launcher, toasts, notification center, 10-window switch, mobile drawer and switcher, window focus switching. 1× and 4×. `--only=drag,resize` narrows it.
+   - `node scripts/perf/report.mjs <out>/boot.json <out>/idle.json …`: the base vs head markdown table, median [min–max], Δ, spread overlap. `--steps` for per-service boot times, `--changed` for differences only.
+   - `probe.mjs` holds the in-page instrumentation the others inject.
 
 ## 2. Audit (parallel)
 
