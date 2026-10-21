@@ -598,7 +598,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
   - [x] Taboo: describe a word without the banned ones; the AI guesses (S, research pick #1). Built as Unsaid ([ADR-061](adrs/061-ai-games.md))
   - [ ] Twenty Questions: the AI holds a secret, answers yes / no / sometimes / unknown (S)
   - [ ] Sketch Guess: you draw, the AI guesses from snapshots (M, research pick #2)
-  - [ ] Alibi: question an AI suspect, find the lie (M)
+  - [x] Alibi: question an AI suspect, find the lie (M). [ADR-061](adrs/061-ai-games.md), [internals](apps/alibi.md)
   - [ ] Pocket Dungeon: text adventure, code runs the world, AI parses and narrates (L, research pick #3)
   - [ ] Emoji Rebus: guess or make emoji puzzles; Game Hub daily (S)
   - [ ] Café Talk: role-play language practice with corrections (M, needs Proofreader API)

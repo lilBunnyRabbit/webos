@@ -27,3 +27,7 @@ The first games that need on-device Gemini Nano (ADR-046): Unsaid (Taboo), Doodl
 ## Revision 2026-10-21
 
 Platform pieces built. `AiGate` (`$kit/components/ai-gate`) takes `features`, `title`, `icon` and `download` (the notice text, so Ask keeps "The first question…"); its `children` snippet gets `{ availability, notice }`, where `notice` is the download strip as a snippet the app renders under its toolbar, or `null`. After one check at mount it follows the service's `features`, so the notice goes when a download finishes. `extract()` takes picture parts as decided; image plus `responseConstraint` is still unverified on a device with the model (the build machine's Chrome had no Prompt API).
+
+## Revision 2026-10-21: Alibi
+
+Built as decided ([app page](../apps/alibi.md)). The build settled the shape of a statement within scope: the player sees each one vague and in the first person ("I went home the usual way"), and the detail the lie hides comes out only by questioning. With the details on screen the cards could be matched without asking anything. Three templates of seven beats, six used per case; five cards (the one that breaks the lie, three that corroborate other statements, one red herring). Not yet played against Gemini Nano: the build machine's Chromium had no Prompt API.
