@@ -1,5 +1,6 @@
 import type { Span } from "$kit/components/waveform";
-import { cut_regions, pcm_length, pcm_of, subtract_regions, wav_blob, type Pcm } from "$kit/utils/audio";
+import { CROSSFADE_SECONDS, cut_regions, pcm_length, pcm_of, subtract_regions, wav_blob, type Pcm } from "$kit/utils/audio";
+import { remove_span, source_time, type Segment } from "./timeline";
 
 export class SoundEditor {
   pcm = $state.raw<Pcm | null>(null);
@@ -9,6 +10,8 @@ export class SoundEditor {
   playhead = $state<number | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
+  /** What is left of the loaded sound, in its own time; maps the edit back to the video it came from. */
+  segments = $state.raw<Segment[]>([]);
   private spliced = $state(false);
   private original: Pcm | null = null;
   private context: AudioContext | null = null;
@@ -54,6 +57,7 @@ export class SoundEditor {
     this.selection = null;
     this.start = 0;
     this.end = this.duration;
+    this.segments = [{ start: 0, end: this.duration }];
   }
 
   delete_selection(): void {
@@ -71,6 +75,7 @@ export class SoundEditor {
         length
       )
     );
+    this.segments = remove_span(this.segments, selection, CROSSFADE_SECONDS);
     this.spliced = true;
     this.selection = null;
     this.end = at_end ? this.duration : Math.min(this.duration, this.end - (selection.end - selection.start));
@@ -114,9 +119,13 @@ export class SoundEditor {
     this.playhead = null;
   }
 
-  render(): Blob | null {
+  source_time(time: number): number {
+    return source_time(this.segments, time, CROSSFADE_SECONDS);
+  }
+
+  render(always = false): Blob | null {
     const { pcm } = this;
-    if (!pcm || !this.changed) return null;
+    if (!pcm || !(always || this.changed)) return null;
     return wav_blob(cut_regions(pcm, [{ start: this.start * pcm.sample_rate, end: this.end * pcm.sample_rate }]));
   }
 

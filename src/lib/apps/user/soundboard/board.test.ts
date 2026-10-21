@@ -10,7 +10,10 @@ import {
   PlayMode,
   resolve_pad,
   free_keys,
+  clip_name,
+  decode_bytes,
   is_audio,
+  is_video,
   label_from_file,
   move_pad,
   next_color,
@@ -43,6 +46,28 @@ describe("is_audio", () => {
   });
   test("rejects other known types", () => expect(is_audio("cover.mp3", "image/png")).toBe(false));
 });
+
+describe("is_video", () => {
+  test("trusts a video MIME type", () => expect(is_video("x.bin", "video/mp4")).toBe(true));
+  test("falls back to the extension without a type", () => {
+    expect(is_video("clip.MOV")).toBe(true);
+    expect(is_video("clip.mkv", "application/octet-stream")).toBe(true);
+    expect(is_video("horn.mp3")).toBe(false);
+    expect(is_video("mp4")).toBe(false);
+  });
+  test("rejects other known types", () => expect(is_video("clip.mp4", "audio/mp4")).toBe(false));
+  test("a WebM is both, so the picture decides", () => {
+    expect(is_video("take.webm")).toBe(true);
+    expect(is_audio("take.webm")).toBe(true);
+  });
+});
+
+describe("clip_name", () => {
+  test("names the WAV after the video", () => expect(clip_name("Bird Wales.mp4")).toBe("Bird Wales.wav"));
+  test("never empty", () => expect(clip_name("")).toBe("clip.wav"));
+});
+
+test("decode_bytes grows with the length", () => expect(decode_bytes(600)).toBe(460_800_000));
 
 describe("label_from_file", () => {
   test("strips the extension and separators", () => expect(label_from_file("air-horn_02.mp3")).toBe("air horn 02"));

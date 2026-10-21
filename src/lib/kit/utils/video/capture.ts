@@ -161,3 +161,80 @@ export async function capture(options: CaptureOptions): Promise<CaptureResult> {
     URL.revokeObjectURL(url);
   }
 }
+
+export interface MediaTracks {
+  duration: number;
+  picture: boolean;
+  /** Only sound this browser can play. */
+  audio: boolean;
+}
+
+export async function probe_tracks(file: Blob, signal = new AbortController().signal): Promise<MediaTracks> {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "metadata";
+  const url = URL.createObjectURL(file);
+  try {
+    video.src = url;
+    await once(video, "loadedmetadata", signal);
+    const audio = video.captureStream().getAudioTracks().length > 0;
+    if (!Number.isFinite(video.duration)) {
+      video.currentTime = Number.MAX_SAFE_INTEGER;
+      await once(video, "seeked", signal);
+    }
+    return {
+      duration: Number.isFinite(video.duration) ? video.duration : 0,
+      picture: video.videoWidth > 0 && video.videoHeight > 0,
+      audio,
+    };
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
+export interface RecordAudioOptions {
+  file: Blob;
+  signal: AbortSignal;
+  on_progress?: (time: number, duration: number) => void;
+}
+
+/** Plays the file muted and records its sound as Opus WebM, in real time: for sound Chrome plays but `decodeAudioData` can't read. */
+export async function record_audio(options: RecordAudioOptions): Promise<Blob> {
+  const { signal } = options;
+  signal.throwIfAborted();
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  const url = URL.createObjectURL(options.file);
+  try {
+    video.src = url;
+    await once(video, "loadedmetadata", signal);
+    const tracks = video.captureStream().getAudioTracks();
+    if (tracks.length === 0) throw new Error("This video has no sound");
+    const recorder = new MediaRecorder(new MediaStream(tracks), { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 256_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (event) => chunks.push(event.data);
+    const stopped = new Promise<void>((resolve) => (recorder.onstop = () => resolve()));
+    const ended = once(video, "ended", signal);
+    const report = () => options.on_progress?.(video.currentTime, video.duration);
+    video.addEventListener("timeupdate", report);
+    recorder.start(1000);
+    try {
+      await video.play();
+      await ended;
+    } finally {
+      video.removeEventListener("timeupdate", report);
+      video.pause();
+      if (recorder.state !== "inactive") recorder.stop();
+      await stopped;
+    }
+    return new Blob(chunks, { type: "audio/webm" });
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}

@@ -11,6 +11,7 @@ import {
   create_pad,
   find_board,
   is_audio,
+  is_video,
   resolve_pad,
   type Board,
   type BoardFile,
@@ -106,7 +107,9 @@ export async function* add(context: CommandContext<{ paths: string[]; board?: st
   for (const path of paths) {
     const file = await files().get_file(path);
     if (!file) throw new ShellError(`${path}: no such file`);
-    if (!is_audio(file.name, file.type)) throw new ShellError(`${path}: not an audio file`);
+    if (!is_audio(file.name, file.type)) {
+      throw new ShellError(is_video(file.name, file.type) ? `${path}: a video; open it in Soundboard to pick the part` : `${path}: not an audio file`);
+    }
     sounds.push(file);
   }
 

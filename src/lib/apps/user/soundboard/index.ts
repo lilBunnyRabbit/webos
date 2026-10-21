@@ -10,7 +10,7 @@ export default define_app({
   version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
-  tools: ["audio/*"],
+  tools: ["audio/*", "video/*"],
   props: FILE_PROPS,
   defaults: {
     constraints: {

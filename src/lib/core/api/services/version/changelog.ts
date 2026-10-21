@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.40.0",
+    date: "2026-10-21",
+    title: "Soundboard pads from videos",
+    changes: [
+      {
+        kind: NEW,
+        text: "Soundboard takes videos: pick the part you want while the picture follows the trim handles, and it becomes a pad.",
+      },
+    ],
+  },
+  {
     version: "3.39.0",
     date: "2026-10-21",
     title: "Calendar reminders, always on time",

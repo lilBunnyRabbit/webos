@@ -60,9 +60,11 @@
       context.globalAlpha = 0.7;
       const middle = height / 2;
       const step = width / buckets;
+      // Scaled to the loudest peak, so a quiet recording (a phone video) still shows its shape.
+      const gain = middle / Math.max(0.001, ...bars.map(Math.abs));
       for (let i = 0; i < buckets; i++) {
-        const top = middle - bars[i * 2 + 1] * middle;
-        const bottom = middle - bars[i * 2] * middle;
+        const top = middle - bars[i * 2 + 1] * gain;
+        const bottom = middle - bars[i * 2] * gain;
         context.fillRect(i * step, top, Math.max(1, step), Math.max(1, bottom - top));
       }
     });

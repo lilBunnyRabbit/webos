@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capture, probe_video } from "./capture";
+import { capture, probe_tracks, probe_video, record_audio } from "./capture";
 import { decode_audio } from "./encode";
 import { FIXTURE_FPS, make_video } from "./fixtures";
 
@@ -71,5 +71,30 @@ describe("play and capture", () => {
     const run = capture({ file: await make_video(2), from: 0, to: 2, signal: controller.signal, on_frame: () => {} });
     setTimeout(() => controller.abort(new Error("stop")), 200);
     await expect(run).rejects.toThrow("stop");
+  });
+});
+
+describe("sound from a video", () => {
+  it("tells a video with sound from a silent one", async () => {
+    expect(await probe_tracks(await make_video(0.5, { audio: true }))).toMatchObject({ picture: true, audio: true });
+    const silent = await probe_tracks(await make_video(0.5));
+    expect(silent).toMatchObject({ picture: true, audio: false });
+    expect(silent.duration).toBeCloseTo(0.5, 1);
+  });
+
+  it("records the whole sound by playing it", async () => {
+    const seen: number[] = [];
+    const blob = await record_audio({
+      file: await make_video(1, { audio: true }),
+      signal: new AbortController().signal,
+      on_progress: (time) => seen.push(time),
+    });
+    const audio = await decode_audio(blob);
+    expect(audio!.duration).toBeGreaterThan(0.8);
+    expect(seen.length).toBeGreaterThan(0);
+  });
+
+  it("refuses a silent video", async () => {
+    await expect(record_audio({ file: await make_video(0.5), signal: new AbortController().signal })).rejects.toThrow("no sound");
   });
 });

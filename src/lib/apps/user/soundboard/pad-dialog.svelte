@@ -9,15 +9,11 @@
   import { base_name } from "$lib/core/api/services/files/path";
   import { Button, IconButton, Input, Select, Slider, Spinner, Switch } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
-  import { Waveform } from "$kit/components/waveform";
   import {
-    ArrowCounterClockwise as ResetIcon,
     CaretRight as CaretIcon,
     Image as ImageIcon,
     Palette as PaletteIcon,
     Play as PlayIcon,
-    Scissors as ScissorsIcon,
-    Stop as StopIcon,
     Trash as TrashIcon,
     X as XIcon,
   } from "phosphor-svelte";
@@ -25,6 +21,7 @@
   import { edited_name, is_hex, PAD_COLORS, type PadColor } from "./board";
   import { SWATCH } from "./colors";
   import { SoundEditor } from "./editor.svelte";
+  import SoundEditorPanel from "./sound-editor.svelte";
   import { delete_sound, import_sound, read_sound } from "./store";
 
   let {
@@ -104,8 +101,6 @@
       saving = false;
     }
   }
-
-  const time = (seconds: number) => seconds.toFixed(2);
 </script>
 
 <form
@@ -202,31 +197,11 @@
       {:else if editor.error}
         <p class="text-ui text-error">{editor.error}</p>
       {:else if editor.pcm}
-        <Waveform
-          pcm={editor.pcm}
-          bind:start={editor.start}
-          bind:end={editor.end}
-          bind:selection={editor.selection}
-          playhead={editor.playhead}
-          label="Sound to trim"
-        />
-        <p class="flex flex-wrap justify-between gap-x-3 font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums">
-          <span>{time(editor.start)}–{time(editor.end)} s</span>
-          {#if editor.selection}<span>selected {time(editor.selection.end - editor.selection.start)} s</span>{/if}
-          <span>{time(editor.end - editor.start)} of {time(editor.duration)} s</span>
-        </p>
-        <p class="text-2xs text-foreground/80">Drag the handles to trim. Drag across the middle to select a part to delete.</p>
-        <div class="flex flex-wrap items-center gap-2">
-          {#if editor.playing}
-            <Button size="sm" variant="quiet" onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
-          {:else}
-            <Button size="sm" variant="quiet" onclick={() => editor.play()}><PlayIcon weight="fill" /> {editor.selection ? "Play selection" : "Play"}</Button>
-          {/if}
-          <Button size="sm" variant="quiet" disabled={!editor.selection} onclick={() => editor.delete_selection()}><ScissorsIcon weight="bold" /> Delete selection</Button>
-          <IconButton label="Undo edits" size="sm" disabled={!editor.changed} onclick={() => editor.reset()}><ResetIcon weight="bold" /></IconButton>
-          <span class="flex-1"></span>
-          <Button size="sm" disabled={!editor.changed || saving} onclick={save_audio}>{saving ? "Saving…" : "Save audio"}</Button>
-        </div>
+        <SoundEditorPanel {editor} label="Sound to trim">
+          {#snippet actions()}
+            <Button size="sm" disabled={!editor.changed || saving} onclick={save_audio}>{saving ? "Saving…" : "Save audio"}</Button>
+          {/snippet}
+        </SoundEditorPanel>
         {#if save_error}
           <p class="text-ui text-error">{save_error}</p>
         {:else if saved_as}

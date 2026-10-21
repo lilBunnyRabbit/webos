@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { file_stem, file_extension } from "$lib/core/api/services/files/path";
+import { is_video_name } from "$lib/apps/user/video-tools/kinds";
 
 export const PadColor = {
   PRIMARY: "primary",
@@ -60,6 +61,25 @@ export function is_audio(name: string, type = ""): boolean {
   if (type.startsWith("audio/")) return true;
   if (type && type !== "application/octet-stream" && type !== "video/webm") return false;
   return name.includes(".") && AUDIO_EXTENSIONS.includes(file_extension(name).slice(1));
+}
+
+/** A WebM or MP4 may hold sound only; the caller checks for a picture before treating it as a video. */
+export function is_video(name: string, type = ""): boolean {
+  if (type.startsWith("video/")) return true;
+  if (type && type !== "application/octet-stream") return false;
+  return is_video_name(name);
+}
+
+export function clip_name(video: string): string {
+  return `${file_stem(video) || "clip"}.wav`;
+}
+
+export const LONG_VIDEO_SECONDS = 10 * 60;
+export const MAX_VIDEO_SECONDS = 60 * 60;
+
+// Float stereo at 48 kHz, held twice: the decoded sound and the edit.
+export function decode_bytes(seconds: number): number {
+  return Math.round(seconds * 48_000 * 2 * 4 * 2);
 }
 
 export function label_from_file(name: string): string {

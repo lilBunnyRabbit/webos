@@ -82,7 +82,8 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `image-tools`, `image-editor`, `qr-reader` | `image/*` |
 | `gif-player` | `image/gif`, `.gif`, `video/*` |
 | `paint` | `image/*` |
-| `music-visualizer`, `soundboard` | `audio/*` |
+| `music-visualizer` | `audio/*` |
+| `soundboard` | `audio/*`, `video/*` (a video opens the "New pad from a video" trim sheet) |
 | `diff` | `text/*`, `.txt`, `.md`, … (`DIFF_ACCEPT`) |
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |

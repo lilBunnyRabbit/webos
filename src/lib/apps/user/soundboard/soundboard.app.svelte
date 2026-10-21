@@ -33,7 +33,11 @@
     DEFAULT_VOLUME,
     EMPTY_FILE,
     free_keys,
+    decode_bytes,
     is_audio,
+    is_video,
+    LONG_VIDEO_SECONDS,
+    MAX_VIDEO_SECONDS,
     move_pad,
     PlayMode,
     PlayModeSchema,
@@ -44,13 +48,16 @@
     type Board,
     type Pad,
   } from "./board";
+  import ClipDialog from "./clip-dialog.svelte";
   import PadDialog, { type PadEdit } from "./pad-dialog.svelte";
   import PadTile from "./pad-tile.svelte";
   import { acquire_player } from "./player.svelte";
   import { delete_sound, import_sound } from "./store";
-  import { error_message } from "$lib/core/utils";
+  import { error_message, format_bytes } from "$lib/core/utils";
+  import { probe_tracks, type MediaTracks } from "$kit/utils/video/capture";
+  import { VIDEO_ACCEPT } from "$lib/apps/user/video-tools/kinds";
 
-  const ACCEPT = ["audio/*"];
+  const ACCEPT = ["audio/*", ...VIDEO_ACCEPT];
   const MODE_OPTIONS = [
     { value: PlayMode.RESTART, label: "Restart", icon: ArrowCounterClockwiseIcon },
     { value: PlayMode.OVERLAP, label: "Overlap", icon: StackIcon },
@@ -101,28 +108,65 @@
     }
   }
 
+  function add_pad(sound: string, file_name: string) {
+    const target = data.value.boards.find((entry) => entry.id === board.id) ?? board;
+    target.pads.push(create_pad(target.pads, sound, file_name, crypto.randomUUID()));
+  }
+
   async function add_files(list: File[]) {
-    const audio = list.filter((file) => is_audio(file.name, file.type));
-    if (audio.length < list.length) {
+    const videos = list.filter((file) => is_video(file.name, file.type));
+    const audio = list.filter((file) => !videos.includes(file) && is_audio(file.name, file.type));
+    if (audio.length + videos.length < list.length) {
       notifications.notify(app_id, {
         type: NotificationType.WARNING,
-        title: audio.length ? "Some files were skipped" : "That isn't an audio file",
-        message: "Only audio files can go on the board.",
+        title: audio.length || videos.length ? "Some files were skipped" : "That isn't an audio or video file",
+        message: "Only sounds and videos can go on the board.",
       });
     }
+    await add_sounds(audio);
+    for (const video of videos) await add_video(video);
+  }
+
+  async function add_sounds(audio: File[]) {
     if (!audio.length) return;
     busy++;
     try {
-      for (const file of audio) {
-        const sound = await import_sound(files, file);
-        const target = data.value.boards.find((entry) => entry.id === board.id) ?? board;
-        target.pads.push(create_pad(target.pads, sound, file.name, crypto.randomUUID()));
-      }
+      for (const file of audio) add_pad(await import_sound(files, file), file.name);
     } catch (reason) {
       report("Couldn't add the sound", reason);
     } finally {
       busy--;
     }
+  }
+
+  function warn(title: string, message: string) {
+    notifications.notify(app_id, { type: NotificationType.WARNING, title, message });
+  }
+
+  async function add_video(file: File) {
+    let tracks: MediaTracks;
+    busy++;
+    try {
+      tracks = await probe_tracks(file);
+    } catch (reason) {
+      return report(`Couldn't open “${file.name}”`, reason);
+    } finally {
+      busy--;
+    }
+    if (!tracks.picture) return add_sounds([file]);
+    if (!tracks.audio) return warn(`“${file.name}” has no sound`, "The video has no sound track this browser can play.");
+    if (tracks.duration > MAX_VIDEO_SECONDS) {
+      return warn(`“${file.name}” is too long`, "Videos up to an hour can be cut here. Export the part you want as audio first, for example with Video Tools.");
+    }
+    if (tracks.duration > LONG_VIDEO_SECONDS) {
+      const go = await win.confirm(`“${file.name}” is ${Math.round(tracks.duration / 60)} minutes long`, {
+        detail: `Reading its sound takes about ${format_bytes(decode_bytes(tracks.duration))} of memory, and the tab may slow down meanwhile.`,
+        confirm_label: "Continue",
+      });
+      if (!go) return;
+    }
+    const sound = await dialogs.show(ClipDialog, { file }, { window: window_id });
+    if (sound) add_pad(sound, file.name);
   }
 
   async function add_paths(paths: string[]) {
@@ -372,7 +416,7 @@
       <EmptyState
         icon={SquaresFourIcon}
         title="No sounds on this board"
-        description="Add audio from your files or your device, or drop it here. Each sound is copied into the board, so moving the original won't break it."
+        description="Add sounds or videos from your files or your device, or drop them here. From a video you pick the part to keep. Each sound is copied into the board, so moving the original won't break it."
       >
         {#snippet actions()}
           <Button variant="primary" onclick={add_from_files}><FolderOpenIcon weight="bold" /> Add sounds…</Button>
