@@ -351,6 +351,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Time Since (2026-10-14)
 - [x] Kanban, a personal "life" board (2026-10-14)
 - [x] Calendar, with Work Hours days and Kanban due dates (2026-10-14)
+- [x] Proposals app (idea from LaxDOTexe) (2026-10-21, [ADR-058](adrs/058-proposals.md), [brainstorm](brainstorm/2026-10-21_proposals.md), [internals](apps/proposals.md)): a notebook of app pitches with the eight guide sections, status chips, a filter and a fill meter; pictures inline or full width inside the text by paste, drop, picker, camera or a sketch pad, downscaled to 1200 px WebP; `.proposals.md` Markdown with data-URL images, hand-edit tolerant; Send the notebook or one proposal through the share sheet, else a download
+  - [ ] Kinds (app, feature, bug) with their own sections, status coming back from the owner, a generic notebook: next session topics in the brainstorm
 - [ ] Habit Tracker (yes, not now)
 - Later: Spreadsheet
 

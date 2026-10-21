@@ -59,6 +59,7 @@ Listing an extension is how an app beats a broader type. A `.ts` file can get th
 | `html-preview` | `text/html`, `.html`, `.htm` |
 | `csv-viewer` | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` |
 | `forms` | `.form.md`, `.answers` |
+| `proposals` | `.proposals.md` |
 | `funky` | `.fdsl` |
 | `settings` | `.webos-theme` (a theme file: opens Appearance with an import preview, [Settings](../system-apps.md#settings)) |
 
