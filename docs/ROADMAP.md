@@ -526,6 +526,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Boot budget: entry chunk <= 190 KB gz (was 180 until 2026-10-17), CI gate
 - [x] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
 - [x] Tasks service (ADR-013): after 1.0, additive (shipped 1.3.0)
+- [x] Releases posted to Discord (2026-10-21, [brainstorm](brainstorm/2026-10-21_discord-releases.md)): an `announce` job after a successful deploy posts every changelog entry newer than the latest `v*` tag as one embed each, then tags the newest; waits on the owner's webhook secret
 
 ### PWA & Offline
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)

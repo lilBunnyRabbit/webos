@@ -231,7 +231,7 @@ Use conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Body
 
 ## Releases
 
-Users are told about releases through `src/lib/core/api/services/version/changelog.ts` (ADR-026). A push without a version bump announces nothing.
+Users are told about releases through `src/lib/core/api/services/version/changelog.ts` (ADR-026). A push without a version bump announces nothing. After a successful deploy, CI also posts every entry newer than the latest `v*` git tag to Discord and tags the newest (`scripts/discord-release.ts`), so changelog wording is public.
 
 - Every `feat:` or `fix:` commit a user can notice also edits `changelog.ts` and, when needed, `package.json`, in the same commit. Refactors, docs and tooling don't.
 - Check `git diff origin/master -- package.json`:

@@ -92,3 +92,25 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+
+  # Posts releases newer than the latest v* tag to Discord, then tags the newest. Without the secret it only prints.
+  announce:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Post to Discord
+        run: bun scripts/discord-release.ts
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
