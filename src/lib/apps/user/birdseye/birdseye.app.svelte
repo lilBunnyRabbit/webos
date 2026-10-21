@@ -9,7 +9,7 @@
   import { has_files } from "$kit/utils/image";
   import { probe_video, type VideoInfo } from "$kit/utils/video/capture";
   import { format_time } from "$kit/utils/video/plan";
-  import { VIDEO_ACCEPT, is_video_name } from "$lib/apps/user/video-tools/kinds";
+  import { VIDEO_ACCEPT, is_video_name } from "$kit/utils/video/files";
   import {
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,

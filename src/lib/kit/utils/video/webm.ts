@@ -46,7 +46,7 @@ export const Ebml = {
   CUE_CLUSTER_POSITION: 0xf1,
 } as const;
 
-const APP = "WebOS Video Tools";
+const APP = "WebOS";
 const TIMESTAMP_SCALE = 1_000_000;
 const MAX_BLOCK_OFFSET = 32_767;
 const AUDIO_ONLY_CLUSTER_MS = 5_000;

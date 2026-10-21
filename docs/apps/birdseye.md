@@ -98,7 +98,7 @@ Props: `path` (optional), a video to open. The manifest lists `tools: ["video/*"
 
 ## Dependencies & licences
 
-None of its own. `$kit/utils/video` (capture, `WebmEncoder`, the WebM muxer), `$kit/components/crop-frame` for the box, and Video Tools' `VIDEO_ACCEPT` and `is_video_name` for the picker and drops.
+None of its own. `$kit/utils/video` (capture, `WebmEncoder`, the WebM muxer), `$kit/components/crop-frame` for the box, and `$kit/utils/video/files`' `VIDEO_ACCEPT` and `is_video_name` for the picker and drops.
 
 ## Limits
 
