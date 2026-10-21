@@ -13,6 +13,10 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "Soundboard's sound editor can keep just your selection and drop everything around it, and zooms in like an audio editor: buttons, pinch or Ctrl+scroll, with a time ruler, to trim to the millisecond.",
       },
+      {
+        kind: IMPROVED,
+        text: "Trim points in Soundboard are thin lines you move by tabs below the sound, so your finger never hides the spot, with arrow buttons to nudge them precisely.",
+      },
     ],
   },
   {

@@ -13,15 +13,19 @@
   import { pcm_length, type Pcm } from "$kit/utils/audio/wav";
   import {
     ArrowsOutLineHorizontal as FitIcon,
+    CaretLeft as LeftIcon,
+    CaretRight as RightIcon,
     MagnifyingGlassMinus as ZoomOutIcon,
     MagnifyingGlassPlus as ZoomInIcon,
     Selection as ZoomSelectionIcon,
   } from "phosphor-svelte";
   import { flushSync, untrack } from "svelte";
   import {
+    dragged_time,
     edge_speed,
     follow,
     max_zoom,
+    nudge_step,
     pinch_zoom,
     px_per_second,
     tick_label,
@@ -57,9 +61,16 @@
   }: Props = $props();
 
   const MIN_SPAN = 0.05;
+  const MIN_SELECTION = 0.001;
   const TAP_PX = 4;
   const EDGE_PX = 32;
   const TICK_PX = 72;
+  const LONG_PRESS_MS = 400;
+
+  const Marker = { START: "start", END: "end", FROM: "from", TO: "to" } as const;
+  type Marker = (typeof Marker)[keyof typeof Marker];
+  const NAMES: Record<Marker, string> = { start: "Trim start", end: "Trim end", from: "Selection start", to: "Selection end" };
+  const SHORT: Record<Marker, string> = { start: "Start", end: "End", from: "From", to: "To" };
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const duration = $derived(pcm_length(pcm) / pcm.sample_rate || 0);
@@ -72,6 +83,7 @@
   let height = $state(0);
   let zoom = $state(1);
   let scroll = $state(0);
+  let active = $state<Marker | null>(null);
 
   const limit = $derived(max_zoom(duration, width, pcm.sample_rate));
   const view = $derived<Viewport>({ zoom, scroll, width, duration });
@@ -79,6 +91,7 @@
   const step = $derived(tick_step(px_per_second(view), TICK_PX));
   const marks = $derived(ticks(visible, step));
   const zoomed = $derived(zoom > 1);
+  const active_value = $derived(active ? value_of(active) : null);
 
   $effect(() => {
     void Object.values(settings.theme);
@@ -118,6 +131,23 @@
 
   const percent = (seconds: number) => `${duration ? (seconds / duration) * 100 : 0}%`;
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+  const seconds = (value: number) => `${value.toFixed(2)} s`;
+  const exact = (value: number) => `${value.toFixed(3)} s`;
+
+  function value_of(marker: Marker): number | null {
+    if (marker === Marker.START) return start;
+    if (marker === Marker.END) return end;
+    if (!selection) return null;
+    return marker === Marker.FROM ? selection.start : selection.end;
+  }
+
+  function place(marker: Marker, time: number) {
+    if (marker === Marker.START) start = clamp(time, 0, end - MIN_SPAN);
+    else if (marker === Marker.END) end = clamp(time, start + MIN_SPAN, duration);
+    else if (selection && marker === Marker.FROM) selection = { start: clamp(time, start, selection.end - MIN_SELECTION), end: selection.end };
+    else if (selection) selection = { start: selection.start, end: clamp(time, selection.start + MIN_SELECTION, end) };
+    if ((marker === Marker.START || marker === Marker.END) && selection) selection = fit(selection);
+  }
 
   const now = (): Viewport => ({ zoom, scroll: scroller?.scrollLeft ?? 0, width, duration });
 
@@ -139,7 +169,14 @@
 
   const zoom_by = (factor: number) => apply(zoom_at(now(), zoom * factor, width / 2, limit));
 
-  // Non-passive so a pinch or Ctrl+wheel zooms the sound instead of the page.
+  function nudge(marker: Marker, direction: number, big = false) {
+    const value = value_of(marker);
+    if (value === null) return;
+    place(marker, value + nudge_step(visible.end - visible.start) * (big ? 10 : 1) * direction);
+    reveal(value_of(marker) ?? value);
+  }
+
+  // Non-passive so a pinch or Ctrl+wheel zooms the sound instead of the page, and a held drag keeps the browser from scrolling.
   function gestures(element: HTMLElement) {
     let pinch: Pinch | null = null;
     const spread = (event: TouchEvent) => {
@@ -153,6 +190,7 @@
       pinch = { zoom, scroll: element.scrollLeft, ...spread(event) };
     };
     const on_touchmove = (event: TouchEvent) => {
+      if (drag && event.cancelable) return event.preventDefault();
       if (!pinch || event.touches.length !== 2) return;
       event.preventDefault();
       const { mid, distance } = spread(event);
@@ -181,18 +219,20 @@
     };
   }
 
-  type DragKind = "start" | "end" | "select";
+  /** `select` draws a new selection from where it began; a marker drag moves that marker by the pointer's travel. */
   interface Drag {
     pointer_id: number;
-    kind: DragKind;
+    target: Marker | "select";
     anchor: number;
+    origin: number;
     x: number;
+    scroll: number;
     client_x: number;
     moved: boolean;
     before: Span | null;
   }
   let drag: Drag | null = null;
-  let tap: { pointer_id: number; x: number } | null = null;
+  let press: { pointer_id: number; x: number; element: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
   let frame = 0;
 
   function time_at(client_x: number): number {
@@ -200,29 +240,45 @@
     return clamp(((client_x - rect.left) / (rect.width || 1)) * duration, 0, duration);
   }
 
-  function begin(event: PointerEvent, kind: DragKind, anchor?: number) {
-    if (drag || !content || (event.pointerType === "mouse" && event.button !== 0)) return;
-    // Zoomed in on touch, a swipe across the sound scrolls it; only the handles drag.
-    if (kind === "select" && anchor === undefined && event.pointerType === "touch" && zoomed) {
-      tap = { pointer_id: event.pointerId, x: event.clientX };
+  function start_drag(element: HTMLElement, pointer_id: number, client_x: number, target: Drag["target"], moved: boolean) {
+    element.setPointerCapture(pointer_id);
+    const origin = target === "select" ? clamp(time_at(client_x), start, end) : (value_of(target) ?? 0);
+    drag = { pointer_id, target, anchor: origin, origin, x: client_x, scroll: scroller?.scrollLeft ?? 0, client_x, moved, before: selection };
+  }
+
+  function select_down(event: PointerEvent) {
+    if (drag || press || !content || (event.pointerType === "mouse" && event.button !== 0)) return;
+    const element = event.currentTarget as HTMLElement;
+    // Zoomed in on touch, a swipe scrolls the sound; holding still first starts a selection instead.
+    if (event.pointerType === "touch" && zoomed && element.dataset.body !== undefined) {
+      const { pointerId: pointer_id, clientX: x } = event;
+      const timer = setTimeout(() => {
+        if (press?.pointer_id !== pointer_id) return;
+        press = null;
+        start_drag(element, pointer_id, x, "select", true);
+        const anchor = drag!.anchor;
+        selection = { start: anchor, end: Math.min(end, anchor + 2 / (px_per_second(view) || 1)) };
+      }, LONG_PRESS_MS);
+      press = { pointer_id, x, element, timer };
       return;
     }
+    event.preventDefault();
+    start_drag(element, event.pointerId, event.clientX, "select", false);
+    element.focus();
+  }
+
+  function marker_down(event: PointerEvent, marker: Marker) {
+    if (drag || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.stopPropagation();
     event.preventDefault();
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    drag = {
-      pointer_id: event.pointerId,
-      kind,
-      anchor: anchor ?? clamp(time_at(event.clientX), start, end),
-      x: event.clientX,
-      client_x: event.clientX,
-      moved: anchor !== undefined,
-      before: selection,
-    };
-    if (kind === "select") (event.currentTarget as HTMLElement).focus();
+    active = marker;
+    const element = event.currentTarget as HTMLElement;
+    element.focus();
+    start_drag(element, event.pointerId, event.clientX, marker, false);
   }
 
   function move(event: PointerEvent) {
+    if (press?.pointer_id === event.pointerId && Math.abs(event.clientX - press.x) >= TAP_PX) clear_press();
     if (!drag || event.pointerId !== drag.pointer_id) return;
     drag.client_x = event.clientX;
     if (Math.abs(event.clientX - drag.x) >= TAP_PX) drag.moved = true;
@@ -231,15 +287,15 @@
   }
 
   function update() {
-    if (!drag) return;
-    const time = time_at(drag.client_x);
-    if (drag.kind === "start") start = clamp(time, 0, end - MIN_SPAN);
-    else if (drag.kind === "end") end = clamp(time, start + MIN_SPAN, duration);
-    else if (drag.moved) {
-      const other = clamp(time, start, end);
-      selection = { start: Math.min(drag.anchor, other), end: Math.max(drag.anchor, other) };
+    if (!drag || !content) return;
+    if (drag.target !== "select") {
+      const travel = drag.client_x - drag.x + ((scroller?.scrollLeft ?? 0) - drag.scroll);
+      place(drag.target, dragged_time(drag.origin, travel, content.getBoundingClientRect().width, duration));
+      return;
     }
-    if (drag.kind !== "select" && selection) selection = fit(selection);
+    if (!drag.moved) return;
+    const other = clamp(time_at(drag.client_x), start, end);
+    selection = { start: Math.min(drag.anchor, other), end: Math.max(drag.anchor, other) };
   }
 
   function edge_scroll() {
@@ -259,24 +315,30 @@
     frame = 0;
   }
 
+  function clear_press() {
+    if (press) clearTimeout(press.timer);
+    press = null;
+  }
+
   function finish(event: PointerEvent) {
     if (drag?.pointer_id !== event.pointerId) return;
-    if (drag.kind === "select" && !drag.moved) selection = null;
+    if (drag.target === "select" && !drag.moved) selection = null;
     drag = null;
     stop_edge_scroll();
   }
 
   function cancel_drag() {
-    tap = null;
+    clear_press();
     if (!drag) return;
-    if (drag.kind === "select") selection = drag.before;
+    if (drag.target === "select") selection = drag.before;
     drag = null;
     stop_edge_scroll();
   }
 
-  function tapped(event: PointerEvent) {
-    if (tap?.pointer_id === event.pointerId && Math.abs(event.clientX - tap.x) < TAP_PX) selection = null;
-    tap = null;
+  function released(event: PointerEvent) {
+    if (press?.pointer_id !== event.pointerId) return;
+    clear_press();
+    selection = null;
   }
 
   function fit(span: Span): Span | null {
@@ -284,22 +346,30 @@
     return next.end - next.start > 0 ? next : null;
   }
 
-  function nudge(event: KeyboardEvent, kind: "start" | "end") {
+  function marker_key(event: KeyboardEvent, marker: Marker) {
     const direction = event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : event.key === "ArrowRight" || event.key === "ArrowUp" ? 1 : 0;
     if (!direction) return;
     event.preventDefault();
-    const step = ((visible.end - visible.start) / 100) * (event.shiftKey ? 10 : 1) * direction;
-    if (kind === "start") start = clamp(start + step, 0, end - MIN_SPAN);
-    else end = clamp(end + step, start + MIN_SPAN, duration);
-    if (selection) selection = fit(selection);
-    reveal(kind === "start" ? start : end);
+    nudge(marker, direction, event.shiftKey);
   }
-
-  const seconds = (value: number) => `${value.toFixed(2)} s`;
 </script>
 
 <div class={cn("waveform grid gap-1.5", class_name)} role="group" aria-label={label}>
-  <div class="flex items-center justify-end gap-1">
+  <div class="flex flex-wrap items-center justify-end gap-1">
+    {#if active && active_value !== null}
+      {@const marker = active}
+      <div class="mr-auto flex items-center gap-0.5">
+        <IconButton label="Move {NAMES[marker].toLowerCase()} earlier" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(marker, -1)}>
+          <LeftIcon weight="bold" />
+        </IconButton>
+        <span class="min-w-22 text-center font-mono text-2xs whitespace-nowrap text-foreground/80 tabular-nums" aria-live="polite"
+          >{SHORT[marker]} {exact(active_value)}</span
+        >
+        <IconButton label="Move {NAMES[marker].toLowerCase()} later" size="sm" class="pointer-coarse:size-11" onclick={() => nudge(marker, 1)}>
+          <RightIcon weight="bold" />
+        </IconButton>
+      </div>
+    {/if}
     <IconButton label="Zoom out" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => zoom_by(1 / ZOOM_STEP)}>
       <ZoomOutIcon weight="bold" />
     </IconButton>
@@ -328,20 +398,58 @@
     {@attach gestures}
   >
     <div bind:this={content} class="relative" style:width="{zoom * 100}%">
-      <div class="relative h-5 overflow-hidden border-b border-foreground/10" aria-hidden="true">
+      {#snippet tab(marker: Marker, value: number)}
+        <div
+          class="tab absolute inset-y-0 grid cursor-ew-resize place-items-center focus-visible:outline-none"
+          data-marker={marker}
+          data-side={marker === Marker.START || marker === Marker.FROM ? "before" : "after"}
+          style:left={marker === Marker.START || marker === Marker.FROM
+            ? `clamp(var(--hit), ${percent(value)}, 100%)`
+            : `clamp(0px, ${percent(value)}, calc(100% - var(--hit)))`}
+          role="slider"
+          tabindex="0"
+          aria-label={NAMES[marker]}
+          aria-valuemin={0}
+          aria-valuemax={duration}
+          aria-valuenow={value}
+          aria-valuetext={exact(value)}
+          onpointerdown={(event) => marker_down(event, marker)}
+          onpointermove={move}
+          onlostpointercapture={finish}
+          onfocus={() => (active = marker)}
+          onkeydown={(event) => marker_key(event, marker)}
+        >
+          <span class="grip"></span>
+        </div>
+      {/snippet}
+
+      <div
+        class="strip relative touch-none overflow-hidden border-b border-foreground/10"
+        role="presentation"
+        onpointerdown={select_down}
+        onpointermove={move}
+        onlostpointercapture={finish}
+      >
         {#each marks as mark (mark)}
-          <span class="absolute bottom-0 h-1.5 w-px bg-foreground/30" style:left={percent(mark)}></span>
-          <span class="absolute top-1 pl-1 font-mono text-2xs leading-none whitespace-nowrap text-foreground/80 tabular-nums" style:left={percent(mark)}
-            >{tick_label(mark, step, duration >= 60)}</span
+          <span class="pointer-events-none absolute bottom-0 h-1.5 w-px bg-foreground/30" style:left={percent(mark)}></span>
+          <span
+            class="pointer-events-none absolute top-1 pl-1 font-mono text-2xs leading-none whitespace-nowrap text-foreground/80 tabular-nums"
+            style:left={percent(mark)}
+            aria-hidden="true">{tick_label(mark, step, duration >= 60)}</span
           >
         {/each}
+        {#if selection}
+          {@render tab(Marker.FROM, selection.start)}
+          {@render tab(Marker.TO, selection.end)}
+        {/if}
       </div>
 
       <div class="relative h-24" bind:clientHeight={height}>
         <canvas bind:this={canvas} class="pointer-events-none sticky left-0 block h-full" style:width="{width}px" aria-hidden="true"></canvas>
 
         <div
-          class={["track absolute inset-0 cursor-text focus-visible:outline-2 focus-visible:outline-cottontail", zoomed ? "touch-pan-x touch-pan-y" : "touch-none"]}
+          class={["absolute inset-0 cursor-text focus-visible:outline-2 focus-visible:outline-cottontail", zoomed ? "touch-pan-x touch-pan-y" : "touch-none"]}
+          data-body
           role="slider"
           tabindex="0"
           aria-label="Selection"
@@ -349,11 +457,12 @@
           aria-valuemax={duration}
           aria-valuenow={selection?.start ?? start}
           aria-valuetext={selection ? `${seconds(selection.start)} to ${seconds(selection.end)}` : "Nothing selected. Drag across the sound to select"}
-          onpointerdown={(event) => begin(event, "select")}
+          onpointerdown={select_down}
           onpointermove={move}
-          onpointerup={tapped}
-          onpointercancel={() => (tap = null)}
+          onpointerup={released}
+          onpointercancel={clear_press}
           onlostpointercapture={finish}
+          oncontextmenu={(event) => (press || drag) && event.preventDefault()}
           onkeydown={(event) => {
             if (event.key === "Escape" && selection) {
               event.stopPropagation();
@@ -366,45 +475,20 @@
         <div class="trimmed pointer-events-none absolute inset-y-0 right-0" style:left={percent(end)}></div>
 
         {#if selection}
-          {@const span = selection}
-          <div class="selection pointer-events-none absolute inset-y-0" style:left={percent(span.start)} style:width={percent(span.end - span.start)}></div>
-          {#each [span.start, span.end] as edge, side (side)}
-            <div
-              class="edge absolute inset-y-0 cursor-ew-resize"
-              style:left={percent(edge)}
-              aria-hidden="true"
-              onpointerdown={(event) => begin(event, "select", side === 0 ? span.end : span.start)}
-              onpointermove={move}
-              onlostpointercapture={finish}
-            ></div>
-          {/each}
+          <div class="selection pointer-events-none absolute inset-y-0" style:left={percent(selection.start)} style:width={percent(selection.end - selection.start)}></div>
         {/if}
+
+        <div class="marker pointer-events-none absolute inset-y-0" style:left={percent(start)}></div>
+        <div class="marker pointer-events-none absolute inset-y-0" style:left={percent(end)}></div>
 
         {#if playhead !== null && playhead !== undefined}
           <div class="playhead pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2" style:left={percent(playhead)}></div>
         {/if}
+      </div>
 
-        {#snippet handle(kind: "start" | "end", value: number)}
-          <div
-            class="handle absolute inset-y-0 grid cursor-ew-resize place-items-center focus-visible:outline-none"
-            style:left={percent(value)}
-            role="slider"
-            tabindex="0"
-            aria-label={kind === "start" ? "Trim start" : "Trim end"}
-            aria-valuemin={0}
-            aria-valuemax={duration}
-            aria-valuenow={value}
-            aria-valuetext={seconds(value)}
-            onpointerdown={(event) => begin(event, kind)}
-            onpointermove={move}
-            onlostpointercapture={finish}
-            onkeydown={(event) => nudge(event, kind)}
-          >
-            <span class="bar"></span>
-          </div>
-        {/snippet}
-        {@render handle("start", start)}
-        {@render handle("end", end)}
+      <div class="strip relative overflow-hidden border-t border-foreground/10">
+        {@render tab(Marker.START, start)}
+        {@render tab(Marker.END, end)}
       </div>
     </div>
   </div>
@@ -416,16 +500,8 @@
     scrollbar-width: thin;
   }
 
-  .handle,
-  .edge {
-    --hit: 28px;
-    width: var(--hit);
-    translate: -50% 0;
-    touch-action: none;
-  }
-
-  .edge {
-    --hit: 16px;
+  .strip {
+    height: 28px;
   }
 
   .trimmed {
@@ -439,45 +515,69 @@
       inset -1px 0 0 var(--primary);
   }
 
+  .marker {
+    width: 2px;
+    translate: -50% 0;
+    background: var(--primary);
+  }
+
   .playhead {
     background: var(--cottontail);
   }
 
-  .handle .bar {
-    width: 4px;
-    height: 100%;
-    border-radius: 2px;
+  .tab {
+    --hit: 28px;
+    width: var(--hit);
+    touch-action: none;
+  }
+
+  /* Each tab sits outside its line, like a bracket, so the start and end tabs never cover each other. */
+  .tab[data-side="before"] {
+    translate: -100% 0;
+    justify-items: end;
+  }
+
+  .tab[data-side="after"] {
+    justify-items: start;
+  }
+
+  .tab .grip {
+    width: 12px;
+    height: 18px;
     background: var(--primary);
     box-shadow: 0 0 0 1px var(--background-darkest);
   }
 
-  .handle .bar::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 10px;
-    height: 24px;
-    translate: -50% -50%;
-    border-radius: 4px;
-    background: var(--primary);
-    box-shadow: 0 0 0 1px var(--background-darkest);
+  .tab[data-side="before"] .grip {
+    border-radius: 4px 0 0 4px;
   }
 
-  .handle:focus-visible .bar,
-  .handle:focus-visible .bar::after {
+  .tab[data-side="after"] .grip {
+    border-radius: 0 4px 4px 0;
+  }
+
+  .tab[data-marker="from"] .grip,
+  .tab[data-marker="to"] .grip {
+    background: color-mix(in oklch, var(--primary) 22%, var(--background-darker));
+    box-shadow: inset 0 0 0 1.5px var(--primary);
+  }
+
+  .tab:focus-visible .grip {
     box-shadow: 0 0 0 2px var(--cottontail);
   }
 
   @media (pointer: coarse) {
-    .handle,
-    .edge {
+    .strip {
+      height: 44px;
+    }
+
+    .tab {
       --hit: 44px;
     }
 
-    .handle .bar::after {
-      width: 14px;
-      height: 32px;
+    .tab .grip {
+      width: 16px;
+      height: 26px;
     }
   }
 </style>

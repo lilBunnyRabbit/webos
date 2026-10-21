@@ -110,3 +110,14 @@ export function follow(view: Viewport, time: number): number | null {
   if (time >= span.start && time <= span.end) return null;
   return clamp_scroll(time * px_per_second(view) - view.width * 0.05, view.width, view.zoom);
 }
+
+export function nudge_step(visible: number): number {
+  let best = NICE_STEPS[0];
+  for (const step of NICE_STEPS) if (step <= visible / 50) best = step;
+  return best;
+}
+
+/** A marker dragged by its tab moves by the finger's travel (plus what auto-scroll moved under it), not to the finger. */
+export function dragged_time(origin: number, moved_px: number, content_px: number, duration: number): number {
+  return content_px > 0 ? origin + (moved_px / content_px) * duration : origin;
+}

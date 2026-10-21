@@ -1,5 +1,19 @@
 import { describe, expect, test } from "vitest";
-import { clamp_scroll, edge_speed, follow, max_zoom, pinch_zoom, tick_label, tick_step, ticks, visible_span, zoom_at, zoom_to } from "./zoom";
+import {
+  clamp_scroll,
+  dragged_time,
+  edge_speed,
+  follow,
+  max_zoom,
+  nudge_step,
+  pinch_zoom,
+  tick_label,
+  tick_step,
+  ticks,
+  visible_span,
+  zoom_at,
+  zoom_to,
+} from "./zoom";
 
 const view = { zoom: 1, scroll: 0, width: 400, duration: 10 };
 
@@ -103,5 +117,20 @@ describe("scrolling while dragging and playing", () => {
     expect(follow(zoomed, 2)).toBeNull();
     expect(follow(zoomed, 2.6)).toBeCloseTo(2.6 * 160 - 20, 6);
     expect(follow(zoomed, 9.99)).toBe(clamp_scroll(Infinity, 400, 4));
+  });
+});
+
+describe("fine control", () => {
+  test("nudge_step shrinks with the visible span", () => {
+    expect(nudge_step(10)).toBe(0.2);
+    expect(nudge_step(1.83)).toBe(0.02);
+    expect(nudge_step(0.5)).toBe(0.01);
+    expect(nudge_step(0.008)).toBe(0.001);
+  });
+
+  test("a tab drag moves the marker by the travel, not to the finger", () => {
+    expect(dragged_time(3, 40, 400, 10)).toBe(4);
+    expect(dragged_time(3, -40, 1600, 10)).toBe(2.75);
+    expect(dragged_time(3, 40, 0, 10)).toBe(3);
   });
 });

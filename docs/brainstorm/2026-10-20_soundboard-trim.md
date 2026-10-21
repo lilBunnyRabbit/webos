@@ -34,6 +34,7 @@ Beyond the seven theme swatches, a pad can have any hex colour. This is user con
 - [x] Pads from a part of a video: trim sheet with a video preview, saved as a WAV pad (2026-10-21)
 - [x] Keep selection: the inverse of Delete selection, drops everything outside the selection (2026-10-21)
 - [x] Zoom and scroll the waveform, Audacity-like, on desktop and touch (2026-10-21)
+- [x] Precise markers: thin lines, tabs outside the wave, relative drag, nudges (2026-10-21)
 
 ## Implementation notes (2026-10-20)
 - Pads point at a board-owned copy (`/var/lib/apps/soundboard/sounds/{name}`), not a path, so the edit is written into that folder as `name (edited).wav` (a free name). The original copy stays. No `/home/Music` fallback was needed.
@@ -69,6 +70,10 @@ The owner: "i want the option to delete out of my selection so a button that wou
 ## Follow-up: zoom and scroll the waveform (2026-10-21)
 The owner wants to zoom and scroll the waveform "kinda like Audacity does it", great on mobile and desktop. Decided: the kit Waveform sits in a native horizontal scroller (no hand-rolled pan physics); zoom widens the drawing and only the visible part is drawn; Zoom in, Zoom out, Zoom to selection and Fit buttons; Ctrl/⌘+wheel and pinch zoom at the pointer; a time ruler that adapts to the zoom; handles work at any zoom, auto-scroll at the edges; on touch, a drag on a handle trims and elsewhere scrolls; playback keeps the playhead in view.
 Build notes: zoom tops out at one pixel per sample (and 16 million px of layout); drawing reads a min/max index per 256 frames (`peak_index`, `peaks_between` in `$kit/utils/audio`) so a zoomed hour-long sound never rescans every sample. Selecting on touch while zoomed in: select at fit, then Zoom to selection and fine-tune with the selection's edges, which are drag targets now. No scroll is animated, so motion settings have nothing to cut.
+
+## Follow-up: precise markers (2026-10-21)
+The owner: "for soundboard its also hard to be precise on mobile to select the section since the handle takes so much space - rethink it". Decided: markers on the wave are thin `primary` lines; the grab target is a tab outside the wave (44px on touch) so the finger doesn't cover the spot; a tab drag is relative (moves by the finger's travel); the active marker gets ◀ ▶ nudges scaled to the zoom and arrow keys, with an exact readout; a selection gesture on touch that doesn't fight scrolling; mouse drag on the wave still selects.
+Build notes: trim tabs in a strip below the wave, selection tabs in the ruler strip above it; each tab sits outside its line like a bracket (start and From to the left, End and To to the right), so tabs never cover each other. Selecting on touch: drag along the ruler, or touch and hold the wave 400 ms then drag (zoomed in; at fit a drag on the wave still selects, there being nothing to scroll). A tap on the wave clears the selection; there was no tap-to-place-playhead to keep. Nudge step: a fiftieth of the visible span on a 1-2-5 step, at least 1 ms (`nudge_step`). Markers can't cross: From stops short of To, trim keeps 50 ms.
 
 ## Next session topics
 - When a pad moves to an edited sound, its original copy stays in the sounds folder with no pad using it. Delete it then, keep it for undo, or offer "Revert to original"?

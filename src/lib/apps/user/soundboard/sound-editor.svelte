@@ -59,7 +59,7 @@
     {#if editor.selection}<span>selected {time(editor.selection.end - editor.selection.start)} s</span>{/if}
     <span>{time(editor.end - editor.start)} of {time(editor.duration)} s</span>
   </p>
-  <p class="text-2xs text-foreground/80">Drag the handles to trim. Drag across the middle to select a part, then keep only it or delete it. Pinch or Ctrl+scroll to zoom.</p>
+  <p class="text-2xs text-foreground/80">Drag the tabs under the sound to trim. Drag along the ruler (or across the sound with a mouse, or touch and hold it) to select a part, then keep only it or delete it. Pinch or Ctrl+scroll to zoom.</p>
   <div class="flex flex-wrap items-center gap-2">
     {#if editor.playing}
       <Button size="sm" variant="quiet" class="pointer-coarse:h-11" onclick={() => editor.stop()}><StopIcon weight="fill" /> Stop</Button>
