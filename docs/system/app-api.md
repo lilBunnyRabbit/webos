@@ -218,6 +218,7 @@ Internal: Format Lab and Media Preview use it; the API can change in any release
 | Play tracking | `track_play`, `PlayTracker`, `use_plays`, `Plays`, `GameStats`, `PlaysSchema`, `EMPTY_PLAYS`, `PLAYS_PATH` |
 | Input | `Direction`, `key_direction`, `swipe_direction`, `grid_key_move`, `stroke_axis`, `stroke_end`, `stroke_cells`, `Axis` |
 | Edge clues | `across_cells`, `down_cells`: the two cells an edge between neighbours joins, across edges indexed `row * (width - 1) + col`, down edges `row * width + col` (Futoshiki's signs, Sun & Moon's `=` and `×`) |
+| Regions | `region_edges(regions, width)` → per cell the `Edge` bits (`TOP`, `RIGHT`, `BOTTOM`, `LEFT`) of sides that face another region or the board's edge, where a thick border goes (Hutches; 3.42) |
 
 `/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?, mode?)` keeps the better result by the manifest's `daily_rank`. A day's keys are app ids, or `{app_id}/{mode}` for one mode of a game with a per-mode `daily_rank` (3.1, ADR-050); `daily_key(app_id, mode?)` builds one and `split_daily_key` takes one apart, so a reader that looks up a manifest by key splits first.
 

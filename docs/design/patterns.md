@@ -55,11 +55,11 @@ Tic-Tac-Toe, Minesweeper, 2048, Snake, Maze and the puzzle apps share one frame:
 - **Stats panel (optional, Tic-Tac-Toe and Minesweeper):** a side panel from `@3xl` (wins, best times, streaks). Below that, a `pressed` "Statistics" `IconButton` in the toolbar shows it over the board.
 - **Pause and end:** a `BoardOverlay` inside the board: the title ("Paused", "Game over"), one mono line (score, best), the primary action (Resume, Play again, New game) last. Starting cues that must not hide the board (Snake's "swipe to start") sit at its edge instead.
 - **Touch:** swipes on the board; a direction pad only on `pointer-coarse`. Touch targets stay the kit's 36px; a dense board (Minesweeper Expert) may go down to 32px cells.
-- **Helpers:** `$kit/games` has the non-visual parts: `key_direction` / `swipe_direction`, `grid_key_move` for arrows over a grid of cells, `Stopwatch` and `format_time`, `daily_seed`, and `track_play` for the shared play stats.
+- **Helpers:** `$kit/games` has the non-visual parts: `key_direction` / `swipe_direction`, `grid_key_move` for arrows over a grid of cells, `region_edges` for thick borders between regions, `Stopwatch` and `format_time`, `daily_seed`, and `track_play` for the shared play stats.
 
 ### Puzzle apps
 
-Nonogram, Word Search, Sudoku, Futoshiki, Sun & Moon, Kakuro and Nurikabe use the same frame, with a few rules on top:
+Nonogram, Word Search, Sudoku, Futoshiki, Sun & Moon, Kakuro, Nurikabe and Hutches use the same frame, with a few rules on top:
 
 - **Generated, never authored.** A puzzle is its size or difficulty plus a seed (`$lib/core/utils/random`). The generator keeps only puzzles its own solver proves have exactly one answer, so the player never has to guess. Saves store the seed and the player's marks, not the puzzle.
 - **Toolbar:** size or difficulty, the input tool (Fill/Cross, Notes, Sea/Dot), Undo, Redo, Hint, a statistics toggle, New puzzle last. In narrow windows the tools move to a bar under the board, where a thumb reaches them.

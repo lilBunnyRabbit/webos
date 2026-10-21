@@ -1,5 +1,17 @@
 import { describe, expect, test } from "vitest";
-import { across_cells, down_cells, grid_key_move, stroke_axis, stroke_cells, stroke_end } from "./grid";
+import { across_cells, down_cells, Edge, grid_key_move, region_edges, stroke_axis, stroke_cells, stroke_end } from "./grid";
+
+describe("region_edges", () => {
+  test("borders the sides facing another region or the board's edge", () => {
+    const edges = region_edges([0, 0, 1, 2, 0, 1], 3);
+    expect(edges[0]).toBe(Edge.TOP | Edge.LEFT | Edge.BOTTOM);
+    expect(edges[1]).toBe(Edge.TOP | Edge.RIGHT);
+    expect(edges[4]).toBe(Edge.LEFT | Edge.RIGHT | Edge.BOTTOM);
+    expect(edges[2]).toBe(Edge.TOP | Edge.RIGHT | Edge.LEFT);
+    expect(edges[5]).toBe(Edge.RIGHT | Edge.BOTTOM | Edge.LEFT);
+    expect(edges[3]).toBe(Edge.TOP | Edge.RIGHT | Edge.BOTTOM | Edge.LEFT);
+  });
+});
 
 describe("grid_key_move", () => {
   test("moves one cell and stops at the edges", () => {

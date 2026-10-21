@@ -24,8 +24,12 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.42.0",
     date: "2026-10-21",
-    title: "Quieter in the background",
+    title: "Hutches, and quieter in the background",
     changes: [
+      {
+        kind: NEW,
+        text: "Hutches is a new daily logic puzzle: place one rabbit per row, column and meadow without two rabbits touching, with hints that explain the next step.",
+      },
       {
         kind: IMPROVED,
         text: "WebOS does less in the background when you have no alarms, timers or reminders set, and no longer reports an error when it can't check for updates while you're offline.",

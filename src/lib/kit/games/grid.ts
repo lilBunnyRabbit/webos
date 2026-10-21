@@ -1,5 +1,25 @@
 export type Axis = "row" | "col";
 
+export const Edge = { TOP: 1, RIGHT: 2, BOTTOM: 4, LEFT: 8 } as const;
+export type Edge = (typeof Edge)[keyof typeof Edge];
+
+/** Per cell, the `Edge` bits of sides facing another region or the board's edge, where a thick border goes. */
+export function region_edges(regions: readonly number[], width: number): number[] {
+  const height = Math.ceil(regions.length / width);
+  return regions.map((region, index) => {
+    const row = Math.floor(index / width);
+    const col = index % width;
+    const differs = (r: number, c: number) =>
+      r < 0 || r >= height || c < 0 || c >= width || regions[r * width + c] !== region;
+    return (
+      (differs(row - 1, col) ? Edge.TOP : 0) |
+      (differs(row, col + 1) ? Edge.RIGHT : 0) |
+      (differs(row + 1, col) ? Edge.BOTTOM : 0) |
+      (differs(row, col - 1) ? Edge.LEFT : 0)
+    );
+  });
+}
+
 /** Where arrow keys, Home and End move a cursor at `index`, stopping at the edges; null for any other key. */
 export function grid_key_move(key: string, index: number, width: number, height: number): number | null {
   const row = Math.floor(index / width);

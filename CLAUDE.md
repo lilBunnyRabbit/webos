@@ -193,6 +193,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `calendar` | `docs/apps/calendar.md` |
 | `soundboard` | `docs/apps/soundboard.md` |
 | `sun-and-moon` | `docs/apps/sun-and-moon.md` |
+| `hutches` | `docs/apps/hutches.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
 
