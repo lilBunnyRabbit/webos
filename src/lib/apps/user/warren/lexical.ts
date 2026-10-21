@@ -5,6 +5,7 @@ import {
   HorizontalRuleExtension,
   InitialStateExtension,
   INSERT_HORIZONTAL_RULE_COMMAND,
+  NestedEditorExtension,
 } from "@lexical/extension";
 import { HistoryExtension } from "@lexical/history";
 import { $generateNodesFromDOM } from "@lexical/html";
@@ -57,10 +58,11 @@ import {
   type RangeSelection,
   type TextNode,
 } from "lexical";
-import { Align, align_of, font_size } from "./model";
+import { Align, align_of, font_size, is_page_number_line, PAGE_TOKEN, type ImageAlign } from "./model";
 import { CHECK_CLASS } from "./print";
 import { smarten } from "./typography";
 import { $create_page_break, PageBreakExtension } from "./page-break-node";
+import { $create_image, $insert_image, $is_image, $selected_image, ImageExtension, type ImageProps } from "./image-node";
 import { BASE_PT, HEADING_PT } from "./page";
 import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
 
@@ -116,6 +118,8 @@ export interface Hooks {
   on_can_redo: (value: boolean) => void;
   /** Whether typed quotes, dashes and dots become typographic ones. */
   smart: () => boolean;
+  /** Picture files pasted or dropped in; `true` when they were taken. */
+  on_pictures: (editor: LexicalEditor, files: File[]) => boolean;
 }
 
 export function heading_of(style: BlockStyle): 1 | 2 | 3 | null {
@@ -161,9 +165,13 @@ function $in_list(): boolean {
   return $isRangeSelection(selection) && !!$findMatchingParent(selection.anchor.getNode(), $isListItemNode);
 }
 
-export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: () => void; reset_history: () => void } {
+/**
+ * The document's editor, or with `parent` a header or footer: the same nodes (so anything pasted from the body fits), its
+ * own history, and Lexical's nested-editor link, so selecting in one clears the other's selection.
+ */
+export function create_lexical(hooks: Hooks, parent?: LexicalEditor): { editor: LexicalEditor; dispose: () => void; reset_history: () => void } {
   const warren = defineExtension({
-    name: "@webos/warren",
+    name: parent ? "@webos/warren/zone" : "@webos/warren",
     namespace: "warren",
     theme: THEME,
     onError: hooks.on_error,
@@ -176,6 +184,8 @@ export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: 
       HorizontalRuleExtension,
       LinkExtension,
       PageBreakExtension,
+      configExtension(ImageExtension, { on_files: hooks.on_pictures }),
+      ...(parent ? [configExtension(NestedEditorExtension, { $getParentEditor: () => parent })] : []),
       configExtension(HistoryExtension, { delay: 400 }),
       configExtension(InitialStateExtension, { updateOptions: { tag: [HISTORY_MERGE_TAG, LOAD_TAG], discrete: true } }),
     ],
@@ -292,6 +302,26 @@ export function set_block(editor: LexicalEditor, style: BlockStyle, current: Blo
   });
 }
 
+// Warren's pictures are blocks; Word's sit in a paragraph. A paragraph holding only a picture becomes the picture
+// (keeping its alignment), any other picture moves out to just after its block.
+function lift_pictures(document: Document): Document {
+  const last = new Map<Element, Element>();
+  for (const image of [...document.body.querySelectorAll("img")]) {
+    let block: Element = image;
+    while (block.parentElement && block.parentElement !== document.body) block = block.parentElement;
+    if (block === image) continue;
+    const align = block instanceof HTMLElement ? block.style.textAlign : "";
+    if (align && !image.dataset.align) image.dataset.align = align;
+    if (block.tagName === "P" && block.textContent?.trim() === "" && block.querySelectorAll("img").length === 1) {
+      block.replaceWith(image);
+      continue;
+    }
+    (last.get(block) ?? block).after(image);
+    last.set(block, image);
+  }
+  return document;
+}
+
 // Inline nodes left at the top (text after a list, say) go into paragraphs: the root holds blocks only. mammoth never writes
 // an empty paragraph, so an empty one here is what is left around a page break or a dropped picture.
 export function load_html(editor: LexicalEditor, html: string) {
@@ -300,7 +330,7 @@ export function load_html(editor: LexicalEditor, html: string) {
       const root = $getRoot();
       root.clear();
       let paragraph: ParagraphNode | null = null;
-      for (const node of $generateNodesFromDOM(editor, new DOMParser().parseFromString(html, "text/html"))) {
+      for (const node of $generateNodesFromDOM(editor, lift_pictures(new DOMParser().parseFromString(html, "text/html")))) {
         if ($isParagraphNode(node) && node.isEmpty()) continue;
         if (($isElementNode(node) || $isDecoratorNode(node)) && !node.isInline()) {
           root.append(node);
@@ -338,6 +368,103 @@ export function set_link(editor: LexicalEditor, url: string | null) {
       return;
     }
     $toggleLink(url);
+  });
+}
+
+export interface SelectedImage extends ImageProps {
+  key: NodeKey;
+}
+
+export function read_image(state: EditorState): SelectedImage | null {
+  return state.read(() => {
+    const node = $selected_image();
+    return node ? { key: node.getKey(), ...node.props() } : null;
+  });
+}
+
+export function insert_image(editor: LexicalEditor, props: Partial<ImageProps> & { src: string }, at: RangeSelection | null = null) {
+  editor.update(() => {
+    if (at && $getNodeByKey(at.anchor.key) && $getNodeByKey(at.focus.key)) $setSelection(at);
+    const image = $selected_image();
+    if (image) {
+      image.insertAfter($create_image(props));
+      return;
+    }
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) $getRoot().selectEnd();
+    else if (selection.isCollapsed()) {
+      // At the start of a block the picture goes before it: Lexical's split would leave an empty copy of the block above.
+      const { anchor } = selection;
+      const top = anchor.getNode().getTopLevelElement();
+      const first = top?.getFirstDescendant();
+      if (top && anchor.offset === 0 && (anchor.key === top.getKey() || anchor.key === first?.getKey())) {
+        top.insertBefore($create_image(props));
+        return;
+      }
+    }
+    $insert_image(props);
+  });
+}
+
+export function capture_selection(editor: LexicalEditor): RangeSelection | null {
+  return editor.getEditorState().read(() => {
+    const selection = $getSelection();
+    return $isRangeSelection(selection) ? selection.clone() : null;
+  });
+}
+
+export function update_image(editor: LexicalEditor, key: NodeKey, patch: { width?: number; align?: ImageAlign; alt?: string }) {
+  editor.update(() => {
+    const node = $getNodeByKey(key);
+    if (!$is_image(node)) return;
+    if (patch.width !== undefined) node.set_width(patch.width);
+    if (patch.align) node.set_align(patch.align);
+    if (patch.alt !== undefined) node.set_alt(patch.alt);
+  });
+}
+
+export function remove_image(editor: LexicalEditor, key: NodeKey) {
+  editor.update(() => {
+    const node = $getNodeByKey(key);
+    if (!$is_image(node)) return;
+    const next = node.getNextSibling() ?? node.getPreviousSibling();
+    node.remove();
+    if ($getRoot().isEmpty()) $getRoot().append($createParagraphNode());
+    if ($isElementNode(next)) next.selectStart();
+  });
+}
+
+export function remove_page_numbers(editor: LexicalEditor) {
+  editor.update(() => {
+    const root = $getRoot();
+    for (const child of root.getChildren()) if ($isElementNode(child) && is_page_number_line(child.getTextContent())) child.remove();
+    if (root.isEmpty()) root.append($createParagraphNode());
+  });
+}
+
+/** Adds a centred, left or right "{page}" line, reusing an empty zone's only paragraph. */
+export function add_page_number(editor: LexicalEditor, align: Align) {
+  editor.update(() => {
+    const root = $getRoot();
+    const only = root.getChildrenSize() === 1 ? root.getFirstChild() : null;
+    const line = $isParagraphNode(only) && only.getTextContentSize() === 0 ? only : root.append($createParagraphNode()) && root.getLastChildOrThrow();
+    if (!$isElementNode(line)) return;
+    line.append($createTextNode(PAGE_TOKEN));
+    line.setFormat(align);
+  });
+}
+
+export function is_empty(state: EditorState): boolean {
+  return state.read(() => {
+    const root = $getRoot();
+    return root.getTextContent().trim() === "" && !root.getChildren().some($is_image);
+  });
+}
+
+export function insert_text(editor: LexicalEditor, text: string) {
+  editor.update(() => {
+    const selection = $getSelection();
+    if ($isRangeSelection(selection)) selection.insertText(text);
   });
 }
 

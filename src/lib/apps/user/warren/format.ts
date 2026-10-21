@@ -1,9 +1,10 @@
 import { BUILTIN_FONTS, is_font_file_name } from "$lib/core/api/services/settings/fonts";
 import { z } from "zod";
-import { DEFAULT_PAGE, FLOWS, PAGE_SIZES, type PageSettings } from "./page";
+import { DEFAULT_PAGE, FLOWS, MARGIN_MAX, ORIENTATIONS, PAGE_SIZES, type PageSettings } from "./page";
 
-// 2 added `page.font` and link nodes; 3 added `goal`, horizontal rules, check lists and sub/superscript. Older files read as they are.
-export const VERSION = 3;
+// 2 added `page.font` and link nodes; 3 added `goal`, horizontal rules, check lists and sub/superscript; 4 added images,
+// `page.orientation`, `page.margins`, `header` and `footer`. Older files read as they are.
+export const VERSION = 4;
 export const EXTENSION = ".warren";
 export const GOAL_MAX = 1_000_000;
 
@@ -19,6 +20,10 @@ export interface DocNode {
   start?: number;
   url?: string;
   checked?: boolean;
+  src?: string;
+  width?: number;
+  align?: string;
+  alt?: string;
 }
 
 export interface EditorJson {
@@ -30,6 +35,8 @@ export interface WarrenDocument {
   page: PageSettings;
   /** Word goal, shown as progress in the status bar. */
   goal?: number;
+  header?: EditorJson;
+  footer?: EditorJson;
   editor: EditorJson;
 }
 
@@ -46,6 +53,10 @@ const NodeSchema: z.ZodType<DocNode> = z.lazy(() =>
       start: z.number().optional(),
       url: z.string().optional(),
       checked: z.boolean().optional(),
+      src: z.string().optional(),
+      width: z.number().optional(),
+      align: z.string().optional(),
+      alt: z.string().optional(),
     })
     .loose()
 );
@@ -56,11 +67,23 @@ const FontSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("file"), name: z.string().refine(is_font_file_name, "isn't a font file name") }),
 ]);
 
+const Millimetres = z.number().min(0).max(MARGIN_MAX);
+
+const EditorSchema = z.object({ root: z.object({ type: z.literal("root"), children: z.array(NodeSchema) }).loose() }).loose();
+
 const DocumentSchema = z.object({
   version: z.number().int().min(1),
-  page: z.object({ size: z.enum(PAGE_SIZES), flow: z.enum(FLOWS), font: FontSchema.optional() }),
+  page: z.object({
+    size: z.enum(PAGE_SIZES),
+    flow: z.enum(FLOWS),
+    font: FontSchema.optional(),
+    orientation: z.enum(ORIENTATIONS).optional(),
+    margins: z.object({ top: Millimetres, right: Millimetres, bottom: Millimetres, left: Millimetres }).optional(),
+  }),
   goal: z.number().int().positive().max(GOAL_MAX).optional(),
-  editor: z.object({ root: z.object({ type: z.literal("root"), children: z.array(NodeSchema) }).loose() }).loose(),
+  header: EditorSchema.optional(),
+  footer: EditorSchema.optional(),
+  editor: EditorSchema,
 });
 
 export function empty_editor(): EditorJson {
@@ -96,16 +119,30 @@ export function parse_document(text: string): WarrenDocument {
     const issue = result.error.issues[0];
     throw new Error(`This isn't a valid Warren document: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
-  const { font, ...page } = result.data.page;
-  const { goal } = result.data;
+  const { font, orientation, margins, ...page } = result.data.page;
+  const { goal, header, footer } = result.data;
   return {
     version: VERSION,
-    page: font && font.kind !== "default" ? { ...page, font } : page,
+    page: {
+      ...page,
+      ...(font && font.kind !== "default" ? { font } : {}),
+      ...(orientation === "landscape" ? { orientation } : {}),
+      ...(margins ? { margins } : {}),
+    },
     ...(goal ? { goal } : {}),
+    ...(header ? { header: header as EditorJson } : {}),
+    ...(footer ? { footer: footer as EditorJson } : {}),
     editor: result.data.editor as EditorJson,
   };
 }
 
 export function serialize_document(document: WarrenDocument): string {
-  return JSON.stringify({ version: VERSION, page: document.page, goal: document.goal, editor: document.editor });
+  return JSON.stringify({
+    version: VERSION,
+    page: document.page,
+    goal: document.goal,
+    header: document.header,
+    footer: document.footer,
+    editor: document.editor,
+  });
 }

@@ -7,6 +7,8 @@
     ArrowsClockwise as ArrowsClockwiseIcon,
     CaretRight as CaretRightIcon,
     Eraser as EraserIcon,
+    Image as ImageIcon,
+    Trash as TrashIcon,
     ListChecks as ListChecksIcon,
     Minus as MinusIcon,
     FileDoc as FileDocIcon,
@@ -30,10 +32,24 @@
   } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { z } from "zod";
-  import { BlockStyle, type WarrenEditor } from "./editor.svelte";
-  import { Align } from "./model";
+  import { BlockStyle, Zone, type Margin, type WarrenEditor } from "./editor.svelte";
+  import { Align, PAGE_TOKEN, PAGES_TOKEN } from "./model";
   import { GOAL_MAX } from "./format";
-  import { FLOWS, FONT_SIZES, PAGE_SIZES, type Flow, type PageSize } from "./page";
+  import {
+    FLOWS,
+    FONT_SIZES,
+    geometry,
+    MARGIN_MAX,
+    margin_preset,
+    MarginPreset,
+    ORIENTATIONS,
+    PAGE_SIZES,
+    preset_margins,
+    type Flow,
+    type Margins,
+    type Orientation,
+    type PageSize,
+  } from "./page";
   import { find_word, reading_minutes, type Counts, type Repeat } from "./words";
 
   interface Props {
@@ -54,9 +70,16 @@
     onsmart: (on: boolean) => void;
     /** A heading was picked in the outline. */
     ongo: (key: string) => void;
+    onpicture: (event: MouseEvent) => void;
+    /** Switching off a header or footer that has content asks first. */
+    onzone: (zone: Margin, on: boolean) => void;
+    units: Unit;
+    onunits: (units: Unit) => void;
   }
 
-  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind, selection, smart, onsmart, ongo }: Props = $props();
+  type Unit = "mm" | "in";
+
+  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind, selection, smart, onsmart, ongo, onpicture, onzone, units, onunits }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -91,6 +114,76 @@
     ];
   });
   const ai_on = $derived(ai.features.prompt !== AiAvailability.NO);
+
+  const ORIENTATION_OPTIONS = ORIENTATIONS.map((value) => ({ value, label: value === "portrait" ? "Portrait" : "Landscape" }));
+  const MARGIN_OPTIONS = [
+    { value: MarginPreset.NORMAL, label: "Normal" },
+    { value: MarginPreset.NARROW, label: "Narrow" },
+    { value: MarginPreset.WIDE, label: "Wide" },
+    { value: MarginPreset.CUSTOM, label: "Custom" },
+  ];
+  const UNIT_OPTIONS: { value: Unit; label: string }[] = [
+    { value: "mm", label: "mm" },
+    { value: "in", label: "in" },
+  ];
+  const SIDES = [
+    { key: "top", label: "Top" },
+    { key: "bottom", label: "Bottom" },
+    { key: "left", label: "Left" },
+    { key: "right", label: "Right" },
+  ] as const;
+  const ZONES = [
+    { zone: Zone.HEADER, label: "Header", hint: "On every page, above the text" },
+    { zone: Zone.FOOTER, label: "Footer", hint: "On every page, below the text" },
+  ] as const;
+  const NUMBER_OPTIONS = [
+    { value: "none", label: "None" },
+    { value: "footer:center", label: "Bottom, centre" },
+    { value: "footer:right", label: "Bottom, right" },
+    { value: "footer:left", label: "Bottom, left" },
+    { value: "header:right", label: "Top, right" },
+    { value: "header:center", label: "Top, centre" },
+    { value: "header:left", label: "Top, left" },
+  ];
+  const WIDTH_PRESETS = [25, 50, 75, 100];
+  const PICTURE_ALIGN_BUTTONS = [
+    { value: Align.LEFT, label: "Picture left", icon: TextAlignLeftIcon },
+    { value: Align.CENTER, label: "Picture centred", icon: TextAlignCenterIcon },
+    { value: Align.RIGHT, label: "Picture right", icon: TextAlignRightIcon },
+  ] as const;
+
+  let custom = $state(false);
+  const preset = $derived(custom ? MarginPreset.CUSTOM : margin_preset(editor.page));
+  const margins = $derived(geometry(editor.page).margins);
+  const numbers = $derived(editor.page_numbers ? `${editor.page_numbers.zone}:${editor.page_numbers.align}` : "none");
+  const in_zone = $derived(editor.active !== Zone.BODY);
+
+  const to_unit = (mm: number) => (units === "in" ? Math.round((mm / 25.4) * 100) / 100 : Math.round(mm * 10) / 10);
+  const from_unit = (value: number) => (units === "in" ? value * 25.4 : value);
+
+  function pick_preset(value: string) {
+    custom = value === MarginPreset.CUSTOM;
+    if (value === MarginPreset.NORMAL) editor.set_page({ margins: undefined });
+    else if (value === MarginPreset.NARROW || value === MarginPreset.WIDE) editor.set_page({ margins: preset_margins(value, editor.page.size) });
+  }
+
+  function set_margin(side: keyof Margins, field: HTMLInputElement) {
+    const value = from_unit(Number(field.value));
+    if (!field.value.trim() || !Number.isFinite(value)) {
+      field.value = String(to_unit(margins[side]));
+      return;
+    }
+    const mm = Math.min(MARGIN_MAX, Math.max(0, Math.round(value * 10) / 10));
+    custom = true;
+    editor.set_page({ margins: { ...margins, [side]: mm } });
+    field.value = String(to_unit(mm));
+  }
+
+  function set_numbers(value: string) {
+    if (value === "none") return editor.set_page_numbers(null);
+    const [zone, align] = value.split(":") as [Margin, Align];
+    editor.set_page_numbers({ zone, align });
+  }
 
   const SIZE_OPTIONS = FONT_SIZES.map((size) => ({ value: String(size), label: `${size} pt` }));
   const PAGE_OPTIONS = PAGE_SIZES.map((size) => ({ value: size, label: size }));
@@ -127,6 +220,7 @@
 
   const keep_focus = (event: PointerEvent) => event.preventDefault();
   const smart_id = $props.id();
+  const zone_id = `${smart_id}-zone`;
 
   function commit_goal(field: HTMLInputElement) {
     const value = Math.round(Number(field.value.trim()));
@@ -254,8 +348,84 @@
 
 {#snippet page_group()}
   <Segmented size="sm" label="Page size" options={PAGE_OPTIONS} bind:value={() => editor.page.size, (size: PageSize) => editor.set_page({ size })} />
+  <Segmented
+    size="sm"
+    label="Orientation"
+    options={ORIENTATION_OPTIONS}
+    bind:value={() => editor.page.orientation ?? "portrait", (orientation: Orientation) => editor.set_page({ orientation: orientation === "landscape" ? orientation : undefined })}
+  />
+  <label class="flex items-center justify-between gap-2 text-ui">
+    <span>Margins</span>
+    <Select size="sm" class="w-28" aria-label="Margins" value={preset} options={MARGIN_OPTIONS} onchange={(event) => pick_preset(event.currentTarget.value)} />
+  </label>
+  {#if preset === MarginPreset.CUSTOM}
+    <div class="grid grid-cols-2 gap-1.5" role="group" aria-label="Custom margins">
+      {#each SIDES as side (side.key)}
+        <label class="flex min-w-0 flex-col gap-1 text-2xs text-foreground/65">
+          <span>{side.label}</span>
+          <Input
+            size="sm"
+            class="w-full text-right tabular-nums"
+            type="number"
+            min="0"
+            step={units === "in" ? 0.05 : 1}
+            inputmode="decimal"
+            aria-label="{side.label} margin in {units === 'in' ? 'inches' : 'millimetres'}"
+            value={to_unit(margins[side.key])}
+            onchange={(event) => set_margin(side.key, event.currentTarget)}
+          />
+        </label>
+      {/each}
+    </div>
+    <Segmented size="sm" label="Margin units" options={UNIT_OPTIONS} bind:value={() => units, onunits} />
+  {/if}
+  {#each ZONES as item (item.zone)}
+    <label for="{zone_id}-{item.zone}" class="flex min-h-8 cursor-pointer items-center justify-between gap-2 text-ui pointer-coarse:min-h-11">
+      <span>{item.label} <span class="block text-2xs text-foreground/65">{item.hint}</span></span>
+      <Switch id="{zone_id}-{item.zone}" checked={editor.has(item.zone)} onchange={(event) => onzone(item.zone, event.currentTarget.checked)} />
+    </label>
+  {/each}
+  <label class="flex flex-col gap-1 text-ui">
+    <span>Page numbers</span>
+    <Select size="sm" class="w-full" aria-label="Page numbers" value={numbers} options={NUMBER_OPTIONS} onchange={(event) => set_numbers(event.currentTarget.value)} />
+  </label>
+  <div class="grid grid-cols-2 gap-1">
+    <Button size="sm" disabled={!in_zone} title="Typed as {PAGE_TOKEN}; each page shows its own number" onpointerdown={keep_focus} onclick={() => editor.insert_token(PAGE_TOKEN)}>Page number</Button>
+    <Button size="sm" disabled={!in_zone} title="Typed as {PAGES_TOKEN}; shows how many pages there are" onpointerdown={keep_focus} onclick={() => editor.insert_token(PAGES_TOKEN)}>Page count</Button>
+  </div>
+  {#if !in_zone}<p class="-mt-1 text-2xs text-foreground/65">Click into a header or footer to add page fields there.</p>{/if}
   <Segmented size="sm" label="Page flow" options={FLOW_OPTIONS} bind:value={() => editor.page.flow, (flow: Flow) => editor.set_page({ flow })} />
   <Button size="sm" onpointerdown={keep_focus} onclick={() => editor.insert_page_break()}><ScissorsIcon weight="bold" />Insert page break</Button>
+{/snippet}
+
+{#snippet picture_group()}
+  <Button size="sm" disabled={editor.adding > 0} onpointerdown={keep_focus} onclick={onpicture}>
+    {#if editor.adding}<Spinner label="Adding the picture" />{:else}<ImageIcon weight="bold" />{/if}Insert picture…
+  </Button>
+  {#if editor.image}
+    {@const image = editor.image}
+    <div class="flex items-center justify-between gap-2 text-ui">
+      <span>Width</span>
+      <span class="font-mono text-2xs text-foreground/65 tabular-nums">{image.width}%</span>
+    </div>
+    <div class="grid grid-cols-4 gap-1" role="group" aria-label="Picture width">
+      {#each WIDTH_PRESETS as width (width)}
+        <Button size="sm" variant="quiet" pressed={image.width === width} onpointerdown={keep_focus} onclick={() => editor.update_image({ width })}>{width}%</Button>
+      {/each}
+    </div>
+    <div class="grid grid-cols-3 gap-1" role="group" aria-label="Picture alignment">
+      {#each PICTURE_ALIGN_BUTTONS as item (item.value)}
+        <IconButton label={item.label} class="w-full" pressed={image.align === item.value} onpointerdown={keep_focus} onclick={() => editor.update_image({ align: item.value })}><item.icon weight="bold" /></IconButton>
+      {/each}
+    </div>
+    <label class="flex flex-col gap-1 text-ui">
+      <span>Description <span class="text-2xs text-foreground/65">for screen readers and Word</span></span>
+      <Input size="sm" placeholder="What the picture shows" value={image.alt} onchange={(event) => editor.update_image({ alt: event.currentTarget.value.trim() })} />
+    </label>
+    <Button size="sm" variant="quiet" onpointerdown={keep_focus} onclick={() => editor.remove_image()}><TrashIcon weight="bold" />Remove picture</Button>
+  {:else}
+    <p class="text-2xs text-foreground/65">Paste or drop pictures onto the page too. Click one to size, align or describe it.</p>
+  {/if}
 {/snippet}
 
 {#snippet words_group()}
@@ -359,6 +529,7 @@
 <div class="flex flex-col">
   {@render group("text", "Text", text_group)}
   {@render group("paragraph", "Paragraph", paragraph_group)}
+  {@render group("picture", "Picture", picture_group)}
   {@render group("page", "Page", page_group)}
   {@render group("words", "Words", words_group)}
   {@render group("export", "Export", export_group)}

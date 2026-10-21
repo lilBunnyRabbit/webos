@@ -5,11 +5,17 @@
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_extension, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
+  import { error_message, format_bytes } from "$lib/core/utils";
+  import { pick_device_files } from "$lib/core/utils/device-file";
   import { print_html } from "$lib/core/utils/print";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
+    Camera as CameraIcon,
+    Devices as DevicesIcon,
+    Image as ImageIcon,
+    Stack as StackIcon,
+    StackPlus as StackPlusIcon,
     CaretDown as CaretDownIcon,
     DotsThree as DotsThreeIcon,
     FileDoc as FileDocIcon,
@@ -28,12 +34,15 @@
   import { z } from "zod";
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
   import { build_docx, DOCX_TYPE, font_name } from "./docx";
-  import { BlockStyle, LIST_STYLES, WarrenEditor } from "./editor.svelte";
-  import { EXTENSION, serialize_document } from "./format";
+  import { BlockStyle, LIST_STYLES, WarrenEditor, Zone, type Margin } from "./editor.svelte";
+  import { EXTENSION, serialize_document, type WarrenDocument } from "./format";
   import { document_file_name, font_sources, read_document, read_file, stem_of, with_extension, write_file } from "./io";
-  import { document_text } from "./model";
-  import { Flow, PAGE_MM } from "./page";
-  import { BODY_FAMILY, document_css, print_document } from "./print";
+  import { document_text, picture_size } from "./model";
+  import { Flow, geometry, ZONE_GAP_MM, zone_distance } from "./page";
+  import { BODY_FAMILY, document_css } from "./print";
+  import { printable } from "./print-layout";
+  import { TEMPLATES_DIR, type Template } from "./templates";
+  import WarrenTemplates from "./warren-templates.svelte";
   import { fill_sheets } from "./sheets";
   import WarrenFind from "./warren-find.svelte";
   import WarrenLink from "./warren-link.svelte";
@@ -57,9 +66,28 @@
 
   const smart = storage.persisted<boolean>("smart", true, z.boolean());
 
+  const units = storage.persisted<"mm" | "in">("units", "mm", z.enum(["mm", "in"]));
+
+  // Past this the .warren file is slow to open and save, and a phone may run short of memory.
+  const LARGE_PICTURES = 5 * 1024 * 1024;
+  let warned_large = false;
+
   const editor = new WarrenEditor(
     (error) => report_error(app_id, "Something went wrong in the editor", error),
-    () => smart.value
+    () => smart.value,
+    {
+      failed: (reason) => report_error(app_id, "Couldn't add the picture", reason),
+      added: () => {
+        const size = picture_size(editor.snapshot());
+        if (size < LARGE_PICTURES || warned_large) return;
+        warned_large = true;
+        notifications.notify(app_id, {
+          type: NotificationType.WARNING,
+          title: "This document is getting large",
+          message: `Its pictures take ${format_bytes(size)}, so saving and opening slow down. Fewer or smaller pictures keep it quick.`,
+        });
+      },
+    }
   );
 
   let file_path = $state<string | null>(null);
@@ -77,7 +105,11 @@
   const repeats = $derived(repeated_words(text));
   const selection = $derived(editor.selected ? count(editor.selected) : null);
   const goal_progress = $derived(editor.goal ? Math.min(1, counts.words / editor.goal) : null);
-  const page = $derived(PAGE_MM[editor.page.size]);
+  const page = $derived(geometry(editor.page));
+  const has_header = $derived(editor.has(Zone.HEADER));
+  const has_footer = $derived(editor.has(Zone.FOOTER));
+  let head = $state<HTMLElement | null>(null);
+  let foot = $state<HTMLElement | null>(null);
   const sheets = $derived(editor.page.flow === Flow.SHEETS);
 
   const PAPER_VARS = Object.entries(BRAND_LIGHT)
@@ -89,7 +121,7 @@
     { value: BlockStyle.H2, label: "Heading 2" },
     { value: BlockStyle.H3, label: "Heading 3" },
   ];
-  const DOC_CSS = document_css(".warren-doc", "var(--doc-font,Inter)");
+  const DOC_CSS = document_css(".warren-doc", "var(--doc-font,Inter)") + document_css(".zone-doc", "var(--doc-font,Inter)");
   const uid = $props.id();
   const link_id = `warren-link-${uid}`;
   const link_anchor = `--warren-link-${uid}`;
@@ -230,7 +262,77 @@
     editor.reset();
     file_path = null;
     draft = null;
+    warned_large = false;
     editor.focus();
+  }
+
+  async function from_template() {
+    if (!(await discard_ok())) return;
+    const choice = await dialogs.show(WarrenTemplates, {}, { window: window_id });
+    if (!choice) return;
+    if (choice === "blank") return create();
+    let document: WarrenDocument;
+    try {
+      document = await choice.load();
+    } catch (reason) {
+      report_error(app_id, `Couldn't open the ${choice.name} template`, reason);
+      return;
+    }
+    open_request++;
+    loading = false;
+    editor.load(document);
+    file_path = null;
+    draft = { name: document_file_name(choice.name), folder: "/home/Documents" };
+    warned_large = false;
+  }
+
+  async function save_template() {
+    const path = await win.pick_save({ name: file_name, accept: [EXTENSION], start_path: TEMPLATES_DIR, title: "Save as template" });
+    if (!path) return;
+    const target = with_extension(path, EXTENSION);
+    try {
+      await write_file(target, serialize_document(editor.snapshot()));
+      notifications.notify(app_id, { title: "Saved as a template", message: `${target}. File › New from template… starts from it.` });
+    } catch (reason) {
+      report_error(app_id, "Couldn't save the template", reason);
+    }
+  }
+
+  async function picture_menu(event: MouseEvent) {
+    more = false;
+    const zone = editor.active;
+    const choice = await dialogs.menu(
+      [
+        ...(mobile ? [{ id: "camera", label: "Take a photo", icon: CameraIcon }] : []),
+        { id: "device", label: mobile ? "Choose a picture" : "From this device…", icon: DevicesIcon },
+        { id: "files", label: "From files…", icon: FolderOpenIcon },
+      ],
+      { anchor: anchor_of(event) }
+    );
+    if (!choice) return;
+    let pictures: File[] = [];
+    try {
+      if (choice === "camera") pictures = await pick_device_files({ accept: ["image/*"], capture: "environment" });
+      else if (choice === "device") pictures = await pick_device_files({ accept: ["image/*"], multiple: true });
+      else {
+        const paths = await win.pick_file({ accept: ["image/*"], multiple: true, title: "Insert pictures" });
+        for (const path of paths) pictures.push(await read_file(path));
+      }
+    } catch (reason) {
+      report_error(app_id, "Couldn't add the picture", reason);
+      return;
+    }
+    if (pictures.length) await editor.insert_pictures(pictures, zone === Zone.BODY ? editor.lexical : editor.zones[zone]);
+  }
+
+  async function set_zone(zone: Margin, on: boolean) {
+    if (!on && editor.has(zone) && !editor.zone_empty(zone)) {
+      const label = zone === Zone.HEADER ? "header" : "footer";
+      const ok = await win.confirm(`Remove the ${label}?`, { detail: `What's in it goes from every page.`, confirm_label: "Remove", danger: true });
+      if (!ok) return;
+    }
+    editor.set_zone(zone, on);
+    if (on) requestAnimationFrame(() => editor.focus(zone));
   }
 
   async function write(path: string): Promise<boolean> {
@@ -291,7 +393,7 @@
 
   async function export_pdf() {
     try {
-      await print_html(print_document(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
+      await print_html(await printable(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
     } catch (reason) {
       report_error(app_id, "Couldn't print the document", reason);
     }
@@ -321,9 +423,11 @@
     const choice = await dialogs.menu(
       [
         { id: "new", label: "New document", icon: FilePlusIcon },
+        { id: "template", label: "New from template…", icon: StackIcon },
         { id: "open", label: "Open…", icon: FolderOpenIcon, shortcut: "Mod+O" },
         { id: "save", label: "Save", icon: FloppyDiskIcon, shortcut: "Mod+S" },
         { id: "save-as", label: "Save as…", icon: FloppyDiskBackIcon, shortcut: "Mod+Shift+S" },
+        { id: "save-template", label: "Save as template…", icon: StackPlusIcon },
         { separator: true },
         { id: "docx", label: "Export for Word…", icon: FileDocIcon },
         { id: "pdf", label: "Print or save as PDF…", icon: FilePdfIcon, shortcut: "Mod+P" },
@@ -331,6 +435,8 @@
       { anchor: anchor_of(event) }
     );
     if (choice === "new") void create();
+    else if (choice === "template") void from_template();
+    else if (choice === "save-template") void save_template();
     else if (choice === "open") void open();
     else if (choice === "save") void save();
     else if (choice === "save-as") void save_as();
@@ -342,22 +448,27 @@
     return editor.mount(element);
   }
 
+  const mount_zone = (zone: Margin) => (element: HTMLElement) => editor.mount(element, zone);
+
   $effect(() => {
     const element = root;
-    if (!element) return;
+    const zones = head && foot ? { head, foot } : null;
+    if (!element || !zones) return;
     const ratio = sheets ? page.height / page.width : null;
     let frame = 0;
     const refill = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => fill_sheets(element, ratio));
+      frame = requestAnimationFrame(() => fill_sheets(element, ratio, zones));
     };
     refill();
-    const stop = editor.lexical.registerUpdateListener(refill);
+    const stops = [editor.lexical, editor.zones.header, editor.zones.footer].map((lexical) => lexical.registerUpdateListener(refill));
     const observer = new ResizeObserver(refill);
     observer.observe(element.parentElement!);
+    observer.observe(zones.head);
+    observer.observe(zones.foot);
     return () => {
       cancelAnimationFrame(frame);
-      stop();
+      for (const stop of stops) stop();
       observer.disconnect();
       fill_sheets(element, null);
     };
@@ -416,6 +527,10 @@
     smart={smart.value}
     onsmart={(on) => (smart.value = on)}
     ongo={go_to}
+    onpicture={picture_menu}
+    onzone={set_zone}
+    units={units.value}
+    onunits={(value) => (units.value = value)}
   />
 {/snippet}
 
@@ -444,7 +559,7 @@
         <IconButton label="Underline" size="sm" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
         <Select
           size="sm"
-          class="w-28 min-w-0"
+          class="w-32 min-w-0"
           aria-label="Paragraph style"
           value={LIST_STYLES.includes(editor.block) ? BlockStyle.PARAGRAPH : editor.block}
           options={STYLE_OPTIONS}
@@ -455,6 +570,7 @@
         />
         <IconButton label="Bullets" size="sm" pressed={editor.block === BlockStyle.BULLET} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.BULLET)}><ListBulletsIcon weight="bold" /></IconButton>
         <IconButton label="Numbers" size="sm" pressed={editor.block === BlockStyle.NUMBER} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.NUMBER)}><ListNumbersIcon weight="bold" /></IconButton>
+        <IconButton label="Insert picture" size="sm" disabled={editor.adding > 0} onpointerdown={keep_focus} onclick={picture_menu}><ImageIcon weight="bold" /></IconButton>
         <div class="flex-1"></div>
         <IconButton label="More tools" size="sm" onclick={() => (more = true)}><DotsThreeIcon weight="bold" /></IconButton>
       </div>
@@ -465,13 +581,20 @@
 
       <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow}>
         <div
-          class="paper"
-          style="{PAPER_VARS};--page-width:{page.width}mm;--page-margin:{page.margin}mm{body ? `;--doc-font:'${body.family}'` : ''}"
-          onclick={(event) => event.target === event.currentTarget && editor.focus()}
+          class="paper text-foreground"
+          style="{PAPER_VARS};--pw:{page.width};--ph:{page.height};--mt:{page.margins.top};--mr:{page.margins.right};--mb:{page.margins.bottom};--ml:{page.margins.left};--hd:{zone_distance(
+            page.margins.top
+          )};--fd:{zone_distance(page.margins.bottom)};--zg:{ZONE_GAP_MM}{body ? `;--doc-font:'${body.family}'` : ''}"
+          onclick={(event) => event.target === event.currentTarget && editor.focus(Zone.BODY)}
           role="presentation"
         >
+          <div class={["zone head", !has_header && "spacer"]} bind:this={head} onclick={(event) => has_header && event.target === event.currentTarget && editor.focus(Zone.HEADER)} role="presentation">
+            {#if has_header}
+              <div class="zone-doc" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Header" tabindex="0" {@attach mount_zone(Zone.HEADER)}></div>
+            {/if}
+          </div>
           <div
-            class="warren-doc text-foreground"
+            class="warren-doc"
             contenteditable="true"
             spellcheck="true"
             role="textbox"
@@ -480,6 +603,11 @@
             tabindex="0"
             {@attach mount_editor}
           ></div>
+          <div class={["zone foot", !has_footer && "spacer"]} bind:this={foot} onclick={(event) => has_footer && event.target === event.currentTarget && editor.focus(Zone.FOOTER)} role="presentation">
+            {#if has_footer}
+              <div class="zone-doc" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Footer" tabindex="0" {@attach mount_zone(Zone.FOOTER)}></div>
+            {/if}
+          </div>
         </div>
       </div>
     </div>
@@ -510,7 +638,8 @@
     <span class="hidden @sm:inline">
       {selection ? `${selection.characters.toLocaleString("en")} of ` : ""}{counts.characters.toLocaleString("en")} {counts.characters === 1 && !selection ? "character" : "characters"}
     </span>
-    <span class="hidden @lg:inline">{editor.page.size}</span>
+    {#if editor.active !== Zone.BODY}<span class="text-primary">Editing the {editor.active}</span>{/if}
+    <span class="hidden @lg:inline">{editor.page.size}{editor.page.orientation === "landscape" ? " landscape" : ""}</span>
   </StatusBar>
 
   {#if more}
@@ -571,14 +700,86 @@
     padding: 1.5rem 0.75rem 3rem;
   }
 
+  /* Margins scale with the paper (cqi inside it is the paper's width), so a narrow window shows the same page smaller. */
   .paper {
     --link: var(--primary);
-    width: min(var(--page-width), 100cqi - 1.5rem);
+    --pl: calc(var(--ml) / var(--pw) * 100cqi);
+    --pr: calc(var(--mr) / var(--pw) * 100cqi);
+    --pt: calc(var(--mt) / var(--pw) * 100cqi);
+    --pb: calc(var(--mb) / var(--pw) * 100cqi);
+    --phd: calc(var(--hd) / var(--pw) * 100cqi);
+    --pfd: calc(var(--fd) / var(--pw) * 100cqi);
+    --gap: calc(var(--zg) / var(--pw) * 100cqi);
+    container: paper / inline-size;
+    width: min(var(--pw) * 1mm, 100cqi - 1.5rem);
     margin: 0 auto;
-    padding: min(var(--page-margin), 7cqi);
     background: var(--background-lightest);
     box-shadow: 0 1px 3px color-mix(in oklch, var(--background-darkest) 30%, transparent);
     cursor: text;
+  }
+
+  /* On a phone-sized desk the side margins give way to the text, as before page setup existed. */
+  @container (width < 40rem) {
+    .paper {
+      --pl: min(calc(var(--ml) / var(--pw) * 100cqi), 7cqi);
+      --pr: min(calc(var(--mr) / var(--pw) * 100cqi), 7cqi);
+    }
+  }
+
+  .paper :global(.zone) {
+    box-sizing: border-box;
+    padding-inline: var(--pl) var(--pr);
+  }
+
+  .paper :global(.zone.head) {
+    min-height: var(--pt);
+    padding-top: var(--phd);
+    padding-bottom: var(--gap);
+  }
+
+  .paper :global(.zone.foot) {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: var(--pb);
+    padding-top: var(--gap);
+    padding-bottom: var(--pfd);
+  }
+
+  .paper :global(.zone.spacer) {
+    padding-block: 0;
+  }
+
+  .paper :global(.zone-doc) {
+    position: relative;
+    min-height: 1lh;
+    outline: none;
+    caret-color: var(--primary);
+  }
+
+  .paper :global(.zone-doc > :last-child) {
+    margin-bottom: 0;
+  }
+
+  .zone-doc {
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px transparent;
+  }
+
+  .zone-doc:hover,
+  .zone-doc:focus {
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent);
+  }
+
+  .zone-doc:has(> :global(p:only-child > br:only-child))::before {
+    content: attr(aria-label);
+    position: absolute;
+    color: color-mix(in oklch, var(--foreground) 40%, transparent);
+    pointer-events: none;
+  }
+
+  .paper :global(.zone.copy) {
+    cursor: default;
   }
 
   .desk[data-flow="continuous"] {
@@ -594,6 +795,7 @@
   .warren-doc {
     position: relative;
     min-height: 1lh;
+    padding-inline: var(--pl) var(--pr);
     padding-bottom: var(--tail, 0px);
     outline: none;
     caret-color: var(--primary);
@@ -613,21 +815,18 @@
 
   .warren-doc :global(.page-break) {
     position: relative;
-    margin-inline: calc(-1 * min(var(--page-margin), 7cqi));
+    margin-inline: calc(-1 * var(--pl)) calc(-1 * var(--pr));
     user-select: none;
   }
 
   .desk[data-flow="sheets"] .warren-doc :global(.page-break) {
-    --edge: min(var(--page-margin), 7cqi);
-    box-sizing: content-box;
-    height: calc(2 * var(--edge) + 1.5rem);
+    display: flow-root;
     padding-top: var(--fill, 0px);
-    background: linear-gradient(
-      to bottom,
-      transparent calc(var(--fill, 0px) + var(--edge)),
-      var(--desk) 0 calc(var(--fill, 0px) + var(--edge) + 1.5rem),
-      transparent 0
-    );
+  }
+
+  .warren-doc :global(.page-break .desk-gap) {
+    height: 1.5rem;
+    background: var(--desk);
   }
 
   .desk[data-flow="continuous"] .warren-doc :global(.page-break) {
@@ -651,6 +850,62 @@
   .warren-doc :global(.page-break:focus),
   .warren-doc :global(.wr-rule.selected) {
     outline: 2px solid var(--cottontail);
+  }
+
+  .paper :global(.wr-image) {
+    margin: 0 0 6pt;
+    line-height: 0;
+    user-select: none;
+  }
+
+  .paper :global(.wr-image[data-align="center"]) {
+    text-align: center;
+  }
+
+  .paper :global(.wr-image[data-align="right"]) {
+    text-align: right;
+  }
+
+  .paper :global(.wr-image-frame) {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    cursor: default;
+  }
+
+  .paper :global(.wr-image img) {
+    width: 100%;
+    height: auto;
+  }
+
+  .paper :global(.wr-image.selected .wr-image-frame) {
+    outline: 2px solid var(--cottontail);
+  }
+
+  .paper :global(.wr-image-handle) {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    display: none;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--background-lightest);
+    border-radius: 2px;
+    background: var(--cottontail);
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+
+  .paper :global(.wr-image[data-align="right"] .wr-image-handle) {
+    right: auto;
+    left: -6px;
+    cursor: nesw-resize;
+  }
+
+  @media (pointer: fine) {
+    .paper :global(.wr-image.selected .wr-image-handle) {
+      display: block;
+    }
   }
 
   .warren-doc :global(.wr-rule) {

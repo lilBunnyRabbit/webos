@@ -62,7 +62,8 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 ├ home/          the user's space; File Explorer opens here
 │ ├ Desktop/
 │ ├ Documents/
-│ └ Downloads/
+│ ├ Downloads/
+│ └ Templates/   documents to start new ones from (Warren's "Save as template")
 ├ etc/           OS config: hierarchy.json (migration marker), settings.json (SettingsService)
 ├ var/
 │ └ lib/         OS component state, one folder each: desktop/ (layout.json, home-layout.json,
@@ -76,7 +77,7 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 
 | Export | What |
 |--------|------|
-| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `etc`, `var`, `var_lib`, `tmp`, `mnt` → the paths above |
+| `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `templates`, `etc`, `var`, `var_lib`, `tmp`, `mnt` → the paths above |
 | `SYSTEM_DIRECTORIES` | `["/etc", "/var", "/tmp"]`, the OS-owned top-level folders |
 | `is_system_path(path)` | `true` for a system directory or anything under one. Plain string prefix check, so pass a normalised path |
 | `is_read_only_path(path)` | `is_system_path`, or `/mnt` itself: nothing is created there, its entries are mounts. Explorer's New folder and Upload, drops, the picker's Save and the shell's writes check it |
@@ -88,7 +89,7 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 
 1. Creates `/home`, `/etc`, `/var/lib` (and `/var` on the way), `/tmp`, `/mnt` if missing, in parallel.
 2. If `/etc/hierarchy.json` doesn't exist, migrates the old flat root: every root entry except a **directory** named `home`, `etc`, `var`, `tmp` or `mnt` moves into `/home`, auto-renamed on a clash (`available_name`). Files use `move_file`, folders `move_directory`. Then it writes the marker, `{"version":1}`. The marker goes last, so a migration interrupted mid-way runs again on the next boot and picks up whatever is still at the root.
-3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
+3. Creates `/home/Desktop`, `/home/Documents`, `/home/Downloads`, `/home/Templates` if missing. This runs after the migration on purpose: a user's own root `Documents` folder becomes `/home/Documents` instead of `Documents (1)`.
 4. Empties `/tmp` (every entry, recursively). Steps 3 and 4 run in parallel, and so do the `/tmp` removals.
 
 Nothing protects the system folders. They're ordinary OPFS directories, and File Explorer can delete them like any other folder. Whatever is missing gets recreated on the next boot. Deleting the marker re-runs the migration, which is harmless once the root holds only the four top-level folders.
@@ -165,7 +166,7 @@ Many entries renamed by one pattern ([brainstorm](../../brainstorm/2026-10-17_ap
 
 `changed(directory)` is public on the class but not on the interface. It's the internal hook DirectoryHandler calls after a mutation. See [Revisions](#revisions).
 
-`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `keep_unchanged`, `move_directory`, `hold_writes`, `can_pick_folders`, `pick_disk_folder` (Explorer's Upload a folder), `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`; DesktopService, Web App's store, Image Tools' poster section and the Image Editor, Image Tools, QR Studio and PDF Tools `shell.ts` import `available_name`. `PATHS` is imported widely: the file components, the desktop components, the OS services' persistence files, the shell session, and apps that write to a default folder (Forms, Recipe Box, Algorithms, API Client, P2P Transfer, Brackets, Settings › Theme, Getting started). `is_read_only_path` is checked by `file-list.svelte`, `file-list.handler.svelte.ts`, `file-explorer-navigation.svelte`, the picker footer and `files/shell.ts`; `is_system_path` by `files/shell.ts` and the Save as of Text Editor, Paint, Image Editor, Markdown PDF, Diff, Forms, Algorithms, API Client, Hopsprite, Font Maker and Funky; `is_locked_path` by `file-list.svelte` and `files/shell-run.ts`.
+`opfs.ts` also exports functions the service doesn't wrap: `get_directory_handle`, `get_file_handle` (both take `{ create }`, the only exact-name open-or-create path), `get_file_at`, `get_directory_at`, `read_file_as_text`, `read_file_as_array_buffer`, `read_file_as_blob`, `available_name`, `default_sort`, `keep_unchanged`, `move_directory`, `hold_writes`, `can_pick_folders`, `pick_disk_folder` (Explorer's Upload a folder), `clear_opfs`. Outside the service, `hierarchy.ts` uses `available_name`, `list_directory`, `move_file` and `move_directory`; DesktopService, Web App's store, Image Tools' poster section and the Image Editor, Image Tools, QR Studio and PDF Tools `shell.ts` import `available_name`. `PATHS` is imported widely: the file components, the desktop components, the OS services' persistence files, the shell session, and apps that write to a default folder (Forms, Recipe Box, Algorithms, API Client, P2P Transfer, Brackets, Settings › Theme, Getting started, Warren's templates). `is_read_only_path` is checked by `file-list.svelte`, `file-list.handler.svelte.ts`, `file-explorer-navigation.svelte`, the picker footer and `files/shell.ts`; `is_system_path` by `files/shell.ts` and the Save as of Text Editor, Paint, Image Editor, Markdown PDF, Diff, Forms, Algorithms, API Client, Hopsprite, Font Maker and Funky; `is_locked_path` by `file-list.svelte` and `files/shell-run.ts`.
 
 ## DirectoryHandler
 
@@ -448,7 +449,7 @@ The `$effect` reads `handler.items`, so it re-fetches the storage estimate on ev
 - ADR-005 §5 lists `move_file(...): Promise<void>`. The code returns the moved handle. The 2026-10-10 revision note records this, so it's only the body that's stale.
 - ADR-005 §6 types `FileSystemItem` as a base interface with `kind: "file" | "directory"`. The code uses a discriminated union, which is better and matches CONVENTIONS.
 - ADR-005 §9 specifies `confirm()`/`prompt()`. Superseded by ADR-025: the explorer uses window sheets.
-- ADR-021 §2 triggers the migration when `/home` doesn't exist and creates every `PATHS` folder before it. The code creates the four top-level folders first, keys the migration on the `/etc/hierarchy.json` marker (so an interrupted migration resumes), and creates `Desktop`/`Documents`/`Downloads` after it (so a user's own `Documents` merges in by name).
+- ADR-021 §2 triggers the migration when `/home` doesn't exist and creates every `PATHS` folder before it. The code creates the four top-level folders first, keys the migration on the `/etc/hierarchy.json` marker (so an interrupted migration resumes), and creates `Desktop`/`Documents`/`Downloads`/`Templates` after it (so a user's own `Documents` merges in by name). `Templates` isn't in ADR-021's list: it was added for Warren's templates (ADR-021 revision 2026-10-22).
 - ADR-044 puts "This device…" and "Folder on disk…" in the picker's Places list. Places shows only at `@3xl` (48rem) and the picker sheet is at most 46rem wide, so they sit in the picker footer instead.
 - ADR-021 §4 says a revision is `0` "until something under `path` changes". The code bumps only the directory a mutation touched, not its ancestors, so it's "in `path`", not "under".
 - [CONVENTIONS](../../CONVENTIONS.md#services) says `index.ts` exports types only and that only `init.ts` imports service classes. `type.ts` imports `DirectoryHandler` from the implementation file, so `FilesService.directory()` returns the concrete class, and `DirectoryHandler.service` is the concrete `FilesService`, not the interface. The UI components import the type from `service.svelte` directly. Swapping the files service (ADR-016) would have to keep this exact class.

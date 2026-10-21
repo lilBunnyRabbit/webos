@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { entry_blob, read_zip } from "$lib/core/utils/zip/read";
 import { build_docx, docx_parts, document_xml, escape_xml, numbering_xml } from "./docx";
-import { SAMPLE, SAMPLE_V3 } from "./fixture";
+import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4 } from "./fixture";
 import { face_css, font_format } from "./fonts";
-import { BODY_FAMILY, body_html, print_document } from "./print";
+import { BODY_FAMILY, body_html, print_document, zone_padding } from "./print";
 
 describe("docx", () => {
   it("packs every part a Word file needs", async () => {
@@ -72,7 +72,7 @@ describe("docx", () => {
 describe("print", () => {
   it("lays the document out for the printer with its page size and breaks", () => {
     const html = print_document(SAMPLE, "CV", "/inter.woff2");
-    expect(html).toContain("@page{size:letter portrait;margin:20mm}");
+    expect(html).toContain("@page{size:letter portrait;margin:20mm 20mm 20mm 20mm}");
     expect(body_html(SAMPLE)).toContain(`<h1 style="text-align:center">Jane &amp; Co &lt;CV&gt;</h1>`);
     expect(body_html(SAMPLE)).toContain(`<strong>very</strong><em><span style="font-size:14pt"> fast</span></em><br>`);
     expect(body_html(SAMPLE)).toContain(`<ol><li>One</li><li class="nested"><ul><li>Nested</li></ul></li><li style="text-align:right">Two</li></ol><div class="break"></div>`);
@@ -92,8 +92,62 @@ describe("print", () => {
     const bytes = new Uint8Array([0, 1, 0, 0, 1, 2, 3]);
     const css = face_css(BODY_FAMILY, [{ bytes, descriptors: { weight: "300 700", style: "italic" } }]);
     expect(css).toBe(`@font-face{font-family:"warren-body";src:url(data:font/ttf;base64,AAEAAAECAw==) format("truetype");font-weight:300 700;font-style:italic}`);
-    expect(print_document(SAMPLE, "CV", "/inter.woff2", css)).toContain(`${css}@page`);
+    expect(print_document(SAMPLE, "CV", "/inter.woff2", css)).toContain(`${css}html,body`);
     expect(print_document(SAMPLE, "CV", "/inter.woff2", css)).toContain(`font-family:"warren-body",Inter`);
     expect(font_format(new TextEncoder().encode("wOF2xxxx"))).toEqual({ mime: "font/woff2", format: "woff2" });
+  });
+});
+
+describe("format 4 exports", () => {
+  const media = new Map([[PIXEL, { file: "image1.png", width: 200, height: 100 }]]);
+
+  it("writes the header and footer as their own parts, with page fields", () => {
+    const parts = docx_parts(SAMPLE_V4, "Report", new Date(0), media);
+    expect(Object.keys(parts)).toEqual(expect.arrayContaining(["word/header1.xml", "word/footer1.xml", "word/_rels/header1.xml.rels"]));
+    expect(parts["word/_rels/footer1.xml.rels"]).toBeUndefined();
+    expect(parts["word/footer1.xml"]).toContain(`<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>`);
+    expect(parts["word/footer1.xml"]).toContain(`<w:fldSimple w:instr=" NUMPAGES ">`);
+    expect(parts["word/footer1.xml"]).toMatch(/^<\?xml[^>]*\?>\n<w:ftr /);
+    expect(parts["word/header1.xml"]).toContain(`<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Jane Doe</w:t></w:r>`);
+    expect(parts["word/_rels/document.xml.rels"]).toContain(`Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"`);
+    expect(parts["[Content_Types].xml"]).toContain(`<Default Extension="png" ContentType="image/png"/>`);
+    expect(parts["[Content_Types].xml"]).toContain(`PartName="/word/footer1.xml"`);
+  });
+
+  it("orders the section as the schema wants, turned and with its margins", () => {
+    const xml = document_xml(SAMPLE_V4, media);
+    const section = xml.slice(xml.indexOf("<w:sectPr>"));
+    const order = ["<w:headerReference", "<w:footerReference", "<w:pgSz", "<w:pgMar"].map((tag) => section.indexOf(tag));
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(section).toContain(`<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>`);
+    expect(section).toContain(`<w:pgMar w:top="1417" w:right="850" w:bottom="1701" w:left="850" w:header="709" w:footer="709" w:gutter="0"/>`);
+  });
+
+  it("puts pictures in as inline drawings sized to the column", () => {
+    const xml = document_xml(SAMPLE_V4, media);
+    const cx = Math.round(267 * 36000 * 0.4);
+    expect(xml).toContain(`<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cx / 2}"/>`);
+    expect(xml).toContain(`<a:blip r:embed="rIdImg1"/>`);
+    expect(xml).toContain(`descr="Logo"`);
+    const header = docx_parts(SAMPLE_V4, "Report", new Date(0), media)["word/header1.xml"];
+    expect(header).toContain(`<wp:docPr id="2" name="Picture 2" descr="Mark"/>`);
+  });
+
+  it("prints a header and footer on each page with its number", () => {
+    const html = print_document(SAMPLE_V4, "Report", "/inter.woff2", "", { pages: 2, top: 30, bottom: 35 });
+    expect(html).toContain("@page{size:A4 landscape;margin:0}");
+    expect(html).toContain(".doc{padding:30mm 15mm 35mm 15mm;");
+    expect(html).toContain(`<div class="zone head" style="top:222.5mm">`);
+    expect(html).toContain(`Page 2 of 2`);
+    expect(html).toContain("Jane Doe</strong> · 1</p>");
+    expect(html).toContain(`<img src="${PIXEL}" alt="Logo" style="width:40%">`);
+    expect(html).toContain(`img-src data:`);
+    expect(print_document(SAMPLE_V4, "Report", "/inter.woff2", "", "measure")).toContain(`<html lang="en" class="measure">`);
+  });
+
+  it("pushes the body down when a header is taller than its margin leaves room for", () => {
+    expect(zone_padding(SAMPLE_V4, 5, 5)).toEqual({ top: 25, bottom: 30 });
+    expect(zone_padding(SAMPLE_V4, 20, 5)).toEqual({ top: 12.5 + 20 + 4, bottom: 30 });
   });
 });

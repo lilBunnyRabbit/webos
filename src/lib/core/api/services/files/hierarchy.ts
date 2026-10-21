@@ -7,6 +7,8 @@ export const PATHS = {
   desktop: "/home/Desktop",
   documents: "/home/Documents",
   downloads: "/home/Downloads",
+  /** Documents to start new ones from (Warren's "Save as template"). */
+  templates: "/home/Templates",
   etc: "/etc",
   var: "/var",
   /** Persistent state owned by OS components, one folder each (`/var/lib/desktop`). */
@@ -109,6 +111,7 @@ export async function ensure_hierarchy(root: FileSystemDirectoryHandle): Promise
     ensure_directory(root, PATHS.desktop),
     ensure_directory(root, PATHS.documents),
     ensure_directory(root, PATHS.downloads),
+    ensure_directory(root, PATHS.templates),
     empty_directory(tmp),
   ]);
 }

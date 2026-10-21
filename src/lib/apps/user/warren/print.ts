@@ -1,11 +1,29 @@
 import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
 import { escape_html } from "$lib/core/utils";
-import type { DocNode, WarrenDocument } from "./format";
-import { align_of, BOLD, font_size, ITALIC, LINK_TYPES, PAGE_BREAK, RULE, safe_url, STRIKETHROUGH, SUBSCRIPT, SUPERSCRIPT, UNDERLINE } from "./model";
-import { BASE_PT, HEADING_PT, LINE_HEIGHT, PAGE_MM, PageSize, PARAGRAPH_AFTER_PT } from "./page";
+import type { DocNode, EditorJson, WarrenDocument } from "./format";
+import {
+  align_of,
+  BOLD,
+  fill_tokens,
+  font_size,
+  IMAGE,
+  image_align,
+  image_width,
+  ITALIC,
+  LINK_TYPES,
+  PAGE_BREAK,
+  RULE,
+  safe_image,
+  safe_url,
+  STRIKETHROUGH,
+  SUBSCRIPT,
+  SUPERSCRIPT,
+  UNDERLINE,
+} from "./model";
+import { BASE_PT, geometry, HEADING_PT, LINE_HEIGHT, Orientation, PageSize, PARAGRAPH_AFTER_PT, ZONE_GAP_MM, zone_distance } from "./page";
 
 const CSS_SIZE: Record<PageSize, string> = { A4: "A4", Letter: "letter", A5: "A5" };
-const CSP = `default-src 'none'; style-src 'unsafe-inline'; font-src 'self' data: blob:`;
+const CSP = `default-src 'none'; style-src 'unsafe-inline'; font-src 'self' data: blob:; img-src data:`;
 
 // Shared with the editor, so what prints is what was typed.
 export const BODY_FAMILY = "warren-body";
@@ -97,11 +115,18 @@ function list_html(node: DocNode): string {
   return check ? `<ul class="${CHECK_CLASS.list}">${items}</ul>` : `<ul>${items}</ul>`;
 }
 
-export function body_html(document: WarrenDocument): string {
-  return document.editor.root.children
+function image_html(node: DocNode): string {
+  const src = safe_image(node.src);
+  if (!src) return "";
+  return `<div class="picture" style="text-align:${image_align(node.align)}"><img src="${src}" alt="${escape_html(node.alt ?? "")}" style="width:${image_width(node.width)}%"></div>`;
+}
+
+export function blocks_html(editor: EditorJson): string {
+  return editor.root.children
     .map((node) => {
       if (node.type === PAGE_BREAK) return `<div class="break"></div>`;
       if (node.type === RULE) return "<hr>";
+      if (node.type === IMAGE) return image_html(node);
       if (node.type === "list") return list_html(node);
       if (node.type === "heading") {
         const level = Math.min(Math.max(Number(node.tag?.slice(1)) || 3, 1), 3);
@@ -112,18 +137,82 @@ export function body_html(document: WarrenDocument): string {
     .join("");
 }
 
-/** `body_faces` is the document font's `@font-face` rules for `BODY_FAMILY`; without it the page is set in Inter. */
-export function print_document(document: WarrenDocument, title: string, inter_url: string, body_faces = ""): string {
-  const page = PAGE_MM[document.page.size];
-  const style =
+export function body_html(document: WarrenDocument): string {
+  return blocks_html(document.editor);
+}
+
+/** Where the body starts and ends on every page (mm), and how many pages there are, measured before printing. */
+export interface PrintLayout {
+  pages: number;
+  top: number;
+  bottom: number;
+}
+
+export function has_zones(document: WarrenDocument): boolean {
+  return !!(document.header || document.footer);
+}
+
+/** The body's top and bottom padding when a header or footer of the given height (mm) sits in the margin. */
+export function zone_padding(document: WarrenDocument, header: number, footer: number): { top: number; bottom: number } {
+  const { margins } = geometry(document.page);
+  const reach = (margin: number, height: number) => (height > 0 ? Math.max(margin, zone_distance(margin) + height + ZONE_GAP_MM) : margin);
+  return { top: reach(margins.top, document.header ? header : 0), bottom: reach(margins.bottom, document.footer ? footer : 0) };
+}
+
+const round = (mm: number) => Math.round(mm * 100) / 100;
+
+/**
+ * The printable page. Without a header or footer the body sits in `@page` margins. With one, Chrome can print page
+ * numbers only in `@page` margin boxes, which hold plain text, so the page has no margins: the body's padding repeats
+ * on every page (`box-decoration-break: clone`) and each page gets its own header and footer, absolutely placed, with
+ * its numbers filled in. That needs the page count and the zones' heights first: `layout` comes from `measure_layout`
+ * over this same page printed with `"measure"`, which lays the body out in page-tall columns instead.
+ * `body_faces` is the document font's `@font-face` rules for `BODY_FAMILY`; without it the page is set in Inter.
+ */
+export function print_document(document: WarrenDocument, title: string, inter_url: string, body_faces = "", layout: PrintLayout | "measure" | null = null): string {
+  const page = geometry(document.page);
+  const { margins } = page;
+  const orientation = document.page.orientation === Orientation.LANDSCAPE ? "landscape" : "portrait";
+  const family = body_faces ? `"${BODY_FAMILY}"` : "Inter";
+  const zones = has_zones(document);
+  const padding = layout && layout !== "measure" ? layout : { pages: 1, top: margins.top, bottom: margins.bottom };
+  let style =
     `@font-face{font-family:Inter;src:url("${inter_url}") format("woff2");font-weight:100 900}` +
     body_faces +
-    `@page{size:${CSS_SIZE[document.page.size]} portrait;margin:${page.margin}mm}` +
     `html,body{--link:${BRAND_LIGHT.primary};--background-lightest:${BRAND_LIGHT.background_lightest};margin:0;padding:0;background:none;color:${BRAND_LIGHT.foreground};-webkit-print-color-adjust:exact;print-color-adjust:exact}` +
     `.break{break-before:page;height:0}` +
-    document_css(".doc", body_faces ? `"${BODY_FAMILY}"` : "Inter");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+    `.picture{margin:0 0 ${PARAGRAPH_AFTER_PT}pt;break-inside:avoid}.picture img{max-width:100%;height:auto;vertical-align:top}` +
+    document_css(".doc", family);
+  let zones_html = "";
+  if (!zones) {
+    style += `@page{size:${CSS_SIZE[document.page.size]} ${orientation};margin:${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm}`;
+  } else {
+    style +=
+      `@page{size:${CSS_SIZE[document.page.size]} ${orientation};margin:0}` +
+      `body{position:relative}` +
+      `.doc{padding:${round(padding.top)}mm ${margins.right}mm ${round(padding.bottom)}mm ${margins.left}mm;-webkit-box-decoration-break:clone;box-decoration-break:clone}` +
+      `.zone{position:absolute;left:${margins.left}mm;right:${margins.right}mm}.zone>:last-child{margin-bottom:0}` +
+      document_css(".zone", family) +
+      `html.measure .zone{position:static;margin:0 ${margins.right}mm 0 ${margins.left}mm}` +
+      `html.paginate .zone{display:none}html.paginate main{columns:1;column-gap:0;column-fill:auto;width:${page.width}mm;height:${page.height}mm}` +
+      `html.paginate .break{break-before:column}`;
+    const head = document.header ? blocks_html(document.header) : "";
+    const foot = document.footer ? blocks_html(document.footer) : "";
+    if (layout === "measure") {
+      zones_html = `${head ? `<div class="zone head">${fill_tokens(head, 88, 88)}</div>` : ""}${foot ? `<div class="zone foot">${fill_tokens(foot, 88, 88)}</div>` : ""}`;
+    } else {
+      for (let index = 0; index < padding.pages; index++) {
+        const number = index + 1;
+        if (head) zones_html += `<div class="zone head" style="top:${round(index * page.height + zone_distance(margins.top))}mm">${fill_tokens(head, number, padding.pages)}</div>`;
+        if (foot) {
+          zones_html += `<div class="zone foot" style="top:${round((index + 1) * page.height - zone_distance(margins.bottom))}mm;translate:0 -100%">${fill_tokens(foot, number, padding.pages)}</div>`;
+        }
+      }
+    }
+  }
+  return `<!doctype html><html lang="en"${layout === "measure" ? ` class="measure"` : ""}><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <title>${escape_html(title)}</title>
-<style>${style}</style></head><body><main class="doc">${body_html(document)}</main></body></html>`;
+<style>${style}</style></head><body>${zones_html}<main><div class="doc">${body_html(document)}</div></main></body></html>`;
 }
+

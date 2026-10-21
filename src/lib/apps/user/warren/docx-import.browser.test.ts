@@ -37,17 +37,17 @@ describe("docx import", () => {
     editor.destroy();
   });
 
-  it("reads a Word-shaped file and says what it left out", async () => {
+  it("reads a Word-shaped file, keeps its picture and says what it left out", async () => {
     const { html, left_out: dropped } = await docx_to_html(await word_like_docx());
     expect(html).toContain("<h1>Jane Doe</h1><h1>Experience</h1>");
     expect(html).toContain("Led a <strong>small</strong> team, <em>on time</em> and <u>on budget</u>.");
     expect(html).toContain("<ul><li>Shipped the app</li><li>Hired three people</li></ul>");
     expect(html).toContain(`<a href="https://example.com/jane">my site</a>`);
-    expect(dropped).toEqual(["1 picture", "1 table (the text is kept)"]);
+    expect(dropped).toEqual(["1 table (the text is kept)"]);
 
     const editor = editor_from(html);
     const blocks = blocks_of(editor.json);
-    expect(blocks.map((block) => block.kind)).toEqual(["heading", "heading", "paragraph", "item", "item", "paragraph", "paragraph", "paragraph", "page-break", "heading"]);
+    expect(blocks.map((block) => block.kind)).toEqual(["heading", "heading", "paragraph", "item", "item", "paragraph", "image", "paragraph", "paragraph", "page-break", "heading"]);
     const runs = blocks[2].kind === "paragraph" ? blocks[2].runs : [];
     expect(runs.map((run) => [run.text, run.bold, run.italic, run.underline])).toEqual([
       ["Led a ", false, false, false],

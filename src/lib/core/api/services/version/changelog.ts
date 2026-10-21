@@ -5,6 +5,28 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.46.0",
+    date: "2026-10-22",
+    title: "Warren writes CVs",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren can start a document from a template, a CV, cover letter, letter or report, and save your own documents as templates in the new Templates folder.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren takes pictures: paste, drop, pick or snap one, then size, align and describe it, and it goes along into Word and PDF, and comes in with Word files you open.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren's page setup has margins, landscape pages, page numbers and headers and footers with their own formatting, a logo and page fields, on every page and in every export.",
+      },
+    ],
+  },
+  {
     version: "3.45.0",
     date: "2026-10-21",
     title: "A tidier sound editor",

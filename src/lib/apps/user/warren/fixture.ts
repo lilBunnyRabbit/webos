@@ -39,3 +39,24 @@ export const SAMPLE_V3: WarrenDocument = {
     ]) as WarrenDocument["editor"]["root"],
   },
 };
+
+export const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+export const SAMPLE_V4: WarrenDocument = {
+  version: VERSION,
+  page: { size: "A4", flow: "sheets", orientation: "landscape", margins: { top: 25, right: 15, bottom: 30, left: 15 } },
+  header: {
+    root: block("root", [
+      { type: "image", version: 1, src: PIXEL, width: 20, align: "left", alt: "Mark" } as DocNode,
+      block("paragraph", [text("Jane Doe", 1), text(" · {page}")], { format: "right" }),
+    ]) as WarrenDocument["editor"]["root"],
+  },
+  footer: { root: block("root", [block("paragraph", [text("Page {page} of {pages}")], { format: "center" })]) as WarrenDocument["editor"]["root"] },
+  editor: {
+    root: block("root", [
+      block("heading", [text("Report")], { tag: "h1" }),
+      { type: "image", version: 1, src: PIXEL, width: 40, align: "right", alt: "Logo" } as DocNode,
+      block("paragraph", [text("Body text")]),
+    ]) as WarrenDocument["editor"]["root"],
+  },
+};

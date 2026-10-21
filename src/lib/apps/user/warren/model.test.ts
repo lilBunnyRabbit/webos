@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { SAMPLE, SAMPLE_V3 } from "./fixture";
+import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4 } from "./fixture";
 import { create_document, parse_document, serialize_document } from "./format";
-import { blocks_of, document_text, font_size, has_text, normalize_url, safe_url } from "./model";
+import { blocks_of, document_text, fill_tokens, font_size, has_text, is_page_number_line, normalize_url, page_number_align, picture_size, safe_image, safe_url } from "./model";
+import { geometry, margin_preset, preset_margins } from "./page";
 import { smarten } from "./typography";
 import { count, find_matches, find_word, map_offset, match_case, reading_minutes, repeated_words, replace_matches, replace_word, TEXT_MATCH, word_at } from "./words";
 
@@ -14,7 +15,7 @@ describe("format", () => {
   it("rejects what isn't a Warren document", () => {
     expect(() => parse_document("nope")).toThrow("isn't JSON");
     expect(() => parse_document(JSON.stringify({ version: 1, page: { size: "A3", flow: "sheets" }, editor: SAMPLE.editor }))).toThrow("page.size");
-    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 4 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 5 }))).toThrow("newer Warren");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, goal: -3 }))).toThrow("goal");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "builtin", id: "nope" } } }))).toThrow("page.font");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, editor: { root: { type: "paragraph", children: [] } } }))).toThrow("editor.root.type");
@@ -22,13 +23,22 @@ describe("format", () => {
 });
 
 describe("format versions", () => {
-  it("opens version 1 and 2 files and saves them as version 3", () => {
-    for (const version of [1, 2]) {
+  it("opens version 1 to 3 files and saves them as version 4", () => {
+    for (const version of [1, 2, 3]) {
       const opened = parse_document(JSON.stringify({ ...SAMPLE, version }));
-      expect(opened.version).toBe(3);
+      expect(opened.version).toBe(4);
       expect(opened.goal).toBeUndefined();
-      expect(JSON.parse(serialize_document(opened)).version).toBe(3);
+      expect(opened.header).toBeUndefined();
+      expect(JSON.parse(serialize_document(opened)).version).toBe(4);
     }
+  });
+
+  it("keeps page setup, header, footer and pictures", () => {
+    expect(parse_document(serialize_document(SAMPLE_V4))).toEqual(SAMPLE_V4);
+    const portrait = { ...SAMPLE, page: { ...SAMPLE.page, orientation: "portrait" as const } };
+    expect(parse_document(serialize_document(portrait)).page).toEqual(SAMPLE.page);
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, page: { ...SAMPLE.page, margins: { top: 10, right: 10, bottom: 10, left: 200 } } }))).toThrow("page.margins.left");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, header: { root: { type: "nope" } } }))).toThrow("header.root");
   });
 
   it("keeps the word goal", () => {
@@ -198,5 +208,33 @@ describe("words", () => {
       { word: "great", count: 3 },
       { word: "really", count: 3 },
     ]);
+  });
+});
+
+describe("format 4", () => {
+  it("reads pictures as blocks, with only inline data kept", () => {
+    expect(blocks_of(SAMPLE_V4.editor)).toContainEqual({ kind: "image", src: PIXEL, width: 40, align: "right", alt: "Logo" });
+    expect(blocks_of({ root: { type: "root", children: [{ type: "image", src: "https://example.com/a.png" }] } })).toEqual([]);
+    expect(blocks_of({ root: { type: "root", children: [{ type: "image", src: PIXEL, width: 400 }] } })).toEqual([{ kind: "image", src: PIXEL, width: 100, align: "center", alt: "" }]);
+    expect(safe_image("data:image/svg+xml;base64,AAAA")).toBeNull();
+    expect(document_text(SAMPLE_V4.editor)).toBe("Report\nBody text");
+    expect(picture_size(SAMPLE_V4)).toBe(PIXEL.length * 2);
+  });
+
+  it("finds page number lines and fills page fields", () => {
+    expect(is_page_number_line("{page}")).toBe(true);
+    expect(is_page_number_line(" Page {page} of {pages} ")).toBe(true);
+    expect(is_page_number_line("{page} / {pages}")).toBe(true);
+    expect(is_page_number_line("Jane, page {page}")).toBe(false);
+    expect(page_number_align(SAMPLE_V4.footer)).toBe("center");
+    expect(page_number_align(SAMPLE_V4.header)).toBeNull();
+    expect(fill_tokens("Page {page} of {pages}", 2, 5)).toBe("Page 2 of 5");
+  });
+
+  it("turns the page and picks margins", () => {
+    expect(geometry({ size: "A4", flow: "sheets", orientation: "landscape" })).toEqual({ width: 297, height: 210, margins: { top: 20, right: 20, bottom: 20, left: 20 } });
+    expect(margin_preset({ size: "A5", flow: "sheets" })).toBe("normal");
+    expect(margin_preset({ size: "A4", flow: "sheets", margins: preset_margins("wide", "A4") })).toBe("wide");
+    expect(margin_preset({ size: "A4", flow: "sheets", margins: { top: 1, right: 2, bottom: 3, left: 4 } })).toBe("custom");
   });
 });

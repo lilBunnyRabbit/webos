@@ -3,6 +3,10 @@ import type { DocNode, EditorJson } from "./format";
 export const PAGE_BREAK = "page-break";
 export const RULE = "horizontalrule";
 export const LINK_TYPES = ["link", "autolink"];
+export const IMAGE = "image";
+
+// Like Proposals' pictures, but a page gets printed: a longer edge and a little more quality.
+export const PICTURE = { max_side: 1600, quality: 0.82 } as const;
 
 // Lexical's TextNode format bits.
 export const BOLD = 1;
@@ -39,13 +43,33 @@ export type Block =
   | { kind: "heading"; level: 1 | 2 | 3; align: Align | null; runs: Run[] }
   | { kind: "item"; list: ListKind; level: number; list_id: number; start: number; checked: boolean; align: Align | null; runs: Run[] }
   | { kind: "page-break" }
-  | { kind: "rule" };
+  | { kind: "rule" }
+  | { kind: "image"; src: string; width: number; align: ImageAlign; alt: string };
 
-/** Blocks that hold text, as opposed to page breaks and rules. */
-export type TextBlock = Exclude<Block, { kind: "page-break" } | { kind: "rule" }>;
+/** Blocks that hold text, as opposed to page breaks, rules and pictures. */
+export type TextBlock = Exclude<Block, { kind: "page-break" } | { kind: "rule" } | { kind: "image" }>;
 
 export function has_text(block: Block): block is TextBlock {
-  return block.kind !== "page-break" && block.kind !== "rule";
+  return block.kind !== "page-break" && block.kind !== "rule" && block.kind !== "image";
+}
+
+export type ImageAlign = Exclude<Align, "justify">;
+export const IMAGE_ALIGNS: readonly ImageAlign[] = [Align.LEFT, Align.CENTER, Align.RIGHT];
+/** A picture's width as a percentage of the text column. */
+export const IMAGE_WIDTH = { MIN: 5, MAX: 100, DEFAULT: 50 } as const;
+
+export function image_width(value: unknown): number {
+  const width = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : IMAGE_WIDTH.DEFAULT;
+  return Math.min(IMAGE_WIDTH.MAX, Math.max(IMAGE_WIDTH.MIN, width));
+}
+
+export function image_align(value: unknown): ImageAlign {
+  return IMAGE_ALIGNS.find((align) => align === value) ?? Align.CENTER;
+}
+
+// Only pictures carried inside the document leave Warren; a pasted remote address would load from the web.
+export function safe_image(src: string | undefined): string | null {
+  return src && /^data:image\/(png|jpeg|webp|gif);base64,/i.test(src) ? src : null;
 }
 
 export function script_of(format: number): Script | null {
@@ -128,6 +152,10 @@ export function blocks_of(editor: EditorJson): Block[] {
   for (const node of editor.root.children) {
     if (node.type === PAGE_BREAK) blocks.push({ kind: "page-break" });
     else if (node.type === RULE) blocks.push({ kind: "rule" });
+    else if (node.type === IMAGE) {
+      const src = safe_image(node.src);
+      if (src) blocks.push({ kind: "image", src, width: image_width(node.width), align: image_align(node.align), alt: node.alt ?? "" });
+    }
     else if (node.type === "heading") blocks.push({ kind: "heading", level: heading_level(node.tag), align: align_of(node), runs: runs_of(node.children) });
     else if (node.type === "list") list(node, 0);
     else blocks.push({ kind: "paragraph", align: align_of(node), runs: runs_of(node.children) });
@@ -139,4 +167,45 @@ export function document_text(editor: EditorJson): string {
   return blocks_of(editor)
     .flatMap((block) => (has_text(block) ? [block.runs.map((run) => run.text).join("")] : []))
     .join("\n");
+}
+
+// Page fields in headers and footers: typed as text, filled in per page by the exports and the sheets.
+export const PAGE_TOKEN = "{page}";
+export const PAGES_TOKEN = "{pages}";
+export const TOKEN_PATTERN = /\{pages?\}/g;
+
+export function fill_tokens(text: string, page: number, pages: number): string {
+  return text.replace(TOKEN_PATTERN, (token) => String(token === PAGE_TOKEN ? page : pages));
+}
+
+export function has_tokens(editor: EditorJson | undefined): boolean {
+  return !!editor && /\{pages?\}/.test(JSON.stringify(editor));
+}
+
+/** A line that is only a page number: "{page}", "Page {page}", "{page} of {pages}", "Page {page} / {pages}". */
+export function is_page_number_line(text: string): boolean {
+  return /^(page\s*)?\{page\}(\s*(of|\/)\s*\{pages\})?$/i.test(text.trim());
+}
+
+/** The alignment of a header's or footer's first line that's only a page number. */
+export function page_number_align(editor: EditorJson | undefined): Align | null {
+  for (const node of editor?.root.children ?? []) {
+    if (node.type !== "paragraph" && node.type !== "heading") continue;
+    const text = (node.children ?? []).map((child) => child.text ?? "").join("");
+    if (is_page_number_line(text)) return align_of(node) ?? Align.LEFT;
+  }
+  return null;
+}
+
+/** Characters the pictures take in the saved file, in all three parts. */
+export function picture_size(document: { editor: EditorJson; header?: EditorJson; footer?: EditorJson }): number {
+  let size = 0;
+  const walk = (nodes: DocNode[] | undefined) => {
+    for (const node of nodes ?? []) {
+      if (node.type === IMAGE && typeof node.src === "string") size += node.src.length;
+      walk(node.children);
+    }
+  };
+  for (const part of [document.editor, document.header, document.footer]) if (part) walk(part.root.children);
+  return size;
 }

@@ -1,0 +1,313 @@
+{
+ "version": 4,
+ "page": {
+  "size": "A4",
+  "flow": "sheets"
+ },
+ "editor": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Street Address",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "City, Postcode",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "link",
+       "url": "mailto:you@example.com",
+       "rel": null,
+       "target": null,
+       "title": null,
+       "children": [
+        {
+         "type": "text",
+         "text": "you@example.com",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "right",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Day Month Year",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "right",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Recipient's Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Organisation",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Street Address",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "City, Postcode",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Subject of your letter",
+       "format": 1,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Dear Recipient's Name,",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Open with why you're writing, in a sentence or two. If you're replying to something, name it and its date so the reader can find it.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Give the detail in the order the reader needs it. Keep to one topic per paragraph, and say plainly what you're asking for or offering.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "End with what happens next: what you'll do, what you'd like them to do, and by when.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Kind regards,",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ }
+}

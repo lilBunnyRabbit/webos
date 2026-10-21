@@ -17,6 +17,7 @@ describe("is_locked_path", () => {
     expect(is_locked_path("/home")).toBe(true);
     expect(is_locked_path("/home/Desktop")).toBe(true);
     expect(is_locked_path("/home/Documents")).toBe(true);
+    expect(is_locked_path("/home/Templates")).toBe(true);
     expect(is_locked_path("/home/Documents/notes.txt")).toBe(false);
     expect(is_locked_path("/home/Photos")).toBe(false);
   });

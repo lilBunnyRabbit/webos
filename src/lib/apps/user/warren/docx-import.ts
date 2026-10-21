@@ -1,3 +1,6 @@
+import { picture_data_url } from "$kit/utils/picture";
+import { PICTURE } from "./model";
+
 export interface DocxHtml {
   html: string;
   left_out: string[];
@@ -12,6 +15,7 @@ const STYLE_MAP = [
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
+/** `pictures` counts the ones that couldn't be read. */
 export function left_out(html: string, pictures: number, warnings: number): string[] {
   const notes: string[] = [];
   if (pictures) notes.push(plural(pictures, "picture", "pictures"));
@@ -28,9 +32,14 @@ export async function docx_to_html(data: ArrayBuffer): Promise<DocxHtml> {
     { arrayBuffer: data },
     {
       styleMap: STYLE_MAP,
-      convertImage: mammoth.images.imgElement(async () => {
-        pictures++;
-        return { src: "" };
+      // Pictures come in downscaled like pasted ones; one the browser can't decode (EMF, WMF) is left out.
+      convertImage: mammoth.images.imgElement(async (image) => {
+        try {
+          return { src: await picture_data_url(new Blob([await image.readAsArrayBuffer()], { type: image.contentType }), PICTURE) };
+        } catch {
+          pictures++;
+          return { src: "" };
+        }
       }),
     }
   );

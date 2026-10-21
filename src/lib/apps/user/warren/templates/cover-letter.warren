@@ -1,0 +1,336 @@
+{
+ "version": 4,
+ "page": {
+  "size": "A4",
+  "flow": "sheets"
+ },
+ "header": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 1,
+       "style": "font-size: 16pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "link",
+       "url": "mailto:you@example.com",
+       "rel": null,
+       "target": null,
+       "title": null,
+       "children": [
+        {
+         "type": "text",
+         "text": "you@example.com",
+         "format": 0,
+         "style": "font-size: 9pt;",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": " · +44 7700 900000 · City, Country · ",
+       "format": 0,
+       "style": "font-size: 9pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "link",
+       "url": "https://example.com",
+       "rel": null,
+       "target": null,
+       "title": null,
+       "children": [
+        {
+         "type": "text",
+         "text": "yourwebsite.com",
+         "format": 0,
+         "style": "font-size: 9pt;",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ },
+ "editor": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Day Month Year",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Hiring Manager's Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Company Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Street Address",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "City, Postcode",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Re: Job Title, reference 1234",
+       "format": 1,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Dear Hiring Manager's Name,",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "I'm writing to apply for the role of Job Title at Company Name. Say in one sentence where you saw it and why it caught your eye: something specific about the company, not the salary.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Pick the two or three things the advert asks for most and show you've done them. One short story beats a list of adjectives: the situation, what you did, and the result, with a number if you have one.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Close by saying what you'd bring in the first months, and that you'd welcome the chance to talk. Mention when you could start if it helps.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Yours sincerely,",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "linebreak",
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ }
+}

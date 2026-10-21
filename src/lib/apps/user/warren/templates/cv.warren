@@ -1,0 +1,612 @@
+{
+ "version": 4,
+ "page": {
+  "size": "A4",
+  "flow": "sheets"
+ },
+ "editor": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "center",
+     "indent": 0,
+     "version": 1,
+     "tag": "h1"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "The role you're applying for",
+       "format": 0,
+       "style": "font-size: 13pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "center",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "link",
+       "url": "mailto:you@example.com",
+       "rel": null,
+       "target": null,
+       "title": null,
+       "children": [
+        {
+         "type": "text",
+         "text": "you@example.com",
+         "format": 0,
+         "style": "font-size: 10pt;",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      },
+      {
+       "type": "text",
+       "text": " · +44 7700 900000 · City, Country · ",
+       "format": 0,
+       "style": "font-size: 10pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      },
+      {
+       "type": "link",
+       "url": "https://example.com",
+       "rel": null,
+       "target": null,
+       "title": null,
+       "children": [
+        {
+         "type": "text",
+         "text": "yourwebsite.com",
+         "format": 0,
+         "style": "font-size: 10pt;",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "center",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "horizontalrule",
+     "version": 1
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Profile",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Two or three sentences on who you are at work, what you're best at and what you want to do next. Lead with the result you're proudest of, and keep it about the reader's job, not your wishes.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Experience",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Job Title, Company Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h3"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Month Year – Present · City",
+       "format": 2,
+       "style": "font-size: 10pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "What you did and what came of it, with a number where you have one: cut month-end close from ten days to six.",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "A project you led or a problem you solved, in one line.",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Something this role proves you can do, shown rather than claimed.",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 3
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "bullet",
+     "start": 1,
+     "tag": "ul"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Previous Job Title, Company Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h3"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Month Year – Month Year · City",
+       "format": 2,
+       "style": "font-size: 10pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Your biggest responsibility, and how big it was: the team, the budget, the customers.",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "An achievement the next employer will care about.",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "bullet",
+     "start": 1,
+     "tag": "ul"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Education",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Degree in Subject, University Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h3"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Year – Year",
+       "format": 2,
+       "style": "font-size: 10pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Your grade, and a dissertation, project or modules worth naming.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Skills",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Tools: ",
+         "format": 1,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        },
+        {
+         "type": "text",
+         "text": "the software you use every day",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Languages: ",
+         "format": 1,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        },
+        {
+         "type": "text",
+         "text": "English (native), Spanish (conversational)",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Strengths: ",
+         "format": 1,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        },
+        {
+         "type": "text",
+         "text": "three you can back with an example in an interview",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 3
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "bullet",
+     "start": 1,
+     "tag": "ul"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "References",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Available on request.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ }
+}

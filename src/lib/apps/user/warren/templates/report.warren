@@ -1,0 +1,566 @@
+{
+ "version": 4,
+ "page": {
+  "size": "A4",
+  "flow": "sheets"
+ },
+ "header": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Report Title · Organisation",
+       "format": 0,
+       "style": "font-size: 9pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "right",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ },
+ "footer": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Page {page} of {pages}",
+       "format": 0,
+       "style": "font-size: 9pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "center",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ },
+ "editor": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Report Title",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h1"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "One line on the question this report answers",
+       "format": 0,
+       "style": "font-size: 14pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Prepared by Your Name for Audience · Month Year",
+       "format": 2,
+       "style": "font-size: 10pt;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "horizontalrule",
+     "version": 1
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Summary",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "The answer first, in a paragraph a busy reader could stop after: what you found, what it means, and what you recommend.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Background",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Why this report exists: the decision it supports, who asked for it, and what was already known. Keep it to what the reader needs to follow the rest.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Findings",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "First finding",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h3"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "State the finding as a sentence, then the evidence for it.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "A figure, with its source and date",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "A quote or an observation that shows the pattern",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "What it rules out",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 3
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "bullet",
+     "start": 1,
+     "tag": "ul"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Second finding",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h3"
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "Each finding gets its own heading, so the outline reads as the argument.",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Recommendations",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "The change you recommend most, and who would make it",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "The next one, with its cost or effort",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "What to stop doing",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 3
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "number",
+     "start": 1,
+     "tag": "ol"
+    },
+    {
+     "type": "heading",
+     "children": [
+      {
+       "type": "text",
+       "text": "Next steps",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "tag": "h2"
+    },
+    {
+     "type": "list",
+     "children": [
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Agree the recommendations with the owner",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 1,
+       "checked": false
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Set a date to review the results",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 2,
+       "checked": false
+      },
+      {
+       "type": "listitem",
+       "children": [
+        {
+         "type": "text",
+         "text": "Share this report with the team",
+         "format": 0,
+         "style": "",
+         "detail": 0,
+         "mode": "normal",
+         "version": 1
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1,
+       "value": 3,
+       "checked": false
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "listType": "check",
+     "start": 1,
+     "tag": "ul"
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ }
+}

@@ -12,6 +12,9 @@
 > - `/var/lib` added for persistent state owned by OS components (`/var/lib/desktop/layout.json`, ADR-022).
 > - On the owner's machine the migration ran through hot reload before the planned scratch test. All six root files arrived in `/home` intact (byte sizes checked).
 
+> **Revision 2026-10-22: `/home/Templates`**
+> - A fourth home folder, `PATHS.templates`, created with `Desktop`, `Documents` and `Downloads` after the migration, so a user's own root `Templates` folder becomes it. Locked in File Explorer like the others (`is_locked_path`), backed up with `/home`. Warren's "Save as template" writes there and its "New from template" lists the `.warren` files in it ([Warren follow-up](../brainstorm/2026-10-21_warren.md#follow-up-2026-10-21-ultra-functional), ADR-059 wave B). File Explorer's Places doesn't list it; it's one click away under Home.
+
 ## Context
 
 OPFS has no structure: user files sit at the root and File Explorer opens there. The OS now needs places for its own data (the session, the desktop), and the owner wants a real, Unix-inspired system storage instead of ad-hoc dot-folders. Brainstorm: [2026-10-11 Session persistence](../brainstorm/2026-10-11_session-persistence.md), round 3.
