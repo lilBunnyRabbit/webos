@@ -73,7 +73,7 @@
           {/each}
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <Input bind:value={label} size="md" class="min-w-40 flex-1" placeholder="Label, like Tea" aria-label="Timer label" maxlength={40} />
+          <Input bind:value={label} size="md" class="min-w-40 flex-1" placeholder="Name, like Dinner" aria-label="Timer name" maxlength={40} />
           {#if timers.length > 0}<Button variant="quiet" onclick={() => (adding = false)}>Cancel</Button>{/if}
           <Button variant="primary" type="submit" disabled={total_ms <= 0}><Play weight="bold" />Start</Button>
         </div>
@@ -88,7 +88,16 @@
           {@const progress = 1 - remaining / timer.duration_ms}
           <li class="grid gap-2 rounded-xl bg-background-light p-3">
             <div class="flex min-w-0 items-center gap-2">
-              <span class="min-w-0 flex-1 truncate text-ui font-medium">{timer.label || format_duration(timer.duration_ms)}</span>
+              <Input
+                value={timer.label}
+                size="sm"
+                class="min-w-0 flex-1 bg-transparent px-1 font-medium ring-transparent pointer-fine:hover:ring-foreground/20 focus-visible:ring-foreground/30"
+                placeholder={format_duration(timer.duration_ms)}
+                aria-label="Timer name"
+                maxlength={40}
+                onchange={(event) => update(timer, { ...timer, label: event.currentTarget.value.trim() })}
+                onkeydown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+              />
               {#if state === TimerState.DONE}<Badge tone="success">Done</Badge>{:else if state === TimerState.PAUSED}<Badge>Paused</Badge>{/if}
               <IconButton label="Delete timer" size="sm" onclick={() => remove(timer)}><Trash /></IconButton>
             </div>
