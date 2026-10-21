@@ -41,6 +41,7 @@
   import LettererBoard from "./letterer-board.svelte";
   import LettererKeyboard from "./letterer-keyboard.svelte";
   import { LENGTHS, load_words, type Length, type Words } from "./words";
+  import { Flash } from "$kit/utils/flash.svelte";
 
   const MODE_LABELS: Record<Mode, string> = {
     classic: "Classic",
@@ -76,7 +77,7 @@
   let game = $state.raw<Game | null>(null);
   let load_error = $state<string | null>(null);
   let typed = $state("");
-  let message = $state<string | null>(null);
+  const flash = new Flash(1800);
   let shake = $state(false);
   let reveal = $state(-1);
   let show_stats = $state(false);
@@ -111,7 +112,7 @@
   });
 
   const status = $derived.by(() => {
-    if (message) return message;
+    if (flash.text) return flash.text;
     if (!game) return load_error ?? "Loading words…";
     const answers = game.boards.map((board) => (board.answer ? display_word(board.answer) : "")).join(", ");
     if (game.status === Status.WON) {
@@ -162,12 +163,6 @@
   });
 
   $effect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => (message = null), 1800);
-    return () => clearTimeout(timer);
-  });
-
-  $effect(() => {
     if (!shake) return;
     const timer = setTimeout(() => (shake = false), 400);
     return () => clearTimeout(timer);
@@ -204,7 +199,7 @@
     game = restored ?? new_game(next, seed, list);
     typed = "";
     reveal = -1;
-    message = null;
+    flash.clear();
     clock.reset(restored && saved ? saved.elapsed : 0);
     if (restored?.status === Status.PLAYING && restored.guesses.length) clock.start();
     if (!restored) save();
@@ -239,13 +234,13 @@
     game = result.game;
     reveal = Math.max(...game.boards.map((board) => board.rows.length)) - 1;
     typed = "";
-    message = game.round !== before ? `Solved. Word ${game.round + 1}` : null;
+    flash.show(game.round !== before ? `Solved. Word ${game.round + 1}` : null);
     if (game.status !== Status.PLAYING) finish(game);
     save();
   }
 
   function reject(text: string) {
-    message = text;
+    flash.show(text);
     shake = true;
   }
 

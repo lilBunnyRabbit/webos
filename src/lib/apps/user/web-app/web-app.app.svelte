@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type FilesService } from "$lib/core/api";
   import { Button, CopyButton, EmptyState, IconButton, Spinner, Toolbar, button } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message } from "$lib/core/utils";
@@ -18,13 +18,13 @@
   import Favicon from "./favicon.svelte";
   import { read_web_app, write_web_app } from "./store";
   import { ALLOW, EXTENSION, NOT_LOADING_AFTER_MS, SANDBOX, favicon_url, is_own_origin, parse_web_app } from "./web-app";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
 
   const { window: win, storage, app_id } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let path = $state(untrack(() => initial_path));
   let revision = $state(0);
@@ -56,7 +56,7 @@
     try {
       show(await write_web_app(files, added.folder, added.app));
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the web app", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the web app", reason);
     }
   }
 

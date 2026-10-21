@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import {
     Badge,
@@ -55,6 +55,7 @@
   import { rasterize } from "./raster";
   import { write_new, write_over } from "./shell";
   import SvgStage, { Backdrop } from "./svg-stage.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const ACCEPT = [".svg", "image/svg+xml"];
   const DIFFERENCE_SIZE = 512;
@@ -263,7 +264,7 @@
 
   function report(title: string, reason: unknown) {
     console.error(`[${app_id}] ${title}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
+    report_error(app_id, title, reason);
   }
 
   const start_folder = () => (source?.path ? parent_path(source.path) : "/home");

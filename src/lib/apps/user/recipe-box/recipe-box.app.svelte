@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { CodeView } from "$kit/components/code";
   import { base_name, parent_path, tilde_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, Toolbar } from "$lib/core/components/ui";
@@ -26,6 +26,7 @@
   import ScaleControls from "./scale-controls.svelte";
   import TableView from "./table-view.svelte";
   import { CookTimers } from "./timers.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
 
@@ -73,10 +74,6 @@
     () => (path ? { title, path } : null),
     () => win.is_visible
   );
-
-  function report(title: string, reason: unknown) {
-    notifications.notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
 
   async function load(target: string, next: View = View.RECIPE) {
     loading = true;
@@ -146,7 +143,7 @@
       edit_panel = EditPanel.SOURCE;
       await load(`${folder.value}/${handle.name}`, View.EDIT);
     } catch (reason) {
-      report("Couldn't create the recipe", reason);
+      report_error(APP_ID, "Couldn't create the recipe", reason);
     }
   }
 
@@ -161,7 +158,7 @@
       if (created.length === 1) await load(`${folder.value}/${created[0]}`);
       else notifications.notify(APP_ID, { title: `Imported ${created.length} recipes`, message: tilde_path(folder.value) });
     } catch (reason) {
-      report("Couldn't import the recipes", reason);
+      report_error(APP_ID, "Couldn't import the recipes", reason);
     }
   }
 
@@ -180,7 +177,7 @@
       saved_text = content;
       return true;
     } catch (reason) {
-      report("Couldn't save the recipe", reason);
+      report_error(APP_ID, "Couldn't save the recipe", reason);
       return false;
     }
   }

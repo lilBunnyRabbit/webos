@@ -1,16 +1,15 @@
 <script lang="ts">
-  import kernel, { NotificationType, type ClipboardService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type ClipboardService } from "$lib/core/api";
   import { Button } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message } from "$lib/core/utils";
   import { Check as CheckIcon, ShareNetwork as ShareNetworkIcon } from "phosphor-svelte";
   import type { NextAction } from "./run";
+  import { report_error } from "$kit/utils/report-error";
 
   let { text, next }: { text: string; next: NextAction } = $props();
 
   const { app_id } = get_app_context();
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let copied = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,7 +19,7 @@
     try {
       await clipboard.copy_text(text);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy the result", message: error_message(reason) });
+      report_error(app_id, "Couldn't copy the result", reason);
       return;
     }
     copied = true;

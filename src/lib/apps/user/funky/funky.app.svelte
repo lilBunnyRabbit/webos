@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, ShortcutCategory, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type DialogsService, type FilesService, type ShortcutsService } from "$lib/core/api";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { diagnostics_gutter, reveal, show_diagnostics, symbol_assist, token_highlight, token_theme } from "$kit/components/code";
@@ -33,12 +33,12 @@
   import FunkySimulator from "./funky-simulator.svelte";
   import { all_docs, funky_language } from "./language";
   import type { SimSetup } from "./presets";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
 
   const { app_id, window_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
@@ -196,7 +196,7 @@
       path = target;
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the file", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the file", reason);
       return false;
     }
   }
@@ -232,7 +232,7 @@
       craft_notes = decompile(read).notes;
       view.value = View.IMPORT;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the craft", message: error_message(reason) });
+      report_error(app_id, "Couldn't read the craft", reason);
     }
   }
 
@@ -242,7 +242,7 @@
       if (!file) throw new Error(`File not found: ${target}`);
       show_craft(base_name(target), await file.text());
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't read the craft", message: error_message(reason) });
+      report_error(app_id, "Couldn't read the craft", reason);
     }
   }
 

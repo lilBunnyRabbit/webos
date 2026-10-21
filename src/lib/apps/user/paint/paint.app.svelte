@@ -1,6 +1,5 @@
 <script lang="ts">
   import kernel, {
-    NotificationType,
     Platform,
     ShortcutCategory,
     type NotificationsService,
@@ -59,7 +58,7 @@
     uses_size,
   } from "./tools";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -302,7 +301,7 @@
       fit();
     } catch (reason) {
       if (id !== open_request) return;
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the image", message: error_message(reason) });
+      report_error(app_id, "Couldn't open the image", reason);
     } finally {
       if (id === open_request) loading = false;
     }
@@ -328,7 +327,7 @@
       notifications.notify(app_id, { title: "Image saved", message: path });
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the image", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the image", reason);
       return false;
     }
   }

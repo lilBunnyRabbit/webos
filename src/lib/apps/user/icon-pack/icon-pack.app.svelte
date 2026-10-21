@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { to_hex } from "$lib/apps/system/settings/color";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
@@ -19,6 +19,7 @@
   import { CardFont, DEFAULT_PACK, MAX_PADDING, PackSchema, card_title, file_stem, pack_name } from "./pack";
   import { build_pack, card_style, close_source, draw_card, load_card_fonts, load_icon_source, render_icons, type IconSource } from "./render";
   import { is_svg } from "./svg";
+  import { report_error } from "$kit/utils/report-error";
 
   const Panel = { ICON: "icon", CARD: "card" } as const;
   type Panel = (typeof Panel)[keyof typeof Panel];
@@ -115,7 +116,7 @@
       notifications.notify(app_id, { title: "Icon pack saved", message: target });
     } catch (reason) {
       console.error(`[${app_id}] Couldn't save the icon pack`, reason);
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the icon pack", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the icon pack", reason);
     } finally {
       saving = false;
     }

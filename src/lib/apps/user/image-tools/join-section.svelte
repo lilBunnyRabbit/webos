@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type DialogsService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type DialogsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
@@ -29,7 +29,7 @@
     type SourceImage,
   } from "$kit/utils/image";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
+  import { report_error } from "$kit/utils/report-error";
 
   const MIN_ZOOM = 10;
   const MAX_ZOOM = 100;
@@ -85,11 +85,7 @@
     if (loaded.length) images = [...images, ...loaded];
     for (const entry of results) {
       if (entry.status === "rejected") {
-        kernel.service<NotificationsService>("notifications").notify(app_id, {
-          type: NotificationType.ERROR,
-          title: "Couldn't open the image",
-          message: error_message(entry.reason),
-        });
+        report_error(app_id, "Couldn't open the image", entry.reason);
       }
     }
   }

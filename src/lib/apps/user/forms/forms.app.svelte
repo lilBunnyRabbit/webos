@@ -57,6 +57,7 @@
   import { app_link, form_payload, read_answer_code, read_answer_payload, read_form_payload, type SharedAnswer } from "./link";
   import LinkBox from "./link-box.svelte";
   import type { FormsProps } from "./props";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path, f, a }: Partial<FormsProps> = $props();
 
@@ -289,7 +290,7 @@
       folder.value = parent_path(target);
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the form", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the form", reason);
       return false;
     }
   }
@@ -341,7 +342,7 @@
       if (target !== answers_path) chosen_answers.value = target;
       folder.value = parent_path(target);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the answer", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the answer", reason);
     }
   }
 
@@ -371,7 +372,7 @@
     try {
       result = await store_answer(pasted);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the answer", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the answer", reason);
       return false;
     }
 
@@ -437,7 +438,7 @@
     try {
       await write_answers(answers_path, remove_response(answers_file, index));
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't remove the answer", message: error_message(reason) });
+      report_error(app_id, "Couldn't remove the answer", reason);
     }
   }
 
@@ -452,7 +453,7 @@
     try {
       await write_text(with_extension(target, ".csv"), to_csv(answer_columns(form, responses), responses));
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't export the answers", message: error_message(reason) });
+      report_error(app_id, "Couldn't export the answers", reason);
     }
   }
 
@@ -461,7 +462,7 @@
       await clipboard.copy_text(AI_PROMPT);
       notifications.notify(app_id, { type: NotificationType.INFO, title: "Prompt copied", message: "Give it to any AI chat with what the form is for, then paste the answer here." });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy to the clipboard", message: error_message(reason) });
+      report_error(app_id, "Couldn't copy to the clipboard", reason);
     }
   }
 

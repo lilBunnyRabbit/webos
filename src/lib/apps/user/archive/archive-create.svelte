@@ -2,7 +2,7 @@
   import kernel, { NotificationType, type NotificationsService, type TaskJob } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message, format_bytes } from "$lib/core/utils";
+  import { format_bytes } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     Devices as DevicesIcon,
@@ -21,6 +21,7 @@
   import { add_item, archive_name, parent_path, type CreateItem } from "$lib/core/utils/zip/create";
   import { Method } from "$lib/core/utils/zip/format";
   import { zip_items } from "$lib/core/utils/zip/operations";
+  import { report_error } from "$kit/utils/report-error";
 
   const { tabs, initial_paths }: { tabs: Snippet; initial_paths: string[] } = $props();
 
@@ -54,7 +55,7 @@
         else notifications.notify(app_id, { type: NotificationType.WARNING, title: "Nothing to add", message: `${path} no longer exists.` });
       }
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't add that", message: error_message(error) });
+      report_error(app_id, "Couldn't add that", error);
     } finally {
       adding--;
     }

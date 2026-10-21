@@ -26,6 +26,7 @@
     to_saved,
     type Game,
   } from "./game";
+  import { Flash } from "$kit/utils/flash.svelte";
 
   const LENGTH_OPTIONS = LENGTHS.map((value) => ({ value, label: `${value} digits` }));
   const PAD = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
@@ -49,7 +50,7 @@
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   if (restored?.status === Status.PLAYING && restored.guesses.length) clock.start();
   let typed = $state<number[]>([]);
-  let message = $state<string | null>(null);
+  const flash = new Flash(1800);
   let shake = $state(false);
   let show_stats = $state(false);
   let root = $state<HTMLDivElement>();
@@ -74,7 +75,7 @@
   });
 
   const status = $derived.by(() => {
-    if (message) return message;
+    if (flash.text) return flash.text;
     if (game.status === Status.CRACKED) return `Cracked in ${guesses(used)}`;
     if (game.status === Status.DECLASSIFIED) return "Declassified. The code is on file";
     const last = game.guesses.at(-1);
@@ -105,12 +106,6 @@
   });
 
   $effect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => (message = null), 1800);
-    return () => clearTimeout(timer);
-  });
-
-  $effect(() => {
     if (!shake) return;
     const timer = setTimeout(() => (shake = false), 400);
     return () => clearTimeout(timer);
@@ -135,14 +130,14 @@
   function transmit() {
     if (over) return;
     if (typed.length < length) {
-      message = `Enter all ${length} digits`;
+      flash.show(`Enter all ${length} digits`);
       shake = true;
       return;
     }
     if (!clock.running) clock.start();
     game = guess(game, typed);
     typed = [];
-    message = null;
+    flash.clear();
     if (game.status === Status.CRACKED) finish();
     save();
   }
@@ -179,7 +174,7 @@
     storage.set("length", next);
     game = new_game(next, random_seed());
     typed = [];
-    message = null;
+    flash.clear();
     clock.reset();
     save();
     board?.focus({ preventScroll: true });

@@ -26,6 +26,7 @@
     type Saved,
     type Turn,
   } from "./case";
+  import { Flash } from "$kit/utils/flash.svelte";
 
   const { seed: seed_prop }: { seed?: number } = $props();
   const linked = untrack(() => seed_prop);
@@ -45,7 +46,7 @@
   let chosen_card = $state<string | null>(null);
   let draft = $state("");
   let error = $state<string | null>(null);
-  let message = $state<string | null>(null);
+  const flash = new Flash(2400);
   let controller = $state.raw<AbortController | null>(null);
   let begun = $state(false);
   let reviewing = $state(false);
@@ -64,7 +65,7 @@
   const card_title = $derived(new Map(game.cards.map((card) => [card.id, card.title])));
 
   const status_line = $derived.by(() => {
-    if (message) return message;
+    if (flash.text) return flash.text;
     if (result === Status.SOLVED) return `Caught: statement ${statement_number.get(lie!.statement.id)} breaks against the ${lie!.card.title.toLowerCase()}.`;
     if (result === Status.LOST) return `The lie was statement ${statement_number.get(lie!.statement.id)}, broken by the ${lie!.card.title.toLowerCase()}.`;
     if (chosen_statement && chosen_card) return "Accuse when you're sure.";
@@ -113,12 +114,6 @@
       run: () => start_over(),
     });
     return () => dispose();
-  });
-
-  $effect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => (message = null), 2400);
-    return () => clearTimeout(timer);
   });
 
   $effect(() =>
@@ -181,7 +176,7 @@
     chosen_statement = null;
     chosen_card = null;
     if (!judge(game, accusation) && !over)
-      message = `The ${card_title.get(accusation.card)?.toLowerCase()} doesn't break statement ${statement_number.get(accusation.statement)}. ${tries_left} ${tries_left === 1 ? "try" : "tries"} left.`;
+      flash.show(`The ${card_title.get(accusation.card)?.toLowerCase()} doesn't break statement ${statement_number.get(accusation.statement)}. ${tries_left} ${tries_left === 1 ? "try" : "tries"} left.`);
     if (over) controller?.abort();
     save();
   }
@@ -204,7 +199,7 @@
     chosen_card = null;
     draft = "";
     error = null;
-    message = null;
+    flash.clear();
     begun = false;
     reviewing = false;
   }

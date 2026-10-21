@@ -26,6 +26,7 @@
   import { format_time, VisualizerMode } from "./spectrum";
   import Visualizer from "./visualizer.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   const ACCEPT = ["audio/*"];
   const MODE_OPTIONS = [
@@ -87,7 +88,7 @@
 
   function report(heading: string, reason: unknown) {
     console.error(`[MusicVisualizer] ${heading}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title: heading, message: error_message(reason) });
+    report_error(app_id, heading, reason);
   }
 
   // Built on first play: an AudioContext made without a user gesture starts suspended.

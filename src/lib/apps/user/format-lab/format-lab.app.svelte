@@ -1,6 +1,5 @@
 <script lang="ts">
   import kernel, {
-    NotificationType,
     TaskJobStatus,
     type AppsService,
     type DialogsService,
@@ -35,6 +34,7 @@
   import { draw_heatmap } from "./heatmap";
   import { LAB_FORMATS, LabSettingsSchema, default_settings, type LabFormat } from "./settings";
   import { IMAGE_ACCEPT, converted_name, has_alpha, is_image, is_inspectable, read_image } from "./source";
+  import { report_error } from "$kit/utils/report-error";
 
   const View = { COMPARE: "compare", INSPECT: "inspect" } as const;
   type View = (typeof View)[keyof typeof View];
@@ -128,10 +128,6 @@
     release();
   });
 
-  function report(title: string, error: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(error) });
-  }
-
   function release() {
     source?.bitmap.close();
     for (const result of results.values()) result.bitmap.close();
@@ -141,7 +137,7 @@
 
   async function take(file: File, path: string | null) {
     if (!is_image(file)) {
-      report("Not an image", file.name);
+      report_error(app_id, "Not an image", file.name);
       return;
     }
     job?.cancel();
@@ -262,7 +258,7 @@
       await files.create_file(directory, base_name(chosen), { content: result.blob, overwrite: true });
       saved([chosen]);
     } catch (error) {
-      report("Couldn't save the image", error);
+      report_error(app_id, "Couldn't save the image", error);
     }
   }
 
@@ -279,7 +275,7 @@
       for (const format of ready) paths.push(await write(format, folder));
       saved(paths);
     } catch (error) {
-      report("Couldn't save the images", error);
+      report_error(app_id, "Couldn't save the images", error);
     }
   }
 

@@ -1,10 +1,9 @@
-import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
 import { parent_path } from "$lib/core/api/services/files/path";
 import type { WindowHandle } from "$lib/core/contexts/app/type";
-import { error_message } from "$lib/core/utils";
 import { load_image, load_image_at, read_pixels, type SourceImage } from "$kit/utils/image";
 import { tolerance_level } from "./compare";
 import { Pyramid, align, compare, coverage, find_regions, type Alignment, type Rect } from "./patch";
+import { report_error } from "$kit/utils/report-error";
 
 export const Slot = { ORIGINAL: "original", EDITED: "edited" } as const;
 export type Slot = (typeof Slot)[keyof typeof Slot];
@@ -82,9 +81,7 @@ export class ImagePair {
       this.realign();
     } catch (reason) {
       if (id === this.requests[slot]) {
-        kernel
-          .service<NotificationsService>("notifications")
-          .notify(this.options.app_id, { type: NotificationType.ERROR, title: "Couldn't open the image", message: error_message(reason) });
+        report_error(this.options.app_id, "Couldn't open the image", reason);
       }
     } finally {
       if (id === this.requests[slot]) this.loading = { ...this.loading, [slot]: false };

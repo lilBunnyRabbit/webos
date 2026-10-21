@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type ClipboardService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type ClipboardService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -17,6 +17,7 @@
   import type { Attachment } from "svelte/attachments";
   import { BYTES_PER_ROW, Endian, ascii_char, format_offset, hex_byte, hex_string, inspect, is_printable, offset_digits, parse_offset, row_count } from "./hex";
   import { clamp_top, reveal_row, row_window, rows_per_page, scroll_height, scroll_scale } from "./rows";
+  import { report_error } from "$kit/utils/report-error";
 
   const ROW = 20;
   const OVERSCAN = 8;
@@ -28,7 +29,6 @@
   const { window: win, app_id } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let file = $state.raw<File | null>(null);
   let loading = $state(false);
@@ -223,7 +223,7 @@
       clearTimeout(copied_timer);
       copied_timer = setTimeout(() => (copied = null), 1500);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy the selection", message: error_message(reason) });
+      report_error(app_id, "Couldn't copy the selection", reason);
     }
   }
 

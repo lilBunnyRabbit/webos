@@ -15,7 +15,6 @@
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
   import { print_html } from "$lib/core/utils/print";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { ImageFormat, save_image } from "$kit/utils/image";
@@ -89,6 +88,7 @@
   import { find_marks, type Quad } from "./scan";
   import { load_scan, scan_guides, type ScanImage } from "./scan-image";
   import { draw_template, PAGE, PNG_DPI, template_html, template_layout } from "./template";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -171,10 +171,6 @@
     })
   );
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   async function discard_ok(): Promise<boolean> {
     return !editor.dirty || confirm_discard(win, file_name);
   }
@@ -191,7 +187,7 @@
       file_path = path;
       pane = "grid";
     } catch (reason) {
-      if (id === open_request) report(`Couldn't open ${base_name(path)}`, reason);
+      if (id === open_request) report_error(app_id, `Couldn't open ${base_name(path)}`, reason);
     } finally {
       if (id === open_request) loading = false;
     }
@@ -223,7 +219,7 @@
       notifications.notify(app_id, { title: "Font project saved", message: path });
       return true;
     } catch (reason) {
-      report("Couldn't save the font project", reason);
+      report_error(app_id, "Couldn't save the font project", reason);
       return false;
     }
   }
@@ -268,7 +264,7 @@
         actions: [{ label: "Open", on_click: () => void apps.open(target) }],
       });
     } catch (reason) {
-      report("Couldn't export the font", reason);
+      report_error(app_id, "Couldn't export the font", reason);
     }
   }
 
@@ -295,7 +291,7 @@
       await kernel.service<SettingsService>("settings").use_font(role, file);
       notifications.notify(app_id, { title: role === FontRole.SANS ? `${family} is the UI font` : `${family} is the code font`, message: "Change it back in Settings › Text & interface." });
     } catch (reason) {
-      report("Couldn't use the font", reason);
+      report_error(app_id, "Couldn't use the font", reason);
     }
   }
 
@@ -342,7 +338,7 @@
     try {
       await print_html(template_html(template_layout(set), project.metrics, project.name), { title: `${project.name} ${CHAR_SET_LABELS[set]} template` });
     } catch (reason) {
-      report("Couldn't print the template", reason);
+      report_error(app_id, "Couldn't print the template", reason);
     }
   }
 
@@ -375,7 +371,7 @@
       const current = set_characters(project.sets[0]).includes(editor.char) ? project.sets[0] : (project.sets.find((set) => set_characters(set).includes(editor.char)) ?? project.sets[0]);
       scan = { image, found: find_marks(image.gray), set: current };
     } catch (reason) {
-      report("Couldn't read the picture", reason);
+      report_error(app_id, "Couldn't read the picture", reason);
     } finally {
       scanning = false;
     }
@@ -399,7 +395,7 @@
       editor.apply((value) => set_guides(value, guides));
       notifications.notify(app_id, { title: guides.size === 1 ? "1 guide added" : `${guides.size} guides added`, message: "Trace over each one with strokes." });
     } catch (reason) {
-      report("Couldn't read the sheet", reason);
+      report_error(app_id, "Couldn't read the sheet", reason);
     } finally {
       scanning = false;
     }

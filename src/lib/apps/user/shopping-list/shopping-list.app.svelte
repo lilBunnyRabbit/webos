@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
+  import kernel, { Platform, type DesktopItem, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
@@ -58,6 +58,7 @@
   import PhotoReview from "./photo-review.svelte";
   import { read_method, read_with_ai, read_with_ocr, ReadMethod, type ReviewRow } from "./read-image";
   import { record_trip } from "./suggest";
+  import { report_error } from "$kit/utils/report-error";
 
   const View = { LIST: "list", SHARE: "share", RECEIVE: "receive", INCOMING: "incoming", CROP: "crop", REVIEW: "review", EDIT: "edit", SETTINGS: "settings" } as const;
   /** Window storage `list` holds a list id, or one of these. */
@@ -394,7 +395,7 @@
       if (!name) throw new Error(`The ${place} is full`);
       notifications.notify(app_id, { title: `List added to the ${place}`, message: `${target.name}: add items or read a photo right there.` });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't change the ${place}`, message: error_message(reason) });
+      report_error(app_id, `Couldn't change the ${place}`, reason);
     }
   }
 

@@ -6,7 +6,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { format_time } from "$kit/games";
-  import { cn, format_bytes, format_datetime, error_message } from "$lib/core/utils";
+  import { cn, format_bytes, format_datetime } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     Camera as CameraIcon,
@@ -36,6 +36,7 @@
   import { list_recordings } from "./recordings";
   import RecorderMeter from "./recorder-meter.svelte";
   import { Phase, RecorderSession } from "./session.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const { source: initial_source }: RecorderProps = $props();
   const { window: win, storage, app_id } = get_app_context();
@@ -106,7 +107,7 @@
 
   function report(title: string, reason: unknown) {
     console.error(`[Recorder] ${title}`, reason);
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
+    report_error(app_id, title, reason);
   }
 
   async function start() {

@@ -1,18 +1,16 @@
-import kernel, { NotificationType, type NotificationsService, type SchedulerService } from "$lib/core/api";
+import kernel, { type SchedulerService } from "$lib/core/api";
 import { live_file } from "$lib/core/contexts/app";
-import { error_message } from "$lib/core/utils";
 import { local_zone } from "$lib/core/utils/zoned";
 import { APP_ID, EMPTY_EVENTS, EVENTS_PATH, EventsFileSchema, type CalendarEvent } from "./calendar";
 import { reminder_input, reminder_job_id, same_timing } from "./reminders";
+import { report_error } from "$kit/utils/report-error";
 
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
 
 export const events_file = live_file(EVENTS_PATH, EMPTY_EVENTS, EventsFileSchema);
 
 export function attempt(title: string, work: Promise<unknown>): void {
-  work.catch((reason) =>
-    kernel.service<NotificationsService>("notifications").notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) })
-  );
+  work.catch((reason) => report_error(APP_ID, title, reason));
 }
 
 export async function sync_reminder(event: CalendarEvent): Promise<void> {

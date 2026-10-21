@@ -1,11 +1,11 @@
 import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import { untrack } from "svelte";
-import kernel, { NotificationType, type Job, type NotificationsService, type SchedulerService } from "$lib/core/api";
+import kernel, { type Job, type NotificationsService, type SchedulerService } from "$lib/core/api";
 import { app_data_path, json_file } from "$lib/core/contexts/app";
-import { error_message } from "$lib/core/utils";
 import * as logic from "./pomodoro";
 import { APP_ID, EMPTY_TIMER, JOB_ID, Phase, Status, TimerFileSchema, type Ended, type PhaseJob, type Run, type Settings } from "./pomodoro";
 import { EMPTY_STATS, record_focus, StatsFileSchema } from "./stats";
+import { report_error } from "$kit/utils/report-error";
 
 const notifications = () => kernel.service<NotificationsService>("notifications");
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
@@ -171,7 +171,7 @@ class PomodoroTimer {
   private enqueue(work: () => Promise<void>): Promise<void> {
     const next = this.queue.then(work);
     this.queue = next.catch((reason) => {
-      notifications().notify(APP_ID, { type: NotificationType.ERROR, title: "Couldn't update the timer", message: error_message(reason) });
+      report_error(APP_ID, "Couldn't update the timer", reason);
     });
     return next;
   }

@@ -1,9 +1,8 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type FilesService } from "$lib/core/api";
   import { base_name } from "$lib/core/api/services/files/path";
   import { Badge, Button, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context, json_file, type JsonFile } from "$lib/core/contexts/app";
-  import { error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -35,12 +34,12 @@
   import StartScreen from "./start-screen.svelte";
   import { can_pick, pick, record_race, undo, view_of } from "./state";
   import { list_brackets, parse_bracket, save_new, type BracketEntry } from "./store";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window: win, storage } = get_app_context();
 
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const open_path = storage.window<string | null>("path", untrack(() => initial_path ?? null), z.string().nullable());
   let creating = $state(false);
@@ -94,10 +93,6 @@
     })
   );
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   function edit(change: (bracket: Bracket) => Bracket) {
     if (!cell?.value) return;
     const current = $state.snapshot(cell.value) as Bracket;
@@ -112,7 +107,7 @@
       creating = false;
       open_path.value = path;
     } catch (reason) {
-      report("Couldn't create the bracket", reason);
+      report_error(app_id, "Couldn't create the bracket", reason);
     } finally {
       busy = false;
     }
@@ -131,7 +126,7 @@
       if (!parsed) throw new Error("It isn't a valid bracket file.");
       open_path.value = await save_new(files, parsed);
     } catch (reason) {
-      report(`Couldn't open ${file.name}`, reason);
+      report_error(app_id, `Couldn't open ${file.name}`, reason);
     }
   }
 

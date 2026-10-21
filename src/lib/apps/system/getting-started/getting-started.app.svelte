@@ -1,13 +1,14 @@
 <script lang="ts">
   import { z } from "zod";
   import { tick, untrack } from "svelte";
-  import kernel, { format_keys, NotificationType, Platform, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { format_keys, Platform, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, Kbd } from "$lib/core/components/ui";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import { CheckCircle as CheckCircleIcon } from "phosphor-svelte";
   import { TOPIC_IDS, type TopicId } from "./ids";
   import { topics_for, type Topic } from "./topics";
+  import { report_error } from "$kit/utils/report-error";
 
   let { topic }: { topic?: TopicId } = $props();
 
@@ -39,11 +40,7 @@
     try {
       await entry.run(window_id);
     } catch (error) {
-      kernel.service<NotificationsService>("notifications").notify(app_id, {
-        type: NotificationType.ERROR,
-        title: `Couldn't ${entry.action.toLowerCase()}`,
-        message: error_message(error),
-      });
+      report_error(app_id, `Couldn't ${entry.action.toLowerCase()}`, error);
     }
   }
 </script>

@@ -2,7 +2,7 @@
   import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import { load_language, token_highlight, token_theme, type Language } from "$kit/components/code";
   import { indentWithTab } from "@codemirror/commands";
   import type { LanguageSupport } from "@codemirror/language";
@@ -41,6 +41,7 @@
   import { DiffSide } from "./side.svelte";
   import { merge_theme } from "./theme";
   import { parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   const { left: left_prop, right: right_prop, path: path_prop }: { left?: string; right?: string; path?: string } = $props();
 
@@ -202,10 +203,6 @@
     live.focus();
   }
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   async function replace_ok(side: DiffSide): Promise<boolean> {
     if (!side.dirty) return true;
     return win.confirm(`Discard changes to “${side.name}”?`, {
@@ -220,7 +217,7 @@
       if (await side.load(path)) revision++;
       else notifications.notify(app_id, { type: NotificationType.ERROR, title: "File not found", message: path });
     } catch (reason) {
-      report("Couldn't read the file", reason);
+      report_error(app_id, "Couldn't read the file", reason);
     }
   }
 
@@ -241,7 +238,7 @@
       started = true;
       revision++;
     } catch (reason) {
-      report("Couldn't read the clipboard", reason);
+      report_error(app_id, "Couldn't read the clipboard", reason);
     }
   }
 
@@ -277,7 +274,7 @@
         })
       );
     } catch (reason) {
-      report("Couldn't save the file", reason);
+      report_error(app_id, "Couldn't save the file", reason);
       return false;
     }
   }

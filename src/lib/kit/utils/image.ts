@@ -1,8 +1,8 @@
-import kernel, { NotificationType, type AppId, type FilesService, type NotificationsService } from "$lib/core/api";
+import kernel, { type AppId, type FilesService, type NotificationsService } from "$lib/core/api";
 import type { WindowHandle } from "$lib/core/contexts/app";
 import { DEFAULT_QUALITY, format_for_name, needs_backdrop, type ImageFormat } from "./image-format";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
-import { error_message } from "$lib/core/utils/utils";
+import { report_error } from "./report-error";
 
 export * from "./image-format";
 
@@ -147,10 +147,6 @@ export async function save_image({
     notifications.notify(app_id, { title: "Image saved", message: path });
   } catch (error) {
     console.error(`[${app_id}] Couldn't save the image`, error);
-    notifications.notify(app_id, {
-      type: NotificationType.ERROR,
-      title: "Couldn't save the image",
-      message: error_message(error),
-    });
+    report_error(app_id, "Couldn't save the image", error);
   }
 }

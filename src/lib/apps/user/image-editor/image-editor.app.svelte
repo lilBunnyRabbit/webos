@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, NotificationType, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { type DialogsService, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
@@ -61,6 +61,7 @@
   import { render_final, render_operations } from "./render";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -286,7 +287,7 @@
       fit();
     } catch (reason) {
       if (id !== request) return;
-      if (source) notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the image", message: error_message(reason) });
+      if (source) report_error(app_id, "Couldn't open the image", reason);
       else error = error_message(reason);
     } finally {
       if (id === request) loading = false;
@@ -326,7 +327,7 @@
       notifications.notify(app_id, { title: "Image saved", message: path });
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the image", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the image", reason);
       return false;
     }
   }

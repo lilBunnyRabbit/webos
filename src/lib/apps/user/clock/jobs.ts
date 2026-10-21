@@ -1,6 +1,5 @@
-import kernel, { NotificationType, pending, type Job, type JobId, type JobPatch, type NotificationsService, type SchedulerService } from "$lib/core/api";
+import kernel, { pending, type Job, type JobId, type JobPatch, type SchedulerService } from "$lib/core/api";
 import { app_data_path, json_file, live_file, type JsonFile } from "$lib/core/contexts/app";
-import { error_message } from "$lib/core/utils";
 import { local_zone } from "$lib/core/utils/zoned";
 import {
   alarm_input,
@@ -19,15 +18,14 @@ import {
   type ClockData,
   type Timer,
 } from "./clock";
+import { report_error } from "$kit/utils/report-error";
 
 export type ClockFile = Omit<JsonFile<ClockData>, "release">;
 
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
 
 export function attempt(title: string, work: Promise<unknown>): void {
-  work.catch((reason) =>
-    kernel.service<NotificationsService>("notifications").notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) })
-  );
+  work.catch((reason) => report_error(APP_ID, title, reason));
 }
 
 export function open_clock_file(): JsonFile<ClockData> {

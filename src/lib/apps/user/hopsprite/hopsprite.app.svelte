@@ -12,7 +12,6 @@
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -57,6 +56,7 @@
   import { frame_sequence, full_range, PlayMode } from "./sequence";
   import { Tool, TOOL_KEYS, TOOL_LABELS, TOOLS, type ToolSettings } from "./tools";
   import { Viewport } from "./viewport.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -115,10 +115,6 @@
     return !editor.dirty || confirm_discard(win, file_name);
   }
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   let open_request = 0;
 
   async function load(task: () => Promise<Opened>, path: string | null, name: string) {
@@ -140,7 +136,7 @@
         });
       }
     } catch (reason) {
-      if (id === open_request) report(`Couldn't open ${name}`, reason);
+      if (id === open_request) report_error(app_id, `Couldn't open ${name}`, reason);
     } finally {
       if (id === open_request) loading = false;
     }
@@ -175,7 +171,7 @@
       notifications.notify(app_id, { title: "Sprite saved", message: path });
       return true;
     } catch (reason) {
-      report("Couldn't save the sprite", reason);
+      report_error(app_id, "Couldn't save the sprite", reason);
       return false;
     }
   }
@@ -226,7 +222,7 @@
         actions: [{ label: "Open", on_click: () => void apps.open(target) }],
       });
     } catch (reason) {
-      report("Couldn't export the SVG", reason);
+      report_error(app_id, "Couldn't export the SVG", reason);
     }
   }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { track_play } from "$kit/games";
@@ -12,12 +12,12 @@
   import type { Mode, Size } from "./game";
   import { base_name } from "$lib/core/api/services/files/path";
   import Play, { type Source } from "./play.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path, daily, size, mode, edit }: { path?: string; daily?: string; size?: Size; mode?: Mode; edit?: boolean } = $props();
 
   const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   // Window state survives session restore, so a restored window doesn't act on its launch request again.
   const handled = storage.window("handled", false);
@@ -76,7 +76,7 @@
       source = { kind: "file", path: chosen, drawing: await read(chosen) };
       load_error = null;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the puzzle", message: error_message(reason) });
+      report_error(app_id, "Couldn't open the puzzle", reason);
     }
   }
 

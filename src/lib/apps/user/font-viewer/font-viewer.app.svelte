@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { FontRole, NotificationType, type DialogsService, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { FontRole, type DialogsService, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, EmptyState, IconButton, Input, Section, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
@@ -14,6 +14,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { CHARACTER_GROUPS, FONT_ACCEPT, FontFormat, detect_format, empty_info, WATERFALL_SIZES, code_label, read_font, variation_settings, type FontInfo } from "./font";
+  import { report_error } from "$kit/utils/report-error";
 
   interface LoadedFace {
     family: string;
@@ -150,7 +151,7 @@
       const name = loaded.faces[0].info.family ?? loaded.name;
       notifications.notify(app_id, { title: `${name} is now the ${choice === FontRole.SANS ? "UI" : "code"} font`, message: "Change it in Settings › Text & interface." });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't use it as the app font", message: error_message(reason) });
+      report_error(app_id, "Couldn't use it as the app font", reason);
     }
   }
 

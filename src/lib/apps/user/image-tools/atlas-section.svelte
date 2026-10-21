@@ -1,9 +1,8 @@
 <script lang="ts">
-  import kernel, { NotificationType, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type DialogsService, type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message } from "$lib/core/utils";
   import {
     Export as ExportIcon,
     FolderOpen as FolderOpenIcon,
@@ -23,6 +22,7 @@
   import type { SectionProps } from "./sections";
   import { pinch_view, zoom_view, type Point, type View as Camera } from "$kit/utils/view";
   import { find_crop_bounds, type CropBounds } from "./trim";
+  import { report_error } from "$kit/utils/report-error";
 
   interface Frame {
     image: SourceImage;
@@ -50,7 +50,6 @@
   const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window_id, window: win } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const files = $derived(kernel.service<FilesService>("files"));
 
   let root = $state<HTMLElement>();
@@ -119,11 +118,7 @@
     }
     const failed = results.filter((entry) => entry.status === "rejected");
     if (failed.length) {
-      notifications.notify(app_id, {
-        type: NotificationType.ERROR,
-        title: failed.length === 1 ? "Couldn't open an image" : `Couldn't open ${failed.length} images`,
-        message: error_message(failed[0].reason),
-      });
+      report_error(app_id, failed.length === 1 ? "Couldn't open an image" : `Couldn't open ${failed.length} images`, failed[0].reason);
     }
   }
 

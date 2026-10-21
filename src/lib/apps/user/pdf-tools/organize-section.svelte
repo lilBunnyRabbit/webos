@@ -1,8 +1,8 @@
 <script lang="ts">
-  import kernel, { NotificationType, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { Button, IconButton, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -24,6 +24,7 @@
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { ThumbCache } from "./thumbs.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   const {
     picker,
@@ -33,7 +34,6 @@
   }: { picker: Snippet; initial_paths: string[]; active: boolean; ondirty: (dirty: boolean, save: () => Promise<boolean>) => void } = $props();
 
   const { app_id, window_id, window: win } = get_app_context();
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const THUMB_WIDTH = 220;
@@ -99,7 +99,7 @@
       await slot.open({ name: base_name(path), path, file });
       return true;
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the PDF", message: error_message(error) });
+      report_error(app_id, "Couldn't save the PDF", error);
       return false;
     } finally {
       saving = false;

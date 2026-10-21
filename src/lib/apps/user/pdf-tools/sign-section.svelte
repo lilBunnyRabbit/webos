@@ -1,8 +1,8 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type AppsService, type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, format_date, error_message } from "$lib/core/utils";
+  import { cn, format_date } from "$lib/core/utils";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     CaretLeft as CaretLeftIcon,
@@ -30,6 +30,7 @@
   import { watch_signatures } from "./signatures.svelte";
   import { build_signature, type Signature, type StrokePoint } from "./stroke";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   let {
     picker,
@@ -256,7 +257,7 @@
       drawing = false;
       pad_strokes = [];
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the signature", message: error_message(error) });
+      report_error(app_id, "Couldn't save the signature", error);
     }
   }
 
@@ -282,7 +283,7 @@
       notifications.notify(app_id, { title: "Signed copy saved", message: path, actions: [{ label: "Open", on_click: () => apps.open(path) }] });
       return true;
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the signed PDF", message: error_message(error) });
+      report_error(app_id, "Couldn't save the signed PDF", error);
       return false;
     } finally {
       saving = false;

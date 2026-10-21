@@ -1,11 +1,11 @@
 <script lang="ts">
-  import kernel, { NotificationType, type ClipboardService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type ClipboardService } from "$lib/core/api";
   import { Button, CopyButton, EmptyState } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message } from "$lib/core/utils";
   import { Bug as BugIcon, Check as CheckIcon, TreeStructure as TreeStructureIcon } from "phosphor-svelte";
   import type { Span } from "./ast";
   import type { Compiled } from "./compile";
+  import { report_error } from "$kit/utils/report-error";
 
   interface Props {
     entries: Compiled[];
@@ -18,7 +18,6 @@
 
   const { app_id } = get_app_context();
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const all = $derived(kind === "setters" ? xml : entries.map((entry) => `${entry.name}: ${entry.ft}`).join("\n"));
 
@@ -30,7 +29,7 @@
     try {
       await clipboard.copy_text(entry.debug);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy to the clipboard", message: error_message(reason) });
+      report_error(app_id, "Couldn't copy to the clipboard", reason);
       return;
     }
     copied_debug = entry.name;

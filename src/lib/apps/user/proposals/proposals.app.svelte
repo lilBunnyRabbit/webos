@@ -1,6 +1,5 @@
 <script lang="ts">
   import kernel, {
-    NotificationType,
     Platform,
     ShortcutCategory,
     type DialogsService,
@@ -11,7 +10,6 @@
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
   import {
     CaretDown as CaretDownIcon,
     FilePlus as FilePlusIcon,
@@ -42,6 +40,7 @@
   import ProposalEditor from "./proposal-editor.svelte";
   import ProposalsList from "./proposals-list.svelte";
   import SketchPad from "./sketch-pad.svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win } = get_app_context();
@@ -79,7 +78,7 @@
   );
 
   function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
+    report_error(app_id, title, reason);
   }
 
   async function discard_ok(): Promise<boolean> {

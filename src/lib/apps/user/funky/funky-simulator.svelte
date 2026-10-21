@@ -3,7 +3,7 @@
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
   import { Badge, Button, IconButton, Input, Select, Slider, Switch, Textarea } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     DownloadSimple as DownloadSimpleIcon,
@@ -22,6 +22,7 @@
   import { PRESETS, PRESETS_BY_ID, type SimSetup } from "./presets";
   import { apply_due, parse_script } from "./script";
   import { AMMO, BEHAVIOURS, Evidence, Simulator, type Entry, type Value } from "./simulator";
+  import { report_error } from "$kit/utils/report-error";
 
   interface Props {
     result: CompileResult;
@@ -224,7 +225,7 @@
       await files.create_file(directory, base_name(target), { content: to_csv(columns, rows), overwrite: true });
       notifications.notify(app_id, { type: NotificationType.INFO, title: "Recording exported", message: target });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't export the recording", message: error_message(reason) });
+      report_error(app_id, "Couldn't export the recording", reason);
     }
   }
 

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import kernel, { NotificationType, type AppsService, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type AppsService, type DialogsService, type FilesService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { error_message, format_bytes } from "$lib/core/utils";
+  import { format_bytes } from "$lib/core/utils";
   import { encode_image, has_files, image_files, load_image } from "$kit/utils/image";
   import {
     ArrowsIn as ArrowsInIcon,
@@ -18,6 +18,7 @@
   import type { SectionProps } from "./sections";
   import { DEFAULT_SQUASH, SquashFormat, estimate_bytes, format_share, saved_share, squashed_size } from "./squash";
   import { images_in, squash_images, type SquashResult } from "./squash-job";
+  import { report_error } from "$kit/utils/report-error";
 
   const SAMPLE_SIDE = 512;
 
@@ -116,11 +117,7 @@
     if (loaded.length) entries = [...entries, ...loaded];
     for (const item of settled) {
       if (item.status === "rejected") {
-        kernel.service<NotificationsService>("notifications").notify(app_id, {
-          type: NotificationType.ERROR,
-          title: "Couldn't open the image",
-          message: error_message(item.reason),
-        });
+        report_error(app_id, "Couldn't open the image", item.reason);
       }
     }
   }
@@ -161,11 +158,7 @@
     try {
       add((await images_in(chosen)).map((path) => () => entry_at(path)));
     } catch (error) {
-      kernel.service<NotificationsService>("notifications").notify(app_id, {
-        type: NotificationType.ERROR,
-        title: "Couldn't read the folder",
-        message: error_message(error),
-      });
+      report_error(app_id, "Couldn't read the folder", error);
     }
   }
 

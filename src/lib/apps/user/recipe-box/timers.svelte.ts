@@ -1,8 +1,8 @@
-import kernel, { NotificationType, type JobId, type NotificationsService, type SchedulerService } from "$lib/core/api";
-import { error_message } from "$lib/core/utils";
+import kernel, { type JobId, type NotificationsService, type SchedulerService } from "$lib/core/api";
 import { Ticker } from "$lib/core/utils/ticker.svelte";
 import { APP_ID } from "./constants";
 import { cook_timer_input, cook_timers, type CookTimer, type RecipeRef } from "./timers";
+import { report_error } from "$kit/utils/report-error";
 
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
 
@@ -30,18 +30,14 @@ export class CookTimers {
     if (!recipe) return;
     // In the click that starts it, so the browser counts the permission prompt as the user's.
     void this.notifications.request_system();
-    start_cook_timer(label, duration_ms, recipe).catch((reason) => this.report("Couldn't start the timer", reason));
+    start_cook_timer(label, duration_ms, recipe).catch((reason) => report_error(APP_ID, "Couldn't start the timer", reason));
   }
 
   cancel(id: JobId): void {
-    this.scheduler.cancel(id).catch((reason) => this.report("Couldn't stop the timer", reason));
+    this.scheduler.cancel(id).catch((reason) => report_error(APP_ID, "Couldn't stop the timer", reason));
   }
 
   remaining(timer: CookTimer): number {
     return timer.done ? 0 : Math.max(0, timer.end_at - this.ticker.now);
-  }
-
-  private report(title: string, reason: unknown): void {
-    this.notifications.notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) });
   }
 }

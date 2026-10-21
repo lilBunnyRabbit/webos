@@ -5,21 +5,18 @@
     FONT_DIRECTORY,
     FONT_FILE_ACCEPT,
     FontRole,
-    NotificationType,
     type FilesService,
     type FontChoice,
-    type NotificationsService,
     type SettingsService,
   } from "$lib/core/api";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { IconButton, Section, Select, SettingRow } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { error_message } from "$lib/core/utils";
   import { FolderOpen as FolderOpenIcon, Trash as TrashIcon } from "phosphor-svelte";
+  import { report_error } from "$kit/utils/report-error";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const { window: win } = get_app_context();
 
   const ROLES = [
@@ -63,17 +60,13 @@
     settings.appearance.font = { ...settings.appearance.font, [role]: decode(value) };
   }
 
-  function report(title: string, reason: unknown) {
-    notifications.notify("settings", { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   async function add(role: FontRole) {
     const chosen = await win.pick_file({ accept: FONT_FILE_ACCEPT, start_path: PATHS.home, title: role === FontRole.SANS ? "Choose a UI font" : "Choose a code font" });
     if (!chosen) return;
     try {
       await settings.use_font(role, chosen);
     } catch (reason) {
-      report("Couldn't use that font", reason);
+      report_error("settings", "Couldn't use that font", reason);
     }
   }
 
@@ -83,7 +76,7 @@
     try {
       await settings.remove_font(name);
     } catch (reason) {
-      report(`Couldn't remove ${stem(name)}`, reason);
+      report_error("settings", `Couldn't remove ${stem(name)}`, reason);
     }
   }
 </script>

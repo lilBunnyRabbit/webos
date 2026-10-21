@@ -1,9 +1,7 @@
 <script lang="ts">
   import kernel, {
-    NotificationType,
     ShortcutCategory,
     type FilesService,
-    type NotificationsService,
     type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
@@ -31,12 +29,12 @@
   import { preview_document, render_markdown, SCROLL_MESSAGE } from "./markdown-preview";
   import manifest from "./index";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
 
   const { app_id, window_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
@@ -218,7 +216,7 @@
       }
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the file", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the file", reason);
       return false;
     } finally {
       saving = false;

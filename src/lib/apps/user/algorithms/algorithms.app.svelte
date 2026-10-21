@@ -33,6 +33,7 @@
   import { resolve_input } from "./engine/resolve";
   import type { AlgorithmsProps } from "./props";
   import { definition_for } from "./registry";
+  import { report_error } from "$kit/utils/report-error";
 
   const props: AlgorithmsProps = $props();
   const { app_id, window: win, storage } = get_app_context();
@@ -130,7 +131,7 @@
       path = target;
       folder.value = parent_path(target);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the file", message: error_message(reason) });
+      report_error(app_id, "Couldn't open the file", reason);
     }
   }
 
@@ -155,7 +156,7 @@
       path = target;
       folder.value = parent_path(target);
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save", message: error_message(reason) });
+      report_error(app_id, "Couldn't save", reason);
     }
   }
 
@@ -169,7 +170,7 @@
       await clipboard.copy_text(link);
       notifications.notify(app_id, { type: NotificationType.INFO, title: "Link copied", message: `Opens ${entry.name} on its own, with this input.` });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't copy the link", message: error_message(reason) });
+      report_error(app_id, "Couldn't copy the link", reason);
     }
   }
 

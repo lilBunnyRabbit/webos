@@ -10,6 +10,7 @@
   import type { RunProps } from "./run";
   import ShareCard from "./share-card.svelte";
   import { hex_share } from "./share";
+  import { Flash } from "$kit/utils/flash.svelte";
 
   let { seed, daily, head, link, saved, onsave, onfinish, next }: RunProps<HexState> = $props();
 
@@ -22,7 +23,7 @@
   const initial_guesses = initial.saved?.guesses.slice(0, HEX_GUESSES) ?? [];
   let guesses = $state<string[]>(initial_guesses);
   let typed = $state("");
-  let message = $state<string | null>(null);
+  const flash = new Flash(1800);
   let root = $state<HTMLDivElement>();
 
   const status = $derived(hex_status(guesses, target));
@@ -36,7 +37,7 @@
     if (over || typed.length >= HEX_LENGTH) return;
     if (!clock.running) clock.start();
     typed += digit.toUpperCase();
-    message = null;
+    flash.clear();
   }
 
   function erase() {
@@ -46,7 +47,7 @@
   function submit() {
     if (over) return;
     if (typed.length < HEX_LENGTH) {
-      message = `Type all ${HEX_LENGTH} digits`;
+      flash.show(`Type all ${HEX_LENGTH} digits`);
       return;
     }
     guesses = [...guesses, typed];
@@ -58,12 +59,6 @@
     }
     onsave({ guesses: [...guesses], ms: clock.read() });
   }
-
-  $effect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => (message = null), 1800);
-    return () => clearTimeout(timer);
-  });
 
   $effect(() => {
     if (win.is_focused && root && !root.contains(document.activeElement)) root.focus({ preventScroll: true });
@@ -150,8 +145,8 @@
   </ol>
 
   <p class="min-h-5 shrink-0 text-center text-ui" aria-live="polite">
-    {#if message}
-      {message}
+    {#if flash.text}
+      {flash.text}
     {:else if status === HexStatus.WON}
       Got it in {guesses.length} of {HEX_GUESSES}.
     {:else if status === HexStatus.LOST}

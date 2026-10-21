@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type FilesService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { Language } from "$kit/components/code";
@@ -40,12 +40,12 @@
   } from "./request";
   import ResponseView from "./response-view.svelte";
   import { pretty_json, send, type ApiResponse } from "./send";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
 
   const { window_id, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const Tab = { PARAMS: "params", HEADERS: "headers", BODY: "body", VARIABLES: "variables" } as const;
@@ -119,10 +119,6 @@
     selected = Math.min(selected, doc.requests.length - 1);
   }
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   async function load(target: string) {
     loading = true;
     load_error = null;
@@ -176,7 +172,7 @@
       path = target;
       return true;
     } catch (reason) {
-      report("Couldn't save the requests", reason);
+      report_error(APP_ID, "Couldn't save the requests", reason);
       return false;
     }
   }
@@ -235,7 +231,7 @@
     try {
       void download(APP_ID, request, { folder: await downloads_folder() });
     } catch (reason) {
-      report("Couldn't start the download", reason);
+      report_error(APP_ID, "Couldn't start the download", reason);
     }
   }
 
@@ -251,7 +247,7 @@
       if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
       await files.create_file(directory, base_name(target), { content: response.blob, overwrite: true });
     } catch (reason) {
-      report("Couldn't save the body", reason);
+      report_error(APP_ID, "Couldn't save the body", reason);
     }
   }
 

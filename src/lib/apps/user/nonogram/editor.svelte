@@ -1,8 +1,8 @@
 <script lang="ts">
-  import kernel, { NotificationType, ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type FilesService, type ShortcutsService } from "$lib/core/api";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { Badge, Button, IconButton, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import {
     ArrowLeft as ArrowLeftIcon,
     ArrowUUpLeft as UndoIcon,
@@ -23,6 +23,7 @@
   import Swatches from "./swatches.svelte";
   import FromImage from "./from-image.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   interface Props {
     drawing: Drawing;
@@ -41,7 +42,6 @@
 
   const { app_id, window_id, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const start = untrack(() => to_editor(initial));
@@ -223,7 +223,7 @@
       if (!parsed.ok) throw new Error(parsed.error);
       saved_text = serialize_nonogram(load(parsed.drawing, chosen));
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the puzzle", message: error_message(reason) });
+      report_error(app_id, "Couldn't open the puzzle", reason);
     }
   }
 
@@ -237,7 +237,7 @@
       path = target;
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the puzzle", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the puzzle", reason);
       return false;
     }
   }

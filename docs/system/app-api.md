@@ -191,6 +191,8 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/components/waveform` | | `Waveform`: peaks on a canvas, trim and selection markers grabbed by tabs, a playhead, zoom and scroll with a time ruler (Soundboard, Style Guide). See [components](../design/components.md#app-kit) |
 | `$kit/utils/audio` | | Kernel-free PCM: `Pcm`, `pcm_of(AudioBuffer)`, `encode_wav` / `wav_blob` (16-bit PCM WAV, channels interleaved), `normalize_regions`, `subtract_regions`, `cut_regions` (keeps regions in order, each seam a 10 ms linear crossfade, so the result is shorter by that much per seam), `peaks`, `peak_index` + `peaks_between` (min/max per 256 frames, so a zoomed view draws only its range) (Soundboard) |
 | `$kit/utils/view` | | 2D camera math: `View`, `Point`, `to_screen`, `to_image`, `clamp_scale`, `fit_view`, `zoom_view`, `pinch_view` (`SwipeCompare`, Image Tools, Jigsaw) |
+| `$kit/utils/report-error` | | `report_error(app_id, title, reason)`: an error toast whose message is `error_message(reason)`, the one-liner apps use for a failed save, open or copy (most apps; Clock's and Calendar's `attempt()`) |
+| `$kit/utils/flash.svelte` | | `Flash(ms)`: a short status line that clears itself `ms` after `show(text)`; `clear()` drops it early. Construct it during component init, its timer is an `$effect` (Alibi, Crack the Code, Color Games › Hex Guess, Letterer) |
 
 The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 

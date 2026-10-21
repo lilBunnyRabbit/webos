@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type NotificationsService } from "$lib/core/api";
+  import kernel, { type NotificationsService } from "$lib/core/api";
   import { Button, IconButton, Section as Group, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
@@ -18,7 +18,7 @@
   import { watch_signatures } from "./signatures.svelte";
   import { build_signature, type StrokePoint } from "./stroke";
   import { file_stem } from "$lib/core/api/services/files/path";
-  import { error_message } from "$lib/core/utils";
+  import { report_error } from "$kit/utils/report-error";
 
   const { picker, on_use }: { picker: Snippet; on_use: (name: string) => void } = $props();
   const { app_id, window: win } = get_app_context();
@@ -52,7 +52,7 @@
       strokes = [];
       notifications.notify(app_id, { title: "Signature saved", message: path });
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the signature", message: error_message(error) });
+      report_error(app_id, "Couldn't save the signature", error);
     } finally {
       saving = false;
     }
@@ -72,7 +72,7 @@
     try {
       await rename_signature(name, signature_file_name(next));
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't rename the signature", message: error_message(error) });
+      report_error(app_id, "Couldn't rename the signature", error);
     }
   }
 
@@ -82,7 +82,7 @@
     try {
       await delete_signature(name);
     } catch (error) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't delete the signature", message: error_message(error) });
+      report_error(app_id, "Couldn't delete the signature", error);
     }
   }
 </script>

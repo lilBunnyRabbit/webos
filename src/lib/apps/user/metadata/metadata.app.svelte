@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, Checkbox, EmptyState, IconButton, Section, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
@@ -15,6 +15,7 @@
   import { APP_ID, open_in_hex, strip_beside, write_at } from "./files";
   import { inspect, type Inspection } from "./inspect";
   import { strip_metadata, stripped_name } from "./strip";
+  import { report_error } from "$kit/utils/report-error";
 
   const ACCEPT = ["image/jpeg", "image/png", "image/webp", ".jpg", ".jpeg", ".png", ".webp", ".pdf", "application/pdf"];
 
@@ -93,7 +94,7 @@
         actions: [{ label: "Open", on_click: () => void open_path(target) }],
       });
     } catch (reason) {
-      notifications.notify(APP_ID, { type: NotificationType.ERROR, title: "Couldn't strip the metadata", message: error_message(reason) });
+      report_error(APP_ID, "Couldn't strip the metadata", reason);
     } finally {
       saving = false;
     }

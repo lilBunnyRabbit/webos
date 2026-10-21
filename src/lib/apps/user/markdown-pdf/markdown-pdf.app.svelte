@@ -1,9 +1,7 @@
 <script lang="ts">
   import kernel, {
-    NotificationType,
     ShortcutCategory,
     type FilesService,
-    type NotificationsService,
     type SettingsService,
     type ShortcutsService,
   } from "$lib/core/api";
@@ -55,12 +53,12 @@
   import SettingsPanel from "./settings-panel.svelte";
   import manifest from "./index";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path, print, ...launch_settings }: Partial<MarkdownPdfProps> = $props();
 
   const { app_id, window_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const theme = $derived(kernel.service<SettingsService>("settings").theme);
 
@@ -241,7 +239,7 @@
       device_name = null;
       return true;
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't save the file", message: error_message(reason) });
+      report_error(app_id, "Couldn't save the file", reason);
       return false;
     }
   }
@@ -265,7 +263,7 @@
     try {
       await print_html(html, { title: stem });
     } catch (reason) {
-      notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't open the print dialog", message: error_message(reason) });
+      report_error(app_id, "Couldn't open the print dialog", reason);
     }
   }
 

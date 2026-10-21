@@ -1,9 +1,9 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type AppsService, type DesktopItem, type DesktopService, type NotificationsService } from "$lib/core/api";
+  import kernel, { Platform, type AppsService, type DesktopItem, type DesktopService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { EmptyState, IconButton, Section } from "$lib/core/components/ui";
   import ShortcutIcon from "$lib/core/components/files/shortcut-icon.svelte";
-  import { cn, error_message } from "$lib/core/utils";
+  import { cn } from "$lib/core/utils";
   import {
     ArrowSquareOut as ArrowSquareOutIcon,
     SquaresFour as SquaresFourIcon,
@@ -15,6 +15,7 @@
   import Sparkline from "../sparkline.svelte";
   import type { DomMonitor, DomStats } from "../dom-monitor.svelte";
   import { summarize_props } from "../widget-props";
+  import { report_error } from "$kit/utils/report-error";
 
   type Widget = Extract<DesktopItem, { kind: "widget" }>;
 
@@ -25,7 +26,6 @@
   const { window: win } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
-  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let sort = $state<Sort<SortKey> | null>(null);
 
@@ -62,11 +62,7 @@
     try {
       await desktop.remove_item(item.name);
     } catch (error) {
-      notifications.notify("activity-monitor", {
-        type: NotificationType.ERROR,
-        title: `Could not remove “${item.label}”`,
-        message: error_message(error),
-      });
+      report_error("activity-monitor", `Could not remove “${item.label}”`, error);
     }
   }
 

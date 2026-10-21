@@ -43,6 +43,7 @@
   import { font_label } from "$lib/core/api/services/settings/fonts";
   import type { FontChoice } from "$lib/core/api/services/settings/type";
   import { count, repeated_words } from "./words";
+  import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -54,7 +55,7 @@
   const groups = storage.persisted<Record<string, boolean>>("groups", {}, z.record(z.string(), z.boolean()));
   const mobile = kernel.platform === Platform.MOBILE;
 
-  const editor = new WarrenEditor((error) => report("Something went wrong in the editor", error));
+  const editor = new WarrenEditor((error) => report_error(app_id, "Something went wrong in the editor", error));
 
   let file_path = $state<string | null>(null);
   let draft = $state<{ name: string; folder: string } | null>(null);
@@ -167,10 +168,6 @@
   $effect(() => win.set_dirty(editor.dirty, { save }));
   $effect(() => win.on_back(() => (more ? ((more = false), true) : finding ? ((finding = false), editor.focus(), true) : false)));
 
-  function report(title: string, reason: unknown) {
-    notifications.notify(app_id, { type: NotificationType.ERROR, title, message: error_message(reason) });
-  }
-
   async function discard_ok(): Promise<boolean> {
     return !editor.dirty || confirm_discard(win, file_name);
   }
@@ -191,7 +188,7 @@
       file_path = path;
       draft = null;
     } catch (reason) {
-      if (id === open_request) report(`Couldn't open ${base_name(path)}`, reason);
+      if (id === open_request) report_error(app_id, `Couldn't open ${base_name(path)}`, reason);
     } finally {
       if (id === open_request) loading = false;
     }
@@ -239,7 +236,7 @@
       notifications.notify(app_id, { title: "Document saved", message: path });
       return true;
     } catch (reason) {
-      report("Couldn't save the document", reason);
+      report_error(app_id, "Couldn't save the document", reason);
       return false;
     }
   }
@@ -281,7 +278,7 @@
         notifications.notify(app_id, { title: "Exported for Word", message: target });
       }
     } catch (reason) {
-      report("Couldn't export the document", reason);
+      report_error(app_id, "Couldn't export the document", reason);
     }
   }
 
@@ -289,7 +286,7 @@
     try {
       await print_html(print_document(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
     } catch (reason) {
-      report("Couldn't print the document", reason);
+      report_error(app_id, "Couldn't print the document", reason);
     }
   }
 
