@@ -68,7 +68,7 @@
 
 <div class="flex flex-col gap-8">
   <Section title="System notifications" description="Alarms, timers, Pomodoro phases and reminders ring through your system's notifications, even when WebOS is in a background tab.">
-    <SettingRow label="Permission" description={current.description}>
+    <SettingRow setting="notification-permission" label="Permission" description={current.description}>
       {#snippet children({ id, describedby })}
         <Badge tone={current.tone}>{current.label}</Badge>
         {#if status === "default"}
@@ -76,7 +76,7 @@
         {/if}
       {/snippet}
     </SettingRow>
-    <SettingRow label="Send a test" description="Fires one in a second, the same way an alarm would.">
+    <SettingRow setting="notification-test" label="Send a test" description="Fires one in a second, the same way an alarm would.">
       {#snippet children({ id, describedby })}
         <Button {id} aria-describedby={describedby} disabled={sending} onclick={send_test}><PaperPlaneTiltIcon weight="bold" />Send test</Button>
       {/snippet}
@@ -85,6 +85,7 @@
 
   <Section title="When WebOS is closed" description="A browser page can't keep time once it's closed, so what you get depends on this browser.">
     <SettingRow
+      setting="notification-closed"
       label="Alerts with every tab closed"
       description={scheduler.triggers
         ? "On: Chrome's notification triggers show alerts on time even with WebOS closed."

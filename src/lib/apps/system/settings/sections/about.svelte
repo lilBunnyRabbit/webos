@@ -1,15 +1,9 @@
 <script lang="ts">
   import kernel, {
     author_link,
-    BRAND_DARK,
-    DEFAULT_APPEARANCE,
     credits,
     OWNER,
-    TaskbarPosition,
-    TaskbarSize,
-    WallpaperPreset,
     type AppsService,
-    type SettingsService,
     type VersionService,
   } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
@@ -19,7 +13,6 @@
   import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
-    ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
     Bug as BugIcon,
     CheckCircle as CheckCircleIcon,
@@ -33,7 +26,6 @@
     Sparkle as SparkleIcon,
   } from "phosphor-svelte";
 
-  const settings = $derived(kernel.service<SettingsService>("settings"));
   const version = $derived(kernel.service<VersionService>("version"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
@@ -55,14 +47,6 @@
     window.open(issue_url(kind, version.info, kernel.platform), "_blank", "noopener,noreferrer");
   }
 
-  function reset_settings() {
-    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false, seconds: false };
-    settings.theme = { ...BRAND_DARK };
-    settings.file_defaults = {};
-    settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
-    settings.appearance = { ...DEFAULT_APPEARANCE };
-    settings.live_options = {};
-  }
 </script>
 
 <div class="flex flex-col gap-8">
@@ -78,7 +62,7 @@
     </div>
   </div>
 
-  <Section title="Install">
+  <Section setting="install" title="Install">
     <SettingRow
       label="Install WebOS"
       description={installer.installed || installer.can_install ? INSTALL_WHY : `${INSTALL_WHY} ${installer.hint}`}
@@ -95,16 +79,15 @@
     </SettingRow>
   </Section>
 
-  <Section title="Build">
+  <Section setting="build" title="Build">
     {#each rows as [label, value] (label)}
-      <div class="flex items-center justify-between gap-4 px-4 py-2.5">
-        <span class="text-ui text-foreground/80">{label}</span>
-        <span class="truncate font-mono text-2xs">{value}</span>
-      </div>
+      <SettingRow {label}>
+        {#snippet children({ id })}<output {id} class="truncate font-mono text-2xs">{value}</output>{/snippet}
+      </SettingRow>
     {/each}
   </Section>
 
-  <Section title="Updates" description={DEV ? "Update checks are off in development builds." : "WebOS also checks every 30 minutes on its own."}>
+  <Section setting="updates" title="Updates" description={DEV ? "Update checks are off in development builds." : "WebOS also checks every 30 minutes on its own."}>
     <SettingRow
       label={version.update_available ? `v${version.update_available.version} is ready` : "You're on the latest build"}
       description={version.update_available ? `Commit ${version.update_available.commit}. Reloads into the new build.` : undefined}
@@ -123,7 +106,7 @@
     </SettingRow>
   </Section>
 
-  <Section title="Introduction">
+  <Section setting="introduction" title="Introduction">
     <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: installing, files, getting around, theme and taskbar.">
       <Button onclick={() => version.show_intro()}>
         <PlayIcon /> Show again
@@ -136,7 +119,7 @@
     </SettingRow>
   </Section>
 
-  <Section title="Feedback" description="Opens a pre-filled issue on GitHub; posting it needs a GitHub account.">
+  <Section setting="feedback" title="Feedback" description="Opens a pre-filled issue on GitHub; posting it needs a GitHub account.">
     <SettingRow label="Request a feature" description="An idea for WebOS or one of its apps.">
       <Button onclick={() => open_issue(FeedbackKind.FEATURE)}>
         <LightbulbIcon /> Request <ArrowSquareOutIcon class="size-3.5" />
@@ -154,7 +137,7 @@
     </SettingRow>
   </Section>
 
-  <Section title="Credits" description="Who made the apps in WebOS. An app without a credit of its own is the owner's.">
+  <Section setting="credits" title="Credits" description="Who made the apps in WebOS. An app without a credit of its own is the owner's.">
     {#each credit_list as { author, apps: made } (author.name)}
       {@const href = author_link(author)}
       {@const open = expanded.includes(author.name)}
@@ -205,14 +188,6 @@
         </ul>
       </div>
     {/each}
-  </Section>
-
-  <Section title="Reset">
-    <SettingRow label="Reset settings" description="Brand Dark theme, default corners and motion, grid wallpaper and live wallpaper options, taskbar at the bottom, default apps forgotten. Saved themes and files are kept.">
-      <Button variant="danger" onclick={reset_settings}>
-        <ArrowCounterClockwiseIcon /> Reset
-      </Button>
-    </SettingRow>
   </Section>
 
   <a

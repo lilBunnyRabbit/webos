@@ -148,7 +148,7 @@
     try {
       await settings.use_font(choice, loaded.source);
       const name = loaded.faces[0].info.family ?? loaded.name;
-      notifications.notify(app_id, { title: `${name} is now the ${choice === FontRole.SANS ? "UI" : "code"} font`, message: "Change it in Settings › Appearance › Fonts." });
+      notifications.notify(app_id, { title: `${name} is now the ${choice === FontRole.SANS ? "UI" : "code"} font`, message: "Change it in Settings › Text & interface." });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't use it as the app font", message: error_message(reason) });
     }

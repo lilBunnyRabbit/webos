@@ -87,7 +87,7 @@
   }
 </script>
 
-<Section title="Generate" description="New colours from a few rules. Text always stays readable; lock a colour to keep it, save the ones you like." flush>
+<Section setting="theme-create" title="Generate" description="New colours from a few rules. Text always stays readable; lock a colour to keep it, save the ones you like." flush>
   <div class="@container flex flex-col gap-4">
     <div class="grid gap-4 @xl:grid-cols-[minmax(0,1fr)_13rem]">
       <div class="flex flex-col gap-1 rounded-xl bg-background-light ring-1 ring-foreground/8">

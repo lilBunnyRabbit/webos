@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { AppearanceMotion, AppearanceRadius, AppearanceShadow, AppearanceText, type SettingsService } from "$lib/core/api";
   import { Section, Segmented, SettingRow } from "$lib/core/components/ui";
+  import Fonts from "./fonts.svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
@@ -29,25 +30,32 @@
   ];
 </script>
 
-<Section title="Interface" description="Kept when you switch themes.">
-  <SettingRow label="Corners" description="How round windows, menus and buttons are.">
-    {#snippet children({ id, describedby })}
-      <Segmented {id} aria-describedby={describedby} label="Corners" bind:value={settings.appearance.radius} options={RADII} />
-    {/snippet}
-  </SettingRow>
-  <SettingRow label="Shadows" description="How strongly windows, menus and tiles lift off what's behind them.">
-    {#snippet children({ id, describedby })}
-      <Segmented {id} aria-describedby={describedby} label="Shadows" bind:value={settings.appearance.shadow} options={SHADOWS} />
-    {/snippet}
-  </SettingRow>
-  <SettingRow label="Text size" description="Scales text and the spacing around it.">
-    {#snippet children({ id, describedby })}
-      <Segmented {id} aria-describedby={describedby} label="Text size" bind:value={settings.appearance.text} options={TEXT_SIZES} />
-    {/snippet}
-  </SettingRow>
-  <SettingRow label="Motion" description="Off stops animations. System follows your device's reduce motion setting.">
-    {#snippet children({ id, describedby })}
-      <Segmented {id} aria-describedby={describedby} label="Motion" bind:value={settings.appearance.motion} options={MOTIONS} />
-    {/snippet}
-  </SettingRow>
-</Section>
+<div class="flex flex-col gap-8">
+  <Section title="Readability" description="Kept when you switch themes.">
+    <SettingRow setting="text-size" label="Text size" description="Scales text and the spacing around it.">
+      {#snippet children({ id, describedby })}
+        <Segmented {id} aria-describedby={describedby} label="Text size" bind:value={settings.appearance.text} options={TEXT_SIZES} />
+      {/snippet}
+    </SettingRow>
+    <SettingRow setting="motion" label="Motion" description="Off stops animations. System follows your device's reduce motion setting.">
+      {#snippet children({ id, describedby })}
+        <Segmented {id} aria-describedby={describedby} label="Motion" bind:value={settings.appearance.motion} options={MOTIONS} />
+      {/snippet}
+    </SettingRow>
+  </Section>
+
+  <Fonts />
+
+  <Section title="Shape" description="How windows, menus and tiles are drawn, in every theme.">
+    <SettingRow setting="corners" label="Corners" description="How round windows, menus and buttons are.">
+      {#snippet children({ id, describedby })}
+        <Segmented {id} aria-describedby={describedby} label="Corners" bind:value={settings.appearance.radius} options={RADII} />
+      {/snippet}
+    </SettingRow>
+    <SettingRow setting="shadows" label="Shadows" description="How strongly windows, menus and tiles lift off what's behind them.">
+      {#snippet children({ id, describedby })}
+        <Segmented {id} aria-describedby={describedby} label="Shadows" bind:value={settings.appearance.shadow} options={SHADOWS} />
+      {/snippet}
+    </SettingRow>
+  </Section>
+</div>

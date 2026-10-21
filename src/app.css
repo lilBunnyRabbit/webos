@@ -50,7 +50,7 @@
   --color-info: var(--info);
   --color-mark-ears: oklch(0.949 0.0939 122.47);
 
-  /* Settings › Appearance › Font writes --app-font-sans / --app-font-mono on <html>: the chosen family, then Inter or Hack. */
+  /* Settings › Text & interface › Fonts writes --app-font-sans / --app-font-mono on <html>: the chosen family, then Inter or Hack. */
   --font-sans: var(--app-font-sans, "Inter"), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--app-font-mono, "Hack"), ui-monospace, monospace;
 
@@ -62,7 +62,7 @@
 
   --tracking-heading: -0.011em;
 
-  /* Settings › Appearance › Corners writes --radius-scale on <html>. rounded-full stays a circle at every scale. */
+  /* Settings › Text & interface › Corners writes --radius-scale on <html>. rounded-full stays a circle at every scale. */
   --radius: calc(4px * var(--radius-scale, 1));
   --radius-xs: calc(4px * var(--radius-scale, 1));
   --radius-sm: calc(6px * var(--radius-scale, 1));
@@ -115,7 +115,7 @@
   html {
     /* The one scrim behind every floating layer (start menu, menus, dialogs). */
     --overlay: color-mix(in oklch, var(--background-darkest) 60%, transparent);
-    /* Settings › Appearance › Text size writes --text-scale. Everything is in rem, so the whole UI scales with it. */
+    /* Settings › Text & interface › Text size writes --text-scale. Everything is in rem, so the whole UI scales with it. */
     font-size: calc(100% * var(--text-scale, 1));
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
@@ -163,7 +163,7 @@
     }
   }
 
-  /* Settings › Appearance › Motion off. Only ever removes motion; the OS setting above still applies under "system". */
+  /* Settings › Text & interface › Motion off. Only ever removes motion; the OS setting above still applies under "system". */
   html[data-motion="off"] {
     *,
     ::before,

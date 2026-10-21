@@ -29,7 +29,7 @@
 
 <div class="flex flex-col gap-8">
   <Section title="Position" description="Which screen edge the taskbar docks to.">
-    <SettingRow label="Dock to" description="Windows resize to the space that's left.">
+    <SettingRow setting="taskbar-position" label="Dock to" description="Windows resize to the space that's left.">
       {#snippet children({ id, describedby })}
         <Segmented {id} aria-describedby={describedby} label="Taskbar position" bind:value={settings.taskbar.position} options={OPTIONS} />
       {/snippet}
@@ -37,12 +37,12 @@
   </Section>
 
   <Section title="Size and hiding">
-    <SettingRow label="Size" description="Buttons, icons and the bar itself.">
+    <SettingRow setting="taskbar-size" label="Size" description="Buttons, icons and the bar itself.">
       {#snippet children({ id, describedby })}
         <Segmented {id} aria-describedby={describedby} label="Taskbar size" bind:value={settings.taskbar.size} options={SIZES} />
       {/snippet}
     </SettingRow>
-    <SettingRow label="Auto-hide" description="Windows get the whole screen. Point at the edge to bring the taskbar back.">
+    <SettingRow setting="taskbar-auto-hide" label="Auto-hide" description="Windows get the whole screen. Point at the edge to bring the taskbar back.">
       {#snippet children({ id, describedby })}
         <Switch {id} aria-describedby={describedby} bind:checked={settings.taskbar.auto_hide} />
       {/snippet}
@@ -50,7 +50,7 @@
   </Section>
 
   <Section title="Clock">
-    <SettingRow label="Show seconds" description="The taskbar clock ticks every second.">
+    <SettingRow setting="taskbar-seconds" label="Show seconds" description="The taskbar clock ticks every second.">
       {#snippet children({ id, describedby })}
         <Switch {id} aria-describedby={describedby} bind:checked={settings.taskbar.seconds} />
       {/snippet}

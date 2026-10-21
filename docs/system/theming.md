@@ -79,14 +79,14 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 
 ### Base layer
 
-- `html`: `font-size: calc(100% * var(--text-scale, 1))` (Settings › Appearance › Text size), Inter features `cv11`, `ss01`, antialiased.
+- `html`: `font-size: calc(100% * var(--text-scale, 1))` (Settings › Text & interface › Text size), Inter features `cv11`, `ss01`, antialiased.
 - `body`: `bg-background-darkest text-foreground font-sans text-sm overflow-hidden`. `#app` fills `100dvw × 100dvh`.
 - `:focus-visible`: 2px `var(--cottontail)` outline, 2px offset.
 - `--overlay` on `html`: the shared scrim behind the start menu and every dialog, `background-darkest` at 60%.
 - `::selection`: solid `primary` with `background` text, the primary button pair. A translucent `primary` left the light text unreadable on light fields.
 - `h1`–`h3`: heading tracking, `text-wrap: balance`.
 - Every element: thin scrollbars, thumb `foreground` at 22% on a transparent track.
-- `prefers-reduced-motion: reduce`, and `html[data-motion="off"]` (Settings › Appearance › Motion off): every animation and transition collapses to 1ms.
+- `prefers-reduced-motion: reduce`, and `html[data-motion="off"]` (Settings › Text & interface › Motion off): every animation and transition collapses to 1ms.
 
 The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (`desktop/wallpaper.svelte`, under the desktop and the mobile home) paint `background-darkest`.
 
@@ -131,7 +131,7 @@ Because the stored value is the expression and not a resolved colour, editing `p
 
 **Previews.** Settings' theme cards draw each preset in its own colours. They re-declare `--background`, `--foreground`, `--primary`, `--secondary` and `--accent` on the miniature only (not the whole card, so the card's own label and ring stay in the active theme), so the derived expressions resolve against the preset rather than the active theme.
 
-The Settings app (Appearance) applies a preset with `settings.theme = { ...preset.theme }` and edits single tokens in a collapsible customiser (rows only render while it's open): a text field and an `<input type="color">` per token, grouped Surfaces / Text and brand / States. The colour picker goes through native relative colour syntax (`settings/color.ts`): it shows `rgb(from <value> r g b)` as `#rrggbb` (out-of-gamut channels clipped), and a pick is stored as the computed result of `oklch(from <hex> l c h)`, read from a probe element. Stored values stay OKLCH. Picking a derived token replaces its live expression with a fixed colour, so that token stops following `primary` or `background`.
+The Settings app (Theme) applies a preset with `settings.theme = { ...preset.theme }` and edits single tokens on its Edit colours subpage: a text field and an `<input type="color">` per token, grouped Surfaces / Text and brand / States. The colour picker goes through native relative colour syntax (`settings/color.ts`): it shows `rgb(from <value> r g b)` as `#rrggbb` (out-of-gamut channels clipped), and a pick is stored as the computed result of `oklch(from <hex> l c h)`, read from a probe element. Stored values stay OKLCH. Picking a derived token replaces its live expression with a fixed colour, so that token stops following `primary` or `background`.
 
 ## Fonts
 

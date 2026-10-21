@@ -47,6 +47,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
+  import { reveal_setting } from "$lib/core/components/ui/setting-anchor";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -56,18 +57,19 @@
   import { encode_frames } from "$kit/utils/qr-transfer";
 
   const SECTIONS = [
-    { value: "colour", label: "Colour", icon: SwatchesIcon },
-    { value: "type", label: "Type", icon: TextAaIcon },
-    { value: "surfaces", label: "Surfaces", icon: StackIcon },
-    { value: "actions", label: "Actions", icon: CursorClickIcon },
-    { value: "inputs", label: "Inputs", icon: SquaresFourIcon },
-    { value: "feedback", label: "Feedback", icon: BellIcon },
-    { value: "kit", label: "App kit", icon: ToolboxIcon },
+    { value: "colour", label: "Colour", icon: SwatchesIcon, group: "Foundations" },
+    { value: "type", label: "Type", icon: TextAaIcon, group: "Foundations" },
+    { value: "surfaces", label: "Surfaces", icon: StackIcon, group: "Foundations" },
+    { value: "actions", label: "Actions", icon: CursorClickIcon, group: "Components" },
+    { value: "inputs", label: "Inputs", icon: SquaresFourIcon, group: "Components" },
+    { value: "feedback", label: "Feedback", icon: BellIcon, group: "Components" },
+    { value: "kit", label: "App kit", icon: ToolboxIcon, group: "Components" },
   ] as const;
   type SectionId = (typeof SECTIONS)[number]["value"];
 
   const { storage } = get_app_context();
   const section = storage.window<SectionId>("section", "colour", z.enum(SECTIONS.map((item) => item.value)));
+  const open = storage.window<boolean>("open", false, z.boolean());
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 
   const LADDER = ["background-darkest", "background-darker", "background-dark", "background", "background-light", "background-lighter", "background-lightest"];
@@ -100,6 +102,15 @@
   let tool = $state<"pencil" | "eraser">("pencil");
   let speed = $state<"slow" | "normal" | "fast">("normal");
   let pane = $state({ size: 160, collapsed: false });
+  const DEMO_PAGES = [
+    { value: "theme", label: "Theme", icon: SwatchesIcon, group: "Personalise" },
+    { value: "text", label: "Text", icon: TextAaIcon, group: "Personalise" },
+    { value: "alerts", label: "Alerts", icon: BellIcon, group: "System" },
+  ];
+  let demo_page = $state("text");
+  let demo_open = $state(false);
+  let demo_width = $state<"wide" | "narrow">("wide");
+  let demo_root: HTMLElement | null = $state(null);
   let split = $state(50);
   let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
   const WAVE_RATE = 8000;
@@ -168,9 +179,7 @@
   <span class="font-mono text-2xs text-foreground/80">{label}</span>
 {/snippet}
 
-<div class="flex h-full flex-col @2xl:flex-row">
-  <SideNav label="Style guide sections" items={[...SECTIONS]} bind:value={section.value} />
-
+<SideNav label="Style guide sections" back_label="Style Guide" items={[...SECTIONS]} bind:value={section.value} bind:open={open.value}>
   <main class="min-h-0 flex-1 overflow-y-auto">
     <div class="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-6">
       <header>
@@ -249,6 +258,29 @@
             </Toolbar>
             <div class="h-24 bg-background p-4 text-ui text-foreground/65">Content on background</div>
             <StatusBar><span>3 items</span><span class="ml-auto">1.42 MB</span></StatusBar>
+          </div>
+        </Section>
+        <Section title="Side navigation" description="Grouped pages; with the page as its child it drills in below @2xl: the list first, Back returns." flush>
+          {#snippet actions()}
+            <Segmented label="Demo width" size="sm" bind:value={demo_width} options={[{ value: "wide", label: "Wide" }, { value: "narrow", label: "Narrow" }]} />
+          {/snippet}
+          <div class={["@container mx-auto h-80 overflow-hidden rounded-xl ring-1 ring-foreground/10", demo_width === "wide" ? "w-full" : "w-80"]}>
+            <SideNav label="Demo pages" back_label="Demo" items={DEMO_PAGES} bind:value={demo_page} bind:open={demo_open}>
+              {#snippet header()}
+                <Input size="sm" placeholder="Search" aria-label="Search the demo">
+                  {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
+                </Input>
+              {/snippet}
+              <div bind:this={demo_root} class="min-h-0 flex-1 overflow-y-auto bg-background p-4">
+                <Section title={DEMO_PAGES.find((item) => item.value === demo_page)?.label} description="Section and SettingRow take a setting anchor.">
+                  <SettingRow setting="demo-size" label="Text size">
+                    {#snippet children({ id, describedby })}
+                      <Button {id} aria-describedby={describedby} size="sm" onclick={() => demo_root && reveal_setting(demo_root, "demo-size")}>Ring this row</Button>
+                    {/snippet}
+                  </SettingRow>
+                </Section>
+              </div>
+            </SideNav>
           </div>
         </Section>
         <Section title="Resize handle" description="A splitter between two panes: drag, arrow keys, Home and End; double-click or Enter folds the pane." flush>
@@ -510,4 +542,4 @@
       {/if}
     </div>
   </main>
-</div>
+</SideNav>

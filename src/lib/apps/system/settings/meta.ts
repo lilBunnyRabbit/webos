@@ -1,7 +1,7 @@
 import type { AppMeta } from "$lib/core/api";
 
 export default {
-  description: "Theme, wallpaper, taskbar, default apps, backups and what's new.",
+  description: "Theme, wallpaper, text and fonts, taskbar, notifications, default apps, backups and what's new.",
   keywords: [
     "preferences",
     "options",
@@ -15,6 +15,19 @@ export default {
     "backup",
     "restore",
     "export",
+    "text size",
+    "font",
+    "fonts",
+    "motion",
+    "accessibility",
+    "notifications",
+    "shortcuts",
+    "keyboard",
+    "default apps",
+    "reset",
+    "changelog",
+    "about",
+    "version",
   ],
   pitch: {
     problem: "Everyone wants their desktop to look and behave a little differently.",

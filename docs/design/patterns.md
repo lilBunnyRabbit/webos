@@ -16,15 +16,16 @@ How apps are put together. The app's root fills the window content, which is an 
 
 A notice about the open document (Text Editor's "changed on disk") is a strip between toolbar and content: `bg-warning/10`, hairline below, a filled warning icon, one sentence in `text-ui`, then `sm` buttons (secondary, then the primary action last).
 
-**Settings-style app** (Settings, Style Guide):
+**Settings-style app** (Settings, Style Guide, Activity Monitor):
 
 ```
 ┌ SideNav ┬ page ─────────────────────────┐
-│ items   │  h1 text-lg                   │  max-w-2xl (Style Guide 3xl), px-6 py-6, gap-6–8
-│         │  Section · Section · …        │
+│ search  │  h1 text-lg                   │  max-w-2xl (Style Guide 3xl), px-6 py-6, gap-6–8
+│ GROUP   │  Section · Section · …        │
+│ items   │  Related                      │
 ```
 
-`flex h-full flex-col @2xl:flex-row`; the nav becomes a tab row in narrow windows. Persist the open section in app storage.
+`SideNav` with the page as its child (drill-in): side by side from `@2xl`; below, a list of pages that drills into one, with a Back bar and the phone's Back. Group the pages under overlines when there are more than about seven. Persist the open section and `open` in window storage. Apps whose nav filters one view (App Library's categories) or switches tools inside a toolbar keep the tab row.
 
 **Dashboard app** (Kernel, Example): a centered column (`mx-auto max-w-3xl`/`max-w-4xl p-6`) of `Section`s or cards.
 
@@ -82,7 +83,11 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 
 - One `Section` per topic, each with a one-line description that says what it controls.
 - Inside: `SettingRow`s (label left, control right). Switches apply immediately; no Save button.
-- Destructive settings (reset) go last, in their own section, with a `danger` button and a description of exactly what's lost and what's kept.
+- Destructive settings (reset) go last, in their own section, with a `danger` button and a description of exactly what's lost and what's kept. The button asks first (`window.confirm` with `danger`).
+- A page holds one subject. When a block outgrows it (a generator, a 17-token editor), it becomes a one-level subpage opened from a `SettingRow` with a button ("Create ›"); the subpage shows a breadcrumb (‹, parent, ›, current) instead of the `h1`, and Back leaves it before the page.
+- **Search:** a field on top of the sidebar; results replace the page list, each with its label and where it lives ("Theme › Create a theme"). Picking one opens the page, scrolls to the row and rings it (`setting` anchors, `reveal_setting`). The index is a static list next to the app with a browser test that every id has an anchor; never a DOM scan (only one page is mounted).
+- **Related:** a "Related" row at the bottom of a page: secondary `sm` buttons to neighbouring pages (with an arrow) and to apps that change the same thing (with the app's icon). Two or three, not a sitemap.
+- Actions on a card (a saved theme) are reachable without right-click: a small ⋯ `IconButton` on the card opens the same menu.
 
 ## Empty, loading and error states
 

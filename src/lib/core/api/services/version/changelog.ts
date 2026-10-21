@@ -5,6 +5,29 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.37.0",
+    date: "2026-10-21",
+    title: "Settings, easier to find your way",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Settings is split into smaller pages, grouped in the sidebar: Appearance became Theme, Wallpaper and Text & interface, and creating a theme or editing its colours each get a page of their own.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Search Settings by name: pick a result and Settings opens the page and points at the setting. Type settings and a setting's name in the command palette or Terminal to jump straight there.",
+      },
+      {
+        kind: IMPROVED,
+        text: "On phones and in narrow windows, Settings, the Style Guide and Activity Monitor show a list of pages first and open one at a time, with Back to return.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Reset settings moved to Backup & reset and asks before it resets, saved themes have a menu button for rename, export and delete, and the desktop's Change wallpaper opens the Wallpaper page.",
+      },
+    ],
+  },
+  {
     version: "3.36.0",
     date: "2026-10-21",
     title: "Warren, finished",

@@ -253,7 +253,7 @@
             <p class="text-ui text-foreground/65">Nothing picked yet: you start with the core apps. The App Library has the rest.</p>
           {/if}
         {:else if PAGES[page] === "yours"}
-          {@render heading("Make it yours", "Pick a look", "Changes apply right away. Fine-tune every colour later in Settings › Appearance.")}
+          {@render heading("Make it yours", "Pick a look", "Changes apply right away. Fine-tune every colour later in Settings › Theme.")}
           <div class="grid grid-cols-2 gap-2 @xl:grid-cols-4">
             {#each THEME_PRESETS as preset (preset.name)}
               <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />

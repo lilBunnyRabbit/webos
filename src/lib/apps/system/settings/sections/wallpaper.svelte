@@ -81,51 +81,51 @@
   </button>
 {/snippet}
 
-<Section title="Wallpaper" description="Behind the desktop and the phone's home screen. Presets follow the theme." flush>
-  <div class="flex flex-col gap-4">
-    <div class="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
-      {#each PRESETS as { preset, label } (preset)}
-        {@const value: Wallpaper = { kind: "preset", preset }}
-        {@render tile(
-          label,
-          (settings.wallpaper.kind === "preset" && settings.wallpaper.preset === preset) ||
-            (settings.wallpaper.kind === "live" && kernel.platform === Platform.MOBILE && preset === WallpaperPreset.GRID),
-          () => (settings.wallpaper = value),
-          value,
-          preset === WallpaperPreset.GRID
-        )}
-      {/each}
-      {@render tile(image ? "Image" : "Image…", image !== null, () => !image && choose(), image)}
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <Button variant="secondary" size="sm" onclick={choose} disabled={busy}>Choose image…</Button>
-    </div>
-
-    {#if image}
-      <div class="flex flex-col gap-1">
-        <SettingRow label="Fit" description="How the image fills the screen.">
-          {#snippet children({ id, describedby })}
-            <Segmented {id} aria-describedby={describedby} label="Fit" size="sm" options={FITS} bind:value={() => image.fit, (fit) => update({ fit })} />
-          {/snippet}
-        </SettingRow>
-        <SettingRow label="Dim" description="Fades the image toward the theme, so icons stay readable.">
-          {#snippet children({ id, describedby })}
-            <Slider {id} aria-describedby={describedby} class="w-40" min={0} max={60} bind:value={() => Math.round(image.dim * 100), (dim) => update({ dim: dim / 100 })} />
-          {/snippet}
-        </SettingRow>
-        <SettingRow label="Blur">
-          {#snippet children({ id, describedby })}
-            <Slider {id} aria-describedby={describedby} class="w-40" min={0} max={20} bind:value={() => image.blur, (blur) => update({ blur })} />
-          {/snippet}
-        </SettingRow>
-      </div>
-    {/if}
+<div class="flex flex-col gap-8">
+<Section setting="wallpaper-style" title="Style" description="Behind the desktop and the phone's home screen. Presets follow the theme." flush>
+  <div class="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
+    {#each PRESETS as { preset, label } (preset)}
+      {@const value: Wallpaper = { kind: "preset", preset }}
+      {@render tile(
+        label,
+        (settings.wallpaper.kind === "preset" && settings.wallpaper.preset === preset) ||
+          (settings.wallpaper.kind === "live" && kernel.platform === Platform.MOBILE && preset === WallpaperPreset.GRID),
+        () => (settings.wallpaper = value),
+        value,
+        preset === WallpaperPreset.GRID
+      )}
+    {/each}
+    {@render tile(image ? "Image" : "Image…", image !== null, () => !image && choose(), image)}
   </div>
 </Section>
 
+<Section setting="wallpaper-image" title="Image" description="A picture of your own, from your files or this device.">
+  <SettingRow label="Picture" description={image ? "A copy is kept, so the original can move or go." : "None chosen yet."}>
+    {#snippet children({ id, describedby })}
+      <Button {id} aria-describedby={describedby} onclick={choose} disabled={busy}><ImageIcon /> Choose image…</Button>
+    {/snippet}
+  </SettingRow>
+  {#if image}
+    <SettingRow label="Fit" description="How the image fills the screen.">
+      {#snippet children({ id, describedby })}
+        <Segmented {id} aria-describedby={describedby} label="Fit" size="sm" options={FITS} bind:value={() => image.fit, (fit) => update({ fit })} />
+      {/snippet}
+    </SettingRow>
+    <SettingRow label="Dim" description="Fades the image toward the theme, so icons stay readable.">
+      {#snippet children({ id, describedby })}
+        <Slider {id} aria-describedby={describedby} class="w-40" min={0} max={60} bind:value={() => Math.round(image.dim * 100), (dim) => update({ dim: dim / 100 })} />
+      {/snippet}
+    </SettingRow>
+    <SettingRow label="Blur">
+      {#snippet children({ id, describedby })}
+        <Slider {id} aria-describedby={describedby} class="w-40" min={0} max={20} bind:value={() => image.blur, (blur) => update({ blur })} />
+      {/snippet}
+    </SettingRow>
+  {/if}
+</Section>
+
 {#if kernel.platform !== Platform.MOBILE}
-  <Section title="Live wallpapers" description="Animated, and they react to the pointer and your windows. Desktop only." flush>
+  <Section setting="live-wallpapers" title="Live wallpapers" description="Animated, and they react to the pointer and your windows. Desktop only." flush>
     <div class="flex flex-col gap-4">
       <div class="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
         {#each LIVE as { id, entry } (id)}
@@ -146,6 +146,7 @@
     </div>
   </Section>
 {/if}
+</div>
 
 <style>
   .dots::after {

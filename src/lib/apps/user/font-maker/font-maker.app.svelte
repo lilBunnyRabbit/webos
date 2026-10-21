@@ -293,7 +293,7 @@
       const family = family_name(snapshot);
       const file = new File([build_family(snapshot)], `${safe_name(family)}.ttc`, { type: "font/collection" });
       await kernel.service<SettingsService>("settings").use_font(role, file);
-      notifications.notify(app_id, { title: role === FontRole.SANS ? `${family} is the UI font` : `${family} is the code font`, message: "Change it back in Settings › Appearance." });
+      notifications.notify(app_id, { title: role === FontRole.SANS ? `${family} is the UI font` : `${family} is the code font`, message: "Change it back in Settings › Text & interface." });
     } catch (reason) {
       report("Couldn't use the font", reason);
     }

@@ -24,7 +24,7 @@ Props aren't validated here; the app's schema decides in the service.
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `last_link` | `readonly { hash, outcome } \| null` | The last `#/…` hash handled in this tab. `outcome`: `opened`, `not a link`, `unknown app`, `invalid props` |
-| `link_for` | `(id: WindowId, kind = RouteKind.APP) => string \| null` | `route_url` of `#/app/{id}?{props}` (or `#/solo/…` for `RouteKind.SOLO`) from the window's **launch props** (not its current state: Settings opened on About and moved to Appearance still links About). Props go through `shareable_props`, so a file window links to its app without the file (PDF Tools on Sign: `#/app/pdf-tools?section=sign`). `null` only for an unknown window. Drops `location.search`, so `?platform=` isn't shared |
+| `link_for` | `(id: WindowId, kind = RouteKind.APP) => string \| null` | `route_url` of `#/app/{id}?{props}` (or `#/solo/…` for `RouteKind.SOLO`) from the window's **launch props** (not its current state: Settings opened on About and moved to Theme still links About). Props go through `shareable_props`, so a file window links to its app without the file (PDF Tools on Sign: `#/app/pdf-tools?section=sign`). `null` only for an unknown window. Drops `location.search`, so `?platform=` isn't shared |
 | `copy_link` | `(id: WindowId, kind = RouteKind.APP) => Promise<void>` | `clipboard.copy_text(link)` then an `info` toast "Link copied" ("Solo link copied") with the URL, titled "Link copied · the open file isn't included" when props were left out. A failed write toasts an error. No-op when `link_for` is `null` |
 
 ## Handling a link

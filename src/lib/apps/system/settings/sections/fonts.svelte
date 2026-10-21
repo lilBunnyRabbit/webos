@@ -23,8 +23,8 @@
   const { window: win } = get_app_context();
 
   const ROLES = [
-    { role: FontRole.SANS, label: "UI font", description: "Everything you read: windows, menus, the desktop.", sample: "The quick brown fox jumps over the lazy dog" },
-    { role: FontRole.MONO, label: "Code font", description: "Code, the terminal, hex values and sizes.", sample: "const hop = (x) => x * 2; // 0O 1lI" },
+    { role: FontRole.SANS, setting: "ui-font", label: "UI font", description: "Everything you read: windows, menus, the desktop.", sample: "The quick brown fox jumps over the lazy dog" },
+    { role: FontRole.MONO, setting: "code-font", label: "Code font", description: "Code, the terminal, hex values and sizes.", sample: "const hop = (x) => x * 2; // 0O 1lI" },
   ] as const;
 
   let installed = $state<string[]>([]);
@@ -91,7 +91,7 @@
 <Section title="Fonts" description="Kept when you switch themes. Use one from Font Maker or Font Viewer, or pick a font file here.">
   {#each ROLES as item (item.role)}
     <div>
-      <SettingRow label={item.label} description={item.description}>
+      <SettingRow setting={item.setting} label={item.label} description={item.description}>
         {#snippet children({ id, describedby })}
           <Select
             {id}
@@ -111,15 +111,13 @@
   {/each}
 
   {#if installed.length}
-    <div class="flex flex-col border-t border-foreground/8 px-4 py-2">
-      <p class="py-1 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Installed in {FONT_DIRECTORY}</p>
-      {#each installed as name (name)}
-        <div class="flex min-h-9 items-center gap-2">
-          <span class="min-w-0 flex-1 truncate text-ui">{stem(name)}</span>
-          <span class="font-mono text-2xs text-foreground/65">{name.split(".").pop()}</span>
-          <IconButton label="Remove {stem(name)}" size="sm" onclick={() => remove(name)}><TrashIcon /></IconButton>
-        </div>
-      {/each}
-    </div>
+    <p class="px-4 pt-3 pb-1 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Installed in {FONT_DIRECTORY}</p>
+    {#each installed as name (name)}
+      <SettingRow label={stem(name)} description={name.split(".").pop()?.toUpperCase()}>
+        {#snippet children({ id, describedby })}
+          <IconButton {id} aria-describedby={describedby} label="Remove {stem(name)}" size="sm" onclick={() => remove(name)}><TrashIcon /></IconButton>
+        {/snippet}
+      </SettingRow>
+    {/each}
   {/if}
 </Section>

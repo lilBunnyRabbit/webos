@@ -20,6 +20,8 @@
   const { storage, window: win } = get_app_context();
   // svelte-ignore state_referenced_locally
   const section = storage.window<Section>("section", requested ?? "windows", z.enum(SECTION_IDS));
+  // svelte-ignore state_referenced_locally
+  const open = storage.window<boolean>("open", requested !== undefined, z.boolean());
   const current = $derived(SECTIONS.find((item) => item.value === section.value) ?? SECTIONS[0]);
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
@@ -57,9 +59,7 @@
   });
 </script>
 
-<div class="flex h-full flex-col @2xl:flex-row">
-  <SideNav label="Activity Monitor sections" items={[...SECTIONS]} bind:value={section.value} />
-
+<SideNav label="Activity Monitor sections" back_label="Activity Monitor" items={[...SECTIONS]} bind:value={section.value} bind:open={open.value}>
   <main class="min-h-0 flex-1 overflow-y-auto">
     <div class="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-6">
       <h1 class="text-lg font-semibold">{current.label}</h1>
@@ -78,4 +78,4 @@
       {/if}
     </div>
   </main>
-</div>
+</SideNav>

@@ -188,6 +188,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | letterer | `letterer daily [day]` | opens the daily word |
 | pomodoro | `pomo`, `pomo start [task…]`, `pomo pause\|skip\|reset\|status`, `pomo stats`, `pomo pin` | status `text`; `focus-day` values; `pomo start`, `pomo skip` and `pomo pause` are the phase notification's buttons |
 | getting-started | `tour [topic]` | none |
+| settings | `settings [setting]`: opens Settings at a page (`settings wallpaper`) or a setting, which it scrolls to and rings (`settings text-size`); an unknown id fails with suggestions | `setting` completer: ids from Settings' search index (pages and settings, platform-filtered) with label and place ([Settings](../system-apps.md#settings)) |
 | clock | `clock [tab]`, `clock pin [-f]`, `time [zone]`, `alarm ls\|add\|on\|off\|rm`, `alarm snooze <alarm> [duration]` (default `10m`), `alarm stop <alarm>`, `timer <duration> [label…]`, `timer ls\|restart\|stop` | `alarm` / `timer` values, `text`; `zone` completer. Alarms and timers are scheduler jobs; `alarm snooze\|stop` and `timer restart\|stop` are their notification buttons |
 | time-since | `since`, `since new <name…>`, `since reset\|stop\|start\|rm\|pin <counter>` | `counter` values; `counter` completer |
 | work-hours | `wh in [desc…]`, `wh out`, `wh status`, `wh ls [month]`, `wh add <date> <start> <end> [desc…]`, `wh report [month]`, `wh target <hours\|none> [month]` | `workday` values (open → `{ day }`), `text` |

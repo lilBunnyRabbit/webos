@@ -38,7 +38,7 @@ It sits in `desktop-shell.svelte` under the [window manager](window-manager.md),
 
 The surface gets `data-wallpaper-image` while an image is set. An unlayered rule in `app.css` then gives every `[data-wallpaper-label]` (desktop and phone home labels) a `background/72` backing, so labels stay readable on any photo.
 
-Set from Settings › Appearance › Wallpaper, or "Set as wallpaper" on an image file (desktop, File Explorer, Media Preview), which calls `set_wallpaper()` in `components/files/file-actions.ts` → `settings.set_wallpaper_image(path)` with an error toast.
+Set from Settings › Wallpaper, or "Set as wallpaper" on an image file (desktop, File Explorer, Media Preview), which calls `set_wallpaper()` in `components/files/file-actions.ts` → `settings.set_wallpaper_image(path)` with an error toast.
 
 ## Live wallpapers
 
@@ -196,7 +196,7 @@ Pinning happens from the [start menu](taskbar.md#start-menu) ("Pin to Desktop" �
 | Where | Menu |
 |-------|------|
 | An icon (right-click, ContextMenu key, Shift+F10) | For one: Open; Cut (Ctrl+X); Copy (Ctrl+C); Rename (F2); Save to disk… (files, folders); Set as wallpaper (`image/*` files); Remove shortcut (shortcuts) or Delete (files, folders); Properties (Alt+Enter). For a selection of N: Open N items, Cut, Copy, Delete N items |
-| Empty desktop | New folder (system prompt, validated against desktop names); Paste (Ctrl+V; conflicts ask in a system dialog); Sort by ▸ Name, Kind, Date modified (only when the desktop service has `move_items`, so not on the phone home; see below); Gather windows (Alt+Shift+G: every visible window moved fully on screen, `windows.gather()` in a view transition; disabled with no windows; only when the windows service has `gather`); Open Terminal here (a Terminal in `~/Desktop`, hint Alt+Shift+↵); Change wallpaper or theme (opens Settings) |
+| Empty desktop | New folder (system prompt, validated against desktop names); Paste (Ctrl+V; conflicts ask in a system dialog); Sort by ▸ Name, Kind, Date modified (only when the desktop service has `move_items`, so not on the phone home; see below); Gather windows (Alt+Shift+G: every visible window moved fully on screen, `windows.gather()` in a view transition; disabled with no windows; only when the windows service has `gather`); Open Terminal here (a Terminal in `~/Desktop`, hint Alt+Shift+↵); Change wallpaper or theme (opens Settings › Wallpaper) |
 
 Delete (menu or the Delete key) asks first with a system confirm (`dismissible: false`): "Remove the “X” shortcut?" for shortcuts, "Delete “X”?" (recursive for folders) for real entries, "Delete N items?" once for a selection. `DesktopService.remove_item` now deletes any entry; the caller confirms. New: `create_folder(name)`, `names()`, and `rename_item(name, new_name)`, which moves the saved cell to the new name before renaming so the icon doesn't jump.
 

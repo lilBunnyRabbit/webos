@@ -299,7 +299,7 @@ export async function background_menu(anchor: Position, lead: { item: MenuAction
   else if (choice === "new_folder") create_folder();
   else if (choice === "paste") paste();
   else if (choice === "gather") window_transition(gather?.list() ?? [], () => gather?.gather());
-  else if (choice === "appearance") apps().launch("settings");
+  else if (choice === "appearance") apps().launch("settings", { section: "wallpaper" });
   else if (choice === "terminal") apps().launch("terminal", { cwd: PATHS.desktop });
   else if (choice === "sort_name") sort_items(DesktopSort.NAME);
   else if (choice === "sort_kind") sort_items(DesktopSort.KIND);

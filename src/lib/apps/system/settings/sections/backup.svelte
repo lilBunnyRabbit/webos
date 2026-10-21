@@ -1,11 +1,26 @@
 <script lang="ts">
-  import kernel, { BACKUP_AREAS, BackupError, type BackupArea, type BackupService, type NotificationsService } from "$lib/core/api";
+  import kernel, {
+    BACKUP_AREAS,
+    BackupError,
+    BRAND_DARK,
+    DEFAULT_APPEARANCE,
+    TaskbarPosition,
+    TaskbarSize,
+    WallpaperPreset,
+    type BackupArea,
+    type BackupService,
+    type NotificationsService,
+    type SettingsService,
+  } from "$lib/core/api";
+  import { get_app_context } from "$lib/core/contexts/app";
   import { Button, Section, SettingRow, Spinner, Switch } from "$lib/core/components/ui";
   import { format_bytes } from "$lib/core/utils";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, DownloadSimple as DownloadSimpleIcon } from "phosphor-svelte";
+  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, DownloadSimple as DownloadSimpleIcon, Eraser as EraserIcon } from "phosphor-svelte";
 
   const backup = $derived(kernel.service<BackupService>("backup"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  const { window: win } = get_app_context();
 
   let chosen = $state<Record<BackupArea, boolean>>({ files: true, settings: true, apps: true });
   let sizes = $state<Record<BackupArea, number> | null>(null);
@@ -26,6 +41,21 @@
     };
   });
 
+  async function reset_settings() {
+    const ok = await win.confirm("Reset settings?", {
+      detail: "Theme, wallpaper, text and interface, taskbar and default apps go back to how WebOS started. Saved themes, fonts and files are kept.",
+      confirm_label: "Reset",
+      danger: true,
+    });
+    if (!ok) return;
+    settings.taskbar = { position: TaskbarPosition.BOTTOM, pinned: [], size: TaskbarSize.MEDIUM, auto_hide: false, seconds: false };
+    settings.theme = { ...BRAND_DARK };
+    settings.file_defaults = {};
+    settings.wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
+    settings.appearance = { ...DEFAULT_APPEARANCE };
+    settings.live_options = {};
+  }
+
   async function report(title: string, run: () => Promise<unknown>) {
     try {
       await run();
@@ -37,7 +67,7 @@
 </script>
 
 <div class="flex flex-col gap-8">
-  <Section title="Back up" description="One zip of what you pick, saved to this device. Clearing site data can't touch it.">
+  <Section setting="backup-create" title="Back up" description="One zip of what you pick, saved to this device. Clearing site data can't touch it.">
     {#each BACKUP_AREAS as { area, label, path } (area)}
       <SettingRow {label} description="{path}{area === 'apps' ? ' and app storage' : ''} · {sizes ? format_bytes(sizes[area]) : '…'}">
         {#snippet children({ id, describedby })}
@@ -61,12 +91,24 @@
   </Section>
 
   <Section title="Restore" description="Replaces each area the backup holds and leaves the others alone. WebOS reloads afterwards.">
-    <SettingRow label="Restore from a backup" description="Pick a webos-backup zip on this device. You'll be asked before anything is replaced.">
+    <SettingRow setting="backup-restore" label="Restore from a backup" description="Pick a webos-backup zip on this device. You'll be asked before anything is replaced.">
       {#snippet children({ id, describedby })}
         <Button {id} aria-describedby={describedby} disabled={backup.activity !== null} onclick={() => report("Couldn't restore the backup", () => backup.restore())}>
           {#if backup.activity === "restoring"}<Spinner label="Working" class="text-current" />{:else}<ArrowCounterClockwiseIcon weight="bold" />{/if}
           Restore…
         </Button>
+      {/snippet}
+    </SettingRow>
+  </Section>
+
+  <Section title="Reset">
+    <SettingRow
+      setting="reset-settings"
+      label="Reset settings"
+      description="Brand Dark theme, default corners, text size and motion, grid wallpaper, taskbar at the bottom with nothing pinned, default apps forgotten. Saved themes, fonts and files are kept."
+    >
+      {#snippet children({ id, describedby })}
+        <Button {id} aria-describedby={describedby} variant="danger" onclick={reset_settings}><EraserIcon /> Reset…</Button>
       {/snippet}
     </SettingRow>
   </Section>

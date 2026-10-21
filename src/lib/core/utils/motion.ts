@@ -1,5 +1,5 @@
 /**
- * The OS asks for reduced motion, or Settings › Appearance › Motion is off. CSS animations and transitions are cut in
+ * The OS asks for reduced motion, or Settings › Text & interface › Motion is off. CSS animations and transitions are cut in
  * `app.css`; script-driven motion (View Transitions, Svelte transitions, which run on the Web Animations API and
  * ignore that rule) checks this when it starts.
  */

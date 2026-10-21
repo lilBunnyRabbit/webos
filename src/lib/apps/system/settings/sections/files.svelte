@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService, type SettingsService } from "$lib/core/api";
-  import { Button, EmptyState, IconButton, Section } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Section, SettingRow } from "$lib/core/components/ui";
   import { FileDashed as FileDashedIcon, X as XIcon } from "phosphor-svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -14,7 +14,7 @@
   }
 </script>
 
-<Section title="Remembered choices" description="Added when you tick “Always use” in the Open with menu.">
+<Section setting="default-apps" title="Remembered choices" description="Added when you tick “Always use” in the Open with menu.">
   {#snippet actions()}
     {#if defaults.length > 0}
       <Button size="sm" variant="quiet" onclick={() => (settings.file_defaults = {})}>Forget all</Button>
@@ -26,20 +26,14 @@
   {:else}
     {#each defaults as [extension, app_id] (extension)}
       {@const manifest = apps.get(app_id)}
-      <div class="flex items-center gap-3 px-4 py-2.5">
-        <span class="w-20 shrink-0 font-mono text-ui">{extension}</span>
-        <span class="flex min-w-0 flex-1 items-center gap-2 text-ui">
-          {#if manifest}
-            <manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
-            <span class="truncate">{manifest.name}</span>
-          {:else}
-            <span class="text-error">{app_id} (no longer installed)</span>
-          {/if}
-        </span>
-        <IconButton label="Forget {extension}" size="sm" onclick={() => forget(extension)}>
-          <XIcon weight="bold" />
-        </IconButton>
-      </div>
+      <SettingRow label={extension} description={manifest ? `Opens in ${manifest.name}` : `${app_id} is no longer installed`}>
+        {#snippet children({ id, describedby })}
+          {#if manifest}<manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />{/if}
+          <IconButton {id} aria-describedby={describedby} label="Forget {extension}" size="sm" onclick={() => forget(extension)}>
+            <XIcon weight="bold" />
+          </IconButton>
+        {/snippet}
+      </SettingRow>
     {/each}
   {/if}
 </Section>
