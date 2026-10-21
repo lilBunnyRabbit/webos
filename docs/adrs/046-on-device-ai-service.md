@@ -2,6 +2,8 @@
 **Date:** 2026-10-17
 **Status:** Implemented
 
+> **Revision 2026-10-21: structured answers from pictures** ([ADR-061](./061-ai-games.md)). `extract()` accepts the same content as `prompt()`: with a picture it needs `prompt-image` and creates its fresh session with `expectedInputs`, still destroyed after the call and never kept. The availability flow apps show (checking, unavailable, download notice) moved into the app kit as `AiGate`; Ask uses it.
+>
 > **Revision 2026-10-20: structured answers and usage** ([ADR-054](./054-ai-assistant-over-shell.md)). `extract(messages, zod schema)` returns a validated value through `responseConstraint`, on a fresh session it destroys. `measure(text)` returns `{ used, window }` from a kept token-counter session (a `window` alongside the count, so a cost can show as a share before any chat exists). `prompt()` returns the chat's `{ used, window }` when it ends, and `sessions` carry it.
 
 > **Revision 2026-10-19:** `prompt()` takes pictures: `AiMessage.content` can be `AiPart[]`, and `AiFeature.PROMPT_IMAGE` answers whether the model reads them ([ADR-051](./051-ai-image-input.md)).

@@ -1,0 +1,29 @@
+# ADR-061: AI Games
+**Date:** 2026-10-21
+**Status:** Accepted
+
+## Context
+The first games that need on-device Gemini Nano (ADR-046): Unsaid (Taboo), Doodlehop (Sketch Guess) and Alibi. Nano is unavailable on phones, `extract()` is text-only, and every finished `prompt()` keeps a session from a pool of 4 shared by the whole OS. Ask already has an availability screen of its own. Discussion: [brainstorm](../brainstorm/2026-10-21_ai-games.md).
+
+## Decision
+- **Code owns the rules.** Word lists, cards, cases, banned-word checks, matching and verdicts are pure `.ts` with unit tests. The model only guesses (Unsaid, Doodlehop) or plays a suspect who never knows which statement is the lie (Alibi).
+- **One kit gate.** A `$kit` component wraps any AI app: checking, unavailable (the requirements text), download notice, then the app. Ask moves onto it.
+- **`extract()` takes images.** Content with an image part opens a `prompt-image` session with `expectedInputs` and the `responseConstraint`, destroyed after the call. Games that guess repeatedly never use `prompt()`, so they never evict kept chats. Alibi's interrogation is a chat and uses `prompt()`.
+- **Phones:** the apps exist on phones and show the gate's unavailable state. No platform field in the manifest.
+- **No dailies yet.** `track_play` and app storage only. Unsaid and Alibi take `{ seed?: number }`.
+- **No shell commands.**
+
+## Alternatives Considered
+- Desktop-only manifest flag: hides dead tiles, but changes `define_app`. Deferred.
+- `prompt()` with text parsing for image guesses: evicts other windows' chats on every guess.
+- Kept base session plus `clone()`: faster guesses, new service API.
+- Letting the model invent Alibi's case: inconsistent across turns, unverifiable, no seeds.
+
+## Consequences
+- AI games look broken on phones until a platform flag exists; the gate at least says why.
+- Each Doodlehop guess pays for a new session; latency is the risk to measure.
+- Image plus `responseConstraint` must be verified in Chrome before Doodlehop relies on it.
+
+## Revision 2026-10-21
+
+Platform pieces built. `AiGate` (`$kit/components/ai-gate`) takes `features`, `title`, `icon` and `download` (the notice text, so Ask keeps "The first question…"); its `children` snippet gets `{ availability, notice }`, where `notice` is the download strip as a snippet the app renders under its toolbar, or `null`. After one check at mount it follows the service's `features`, so the notice goes when a download finishes. `extract()` takes picture parts as decided; image plus `responseConstraint` is still unverified on a device with the model (the build machine's Chrome had no Prompt API).

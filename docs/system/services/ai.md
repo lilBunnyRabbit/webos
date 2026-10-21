@@ -1,6 +1,6 @@
 # AiService
 
-Key `ai` · Depends on: `files`, `tasks`, `notifications` · ADR: [046](../../adrs/046-on-device-ai-service.md), [051](../../adrs/051-ai-image-input.md) · Source: `src/lib/core/api/services/ai/` · Inspector: `inspector.svelte` (ADR-020)
+Key `ai` · Depends on: `files`, `tasks`, `notifications` · ADR: [046](../../adrs/046-on-device-ai-service.md), [051](../../adrs/051-ai-image-input.md), [061](../../adrs/061-ai-games.md) · Source: `src/lib/core/api/services/ai/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Two classes, picked by `platform_services` in `kernel/init.ts` and lazy-loaded w
 | `translate` | `(text, { to, from?, signal? }) => Promise<string>` | Without `from`, detects it first and fails on `und`. Text already in `to` (same base language, `en-US` = `en`) comes back unchanged |
 | `detect` | `(text, { signal? }) => Promise<DetectedLanguage[]>` | `{ language, confidence }`, most likely first, as the browser ranks them. `und` when it can't tell |
 | `prompt` | `(messages: AiMessage[], { signal? }) => AsyncGenerator<string, AiUsage>` | Streams the answer to the last message (must be `user`) in pieces. A leading `system` message sets the instructions. `content` is a string, or `AiPart[]` mixing `{ type: "text", value }` and `{ type: "image", value: Blob }` like Chrome's Prompt API; a picture anywhere needs `prompt-image`. The generator's return value is the session's `{ used, window }` (`contextUsage`, `contextWindow`); `for await` drops it, Ask reads it with `next()` |
-| `extract` | `(messages, schema: z.ZodType<T>, { signal? }) => Promise<T>` | A structured answer: the last message (a text `user` one) is sent with `responseConstraint: z.toJSONSchema(schema)`, the reply parsed and validated (throws when it doesn't fit). A fresh session per call, destroyed after: nothing is kept (ADR-054) |
+| `extract` | `(messages, schema: z.ZodType<T>, { signal? }) => Promise<T>` | A structured answer: the last message (a `user` one, text or parts like `prompt`) is sent with `responseConstraint: z.toJSONSchema(schema)`, the reply parsed and validated (throws when it doesn't fit). A fresh session per call, destroyed after: nothing is kept, so it never evicts a chat (ADR-054). A picture in any message needs `prompt-image`: the session is created with `expectedInputs` (text and image) and labelled "Language model with pictures" in a download, like `prompt` (ADR-061) |
 | `measure` | `(text, { signal? }) => Promise<AiUsage>` | `measureContextUsage(text)` on a kept "Token counter" session, with that session's `contextWindow`. Ask uses it for command costs and its instructions |
 
 `AI_REQUIREMENTS` (in `type.ts`) is the one sentence on what's needed: desktop Chrome 138+ for summaries, translation and detection, 148+ for chat, about 22 GB free for the download, no phones or other browsers. The kit's `AiGate` (Ask, the AI games) and the error messages show it.

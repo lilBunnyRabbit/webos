@@ -110,7 +110,7 @@ export interface AiService extends IService {
   prompt(messages: AiMessage[], options?: { signal?: AbortSignal }): AsyncGenerator<string, AiUsage>;
   /**
    * Answers the last message, a `user` one, with a value matching `schema` (sent as the answer's JSON Schema), parsed
-   * and validated. A fresh session each call: nothing is kept.
+   * and validated. A fresh session each call: nothing is kept. A picture in any message needs `prompt-image`.
    */
   extract<T>(messages: AiMessage[], schema: z.ZodType<T>, options?: { signal?: AbortSignal }): Promise<T>;
   /** How many tokens `text` takes, and the context window it's measured against. */

@@ -146,6 +146,8 @@ describe("MobileAiService", () => {
     await expect(ai.summarize("Some text")).rejects.toThrow(/desktop Chrome/);
     await expect(ai.translate("Hallo", { to: "en", from: "de" })).rejects.toThrow(/desktop Chrome/);
     await expect(ai.prompt([{ role: "user", content: "Hi" }]).next()).rejects.toThrow(/desktop Chrome/);
+    const picture: AiMessage = { role: "user", content: [{ type: "image", value: new Blob(["x"]) }] };
+    await expect(ai.extract([picture], z.object({ word: z.string() }))).rejects.toThrow(/desktop Chrome/);
     expect(ai.sessions).toEqual([]);
     expect(ai.downloads).toEqual([]);
   });
@@ -167,6 +169,43 @@ describe("AiService structured answers and usage", () => {
     expect(ai.sessions).toEqual([]);
 
     await expect(ai.extract(messages, z.object({ command: z.literal("none") }))).rejects.toThrow();
+  });
+
+  test("extract with a picture gets a session for pictures with the schema, never kept", async () => {
+    const created = fake_language_model();
+    const ai = (await boot(AiService)).service<IAiService>("ai");
+    await answer(ai, [{ role: "user", content: "Hi" }]);
+    const schema = z.object({ command: z.string(), args: z.array(z.string()) });
+    const doodle = new Blob(["png"], { type: "image/png" });
+    const question: AiMessage = { role: "user", content: [{ type: "text", value: "Guess" }, { type: "image", value: doodle }] };
+
+    expect(await ai.extract([{ role: "system", content: "Guess the drawing" }, question], schema)).toEqual({
+      command: "cal agenda",
+      args: ["tomorrow"],
+    });
+    expect(created).toHaveLength(2);
+    expect(created[1].options.expectedInputs).toContainEqual({ type: "image" });
+    expect(created[1].options.initialPrompts).toEqual([{ role: "system", content: "Guess the drawing" }]);
+    expect(created[1].inputs).toEqual([[question]]);
+    expect(created[1].constraints[0]).toMatchObject({ type: "object", required: ["command", "args"] });
+    expect(created[1].destroyed).toBe(true);
+    expect(ai.sessions.map((session) => session.feature)).toEqual([AiFeature.PROMPT]);
+  });
+
+  test("extract refuses a conversation that doesn't end with the user, and a picture where pictures aren't available", async () => {
+    vi.stubGlobal("LanguageModel", {
+      availability: async (options?: { expectedInputs?: { type: string }[] }) =>
+        options?.expectedInputs?.some((input) => input.type === "image") ? "unavailable" : "available",
+      create: async () => {
+        throw new Error("never created");
+      },
+    });
+    const ai = (await boot(AiService)).service<IAiService>("ai");
+    const schema = z.object({ word: z.string() });
+    await expect(ai.extract([{ role: "assistant", content: "Hi" }], schema)).rejects.toThrow(/user's/);
+    const picture: AiMessage = { role: "user", content: [{ type: "image", value: new Blob(["x"]) }] };
+    await expect(ai.extract([picture], schema)).rejects.toThrow(/with pictures isn't available here/);
+    expect(ai.features[AiFeature.PROMPT_IMAGE]).toBe(AiAvailability.NO);
   });
 
   test("a chat reports its usage when it ends, and measure counts against the window", async () => {

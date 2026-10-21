@@ -25,6 +25,10 @@ AiService (ADR-046) takes text only: `AiMessage.content` is a string. Shopping L
 
 Shopping List's fallback reader is now PP-OCRv5 (mobile detector, Latin recogniser) on `onnxruntime-web` in a worker, not tesseract.js: on a handwritten two-column list it read 28 of 34 items against tesseract's 0 as shipped ([brainstorm](../brainstorm/2026-10-19_shopping-list.md#photo-reading-on-handwriting-later-the-same-day)). Gemini Nano still goes first where it's available, and gets the same straightened, cropped picture.
 
+## Revision 2026-10-21
+
+`extract()` takes pictures too ([ADR-061](./061-ai-games.md)): a picture in any message opens a `prompt-image` session with `expectedInputs` and the `responseConstraint`, destroyed after the call like the text path, so it never takes one of the kept chat slots. The last message is sent as `[{ role, content: parts }]`, the shape `prompt()` sends. Whether Chrome accepts a picture together with `responseConstraint` couldn't be checked when this landed (the build machine's Chrome had no Prompt API); Doodlehop checks it first.
+
 ## Consequences
 
 - `AiFeature` has five values; `Record<AiFeature, …>` literals (the services, the inspector's count) list it.

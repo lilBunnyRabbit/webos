@@ -94,6 +94,7 @@ What are the implications of this decision?
 | [058](./058-proposals.md) | Proposals | 2026-10-21 | Implemented |
 | [059](./059-warren.md) | Warren | 2026-10-21 | Implemented |
 | [060](./060-files-by-light.md) | Files by Light | 2026-10-21 | Implemented |
+| [061](./061-ai-games.md) | AI Games | 2026-10-21 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

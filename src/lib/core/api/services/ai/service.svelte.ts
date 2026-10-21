@@ -171,13 +171,22 @@ export class AiService implements IAiService {
 
   async extract<T>(messages: AiMessage[], schema: z.ZodType<T>, { signal }: { signal?: AbortSignal } = {}): Promise<T> {
     const last = messages.at(-1);
-    if (last?.role !== "user" || typeof last.content !== "string") throw new Error("The last message has to be the user's, as text");
-    const session = await this.create(AiFeature.PROMPT, "Language model", {
-      check: () => this.availability(AiFeature.PROMPT),
-      create: (options) => globalThis.LanguageModel!.create({ initialPrompts: messages.slice(0, -1), ...options }),
+    if (last?.role !== "user") throw new Error("The last message has to be the user's");
+    // Never kept, pictures included: a game guessing on every stroke must not evict another window's chat.
+    const image = has_image(messages);
+    const feature = image ? AiFeature.PROMPT_IMAGE : AiFeature.PROMPT;
+    const session = await this.create(feature, image ? "Language model with pictures" : "Language model", {
+      check: () => this.availability(feature),
+      create: (options) =>
+        globalThis.LanguageModel!.create({
+          initialPrompts: messages.slice(0, -1),
+          ...(image ? { expectedInputs: IMAGE_INPUTS } : {}),
+          ...options,
+        }),
     });
     try {
-      const answer = await session.prompt(last.content, { signal, responseConstraint: z.toJSONSchema(schema) });
+      const input = typeof last.content === "string" ? last.content : [{ role: last.role, content: last.content }];
+      const answer = await session.prompt(input, { signal, responseConstraint: z.toJSONSchema(schema) });
       return schema.parse(JSON.parse(answer));
     } finally {
       session.destroy();
