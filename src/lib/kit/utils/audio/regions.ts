@@ -89,3 +89,72 @@ export function peaks(pcm: Pcm, buckets: number): Float32Array {
   }
   return out;
 }
+
+export interface PeakIndex {
+  block: number;
+  min: Float32Array;
+  max: Float32Array;
+  /** Largest absolute sample, for scaling the drawing to the loudest peak. */
+  loudest: number;
+}
+
+/** Min and max per `block` frames across channels, built once so a zoomed view never rescans the whole sound. */
+export function peak_index(pcm: Pcm, block = 256): PeakIndex {
+  const length = pcm_length(pcm);
+  const count = Math.ceil(length / block);
+  const min = new Float32Array(count);
+  const max = new Float32Array(count);
+  let loudest = 0;
+  for (let index = 0; index < count; index++) {
+    const start = index * block;
+    const end = Math.min(length, start + block);
+    let low = 0;
+    let high = 0;
+    for (const channel of pcm.channels) {
+      for (let i = start; i < end; i++) {
+        const value = channel[i];
+        if (value < low) low = value;
+        else if (value > high) high = value;
+      }
+    }
+    min[index] = low;
+    max[index] = high;
+    loudest = Math.max(loudest, high, -low);
+  }
+  return { block, min, max, loudest };
+}
+
+/** Like `peaks`, for frames `from` to `to`: buckets as wide as a block or more read the index, narrower ones the samples. */
+export function peaks_between(pcm: Pcm, index: PeakIndex, from: number, to: number, buckets: number): Float32Array {
+  const count = Math.max(0, Math.floor(buckets));
+  const out = new Float32Array(count * 2);
+  const length = pcm_length(pcm);
+  const first = Math.max(0, Math.min(length, from));
+  const last = Math.max(first, Math.min(length, to));
+  if (length === 0 || last === first) return out;
+  const span = last - first;
+  for (let bucket = 0; bucket < count; bucket++) {
+    const start = Math.floor(first + (bucket * span) / count);
+    const end = Math.min(length, Math.max(start + 1, Math.floor(first + ((bucket + 1) * span) / count)));
+    let low = 0;
+    let high = 0;
+    if (end - start >= index.block) {
+      const block_end = Math.min(index.min.length, Math.ceil(end / index.block));
+      for (let i = Math.floor(start / index.block); i < block_end; i++) {
+        if (index.min[i] < low) low = index.min[i];
+        if (index.max[i] > high) high = index.max[i];
+      }
+    } else {
+      for (const channel of pcm.channels) {
+        for (let i = start; i < end; i++) {
+          const value = channel[i];
+          if (value < low) low = value;
+          else if (value > high) high = value;
+        }
+      }
+    }
+    out[bucket * 2] = low;
+    out[bucket * 2 + 1] = high;
+  }
+  return out;
+}

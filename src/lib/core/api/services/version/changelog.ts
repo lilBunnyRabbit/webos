@@ -7,11 +7,11 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.41.0",
     date: "2026-10-21",
-    title: "Keep just the part you want",
+    title: "Zoom in on your sounds",
     changes: [
       {
         kind: IMPROVED,
-        text: "Soundboard's sound editor can keep just your selection and drop everything around it.",
+        text: "Soundboard's sound editor can keep just your selection and drop everything around it, and zooms in like an audio editor: buttons, pinch or Ctrl+scroll, with a time ruler, to trim to the millisecond.",
       },
     ],
   },

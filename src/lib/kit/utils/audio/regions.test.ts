@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cut_regions, normalize_regions, peaks, subtract_regions } from "./regions";
+import { cut_regions, normalize_regions, peak_index, peaks, peaks_between, subtract_regions } from "./regions";
 import type { Pcm } from "./wav";
 
 const ramp = (length: number, rate = 1000): Pcm => ({
@@ -125,4 +125,27 @@ test("peaks gives the min and max of each bucket across channels", () => {
   const out = peaks(ramp(100), 4);
   expect(Array.from(out)).toEqual([-24, 24, -49, 49, -74, 74, -99, 99]);
   expect(peaks({ sample_rate: 1, channels: [] }, 3)).toHaveLength(6);
+});
+
+describe("peaks_between", () => {
+  const sound = ramp(1000);
+  const index = peak_index(sound, 10);
+
+  test("the index holds each block's min and max and the loudest sample", () => {
+    expect(index.min).toHaveLength(100);
+    expect([index.min[3], index.max[3]]).toEqual([-39, 39]);
+    expect(index.loudest).toBe(999);
+  });
+
+  test("wide buckets read the index and match a full scan", () => {
+    expect(Array.from(peaks_between(sound, index, 0, 1000, 4))).toEqual(Array.from(peaks(sound, 4)));
+  });
+
+  test("narrow buckets read the samples of just the visible range", () => {
+    expect(Array.from(peaks_between(sound, index, 500, 504, 2))).toEqual([-501, 501, -503, 503]);
+  });
+
+  test("a range past the end or empty draws nothing", () => {
+    expect(Array.from(peaks_between(sound, index, 2000, 3000, 2))).toEqual([0, 0, 0, 0]);
+  });
 });

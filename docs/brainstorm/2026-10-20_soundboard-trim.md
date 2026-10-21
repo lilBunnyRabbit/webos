@@ -33,6 +33,7 @@ Beyond the seven theme swatches, a pad can have any hex colour. This is user con
 - Build: pad image and free colour; kit WAV and region utilities with Node tests, the waveform component, the Soundboard pad dialog section, changelog.
 - [x] Pads from a part of a video: trim sheet with a video preview, saved as a WAV pad (2026-10-21)
 - [x] Keep selection: the inverse of Delete selection, drops everything outside the selection (2026-10-21)
+- [x] Zoom and scroll the waveform, Audacity-like, on desktop and touch (2026-10-21)
 
 ## Implementation notes (2026-10-20)
 - Pads point at a board-owned copy (`/var/lib/apps/soundboard/sounds/{name}`), not a path, so the edit is written into that folder as `name (edited).wav` (a free name). The original copy stays. No `/home/Music` fallback was needed.
@@ -64,6 +65,10 @@ No new commands. `sb add` on a video says to open it in Soundboard, since pickin
 
 ## Follow-up: keep selection (2026-10-21)
 The owner: "i want the option to delete out of my selection so a button that would keep the current interval". Keep selection, beside Delete selection in the shared editor panel (pad dialog and video sheet), moves the trim handles to the selection edges. Nothing is cut, so the video mapping needs no change; Undo edits reverts it like any edit.
+
+## Follow-up: zoom and scroll the waveform (2026-10-21)
+The owner wants to zoom and scroll the waveform "kinda like Audacity does it", great on mobile and desktop. Decided: the kit Waveform sits in a native horizontal scroller (no hand-rolled pan physics); zoom widens the drawing and only the visible part is drawn; Zoom in, Zoom out, Zoom to selection and Fit buttons; Ctrl/⌘+wheel and pinch zoom at the pointer; a time ruler that adapts to the zoom; handles work at any zoom, auto-scroll at the edges; on touch, a drag on a handle trims and elsewhere scrolls; playback keeps the playhead in view.
+Build notes: zoom tops out at one pixel per sample (and 16 million px of layout); drawing reads a min/max index per 256 frames (`peak_index`, `peaks_between` in `$kit/utils/audio`) so a zoomed hour-long sound never rescans every sample. Selecting on touch while zoomed in: select at fit, then Zoom to selection and fine-tune with the selection's edges, which are drag targets now. No scroll is animated, so motion settings have nothing to cut.
 
 ## Next session topics
 - When a pad moves to an edited sound, its original copy stays in the sounds folder with no pad using it. Delete it then, keep it for undo, or offer "Revert to original"?

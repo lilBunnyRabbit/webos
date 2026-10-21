@@ -440,7 +440,7 @@
         </Section>
         <Section
           title="Waveform"
-          description="A sound to trim and cut, from $kit: drag the handles to trim, drag across the middle to select, Esc clears the selection. Soundboard's Edit audio uses it."
+          description="A sound to trim and cut, from $kit: drag the handles to trim, drag across the middle to select, Esc clears the selection. Zoom with the buttons, Ctrl+scroll or a pinch; scroll the zoomed sound sideways, and the ruler follows. Soundboard's Edit audio uses it."
           flush
         >
           <div class="flex flex-col gap-2">
