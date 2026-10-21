@@ -117,7 +117,7 @@ export class VersionService implements IVersionService {
     if (seen === null) {
       // Off the boot chunk: the samples are only ever written once (ADR-041).
       void import("./samples")
-        .then(({ seed_samples }) => seed_samples(this.files_service))
+        .then(({ seed_samples }) => seed_samples(this.files_service, [...this.apps_service.list()].map(([, manifest]) => manifest)))
         .catch((error) => console.error("[VersionService] Failed to add sample files", error));
       // Loaded during boot, so the introduction is already up when the splash goes. Only a first boot waits for the meta.
       await Promise.all([intro_dialog(), this.apps_service.meta_ready]);

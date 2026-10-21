@@ -52,6 +52,7 @@
 
   const interests = new SvelteSet<string>();
   const pins = new SvelteSet<string>();
+  const shown_interests = $derived(INTERESTS.filter((interest) => interest.apps.some((id) => apps.get(id))));
   const suggested = $derived(interest_apps(interests).flatMap((id) => apps.listings().find((listing) => listing.id === id) ?? []));
 
   function toggle<T>(set: SvelteSet<T>, value: T) {
@@ -237,7 +238,7 @@
             `Pick what you're into and those apps get installed, then ${mobile ? "add favourites to the home screen" : "pin favourites to the desktop"}. Every other app is a search away.`
           )}
           <div class="flex flex-wrap gap-2" role="group" aria-label="Interests">
-            {#each INTERESTS as interest (interest.id)}
+            {#each shown_interests as interest (interest.id)}
               <Button size="lg" pressed={interests.has(interest.id)} title={interest.description} onclick={() => toggle(interests, interest.id)}>
                 {interest.label}
               </Button>

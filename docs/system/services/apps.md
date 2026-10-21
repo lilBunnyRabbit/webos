@@ -19,7 +19,7 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
-| `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked |
+| `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked. The intro hides a group with none of its apps registered |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
 | `solo.svelte.ts` | `SoloAppsService`, registered instead in solo mode (see [Solo mode](#solo-mode)) |

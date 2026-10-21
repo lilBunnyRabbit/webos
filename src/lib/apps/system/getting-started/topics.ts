@@ -7,6 +7,7 @@ import kernel, {
   type ShellService,
   type WindowId,
 } from "$lib/core/api";
+import type { AppId } from "$lib/core/api/services/apps/type";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import {
   AppWindow as AppWindowIcon,
@@ -35,6 +36,8 @@ export interface Topic {
   /** Shortcut keys shown as chips, `format_keys` syntax. */
   keys?: string;
   platforms: Platform[];
+  /** The user app the topic shows off: without it (a fork that deleted it) the topic is skipped. */
+  app?: AppId;
   /** The Try it button's label; it counts as tried once pressed. */
   action: string;
   run(window_id: WindowId): unknown;
@@ -84,6 +87,7 @@ export const TOPICS: Topic[] = [
     title: "Ask about your apps",
     text: "Ask \"what's on my shopping list?\" or \"what am I doing tomorrow?\". Choose what Ask may read; the AI runs on this device, offline too.",
     platforms: DESKTOP,
+    app: "ask",
     action: "Open Ask",
     run: () => apps().launch("ask"),
   },
@@ -113,6 +117,7 @@ export const TOPICS: Topic[] = [
     title: "Desktop widgets",
     text: "Some apps live on the desktop as widgets: a clock with your next alarm and running timers, notes, today's puzzle.",
     platforms: DESKTOP,
+    app: "clock",
     action: "Add a clock widget",
     run: () => {
       apps().install("clock");
@@ -131,7 +136,7 @@ export const TOPICS: Topic[] = [
       const { SAMPLES_FOLDER, seed_samples } = await import("$lib/core/api/services/version/samples");
       const samples = `${PATHS.documents}/${SAMPLES_FOLDER}`;
       // Only a first boot writes them, so a device from before 1.9.0 (or one that deleted them) gets them here.
-      if (!(await files.get_directory(samples))) await seed_samples(files);
+      if (!(await files.get_directory(samples))) await seed_samples(files, [...apps().list()].map(([, manifest]) => manifest));
       apps().launch("file-explorer", { path: (await files.get_directory(samples)) ? samples : PATHS.home });
     },
   },
@@ -192,5 +197,5 @@ export const TOPICS: Topic[] = [
 ];
 
 export function topics_for(platform: Platform): Topic[] {
-  return TOPICS.filter((topic) => topic.platforms.includes(platform));
+  return TOPICS.filter((topic) => topic.platforms.includes(platform) && (!topic.app || apps().get(topic.app)));
 }

@@ -1,5 +1,7 @@
 import type { FilesService } from "../files/type";
 import { PATHS } from "../files/hierarchy";
+import { apps_for } from "../apps/associations";
+import type { AppManifest } from "../apps/type";
 import BURROW from "./samples/Burrow.fontmaker?raw";
 
 export const SAMPLES_FOLDER = "Samples";
@@ -9,19 +11,18 @@ export interface SampleFile {
   content: string;
 }
 
-const WELCOME = `# Welcome to WebOS
+function welcome(lines: string[]): string {
+  return `# Welcome to WebOS
 
 These are sample files. Open them, change them, delete them: they're yours.
 
-- **Bouncing ball.hopsprite** opens in Hopsprite, the pixel art editor. Opening it installs the app.
-- **Fruit.csv** opens as a table you can sort.
-- **Sunset.svg** opens in Media Preview.
-- **Burrow.fontmaker** opens in Font Maker. It's Burrow, WebOS's own font, drawn as strokes: change a letter and use it as the app font.
+${lines.map((line) => `- ${line}`).join("\n")}
 
 Right-click any file for Open with, Rename, Compress or Save to disk.
 
 New here? **Getting started** on the desktop shows the rest: the command palette, the Terminal, widgets and backups.
 `;
+}
 
 const FRUIT = `name,colour,price_eur,in_season
 Apple,red,0.40,yes
@@ -100,20 +101,45 @@ function bouncing_ball(): string {
   });
 }
 
-/** What a first boot puts in `/home/Documents/Samples` (ADR-041): one file per kind of app. */
-export function sample_files(): SampleFile[] {
+interface Sample extends SampleFile {
+  /** What the browser reports for it, for matching MIME associations. */
+  type: string;
+  /** Its line in Welcome.md. */
+  line: string;
+}
+
+function samples(): Sample[] {
   return [
-    { name: "Welcome.md", content: WELCOME },
-    { name: "Bouncing ball.hopsprite", content: bouncing_ball() },
-    { name: "Fruit.csv", content: FRUIT },
-    { name: "Sunset.svg", content: SUNSET },
-    { name: "Burrow.fontmaker", content: BURROW },
+    {
+      name: "Bouncing ball.hopsprite",
+      content: bouncing_ball(),
+      type: "",
+      line: "**Bouncing ball.hopsprite** opens in Hopsprite, the pixel art editor. Opening it installs the app.",
+    },
+    { name: "Fruit.csv", content: FRUIT, type: "text/csv", line: "**Fruit.csv** opens as a table you can sort." },
+    { name: "Sunset.svg", content: SUNSET, type: "image/svg+xml", line: "**Sunset.svg** opens in Media Preview." },
+    {
+      name: "Burrow.fontmaker",
+      content: BURROW,
+      type: "",
+      line: "**Burrow.fontmaker** opens in Font Maker. It's Burrow, WebOS's own font, drawn as strokes: change a letter and use it as the app font.",
+    },
   ];
 }
 
-export async function seed_samples(files: FilesService): Promise<void> {
+/**
+ * What a first boot puts in `/home/Documents/Samples` (ADR-041): one file per kind of app. Given the registered apps, only
+ * files one of them opens, so a fork without the user apps gets no file nothing can open.
+ */
+export function sample_files(apps?: Iterable<AppManifest>): SampleFile[] {
+  const registered = apps && [...apps];
+  const kept = samples().filter((sample) => !registered || apps_for(registered, sample).length > 0);
+  return [{ name: "Welcome.md", content: welcome(kept.map(({ line }) => line)) }, ...kept.map(({ name, content }) => ({ name, content }))];
+}
+
+export async function seed_samples(files: FilesService, apps: Iterable<AppManifest>): Promise<void> {
   const documents = await files.get_directory(PATHS.documents);
   if (!documents) return;
   const folder = await files.create_directory(documents, SAMPLES_FOLDER);
-  for (const { name, content } of sample_files()) await files.create_file(folder, name, { content });
+  for (const { name, content } of sample_files(apps)) await files.create_file(folder, name, { content });
 }
