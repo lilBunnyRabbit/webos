@@ -16,6 +16,7 @@
   import NavBar from "./nav-bar.svelte";
   import Wallpaper from "../desktop/wallpaper.svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { flushSync } from "svelte";
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
   const focused = $derived(windows.get_focused());
@@ -45,6 +46,12 @@
     view_transition(() => (switcher ? ui.close() : ui.open(UiOverlay.SWITCHER)));
   }
 
+  // No view transition: its callback runs a frame later, outside the tap, and mobile browsers only raise the
+  // keyboard for a focus() made inside the gesture. The drawer flies in on its own.
+  function open_drawer() {
+    flushSync(() => ui.open(UiOverlay.LAUNCHER));
+  }
+
   function pick(id: WindowId) {
     view_transition(() => {
       ui.close();
@@ -71,7 +78,7 @@
       aria-hidden="true"
     />
     {/if}
-    <MobileHome ondrawer={() => view_transition(() => ui.open(UiOverlay.LAUNCHER))} />
+    <MobileHome ondrawer={open_drawer} />
     <MobileWindows {switcher} onpick={pick} />
     {#if layer === UiOverlay.LAUNCHER}
       <AppDrawer onclose={() => ui.close()} />

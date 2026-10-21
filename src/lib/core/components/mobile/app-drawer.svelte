@@ -31,6 +31,12 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   let query = $state("");
+  let search: HTMLInputElement | null = $state(null);
+
+  // The shell mounts the drawer with flushSync inside the tap, so this runs in the gesture and the keyboard comes up.
+  $effect(() => {
+    search?.focus();
+  });
 
   const installed = $derived(apps.listings({ installed: true }));
   const matches = $derived(search_apps(installed, query));
@@ -124,7 +130,7 @@
   </section>
 {/snippet}
 
-<!-- The start menu's mobile counterpart: a sheet over the home screen. No autofocus, so the keyboard stays down until asked. -->
+<!-- The start menu's mobile counterpart: a sheet over the home screen. -->
 <div class="absolute inset-0 z-10 flex flex-col bg-(--overlay)" role="presentation" onclick={(event) => event.target === event.currentTarget && onclose()}>
   <div
     role="dialog"
@@ -150,6 +156,7 @@
         <Input
           class="min-w-0 flex-1"
           bind:value={query}
+          bind:element={search}
           size="lg"
           placeholder="Search apps"
           aria-label="Search apps"
