@@ -22,7 +22,7 @@ The first games that need on-device Gemini Nano (ADR-046): Unsaid (Taboo), Doodl
 ## Consequences
 - AI games look broken on phones until a platform flag exists; the gate at least says why.
 - Each Doodlehop guess pays for a new session; latency is the risk to measure.
-- Image plus `responseConstraint` must be verified in Chrome before Doodlehop relies on it.
+- Image plus `responseConstraint` is unverified on a real model: Doodlehop shipped relying on it, tested only against a stub. The owner's first real run decides whether it holds.
 
 ## Revision 2026-10-21
 

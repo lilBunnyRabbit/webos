@@ -19,6 +19,7 @@ const STEP_LABELS: Record<string, string> = {
   ui: "Interface",
   shell: "Shell",
   shortcuts: "Shortcuts",
+  scheduler: "Alarms",
   tasks: "Tasks",
   backup: "Backup",
   ai: "On-device AI",

@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.33.1",
+    date: "2026-10-21",
+    title: "Tidier start",
+    changes: [
+      {
+        kind: FIXED,
+        text: "The loading screen says \"Alarms\" while it sets up alarms and reminders, instead of an internal name.",
+      },
+    ],
+  },
+  {
     version: "3.33.0",
     date: "2026-10-21",
     title: "Alarms that ring on their own",
