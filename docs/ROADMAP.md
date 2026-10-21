@@ -116,6 +116,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Typography and spacing (docs/design/foundations.md)
 - [x] UI kit: buttons, inputs, select, switch, segmented, sections, toolbar, status bar (ADR-024)
 - [x] Surface ladder tokens per theme, elevation, motion (ADR-024)
+- [x] AI mark on app icons (2026-10-21, [brainstorm](brainstorm/2026-10-21_ai-icon-mark.md)): `ai_icon` in the app kit puts a `primary` sparkle in the top-right corner of Ask, Unsaid, Doodlehop and Alibi, the apps that need on-device AI to work
 
 ### Window Enhancements
 - **ADR:** [ADR-014](adrs/014-window-enhancements.md)

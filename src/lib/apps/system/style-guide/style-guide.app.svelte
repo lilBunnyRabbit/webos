@@ -141,6 +141,8 @@
       return manifest ? [{ manifest, version: "0.34.0" }] : [];
     })
   );
+  const ai_apps = $derived(["ask", "unsaid", "doodlehop", "alibi"].flatMap((id) => pick(id) ?? []));
+  const AI_ICON_SIZES = ["size-4", "size-6", "size-9", "size-12"];
 </script>
 
 {#snippet swatch(token: string)}
@@ -428,6 +430,28 @@
                 <div class="grid flex-1 place-items-center p-4 text-ui text-foreground/80">The app goes here</div>
               {/snippet}
             </AiGate>
+          </div>
+        </Section>
+        <Section
+          title="AI icon"
+          description="An app that needs on-device AI wraps its icon in ai_icon, from $kit: a primary sparkle cut into the top-right corner, in the same box, so every place that draws the icon shows it. Ask, Unsaid, Doodlehop and Alibi use it."
+          flush
+        >
+          <div class="flex flex-col gap-3">
+            {#each AI_ICON_SIZES as size (size)}
+              <div class="flex items-center gap-4">
+                {#each ai_apps as manifest (manifest.id)}
+                  <span title={manifest.name}><manifest.icon class={size} weight="duotone" /></span>
+                {/each}
+                <span class="font-mono text-2xs text-foreground/65">{size}</span>
+              </div>
+            {/each}
+            <div class="flex w-fit items-center gap-4 rounded-lg bg-primary/15 px-3 py-2 text-primary">
+              {#each ai_apps as manifest (manifest.id)}
+                <manifest.icon class="size-6" weight="fill" />
+              {/each}
+              <span class="font-mono text-2xs">primary ink</span>
+            </div>
           </div>
         </Section>
         <Section

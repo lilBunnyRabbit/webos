@@ -2,6 +2,7 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 // Not via the barrel: manifests load while the barrel is still initializing, so its constants are not yet defined.
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
+import { ai_icon } from "$kit/components/ai-icon";
 import AppIcon from "./icon.svelte";
 
 export const ASK_ACCEPT = [
@@ -28,7 +29,7 @@ export const ASK_ACCEPT = [
 export default define_app({
   id: "ask",
   name: "Ask",
-  icon: AppIcon,
+  icon: ai_icon(AppIcon),
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),

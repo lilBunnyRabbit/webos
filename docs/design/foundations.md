@@ -141,6 +141,7 @@ Every app draws its own icon in `icon.svelte` next to its manifest (`icon: AppIc
 - One idea per app, the thing that app is about, in a handful of shapes. No text, tiny details or decoration. Core (system) apps are the plainest: one object in 3–5 strokes, never a scene.
 - Colour is rare (18 of 76): only on the element the app is about (the lander's flame, the dragged card), in `var(--primary)` or `var(--secondary)`, solid with no outline. It stands outside the line drawing: never inside an outline, never touching a line, at least 1.5 units clear. Primary and secondary never touch; accent and state colours never appear.
 - The component takes the same props a Phosphor icon does (`class`, and `weight`, which it ignores), so every place that draws `manifest.icon` keeps working. It sizes at `1em`.
+- An app that needs on-device AI to work at all wraps its icon in `ai_icon` (`$kit/components/ai-icon`, [decided](../brainstorm/2026-10-21_ai-icon-mark.md)): a `primary` sparkle in the top-right corner, the glyph cut away 1.5 units around it. Keep that corner free of the app's own colour element: Doodlehop's dot moved left to make room. An app where AI is optional (Warren, Shopping List) keeps its plain icon.
 
 ## Icons
 
