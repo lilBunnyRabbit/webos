@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo), [ADR-049](../../adrs/049-lazy-app-metadata.md) (waits for app meta) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo), [ADR-049](../../adrs/049-lazy-app-metadata.md) (waits for app meta) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/components/update/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -14,8 +14,10 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `update_available` | `update_available: VersionInfo \| null` | The remote info, set when `remote.buildTimestamp > info.buildTimestamp`. Never reset to `null`. |
 | `is_checking` | `is_checking: boolean` | True while a `check()` is in flight. |
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running. Fetches `${import.meta.env.BASE_URL}version.json` (`/webos/version.json` in production) with `cache: "no-store"`. A non-OK response is ignored silently. Network or parse errors go to `console.error`. Never throws. |
-| `apply_update` | `apply_update(): Promise<void>` | Walks `update_stage` through `installing` → (`clearing`) → `reloading` while the update overlay shows it. `registration.update()`; a new worker that activates within 8 s means a reload into its precache. No new worker, a timeout or an error falls through to clearing: unregister this app's registration and delete only Cache Storage keys containing its scope (`scope_caches`, `update.ts`). Every path ends in `location.replace(?__upd=<now>)`; `init()` strips the parameter again. A second call while one runs is ignored. See [Service worker](#service-worker). |
+| `apply_update` | `apply_update(): Promise<void>` | Walks `update_stage` through `installing` → (`clearing`) → `reloading` while the update overlay shows it. `registration.update()`; (15 s timeout); a new worker that activates means a reload into its precache, with `update_progress` following its download meanwhile. No new worker, a timeout, a stall, Restart now or an error falls through to clearing: unregister this app's registration and delete only Cache Storage keys containing its scope (`scope_caches`, `update.ts`). Every path ends in `location.replace(?__upd=<now>)`; `init()` strips the parameter again. A second call while one runs is ignored. See [Service worker](#service-worker). |
 | `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
+| `update_progress` | `UpdateProgress \| null` | `$state`. `{ started, done, total, slow }` while `installing`, `null` in every other stage. `total` is the number of files the new worker downloads, `null` until its manifest is read (or when it can't be); `slow` turns true after 8 s. See [Update progress](#update-progress) |
+| `restart_update` | `restart_update(): void` | The overlay's Restart now: stops waiting for the new worker and runs the clearing path. No-op outside `installing` |
 | `changelog` | `Release[]` | `$state.raw`, empty until `load_changelog()` resolves, then `CHANGELOG` from `changelog.ts`, newest first |
 | `load_changelog` | `(): Promise<Release[]>` | Imports `changelog.ts` once (the promise is kept) and fills `changelog`. `init()` awaits it only after an update; Settings › What's new, App Library and the `changelog` command call it themselves. It's the largest module WebOS has and grows every release, so it stays out of the boot chunk |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
@@ -60,7 +62,7 @@ The bundle and `version.json` always carry the same `buildTimestamp`. Only a new
 
 ## State
 
-Six `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `unseen`, `announced`), `changelog` as `$state.raw`, and private `loading` (the kept `load_changelog()` promise), `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `update_toast`, `poll_interval`, `destroyed`, `dispose_announcement`, `writer` (`LatestWriter` for the seen marker). Nothing derived.
+Seven `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `update_progress`, `unseen`, `announced`), `changelog` as `$state.raw`, and private `restart` (resolves the current wait as given up), `loading` (the kept `load_changelog()` promise), `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `update_toast`, `poll_interval`, `destroyed`, `dispose_announcement`, `writer` (`LatestWriter` for the seen marker). Nothing derived.
 
 ## Lifecycle
 
@@ -181,6 +183,31 @@ Who does what:
 
 If the browser already installed the new worker before the click, `installing` and `waiting` are both `null`, so it takes the fallback path: unregister, clear this app's caches, reload from the network. Slower than needed, but it ends on the new build either way.
 
+### Update progress
+
+Why it's slow: a release renames most of the precache (606 of 765 files, about 5 MB, for a one-line change; see the [slow updates brainstorm](../../brainstorm/2026-10-21_slow-updates.md)), and Workbox's install fetches them **one at a time** (`PrecacheController.install`, workbox#2528), storing each in the precache cache as it lands and skipping any key already there.
+
+So the progress is read from Cache Storage, with no change to the worker (`precache.ts`, pure, unit-tested; the loop is `track_install` in the service):
+
+1. Before `registration.update()`, snapshot the keys of `workbox-precache-v2-{scope}` (`precache_cache_name`). The install starts as soon as `sw.js` arrives, so a later snapshot would miss files.
+2. Once there's a new worker, fetch its `scriptURL` (`cache: "no-cache"`; the old worker doesn't route it) and read the manifest out of `precacheAndRoute([{url:"…",revision:…}, …])` (`parse_precache_manifest`, a regex over `generateSW`'s output). Each entry's cache key mirrors Workbox's `createCacheKey` (`precache_key`: resolved against the script URL, `?__WB_REVISION__=` when it has a revision). The keys missing from the snapshot are the download (`keys_to_download`) and set `total`.
+3. Every 400 ms, count how many of them the cache now holds (`count_cached`) into `done`.
+
+Only files are counted, not bytes: the manifest Workbox writes has no sizes (workbox-build deletes `size` before writing it), and summing Content-Length or blob sizes would still leave the total unknown. If the manifest can't be parsed, `total` stays `null` and the overlay shows only the elapsed time.
+
+Timing (constants in `service.svelte.ts`):
+
+| Constant | Value | Effect |
+|----------|-------|--------|
+| `UPDATE_TIMEOUT` | 15 s | `registration.update()` (only fetches `sw.js`) gives up; clearing path |
+| `SLOW_AFTER` | 8 s | `slow` turns true: the overlay shows "Still downloading…" and Restart now |
+| `STALL_TIMEOUT` | 20 s | No new file has landed for this long while files remain: gives up; clearing path |
+| `INSTALL_LIMIT` | 120 s | Hard upper bound on the whole wait, progress or not; clearing path |
+
+A worker that activates at any point before those reloads as before. Restart now and the automatic give-ups resolve the same `given_up` promise the activation races against; the `finally` aborts the polling and clears the timers. A worker that goes `redundant` rejects and also clears. The clearing path wipes the precache, so the next boot downloads it again in the background; that's why the wait is patient as long as files keep landing.
+
+`UpdateOverlay` (`components/update/update-overlay.svelte`, in `os.svelte`, so both shells) keeps the three-step list. Under the active "Downloading the new version" step it shows a `role="progressbar"` (`bg-primary` on `bg-foreground/12`, the same inline bar as Getting started and toasts) once `total` is known, and a mono line `progress_line()`: "212 of 606 files · 14 s", or only "14 s" while the total is unknown or zero. Elapsed seconds tick from a local 1 s interval. With `slow`, a short text and a secondary **Restart now** button sit under the list.
+
 ## Divergence from ADR
 
 - ADR-004 originally rejected a service worker; its revision note accepts the SW and the cooperation above.
@@ -198,4 +225,5 @@ Contributes `version`, `changelog`, `install` and the `release` and `new-app` va
 
 - `update_available` is never cleared, even if a later check finds nothing newer.
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded.
-- `activated()` gives up after 8 s (`ACTIVATE_TIMEOUT`) and falls through to clearing, so a slow precache on a bad network throws away a worker that was about to finish.
+- Progress counts files, not bytes; a few large chunks can make the bar move unevenly.
+- The manifest is read with a regex over `generateSW`'s minified output. A Workbox upgrade that writes it differently leaves only the elapsed time (no error).

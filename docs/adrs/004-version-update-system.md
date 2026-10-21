@@ -2,6 +2,12 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-21: update progress ([brainstorm](../brainstorm/2026-10-21_slow-updates.md))**
+> - A release renames most of the precache and Workbox installs it one file at a time, so "Update and reload" could sit on a silent spinner, then the old 8 s timeout threw the half-done install away and cleared everything.
+> - The update screen now shows files done of the total and elapsed seconds. Progress is read from Cache Storage (the new `sw.js` manifest against the precache cache's keys), so the service worker is unchanged. Bytes aren't shown: the manifest Workbox writes has no sizes.
+> - `registration.update()` has a 15 s timeout. After 8 s the screen says "Still downloading…" and offers Restart now (the clear-and-reload path). The wait gives up on its own after 20 s without a new file, or 120 s in all.
+> - `IVersionService` gains `update_progress` and `restart_update()`. Details in [version.md](../system/services/version.md#update-progress).
+
 > **Revision 2026-10-11: release notes ([ADR-026](026-release-notes-intro.md))**
 > - The changelog is a bundled, typed `changelog.ts`, not a `CHANGELOG.md` fetched at runtime. A runtime markdown file would need a renderer dependency, and there are no kinds for badges.
 > - The "update available" toast is built: it's sticky, shown once per detected build, and offers "Update and reload".

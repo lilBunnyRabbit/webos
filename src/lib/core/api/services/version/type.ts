@@ -25,6 +25,17 @@ export const UpdateStage = {
 } as const;
 export type UpdateStage = (typeof UpdateStage)[keyof typeof UpdateStage];
 
+/** The new service worker's download while `update_stage` is `installing`. */
+export interface UpdateProgress {
+  /** ms epoch */
+  started: number;
+  done: number;
+  /** Files the install downloads; `null` until the new `sw.js` manifest is read, or when it couldn't be. */
+  total: number | null;
+  /** The wait has run long: the overlay offers `restart_update()`. */
+  slow: boolean;
+}
+
 export interface Change {
   kind: ChangeKind;
   /** User-facing wording, one sentence. */
@@ -64,6 +75,9 @@ export interface VersionService extends IService {
   /** Progress of `apply_update()`, for the update overlay. */
   readonly update_stage: UpdateStage;
 
+  /** The download behind the `installing` stage; `null` in every other stage. */
+  readonly update_progress: UpdateProgress | null;
+
   /** Every release, newest first. Empty until `load_changelog()` resolves. */
   readonly changelog: Release[];
   /** Loads the release notes into `changelog` (empty until then, kept out of the boot chunk). Safe to call often. */
@@ -86,6 +100,9 @@ export interface VersionService extends IService {
    * old `sw.js`), unregister this app's worker, delete its caches and reload with a cache-busting query.
    */
   apply_update(): Promise<void>;
+
+  /** Stop waiting for the new worker and clear and reload now. Does nothing outside `installing`. */
+  restart_update(): void;
 
   /** Show the full-screen introduction. Resolves when it closes. */
   show_intro(): Promise<void>;

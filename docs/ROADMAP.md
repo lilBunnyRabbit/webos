@@ -527,6 +527,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Cache strategies (cache-first for assets, network-first for version check)
 - [ ] Background sync for queued operations
 - [x] Install prompt customization (`install.svelte.ts`, introduction and Settings › About)
+- [x] Update screen progress (2026-10-21, [brainstorm](brainstorm/2026-10-21_slow-updates.md)): files done of the total and elapsed time while the new service worker installs, read from Cache Storage; "Still downloading…" with Restart now after 8 s; automatic fallback on a 20 s stall or after 120 s; `registration.update()` timeout
 - [x] Stable chunk names across deploys: left as is (owner, 2026-10-15). Measured: the build stamp (`__VERSION_INFO__` in VersionService, entry chunk) renames 278 of 305 chunks on every deploy even with no code change, and a core change renames every app under any hashing option, because Rollup folds `import()` targets into the importer hash. Options were: `manualChunks` (+82 KB gz boot: barrels pull icons and the kit in), an unhashed `boot-data.js` (stale pairing under Pages max-age=600), or keeping old assets on Pages across deploys. The 1.2.0 update offer covers failed loads
 
 ### Workers Service

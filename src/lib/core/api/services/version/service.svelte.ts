@@ -15,11 +15,13 @@ import { introduced_apps } from "./history";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
 import { scope_caches, strip_update_param, with_update_param } from "./update";
+import { count_cached, keys_to_download, parse_precache_manifest, precache_cache_name } from "./precache";
 import {
   ChangeKind,
   UpdateStage,
   type AppIntroduction,
   type Release,
+  type UpdateProgress,
   type VersionInfo,
   type VersionService as IVersionService,
 } from "./type";
@@ -29,8 +31,13 @@ declare const __VERSION_INFO__: VersionInfo;
 
 const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
-/** A new worker that hasn't activated by then is treated as stuck, and the hard path runs. */
-const ACTIVATE_TIMEOUT = 8000;
+const SLOW_AFTER = 8000;
+/** Gives up on the new worker when no file has landed for this long, or after `INSTALL_LIMIT` in all. */
+const STALL_TIMEOUT = 20_000;
+const INSTALL_LIMIT = 120_000;
+/** `registration.update()` only fetches sw.js; it has no timeout of its own. */
+const UPDATE_TIMEOUT = 15_000;
+const PROGRESS_POLL = 400;
 /** Long enough for a stage to paint before the next one, or the page, replaces it. */
 const STAGE_BEAT = 250;
 
@@ -47,6 +54,8 @@ export class VersionService implements IVersionService {
   public update_available = $state<VersionInfo | null>(null);
   public is_checking = $state(false);
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
+  public update_progress = $state<UpdateProgress | null>(null);
+  private restart?: () => void;
 
   public changelog = $state.raw<Release[]>([]);
   private loading: Promise<Release[]> | null = null;
@@ -168,23 +177,32 @@ export class VersionService implements IVersionService {
   async apply_update(): Promise<void> {
     if (this.update_stage !== UpdateStage.IDLE) return;
     this.update_stage = UpdateStage.INSTALLING;
+    this.update_progress = { started: Date.now(), done: 0, total: null, slow: false };
     await beat();
 
     // The service worker serves the app shell from its precache, so a plain reload would boot the old build. The happy
     // path fetches the new worker; it skips waiting and claims this page, and the reload loads its precache.
     const registration = await navigator.serviceWorker?.getRegistration().catch(() => undefined);
+    const stop = new AbortController();
+    const given_up = new Promise<false>((resolve) => (this.restart = () => resolve(false)));
+    const timers = [
+      setTimeout(() => {
+        if (this.update_progress) this.update_progress.slow = true;
+      }, SLOW_AFTER),
+      setTimeout(() => this.restart?.(), INSTALL_LIMIT),
+    ];
     try {
-      if (registration) {
-        await registration.update();
-        const worker = registration.installing ?? registration.waiting;
-        if (worker) {
-          await activated(worker, ACTIVATE_TIMEOUT);
-          return this.reload();
-        }
+      if (registration && (await Promise.race([this.install(registration, stop.signal), given_up]))) {
+        return this.reload();
       }
     } catch (error) {
       console.warn("[VersionService] Service worker update failed, clearing instead", error);
+    } finally {
+      stop.abort();
+      timers.forEach(clearTimeout);
+      this.restart = undefined;
     }
+    this.update_progress = null;
 
     // No new worker: GitHub Pages' CDN can serve the old sw.js for minutes after version.json changed. Drop this app's
     // worker and caches (never another app's: every lilbunnyrabbit.github.io site shares the origin) and load from the network.
@@ -204,8 +222,48 @@ export class VersionService implements IVersionService {
     this.reload();
   }
 
+  restart_update(): void {
+    this.restart?.();
+  }
+
+  private async install(registration: ServiceWorkerRegistration, signal: AbortSignal): Promise<boolean> {
+    const cache_name = precache_cache_name(registration.scope);
+    // Taken before update(): the install starts as soon as sw.js arrives, and what it stores counts as downloaded.
+    const before = await cached_keys(cache_name);
+    await with_timeout(registration.update(), UPDATE_TIMEOUT, "sw.js didn't arrive");
+    const worker = registration.installing ?? registration.waiting;
+    if (!worker || signal.aborted) return false;
+    void this.track_install(worker, cache_name, before, signal);
+    await activated(worker);
+    return true;
+  }
+
+  // Workbox stores each file in the precache as it lands, one at a time, so the cache's keys are the progress. No
+  // change to the worker needed. Bytes aren't counted: the manifest has no sizes.
+  private async track_install(worker: ServiceWorker, cache_name: string, before: Set<string>, signal: AbortSignal) {
+    try {
+      const response = await fetch(worker.scriptURL, { cache: "no-cache", signal });
+      const manifest = parse_precache_manifest(await response.text());
+      if (manifest.length === 0) return;
+      const needed = keys_to_download(manifest, worker.scriptURL, before);
+      let changed = Date.now();
+      while (!signal.aborted && this.update_progress) {
+        const done = count_cached(needed, await cached_keys(cache_name));
+        if (signal.aborted || !this.update_progress) return;
+        if (done !== this.update_progress.done) changed = Date.now();
+        this.update_progress.done = done;
+        this.update_progress.total = needed.length;
+        if (done < needed.length && Date.now() - changed > STALL_TIMEOUT) return this.restart?.();
+        await delay(PROGRESS_POLL);
+      }
+    } catch (error) {
+      if (!signal.aborted) console.warn("[VersionService] Couldn't follow the download", error);
+    }
+  }
+
   private reload(): void {
     this.update_stage = UpdateStage.RELOADING;
+    this.update_progress = null;
     // A plain reload can replay the old navigation from the HTTP cache; a new query forces a fresh document.
     setTimeout(() => location.replace(with_update_param(location.href, Date.now())), STAGE_BEAT);
   }
@@ -273,23 +331,33 @@ export class VersionService implements IVersionService {
   }
 }
 
-function beat(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, STAGE_BEAT));
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function activated(worker: ServiceWorker, timeout: number): Promise<void> {
+function beat(): Promise<void> {
+  return delay(STAGE_BEAT);
+}
+
+function with_timeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+async function cached_keys(name: string): Promise<Set<string>> {
+  if (!(await caches.has(name))) return new Set();
+  const cache = await caches.open(name);
+  return new Set((await cache.keys()).map((request) => request.url));
+}
+
+function activated(worker: ServiceWorker): Promise<void> {
   return new Promise((resolve, reject) => {
     if (worker.state === "activated") return resolve();
-    const timer = setTimeout(() => reject(new Error("New service worker didn't activate")), timeout);
     worker.addEventListener("statechange", () => {
-      if (worker.state === "activated") {
-        clearTimeout(timer);
-        resolve();
-      }
-      if (worker.state === "redundant") {
-        clearTimeout(timer);
-        reject(new Error("New service worker failed to install"));
-      }
+      if (worker.state === "activated") resolve();
+      if (worker.state === "redundant") reject(new Error("New service worker failed to install"));
     });
   });
 }
