@@ -48,6 +48,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.color-games.{mode,level,space,daily-recall,daily-odd-one-out,daily-gradient-sort,daily-hex-guess}` | `user/color-games` | Last mode; last practice level; Recall's slider space (HSB or OKLCH); each mode's daily attempt `{ day, state }`, so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
+| `app.doodlehop.best` | `user/doodlehop` | Best round `{ recognised, ms }`: most words, then least drawing time |
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |

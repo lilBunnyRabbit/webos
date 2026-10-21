@@ -597,7 +597,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 - [ ] **AI-native apps** (owner, 2026-10-20, [ideas](brainstorm/2026-10-20_ai-native-apps.md)). Apps that couldn't exist without Gemini Nano, not existing apps with an AI button. Owner picks which to build; each gets its own grill (shell question included). Open calls: whether AI-only apps may be desktop-only, and which ideas are too close to "AI bolted on" (ADR-054)
   - [x] Taboo: describe a word without the banned ones; the AI guesses (S, research pick #1). Built as Unsaid ([ADR-061](adrs/061-ai-games.md))
   - [ ] Twenty Questions: the AI holds a secret, answers yes / no / sometimes / unknown (S)
-  - [ ] Sketch Guess: you draw, the AI guesses from snapshots (M, research pick #2)
+  - [x] Sketch Guess: you draw, the AI guesses from snapshots (M, research pick #2). Built as Doodlehop ([ADR-061](adrs/061-ai-games.md), [internals](apps/doodlehop.md))
   - [x] Alibi: question an AI suspect, find the lie (M). [ADR-061](adrs/061-ai-games.md), [internals](apps/alibi.md)
   - [ ] Pocket Dungeon: text adventure, code runs the world, AI parses and narrates (L, research pick #3)
   - [ ] Emoji Rebus: guess or make emoji puzzles; Game Hub daily (S)

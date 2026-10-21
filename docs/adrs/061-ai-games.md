@@ -1,6 +1,6 @@
 # ADR-061: AI Games
 **Date:** 2026-10-21
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The first games that need on-device Gemini Nano (ADR-046): Unsaid (Taboo), Doodlehop (Sketch Guess) and Alibi. Nano is unavailable on phones, `extract()` is text-only, and every finished `prompt()` keeps a session from a pool of 4 shared by the whole OS. Ask already has an availability screen of its own. Discussion: [brainstorm](../brainstorm/2026-10-21_ai-games.md).
@@ -31,3 +31,7 @@ Platform pieces built. `AiGate` (`$kit/components/ai-gate`) takes `features`, `t
 ## Revision 2026-10-21: Alibi
 
 Built as decided ([app page](../apps/alibi.md)). The build settled the shape of a statement within scope: the player sees each one vague and in the first person ("I went home the usual way"), and the detail the lie hides comes out only by questioning. With the details on screen the cards could be matched without asking anything. Three templates of seven beats, six used per case; five cards (the one that breaks the lie, three that corroborate other statements, one red herring). Not yet played against Gemini Nano: the build machine's Chromium had no Prompt API.
+
+## Revision 2026-10-21: Doodlehop
+
+Built as decided ([app page](../apps/doodlehop.md)). Settled by the build within scope: strokes are kept in board units (a 1000-unit square) so a resized window keeps the drawing; the snapshot scales a small doodle up to 384 px and a large one down to 512 px, with the line width clamped so a blown-up doodle stays a pen line; Undo and Clear abort the guess already out, since it's about ink that is gone; a stroke still in its 700 ms idle when the clock ends is not sent; the recap saves at 1024 px, black on white, starting in `~/Pictures` when it exists (it isn't created by default) and `~/` otherwise. 184 words. Played only against a stubbed `LanguageModel`: image plus `responseConstraint` against the real model is still unverified.
