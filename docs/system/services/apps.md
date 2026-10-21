@@ -14,7 +14,7 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
 | `widget.ts` | `.widget` files: `WIDGET_EXTENSION`, `WIDGET_FALLBACK_SIZE`, `WidgetFile`, `widget_size_schema`, `parse_widget()`, `serialize_widget()`, `widget_label()`, `clamp_widget_size()`, `initial_widget_size()` (ADR-034) |
-| `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()`, `group_apps()`, `within_one_edit()`, `APP_CATEGORY_LABELS`, `AppSection` |
+| `search.ts` | App search and grouping for the start menu, mobile app drawer and App Library: `search_apps()` (supplies each app's fields to `search_ranked` from `core/utils/search.ts`, the ranker Settings' search shares), `group_apps()`, `APP_CATEGORY_LABELS`, `AppSection`; re-exports `within_one_edit()` |
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
 | `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |

@@ -363,7 +363,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Kinds (app, feature, bug) with their own sections, status coming back from the owner, a generic notebook: next session topics in the brainstorm
 - [x] Warren, a word processor (idea from LaxDOTexe) (2026-10-21, [ADR-059](adrs/059-warren.md), [brainstorm](brainstorm/2026-10-21_warren.md), [internals](apps/warren.md)): Lexical without a framework; headings, bold, italic, sizes, lists, word and character counts; A4, Letter or A5 sheets with user page breaks, or one continuous page; Change everywhere in one undo step, words used most, AI synonyms on desktop; `.warren` files; .docx export and PDF through print; `doc count`, `doc export --docx`
 - [x] Warren finalize (idea from LaxDOTexe) (2026-10-21, [ADR-059](adrs/059-warren.md) revision, [brainstorm](brainstorm/2026-10-21_warren.md#follow-up-2026-10-21-finalize), [internals](apps/warren.md)): alignment and underline; .docx import through mammoth; one body font per document (Inter, Burrow, `/etc/fonts`), embedded in the PDF; links; find and replace (Mod+F); format version 2
-  - [ ] Spelling error list (nspell + dictionaries), .docx import, fonts from Font Maker: next session
+  - [ ] Spelling error list (spike: nspell vs Chrome's Proofreader API), images, tables, page numbers: next session
 - [ ] Habit Tracker (yes, not now)
 - Later: Spreadsheet
 

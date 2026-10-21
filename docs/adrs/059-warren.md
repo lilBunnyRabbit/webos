@@ -26,7 +26,7 @@ LaxDOTexe asked for a free word processor for CVs, letters and stories ([brainst
 ## Consequences
 - A pinned 0.x dependency to upgrade by hand.
 - The .warren file holds Lexical's schema; a Lexical upgrade that changes node JSON needs a migration in the envelope's `version`.
-- Other people get .docx or PDF; Warren can't open their .docx yet.
+- Other people get .docx or PDF; Warren can't open their .docx yet (added in the finalize revision).
 - No list of spelling errors.
 
 ## Revision 2026-10-21: implementation

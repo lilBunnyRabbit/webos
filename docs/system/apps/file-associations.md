@@ -84,6 +84,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 | `paint` | `image/*` |
 | `music-visualizer` | `audio/*` |
 | `soundboard` | `audio/*`, `video/*` (a video opens the "New pad from a video" trim sheet) |
+| `video-tools`, `birdseye` | `video/*` |
 | `diff` | `text/*`, `.txt`, `.md`, … (`DIFF_ACCEPT`) |
 | `markdown-pdf` | `.md`, `.markdown`, `text/markdown` |
 | `pdf-tools` | `.pdf`, `application/pdf` |
@@ -105,7 +106,7 @@ An `.svg` (`image/svg+xml`) ties Media Preview (`image/*`, 1) with nothing else 
 - Skipped when an app claims the file by a compound extension (`has_compound_match`): a default for `.md` doesn't take `.form.md` files from Forms.
 - A default naming a missing app is ignored (and left in settings).
 - Written only by the dropdown's "Always use" checkbox.
-- Viewed and cleared in Settings → Default apps: one row per extension with its app (or "no longer installed"), Forget per entry, Forget all. Settings → About → Reset clears them too, along with theme and taskbar.
+- Viewed and cleared in Settings → Default apps: one row per extension with its app (or "no longer installed"), Forget per entry, Forget all. Settings → Backup & reset → Reset… (`sections/backup.svelte`) clears them too after a confirm, along with taskbar, theme, wallpaper, appearance and `live_options`; saved themes and fonts are kept.
 
 ## The Open-with dropdown
 

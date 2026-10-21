@@ -48,7 +48,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `backup` | BackupService | Zips `/home`, `/etc`, `/var/lib` and `app.*` localStorage (picked per area) to the device, never OPFS; restore replaces the areas a backup holds and reloads, holding FilesService writes meanwhile; both run as tasks (ADR-037) | files, dialogs, notifications, windows, tasks |
 | `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
 | `ai` | AiService | Chrome's on-device AI (Gemini Nano): availability per feature, summarize, translate, detect, streaming prompt; sessions kept and reused, model downloads as tasks. `MobileAiService` answers "no" on mobile (ADR-046) | files, tasks, notifications |
-| `scheduler` | SchedulerService | Scheduled notifications for every app (alarms, timers, reminders) while any WebOS tab lives: registry in `/var/lib/scheduler/jobs.json`, one leader tab per browser (Web Locks) with one timer, OS notifications through the service worker with shell-command buttons, missed summary at boot, Triggers when flagged (ADR-062) | files, notifications, apps, shell |
+| `scheduler` | SchedulerService | Scheduled notifications for every app (alarms, timers, Pomodoro phases, reminders) while any WebOS tab lives: registry in `/var/lib/scheduler/jobs.json`, one leader tab per browser (Web Locks) with one timer, OS notifications through the service worker with shell-command buttons, missed summary at boot, one in-page chime per pass (`silent` jobs skip it), apps' lazy `on_fire` handlers run in the leader, Triggers when flagged (ADR-062) | files, notifications, apps, shell |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; `#/solo/{id}?{props}` stays in the URL (ADR-047); Copy link and Copy solo link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
@@ -191,6 +191,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `alibi` | `docs/apps/alibi.md` |
 | `doodlehop` | `docs/apps/doodlehop.md` |
 | `calendar` | `docs/apps/calendar.md` |
+| `soundboard` | `docs/apps/soundboard.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
 

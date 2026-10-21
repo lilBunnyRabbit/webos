@@ -106,8 +106,8 @@ Edge cases:
 ### `window()`
 
 ```ts
-const section = storage.window<Section>("section", "appearance", z.enum(SECTION_IDS));
-section.value = "about"; // this window only
+const page = storage.window<Page>("section", "theme", z.enum(SECTION_IDS).transform(page_of));
+page.value = "about"; // this window only
 ```
 
 - The value lives in `AppInstance.state` (`$state`, created by `apps.instantiate`), keyed by `key`. Two windows of one app never share it.

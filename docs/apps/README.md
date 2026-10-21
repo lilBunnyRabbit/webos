@@ -22,11 +22,12 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [format-lab.md](format-lab.md) | Format Lab (`format-lab`) | jSquash codecs in a worker pool (`$kit/utils/codecs`), SSIM and the heatmap, AVIF and JPEG XL headers, `convert` |
 | [birdseye.md](birdseye.md) | Birdseye (`birdseye`) | NCC template tracking over a pyramid, lost frames and re-boxing, forward-backward smoothing, the locked render, WebM export through `$kit/utils/video` |
 | [proposals.md](proposals.md) | Proposals (`proposals`) | The run model (text and inline/block images), `.proposals.md` with escaping and hand-edit tolerance, the `contenteditable` editor, 1200 px WebP pictures, the sketch pad, Send |
-| [warren.md](warren.md) | Warren (`warren`) | Lexical used without a framework, the page-break node and measured sheets, Change everywhere in one undo step, `.warren`, the hand-written .docx (styles, numbering, page size) and the print page |
+| [warren.md](warren.md) | Warren (`warren`) | Lexical used without a framework, the page-break node and measured sheets, Change everywhere in one undo step, find and replace (Custom Highlight API), links, `.warren` v2 with a per-document body font (embedded in the print page), the hand-written .docx export (styles, numbering, page size) and `.docx` import through mammoth, the print page |
 | [unsaid.md](unsaid.md) | Unsaid (`unsaid`) | The card deck and seeded deals, the banned-word check (folding, cheap stems, 4-letter prefixes), the guess prompt and its schema, hits and scoring |
 | [alibi.md](alibi.md) | Alibi (`alibi`) | The seeded case generator (templates, beats, the flipped statement, evidence cards), the suspect sheet sent to the model and what it never sees, judging and score, the save |
 | [doodlehop.md](doodlehop.md) | Doodlehop (`doodlehop`) | When a guess is asked (stroke end, idle, one in flight, merged strokes), the cropped black-on-white PNG snapshot, the `extract()` call with a word-list enum, matching and scoring in code |
 | [calendar.md](calendar.md) | Calendar (`calendar`) | Repeat rules and their occurrences (month-end clamping, 29 February, skip, until), how a reminder becomes a scheduler job (the day shift, the exactness check, `on_fire`), the events file |
+| [soundboard.md](soundboard.md) | Soundboard (`soundboard`) | The shared player and play modes, edited time → source time across cuts and crossfades (`timeline.ts`), reading a video's sound (decode, then the record task; 10 min confirm, 1 h refusal), WAV encoding, the board file, pad colour and picture, the trim editor |
 
 ## Page shape
 

@@ -19,7 +19,7 @@ System-level notifications. `notify()` adds one to the history and shows it as a
 | `hide_toast(id)` | `(id): void` | Hides the toast, clears its timer, keeps it in history |
 | `mark_read(id)` | `(id): void` | |
 | `mark_all_read()` | `(): void` | |
-| `request_system()` | `(): Promise<boolean>` | Asks for browser notification permission if not decided yet. Call it from a click (Pomodoro's Start, Clock's Save and Start, Recipe Box's timer buttons, Settings › Notifications' Allow) so the prompt isn't blocked; an app does it before `scheduler.schedule()` ([scheduler](scheduler.md#permission)). Resolves whether `system` alerts can show |
+| `request_system()` | `(): Promise<boolean>` | Asks for browser notification permission if not decided yet. Call it from a click (Pomodoro's Start, Clock's Save and Start, Recipe Box's timer buttons, Calendar's Save of an event with a reminder, Settings › Notifications' Allow) so the prompt isn't blocked; an app does it before `scheduler.schedule()` ([scheduler](scheduler.md#permission)). Resolves whether `system` alerts can show |
 
 `NotifyOptions`:
 
@@ -109,7 +109,7 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 | `VersionService` | `"version"` | Updated to a new version (sticky, "What's new"), a new version is ready (sticky, "Update and reload") |
 | `ShellService.execute()` | `"shell"` | A command run from a shortcut or the palette failed (error) |
 | `notify` command | `"shell"` | Whatever the user asked for |
-| [SchedulerService](scheduler.md) | the job's app; `"scheduler"` | A job fired while the tab is visible (its buttons run shell commands, plus Open; an alarm's toast stays); "N missed while WebOS was closed" (warning) plus one hidden entry per missed job |
+| [SchedulerService](scheduler.md) | the job's app; `"scheduler"` | A job fired while the tab is visible (its buttons run shell commands, plus Open; an alarm's toast stays); "N missed while WebOS was closed" (or "asleep", warning) plus one hidden entry per missed job under its app; "Couldn't finish …" (error, under the job's app) when an app's `on_fire` handler throws |
 
 ## Divergence from ADR
 

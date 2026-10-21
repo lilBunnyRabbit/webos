@@ -30,8 +30,8 @@ Formatting buttons cancel `pointerdown`, so the editor keeps focus and its selec
 
 `words.ts`, pure. A word is `[\p{L}\p{N}]+` joined by `'`, `’` or `-`, so "don't" and "well-known" are one word each. Characters count spaces but not the line ends between blocks. Both counts come from `document_text(json)` (`model.ts`), the same walk the shell uses, so the app and `doc count` always agree.
 
-- **Change everywhere** (`lexical.ts:change_everywhere`): every text node gets `replace_word` (whole words, case-insensitive; an all-caps or capitalised occurrence gets the replacement in the same case), in one update tagged `HISTORY_PUSH_TAG`, so one Undo restores all of them. Selection points in changed nodes move with `map_offset`, so the selection stays on the new word. A word split across differently formatted runs ("**fa**st") isn't matched.
-- **Find and replace** (`warren-find.svelte`, `lexical.ts:find_all` / `replace_match` / `replace_all`): Mod+F (a window shortcut; the browser's own find is bypassed) or Words › Find and replace opens a bar above the page. Matching is `find_matches` / `replace_matches` in `words.ts`, the same code Change everywhere runs with `WORD_MATCH` (whole words, keep case); Find uses substrings ignoring case, an optional Whole words toggle, and replaces literally. Matches are painted with the CSS Custom Highlight API (`::highlight()`, a name per bar instance), so the document isn't touched: each match's `Range` is built on the DOM text under `getElementByKey`. The current match starts at the selection, Enter / Shift+Enter step and scroll it into view, Replace splices one match (`spliceText`, which moves the selection after it, so the next match is the one after) and checks the text there is still what was found, All is one undo step. Esc closes the bar and selects the current match; on the phone the nav bar's back closes it.
+- **Change everywhere** (`lexical.ts:change_everywhere`): `replace_all` with `WORD_MATCH`, so every text node goes through `replace_matches` (whole words, case-insensitive; an all-caps or capitalised occurrence gets the replacement in the same case), in one update tagged `HISTORY_PUSH_TAG`, so one Undo restores all of them. Selection points in changed nodes move with `map_offset`, so the selection stays on the new word. A word split across differently formatted runs ("**fa**st") isn't matched.
+- **Find and replace** (`warren-find.svelte`, `lexical.ts:find_all` / `replace_match` / `replace_all`): Mod+F (a window shortcut; the browser's own find is bypassed) or Words › Find and replace opens a bar above the page. Matching is `find_matches` / `replace_matches` in `words.ts`, the same code Change everywhere runs with `WORD_MATCH` (whole words, keep case); Find uses substrings ignoring case, an optional Whole words toggle, and replaces literally. Matches are painted with the CSS Custom Highlight API (`::highlight()`, a name per bar instance), so the document isn't touched: each match's `Range` is built on the DOM text under `getElementByKey`. The current match starts at the selection, Enter / Shift+Enter step and scroll it into view, Replace splices one match (`spliceText` without moving the selection, tagged `SKIP_DOM_SELECTION_TAG`, so focus stays in the bar) after checking the text there is still what was found, then steps past any matches inside the replacement to the next one, All is one undo step. Esc closes the bar and selects the current match; on the phone the nav bar's back closes it.
 - **Used most** (`repeated_words`): words of four letters or more, not in an English stop-word list, used at least twice; the top eight. Clicking one selects its next occurrence after the selection, wrapping.
 - **Synonyms**: shown only when `ai.features.prompt` isn't `no` (so never on mobile). `ai.extract` with `{ synonyms: string[] ≤ 8 }`; a chip fills the "Change to" field.
 
@@ -69,7 +69,7 @@ Characters XML can't hold (C0 controls) are dropped. A browser test parses every
 
 What comes across: headings (h4–h6 as h3), bold, italic, underline, strikethrough, line breaks, bullet and numbered lists with nesting, links, page-break characters. What doesn't: font sizes and fonts (mammoth drops them by design), alignment, `w:pageBreakBefore` (so Warren's own exported page breaks), pictures, table layout (cells become paragraphs), headers and footers. Pictures are counted through `convertImage`, tables found in the HTML and mammoth's warnings (unrecognised styles) counted, and any of those shows a warning toast naming what was left out.
 
-In the app a `.docx` opens as an untitled document named after the file (`CV.docx` → `CV.warren`), not dirty; Save goes to Save as, starting in the `.docx`'s folder. There's no shell import: it needs the DOM.
+In the app a `.docx` opens as an untitled document named after the file (`CV.docx` → `CV.warren`), not dirty; Save goes to Save as, starting in the `.docx`'s folder, or in `/home/Documents` when that's a system folder. There's no shell import: it needs the DOM.
 
 Shared numbers are in `page.ts`: page sizes and margins (A4 and Letter 20 mm, A5 15 mm), body 11 pt, headings, line height, paragraph spacing.
 
@@ -98,17 +98,17 @@ Path completion is filtered to `.warren`.
 
 ## Dependencies & licences
 
-`lexical`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, `@lexical/link` (which pulls in `@lexical/a11y`), all exactly 0.52.0, MIT, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. They pull in `@lexical/extension`, `@lexical/clipboard`, `@lexical/html` and friends at the same version and `@preact/signals-core`. All but mammoth load with the app's lazy component: `warren.app` is 325 KB, 104 KB gz; mammoth is its own chunk, about 99 KB gz, fetched on the first `.docx` opened (production build, 2026-10-21). The boot chunk is unchanged.
+`lexical`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, `@lexical/link` (which pulls in `@lexical/a11y`), all exactly 0.52.0, MIT, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`, `xmlbuilder`, `base64-js`, `dingbat-to-unicode`, and `argparse` for its CLI only), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. The Lexical packages pull in `@lexical/extension`, `@lexical/clipboard` and friends at the same version and `@preact/signals-core`. All but mammoth load with the app's lazy component: `warren.app` is 325 KB, 104 KB gz; mammoth is its own chunk, about 99 KB gz, fetched on the first `.docx` opened (production build, 2026-10-21). The boot chunk is unchanged.
 
 ## Limits
 
 - No spelling list (Chrome's underline only), no PDF import, no `.doc`.
-- A `.docx` loses font sizes, alignment, pictures, tables and paragraph-property page breaks on import.
+- A `.docx` loses fonts and font sizes, alignment, pictures, table layout (the cells' text is kept as paragraphs), headers and footers, and paragraph-property page breaks on import.
 - The .docx names the document font; Word without it substitutes one, so line breaks can differ (exporting with a font other than Inter warns about it). A font file's name stands in for its family name.
 - Links in the .docx are underlined, not coloured.
 - On a narrow window lines reflow differently from the printed page.
 - A Lexical upgrade that changes node JSON needs a migration under the envelope's `version`.
-- Change everywhere, Find and Used most see text inside one text run only ("**fa**st" isn't found as "fast").
+- Change everywhere and Find see text inside one text run only ("**fa**st" isn't found as "fast"). Used most counts across runs, so it can list a split word that clicking it then doesn't select.
 - Stop words are English.
 - Synonyms untested against the real model (no Gemini Nano on the build machine).
 
