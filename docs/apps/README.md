@@ -7,7 +7,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 ## Keeping it current
 
 - A change under `src/lib/apps/user/{id}/` for an app in the index below updates `docs/apps/{id}.md` in the same commit. A commit that leaves the page stale is incomplete.
-- A change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`) updates that page too.
+- A change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`) updates that page too.
 - A new or changed app that gains a model, algorithm, protocol, file or share format, or a non-trivial dependency gets a page, a row in the index below and a row in the "Per-app docs" table in `CLAUDE.md`.
 - Numbers are measured, with what they were measured on. A number nobody measured isn't written down; say it's unmeasured under **Limits**.
 
@@ -17,7 +17,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 |------|-----|--------|
 | [shopping-list.md](shopping-list.md) | Shopping List (`shopping-list`) | PP-OCRv5 photo reading on ONNX Runtime, word snapping, live WebRTC sync and merge, quantity parsing, suggestions |
 | [cards.md](cards.md) | Cards (`cards`) | Barcode formats and check digits, bwip-js drawn as one SVG path, scanning, the `WEBOS-CARDS:1:` share payload, `Cards.zip`, props |
-| [p2p-transfer.md](p2p-transfer.md) | P2P Transfer (`p2p-transfer`) | QR signalling (SDP packed into Base45, `$kit/utils/p2p`), the file transfer protocol, resume |
+| [p2p-transfer.md](p2p-transfer.md) | P2P Transfer (`p2p-transfer`) | QR signalling (SDP packed into Base45, `$kit/utils/p2p`), the file transfer protocol, resume; By light: LT fountain code over animated QR (`$kit/utils/light`) |
 | [font-maker.md](font-maker.md) | Font Maker (`font-maker`) | Stroke expansion to quadratic contours, the hand-written TrueType writer, `.fontmaker`, template corner marks, homography and scan guides |
 | [format-lab.md](format-lab.md) | Format Lab (`format-lab`) | jSquash codecs in a worker pool (`$kit/utils/codecs`), SSIM and the heatmap, AVIF and JPEG XL headers, `convert` |
 | [birdseye.md](birdseye.md) | Birdseye (`birdseye`) | NCC template tracking over a pyramid, lost frames and re-boxing, forward-backward smoothing, the locked render, WebM export through `$kit/utils/video` |

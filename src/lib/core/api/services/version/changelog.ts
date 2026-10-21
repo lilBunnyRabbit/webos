@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.25.0",
+    date: "2026-10-21",
+    title: "Files by light",
+    changes: [
+      {
+        kind: NEW,
+        text: "P2P Transfer can send a file of up to 2 MB with no network at all: one phone flashes a stream of codes, the other films it, and missed codes only cost a little time.",
+      },
+    ],
+  },
+  {
     version: "3.24.0",
     date: "2026-10-21",
     title: "Dodge this",

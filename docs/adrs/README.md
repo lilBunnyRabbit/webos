@@ -92,6 +92,7 @@ What are the implications of this decision?
 | [056](./056-birdseye.md) | Birdseye, Subject-Locked Video | 2026-10-20 | Implemented |
 | [057](./057-live-wallpapers.md) | Live Wallpapers | 2026-10-20 | Implemented |
 | [058](./058-proposals.md) | Proposals | 2026-10-21 | Implemented |
+| [060](./060-files-by-light.md) | Files by Light | 2026-10-21 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
