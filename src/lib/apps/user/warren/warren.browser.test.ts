@@ -37,6 +37,25 @@ describe("editor", () => {
     dispose();
   });
 
+  test("starts clean and follows the history's undo and redo", async () => {
+    const fresh = new WarrenEditor((error) => {
+      throw error;
+    });
+    expect(fresh.dirty).toBe(false);
+    expect(fresh.can_undo).toBe(false);
+    fresh.destroy();
+    const { editor, dispose } = editor_with();
+    await tick();
+    expect([editor.can_undo, editor.can_redo]).toEqual([false, false]);
+    editor.change_everywhere("fast", "quick");
+    await tick();
+    expect([editor.can_undo, editor.can_redo]).toEqual([true, false]);
+    editor.undo();
+    await tick();
+    expect([editor.can_undo, editor.can_redo]).toEqual([false, true]);
+    dispose();
+  });
+
   test("changes a word everywhere as one undo step", async () => {
     const { editor, dispose } = editor_with();
     await tick();

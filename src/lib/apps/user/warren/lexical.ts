@@ -1,19 +1,18 @@
-import { createEmptyHistoryState, registerHistory } from "@lexical/history";
+import { buildEditorFromExtensions, effect, getExtensionDependencyFromEditor, InitialStateExtension } from "@lexical/extension";
+import { HistoryExtension } from "@lexical/history";
 import { $generateNodesFromDOM } from "@lexical/html";
-import { $createLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link";
+import { $createLinkNode, $isLinkNode, $toggleLink, LinkExtension } from "@lexical/link";
 import {
   $isListItemNode,
   $isListNode,
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
-  ListItemNode,
-  ListNode,
-  registerList,
+  ListExtension,
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
-import { $createHeadingNode, $isHeadingNode, HeadingNode, registerRichText } from "@lexical/rich-text";
+import { $createHeadingNode, $isHeadingNode, HeadingAnnounceExtension, RichTextExtension } from "@lexical/rich-text";
 import { $getSelectionStyleValueForProperty, $patchStyleText, $setBlocksType } from "@lexical/selection";
-import { $findMatchingParent, $insertNodeToNearestRoot, mergeRegister } from "@lexical/utils";
+import { $findMatchingParent, $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createParagraphNode,
   $createRangeSelection,
@@ -27,16 +26,16 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
-  CAN_REDO_COMMAND,
-  CAN_UNDO_COMMAND,
   CLEAR_HISTORY_COMMAND,
   COMMAND_PRIORITY_EDITOR,
-  COMMAND_PRIORITY_LOW,
-  createEditor,
+  configExtension,
+  defineExtension,
+  HISTORY_MERGE_TAG,
   HISTORY_PUSH_TAG,
   SKIP_DOM_SELECTION_TAG,
   INDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
+  mergeRegister,
   OUTDENT_CONTENT_COMMAND,
   type EditorState,
   type LexicalEditor,
@@ -47,7 +46,7 @@ import {
   type TextNode,
 } from "lexical";
 import { Align, align_of, font_size } from "./model";
-import { $create_page_break, PageBreakNode } from "./page-break-node";
+import { $create_page_break, PageBreakExtension } from "./page-break-node";
 import { BASE_PT, HEADING_PT } from "./page";
 import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
 
@@ -129,38 +128,47 @@ function $in_list(): boolean {
 }
 
 export function create_lexical(hooks: Hooks): { editor: LexicalEditor; dispose: () => void; reset_history: () => void } {
-  const history = createEmptyHistoryState();
-  const editor = createEditor({ namespace: "warren", nodes: [HeadingNode, ListNode, ListItemNode, LinkNode, PageBreakNode], theme: THEME, onError: hooks.on_error });
-  const dispose = mergeRegister(
-    registerRichText(editor),
-    registerList(editor),
-    registerHistory(editor, history, 400),
-    editor.registerCommand(CAN_UNDO_COMMAND, (value) => (hooks.on_can_undo(value), false), COMMAND_PRIORITY_LOW),
-    editor.registerCommand(CAN_REDO_COMMAND, (value) => (hooks.on_can_redo(value), false), COMMAND_PRIORITY_LOW),
-    editor.registerCommand(
-      KEY_TAB_COMMAND,
-      (event) => {
-        if (!editor.getEditorState().read($in_list)) return false;
-        event.preventDefault();
-        return editor.dispatchCommand(event.shiftKey ? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND, undefined);
-      },
-      COMMAND_PRIORITY_EDITOR
-    )
-  );
-  editor.update(
-    () => {
-      const root = $getRoot();
-      if (root.isEmpty()) root.append($createParagraphNode());
+  const warren = defineExtension({
+    name: "@webos/warren",
+    namespace: "warren",
+    theme: THEME,
+    onError: hooks.on_error,
+    dependencies: [
+      RichTextExtension,
+      // Opening a document would announce every heading in it.
+      configExtension(HeadingAnnounceExtension, { disabled: true }),
+      ListExtension,
+      LinkExtension,
+      PageBreakExtension,
+      configExtension(HistoryExtension, { delay: 400 }),
+      configExtension(InitialStateExtension, { updateOptions: { tag: [HISTORY_MERGE_TAG, LOAD_TAG], discrete: true } }),
+    ],
+    register: (editor, _config, state) => {
+      const { canUndo, canRedo } = state.getDependency(HistoryExtension).output;
+      return mergeRegister(
+        effect(() => hooks.on_can_undo(canUndo.value)),
+        effect(() => hooks.on_can_redo(canRedo.value)),
+        editor.registerCommand(
+          KEY_TAB_COMMAND,
+          (event) => {
+            if (!editor.getEditorState().read($in_list)) return false;
+            event.preventDefault();
+            return editor.dispatchCommand(event.shiftKey ? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND, undefined);
+          },
+          COMMAND_PRIORITY_EDITOR
+        )
+      );
     },
-    { tag: LOAD_TAG, discrete: true }
-  );
+  });
+  const editor = buildEditorFromExtensions(warren);
+  const history = getExtensionDependencyFromEditor(editor, HistoryExtension).output.historyState;
   // After a clear the first change isn't undoable unless the history knows the state it starts from.
   const reset_history = () => {
     editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
-    history.current = { editor, editorState: editor.getEditorState() };
+    history.value.current = { editor, editorState: editor.getEditorState() };
   };
   reset_history();
-  return { editor, dispose, reset_history };
+  return { editor, dispose: () => editor.dispose(), reset_history };
 }
 
 export function read_format(state: EditorState): Format | null {

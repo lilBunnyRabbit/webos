@@ -1,4 +1,4 @@
-import { $create, $getDocument, DecoratorNode, type DOMExportOutput, type LexicalNode } from "lexical";
+import { $create, $getDocument, DecoratorNode, defineExtension, type DOMExportOutput, type LexicalNode } from "lexical";
 import { PAGE_BREAK } from "./model";
 
 export class PageBreakNode extends DecoratorNode<null> {
@@ -51,3 +51,8 @@ export function $create_page_break(): PageBreakNode {
 export function $is_page_break(node: LexicalNode | null | undefined): node is PageBreakNode {
   return node instanceof PageBreakNode;
 }
+
+export const PageBreakExtension = defineExtension({
+  name: "@webos/warren/PageBreak",
+  nodes: () => [PageBreakNode],
+});

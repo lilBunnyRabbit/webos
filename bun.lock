@@ -113,6 +113,7 @@
     "src/lib/apps/user/warren": {
       "name": "@webos/warren",
       "dependencies": {
+        "@lexical/extension": "0.52.0",
         "@lexical/history": "0.52.0",
         "@lexical/html": "0.52.0",
         "@lexical/link": "0.52.0",

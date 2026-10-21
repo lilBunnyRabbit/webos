@@ -10,7 +10,19 @@ A word processor for CVs, letters and stories. Headings 1–3, bold, italic, und
 
 ### Editor: Lexical, framework-agnostic
 
-`lexical.ts`, `editor.svelte.ts`. `createEditor` with `HeadingNode`, `ListNode`, `ListItemNode`, `LinkNode` and `PageBreakNode`, then `registerRichText`, `registerList` and `registerHistory` (400 ms merge window), and `setRootElement` on the page's `contenteditable` through an attachment. No React, no Svelte binding package.
+`lexical.ts`, `editor.svelte.ts`. The editor is built from Lexical Extensions: `buildEditorFromExtensions` (`@lexical/extension`) with one root extension, `@webos/warren`, that holds the namespace, theme and error handler and depends on:
+
+| Extension | Brings |
+|-----------|--------|
+| `RichTextExtension` | Headings, rich-text keys (bold, italic, underline, Enter, Backspace…), paste, plus its own dependencies (Dragon, inline and triple-click normalising) |
+| `HeadingAnnounceExtension`, configured `disabled` | Rich text's screen-reader heading announcements are off: opening a document would announce every heading in it |
+| `ListExtension` | `ListNode`, `ListItemNode`, the list commands |
+| `LinkExtension` | `LinkNode`, its transform and `TOGGLE_LINK_COMMAND` (Warren calls `$toggleLink` itself) |
+| `PageBreakExtension` (`page-break-node.ts`) | `PageBreakNode` |
+| `HistoryExtension`, delay 400 ms | Undo and redo; its `canUndo` / `canRedo` signals drive the toolbar through an `effect` in the root extension's `register` |
+| `InitialStateExtension`, configured | The first empty paragraph is written in a discrete update tagged `warren-load`, so a new editor isn't dirty |
+
+The root extension's `register` also binds Tab and Shift+Tab (indent inside a list only). `editor.dispose()` undoes every registration. `setRootElement` on the page's `contenteditable` through an attachment. No React, no Svelte binding package.
 
 Every Lexical `$` function lives in `lexical.ts`: Svelte reserves the `$` prefix in `.svelte.ts`, so `WarrenEditor` (runes) only calls plain wrappers. `WarrenEditor` keeps the reactive mirror the UI reads: `json` (the serialized state, replaced on every content change), the selection's `bold`, `italic`, `underline`, `align`, `block` and `size`, the selected `word`, `can_undo` / `can_redo`, and `dirty` (a revision counter against the saved one; page settings count as changes).
 
@@ -19,10 +31,10 @@ Every Lexical `$` function lives in `lexical.ts`: Svelte reserves the `$` prefix
 | Page break | `page-break-node.ts` | A `DecoratorNode` with `$config()` type `page-break`, a `contenteditable=false` `div.page-break`, inserted with `$insertNodeToNearestRoot` (splits a list it's in) |
 | Block style | `lexical.ts:set_block` | Headings and body through `$setBlocksType`; lists through `INSERT_*_LIST_COMMAND` / `REMOVE_LIST_COMMAND`. Tab and Shift+Tab indent and outdent inside a list only, so Tab still leaves the editor elsewhere |
 | Alignment | `editor.svelte.ts:set_align` | `FORMAT_ELEMENT_COMMAND` (rich text handles it) writes the element's `format`; Lexical's reconciler sets `text-align` on the block. The current value is read from the list item, else the top-level block; `start`/`end` read as left/right |
-| Links | `lexical.ts:set_link`, `warren-link.svelte` | `LinkNode` from `@lexical/link`, registered as a node only (no `registerLink`, which wants the extension signals): pasted and imported `<a>` come in through its `importDOM`, which also blanks unsafe URLs. A selection is wrapped with `$toggleLink`; a caret inside a link edits or unwraps that link; a caret elsewhere inserts the URL as linked text. The field takes what people type: `normalize_url` makes `example.com` `https://example.com` and `jane@example.com` a `mailto:`, and refuses other schemes. The form is a `popover="auto"` anchored to the Link button (`position-area`, flip fallbacks) on desktop and a bottom sheet on the mobile shell; from the More sheet it closes the sheet first and the popover centres itself. Mod+K isn't bound: it's the OS launcher, and a window shortcut would win over it inside Warren |
+| Links | `lexical.ts:set_link`, `warren-link.svelte` | `LinkNode` from `@lexical/link`'s `LinkExtension`: pasted and imported `<a>` come in through its `importDOM`, which also blanks unsafe URLs. A selection is wrapped with `$toggleLink`; a caret inside a link edits or unwraps that link; a caret elsewhere inserts the URL as linked text. The field takes what people type: `normalize_url` makes `example.com` `https://example.com` and `jane@example.com` a `mailto:`, and refuses other schemes. The form is a `popover="auto"` anchored to the Link button (`position-area`, flip fallbacks) on desktop and a bottom sheet on the mobile shell; from the More sheet it closes the sheet first and the popover centres itself. Mod+K isn't bound: it's the OS launcher, and a window shortcut would win over it inside Warren |
 | Body font | `warren.app.svelte`, `io.ts:font_sources` | `page.font` is a Settings `FontChoice`. Built-ins are fetched (`fetch_faces`), `/etc/fonts` files read and split per face (`file_faces`, a `.ttc` becomes one face each), then `load_faces` registers them as `warren-{window}-{n}` in `document.fonts`, so two windows in two fonts don't share a family. The paper gets `--doc-font`; `document_css` puts it ahead of Inter. A font that fails to load leaves the choice in the document, shows Inter and warns |
 | Font size | `lexical.ts:set_size` | `$patchStyleText` writes `font-size: Npt` into the text node's `style` |
-| Undo after open | `lexical.ts:create_lexical` | Lexical's history can't undo the first change after a clear (it has no state to go back to), so `reset_history` sets `history.current` to the loaded state |
+| Undo after open | `lexical.ts:create_lexical` | Lexical's history can't undo the first change after a clear (it has no state to go back to), so `reset_history` sets the `HistoryExtension`'s `historyState.current` to the loaded state |
 
 Formatting buttons cancel `pointerdown`, so the editor keeps focus and its selection on mouse and touch.
 
@@ -98,7 +110,7 @@ Path completion is filtered to `.warren`.
 
 ## Dependencies & licences
 
-`lexical`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, `@lexical/link` (which pulls in `@lexical/a11y`), all exactly 0.52.0, MIT, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`, `xmlbuilder`, `base64-js`, `dingbat-to-unicode`, and `argparse` for its CLI only), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. The Lexical packages pull in `@lexical/extension`, `@lexical/clipboard` and friends at the same version and `@preact/signals-core`. All but mammoth load with the app's lazy component: `warren.app` is 325 KB, 104 KB gz; mammoth is its own chunk, about 99 KB gz, fetched on the first `.docx` opened (production build, 2026-10-21). The boot chunk is unchanged.
+`lexical`, `@lexical/extension`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, `@lexical/link` (which pulls in `@lexical/a11y`), all exactly 0.52.0, MIT, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`, `xmlbuilder`, `base64-js`, `dingbat-to-unicode`, and `argparse` for its CLI only), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. The Lexical packages pull in `@lexical/clipboard`, `@lexical/dragon` and friends at the same version and `@preact/signals-core`. All but mammoth load with the app's lazy component: `warren.app` is 325 KB, 104 KB gz; mammoth is its own chunk, about 99 KB gz, fetched on the first `.docx` opened (production build, 2026-10-21). The boot chunk is unchanged.
 
 ## Limits
 
