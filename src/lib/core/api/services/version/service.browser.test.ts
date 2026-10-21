@@ -12,9 +12,22 @@ import { WindowsService } from "../windows/service.svelte";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { INSTALLED_PATH, serialize_installed } from "../apps/installed";
 import { VersionService } from "./service.svelte";
+import type { Release } from "./type";
 
 declare const __VERSION_INFO__: { version: string };
 const current = __VERSION_INFO__.version;
+
+// A fixture, not the real release notes: the apps those introduce are gone in a fork.
+vi.mock("./changelog", () => {
+  const release = (version: string, introduces?: string[]): Release => ({
+    version,
+    date: "2026-01-01",
+    title: version,
+    changes: [{ kind: "improved", text: `Release ${version}.` }],
+    introduces,
+  });
+  return { CHANGELOG: [release(__VERSION_INFO__.version), release("1.2.0", ["example", "gone"]), release("1.1.0"), release("1.0.0")] };
+});
 
 let shutdown: () => Promise<void>;
 let show: ReturnType<typeof vi.fn>;
@@ -98,14 +111,13 @@ describe("VersionService at boot", () => {
     expect(announcements()).toEqual([]);
   });
 
-  // Image Tools came in 1.2.0, so a device that last saw 1.1.0 is told about it.
   test("apps an unseen release introduces are announced once the Restore question is answered", async () => {
     let answer!: (restore: boolean) => void;
     const restore = new Promise<boolean>((resolve) => (answer = resolve));
     const kernel = await boot("1.1.0", { restore });
     const version = kernel.service<VersionService>("version");
 
-    expect(version.announced).toContainEqual(expect.objectContaining({ app: "image-tools", release: expect.objectContaining({ version: "1.2.0" }) }));
+    expect(version.announced).toEqual([expect.objectContaining({ app: "example", release: expect.objectContaining({ version: "1.2.0" }) })]);
     expect(version.announced.every(({ release }) => release.version !== "1.1.0")).toBe(true);
     await vi.waitFor(() => expect(show).toHaveBeenCalledOnce());
     await new Promise((resolve) => setTimeout(resolve, 50));

@@ -4,7 +4,6 @@ import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
-import { serialize_session } from "../session/persistence";
 import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
@@ -12,6 +11,7 @@ import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installe
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
 import { TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
+import { serialize_widget } from "./widget";
 
 let shutdown: () => Promise<void>;
 
@@ -63,15 +63,15 @@ describe("AppsService installed apps", () => {
 
   test("a device from before keeps what it used, once, with Undo", async () => {
     await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
-    await write("/var/lib/session/session.json", serialize_session({ windows: [], frames: { clock: { x: 0, y: 0, width: 300, height: 200 } } }));
-    localStorage.setItem("app.snake.best", "12");
+    await write("/home/Desktop/Board.widget", serialize_widget({ app: "board", w: 2, h: 2 }));
+    localStorage.setItem("app.game.best", "12");
     const kernel = await boot();
 
-    expect(apps(kernel).is_installed("clock")).toBe(true);
-    expect(apps(kernel).is_installed("snake")).toBe(true);
-    expect(apps(kernel).is_installed("kanban")).toBe(false);
+    expect(apps(kernel).is_installed("board")).toBe(true);
+    expect(apps(kernel).is_installed("game")).toBe(true);
+    expect(apps(kernel).is_installed("notes")).toBe(false);
     expect(apps(kernel).is_installed("settings")).toBe(true);
-    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["clock", "snake"]));
+    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["board", "game"]));
 
     const toast = kernel.service<NotificationsService>("notifications").all[0];
     expect(toast.title).toMatch(/^Tidied \d+ apps you never opened$/);
@@ -80,10 +80,10 @@ describe("AppsService installed apps", () => {
   });
 
   test("a saved list loads as is and drops unknown ids", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["kanban", "gone"]));
+    await write(INSTALLED_PATH, serialize_installed(["notes", "gone"]));
     const kernel = await boot();
-    expect([...apps(kernel).list({ installed: true })].filter(([, manifest]) => !manifest.system).map(([id]) => id)).toEqual(["kanban"]);
-    expect([...apps(kernel).list({ installed: false })].map(([id]) => id)).toContain("clock");
+    expect([...apps(kernel).list({ installed: true })].filter(([, manifest]) => !manifest.system).map(([id]) => id)).toEqual(["notes"]);
+    expect([...apps(kernel).list({ installed: false })].map(([id]) => id)).toContain("board");
   });
 
   test("launching an app that isn't installed installs it, with a toast", async () => {
@@ -96,20 +96,20 @@ describe("AppsService installed apps", () => {
   });
 
   test("uninstall keeps data unless asked; system apps refuse", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
-    await write("/var/lib/apps/kanban/board.json", "{}");
-    localStorage.setItem("app.kanban.view", "board");
-    localStorage.setItem("app.clock.zone", "UTC");
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    await write("/var/lib/apps/notes/notes.json", "{}");
+    localStorage.setItem("app.notes.view", "list");
+    localStorage.setItem("app.board.zone", "UTC");
     const kernel = await boot();
     const files = kernel.service<FilesService>("files");
 
-    await apps(kernel).uninstall("clock");
-    expect(apps(kernel).is_installed("clock")).toBe(false);
-    expect(localStorage.getItem("app.clock.zone")).toBe("UTC");
+    await apps(kernel).uninstall("board");
+    expect(apps(kernel).is_installed("board")).toBe(false);
+    expect(localStorage.getItem("app.board.zone")).toBe("UTC");
 
-    await apps(kernel).uninstall("kanban", { data: true });
-    expect(localStorage.getItem("app.kanban.view")).toBeNull();
-    expect(await files.get_directory("/var/lib/apps/kanban")).toBeNull();
+    await apps(kernel).uninstall("notes", { data: true });
+    expect(localStorage.getItem("app.notes.view")).toBeNull();
+    expect(await files.get_directory("/var/lib/apps/notes")).toBeNull();
     await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual([]));
 
     await expect(apps(kernel).uninstall("settings")).rejects.toThrow(/can't be uninstalled/);
@@ -120,11 +120,11 @@ describe("AppsService installed apps", () => {
     const kernel = await boot();
     const contribution = apps(kernel).shell!();
     const commands = contribution.commands ?? [];
-    const command = ((await contribution.lazy!()).commands ?? []).find((candidate) => candidate.app === "quick-notes")!;
-    expect(command.available?.()).toBe("Quick Notes isn't installed. Get it in the App Library");
-    apps(kernel).install("quick-notes");
+    const command = ((await contribution.lazy!()).commands ?? []).find((candidate) => candidate.app === "notes")!;
+    expect(command.available?.()).toBe("Notes isn't installed. Get it in the App Library");
+    apps(kernel).install("notes");
     expect(command.available?.() ?? true).toBe(true);
-    expect(() => commands.find((candidate) => candidate.id === "app launch")!.run({ args: { id: "clock" } } as never)).toThrow(/isn't installed/);
+    expect(() => commands.find((candidate) => candidate.id === "app launch")!.run({ args: { id: "board" } } as never)).toThrow(/isn't installed/);
   });
 });
 
@@ -135,31 +135,31 @@ describe("AppsService recent apps", () => {
   }
 
   test("launch records user apps newest first, once each; system apps never", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
     const kernel = await boot();
-    apps(kernel).launch("clock");
+    apps(kernel).launch("board");
     apps(kernel).launch("settings");
-    apps(kernel).launch("kanban");
-    apps(kernel).launch("clock");
-    expect(apps(kernel).recent).toEqual(["clock", "kanban"]);
-    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["clock", "kanban"]));
+    apps(kernel).launch("notes");
+    apps(kernel).launch("board");
+    expect(apps(kernel).recent).toEqual(["board", "notes"]);
+    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["board", "notes"]));
   });
 
   test("the saved list loads, dropping system, unknown and uninstalled apps", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
-    await write(RECENT_PATH, serialize_recent(["gone", "kanban", "settings", "snake", "clock"]));
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    await write(RECENT_PATH, serialize_recent(["gone", "notes", "settings", "game", "board"]));
     const kernel = await boot();
-    expect(apps(kernel).recent).toEqual(["kanban", "clock"]);
+    expect(apps(kernel).recent).toEqual(["notes", "board"]);
 
-    await apps(kernel).uninstall("kanban");
-    expect(apps(kernel).recent).toEqual(["clock"]);
-    apps(kernel).install("kanban");
-    expect(apps(kernel).recent).toEqual(["kanban", "clock"]);
+    await apps(kernel).uninstall("notes");
+    expect(apps(kernel).recent).toEqual(["board"]);
+    apps(kernel).install("notes");
+    expect(apps(kernel).recent).toEqual(["notes", "board"]);
   });
 
   test("clear_recent empties and saves the list", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["clock"]));
-    await write(RECENT_PATH, serialize_recent(["clock"]));
+    await write(INSTALLED_PATH, serialize_installed(["board"]));
+    await write(RECENT_PATH, serialize_recent(["board"]));
     const kernel = await boot();
     apps(kernel).clear_recent();
     expect(apps(kernel).recent).toEqual([]);
@@ -167,13 +167,13 @@ describe("AppsService recent apps", () => {
   });
 
   test("app recent yields the list; --clear forgets it", async () => {
-    await write(INSTALLED_PATH, serialize_installed(["clock", "kanban"]));
-    await write(RECENT_PATH, serialize_recent(["kanban", "clock"]));
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    await write(RECENT_PATH, serialize_recent(["notes", "board"]));
     const kernel = await boot();
     const command = (apps(kernel).shell!().commands ?? []).find((candidate) => candidate.id === "app recent")!;
     const yielded: unknown[] = [];
     for await (const value of command.run({ args: { clear: false } } as never) as AsyncIterable<unknown>) yielded.push(value);
-    expect(yielded).toMatchObject([{ $type: "app", id: "kanban" }, { $type: "app", id: "clock" }]);
+    expect(yielded).toMatchObject([{ $type: "app", id: "notes" }, { $type: "app", id: "board" }]);
 
     for await (const _ of command.run({ args: { clear: true } } as never) as AsyncIterable<unknown>);
     expect(apps(kernel).recent).toEqual([]);
