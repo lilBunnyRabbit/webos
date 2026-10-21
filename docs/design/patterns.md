@@ -59,7 +59,7 @@ Tic-Tac-Toe, Minesweeper, 2048, Snake, Maze and the puzzle apps share one frame:
 
 ### Puzzle apps
 
-Nonogram, Word Search, Sudoku, Futoshiki, Sun & Moon, Kakuro, Nurikabe, Hutches and Hop use the same frame, with a few rules on top:
+Nonogram, Word Search, Sudoku, Futoshiki, Sun & Moon, Kakuro, Nurikabe, Hutches, Hop and Tunnels use the same frame, with a few rules on top:
 
 - **Generated, never authored.** A puzzle is its size or difficulty plus a seed (`$lib/core/utils/random`). The generator keeps only puzzles its own solver proves have exactly one answer, so the player never has to guess. Saves store the seed and the player's marks, not the puzzle.
 - **Toolbar:** size or difficulty, the input tool (Fill/Cross, Notes, Sea/Dot), Undo, Redo, Hint, a statistics toggle, New puzzle last. In narrow windows the tools move to a bar under the board, where a thumb reaches them.

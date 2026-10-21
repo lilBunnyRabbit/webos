@@ -187,6 +187,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `birdseye` | `docs/apps/birdseye.md` |
 | `proposals` | `docs/apps/proposals.md` |
 | `warren` | `docs/apps/warren.md` |
+| `tunnels` | `docs/apps/tunnels.md` |
 | `unsaid` | `docs/apps/unsaid.md` |
 | `alibi` | `docs/apps/alibi.md` |
 | `doodlehop` | `docs/apps/doodlehop.md` |
