@@ -53,7 +53,7 @@ Code in `components/desktop/live/`:
 | `live-layer.svelte` | Mounts one layer: loads the entry's `background` or `overlay` component, builds the context, parses the options from `settings.live_options` |
 | `geometry.ts` | `dot_cells()` (the grid dots' cells), `tile_cells()` (the thumbnail grid), `centre()`, `contains()` |
 | `theme.ts` | `read_tokens()` resolves tokens to colours a canvas can parse (a probe's computed `color`, since a token can be `oklch(from var(--primary) …)`); `watch_theme()` calls back when `<html>`'s `style` changes |
-| `turrets/` | Pew Pew: `options.ts` (schema), `sim.ts` (pure simulation), `impacts.ts` (shield hits from the background layer to the overlay), `sound.ts` (WebAudio synth), `turrets-canvas.svelte`, `turrets-background.svelte`, `turrets-overlay.svelte`, `turrets-settings.svelte` |
+| `turrets/` | Pew Pew: `options.ts` (schema), `sim.ts` (pure simulation), `impacts.ts` (shield hits from the background layer to the overlay), `damage.ts` (damage model and store), `sound.ts` (WebAudio synth), `turrets-canvas.svelte`, `turrets-background.svelte`, `turrets-overlay.svelte`, `turrets-settings.svelte` |
 
 An entry:
 
@@ -75,8 +75,8 @@ interface LiveWallpaperEntry<T> {
 | Field | Source |
 |-------|--------|
 | `pointer` | `pointermove` on `window` (passive), `null` after `pointerleave` on `<html>`. Moves over an iframe don't arrive |
-| `windows` | Measured on read: for each id in `windows.list()` that isn't minimized or popped out (ExtractService), the `[data-window-id]` element in `windows.container.element`. Measured rather than read from `bounds`, because a dragged window lives in the window's local move state and a snapped or maximized one in CSS |
-| `widgets` | Measured on read: every `[data-desktop-widget]` element (the widget's root in `desktop-widget.svelte`) in `desktop.container.element`. Empty in a preview |
+| `windows` | `{ id, rect }[]`, back to front (by window `order`). Measured on read: for each window that isn't minimized or popped out (ExtractService), the `[data-window-id]` element in `windows.container.element`; `id` is the window id. Measured rather than read from `bounds`, because a dragged window lives in the window's local move state and a snapped or maximized one in CSS |
+| `widgets` | `{ id, rect }[]`, always behind the windows. Measured on read: every `[data-desktop-widget]` element (the widget's root in `desktop-widget.svelte`) in `desktop.container.element`; `id` is the attribute's value, the widget's file name in `/home/Desktop` (`Notes.widget`). Empty in a preview |
 | `cells` | `dot_cells(desktop.container.bounds, .cell, .grid)`: `(columns + 1) × (rows + 1)` cells centred on the grid line crossings, the same points the `[data-dots]` CSS paints. A preview tiles its host in 14px cells instead |
 | `paused` | A preview, `document.hidden`, `document.fullscreenElement`, or any visible maximized window (not minimized, not popped out) |
 | `preview` | `wallpaper.svelte` got a `value` (Settings' thumbnails) |
@@ -93,14 +93,26 @@ Id `turrets`, by LaxDOTexe and lilBunnyRabbit. Every grid dot is a turret: a `fo
 | `pace` | `chill` every ~1.5 s, 1 turret, 260 px/s; `normal` every ~0.5 s, 3 turrets, 460 px/s; `frantic` every ~0.14 s, 6 turrets, 760 px/s. Intervals ±25% | `normal` |
 | `sound` | Off by default | `false` |
 | `volume` | 0–1 (the form shows 0–100) | `0.5` |
+| `damage` | Shield hits chip the window or widget they struck ([damage](#damage)). The switch is disabled in follow mode, where nothing is a shield | `false` |
 
-Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. A cursor inside any wall is sheltered and skips the hit test, so a bolt stopping just short of a shield's edge can't reach a cursor just inside it. Wall: `first_wall_hit()` clips the step against each wall (window and widget rects, Liang–Barsky); `update()` returns the entry points as `impacts`, the background layer emits them in page coordinates through `shield_impacts`, and the overlay bursts 8 glowing `primary` sparks there for 280 ms. Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
+Shooters are drawn by weight `1 / (1 + (d / 260)²)` from the cursor, so nearer turrets fire more (`pick_shooters()`). A bolt is a 14px `primary` line with a `primary` glow, starting at the barrel's tip. Hit: a bolt's step passes within 6px of the cursor → a puff of 10 `accent` particles for 300 ms. A cursor inside any wall is sheltered and skips the hit test, so a bolt stopping just short of a shield's edge can't reach a cursor just inside it. Wall: `first_wall_hit()` clips the step against each wall (window and widget rects, Liang–Barsky); `update()` returns the entry points as `impacts` (`WallHit`: the point, the wall's `id` and the `edge` it came through, `nearest_edge()`), the background layer emits them in page coordinates through `shield_impacts`, and the overlay bursts 8 glowing `primary` sparks there for 280 ms. Bolts leaving the canvas are dropped. Bolts and particles live in fixed pools (256 and 512) reused in place. `dt` is capped at 50 ms.
 
 The background layer always draws the turrets and fires in shield mode; the overlay layer fires in follow mode, and in shield mode only draws the shield sparks, its loop running only while they live. Each layer has one canvas sized to `devicePixelRatio`, colours read through `read_tokens()` and re-read on a theme change. The `requestAnimationFrame` loop runs only while not paused and while the pointer is on the page or something still moves (bolts, particles, a turret turning); otherwise one still frame is drawn on resize, theme or option change. A pause also clears bolts in flight, so none hang over a maximized window. A mode or pace change starts clean. Destroy cancels the frame and closes the audio.
 
 Sound (`sound.ts`, `PewSynth`): the AudioContext is made on the first `pointerdown` or `keydown` after sound is turned on, or at once when the page already had a gesture (`navigator.userActivation.hasBeenActive`). A pew is a square oscillator sweeping from 1400 Hz to 220 Hz over 0.13 s (times the pace's pitch: 0.8, 1, 1.3, ±6%) under a 5 ms attack and exponential decay; at most 3 per frame. A hit is a pop: 0.15 s of white noise through a lowpass falling from 1600 Hz to 300 Hz, decaying over 0.12 s.
 
 The thumbnail draws the turrets aimed at a point right of centre, and in shield mode three bolts on their way.
+
+#### Damage
+
+Cosmetic only; the window's DOM is never touched. `turrets/damage.ts` holds the pure model and one module-level store, `damage_store`, shared by the overlay (which chips, prunes and draws) and the settings form (Repair). Memory only: a reload repairs everything.
+
+- **Model.** `Map<id, { window, bites }>`. A `Bite` is `{ edge, offset, depth, seed }`: `offset` along its edge from that edge's start (left for top and bottom, top for left and right), `depth` inward, so a bite moves and resizes with its target.
+- **Chip.** The overlay queues each `shield_impacts` hit and applies the queue at its next frame, against the rects read once for that frame. A hit within a bite's half-width + 4px on the same edge digs it 2.5px deeper and steers it up to 3px (20% of the gap) toward the cursor's position along the edge. It never digs deeper than the cursor sits inside the target, nor past the cap of 18% of the short side or 60px, whichever is smaller. Any other hit opens a 4px bite, up to 64 per target. Half-width is `4 + depth × 0.75`.
+- **Prune.** Each damage frame drops widgets no longer on the desktop. Windows missing from the context are kept, since a minimized or popped-out window comes back with its damage; the 16 most recently chipped hidden windows are kept and older ones dropped. Window ids are fresh UUIDs, so a closed window's damage can't show again and only ages out.
+- **Draw.** On the overlay, back to front: widgets, then windows. For each target with bites, a clip to its rect, a 2px `foreground` rim at 35%, then the bites filled in `background_darkest` over it, so overlapping bites keep only the outer half of the rim. Then every window above that target is `clearRect`ed, so a bite on a window never shows through one in front. Sparks are drawn after. The outline is a seeded jagged arch (8 steps, ±jag), built once into a `Path2D` per bite list and target size (a chip replaces the list) and drawn translated to the target.
+- **Loop.** While there is damage and the pointer is on the page, the overlay redraws every frame so bites follow a dragged window; without the pointer it draws only on resize, theme, option change or Repair. Measured at 64 bites on each of 3 windows and a widget, with frantic fire, the damage pass costs about 0.07 ms a frame (0.4 ms before the path cache).
+- **Repair.** "Repair everything" in the Damage row calls `damage_store.clear()`, which tells the overlay to draw a clean still frame.
 
 ## Desktop item
 

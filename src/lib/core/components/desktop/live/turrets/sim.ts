@@ -1,4 +1,4 @@
-import { contains, type Point, type Rect } from "../geometry";
+import { contains, nearest_edge, type Edge, type Point, type Rect } from "../geometry";
 import { TurretsPace } from "./options";
 
 export interface PaceConfig {
@@ -115,14 +115,29 @@ export function entry_fraction(a: Point, b: Point, rect: Rect): number | null {
   return low;
 }
 
+export interface Wall extends Rect {
+  id: string;
+}
+
+export interface WallHit extends Point {
+  id: string;
+  edge: Edge;
+}
+
 /** The first point on `a → b` inside any wall, or `null`. */
-export function first_wall_hit(a: Point, b: Point, walls: Rect[]): Point | null {
+export function first_wall_hit(a: Point, b: Point, walls: Wall[]): WallHit | null {
   let best: number | null = null;
+  let hit: Wall | null = null;
   for (const wall of walls) {
     const t = entry_fraction(a, b, wall);
-    if (t !== null && (best === null || t < best)) best = t;
+    if (t !== null && (best === null || t < best)) {
+      best = t;
+      hit = wall;
+    }
   }
-  return best === null ? null : { x: a.x + (b.x - a.x) * best, y: a.y + (b.y - a.y) * best };
+  if (best === null || !hit) return null;
+  const at = { x: a.x + (b.x - a.x) * best, y: a.y + (b.y - a.y) * best };
+  return { ...at, id: hit.id, edge: nearest_edge(hit, at) };
 }
 
 export function segment_distance(a: Point, b: Point, point: Point): number {
@@ -167,7 +182,7 @@ export interface SimInput {
   fire: boolean;
   pace: PaceConfig;
   /** Shields: windows and widgets (shield mode). Bolts stop at them and a cursor over one can't be hit; `null` lets bolts through. */
-  walls: Rect[] | null;
+  walls: Wall[] | null;
   width: number;
   height: number;
 }
@@ -176,7 +191,7 @@ export interface SimEvents {
   shots: number;
   hits: number;
   /** Where bolts struck a wall this frame; the caller draws the sparks, above the walls. */
-  impacts: Point[];
+  impacts: WallHit[];
 }
 
 export class TurretsSim {

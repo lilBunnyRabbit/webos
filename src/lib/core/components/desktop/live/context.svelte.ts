@@ -1,6 +1,6 @@
 import kernel, { WindowFlag, type DesktopWindowsService, type ExtractService, type GridDesktopService } from "$lib/core/api";
 import { dot_cells, tile_cells, type Point, type Rect } from "./geometry";
-import type { LiveContext } from "./registry";
+import type { LiveContext, LiveTarget } from "./registry";
 
 /** The Settings thumbnail's dot spacing (`.dots` in `sections/wallpaper.svelte`). */
 const PREVIEW_CELL = 14;
@@ -53,29 +53,34 @@ export class LiveContextState implements LiveContext {
   }
 
   // Measured, not read from `bounds`: a window being dragged, snapped or maximized is drawn from local state and CSS.
-  public get windows(): DOMRect[] {
+  public get windows(): LiveTarget[] {
     const container = this.preview ? null : this.windows_service.container.element;
     if (!container) return [];
-    const rects: DOMRect[] = [];
-    for (const id of this.windows_service.list()) {
-      const instance = this.windows_service.get(id);
-      if (!instance || instance.flags.has(WindowFlag.MINIMIZED) || this.extract?.current === id) continue;
+    const targets: LiveTarget[] = [];
+    const instances = this.windows_service
+      .list()
+      .map((id) => this.windows_service.get(id))
+      .filter((instance) => instance !== null)
+      .sort((a, b) => a.order - b.order);
+    for (const { id, flags } of instances) {
+      if (flags.has(WindowFlag.MINIMIZED) || this.extract?.current === id) continue;
       const element = container.querySelector(`[data-window-id="${CSS.escape(id)}"]`);
       const rect = element?.getBoundingClientRect();
-      if (rect && rect.width > 0 && rect.height > 0) rects.push(rect);
+      if (rect && rect.width > 0 && rect.height > 0) targets.push({ id, rect });
     }
-    return rects;
+    return targets;
   }
 
-  public get widgets(): DOMRect[] {
+  public get widgets(): LiveTarget[] {
     const surface = this.preview ? null : this.desktop.container.element;
     if (!surface) return [];
-    const rects: DOMRect[] = [];
-    for (const element of surface.querySelectorAll("[data-desktop-widget]")) {
+    const targets: LiveTarget[] = [];
+    for (const element of surface.querySelectorAll<HTMLElement>("[data-desktop-widget]")) {
       const rect = element.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) rects.push(rect);
+      const id = element.dataset.desktopWidget;
+      if (id && rect.width > 0 && rect.height > 0) targets.push({ id, rect });
     }
-    return rects;
+    return targets;
   }
 
   /** Starts the listeners; returns their cleanup. A preview only tracks its host's size. */

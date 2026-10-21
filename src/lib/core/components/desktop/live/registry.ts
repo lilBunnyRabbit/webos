@@ -5,13 +5,19 @@ import type { LiveWallpaperId } from "$lib/core/api/services/settings/type";
 import { OWNER } from "$lib/core/api/services/apps/authors";
 import { turrets_options } from "./turrets/options";
 
+/** A window (its window id) or a desktop widget (its file name in the Desktop folder). */
+export interface LiveTarget {
+  id: string;
+  rect: DOMRect;
+}
+
 /** What a live wallpaper sees (ADR-057). Coordinates are the page's, like `getBoundingClientRect()`. */
 export interface LiveContext {
   readonly pointer: { x: number; y: number } | null;
-  /** Visible windows, measured on read. */
-  readonly windows: DOMRect[];
-  /** Desktop widgets, measured on read. */
-  readonly widgets: DOMRect[];
+  /** Visible windows back to front, measured on read. */
+  readonly windows: LiveTarget[];
+  /** Desktop widgets, measured on read; always behind the windows. */
+  readonly widgets: LiveTarget[];
   /** The desktop grid as the dots tile it: one cell per dot, the dot at its centre. */
   readonly cells: DOMRect[];
   /** Tab hidden, a maximized window or a fullscreen element covers the desktop, or a preview. Draw nothing new. */

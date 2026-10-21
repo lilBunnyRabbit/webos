@@ -1,11 +1,12 @@
 <script lang="ts">
-  import type { LiveContext, LiveLayer } from "../registry";
+  import type { LiveContext, LiveLayer, LiveTarget } from "../registry";
   import { centre, type Point } from "../geometry";
   import { read_tokens, watch_theme } from "../theme";
   import { TurretsMode, type TurretsOptions } from "./options";
-  import { BARREL_LENGTH, BOLT_LENGTH, PACES, ParticleKind, TurretsSim } from "./sim";
+  import { BARREL_LENGTH, BOLT_LENGTH, PACES, ParticleKind, TurretsSim, type WallHit } from "./sim";
   import { PewSynth } from "./sound";
   import { shield_impacts } from "./impacts";
+  import { bite_outline, damage_store, type Bite } from "./damage";
 
   interface Props {
     context: LiveContext;
@@ -15,7 +16,7 @@
 
   let { context, options, layer }: Props = $props();
 
-  const TOKENS = ["foreground", "primary", "accent"] as const;
+  const TOKENS = ["foreground", "primary", "accent", "background_darkest"] as const;
   /** Pews per frame at most; a frantic volley would otherwise stack six oscillators. */
   const MAX_PEWS = 3;
 
@@ -24,6 +25,8 @@
   /** The overlay in shield mode: only the sparks of bolts hitting a shield, drawn above it. */
   const sparks_only = $derived(!draws_turrets && !fires);
   const pace = $derived(PACES[options.pace]);
+  /** Only shield hits chip, so Follow mode never damages anything. */
+  const damages = $derived(sparks_only && options.damage && options.mode === TurretsMode.SHIELD && !context.preview);
 
   const sim = new TurretsSim();
   const synth = new PewSynth();
@@ -32,6 +35,7 @@
   let colours = $state(read_tokens(TOKENS));
   let frame = 0;
   let last = 0;
+  let pending: WallHit[] = [];
 
   $effect(() => watch_theme(() => (colours = read_tokens(TOKENS))));
 
@@ -55,15 +59,38 @@
 
   $effect(() => {
     if (!sparks_only || context.preview) return;
-    return shield_impacts.listen((at) => {
+    return shield_impacts.listen((impact) => {
       if (!canvas || context.paused) return;
-      sim.burst(local(at, canvas.getBoundingClientRect()), ParticleKind.SPARK);
+      sim.burst(local(impact, canvas.getBoundingClientRect()), ParticleKind.SPARK);
+      if (damages) pending.push(impact);
       if (!frame) {
         last = 0;
         frame = requestAnimationFrame(tick);
       }
     });
   });
+
+  $effect(() => {
+    if (!damages) {
+      pending = [];
+      return;
+    }
+    return damage_store.on_repair(() => {
+      if (!frame) still();
+    });
+  });
+
+  // Hits land on the rects as they are now; whatever is no longer on screen is pruned in the same pass.
+  function settle_damage(windows: LiveTarget[], widgets: LiveTarget[]) {
+    const hits = pending;
+    pending = [];
+    for (const hit of hits) {
+      const window = windows.find((target) => target.id === hit.id);
+      const target = window ?? widgets.find((item) => item.id === hit.id);
+      if (target) damage_store.chip(hit.id, window !== undefined, { edge: hit.edge, at: hit }, target.rect, context.pointer);
+    }
+    damage_store.prune(new Set([...windows, ...widgets].map((target) => target.id)));
+  }
 
   function local(point: Point, origin: DOMRect): Point {
     return { x: point.x - origin.x, y: point.y - origin.y };
@@ -89,9 +116,65 @@
     return { rect, turrets, unit };
   }
 
+  // A chip replaces the target's bite list, so the list itself keys its outline; a resize rebuilds it too.
+  const paths = new WeakMap<Bite[], { width: number; height: number; path: Path2D }>();
+
+  function bite_path(bites: Bite[], width: number, height: number): Path2D {
+    const cached = paths.get(bites);
+    if (cached && cached.width === width && cached.height === height) return cached.path;
+    const path = new Path2D();
+    const rect = { x: 0, y: 0, width, height };
+    for (const bite of bites) {
+      const [first, ...rest] = bite_outline(bite, rect);
+      path.moveTo(first.x, first.y);
+      for (const point of rest) path.lineTo(point.x, point.y);
+      path.closePath();
+    }
+    paths.set(bites, { width, height, path });
+    return path;
+  }
+
+  /**
+   * Back to front, each target's bites clipped to its rect; then every window above it is cleared, so a bite on a window
+   * never shows through one in front. Widgets sit behind all windows.
+   */
+  function draw_damage(ctx: CanvasRenderingContext2D, origin: DOMRect, windows: LiveTarget[], widgets: LiveTarget[]) {
+    const stack = [...widgets, ...windows];
+    stack.forEach((target, index) => {
+      const bites = damage_store.damage.get(target.id)?.bites;
+      if (!bites?.length) return;
+      const { width, height } = target.rect;
+      const path = bite_path(bites, width, height);
+      ctx.save();
+      ctx.translate(target.rect.x - origin.x, target.rect.y - origin.y);
+      ctx.beginPath();
+      ctx.rect(0, 0, width, height);
+      ctx.clip();
+      // Rim first, fill over it: overlapping bites keep only the outer half of the rim, never lines inside a hole.
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = colours.foreground;
+      ctx.lineWidth = 2;
+      ctx.stroke(path);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colours.background_darkest;
+      ctx.fill(path);
+      ctx.restore();
+      for (const above of windows.slice(Math.max(0, index - widgets.length + 1))) {
+        ctx.clearRect(above.rect.x - origin.x, above.rect.y - origin.y, above.rect.width, above.rect.height);
+      }
+    });
+  }
+
   function draw(ctx: CanvasRenderingContext2D, rect: DOMRect, turrets: Point[], unit: number) {
     ctx.clearRect(0, 0, rect.width, rect.height);
     ctx.lineCap = "round";
+
+    if (damages && (pending.length > 0 || damage_store.damage.size > 0)) {
+      const windows = context.windows;
+      const widgets = context.widgets;
+      settle_damage(windows, widgets);
+      draw_damage(ctx, rect, windows, widgets);
+    }
 
     if (draws_turrets) {
       ctx.fillStyle = colours.foreground;
@@ -148,6 +231,12 @@
     ctx.globalAlpha = 1;
   }
 
+  /** The pointer moves windows too, so while there is damage the overlay follows them frame by frame. */
+  function wants_pointer_frames(): boolean {
+    if (!context.pointer) return false;
+    return !sparks_only || (damages && damage_store.damage.size > 0);
+  }
+
   function tick(now: number) {
     frame = 0;
     if (!canvas) return;
@@ -158,10 +247,10 @@
     const pointer = context.pointer && !sparks_only ? local(context.pointer, rect) : null;
     const walls =
       fires && options.mode === TurretsMode.SHIELD
-        ? [...context.windows, ...context.widgets].map((shield) => ({ x: shield.x - rect.x, y: shield.y - rect.y, width: shield.width, height: shield.height }))
+        ? [...context.windows, ...context.widgets].map(({ id, rect: shield }) => ({ id, x: shield.x - rect.x, y: shield.y - rect.y, width: shield.width, height: shield.height }))
         : null;
     const events = sim.update(dt, { turrets: sparks_only ? [] : turrets, pointer, fire: fires, pace, walls, width: rect.width, height: rect.height });
-    for (const at of events.impacts) shield_impacts.emit({ x: at.x + rect.x, y: at.y + rect.y });
+    for (const impact of events.impacts) shield_impacts.emit({ ...impact, x: impact.x + rect.x, y: impact.y + rect.y });
 
     if (options.sound) {
       for (let shot = 0; shot < Math.min(events.shots, MAX_PEWS); shot++) synth.pew(pace.pitch, options.volume);
@@ -171,7 +260,7 @@
     const ctx = fit(canvas, rect);
     if (ctx) draw(ctx, rect, turrets, unit);
 
-    if (!context.paused && ((context.pointer && !sparks_only) || sim.busy)) frame = requestAnimationFrame(tick);
+    if (!context.paused && (wants_pointer_frames() || sim.busy)) frame = requestAnimationFrame(tick);
     else last = 0;
   }
 
@@ -211,6 +300,7 @@
     void colours;
     void context.cells;
     void draws_turrets;
+    void damages;
     if (!frame) still();
   });
 
@@ -226,7 +316,7 @@
       still();
       return;
     }
-    if (((context.pointer && !sparks_only) || sim.busy) && !frame) {
+    if ((wants_pointer_frames() || sim.busy) && !frame) {
       last = 0;
       frame = requestAnimationFrame(tick);
     }

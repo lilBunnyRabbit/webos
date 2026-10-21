@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { centre, dot_cells, tile_cells } from "./geometry";
+import { centre, dot_cells, Edge, nearest_edge, tile_cells } from "./geometry";
 
 describe("dot_cells", () => {
   test("one cell per grid line crossing, centred on the dot the CSS draws", () => {
@@ -27,4 +27,13 @@ test("tile_cells covers the area from its corner", () => {
     [24, 20],
     [38, 20],
   ]);
+});
+
+test("nearest_edge names the side a border point sits on", () => {
+  const rect = { x: 100, y: 100, width: 200, height: 100 };
+  expect(nearest_edge(rect, { x: 150, y: 100 })).toBe(Edge.TOP);
+  expect(nearest_edge(rect, { x: 300, y: 150 })).toBe(Edge.RIGHT);
+  expect(nearest_edge(rect, { x: 250, y: 200 })).toBe(Edge.BOTTOM);
+  expect(nearest_edge(rect, { x: 100, y: 120 })).toBe(Edge.LEFT);
+  expect(nearest_edge(rect, { x: 200, y: 195 })).toBe(Edge.BOTTOM);
 });

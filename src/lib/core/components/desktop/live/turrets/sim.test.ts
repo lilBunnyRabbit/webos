@@ -14,6 +14,7 @@ import {
   turn_toward,
   volley_delay,
   type SimInput,
+  type WallHit,
 } from "./sim";
 
 function sequence(...values: number[]): () => number {
@@ -73,7 +74,7 @@ describe("firing", () => {
 });
 
 describe("collision", () => {
-  const wall = { x: 100, y: 0, width: 50, height: 100 };
+  const wall = { id: "wall", x: 100, y: 0, width: 50, height: 100 };
 
   test("finds where a segment enters a rect", () => {
     expect(entry_fraction({ x: 0, y: 50 }, { x: 200, y: 50 }, wall)).toBeCloseTo(0.5);
@@ -83,9 +84,15 @@ describe("collision", () => {
   });
 
   test("the nearest wall stops the bolt", () => {
-    const near = { x: 50, y: 0, width: 10, height: 100 };
-    expect(first_wall_hit({ x: 0, y: 50 }, { x: 200, y: 50 }, [wall, near])).toEqual({ x: 50, y: 50 });
+    const near = { id: "near", x: 50, y: 0, width: 10, height: 100 };
+    expect(first_wall_hit({ x: 0, y: 50 }, { x: 200, y: 50 }, [wall, near])).toEqual({ x: 50, y: 50, id: "near", edge: "left" });
     expect(first_wall_hit({ x: 0, y: 50 }, { x: 40, y: 50 }, [wall, near])).toBeNull();
+  });
+
+  test("a hit names the edge it came through", () => {
+    expect(first_wall_hit({ x: 125, y: 200 }, { x: 125, y: 50 }, [wall])).toEqual({ x: 125, y: 100, id: "wall", edge: "bottom" });
+    expect(first_wall_hit({ x: 125, y: -50 }, { x: 125, y: 50 }, [wall])?.edge).toBe("top");
+    expect(first_wall_hit({ x: 300, y: 50 }, { x: 120, y: 50 }, [wall])?.edge).toBe("right");
   });
 
   test("distance from a moving bolt to the cursor", () => {
@@ -120,7 +127,7 @@ describe("TurretsSim", () => {
   };
 
   function run(sim: TurretsSim, input: SimInput, seconds: number) {
-    const totals = { shots: 0, hits: 0, impacts: [] as { x: number; y: number }[] };
+    const totals = { shots: 0, hits: 0, impacts: [] as WallHit[] };
     for (let t = 0; t < seconds; t += 0.016) {
       const events = sim.update(0.016, input);
       totals.shots += events.shots;
@@ -147,20 +154,21 @@ describe("TurretsSim", () => {
 
   test("shield: a window between turret and cursor takes every bolt, at its edge", () => {
     const sim = new TurretsSim(() => 0.5);
-    const totals = run(sim, { ...base, walls: [{ x: 100, y: 0, width: 300, height: 100 }] }, 1.2);
+    const totals = run(sim, { ...base, walls: [{ id: "window", x: 100, y: 0, width: 300, height: 100 }] }, 1.2);
     expect(totals.shots).toBeGreaterThan(0);
     expect(totals.hits).toBe(0);
     expect(totals.impacts.length).toBeGreaterThan(0);
     for (const impact of totals.impacts) {
       expect(impact.x).toBeCloseTo(100);
       expect(impact.y).toBeCloseTo(50);
+      expect(impact).toMatchObject({ id: "window", edge: "left" });
     }
     expect(sim.particles.any()).toBe(false);
   });
 
   test("shield: a widget takes a bolt where it enters", () => {
     const sim = new TurretsSim(() => 0.5);
-    const widget = { x: 200, y: 20, width: 80, height: 60 };
+    const widget = { id: "clock.widget", x: 200, y: 20, width: 80, height: 60 };
     sim.fire({ x: 0, y: 0 }, { x: 240, y: 60 }, 460);
     const totals = run(sim, { ...base, pointer: null, walls: [widget] }, 1);
     expect(totals.impacts.length).toBe(1);
@@ -171,7 +179,7 @@ describe("TurretsSim", () => {
   test("shield: a cursor over a shield is hidden, even right at its edge", () => {
     // Bolts step 7.36px a frame from x = 9, so one stops at 97.3: short of the shield, but within the hit radius of the cursor.
     const sim = new TurretsSim(() => 0.5);
-    const totals = run(sim, { ...base, turrets: [{ x: 3, y: 50 }], pointer: { x: 101, y: 50 }, walls: [{ x: 100, y: 0, width: 80, height: 100 }] }, 3);
+    const totals = run(sim, { ...base, turrets: [{ x: 3, y: 50 }], pointer: { x: 101, y: 50 }, walls: [{ id: "window", x: 100, y: 0, width: 80, height: 100 }] }, 3);
     expect(totals.shots).toBeGreaterThan(0);
     expect(totals.hits).toBe(0);
     expect(totals.impacts.length).toBeGreaterThan(0);
@@ -180,14 +188,14 @@ describe("TurretsSim", () => {
 
   test("shield: a cursor in the open next to a shield still gets hit", () => {
     const sim = new TurretsSim(() => 0.5);
-    const totals = run(sim, { ...base, pointer: { x: 300, y: 50 }, walls: [{ x: 100, y: 70, width: 80, height: 30 }] }, 1.2);
+    const totals = run(sim, { ...base, pointer: { x: 300, y: 50 }, walls: [{ id: "window", x: 100, y: 70, width: 80, height: 30 }] }, 1.2);
     expect(totals.hits).toBeGreaterThan(0);
     expect(totals.impacts.length).toBe(0);
   });
 
   test("shield: a turret under a window holds fire", () => {
     const sim = new TurretsSim(() => 0.5);
-    expect(run(sim, { ...base, walls: [{ x: -10, y: 0, width: 20, height: 100 }] }, 1).shots).toBe(0);
+    expect(run(sim, { ...base, walls: [{ id: "window", x: -10, y: 0, width: 20, height: 100 }] }, 1).shots).toBe(0);
   });
 
   test("no cursor, no fire; bolts in flight still finish", () => {
@@ -211,5 +219,7 @@ describe("options", () => {
   test("defaults fill in, broken fields fall back alone", () => {
     expect(turrets_options.parse({})).toEqual(DEFAULT_TURRETS_OPTIONS);
     expect(turrets_options.parse({ mode: "follow", volume: -1 })).toEqual({ ...DEFAULT_TURRETS_OPTIONS, mode: "follow" });
+    expect(turrets_options.parse({ damage: "yes", sound: true })).toEqual({ ...DEFAULT_TURRETS_OPTIONS, sound: true });
+    expect(turrets_options.parse({ damage: true }).damage).toBe(true);
   });
 });

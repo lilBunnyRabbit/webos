@@ -46,3 +46,21 @@ export function centre(rect: Rect): Point {
 export function contains(rect: Rect, point: Point): boolean {
   return point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height;
 }
+
+export const Edge = {
+  TOP: "top",
+  RIGHT: "right",
+  BOTTOM: "bottom",
+  LEFT: "left",
+} as const;
+export type Edge = (typeof Edge)[keyof typeof Edge];
+
+export function nearest_edge(rect: Rect, point: Point): Edge {
+  const distances: [Edge, number][] = [
+    [Edge.TOP, Math.abs(point.y - rect.y)],
+    [Edge.RIGHT, Math.abs(rect.x + rect.width - point.x)],
+    [Edge.BOTTOM, Math.abs(rect.y + rect.height - point.y)],
+    [Edge.LEFT, Math.abs(point.x - rect.x)],
+  ];
+  return distances.reduce((best, next) => (next[1] < best[1] ? next : best))[0];
+}

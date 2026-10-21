@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Segmented, SettingRow, Slider, Switch } from "$lib/core/components/ui";
+  import { Button, Segmented, SettingRow, Slider, Switch } from "$lib/core/components/ui";
   import type { LiveSettingsProps } from "../registry";
   import { TurretsMode, TurretsPace, type TurretsOptions } from "./options";
+  import { damage_store } from "./damage";
 
   let { value, onchange }: LiveSettingsProps<TurretsOptions> = $props();
 
@@ -48,6 +49,15 @@
         disabled={!value.sound}
         bind:value={() => Math.round(value.volume * 100), (volume) => update({ volume: (volume ?? 0) / 100 })}
       />
+    {/snippet}
+  </SettingRow>
+  <SettingRow
+    label="Damage"
+    description={value.mode === TurretsMode.SHIELD ? "Lasers chip windows and widgets. Only for looks, gone on reload." : "Shield mode only: in Follow mode bolts hit nothing."}
+  >
+    {#snippet children({ id, describedby })}
+      <Button size="sm" variant="quiet" onclick={() => damage_store.clear()}>Repair everything</Button>
+      <Switch {id} aria-describedby={describedby} disabled={value.mode !== TurretsMode.SHIELD} bind:checked={() => value.damage, (damage) => update({ damage })} />
     {/snippet}
   </SettingRow>
 </div>
