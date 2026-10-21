@@ -41,7 +41,7 @@
   onkeydown={move_focus}
   class={[
     "grid gap-0.5 bg-background-lighter text-ui",
-    sheet ? "w-full rounded-t-2xl p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-60 max-w-80 animate-pop-in rounded-xl p-1.5 shadow-popover",
+    sheet ? "w-full rounded-t-2xl p-2 pt-5 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-60 max-w-80 animate-pop-in rounded-xl p-1.5 shadow-popover",
   ]}
 >
   <p class="truncate px-2 pt-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Open {file_name} with</p>

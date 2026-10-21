@@ -1,13 +1,18 @@
 <script lang="ts">
   import kernel, { type DialogsService, type WindowId } from "$lib/core/api";
   import type { Attachment } from "svelte/attachments";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
+  import { Grabber } from "../ui";
 
   let {
     anchored = "dropdown",
     origin = null,
     view = window,
   }: {
-    /** `sheet`: anchored dialogs (menus, Open with) rise from the bottom of the screen instead (the mobile shell). */
+    /**
+     * `sheet` (the mobile shell): anchored dialogs (menus, Open with) rise from the bottom of the screen as full-width
+     * sheets, and centred questions dock to the bottom as cards. Both swipe down to dismiss when dismissible.
+     */
     anchored?: "dropdown" | "sheet";
     /** The popped-out window whose dialogs this host renders in its mini window (ADR-043); `null` for the tab's. */
     origin?: WindowId | null;
@@ -55,7 +60,9 @@
 </script>
 
 {#each entries as entry (entry.id)}
-  {@const sheet = entry.anchored && anchored === "sheet"}
+  {@const docked = anchored === "sheet"}
+  {@const sheet = entry.anchored && docked}
+  {@const card = !entry.anchored && docked}
   <div
     class="fixed size-0 pointer-events-none"
     style:left="{entry.point.x}px"
@@ -73,19 +80,24 @@
     }}
     class={[
       "m-0 p-0 max-w-none max-h-none border-0 bg-transparent text-foreground overflow-visible outline-none",
-      sheet ? "inset-x-0 top-auto bottom-0 w-full animate-sheet-in" : "inset-auto",
+      sheet && "inset-x-0 top-auto bottom-0 w-full animate-sheet-in",
+      card && "inset-x-0 top-auto bottom-0 mx-auto mb-[calc(0.5rem+env(safe-area-inset-bottom))] w-fit max-w-[calc(100%-1rem)] animate-sheet-in",
+      !docked && "inset-auto",
       // A centered question spans the screen so anchor-center can shift it back on screen: its point is the focused
       // window's center, which sits off the screen's center (taskbar, nav bar).
       !entry.anchored &&
+        !docked &&
         "[place-self:anchor-center] mx-4 mt-[calc(1rem+env(safe-area-inset-top))] mb-[calc(1rem+env(safe-area-inset-bottom))]",
       // Every dialog, anchored menu or centered question, sits on the shared scrim; questions also blur what's behind.
       "backdrop:bg-(--overlay)",
       !entry.anchored && "backdrop:backdrop-blur-[2px]",
     ]}
-    style:position-anchor={sheet ? undefined : `--dialog-${entry.id}`}
-    style:position-area={sheet ? undefined : entry.anchored ? "bottom span-right" : "span-all"}
-    style:position-try-fallbacks={!sheet && entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
+    style:position-anchor={docked ? undefined : `--dialog-${entry.id}`}
+    style:position-area={docked ? undefined : entry.anchored ? "bottom span-right" : "span-all"}
+    style:position-try-fallbacks={!docked && entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
+    {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible })}
   >
     <entry.component {...entry.props} {...sheet && { sheet: true }} resolve={entry.resolve} />
+    {#if docked && entry.dismissible}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
   </dialog>
 {/each}

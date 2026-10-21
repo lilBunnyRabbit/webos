@@ -73,7 +73,7 @@
   tabindex="-1"
   class={cn(
     "flex flex-col gap-px bg-background-lighter text-ui outline-none",
-    sheet ? "w-full rounded-t-2xl p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-52 max-w-72 rounded-xl p-1.5 shadow-popover",
+    sheet ? "w-full rounded-t-2xl p-2 pt-5 pb-[max(0.5rem,env(safe-area-inset-bottom))]" : "min-w-52 max-w-72 rounded-xl p-1.5 shadow-popover",
     class_name
   )}
   {onkeydown}

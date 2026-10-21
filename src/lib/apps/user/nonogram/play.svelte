@@ -12,7 +12,8 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { BoardOverlay, Button, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { BoardOverlay, Button, Grabber, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { daily_seed, format_time, Stopwatch } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
@@ -439,7 +440,9 @@
           "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
           show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
         )}
+        {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
       >
+        <Grabber class="-mt-2 mb-2 @5xl:hidden" />
         <Section
           title={mode === Mode.COLOR ? "Colour statistics" : "Statistics"}
           description="Puzzles solved per size. Best times count only solves without hints."

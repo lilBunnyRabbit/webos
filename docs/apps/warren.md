@@ -99,7 +99,7 @@ The paper is `min(page width, 100cqi − gutter)` wide with margins in proportio
 
 ### Layout
 
-At `@container (width >= 44rem)` the tools are a 15rem sidebar of `<details>` groups (Text, Paragraph, Picture, Page, Words, Export, Outline; open state in app storage `groups`). Below that the sidebar is hidden and a formatting bar sits above the page (bold, italic, underline, paragraph style select, bullets, numbers, Insert picture, More); the status bar says "Editing the header" or "footer" while a zone has focus; More opens the same groups in a bottom sheet (the Ask pattern). Spelling is the browser's own `spellcheck` underline.
+At `@container (width >= 44rem)` the tools are a 15rem sidebar of `<details>` groups (Text, Paragraph, Picture, Page, Words, Export, Outline; open state in app storage `groups`). Below that the sidebar is hidden and a formatting bar sits above the page (bold, italic, underline, paragraph style select, bullets, numbers, Insert picture, More); the status bar says "Editing the header" or "footer" while a zone has focus; More opens the same groups in a bottom sheet (the Ask pattern) with a kit `Grabber`; Done, Back, Esc, the scrim or a swipe down (`swipe_dismiss`, once the list is at its top) close it. Spelling is the browser's own `spellcheck` underline.
 
 ### Export
 

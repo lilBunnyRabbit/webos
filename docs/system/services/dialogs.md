@@ -57,7 +57,7 @@ Because `resolve` is idempotent, a dialog that resolves a value and is then clos
 
 `show(..., { window: id })` pushes an entry with `window: id` and focuses that window, so a question in a background window is never answered blind. The window renders it (`components/window/window-sheets.svelte`), not the host:
 
-- A plain element, not `<dialog>`: a native modal would go to the top layer and escape the window. The sheet layer is `absolute inset-0` inside the window's content area, on the shared `--overlay` scrim with a 2px blur, centred.
+- A plain element, not `<dialog>`: a native modal would go to the top layer and escape the window. The sheet layer is `absolute inset-0` inside the window's content area, on the shared `--overlay` scrim with a 2px blur, centred (`animate-pop-in`). On mobile (`kernel.platform`) it docks to the bottom instead (`items-end`, `p-2`, `animate-sheet-in`), takes `swipe_dismiss` with `on_dismiss: entry.resolve(null)` and, when dismissible, a `Grabber` over its top edge ([mobile shell](../shell/mobile.md#swipe-down-to-dismiss)).
 - While the window has sheets, its app content is wrapped in `inert`: no clicks, focus or screen-reader access. The titlebar stays live, so the window can still be moved, minimized or closed. Closing resolves the sheets with `null`.
 - On mount, focus goes to the sheet's first `[autofocus]`, else its first input or button. Only the top sheet is interactive (lower ones are `inert`).
 - Esc resolves `null` if the entry is dismissible.
@@ -104,7 +104,7 @@ The service reads the DOM directly here; it's the only DOM query in a service.
 
 ### Host: `dialogs-host.svelte`
 
-Each shell mounts one: `desktop-shell.svelte` after its grid, and `window-mini.svelte` one inside a popped-out window's mini window with `origin` (it renders `for_origin(origin)` instead of `system`) and `view` (the mini window, for the pointer listeners below), `mobile-shell.svelte` with `anchored="sheet"` (ADR-016 apps pass), and `solo-shell.svelte` (ADR-047) with `sheet` on mobile, `dropdown` on desktop. With `sheet`, anchored entries (menus, Open with) skip anchoring: the `<dialog>` sits at `inset-x-0 bottom-0`, full width, with `animate-sheet-in`, and the component gets `sheet: true` (ContextMenuList: full-width `rounded-t-2xl`, padded by the bottom safe area, submenus expand inline below their item, no shortcut hints; OpenWithDialog: the same surface). Unanchored dialogs stay centred. For each entry:
+Each shell mounts one: `desktop-shell.svelte` after its grid, and `window-mini.svelte` one inside a popped-out window's mini window with `origin` (it renders `for_origin(origin)` instead of `system`) and `view` (the mini window, for the pointer listeners below), `mobile-shell.svelte` with `anchored="sheet"` (ADR-016 apps pass), and `solo-shell.svelte` (ADR-047) with `sheet` on mobile, `dropdown` on desktop. With `sheet`, anchored entries (menus, Open with) skip anchoring: the `<dialog>` sits at `inset-x-0 bottom-0`, full width, with `animate-sheet-in`, and the component gets `sheet: true` (ContextMenuList: full-width `rounded-t-2xl`, padded by the bottom safe area, submenus expand inline below their item, no shortcut hints; OpenWithDialog: the same surface, both with `pt-5` for the grabber). Unanchored dialogs dock to the bottom too, as cards: `inset-x-0 bottom-0 mx-auto w-fit`, 0.5rem plus the bottom safe area above the edge, `animate-sheet-in`, no anchoring. In `sheet` mode every `<dialog>` takes `swipe_dismiss` ([Bottom sheets](../../design/patterns.md#bottom-sheets)) with `on_dismiss: entry.resolve(null)`, the same call as Esc and Back, and a dismissible one gets a `Grabber` laid over its top edge; a non-dismissible one only rubber-bands. For each entry:
 
 - A `fixed`, 0×0, `pointer-events-none` div at `point`, with `anchor-name: --dialog-{id}`.
 - A native `<dialog>`, opened with `showModal()` by an attachment. The attachment's cleanup calls `close()` if it's still open. A dialog that appears while a pointer button is held (the host tracks `pointerdown`/`pointerup`/`pointercancel` on its `view`, `window` by default, capture) waits for the release, then opens a task later: a right-click's `contextmenu` fires mid-press, and a menu that flips above the pointer (anchored near the bottom, like the taskbar's) would get that release outside itself and light-dismiss at once. Mobile long press already opens on release.
@@ -149,6 +149,7 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 ## Divergence from ADR
 
 - ADR-019 sketches `show<T>(component: Component<DialogProps<T>>, props: object, …)`. The code types `props` against the component (`P`), so wrong props don't compile.
+- ADR-019 and ADR-025 centre questions and window sheets. On the mobile shell both dock to the bottom and swipe down to dismiss (revisions 2026-10-22).
 
 ## Shell
 

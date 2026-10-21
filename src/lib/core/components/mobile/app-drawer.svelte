@@ -16,7 +16,8 @@
   } from "phosphor-svelte";
   import { fly } from "svelte/transition";
   import { motion_reduced } from "$lib/core/utils/motion";
-  import { Button, EmptyState, Input } from "../ui";
+  import { Button, EmptyState, Grabber, Input } from "../ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { long_press } from "$lib/core/utils/long-press";
   import AppBadge from "../apps/app-badge.svelte";
   import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
@@ -52,36 +53,6 @@
   function launch_library() {
     apps.launch(APP_LIBRARY);
     onclose();
-  }
-
-  /** Pulled down past this many px, the sheet closes. */
-  const CLOSE_DISTANCE = 96;
-  let pull = $state<{ pointer: number; start: number; dy: number; active: boolean } | null>(null);
-
-  function on_pull_down(event: PointerEvent) {
-    if (!event.isPrimary) return;
-    pull = { pointer: event.pointerId, start: event.clientY, dy: 0, active: false };
-  }
-
-  function on_pull_move(event: PointerEvent) {
-    if (!pull || event.pointerId !== pull.pointer) return;
-    const dy = event.clientY - pull.start;
-    if (!pull.active && dy > 8) {
-      pull.active = true;
-      try {
-        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-      } catch {
-        // A pointer that already ended can't be captured; the pull still follows its moves.
-      }
-    }
-    if (pull.active) pull.dy = Math.max(0, dy);
-  }
-
-  function on_pull_up(event: PointerEvent) {
-    if (!pull || event.pointerId !== pull.pointer) return;
-    const close = pull.active && pull.dy > CLOSE_DISTANCE;
-    pull = null;
-    if (close) onclose();
   }
 
   async function menu(manifest: AppManifest, anchor: { x: number; y: number }, recent = false) {
@@ -135,22 +106,12 @@
   <div
     role="dialog"
     aria-label="All apps"
-    class="mt-[calc(env(safe-area-inset-top)+2rem)] flex min-h-0 flex-1 flex-col rounded-t-3xl bg-background-lighter shadow-popover select-none [-webkit-touch-callout:none]"
+    class="relative mt-[calc(env(safe-area-inset-top)+2rem)] flex min-h-0 flex-1 flex-col rounded-t-3xl bg-background-lighter shadow-popover select-none [-webkit-touch-callout:none]"
     transition:fly={{ y: 48, duration: motion_reduced() ? 0 : 200 }}
-    style:translate={pull?.active ? `0 ${pull.dy}px` : undefined}
-    style:transition={pull?.active ? "none" : "translate 200ms var(--ease-out)"}
+    {@attach swipe_dismiss({ on_dismiss: onclose })}
   >
-    <!-- The top of the sheet pulls it down; touch-none so the browser doesn't scroll or refresh instead. Back and the
-         scrim are the accessible ways to close. -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="touch-none"
-      onpointerdown={on_pull_down}
-      onpointermove={on_pull_move}
-      onpointerup={on_pull_up}
-      onpointercancel={() => (pull = null)}
-    >
-      <div class="mx-auto mt-2 h-1 w-9 rounded-full bg-foreground/20" aria-hidden="true"></div>
+    <div>
+      <Grabber class="mt-2" />
 
       <div class="flex items-center gap-2 p-4 pb-3">
         <Input

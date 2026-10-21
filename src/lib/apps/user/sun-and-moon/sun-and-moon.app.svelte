@@ -4,7 +4,8 @@
   import { format_time, grid_key_move, Stopwatch, track_play } from "$kit/games";
   import { Flash } from "$kit/utils/flash.svelte";
   import { can_redo, can_undo, create_history, current, push, redo as history_redo, undo as history_undo, type History } from "$kit/utils/history";
-  import { BoardOverlay, Button, IconButton, Section, Select, Segmented, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { BoardOverlay, Button, Grabber, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
   import {
@@ -388,7 +389,9 @@
         "flex-col gap-4 overflow-auto p-4 @5xl:static @5xl:flex @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
         show_panel ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
       )}
+      {@attach swipe_dismiss({ on_dismiss: () => (show_panel = false) })}
     >
+      <Grabber class="-mt-2 mb-2 @5xl:hidden" />
       <Section title="Rules">
         <ul class="flex list-disc flex-col gap-1.5 py-3 pr-4 pl-8 text-ui text-foreground/80">
           <li>Every cell holds a sun or a moon.</li>

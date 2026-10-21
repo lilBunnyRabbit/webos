@@ -4,6 +4,7 @@ export { default as Button } from "./button.svelte";
 export { default as Checkbox } from "./checkbox.svelte";
 export { default as CopyButton } from "./copy-button.svelte";
 export { default as EmptyState } from "./empty-state.svelte";
+export { default as Grabber } from "./grabber.svelte";
 export { default as IconButton } from "./icon-button.svelte";
 export { default as Input } from "./input.svelte";
 export { default as Kbd } from "./kbd.svelte";

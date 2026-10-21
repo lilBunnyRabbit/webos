@@ -1,7 +1,8 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, ShortcutCategory, type DialogsService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
-  import { Button, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, Grabber, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_extension, parent_path } from "$lib/core/api/services/files/path";
@@ -652,13 +653,14 @@
         tabindex="-1"
         class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
         {@attach (element) => element.focus({ preventScroll: true })}
+        {@attach swipe_dismiss({ on_dismiss: () => (more = false) })}
         onkeydown={(event) => {
           if (event.key !== "Escape") return;
           event.stopPropagation();
           more = false;
         }}
       >
-        <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
+        <Grabber class="mt-2 mb-1" />
         <div class="min-h-0 flex-1 overflow-y-auto">
           {@render tools()}
         </div>

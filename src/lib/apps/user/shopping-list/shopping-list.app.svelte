@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { Platform, type DesktopItem, type DesktopService, type DialogsService, type MenuItem, type NotificationsService } from "$lib/core/api";
-  import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, Grabber, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
@@ -713,13 +714,14 @@
         tabindex="-1"
         class="relative mx-auto flex max-h-[90%] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
         {@attach (element) => element.focus({ preventScroll: true })}
+        {@attach swipe_dismiss({ on_dismiss: () => close_side_view() })}
         onkeydown={(event) => {
           if (event.key !== "Escape") return;
           event.stopPropagation();
           close_side_view();
         }}
       >
-        <span class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
+        <Grabber class="mt-2" />
         {#key editing.id}
           <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
         {/key}

@@ -2,7 +2,8 @@
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time, Stopwatch, track_play } from "$kit/games";
-  import { BoardOverlay, Button, IconButton, Section, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import { BoardOverlay, Button, Grabber, IconButton, Section, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { cn } from "$lib/core/utils";
   import { random_seed } from "$lib/core/utils/random";
   import { ChartBar as ChartBarIcon } from "phosphor-svelte";
@@ -397,7 +398,9 @@
         "flex-col gap-6 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
         show_stats ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
       )}
+      {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
+      <Grabber class="-mt-2 mb-2 @3xl:hidden" />
       <Section title="Statistics" description={title.startsWith("Daily") ? "Classic · 5 letters, the daily included." : `${title}.`}>
         {#snippet actions()}
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time, Stopwatch, track_play } from "$kit/games";
-  import { Button, IconButton, Input, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, Grabber, IconButton, Input, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
   import type { Position } from "$lib/core/utils/type";
@@ -340,7 +341,9 @@
         "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
         show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
       )}
+      {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
+      <Grabber class="-mt-2 mb-2 @3xl:hidden" />
       <Section title="Statistics" description="Every finished game, per difficulty.">
         {#snippet actions()}
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>

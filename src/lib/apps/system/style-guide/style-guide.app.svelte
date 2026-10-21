@@ -9,6 +9,7 @@
     Checkbox,
     CopyButton,
     EmptyState,
+    Grabber,
     IconButton,
     Input,
     Kbd,
@@ -48,6 +49,7 @@
   } from "phosphor-svelte";
   import { z } from "zod";
   import { reveal_setting } from "$lib/core/components/ui/setting-anchor";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { ai_icon } from "$kit/components/ai-icon";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
@@ -112,6 +114,7 @@
   let demo_open = $state(false);
   let demo_width = $state<"wide" | "narrow">("wide");
   let demo_root: HTMLElement | null = $state(null);
+  let sheet_open = $state(false);
   let split = $state(50);
   let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
   const WAVE_RATE = 8000;
@@ -533,6 +536,38 @@
               <Button size="sm" onclick={() => dialogs.show(AppAnnouncement, { apps: sample_apps })}>Show as dialog</Button>
               <Button size="sm" onclick={() => dialogs.show(AppAnnouncement, { apps: many_apps })}>Show with {many_apps.length} apps</Button>
             </div>
+          </div>
+        </Section>
+        <Section
+          title="Bottom sheet"
+          description="A grabber on top; by touch it follows the finger down and closes past a quarter of its height or on a flick, otherwise springs back. The list scrolls first. Back, the scrim and Done close it too."
+          flush
+        >
+          <div class="relative h-72 overflow-hidden rounded-lg bg-background-darker ring-1 ring-foreground/8">
+            <div class="grid size-full place-items-center">
+              <Button size="sm" onclick={() => (sheet_open = true)}>Open sheet</Button>
+            </div>
+            {#if sheet_open}
+              <div class="absolute inset-0 flex flex-col justify-end">
+                <button type="button" tabindex="-1" aria-label="Close" class="absolute inset-0 bg-(--overlay)" onclick={() => (sheet_open = false)}></button>
+                <div
+                  role="dialog"
+                  aria-label="Sample sheet"
+                  class="relative flex max-h-[85%] flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 motion-safe:animate-sheet-in"
+                  {@attach swipe_dismiss({ on_dismiss: () => (sheet_open = false) })}
+                >
+                  <Grabber class="mt-2 mb-1" />
+                  <ul class="min-h-0 flex-1 overflow-y-auto px-2">
+                    {#each Array.from({ length: 12 }, (_, i) => i + 1) as row (row)}
+                      <li class="flex h-10 items-center px-2 text-ui">Row {row}</li>
+                    {/each}
+                  </ul>
+                  <div class="flex justify-end border-t border-foreground/8 p-2">
+                    <Button size="sm" variant="primary" onclick={() => (sheet_open = false)}>Done</Button>
+                  </div>
+                </div>
+              </div>
+            {/if}
           </div>
         </Section>
         <Section title="Empty state" description="Icon tile, one line of title, one of help, optional action.">

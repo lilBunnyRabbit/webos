@@ -23,6 +23,7 @@ The UI kit lives in `src/lib/core/components/ui/` and is imported from `$lib/cor
 | `Badge` | A short label or status | `tone`: neutral, primary, success, warning, error, info (tinted fill + ink) |
 | `EmptyState` | Nothing to show, an error, or a first run | Icon tile, title, one line of help, optional actions. `tone="error"` for failures |
 | `BoardOverlay` | A game's pause or end screen | Covers its positioned parent (the board) with `background/80` and a 2px blur, fades in, and announces itself (`aria-live`). `title`, an optional mono `detail` line (the score), actions as children with the primary one last. Takes the board's radius (`rounded-[inherit]`); pass `class` for another radius or a z-index. See [Game app](patterns.md#game-app) |
+| `Grabber` | The swipe cue on top of a bottom sheet | A `foreground/25` pill, 36×4px, centred, `aria-hidden`. Place it with `class` (margins, or `absolute inset-x-0 top-1.5` over a card). It is only the cue: the gesture is `swipe_dismiss` from `$lib/core/utils/swipe-dismiss` on the sheet. See [Bottom sheets](patterns.md#bottom-sheets) |
 | `Spinner` | Indeterminate wait | Has a `label` for screen readers |
 | `Kbd` | A key | Mono, `rounded-xs` |
 | `Separator` | A hairline | `vertical` for toolbars |

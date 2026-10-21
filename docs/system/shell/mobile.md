@@ -8,7 +8,7 @@ The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`
 
 ```
 mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touch-action: manipulation
-├─ DialogsHost anchored="sheet"   menus as bottom sheets
+├─ DialogsHost anchored="sheet"   menus as bottom sheets, questions docked to the bottom; both swipe down
 ├─ main (stage)           container-type: size, isolate; the wallpaper (shell/desktop.md#wallpaper); logo mark watermark in the centre (any wallpaper but an image; a live wallpaper draws as the grid here, ADR-057)
 │  ├─ mobile-home.svelte  pages + page dots + dock
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
@@ -75,7 +75,34 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 ## App drawer
 
-`app-drawer.svelte`: the start menu's counterpart. A `rounded-t-3xl bg-background-lighter` sheet on the scrim, flying up 48px, below the top safe area plus 2rem. Search field (focused on open; Enter launches the first match) with an **All apps** button beside it that launches [App Library](../system-apps.md#app-library) and closes the drawer, then the apps in auto-fill grids of the home's tiles: with no query, a **Recent** row first (the start menu's `recent-apps.svelte`, [taskbar](taskbar.md#start-menu): four tiles per page, one row tall, a swipe snaps to the next page, dots when there's more than one), then sectioned by `group_apps()`, a ranked "Results" grid while searching, then "Not installed" matches with a "Get" pill (`services/apps/search.ts`, shared with the start menu). Only installed apps show without a query (ADR-040). Tap launches (a Get tile installs first); long press offers "Add to home screen" (`desktop.pin`), on a Recent tile "Clear recent", and, for user apps, "Uninstall…", or "Get and open" on a Get tile. Tapping the scrim closes it. So does pulling the top of the sheet (grab bar and search row, `touch-none`) down past 96px; the sheet follows the finger and springs back when released short.
+`app-drawer.svelte`: the start menu's counterpart. A `rounded-t-3xl bg-background-lighter` sheet on the scrim, flying up 48px, below the top safe area plus 2rem. Search field (focused on open; Enter launches the first match) with an **All apps** button beside it that launches [App Library](../system-apps.md#app-library) and closes the drawer, then the apps in auto-fill grids of the home's tiles: with no query, a **Recent** row first (the start menu's `recent-apps.svelte`, [taskbar](taskbar.md#start-menu): four tiles per page, one row tall, a swipe snaps to the next page, dots when there's more than one), then sectioned by `group_apps()`, a ranked "Results" grid while searching, then "Not installed" matches with a "Get" pill (`services/apps/search.ts`, shared with the start menu). Only installed apps show without a query (ADR-040). Tap launches (a Get tile installs first); long press offers "Add to home screen" (`desktop.pin`), on a Recent tile "Clear recent", and, for user apps, "Uninstall…", or "Get and open" on a Get tile. Tapping the scrim closes it. So does swiping it down (the shared `swipe_dismiss`, below), from anywhere on it while the grid is scrolled to the top.
+
+## Swipe down to dismiss
+
+Every bottom sheet on the phone closes with a downward swipe (2026-10-22, owner: "not all drawers that popup have slide down?"). One attachment does it, `swipe_dismiss` (`$lib/core/utils/swipe-dismiss.ts`, math in `sheet-gesture.ts`), and a kit `Grabber` on top shows it; the pattern is [Bottom sheets](../../design/patterns.md#bottom-sheets).
+
+- **Touch only.** A mouse never drags a sheet, so the desktop is unchanged. It listens to touch events, not pointer events: whether the sheet or the browser gets a drag depends on the scroller under the finger at the moment the drag starts, and only a cancelled `touchmove` can take a gesture from the browser.
+- **Claiming.** The first move decides: mostly downward, and no element between the finger and the sheet scrolled down (`scrollTop > 0`), then the sheet owns the drag and every `touchmove` is cancelled; otherwise it's the page's for the rest of the touch. A drag on a range slider is never the sheet's. An element laid out in flow (`position: static`) isn't a sheet: a game's stats panel at a wide size is a side panel.
+- **Moving.** `translate` follows the finger down; up, and down on a sheet that can't be dismissed, it rubber-bands (approaches 56px, never reaches it).
+- **Release.** Past 25% of the sheet's height, or a flick faster than 0.5 px/ms over the last 100ms, it slides off the bottom (200ms) and calls `on_dismiss`; a flick back up keeps it. Otherwise it springs back. Motion off (`motion_reduced()`) skips both animations, the swipe still closes.
+- **Same path.** `on_dismiss` is the surface's own Cancel or Back: `entry.resolve(null)` for system dialogs and window sheets (so `dismissible: false` and the close guards hold), the app's own close for in-app sheets. A surface still showing after `on_dismiss` (a guard said no, or it only hid) comes back to rest; one playing a Svelte outro (`inert`) is left alone.
+
+| Surface | Before | Now |
+|---------|--------|-----|
+| App drawer | Back, scrim, pull the header down 96px | Back, scrim, swipe |
+| Context menus, Open with (system, anchored) | Back, scrim | + swipe, grabber |
+| System questions: Properties, Rename, new-app announcements, Restore, home Delete, the introduction | Centred; Back, scrim, buttons | Docked to the bottom; dismissible ones + swipe and grabber; required ones (`dismissible: false`: Restore, Delete and other confirms, the introduction) only rubber-band |
+| Window sheets: prompt, file and save pickers, app sheets (Warren's templates, Soundboard's clip and pad dialogs, Bulk Rename, Properties) | Centred in the window; Back, Esc, Cancel | Docked to the window's bottom (`animate-sheet-in`); + swipe, grabber |
+| Window confirm (`window.confirm`), save changes, conflict | Centred; buttons only (ADR-025: a confirm needs an explicit answer) | Docked; rubber-band only, no grabber |
+| In-app sheets: Warren's More, Ask's commands, Shopping List's item editor | Back, Esc, scrim, Done | + swipe, kit `Grabber` |
+| Game stats and rules panels (17 games, below `@3xl` or `@5xl`) | The toolbar toggle | + swipe, grabber (hidden when it's a side panel) |
+
+Not given the swipe, on purpose:
+
+- **Notification center.** It's the switcher's top band, not a sheet; its cards already flick up to close apps and the list scrolls. Back, Home and the running-apps button close it.
+- **The switcher.** Full screen, sideways scroll plus flick-up cards.
+- **AI gate.** An in-app empty state, not a layer.
+- **Kit popovers** (Waveform's help, Image Editor's Save as, `Select`'s picker): anchored popovers, not sheets, on every size; light dismiss.
 
 ## Services read
 
@@ -86,6 +113,7 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 - Apps aren't adjusted for phone widths yet (second pass). Most assume a desktop-sized window.
 - Two device backs with no tap between them leave WebOS: Chrome skips a history entry pushed without a gesture, so the guard re-arms only on the next tap ([ui](../services/ui.md#back)).
 - No virtual keyboard handling beyond what `h-dvh` gives.
-- Centred system dialogs use their desktop sizes (capped to the screen); context menus and Open with are bottom sheets.
+- Docked questions keep their desktop widths (a confirm is 24rem, capped to the screen), so they float as cards rather than spanning the width.
+- Swipe to dismiss is checked with CDP touch in emulated Chromium, not yet on a phone.
 - Edit mode drag is checked with a mouse in Chromium only; not yet on a Samsung phone.
 - A widget that doesn't fit the rest of a page leaves a gap: the packer never backfills, so the order stays the user's.

@@ -3,7 +3,8 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
-  import { Button, CopyButton, EmptyState, IconButton, Spinner, Textarea, Toolbar } from "$lib/core/components/ui";
+  import { Button, CopyButton, EmptyState, Grabber, IconButton, Spinner, Textarea, Toolbar } from "$lib/core/components/ui";
+  import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { AiGate } from "$kit/components/ai-gate";
   import {
     CaretRight as CaretRightIcon,
@@ -341,13 +342,14 @@
             tabindex="-1"
             class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
             {@attach (element) => element.focus({ preventScroll: true })}
+            {@attach swipe_dismiss({ on_dismiss: () => (choosing = false) })}
             onkeydown={(event) => {
               if (event.key !== "Escape") return;
               event.stopPropagation();
               choosing = false;
             }}
           >
-            <span class="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-foreground/20" aria-hidden="true"></span>
+            <Grabber class="mt-2 mb-1" />
             <CommandsSheet {catalogue} on={enabled.value.on} ready={availability === AiAvailability.READY} ontoggle={toggle} />
             <div class="flex justify-end border-t border-foreground/8 p-2">
               <Button variant="primary" onclick={() => (choosing = false)}>Done</Button>

@@ -127,9 +127,20 @@ Apps that take a file or a code (image tools, QR Reader, GIF Player, Forms' answ
 
 Built with `dialogs.menu(items, { anchor })`, never by hand. Rows are 32px (44px on touch), a duotone icon at `foreground/80`, the shortcut in mono `text-2xs` at the end; arrows, Home, End and typeahead move through them. An item with `items` opens a submenu anchored beside it (hover, Enter or ArrowRight; ArrowLeft goes back). On phones the menu is a bottom sheet: full width, submenus open inline under their item, no shortcut hints. Order items by frequency: the default action first (Open), then variations (Open with), then edit actions (Rename, Copy, Cut, Paste), then destructive actions last after a separator. Destructive items are `danger`. Show the keyboard shortcut as a hint when one exists. Every right-clickable thing also opens its menu from the keyboard (ContextMenu key, Shift+F10).
 
+## Bottom sheets
+
+On a phone, anything that rises from the bottom closes by swiping it down: menus, Open with, system questions, window sheets, the app drawer, an app's own sheet (Warren's More, Ask's commands, Shopping List's item editor) and a game's stats panel over the board.
+
+- A `Grabber` (kit) on top: a 36×4px pill at `foreground/25`, inside the sheet's top padding. Only on sheets that can be dismissed.
+- `{@attach swipe_dismiss({ on_dismiss, dismissible })}` (`$lib/core/utils/swipe-dismiss`) on the sheet's own box, which must be positioned (`relative`, `absolute` or `fixed`). `on_dismiss` is the same call as its Cancel, Back and scrim tap, never a second close path.
+- Touch only; the sheet follows the finger, and up it rubber-bands. Past a quarter of its height or on a flick it slides away, otherwise it springs back. With Motion off it closes without sliding.
+- An inner list scrolls first: the swipe only starts with the scroller at its top. Nothing inside a sheet should need a downward drag of its own (sliders are exempt).
+- `dismissible: false` (a confirm, Restore) keeps the gesture as feedback: it gives a little and comes back, with no grabber.
+- The Style Guide shows one under Feedback. Behaviour in depth: [mobile shell](../system/shell/mobile.md#swipe-down-to-dismiss).
+
 ## Window sheets
 
-Questions that belong to one window's task (confirm, prompt, the file picker) are **sheets**: centred in that window on the shared scrim, the app behind them inert, the rest of the OS usable. Use `window.confirm` / `window.prompt` from the app context; never the browser's `confirm()` / `prompt()`.
+Questions that belong to one window's task (confirm, prompt, the file picker) are **sheets**: centred in that window on the shared scrim, the app behind them inert, the rest of the OS usable. On a phone they dock to the bottom of the window instead, rise with `animate-sheet-in` and swipe down (see Bottom sheets); system questions do the same at the bottom of the screen. Use `window.confirm` / `window.prompt` from the app context; never the browser's `confirm()` / `prompt()`.
 
 - Confirm: a tinted icon tile, the question as the title (with the item's name in curly quotes), one line on consequences, then Cancel + the verb ("Delete"). `danger` makes the verb red and focuses Cancel.
 - File picker: File Explorer in a `rounded-2xl` frame with a title bar on `background-lighter` showing what's accepted, sized to the window (`min(46rem, 100cqw - 2rem)`), with a footer of the chosen path, Cancel and Open. Unacceptable files stay visible but dimmed, so the folder still looks like itself.

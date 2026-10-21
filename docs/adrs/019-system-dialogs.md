@@ -2,6 +2,8 @@
 **Date:** 2026-10-11
 **Status:** Implemented (2026-10-11, see revision)
 
+> **Revision 2026-10-22: questions dock on phones.** With the host's `anchored="sheet"` (mobile), unanchored dialogs no longer centre on the fallback point: they dock to the bottom of the screen as cards, and every dialog there swipes down to dismiss through the same `resolve(null)` as Esc (non-dismissible ones only rubber-band) ([mobile shell](../system/shell/mobile.md#swipe-down-to-dismiss)).
+
 > **Revision 2026-10-11: required answers**
 > - `DialogOptions.dismissible` (default `true`). With `false`, the host renders `closedby="none"` and cancels Esc, so only the dialog's own buttons close it. This is for questions whose dismissal would silently pick an answer. The session restore dialog is the first: dismissing it used to mean "Start fresh" and threw the saved session away. Menus stay light-dismiss.
 
