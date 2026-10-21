@@ -90,7 +90,7 @@ None. Owner: "We dont need migration no one uses it yet". The `migrated` marker 
 
 ## Action items
 1. [x] Builder 1: service core (ADR-062). Done 2026-10-21; decisions it had to make are in the ADR's revision note.
-2. [ ] Builder 2: Clock alarms and timers, Recipe Box.
+2. [x] Builder 2: Clock alarms and timers, Recipe Box. Done 2026-10-21; see the ADR revision. Open: who plays the in-page chime with no app window open (a scheduler fired hook or a manifest callback, both new API).
 3. [ ] Builder 3: Pomodoro.
 4. [ ] Builder 4: Calendar.
 

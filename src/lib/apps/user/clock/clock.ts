@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { JobKind, pending, type Job, type JobAt, type JobId, type JobInput } from "$lib/core/api/services/scheduler";
+import { add_days, format_date_key, local_date, parse_plain_time, wall_to_epoch } from "$lib/core/utils/zoned";
 import { CLOCK_PROPS, ClockFace, ClockTab } from "./props";
 
 export const APP_ID = "clock";
@@ -6,24 +8,28 @@ export const DATA_FILE = "clock.json";
 
 export const MINUTE = 60_000;
 
-/** An alarm older than this when first noticed (WebOS was closed) is reported as missed instead of ringing. */
-export const MISSED_AFTER_MS = 10 * MINUTE;
-export const SNOOZE_MS = 10 * MINUTE;
+export const AlarmExtrasSchema = z.object({ label: z.string() });
+export type AlarmExtras = z.infer<typeof AlarmExtrasSchema>;
 
-export const AlarmSchema = z.object({
-  id: z.string(),
-  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-  /** Weekdays it repeats on, `0` = Sunday (as `Date.getDay()`). Empty rings once. */
-  days: z.array(z.number().int().min(0).max(6)),
+/** `left_ms` is the time left while it isn't running. */
+export const TimerExtrasSchema = z.object({
   label: z.string(),
-  enabled: z.boolean(),
-  /** Only occurrences after this instant count: set when the alarm is created, edited or switched on. */
-  armed_at: z.number(),
-  /** The occurrence that last rang (or was missed). Every host checks it before ringing, so one ring per occurrence. */
-  last_fired: z.number().nullable(),
-  snooze_until: z.number().nullable(),
+  duration_ms: z.number().int().positive(),
+  left_ms: z.number().min(0).optional(),
 });
-export type Alarm = z.infer<typeof AlarmSchema>;
+export type TimerExtras = z.infer<typeof TimerExtrasSchema>;
+
+export interface Alarm {
+  id: string;
+  job: JobId;
+  time: string;
+  /** Weekdays it repeats on, `0` = Sunday. Empty rings once. */
+  days: number[];
+  label: string;
+  on: boolean;
+  snooze_until: number | null;
+  next: number | null;
+}
 
 export interface AlarmDraft {
   id: string | null;
@@ -32,14 +38,17 @@ export interface AlarmDraft {
   label: string;
 }
 
-export const TimerSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  duration_ms: z.number().int().positive(),
-  end_at: z.number().nullable(),
-  remaining_ms: z.number().min(0),
-});
-export type Timer = z.infer<typeof TimerSchema>;
+export type AlarmSpec = Omit<AlarmDraft, "id">;
+
+export interface Timer {
+  id: string;
+  job: JobId;
+  label: string;
+  duration_ms: number;
+  end_at: number | null;
+  /** The time left while it isn't running; 0 once it's done. */
+  remaining_ms: number;
+}
 
 export interface StopwatchState {
   started_at: number | null;
@@ -58,75 +67,124 @@ export const EMPTY_STOPWATCH: StopwatchState = { started_at: null, before_ms: 0,
 export const ClockDataSchema = z.object({
   version: z.literal(1),
   zones: z.array(z.string()),
-  alarms: z.array(AlarmSchema),
-  timers: z.array(TimerSchema),
+  /** Files from before the scheduler held whole alarms and timers here as arrays; they're dropped, zones kept. */
+  alarms: z.record(z.string(), AlarmExtrasSchema).catch({}),
+  timers: z.record(z.string(), TimerExtrasSchema).catch({}),
   /** Optional: files from before it moved here lack it. A broken one is dropped rather than the whole file. */
   stopwatch: StopwatchSchema.optional().catch(undefined),
 });
 export type ClockData = z.infer<typeof ClockDataSchema>;
 
-export const EMPTY_CLOCK: ClockData = { version: 1, zones: [], alarms: [], timers: [] };
+export const EMPTY_CLOCK: ClockData = { version: 1, zones: [], alarms: {}, timers: {} };
 
 export function new_id(): string {
   return crypto.randomUUID().slice(0, 8);
 }
 
-export function parse_time(time: string): { hours: number; minutes: number } {
-  const [hours, minutes] = time.split(":").map(Number);
-  return { hours, minutes };
+const ALARM_PREFIX = `${APP_ID}:alarm-`;
+const TIMER_PREFIX = `${APP_ID}:timer-`;
+
+export const alarm_job_id = (id: string): JobId => `${ALARM_PREFIX}${id}`;
+export const timer_job_id = (id: string): JobId => `${TIMER_PREFIX}${id}`;
+
+export function next_wall(time: string, now: number, zone: string): JobAt {
+  const today = local_date(now, zone);
+  const date = wall_to_epoch(today, parse_plain_time(time)!, zone) > now ? today : add_days(today, 1);
+  return { date: format_date_key(date), time, tz: zone };
 }
 
 /**
- * The first time after `after` the alarm rings, in local time. Days are stepped on the calendar, not by 24 h, so a
- * DST change never moves it. A time skipped by spring-forward rings when the clock jumps past it; a time repeated by
- * fall-back rings at its first pass only.
+ * The scheduler job of an alarm, in `zone` (the device's when it's made). One that repeats starts counting today; the
+ * scheduler skips an occurrence already past. One that doesn't is the next time the clock reads `time`.
  */
-export function next_occurrence(alarm: Pick<Alarm, "time" | "days">, after: number): number {
-  const { hours, minutes } = parse_time(alarm.time);
-  const base = new Date(after);
-  for (let offset = 0; offset <= 8; offset++) {
-    const candidate = new Date(base.getFullYear(), base.getMonth(), base.getDate() + offset, hours, minutes);
-    if (candidate.getTime() <= after) continue;
-    if (alarm.days.length === 0 || alarm.days.includes(candidate.getDay())) return candidate.getTime();
-  }
-  throw new Error(`No occurrence for ${alarm.time}`);
+export function alarm_input(id: string, spec: AlarmSpec, now: number, zone: string): JobInput {
+  const days = [...new Set(spec.days)].sort((a, b) => a - b);
+  const input: JobInput = {
+    key: `alarm-${id}`,
+    title: spec.label || "Alarm",
+    message: `${spec.time} · ${repeat_label(days)}`,
+    at: days.length > 0 ? { date: format_date_key(local_date(now, zone)), time: spec.time, tz: zone } : next_wall(spec.time, now, zone),
+    kind: JobKind.ALARM,
+    actions: [
+      { label: "Snooze 10 min", command: `alarm snooze ${id}` },
+      { label: "Stop", command: `alarm stop ${id}` },
+    ],
+    open: { app: APP_ID, props: { tab: ClockTab.ALARMS } },
+  };
+  if (days.length > 0) input.repeat = { every: "week", days };
+  return input;
 }
 
-export const AlarmPlan = { NONE: "none", RING: "ring", MISSED: "missed" } as const;
-export type AlarmPlan = (typeof AlarmPlan)[keyof typeof AlarmPlan];
-
-export interface AlarmCheck {
-  plan: AlarmPlan;
-  at: number | null;
-  snoozed: boolean;
+export function timer_input(id: string, label: string, duration_ms: number, end_at: number): JobInput {
+  return {
+    key: `timer-${id}`,
+    title: `${label || "Timer"} is done`,
+    message: format_duration(duration_ms),
+    at: { epoch: end_at },
+    kind: JobKind.TIMER,
+    actions: [
+      { label: "Restart", command: `timer restart ${id}` },
+      { label: "Stop", command: `timer stop ${id}` },
+    ],
+    open: { app: APP_ID, props: { tab: ClockTab.TIMERS } },
+  };
 }
 
-export function check_alarm(alarm: Alarm, now: number, missed_after = MISSED_AFTER_MS): AlarmCheck {
-  if (alarm.snooze_until !== null) {
-    return alarm.snooze_until <= now
-      ? { plan: AlarmPlan.RING, at: alarm.snooze_until, snoozed: true }
-      : { plan: AlarmPlan.NONE, at: alarm.snooze_until, snoozed: true };
-  }
-  if (!alarm.enabled) return { plan: AlarmPlan.NONE, at: null, snoozed: false };
-  const due = next_occurrence(alarm, Math.max(alarm.armed_at, alarm.last_fired ?? -Infinity));
-  if (due > now) return { plan: AlarmPlan.NONE, at: due, snoozed: false };
-  let latest = due;
-  for (let next = next_occurrence(alarm, latest); next <= now; next = next_occurrence(alarm, latest)) latest = next;
-  return { plan: now - latest <= missed_after ? AlarmPlan.RING : AlarmPlan.MISSED, at: latest, snoozed: false };
+export function alarm_of(job: Job, extras: AlarmExtras | undefined): Alarm | null {
+  if (job.kind !== JobKind.ALARM || !job.id.startsWith(ALARM_PREFIX) || "epoch" in job.at) return null;
+  return {
+    id: job.id.slice(ALARM_PREFIX.length),
+    job: job.id,
+    time: job.at.time,
+    days: job.repeat?.every === "week" ? [...job.repeat.days].sort((a, b) => a - b) : [],
+    label: extras?.label ?? "",
+    on: job.armed,
+    snooze_until: job.snooze_until ?? null,
+    next: pending(job),
+  };
 }
 
-export function after_fire(alarm: Alarm, check: AlarmCheck): Alarm {
-  if (check.snoozed) return { ...alarm, snooze_until: null };
-  return { ...alarm, last_fired: check.at, enabled: alarm.days.length > 0 && alarm.enabled };
+export function timer_of(job: Job, extras: TimerExtras | undefined): Timer | null {
+  if (job.kind !== JobKind.TIMER || !job.id.startsWith(TIMER_PREFIX) || !("epoch" in job.at)) return null;
+  const end = job.at.epoch;
+  // A job someone else scheduled has no extras: its length is from when it was armed to its end.
+  const duration_ms = extras?.duration_ms ?? Math.max(1000, end - (job.armed_at ?? end));
+  return {
+    id: job.id.slice(TIMER_PREFIX.length),
+    job: job.id,
+    label: extras?.label ?? "",
+    duration_ms,
+    end_at: job.armed ? end : null,
+    remaining_ms: job.armed ? duration_ms : (extras?.left_ms ?? 0),
+  };
+}
+
+export function clock_alarms(jobs: Job[], data: ClockData): Alarm[] {
+  return jobs
+    .flatMap((job) => (job.app === APP_ID ? (alarm_of(job, data.alarms[job.id]) ?? []) : []))
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+export function clock_timers(jobs: Job[], data: ClockData): Timer[] {
+  return jobs.flatMap((job) => (job.app === APP_ID ? (timer_of(job, data.timers[job.id]) ?? []) : []));
+}
+
+export function drop_orphans(data: ClockData, jobs: Job[]): void {
+  const ids = new Set(jobs.map((job) => job.id));
+  for (const id of Object.keys(data.alarms)) if (!ids.has(id)) delete data.alarms[id];
+  for (const id of Object.keys(data.timers)) if (!ids.has(id)) delete data.timers[id];
 }
 
 export function next_alarm(alarms: Alarm[], now: number): { alarm: Alarm; at: number } | null {
   let best: { alarm: Alarm; at: number } | null = null;
   for (const alarm of alarms) {
-    const { at } = check_alarm(alarm, now);
-    if (at !== null && at > now && (!best || at < best.at)) best = { alarm, at };
+    if (alarm.next !== null && alarm.next > now && (!best || alarm.next < best.at)) best = { alarm, at: alarm.next };
   }
   return best;
+}
+
+export function is_snoozed(alarm: Alarm, now: number): boolean {
+  return alarm.on && alarm.snooze_until !== null && alarm.snooze_until > now && alarm.next === alarm.snooze_until;
 }
 
 export const WEEK = [
@@ -188,25 +246,8 @@ export function timer_remaining(timer: Timer, now: number): number {
   return timer.end_at === null ? timer.remaining_ms : Math.max(0, timer.end_at - now);
 }
 
-export function start_timer(timer: Timer, now: number): Timer {
-  const remaining = timer.remaining_ms > 0 ? timer.remaining_ms : timer.duration_ms;
-  return { ...timer, end_at: now + remaining, remaining_ms: remaining };
-}
-
-export function pause_timer(timer: Timer, now: number): Timer {
-  return { ...timer, end_at: null, remaining_ms: timer_remaining(timer, now) };
-}
-
-export function reset_timer(timer: Timer): Timer {
-  return { ...timer, end_at: null, remaining_ms: timer.duration_ms };
-}
-
-export function is_timer_due(timer: Timer, now: number): boolean {
-  return timer.end_at !== null && timer.end_at <= now;
-}
-
-export function finish_timer(timer: Timer): Timer {
-  return { ...timer, end_at: null, remaining_ms: 0 };
+export function time_to_run(timer: Timer): number {
+  return timer.remaining_ms > 0 ? timer.remaining_ms : timer.duration_ms;
 }
 
 /** Wall-clock based, so it keeps counting while the window is hidden or closed. */
@@ -264,13 +305,12 @@ export function migrate_stopwatch(data: ClockData, stored: StopwatchState | null
   return true;
 }
 
-export function running_count(data: ClockData): number {
-  const timers = data.timers.filter((timer) => timer.end_at !== null).length;
-  return timers + (stopwatch_of(data).started_at !== null ? 1 : 0);
+export function running_count(timers: Timer[], stopwatch: StopwatchState): number {
+  return timers.filter((timer) => timer.end_at !== null).length + (stopwatch.started_at !== null ? 1 : 0);
 }
 
-export function landing_tab(requested: ClockTab | undefined, data: ClockData): ClockTab | null {
-  return requested === undefined && running_count(data) >= 2 ? ClockTab.ALL : null;
+export function landing_tab(requested: ClockTab | undefined, running: number): ClockTab | null {
+  return requested === undefined && running >= 2 ? ClockTab.ALL : null;
 }
 
 export const ActiveKind = { TIMER: "timer", STOPWATCH: "stopwatch", ALARM: "alarm" } as const;
@@ -286,14 +326,19 @@ function is_timer_active(timer: Timer): boolean {
   return state === TimerState.RUNNING || state === TimerState.PAUSED;
 }
 
-export function active_items(data: ClockData, now: number): ActiveItem[] {
-  const timers = data.timers
+export interface ClockView {
+  alarms: Alarm[];
+  timers: Timer[];
+  stopwatch: StopwatchState;
+}
+
+export function active_items({ alarms, timers, stopwatch }: ClockView, now: number): ActiveItem[] {
+  const active = timers
     .filter(is_timer_active)
     .sort((a, b) => Number(a.end_at === null) - Number(b.end_at === null) || timer_remaining(a, now) - timer_remaining(b, now));
-  const items: ActiveItem[] = timers.map((timer) => ({ kind: ActiveKind.TIMER, key: `timer-${timer.id}`, tab: ClockTab.TIMERS, timer }));
-  const stopwatch = stopwatch_of(data);
+  const items: ActiveItem[] = active.map((timer) => ({ kind: ActiveKind.TIMER, key: `timer-${timer.id}`, tab: ClockTab.TIMERS, timer }));
   if (is_stopwatch_active(stopwatch)) items.push({ kind: ActiveKind.STOPWATCH, key: "stopwatch", tab: ClockTab.STOPWATCH, stopwatch });
-  const upcoming = next_alarm(data.alarms, now);
+  const upcoming = next_alarm(alarms, now);
   if (upcoming) items.push({ kind: ActiveKind.ALARM, key: `alarm-${upcoming.alarm.id}`, tab: ClockTab.ALARMS, ...upcoming });
   return items;
 }

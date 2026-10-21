@@ -1,6 +1,6 @@
 # ADR-062: Background Scheduler
 **Date:** 2026-10-21
-**Status:** Implemented (service core; Clock, Recipe Box, Pomodoro and Calendar not moved onto it yet)
+**Status:** Implemented (service core, Clock, Recipe Box; Pomodoro and Calendar not moved onto it yet)
 
 ## Context
 Alarms, timers, Pomodoro phases, Calendar reminders and cook timers fire only while their app's window or widget is mounted: Clock and Calendar poll from their hosts, Pomodoro holds one timeout, Recipe Box keeps timers in memory. Notification buttons are closures, which can't persist or reach a service worker, and system notifications use `new Notification()`, which Android rejects. WebOS has no backend. Discussion and platform research: [brainstorm](../brainstorm/2026-10-21_background-scheduler.md).
@@ -74,3 +74,9 @@ API: `schedule(app, job)`, `update(id, patch)`, `cancel(id)`, `get(id)`, `list(a
 - **Added API:** `missed`, `is_leader`, `triggers`, `last_jump` for apps and the inspector. Permission stays `notifications.request_system()`, called in the creating click.
 - **Missed** wording: "closed" on this tab's first pass, "asleep" after. The in-page chime isn't built.
 - **Dev server:** no service worker, so OS notifications fall back to a page `Notification` without buttons.
+
+## Revision 2026-10-21: Clock and Recipe Box on the scheduler
+- **Clock** keeps alarms and timers only as jobs (`clock:alarm-{id}`, `clock:timer-{id}`); `clock.json` keeps the label, a timer's length and its time left while paused (`left_ms`), by job id. The old `alarms`/`timers` arrays are dropped on read, zones and stopwatch kept; no migration. A one-off alarm is `{ date, time, tz }` for the next time the clock reads it and is re-timed when switched back on; a weekday alarm starts today with `{ every: "week", days }`. The ringing loops (window, widget, `ring_while_timers`) are gone.
+- **Buttons:** `alarm snooze <alarm> [duration]`, `alarm stop <alarm>`, `timer restart <timer>`; a timer's Stop is the existing `timer stop`, which removes it. Recipe Box adds `recipe timer stop <timer>`.
+- **Recipe Box** cook timers are one-shot `timer` jobs whose body click opens the recipe (`open.props.path`); the cook-mode strip shows the open recipe's timers, done ones until cleared. Recipe Box keeps no file of its own: the job's title is the timer's name.
+- **In-page chime** (Permission and sound) is played by the apps, not the scheduler: Clock's window and widget and Recipe Box's window watch their jobs' `last_fired` and chime in the leader tab after a user gesture. With none open, only the OS sound carries it. A scheduler "fired" hook or a manifest callback would be a new public API; it's an open question for the owner, not built.

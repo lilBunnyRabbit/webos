@@ -184,6 +184,18 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - Completers: `job` (ids, title as detail) and `when` (`when_examples`: the next quarter hour about 30 min ahead, `10m`, `1h`, `tomorrow 9:00`).
 - Arg kinds `arg.job()` and `arg.when()` (`shell/arg.ts`). A `when` value is read with `parse_when(text, now, zone)` from `$lib/core/utils/when`: `10m`/`1h30m` (instant from now), `18:30` (the next one), `today 18:30`, `tomorrow 9:00`, `2026-12-24 18:00` (wall time in the zone; a dated time already past is `null`). `parse_duration` and `parse_alarm_time` moved there from Clock unchanged. No core command takes a `when` yet; it's for the alerting apps' commands.
 
+## Apps on it
+
+| App | Jobs | Buttons | Body click | Kept by the app |
+|-----|------|---------|------------|-----------------|
+| Clock | `clock:alarm-{id}`, kind `alarm`: a one-off is `{ date, time, tz }` the next time the clock reads it, a repeating one starts today with `{ every: "week", days }`; tz is the device's when it's made. `clock:timer-{id}`, kind `timer`, `{ epoch }` | `alarm snooze {id}` (Snooze 10 min), `alarm stop {id}`; `timer restart {id}`, `timer stop {id}` | Clock on Alarms or Timer | `clock.json`: `alarms` and `timers` by job id: the label, a timer's length, and its time left while paused or reset (`left_ms`) |
+| Recipe Box | `recipe-box:timer-{id}`, kind `timer`, `{ epoch }`, title the step's timer name, message the recipe | `recipe timer stop {key}` (Stop) | Recipe Box on that recipe (`open.props.path`) | nothing |
+
+- **Clock timer state** comes from the job first: armed is running (ends at `at.epoch`); otherwise `left_ms` says paused or reset, and no `left_ms` is done. Each change writes the job and the extras in the order that keeps that true in between: start arms first, pause and reset write `left_ms` first.
+- **Switching a one-off alarm back on** re-times it to the next time the clock reads its time, in its own zone. `alarm stop` drops a snooze and switches a one-off off when nothing is left to ring; `alarm snooze` arms the job with `snooze_until`, so a one-off that already rang rings once more.
+- **Chime.** `ring_while_alive(app)` (`clock/ringer.svelte.ts`), called by Clock's window and widget and Recipe Box's window, plays Clock's chime when one of that app's jobs gets a new `last_fired`, in the leader tab only, and only after the page has had a user gesture (`navigator.userActivation.hasBeenActive`). Hosts on one page share what they've seen, so a window and the widget chime once; with no host left the record is dropped, so a job that fired meanwhile doesn't chime later.
+- **Permission.** Clock's Save and Start and Recipe Box's timer buttons call `notifications.request_system()` in the click, before scheduling.
+
 ## Divergence from ADR
 
 - Job gains `armed_at` and `missed_at`; the registry loses `migrated` and there's no migration (owner follow-up, ADR-062 revision 2026-10-21).
@@ -195,5 +207,5 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - Nothing fires with every tab closed unless Triggers is on. On Android a background tab is frozen within about a minute, so only the foreground tab fires.
 - With Triggers on, a job delivered by its trigger while every tab was closed is still reported missed at the next boot: the registry never heard it fired.
 - Whether Chrome replaces a shown notification immediately when a triggered one with the same tag is added (rather than when it triggers) is unverified.
-- The in-page chime (ADR-062, Permission and sound) isn't built: the OS notification's own sound carries the alert, and Clock keeps its own chime while its window is open.
+- The in-page chime (ADR-062, Permission and sound) has no scheduler hook: the scheduler tells nobody it fired. Clock and Recipe Box chime from their own windows and Clock's widget by watching `last_fired` (below); with none of them open, only the OS notification's sound carries the alert. A fired hook would be a new public API, left to the owner.
 - `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.

@@ -1,75 +1,47 @@
-import kernel, { type NotificationsService } from "$lib/core/api";
-import { play_chime } from "$lib/apps/user/clock/chime";
-import { Timer as TimerIcon } from "phosphor-svelte";
+import kernel, { NotificationType, type JobId, type NotificationsService, type SchedulerService } from "$lib/core/api";
+import { error_message } from "$lib/core/utils";
+import { Ticker } from "$lib/core/utils/ticker.svelte";
 import { APP_ID } from "./constants";
+import { cook_timer_input, cook_timers, type CookTimer, type RecipeRef } from "./timers";
 
-export interface RunningTimer {
-  id: number;
-  label: string;
-  duration_ms: number;
-  end_at: number;
+const scheduler = () => kernel.service<SchedulerService>("scheduler");
+
+export function start_cook_timer(label: string, duration_ms: number, recipe: RecipeRef): Promise<unknown> {
+  return scheduler().schedule(APP_ID, cook_timer_input(`timer-${crypto.randomUUID().slice(0, 8)}`, label, duration_ms, recipe, Date.now()));
 }
 
-// Owned by the window, not cook mode: a timer keeps running while you check the table or edit the recipe.
+/** The open recipe's timers. They live in the scheduler, so they outlast the window and show again when it reopens. */
 export class CookTimers {
-  list = $state<RunningTimer[]>([]);
-  now = $state(Date.now());
-  private next_id = 1;
-  private interval: ReturnType<typeof setInterval> | null = null;
+  private readonly scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
+  private readonly notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  private readonly ticker: Ticker;
 
-  constructor(private readonly recipe: () => string) {}
+  readonly list = $derived(cook_timers(this.scheduler.list(APP_ID)).filter((timer) => timer.path === this.recipe()?.path));
+
+  constructor(
+    private readonly recipe: () => RecipeRef | null,
+    visible: () => boolean
+  ) {
+    this.ticker = new Ticker(visible, 250);
+  }
 
   start(label: string, duration_ms: number): void {
-    this.list.push({ id: this.next_id++, label, duration_ms, end_at: Date.now() + duration_ms });
-    this.now = Date.now();
-    this.interval ??= setInterval(() => this.tick(), 250);
+    const recipe = this.recipe();
+    if (!recipe) return;
+    // In the click that starts it, so the browser counts the permission prompt as the user's.
+    void this.notifications.request_system();
+    start_cook_timer(label, duration_ms, recipe).catch((reason) => this.report("Couldn't start the timer", reason));
   }
 
-  cancel(id: number): void {
-    this.list = this.list.filter((timer) => timer.id !== id);
-    if (this.list.length === 0) this.stop();
+  cancel(id: JobId): void {
+    this.scheduler.cancel(id).catch((reason) => this.report("Couldn't stop the timer", reason));
   }
 
-  remaining(timer: RunningTimer): number {
-    return Math.max(0, timer.end_at - this.now);
+  remaining(timer: CookTimer): number {
+    return timer.done ? 0 : Math.max(0, timer.end_at - this.ticker.now);
   }
 
-  destroy(): void {
-    this.stop();
-    this.list = [];
+  private report(title: string, reason: unknown): void {
+    this.notifications.notify(APP_ID, { type: NotificationType.ERROR, title, message: error_message(reason) });
   }
-
-  private tick(): void {
-    this.now = Date.now();
-    const due = this.list.filter((timer) => timer.end_at <= this.now);
-    if (due.length === 0) return;
-    this.list = this.list.filter((timer) => timer.end_at > this.now);
-    if (this.list.length === 0) this.stop();
-    for (const timer of due) this.ring(timer);
-  }
-
-  private ring(timer: RunningTimer): void {
-    play_chime();
-    kernel.service<NotificationsService>("notifications").notify(APP_ID, {
-      title: `${timer.label} is done`,
-      message: this.recipe(),
-      icon: TimerIcon,
-      system: true,
-      duration: null,
-      actions: [{ label: "Stop", on_click: () => {} }],
-    });
-  }
-
-  private stop(): void {
-    if (this.interval !== null) clearInterval(this.interval);
-    this.interval = null;
-  }
-}
-
-export function format_countdown(ms: number): string {
-  const total = Math.ceil(ms / 1000);
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = String(total % 60).padStart(2, "0");
-  return hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
 }

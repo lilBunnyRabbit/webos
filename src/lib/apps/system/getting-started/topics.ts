@@ -111,7 +111,7 @@ export const TOPICS: Topic[] = [
     id: "widgets",
     icon: StickerIcon,
     title: "Desktop widgets",
-    text: "Some apps live on the desktop as widgets: a clock that rings alarms with no window open, notes, today's puzzle.",
+    text: "Some apps live on the desktop as widgets: a clock with your next alarm and running timers, notes, today's puzzle.",
     platforms: DESKTOP,
     action: "Add a clock widget",
     run: () => {

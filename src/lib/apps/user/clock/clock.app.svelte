@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService, type SchedulerService } from "$lib/core/api";
   import { Button, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
@@ -17,6 +17,8 @@
   import AllTab from "./all-tab.svelte";
   import AlarmsTab from "./alarms-tab.svelte";
   import {
+    clock_alarms,
+    clock_timers,
     ClockDataSchema,
     ClockFace,
     ClockTab,
@@ -35,6 +37,7 @@
     type AlarmDraft,
     type StopwatchState,
   } from "./clock";
+  import { attempt, delete_alarm as remove_alarm } from "./jobs";
   import { ring_while_alive } from "./ringer.svelte";
   import StopwatchTab from "./stopwatch-tab.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
@@ -48,6 +51,7 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema);
   const stopwatch = {
@@ -58,6 +62,8 @@
       file.value.stopwatch = next;
     },
   };
+  const alarms = $derived(file.ready ? clock_alarms(scheduler.jobs, file.value) : []);
+  const timers = $derived(file.ready ? clock_timers(scheduler.jobs, file.value) : []);
   const tab = storage.window<ClockTab>("tab", untrack(() => initial_tab ?? ClockTab.WORLD), z.enum(ClockTab));
 
   let landed = false;
@@ -66,12 +72,12 @@
     landed = true;
     untrack(() => {
       if (migrate_stopwatch(file.value, storage.get("stopwatch", StopwatchSchema))) storage.remove("stopwatch");
-      const landing = landing_tab(initial_tab, file.value);
+      const landing = landing_tab(initial_tab, running_count(timers, stopwatch_of(file.value)));
       if (landing) tab.value = landing;
     });
   });
 
-  ring_while_alive(file);
+  ring_while_alive(app_id);
   // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
   const ticker = new Ticker(
     () => win.is_visible,
@@ -105,8 +111,8 @@
   async function delete_alarm(alarm: Alarm) {
     const name = alarm.label ? `“${alarm.label}” (${alarm.time})` : `the ${alarm.time} alarm`;
     if (!(await win.confirm(`Delete ${name}?`, { confirm_label: "Delete", danger: true }))) return;
-    file.value.alarms = file.value.alarms.filter((entry) => entry.id !== alarm.id);
     draft = null;
+    attempt("Couldn't delete the alarm", remove_alarm(alarm.job));
   }
 
   function widget_on_desktop() {
@@ -131,7 +137,7 @@
       if (face !== ClockFace.ANALOG && face !== ClockFace.DIGITAL) return;
       const name = await desktop.pin_widget(app_id, { label: "Clock", props: { face } });
       if (!name) throw new Error("The desktop is full");
-      notifications.notify(app_id, { title: "Clock added to the desktop", message: "It keeps alarms and timers ringing with this window closed." });
+      notifications.notify(app_id, { title: "Clock added to the desktop" });
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: "Couldn't change the desktop", message: String(reason) });
     }
@@ -140,14 +146,14 @@
   $effect(() => win.on_back(() => {
     if (draft) draft = null;
     else if (adding_zone) adding_zone = false;
-    else if (adding_timer && file.value.timers.length > 0) adding_timer = false;
+    else if (adding_timer && timers.length > 0) adding_timer = false;
     else return false;
     return true;
   }));
 
   const home = local_zone();
-  const upcoming = $derived(file.ready ? next_alarm(file.value.alarms, ticker.now) : null);
-  const running_timers = $derived(file.ready ? file.value.timers.filter((timer) => timer.end_at !== null).length : 0);
+  const upcoming = $derived(file.ready ? next_alarm(alarms, ticker.now) : null);
+  const running_timers = $derived(file.ready ? timers.filter((timer) => timer.end_at !== null).length : 0);
 </script>
 
 <div class="@container grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
@@ -162,7 +168,7 @@
           variant="quiet"
           size="sm"
           pressed={pinned !== undefined}
-          title={pinned ? "A clock is on the desktop. Click to remove it." : "Show a clock on the desktop. It also rings alarms and timers with this window closed."}
+          title={pinned ? "A clock is on the desktop. Click to remove it." : "Show a clock on the desktop"}
           onclick={(event) => toggle_widget({ x: event.clientX, y: event.clientY })}
         >
           <StickerIcon />{pinned ? "On desktop" : "Add to desktop"}
@@ -171,7 +177,7 @@
       <Button variant="primary" size="sm" onclick={() => (adding_zone = true)}><PlusIcon weight="bold" />Add city</Button>
     {:else if tab.value === ClockTab.ALARMS && !draft}
       <Button variant="primary" size="sm" onclick={new_alarm}><PlusIcon weight="bold" />New alarm</Button>
-    {:else if tab.value === ClockTab.TIMERS && !adding_timer && file.value.timers.length > 0}
+    {:else if tab.value === ClockTab.TIMERS && !adding_timer && timers.length > 0}
       <Button variant="primary" size="sm" onclick={() => (adding_timer = true)}><PlusIcon weight="bold" />New timer</Button>
     {/if}
   </Toolbar>
@@ -182,6 +188,8 @@
     {:else if tab.value === ClockTab.ALL}
       <AllTab
         {file}
+        {alarms}
+        {timers}
         now={ticker.now}
         visible={win.is_visible}
         onopen={(next) => (tab.value = next)}
@@ -197,9 +205,9 @@
     {:else if tab.value === ClockTab.WORLD}
       <WorldTab {file} now={ticker.now} bind:adding={adding_zone} />
     {:else if tab.value === ClockTab.ALARMS}
-      <AlarmsTab {file} now={ticker.now} bind:draft onsave={ask_permission} ondelete={delete_alarm} />
+      <AlarmsTab {alarms} now={ticker.now} bind:draft onsave={ask_permission} ondelete={delete_alarm} />
     {:else if tab.value === ClockTab.TIMERS}
-      <TimersTab {file} now={ticker.now} bind:adding={adding_timer} onstart={ask_permission} />
+      <TimersTab {timers} now={ticker.now} bind:adding={adding_timer} onstart={ask_permission} />
     {:else}
       <StopwatchTab {stopwatch} visible={win.is_visible} />
     {/if}
@@ -207,7 +215,7 @@
 
   <StatusBar>
     {#if tab.value === ClockTab.ALL}
-      {@const running = file.ready ? running_count(file.value) : 0}
+      {@const running = file.ready ? running_count(timers, stopwatch.value) : 0}
       <span class="truncate">{running ? `${running} running` : "Nothing running"}</span>
     {:else if tab.value === ClockTab.WORLD}
       <span class="truncate">{home} · {format_utc_offset(zone_offset(ticker.now, home))}</span>
@@ -219,7 +227,7 @@
       <span class="truncate">{laps_of(stopwatch.value).length} laps</span>
     {/if}
     {#if tab.value === ClockTab.ALARMS || tab.value === ClockTab.TIMERS}
-      <span class="ml-auto hidden truncate @md:inline">Rings while WebOS is open{can_pin ? ", with this window or the desktop clock" : ""}</span>
+      <span class="ml-auto hidden truncate @md:inline">Rings while WebOS is open, with or without this window</span>
     {/if}
   </StatusBar>
 </div>

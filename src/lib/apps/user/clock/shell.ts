@@ -1,27 +1,27 @@
-import kernel, { type AppsService, type DesktopService } from "$lib/core/api";
+import kernel, { type AppsService, type DesktopService, type SchedulerService } from "$lib/core/api";
 import { ShellError, type CommandContext, type Tagged } from "$lib/core/api/services/shell/type";
 import { format_time } from "$kit/games";
 import { parse_alarm_time, parse_duration } from "$lib/core/utils/when";
 import {
+  alarm_job_id,
   APP_ID,
-  check_alarm,
+  clock_alarms,
+  clock_timers,
   ClockFace,
   ClockTab,
   find_entry,
   format_duration,
   format_hm,
   format_until,
-  new_id,
+  is_snoozed,
   parse_days,
   repeat_label,
-  start_timer,
   timer_remaining,
   timer_state,
   type Alarm,
-  type ClockData,
   type Timer,
 } from "./clock";
-import { clock_file, ring_while_timers } from "./ringer.svelte";
+import { add_timer, clock_file, delete_alarm, remove_timer, restart_timer, save_alarm, snooze_alarm, stop_alarm, switch_alarm } from "./jobs";
 import {
   all_zones,
   format_offset,
@@ -34,19 +34,7 @@ import {
   zone_offset,
 } from "./zones";
 
-async function with_clock<T>(action: (data: ClockData) => T): Promise<T> {
-  let result!: T;
-  const data = await clock_file.edit((value) => {
-    result = action(value);
-    return value;
-  });
-  ring_if_timers(data);
-  return result;
-}
-
-function ring_if_timers(data: ClockData): void {
-  if (data.timers.some((timer) => timer.end_at !== null)) ring_while_timers();
-}
+const scheduler = () => kernel.service<SchedulerService>("scheduler");
 
 function launch(tab?: ClockTab): void {
   kernel.service<AppsService>("apps").launch(APP_ID, tab ? { tab } : {});
@@ -65,15 +53,15 @@ export function open_timers(): void {
 }
 
 export function alarm_value(alarm: Alarm, now: number): Tagged {
-  const { at } = check_alarm(alarm, now);
+  const snoozed = is_snoozed(alarm, now);
   return {
     $type: "alarm",
     id: alarm.id,
     time: alarm.time,
     repeat: repeat_label(alarm.days),
     label: alarm.label,
-    on: alarm.enabled,
-    next: at !== null && at > now ? `${format_hm(at)}, ${format_until(at - now)}` : "",
+    on: alarm.on,
+    next: alarm.next !== null && alarm.next > now ? `${snoozed ? "snoozed, " : ""}${format_hm(alarm.next)}, ${format_until(alarm.next - now)}` : "",
   };
 }
 
@@ -88,86 +76,88 @@ export function timer_value(timer: Timer, now: number): Tagged {
   };
 }
 
-export async function* alarms(): AsyncGenerator<Tagged> {
-  const now = Date.now();
-  const list = (await clock_file.read()).alarms.map((alarm) => alarm_value(alarm, now));
-  yield* list.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+async function alarms_now(): Promise<Alarm[]> {
+  return clock_alarms(scheduler().jobs, await clock_file.read());
 }
 
-export function alarm_add({ args }: CommandContext<{ time: string; days?: string; label: string[] }>): Promise<Tagged> {
+async function timers_now(): Promise<Timer[]> {
+  return clock_timers(scheduler().jobs, await clock_file.read());
+}
+
+function found<T extends { id: string; label: string }>(entries: T[], query: string, noun: string): T {
+  const entry = find_entry(entries, query, noun);
+  if (typeof entry === "string") throw new ShellError(entry);
+  return entry;
+}
+
+async function alarm_after(id: string): Promise<Tagged> {
+  const alarm = (await alarms_now()).find((entry) => entry.id === id);
+  if (!alarm) throw new ShellError(`alarm ${id} is gone`);
+  return alarm_value(alarm, Date.now());
+}
+
+export async function* alarms(): AsyncGenerator<Tagged> {
+  const now = Date.now();
+  yield* (await alarms_now()).map((alarm) => alarm_value(alarm, now));
+}
+
+export async function alarm_add({ args }: CommandContext<{ time: string; days?: string; label: string[] }>): Promise<Tagged> {
   const time = parse_alarm_time(args.time);
   if (!time) throw new ShellError(`alarm add: "${args.time}" isn't a time like 07:30`);
   const days = args.days === undefined ? [] : parse_days(args.days);
   if (!days) throw new ShellError(`alarm add: "${args.days}" isn't days like mon,wed, weekdays or weekends`);
-  const now = Date.now();
-  const alarm: Alarm = {
-    id: new_id(),
-    time,
-    days,
-    label: args.label.join(" ").trim(),
-    enabled: true,
-    armed_at: now,
-    last_fired: null,
-    snooze_until: null,
-  };
-  return with_clock((data) => {
-    data.alarms.push(alarm);
-    return alarm_value(alarm, now);
-  });
+  return alarm_after(await save_alarm(null, { time, days, label: args.label.join(" ") }));
 }
 
-function find_alarm(data: ClockData, query: string): Alarm {
-  const found = find_entry(data.alarms, query, "alarm");
-  if (typeof found === "string") throw new ShellError(found);
-  return found;
+export async function alarm_switch({ args }: CommandContext<{ alarm: string }>, on: boolean): Promise<Tagged> {
+  const alarm = found(await alarms_now(), args.alarm, "alarm");
+  await switch_alarm(alarm.job, on);
+  return alarm_after(alarm.id);
 }
 
-export function alarm_switch({ args }: CommandContext<{ alarm: string }>, enabled: boolean): Promise<Tagged> {
-  return with_clock((data) => {
-    const alarm = find_alarm(data, args.alarm);
-    alarm.enabled = enabled;
-    alarm.snooze_until = null;
-    if (enabled) alarm.armed_at = Date.now();
-    return alarm_value(alarm, Date.now());
-  });
+export async function alarm_snooze({ args }: CommandContext<{ alarm: string; duration: string }>): Promise<Tagged> {
+  const ms = parse_duration(args.duration);
+  if (!ms) throw new ShellError(`alarm snooze: "${args.duration}" isn't a duration like 10m or 1h`);
+  const alarm = found(await alarms_now(), args.alarm, "alarm");
+  await snooze_alarm(alarm.job, ms);
+  return alarm_after(alarm.id);
 }
 
-export function alarm_rm({ args }: CommandContext<{ alarm: string }>): Promise<string> {
-  return with_clock((data) => {
-    const alarm = find_alarm(data, args.alarm);
-    data.alarms = data.alarms.filter((entry) => entry.id !== alarm.id);
-    return `removed the ${alarm.time} alarm${alarm.label ? ` (${alarm.label})` : ""}`;
-  });
+export async function alarm_stop({ args }: CommandContext<{ alarm: string }>): Promise<Tagged> {
+  const alarm = found(await alarms_now(), args.alarm, "alarm");
+  await stop_alarm(alarm.job);
+  return alarm_after(alarm.id);
 }
 
-export function timer_start({ args }: CommandContext<{ duration: string; label: string[] }>): Promise<Tagged> {
+export async function alarm_rm({ args }: CommandContext<{ alarm: string }>): Promise<string> {
+  const alarm = found(await alarms_now(), args.alarm, "alarm");
+  await delete_alarm(alarm_job_id(alarm.id));
+  return `removed the ${alarm.time} alarm${alarm.label ? ` (${alarm.label})` : ""}`;
+}
+
+export async function timer_start({ args }: CommandContext<{ duration: string; label: string[] }>): Promise<Tagged> {
   const ms = parse_duration(args.duration);
   if (!ms) throw new ShellError(`timer: "${args.duration}" isn't a duration like 5m, 1h30m or 90s`);
-  const now = Date.now();
-  const timer = start_timer(
-    { id: new_id(), label: args.label.join(" ").trim(), duration_ms: ms, end_at: null, remaining_ms: ms },
-    now
-  );
-  return with_clock((data) => {
-    data.timers.push(timer);
-    return timer_value(timer, now);
-  });
+  return timer_value(await add_timer(args.label.join(" "), ms), Date.now());
 }
 
 export async function* timers(): AsyncGenerator<Tagged> {
   const now = Date.now();
-  const data = await clock_file.read();
-  ring_if_timers(data);
-  yield* data.timers.map((timer) => timer_value(timer, now));
+  yield* (await timers_now()).map((timer) => timer_value(timer, now));
 }
 
-export function timer_stop({ args }: CommandContext<{ timer: string }>): Promise<string> {
-  return with_clock((data) => {
-    const found = find_entry(data.timers, args.timer, "timer");
-    if (typeof found === "string") throw new ShellError(found);
-    data.timers = data.timers.filter((entry) => entry.id !== found.id);
-    return `stopped ${found.label || format_duration(found.duration_ms)}`;
-  });
+export async function timer_restart({ args }: CommandContext<{ timer: string }>): Promise<Tagged> {
+  const timer = found(await timers_now(), args.timer, "timer");
+  await restart_timer(timer);
+  const restarted = (await timers_now()).find((entry) => entry.id === timer.id);
+  if (!restarted) throw new ShellError(`timer ${timer.id} is gone`);
+  return timer_value(restarted, Date.now());
+}
+
+export async function timer_stop({ args }: CommandContext<{ timer: string }>): Promise<string> {
+  const timer = found(await timers_now(), args.timer, "timer");
+  await remove_timer(timer);
+  return `stopped ${timer.label || format_duration(timer.duration_ms)}`;
 }
 
 export async function pin({ args }: CommandContext<{ face: ClockFace }>): Promise<string> {

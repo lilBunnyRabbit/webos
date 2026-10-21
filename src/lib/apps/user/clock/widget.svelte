@@ -1,22 +1,38 @@
 <script lang="ts">
-  import kernel, { type AppsService, type WidgetProps, type WindowsService, WidgetStyle } from "$lib/core/api";
+  import kernel, { type AppsService, type SchedulerService, type WidgetProps, type WindowsService, WidgetStyle } from "$lib/core/api";
   import { cn, format_date, clamp, pad2 } from "$lib/core/utils";
   import { format_time } from "$kit/games";
   import { Alarm as AlarmIcon, Hourglass as HourglassIcon, SquaresFour as SquaresFourIcon, Timer as TimerIcon } from "phosphor-svelte";
   import AnalogFace from "./analog-face.svelte";
-  import { ActiveKind, active_items, APP_ID, ClockFace, ClockTab, fit_items, format_hm, format_until, stopwatch_elapsed, stopwatch_of, timer_remaining, widget_slots } from "./clock";
-  import { open_clock_file, ring_while_alive } from "./ringer.svelte";
+  import {
+    ActiveKind,
+    active_items,
+    APP_ID,
+    clock_alarms,
+    clock_timers,
+    ClockFace,
+    ClockTab,
+    fit_items,
+    format_hm,
+    format_until,
+    stopwatch_elapsed,
+    stopwatch_of,
+    timer_remaining,
+    widget_slots,
+  } from "./clock";
+  import { open_clock_file } from "./jobs";
+  import { ring_while_alive } from "./ringer.svelte";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
 
-  // Rings alarms and timers too, so a pinned widget keeps them working with no Clock window open.
   let { props, size, style }: WidgetProps = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = open_clock_file();
   $effect(() => () => file.release());
-  ring_while_alive(file);
+  ring_while_alive(APP_ID);
 
   const ticker = new Ticker(
     () => !windows.page_hidden,
@@ -24,8 +40,11 @@
   );
   const face = $derived(props.face === ClockFace.DIGITAL ? ClockFace.DIGITAL : ClockFace.ANALOG);
   const date = $derived(new Date(ticker.now));
-  const items = $derived(file.ready ? active_items(file.value, ticker.now) : []);
-  const fast = $derived(file.ready && (file.value.timers.some((entry) => entry.end_at !== null) || stopwatch_of(file.value).started_at !== null));
+  const timers = $derived(file.ready ? clock_timers(scheduler.jobs, file.value) : []);
+  const alarms = $derived(file.ready ? clock_alarms(scheduler.jobs, file.value) : []);
+  const stopwatch = $derived(stopwatch_of(file.value));
+  const items = $derived(file.ready ? active_items({ alarms, timers, stopwatch }, ticker.now) : []);
+  const fast = $derived(timers.some((entry) => entry.end_at !== null) || stopwatch.started_at !== null);
   const lines = $derived(fit_items(items, widget_slots(size.h)));
 
   // Straight on the wallpaper: no dial fill or divider, and a soft shadow so the digits read on any background.

@@ -6,7 +6,8 @@
   import type { UnitSystem } from "./constants";
   import type { Ingredient, Recipe, Timer } from "./cooklang";
   import StepText from "./step-text.svelte";
-  import { format_countdown, type CookTimers } from "./timers.svelte";
+  import { format_countdown } from "./timers";
+  import type { CookTimers } from "./timers.svelte";
 
   interface Props {
     recipe: Recipe;
@@ -117,13 +118,17 @@
     </div>
 
     {#if timers.list.length > 0}
-      <ul class="flex shrink-0 flex-wrap gap-2 border-t border-foreground/8 bg-background-light px-4 py-2" aria-label="Running timers">
+      <ul class="flex shrink-0 flex-wrap gap-2 border-t border-foreground/8 bg-background-light px-4 py-2" aria-label="Timers">
         {#each timers.list as timer (timer.id)}
-          <li class="flex items-center gap-2 rounded-lg bg-tertiary/12 py-1 pr-1 pl-3 text-tertiary">
-            <TimerIcon class="size-4" />
+          <li class={cn("flex items-center gap-2 rounded-lg py-1 pr-1 pl-3", timer.done ? "bg-success/12 text-success" : "bg-tertiary/12 text-tertiary")}>
+            <TimerIcon class="size-4" weight={timer.done ? "fill" : "regular"} />
             <span class="max-w-40 truncate text-ui">{timer.label}</span>
-            <span class="font-mono text-sm tabular-nums" role="timer">{format_countdown(timers.remaining(timer))}</span>
-            <IconButton size="sm" label={`Cancel ${timer.label}`} onclick={() => timers.cancel(timer.id)}><XIcon /></IconButton>
+            {#if timer.done}
+              <span class="text-sm font-medium">Done</span>
+            {:else}
+              <span class="font-mono text-sm tabular-nums" role="timer">{format_countdown(timers.remaining(timer))}</span>
+            {/if}
+            <IconButton size="sm" label={timer.done ? `Clear ${timer.label}` : `Cancel ${timer.label}`} onclick={() => timers.cancel(timer.id)}><XIcon /></IconButton>
           </li>
         {/each}
       </ul>

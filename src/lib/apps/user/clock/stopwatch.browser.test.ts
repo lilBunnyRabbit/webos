@@ -5,7 +5,7 @@ import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { app_data_path } from "$lib/core/contexts/app";
 import { APP_ID, DATA_FILE, stopwatch_of, toggle_stopwatch } from "./clock";
-import { open_clock_file } from "./ringer.svelte";
+import { open_clock_file } from "./jobs";
 
 let files: FilesService;
 

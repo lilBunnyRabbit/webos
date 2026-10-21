@@ -1,4 +1,4 @@
-import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import kernel, { type AppsService, type FilesService, type SchedulerService } from "$lib/core/api";
 import { base_name, file_extension, resolve_path } from "$lib/core/api/services/files/path";
 import { ArgKind } from "$lib/core/api/services/shell/arg";
 import {
@@ -12,6 +12,7 @@ import {
 import { format_amounts, ingredient_list } from "./amounts";
 import { APP_ID, UnitSystem } from "./constants";
 import { parse_cook, recipe_servings } from "./cooklang";
+import { cook_timers, find_cook_timer } from "./timers";
 
 export interface ScaleArgs {
   path: string;
@@ -35,6 +36,14 @@ export async function* scale({ args, session }: CommandContext<ScaleArgs>): Asyn
       path,
     };
   }
+}
+
+export async function timer_stop({ args }: CommandContext<{ timer: string }>): Promise<string> {
+  const scheduler = kernel.service<SchedulerService>("scheduler");
+  const found = find_cook_timer(cook_timers(scheduler.list(APP_ID)), args.timer);
+  if (typeof found === "string") throw new ShellError(`recipe timer stop: ${found}`);
+  await scheduler.cancel(found.id);
+  return `${found.done ? "cleared" : "stopped"} ${found.label}`;
 }
 
 export function open(path: string): void {

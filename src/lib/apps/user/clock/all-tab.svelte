@@ -28,10 +28,9 @@
     format_until,
     is_stopwatch_active,
     lap_stopwatch,
+    is_snoozed,
     next_alarm,
-    pause_timer,
     repeat_label,
-    start_timer,
     stopwatch_elapsed,
     stopwatch_of,
     timer_remaining,
@@ -40,11 +39,13 @@
     type StopwatchState,
     type Timer,
   } from "./clock";
-  import type { ClockFile } from "./ringer.svelte";
+  import { attempt, pause_timer, remove_timer, run_timer, switch_alarm, type ClockFile } from "./jobs";
   import { format_wall, is_zone, local_zone, parse_entry, wall_time } from "./zones";
 
   let {
     file,
+    alarms,
+    timers: all_timers,
     now,
     visible,
     onopen,
@@ -52,6 +53,8 @@
     onnewalarm,
   }: {
     file: ClockFile;
+    alarms: Alarm[];
+    timers: Timer[];
     now: number;
     visible: boolean;
     onopen: (tab: ClockTab) => void;
@@ -59,15 +62,17 @@
     onnewalarm: () => void;
   } = $props();
 
-  const timers = $derived(active_items(file.value, now).flatMap((item) => (item.kind === ActiveKind.TIMER ? [item.timer] : [])));
   const stopwatch = $derived(stopwatch_of(file.value));
+  const timers = $derived(
+    active_items({ alarms, timers: all_timers, stopwatch }, now).flatMap((item) => (item.kind === ActiveKind.TIMER ? [item.timer] : []))
+  );
   const running = $derived(stopwatch.started_at !== null);
   const fast = new Ticker(
     () => visible && running,
     () => 40
   );
   const elapsed = $derived(stopwatch_elapsed(stopwatch, running ? fast.now : 0));
-  const upcoming = $derived(next_alarm(file.value.alarms, now));
+  const upcoming = $derived(next_alarm(alarms, now));
   const home = local_zone();
   const places = $derived(file.value.zones.map(parse_entry).filter((place) => is_zone(place.zone)));
   const idle = $derived(timers.length === 0 && !is_stopwatch_active(stopwatch) && !upcoming);
@@ -76,19 +81,8 @@
     file.value.stopwatch = next;
   }
 
-  function update(timer: Timer, next: Timer) {
-    const index = file.value.timers.findIndex((entry) => entry.id === timer.id);
-    if (index >= 0) file.value.timers[index] = next;
-  }
-
-  function stop(timer: Timer) {
-    file.value.timers = file.value.timers.filter((entry) => entry.id !== timer.id);
-  }
-
-  function toggle_alarm(alarm: Alarm, enabled: boolean) {
-    alarm.enabled = enabled;
-    alarm.snooze_until = null;
-    if (enabled) alarm.armed_at = Date.now();
+  function toggle_alarm(alarm: Alarm, on: boolean) {
+    attempt("Couldn't switch the alarm", switch_alarm(alarm.job, on));
   }
 </script>
 
@@ -137,11 +131,11 @@
             </div>
             <div class="flex items-center gap-2">
               {#if paused}
-                <Button size="sm" onclick={() => update(timer, start_timer(timer, Date.now()))}><PlayIcon weight="bold" />Resume</Button>
+                <Button size="sm" onclick={() => attempt("Couldn't resume the timer", run_timer(timer))}><PlayIcon weight="bold" />Resume</Button>
               {:else}
-                <Button size="sm" onclick={() => update(timer, pause_timer(timer, Date.now()))}><PauseIcon weight="bold" />Pause</Button>
+                <Button size="sm" onclick={() => attempt("Couldn't pause the timer", pause_timer(timer))}><PauseIcon weight="bold" />Pause</Button>
               {/if}
-              <Button size="sm" variant="quiet" onclick={() => stop(timer)}><StopIcon weight="bold" />Stop</Button>
+              <Button size="sm" variant="quiet" onclick={() => attempt("Couldn't stop the timer", remove_timer(timer))}><StopIcon weight="bold" />Stop</Button>
             </div>
           </div>
         </li>
@@ -174,10 +168,10 @@
             <span class="grid min-w-0 flex-1">
               <span class="font-mono text-3xl font-medium tabular-nums">{format_hm(upcoming.at)}</span>
               <span class="truncate text-2xs text-foreground/65">
-                {[alarm.label, repeat_label(alarm.days)].filter(Boolean).join(" · ")}<span class="text-primary">{` · ${alarm.snooze_until !== null ? "snoozed, rings " : ""}${format_until(upcoming.at - now)}`}</span>
+                {[alarm.label, repeat_label(alarm.days)].filter(Boolean).join(" · ")}<span class="text-primary">{` · ${is_snoozed(alarm, now) ? "snoozed, rings " : ""}${format_until(upcoming.at - now)}`}</span>
               </span>
             </span>
-            <Switch checked={alarm.enabled || alarm.snooze_until !== null} aria-label="{alarm.time} alarm on" onchange={(event) => toggle_alarm(alarm, event.currentTarget.checked)} />
+            <Switch checked={alarm.on} aria-label="{alarm.time} alarm on" onchange={(event) => toggle_alarm(alarm, event.currentTarget.checked)} />
           </div>
         </li>
       {/if}

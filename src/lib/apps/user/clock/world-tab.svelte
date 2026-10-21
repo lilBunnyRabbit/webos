@@ -9,7 +9,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { tick } from "svelte";
-  import type { ClockFile } from "./ringer.svelte";
+  import type { ClockFile } from "./jobs";
   import {
     all_zones,
     day_label,

@@ -306,7 +306,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [ ] Diff: "Paste text" only reveals the editors; editors rebuild (and lose scroll) on outside changes
   - [-] PDF Tools: Organize overwrites without a disk-change check, errors from commands show as a terminal line plus the task's failed toast with Retry, by design (owner, 2026-10-17). Split's default range follows the PDF's page count (done 2026-10-16); JPEGs follow their EXIF orientation (done 2026-10-17)
   - [ ] Recorder: test a real microphone (agents' sandbox blocked audio)
-  - [ ] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler
+  - [-] Pomodoro / Clock / Calendar alerts need a window or widget alive; see Background scheduler (Clock done 2026-10-21)
 - [-] Batch 1 follow-ups: in-app commands go through ShortcutsService (ADR-030, 2026-10-13); done 2026-10-12: kit Textarea, CopyButton, Slider, pressed buttons, Segmented `sm`, BoardOverlay, "Game app" pattern; close guard + `set_title` (Paint). `write_image(path)` done (2026-10-15, now `$kit/utils/image`). Left: colour well, anchored popover, `Input` invalid state, `Select` groups, regex tester in a worker
 
 ### New System Apps
@@ -595,7 +595,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
 
 - [x] **Multi-window sync.** Done 2026-10-12: each `DirectoryHandler` watches revisions ([brainstorm](brainstorm/2026-10-12_explorer-sync.md)). Cross-tab sync is a separate item under Files.
 - [x] **Testing strategy.** Done as [ADR-027](adrs/027-testing.md).
-- [-] **Background scheduler** (owner, 2026-10-14; [ADR-062](adrs/062-background-scheduler.md), [brainstorm](brainstorm/2026-10-21_background-scheduler.md)). Alarms, timers, Pomodoro phases and Calendar reminders only fire while that app's window or widget is alive. Service core done 2026-10-21: registry, one leader tab, OS notifications through the service worker with command buttons, missed summary, Triggers when flagged, `sched` commands, Settings › Notifications ([scheduler](system/services/scheduler.md)). Next: Clock and Recipe Box, then Pomodoro, then Calendar move onto it
+- [-] **Background scheduler** (owner, 2026-10-14; [ADR-062](adrs/062-background-scheduler.md), [brainstorm](brainstorm/2026-10-21_background-scheduler.md)). Alarms, timers, Pomodoro phases and Calendar reminders only fire while that app's window or widget is alive. Service core done 2026-10-21: registry, one leader tab, OS notifications through the service worker with command buttons, missed summary, Triggers when flagged, `sched` commands, Settings › Notifications ([scheduler](system/services/scheduler.md)). Clock alarms and timers and Recipe Box cook timers moved onto it 2026-10-21 (they ring with their window closed; button commands `alarm snooze|stop`, `timer restart`, `recipe timer stop`). Next: Pomodoro, then Calendar
 - [ ] **AI-native apps** (owner, 2026-10-20, [ideas](brainstorm/2026-10-20_ai-native-apps.md)). Apps that couldn't exist without Gemini Nano, not existing apps with an AI button. Owner picks which to build; each gets its own grill (shell question included). Open calls: whether AI-only apps may be desktop-only, and which ideas are too close to "AI bolted on" (ADR-054)
   - [x] Taboo: describe a word without the banned ones; the AI guesses (S, research pick #1). Built as Unsaid ([ADR-061](adrs/061-ai-games.md))
   - [ ] Twenty Questions: the AI holds a secret, answers yes / no / sometimes / unknown (S)

@@ -35,7 +35,7 @@ export default {
     }),
     define_command({
       id: "clock pin",
-      description: "Pin a clock to the desktop; it rings alarms and timers with no window open",
+      description: "Pin a clock to the desktop",
       args: z.object({ face: z.enum(ClockFace).default(ClockFace.ANALOG) }),
       short: { face: "f" },
       run: async (context) => (await logic()).pin(context),
@@ -85,6 +85,22 @@ export default {
       run: async (context) => (await logic()).alarm_switch(context, false),
     }),
     define_command({
+      id: "alarm snooze",
+      description: "Ring an alarm again in a while, 10 minutes unless given",
+      args: z.object({ alarm: z.string().describe("Id or label"), duration: z.string().default("10m").describe("10m, 1h, 90s") }),
+      positional: ["alarm", "duration"],
+      yields: "alarm",
+      run: async (context) => (await logic()).alarm_snooze(context),
+    }),
+    define_command({
+      id: "alarm stop",
+      description: "Stop a ringing or snoozed alarm; a one-off one switches off",
+      args: z.object({ alarm: z.string().describe("Id or label") }),
+      positional: ["alarm"],
+      yields: "alarm",
+      run: async (context) => (await logic()).alarm_stop(context),
+    }),
+    define_command({
       id: "alarm rm",
       description: "Delete an alarm",
       args: z.object({ alarm: z.string().describe("Id or label") }),
@@ -106,6 +122,14 @@ export default {
       async *run() {
         yield* (await logic()).timers();
       },
+    }),
+    define_command({
+      id: "timer restart",
+      description: "Start a timer again from its full length",
+      args: z.object({ timer: z.string().describe("Id or label") }),
+      positional: ["timer"],
+      yields: "timer",
+      run: async (context) => (await logic()).timer_restart(context),
     }),
     define_command({
       id: "timer stop",

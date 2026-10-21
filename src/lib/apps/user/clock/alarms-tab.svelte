@@ -2,35 +2,30 @@
   import { Button, EmptyState, Input, Switch } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { Alarm as AlarmIcon, Trash } from "phosphor-svelte";
-  import { check_alarm, format_until, new_id, repeat_label, WEEK, type Alarm, type AlarmDraft } from "./clock";
-  import type { ClockFile } from "./ringer.svelte";
+  import { format_until, is_snoozed, repeat_label, WEEK, type Alarm, type AlarmDraft } from "./clock";
+  import { attempt, save_alarm, switch_alarm } from "./jobs";
 
   let {
-    file,
+    alarms,
     now,
     draft = $bindable(null),
     onsave,
     ondelete,
   }: {
-    file: ClockFile;
+    alarms: Alarm[];
     now: number;
     draft?: AlarmDraft | null;
     onsave: () => void;
     ondelete: (alarm: Alarm) => void;
   } = $props();
 
-  const alarms = $derived(
-    file.value.alarms.map((alarm) => ({ alarm, check: check_alarm(alarm, now) })).sort((a, b) => a.alarm.time.localeCompare(b.alarm.time))
-  );
-
   function edit(alarm: Alarm) {
     draft = { id: alarm.id, time: alarm.time, days: [...alarm.days], label: alarm.label };
   }
 
-  function toggle(alarm: Alarm, enabled: boolean) {
-    alarm.enabled = enabled;
-    alarm.snooze_until = null;
-    if (enabled) alarm.armed_at = Date.now();
+  function toggle(alarm: Alarm, on: boolean) {
+    if (on) onsave();
+    attempt("Couldn't switch the alarm", switch_alarm(alarm.job, on));
   }
 
   function toggle_day(day: number) {
@@ -41,15 +36,14 @@
   function save(event: SubmitEvent) {
     event.preventDefault();
     if (!draft || !/^\d{2}:\d{2}$/.test(draft.time)) return;
-    const changes = { time: draft.time, days: [...draft.days].sort(), label: draft.label.trim(), enabled: true, armed_at: Date.now(), snooze_until: null };
-    const existing = file.value.alarms.find((alarm) => alarm.id === draft?.id);
-    if (existing) Object.assign(existing, changes);
-    else file.value.alarms.push({ id: new_id(), last_fired: null, ...changes });
-    draft = null;
     onsave();
+    const { id, ...spec } = $state.snapshot(draft);
+    const known = id !== null && alarms.some((alarm) => alarm.id === id);
+    attempt("Couldn't save the alarm", save_alarm(known ? id : null, spec));
+    draft = null;
   }
 
-  const editing = $derived(draft?.id ? (file.value.alarms.find((alarm) => alarm.id === draft?.id) ?? null) : null);
+  const editing = $derived(draft?.id ? (alarms.find((alarm) => alarm.id === draft?.id) ?? null) : null);
 </script>
 
 {#if draft}
@@ -91,18 +85,19 @@
     </div>
   </form>
 {:else if alarms.length === 0}
-  <EmptyState icon={AlarmIcon} title="No alarms" description="Alarms ring while WebOS is open, from this window or the Clock widget on your desktop." />
+  <EmptyState icon={AlarmIcon} title="No alarms" description="Alarms ring while WebOS is open in a tab, even with Clock closed." />
 {:else}
   <div class="h-full overflow-auto">
     <ul class="mx-auto grid max-w-2xl gap-1 p-2 @md:p-4" aria-label="Alarms">
-      {#each alarms as { alarm, check } (alarm.id)}
-        {@const on = alarm.enabled || check.snoozed}
+      {#each alarms as alarm (alarm.id)}
+        {@const on = alarm.on}
+        {@const snoozed = is_snoozed(alarm, now)}
         <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3 ring-1 ring-foreground/8">
           <button type="button" class="grid min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left hover:bg-foreground/4 focus-visible:bg-primary/12 focus-visible:outline-none" onclick={() => edit(alarm)}>
             <span class={cn("font-mono text-3xl leading-tight font-medium tabular-nums", !on && "text-foreground/45")}>{alarm.time}</span>
             <span class="truncate text-2xs text-foreground/65">
-              {[alarm.label, repeat_label(alarm.days)].filter(Boolean).join(" · ")}{#if on && check.at !== null}
-                <span class="text-primary">{` · ${check.snoozed ? "snoozed, rings " : ""}${format_until(check.at - now)}`}</span>{/if}
+              {[alarm.label, repeat_label(alarm.days)].filter(Boolean).join(" · ")}{#if on && alarm.next !== null && alarm.next > now}
+                <span class="text-primary">{` · ${snoozed ? "snoozed, rings " : ""}${format_until(alarm.next - now)}`}</span>{/if}
             </span>
           </button>
           <Switch checked={on} aria-label="{alarm.time} alarm on" onchange={(event) => toggle(alarm, event.currentTarget.checked)} />

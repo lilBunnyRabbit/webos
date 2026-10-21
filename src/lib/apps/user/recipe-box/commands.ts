@@ -1,7 +1,8 @@
 import { arg } from "$lib/core/api/services/shell/arg";
 import { define_command } from "$lib/core/api/services/shell/define";
 import { z } from "zod";
-import { UnitSystem } from "./constants";
+import kernel, { type SchedulerService } from "$lib/core/api";
+import { APP_ID, UnitSystem } from "./constants";
 import type { ShellContribution } from "$lib/core/api/services/shell/type";
 
 const logic = () => import("./shell");
@@ -30,6 +31,14 @@ export default {
       async *run(context) {
         yield* (await logic()).scale(context);
       },
+    }),
+    define_command({
+      id: "recipe timer stop",
+      description: "Stop a cook timer, or clear one that's done",
+      args: z.object({ timer: z.string().describe("Its id, like timer-1a2b3c4d, or its name") }),
+      positional: ["timer"],
+      available: () => kernel.service<SchedulerService>("scheduler").list(APP_ID).length > 0,
+      run: async (context) => (await logic()).timer_stop(context),
     }),
   ],
 } satisfies ShellContribution;

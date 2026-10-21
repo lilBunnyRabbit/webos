@@ -3,10 +3,10 @@
   import { format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import { ArrowCounterClockwise, Pause, PencilSimple, Play, Trash } from "phosphor-svelte";
-  import { format_duration, MINUTE, new_id, pause_timer, reset_timer, start_timer, timer_remaining, timer_state, TimerState, type Timer } from "./clock";
-  import type { ClockFile } from "./ringer.svelte";
+  import { format_duration, MINUTE, timer_remaining, timer_state, TimerState, type Timer } from "./clock";
+  import { add_timer, attempt, pause_timer, remove_timer, rename_timer, reset_timer, run_timer } from "./jobs";
 
-  let { file, now, adding = $bindable(false), onstart }: { file: ClockFile; now: number; adding?: boolean; onstart: () => void } = $props();
+  let { timers, now, adding = $bindable(false), onstart }: { timers: Timer[]; now: number; adding?: boolean; onstart: () => void } = $props();
 
   const PRESETS = [1, 3, 5, 10, 15, 25, 30, 60];
   const FIELD =
@@ -18,7 +18,6 @@
   let seconds = $state(0);
 
   const total_ms = $derived(((Number(hours) || 0) * 3600 + (Number(minutes) || 0) * 60 + (Number(seconds) || 0)) * 1000);
-  const timers = $derived(file.value.timers);
   const show_form = $derived(adding || timers.length === 0);
 
   function preset(value: number) {
@@ -30,20 +29,15 @@
   function create(event: SubmitEvent) {
     event.preventDefault();
     if (total_ms <= 0) return;
-    const timer: Timer = { id: new_id(), label: label.trim(), duration_ms: total_ms, end_at: null, remaining_ms: total_ms };
-    file.value.timers.push(start_timer(timer, Date.now()));
+    onstart();
+    attempt("Couldn't start the timer", add_timer(label, total_ms));
     label = "";
     adding = false;
+  }
+
+  function start(timer: Timer) {
     onstart();
-  }
-
-  function update(timer: Timer, next: Timer) {
-    const index = file.value.timers.findIndex((entry) => entry.id === timer.id);
-    if (index >= 0) file.value.timers[index] = next;
-  }
-
-  function remove(timer: Timer) {
-    file.value.timers = file.value.timers.filter((entry) => entry.id !== timer.id);
+    attempt("Couldn't start the timer", run_timer(timer));
   }
 </script>
 
@@ -96,13 +90,13 @@
                   placeholder={format_duration(timer.duration_ms)}
                   aria-label="Timer name"
                   maxlength={40}
-                  onchange={(event) => update(timer, { ...timer, label: event.currentTarget.value.trim() })}
+                  onchange={(event) => attempt("Couldn't rename the timer", rename_timer(timer, event.currentTarget.value))}
                   onkeydown={(event) => event.key === "Enter" && event.currentTarget.blur()}
                 />
                 <PencilSimple class="size-3.5 shrink-0 text-foreground/45 group-focus-within:hidden" aria-hidden="true" />
               </label>
               {#if state === TimerState.DONE}<Badge tone="success">Done</Badge>{:else if state === TimerState.PAUSED}<Badge>Paused</Badge>{/if}
-              <IconButton label="Delete timer" size="sm" onclick={() => remove(timer)}><Trash /></IconButton>
+              <IconButton label="Delete timer" size="sm" onclick={() => attempt("Couldn't delete the timer", remove_timer(timer))}><Trash /></IconButton>
             </div>
             <p class={cn("font-mono text-4xl font-medium tabular-nums", state !== TimerState.RUNNING && "text-foreground/80")}>{format_time(Math.ceil(remaining / 1000) * 1000)}</p>
             <div class="h-1 overflow-hidden rounded-full bg-foreground/10" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
@@ -110,14 +104,14 @@
             </div>
             <div class="flex items-center gap-2">
               {#if state === TimerState.RUNNING}
-                <Button size="sm" onclick={() => update(timer, pause_timer(timer, Date.now()))}><Pause weight="bold" />Pause</Button>
+                <Button size="sm" onclick={() => attempt("Couldn't pause the timer", pause_timer(timer))}><Pause weight="bold" />Pause</Button>
               {:else}
-                <Button size="sm" onclick={() => update(timer, start_timer(timer, Date.now()))}>
+                <Button size="sm" onclick={() => start(timer)}>
                   <Play weight="bold" />{state === TimerState.PAUSED ? "Resume" : state === TimerState.DONE ? "Restart" : "Start"}
                 </Button>
               {/if}
               {#if state !== TimerState.IDLE}
-                <Button size="sm" variant="quiet" onclick={() => update(timer, reset_timer(timer))}><ArrowCounterClockwise weight="bold" />Reset</Button>
+                <Button size="sm" variant="quiet" onclick={() => attempt("Couldn't reset the timer", reset_timer(timer))}><ArrowCounterClockwise weight="bold" />Reset</Button>
               {/if}
               <span class="ml-auto font-mono text-2xs text-foreground/65 tabular-nums">{format_duration(timer.duration_ms)}</span>
             </div>
