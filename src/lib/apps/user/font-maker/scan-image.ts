@@ -11,18 +11,6 @@ export interface ScanImage {
   url: string;
 }
 
-export function pick_photo(camera: boolean): Promise<File | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    if (camera) input.setAttribute("capture", "environment");
-    input.onchange = () => resolve(input.files?.[0] ?? null);
-    input.oncancel = () => resolve(null);
-    input.click();
-  });
-}
-
 export async function load_scan(source: Blob): Promise<ScanImage> {
   const bitmap = await createImageBitmap(source).catch(() => {
     throw new Error("The picture couldn't be read");

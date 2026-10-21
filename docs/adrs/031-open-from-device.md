@@ -26,3 +26,6 @@ Apps open files through `window.pick_file()` (ADR-025), which only browses OPFS.
 - No OPFS write, no copy to clean up.
 - What a device file can't do: disk watch (Text Editor), Save to disk (Media Preview), remembered reading position (Speed Reader), session restore. This matches a dropped file.
 - A new app with Open… should add the device action too (design patterns: Toolbars).
+
+## Revision 2026-10-21
+`DeviceFileOptions` gains `capture?: "environment" | "user"`, set as the input's `capture` attribute, so phones open the camera. Font Maker and Proposals use it instead of keeping local copies.

@@ -64,7 +64,7 @@
     type FontProject,
   } from "./model";
   import { find_marks, type Quad } from "./scan";
-  import { load_scan, pick_photo, scan_guides, type ScanImage } from "./scan-image";
+  import { load_scan, scan_guides, type ScanImage } from "./scan-image";
   import { draw_template, PAGE, PNG_DPI, template_html, template_layout } from "./template";
 
   const { path: initial_path }: { path?: string } = $props();
@@ -228,7 +228,7 @@
     if (source === "files") {
       const chosen = await win.pick_file({ accept: ["image/*"], title: "Scan a filled-in sheet" });
       if (chosen) blob = await kernel.service<FilesService>("files").get_file(chosen);
-    } else if (source === "camera") blob = await pick_photo(true);
+    } else if (source === "camera") blob = (await pick_device_files({ accept: ["image/*"], capture: "environment" }))[0] ?? null;
     else blob = (await pick_device_files({ accept: ["image/*"] }))[0] ?? null;
     if (!blob) return;
     scanning = true;

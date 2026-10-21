@@ -47,4 +47,4 @@ Built as decided ([app page](../apps/font-maker.md)). Choices the decision left 
 - **Stroke weight.** One fixed weight: radius 35 units at mid pressure, scaled 0.25–1.75× by pen pressure; mouse and touch draw at mid pressure.
 - **Extra glyphs.** Glyph 0 is a box `.notdef`; space also maps U+00A0.
 - **Orientation mark.** The template's top-left mark has a white hole, so a sideways or upside-down photo still maps to the right corners.
-- **Camera.** "Take a photo" uses a local `<input accept="image/*" capture="environment">` in the app: core `pick_device_files` has no `capture` option.
+- **Camera.** "Take a photo" calls `pick_device_files({ accept: ["image/*"], capture: "environment" })` (the `capture` option was added on 2026-10-21, replacing a local copy).

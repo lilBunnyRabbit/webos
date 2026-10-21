@@ -62,6 +62,6 @@ Built as decided. Choices made inside the decision:
 - **Sketch pad.** 1200 × 900, or 900 × 1200 when the stage is portrait. The paper (`--background`) is painted into the picture along with the ink (`--foreground`), so a sketch made in a dark theme stays readable in a light one.
 - **Send fallback.** Saving to the device is Backup's `save_to_device` with the anchor download, imported on demand; no save picker.
 - **Narrow layout.** "Stacks" is a two-pane switch (list; editor with a back arrow and the phone's Back), the pattern Font Maker uses, rather than the list above the editor.
-- **Camera input.** A local copy of Font Maker's `<input capture="environment">` helper; sharing it is left open.
+- **Camera input.** `pick_device_files({ capture: "environment" })`. Owner, 2026-10-21: the option went into core instead of keeping two copies of the helper.
 
 Internals: [docs/apps/proposals.md](../apps/proposals.md).

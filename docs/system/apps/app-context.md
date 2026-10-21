@@ -56,7 +56,7 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 | `pick_directory(options?)` | `Promise<string \| null>` | The same for folders: "Select folder" takes the selected subfolder or the open folder |
 | `pick_save(options?)` | `Promise<string \| null>` | The picker in save mode: a folder plus a typed name. Options: `name` (suggested), `accept` (dims files that don't match), `start_path`, `title` (default "Save as"). Asks before replacing ("Replace" button). Refuses system folders (`/etc`, `/var`, `/tmp`). Resolves the full path; the app writes the file ([files.md](../services/files.md#picker-mode-adr-025)) |
 
-Files from the real device aren't a handle member: `pick_device_files({ accept, multiple })` from `$lib/core/utils/device-file` resolves `File[]` in memory, with no OPFS copy (ADR-031).
+Files from the real device aren't a handle member: `pick_device_files({ accept, multiple, capture })` from `$lib/core/utils/device-file` resolves `File[]` in memory, with no OPFS copy (ADR-031). `capture: "environment" | "user"` opens the camera on phones.
 
 Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_icon`, taskbar attention/badge, status bar.
 

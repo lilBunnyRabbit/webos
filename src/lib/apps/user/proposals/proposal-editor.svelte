@@ -13,7 +13,6 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
-  import { pick_photo } from "./image";
   import { filled_count, PROPOSAL_STATUSES, SECTION_IDS, SECTIONS, set_section, STATUS_LABELS, type Proposal, type SectionId } from "./model";
   import SectionEditor from "./section-editor.svelte";
 
@@ -67,7 +66,7 @@
     try {
       if (choice === "sketch") return onsketch((image) => editors[id]?.insert(image));
       let pictures: Blob[] = [];
-      if (choice === "camera") pictures = [await pick_photo(true)].filter((file) => file !== null);
+      if (choice === "camera") pictures = await pick_device_files({ accept: ["image/*"], capture: "environment" });
       else if (choice === "device") pictures = await pick_device_files({ accept: ["image/*"], multiple: true });
       else if (choice === "files") {
         const paths = await win.pick_file({ accept: ["image/*"], multiple: true, title: "Add pictures" });
