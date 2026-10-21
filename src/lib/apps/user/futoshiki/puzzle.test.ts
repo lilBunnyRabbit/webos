@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { create_rng } from "$lib/core/utils/random";
+import { across_cells, down_cells } from "$kit/games/grid";
 import {
-  across_cells,
   count_solutions,
   deduce,
-  down_cells,
   generate,
   latin_square,
   logic_solves,

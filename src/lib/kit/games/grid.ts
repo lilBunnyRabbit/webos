@@ -53,3 +53,17 @@ export function stroke_cells(width: number, from: number, to: number, axis: Axis
   }
   return cells;
 }
+
+/**
+ * Edges between side-by-side cells, for clues drawn between them (signs, walls). Edge `index` of the across edges is
+ * `row * (width - 1) + col`, between (row, col) and (row, col + 1); of the down edges `row * width + col`, between
+ * (row, col) and (row + 1, col). These give the two cells an edge joins.
+ */
+export function across_cells(width: number, index: number): [number, number] {
+  const a = Math.floor(index / (width - 1)) * width + (index % (width - 1));
+  return [a, a + 1];
+}
+
+export function down_cells(width: number, index: number): [number, number] {
+  return [index, index + width];
+}

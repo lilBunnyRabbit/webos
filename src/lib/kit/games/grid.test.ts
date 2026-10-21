@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { grid_key_move, stroke_axis, stroke_cells, stroke_end } from "./grid";
+import { across_cells, down_cells, grid_key_move, stroke_axis, stroke_cells, stroke_end } from "./grid";
 
 describe("grid_key_move", () => {
   test("moves one cell and stops at the edges", () => {
@@ -34,5 +34,19 @@ describe("strokes", () => {
     expect(stroke_cells(5, 0, 3, "row")).toEqual([0, 1, 2, 3]);
     expect(stroke_cells(5, 12, 2, "col")).toEqual([12, 7, 2]);
     expect(stroke_cells(5, 16, 1, "col")).toEqual([16, 11, 6, 1]);
+  });
+});
+
+describe("edges", () => {
+  test("an across edge joins a cell and its right neighbour, row by row", () => {
+    expect(across_cells(4, 0)).toEqual([0, 1]);
+    expect(across_cells(4, 2)).toEqual([2, 3]);
+    expect(across_cells(4, 3)).toEqual([4, 5]);
+    expect(across_cells(4, 11)).toEqual([14, 15]);
+  });
+
+  test("a down edge joins a cell and the one below it", () => {
+    expect(down_cells(4, 0)).toEqual([0, 4]);
+    expect(down_cells(4, 11)).toEqual([11, 15]);
   });
 });

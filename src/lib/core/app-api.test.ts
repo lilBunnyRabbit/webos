@@ -81,10 +81,12 @@ const GAMES = [
   "PLAYS_PATH",
   "PlaysSchema",
   "Stopwatch",
+  "across_cells",
   "better_daily",
   "daily_key",
   "daily_rank_for",
   "daily_seed",
+  "down_cells",
   "format_time",
   "grid_key_move",
   "key_direction",
@@ -100,6 +102,7 @@ const GAMES = [
 const GAMES_TIME = ["daily_seed", "format_time", "parse_day"];
 const GAMES_DAILY = ["DailyRank", "better_daily", "daily_key", "daily_rank_for", "split_daily_key"];
 const GAMES_DIRECTION = ["Direction", "key_direction", "swipe_direction"];
+const GAMES_GRID = ["across_cells", "down_cells", "grid_key_move", "stroke_axis", "stroke_cells", "stroke_end"];
 const IMAGE = [
   "FORMAT_OPTIONS",
   "ImageFormat",
@@ -178,6 +181,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
   ["$kit/games/time", () => import("$kit/games/time"), GAMES_TIME],
   ["$kit/games/daily", () => import("$kit/games/daily"), GAMES_DAILY],
   ["$kit/games/direction", () => import("$kit/games/direction"), GAMES_DIRECTION],
+  ["$kit/games/grid", () => import("$kit/games/grid"), GAMES_GRID],
   ["$kit/utils/image", () => import("$kit/utils/image"), IMAGE],
   [
     "$lib/core/utils",

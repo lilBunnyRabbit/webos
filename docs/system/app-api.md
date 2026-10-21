@@ -43,6 +43,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$kit/games/time` | Kernel-free time helpers of the kit | Stable path. Use it from manifests and from logic that Node tests load: the barrel re-exports `track_play`/`use_plays`, which reach the kernel through `json_file` |
 | `$kit/games/daily` | `DailyRank`, `DailyRanks`, `better_daily`, `DailyResult`, `daily_key`, `split_daily_key`, `daily_rank_for` | Stable path (1.20; the per-mode names 3.1), same reason as `games/time`: manifests set `daily_rank` |
 | `$kit/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
+| `$kit/games/grid` | Kernel-free grid helpers of the kit: `grid_key_move`, the stroke helpers, `across_cells`, `down_cells` | Stable path, same reason as `games/time`: puzzle logic with edge clues imports it |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 | `$kit/utils/image` | The names in [App kit](#app-kit-kit) | |
 
@@ -171,7 +172,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 
 | Module | Stable | Internal (used by) |
 |--------|--------|--------------------|
-| `$kit/games`, `games/time`, `games/daily`, `games/direction` | All of it, see [Games kit](#games-kit) | |
+| `$kit/games`, `games/time`, `games/daily`, `games/direction`, `games/grid` | All of it, see [Games kit](#games-kit) | |
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
 | `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |
 | `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite, Doodlehop) |
@@ -216,6 +217,7 @@ Internal: Format Lab and Media Preview use it; the API can change in any release
 | Daily puzzles | `daily_seed`, `parse_day`, `ParsedDay`, `DailyRank`, `DailyRanks`, `DailyResult`, `better_daily`, `daily_key`, `split_daily_key`, `daily_rank_for`. `day_key` comes from `$lib/core/utils/date` |
 | Play tracking | `track_play`, `PlayTracker`, `use_plays`, `Plays`, `GameStats`, `PlaysSchema`, `EMPTY_PLAYS`, `PLAYS_PATH` |
 | Input | `Direction`, `key_direction`, `swipe_direction`, `grid_key_move`, `stroke_axis`, `stroke_end`, `stroke_cells`, `Axis` |
+| Edge clues | `across_cells`, `down_cells`: the two cells an edge between neighbours joins, across edges indexed `row * (width - 1) + col`, down edges `row * width + col` (Futoshiki's signs) |
 
 `/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?, mode?)` keeps the better result by the manifest's `daily_rank`. A day's keys are app ids, or `{app_id}/{mode}` for one mode of a game with a per-mode `daily_rank` (3.1, ADR-050); `daily_key(app_id, mode?)` builds one and `split_daily_key` takes one apart, so a reader that looks up a manifest by key splits first.
 
@@ -255,5 +257,5 @@ Users' data sits in these, so moving one is a major even when no code signature 
 
 - The pin test checks names. A signature change (a parameter made required, a return type changed) passes it; review catches those.
 - `create_storage_handle(app_id, state)` is stable because two apps need storage outside a window, but its `state` parameter only matters to the window frame. A cleaner out-of-window entry point would be an additive change.
-- Two kinds of bundled file still import the games kit through `$kit/games/time` or `games/direction`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
+- Two kinds of bundled file still import the games kit through `$kit/games/time`, `games/direction` or `games/grid`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
 - The `$lib/core/api` barrel exports much more than this page promises (theme presets, widget and shortcut file parsers, association ranking, launcher search, `Kernel`, `detect_platform`). Listing isn't promising.

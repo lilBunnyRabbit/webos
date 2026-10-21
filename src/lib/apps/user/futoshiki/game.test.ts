@@ -21,7 +21,8 @@ import {
   with_cells,
   type Game,
 } from "./game";
-import { across_cells, Relation } from "./puzzle";
+import { across_cells } from "$kit/games/grid";
+import { Relation } from "./puzzle";
 
 function open_cells(game: Game): number[] {
   return game.puzzle.givens.flatMap((given, index) => (given ? [] : [index]));

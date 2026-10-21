@@ -1,8 +1,7 @@
 import { daily_seed } from "$kit/games/time";
 import { z } from "zod";
+import { across_cells, down_cells } from "$kit/games/grid";
 import {
-  across_cells,
-  down_cells,
   generate,
   next_deduction,
   Relation,

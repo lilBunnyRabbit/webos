@@ -1,3 +1,4 @@
+import { across_cells, down_cells } from "$kit/games/grid";
 import { create_rng, shuffle, type Rng } from "$lib/core/utils/random";
 
 export const Relation = { NONE: 0, LESS: 1, GREATER: 2 } as const;
@@ -19,16 +20,6 @@ export type Clues = Pick<Puzzle, "size" | "givens" | "across" | "down">;
 export interface Pair {
   lo: number;
   hi: number;
-}
-
-export function across_cells(size: number, index: number): [number, number] {
-  const row = Math.floor(index / (size - 1));
-  const a = row * size + (index % (size - 1));
-  return [a, a + 1];
-}
-
-export function down_cells(size: number, index: number): [number, number] {
-  return [index, index + size];
 }
 
 export function pairs_of(clues: Clues): Pair[] {
