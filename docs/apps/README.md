@@ -28,6 +28,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [doodlehop.md](doodlehop.md) | Doodlehop (`doodlehop`) | When a guess is asked (stroke end, idle, one in flight, merged strokes), the cropped black-on-white PNG snapshot, the `extract()` call with a word-list enum, matching and scoring in code |
 | [calendar.md](calendar.md) | Calendar (`calendar`) | Repeat rules and their occurrences (month-end clamping, 29 February, skip, until), how a reminder becomes a scheduler job (the day shift, the exactness check, `on_fire`), the events file |
 | [soundboard.md](soundboard.md) | Soundboard (`soundboard`) | The shared player and play modes, edited time → source time across cuts and crossfades (`timeline.ts`), reading a video's sound (decode, then the record task; 10 min confirm, 1 h refusal), WAV encoding, the board file, pad colour and picture, the trim editor |
+| [sun-and-moon.md](sun-and-moon.md) | Sun & Moon (`sun-and-moon`) | The rules, the line-pattern solver and why it proves uniqueness, the generator (givens first down to one per row, then signs), the five hint rules |
 
 ## Page shape
 

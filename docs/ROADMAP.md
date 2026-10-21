@@ -339,6 +339,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Minesweeper, 2048, Snake (2026-10-12)
 - [x] Lunar Lander: three ships with per-thruster physics, gravity presets, air, wind, infinite fuel (2026-10-16)
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
+- [x] Sun & Moon (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Tango-style suns and moons with `=`/`×` signs, 6×6 and 8×8, daily, hints that name the rule
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
