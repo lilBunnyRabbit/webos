@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { fit_size, MAX_SIDE } from "./image";
+import { DEFAULT_MAX_SIDE as MAX_SIDE, fit_size } from "./picture";
 
 test("the long edge is capped at 1200 px and the aspect kept", () => {
   expect(fit_size(4000, 3000)).toEqual({ width: MAX_SIDE, height: 900 });

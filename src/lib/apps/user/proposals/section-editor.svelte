@@ -2,7 +2,7 @@
   import { field } from "$lib/core/components/ui";
   import { has_files, image_files } from "$kit/utils/image";
   import { insert_image, range_at_point, read_runs, render_runs, toggle_display } from "./editor-dom";
-  import { picture_data_url } from "./image";
+  import { picture_data_url } from "$kit/utils/picture";
   import { ImageDisplay, is_empty, type Content } from "./model";
 
   interface Props {

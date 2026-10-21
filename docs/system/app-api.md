@@ -174,6 +174,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 |--------|--------|--------------------|
 | `$kit/games`, `games/time`, `games/daily`, `games/direction`, `games/grid` | All of it, see [Games kit](#games-kit) | |
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
+| `$kit/utils/picture` | | A picture as a downscaled WebP data URL for documents that keep pictures inline: `picture_data_url(blob, { max_side, quality })` (long edge 1200 px and quality 0.8 by default, never upscaled, decoded through `<img>` so SVG works), `fit_size`, `encode_webp`, `blob_to_data_url` (Proposals) |
 | `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |
 | `$kit/utils/history` | | Undo history (Paint, Image Editor, HopSprite, Doodlehop) |
 | `$kit/utils/qr`, `$kit/utils/qr-scan.svelte` | | QR encode, barcode and QR detect (`create_barcode_detector`, `detect_barcode` with the format), `CameraScan` (QR Reader, QR Studio, P2P Transfer, Cards) |

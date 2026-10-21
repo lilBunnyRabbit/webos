@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Eraser as EraserIcon, PencilSimple as PencilSimpleIcon } from "phosphor-svelte";
-  import { blob_to_data_url } from "./image";
+  import { blob_to_data_url } from "$kit/utils/picture";
   import { onMount } from "svelte";
   import { sketch_size, stroke_width, type SketchStroke, type SketchTool } from "./sketch";
 

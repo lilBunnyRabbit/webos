@@ -70,7 +70,7 @@ Each section is a `contenteditable="plaintext-only"` div with `white-space: pre-
 
 ### Image pipeline
 
-`image.ts`. Every picture goes through `picture_data_url`: decoded through `<img>` (so SVG works), drawn on an `OffscreenCanvas` at `fit_size` (long edge at most 1200 px, never upscaled), encoded as WebP at quality 0.8 and read back as a data URL. Animated GIFs keep their first frame. Conversion runs inline, not as a task: one picture takes well under a second.
+`$kit/utils/picture`. Every picture goes through `picture_data_url` with its defaults: decoded through `<img>` (so SVG works), drawn on an `OffscreenCanvas` at `fit_size` (long edge at most 1200 px, never upscaled), encoded as WebP at quality 0.8 and read back as a data URL. Animated GIFs keep their first frame. Conversion runs inline, not as a task: one picture takes well under a second.
 
 ### Sketch pad
 

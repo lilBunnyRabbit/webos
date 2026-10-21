@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { insert_image, read_runs, render_runs, toggle_display } from "./editor-dom";
 import { parse_content, serialize_content } from "./format";
-import { MAX_SIDE, picture_data_url } from "./image";
+import { DEFAULT_MAX_SIDE as MAX_SIDE, picture_data_url } from "$kit/utils/picture";
 import { ImageDisplay, type Content } from "./model";
 
 let root: HTMLDivElement;
