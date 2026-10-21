@@ -12,11 +12,17 @@
     Scissors as ScissorsIcon,
     Sparkle as SparkleIcon,
     TextB as TextBIcon,
+    TextAlignCenter as TextAlignCenterIcon,
+    TextAlignJustify as TextAlignJustifyIcon,
+    TextAlignLeft as TextAlignLeftIcon,
+    TextAlignRight as TextAlignRightIcon,
     TextItalic as TextItalicIcon,
+    TextUnderline as TextUnderlineIcon,
   } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { z } from "zod";
   import { BlockStyle, type WarrenEditor } from "./editor.svelte";
+  import { Align } from "./model";
   import { FLOWS, FONT_SIZES, PAGE_SIZES, type Flow, type PageSize } from "./page";
   import { find_word, type Counts, type Repeat } from "./words";
 
@@ -40,6 +46,12 @@
   const PAGE_OPTIONS = PAGE_SIZES.map((size) => ({ value: size, label: size }));
   const FLOW_LABELS: Record<Flow, string> = { sheets: "Sheets", continuous: "Continuous" };
   const FLOW_OPTIONS = FLOWS.map((flow) => ({ value: flow, label: FLOW_LABELS[flow] }));
+  const ALIGN_BUTTONS = [
+    { value: Align.LEFT, label: "Align left", icon: TextAlignLeftIcon },
+    { value: Align.CENTER, label: "Centre", icon: TextAlignCenterIcon },
+    { value: Align.RIGHT, label: "Align right", icon: TextAlignRightIcon },
+    { value: Align.JUSTIFY, label: "Justify", icon: TextAlignJustifyIcon },
+  ];
   const STYLES = [
     { value: BlockStyle.PARAGRAPH, label: "Body" },
     { value: BlockStyle.H1, label: "H1" },
@@ -112,6 +124,7 @@
   <div class="flex items-center gap-1">
     <IconButton label="Bold (Mod+B)" pressed={editor.bold} onpointerdown={keep_focus} onclick={() => editor.toggle_bold()}><TextBIcon weight="bold" /></IconButton>
     <IconButton label="Italic (Mod+I)" pressed={editor.italic} onpointerdown={keep_focus} onclick={() => editor.toggle_italic()}><TextItalicIcon weight="bold" /></IconButton>
+    <IconButton label="Underline (Mod+U)" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
     <Select
       size="sm"
       class="ml-auto w-24"
@@ -130,6 +143,11 @@
   <div class="grid grid-cols-4 gap-1">
     {#each STYLES as style (style.value)}
       <Button size="sm" variant="quiet" pressed={editor.block === style.value} onpointerdown={keep_focus} onclick={() => editor.set_block(style.value)}>{style.label}</Button>
+    {/each}
+  </div>
+  <div class="grid grid-cols-4 gap-1" role="group" aria-label="Alignment">
+    {#each ALIGN_BUTTONS as item (item.value)}
+      <IconButton label={item.label} class="w-full" pressed={editor.align === item.value} onpointerdown={keep_focus} onclick={() => editor.set_align(item.value)}><item.icon weight="bold" /></IconButton>
     {/each}
   </div>
   <div class="grid grid-cols-2 gap-1">

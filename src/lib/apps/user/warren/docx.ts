@@ -1,7 +1,7 @@
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip } from "$lib/core/utils/zip/write";
 import type { WarrenDocument } from "./format";
-import { blocks_of, ListKind, type Block, type Run } from "./model";
+import { blocks_of, ListKind, type Align, type Block, type Run } from "./model";
 import { BASE_PT, HEADING_PT, LINE_HEIGHT, PAGE_MM, PARAGRAPH_AFTER_PT, mm_to_twips } from "./page";
 
 export const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -14,6 +14,7 @@ const FONT = "Inter";
 const LEVELS = 9;
 const BULLETS = ["•", "◦", "▪"];
 const NUMBERS = ["decimal", "lowerLetter", "lowerRoman"];
+const JUSTIFICATION: Record<Align, string> = { left: "left", center: "center", right: "right", justify: "both" };
 
 export function escape_xml(text: string): string {
   return text
@@ -62,13 +63,15 @@ function numbering_of(blocks: Block[]): Numbering {
 }
 
 function paragraph_xml(block: Exclude<Block, { kind: "page-break" }>, numbering: Numbering, break_before: boolean): string {
+  // `w:pPr` children have a fixed order in the schema: style, page break, numbering, justification.
   const props: string[] = [];
   if (block.kind === "heading") props.push(`<w:pStyle w:val="Heading${block.level}"/>`);
+  if (block.kind === "item") props.push(`<w:pStyle w:val="ListParagraph"/>`);
+  if (break_before) props.push("<w:pageBreakBefore/>");
   if (block.kind === "item") {
-    props.push(`<w:pStyle w:val="ListParagraph"/>`);
     props.push(`<w:numPr><w:ilvl w:val="${Math.min(block.level, LEVELS - 1)}"/><w:numId w:val="${numbering.by_list.get(block.list_id)}"/></w:numPr>`);
   }
-  if (break_before) props.push("<w:pageBreakBefore/>");
+  if (block.align) props.push(`<w:jc w:val="${JUSTIFICATION[block.align]}"/>`);
   return `<w:p>${props.length ? `<w:pPr>${props.join("")}</w:pPr>` : ""}${block.runs.map(run_xml).join("")}</w:p>`;
 }
 

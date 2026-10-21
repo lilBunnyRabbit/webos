@@ -1,7 +1,8 @@
-import { FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND, type LexicalEditor } from "lexical";
+import { FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND, type LexicalEditor } from "lexical";
 import { create_document, VERSION, type EditorJson, type WarrenDocument } from "./format";
 import * as ops from "./lexical";
 import { BlockStyle } from "./lexical";
+import { Align } from "./model";
 import { BASE_PT, DEFAULT_PAGE, type PageSettings } from "./page";
 
 export { BlockStyle };
@@ -12,6 +13,8 @@ export class WarrenEditor {
   json = $state.raw<EditorJson>(create_document().editor);
   bold = $state(false);
   italic = $state(false);
+  underline = $state(false);
+  align = $state<Align>(Align.LEFT);
   block = $state<BlockStyle>(BlockStyle.PARAGRAPH);
   size = $state(BASE_PT);
   word = $state("");
@@ -41,6 +44,8 @@ export class WarrenEditor {
       if (!format) return;
       this.bold = format.bold;
       this.italic = format.italic;
+      this.underline = format.underline;
+      this.align = format.align;
       this.block = format.block;
       this.size = format.size;
       this.word = format.word;
@@ -107,6 +112,14 @@ export class WarrenEditor {
 
   toggle_italic() {
     this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+  }
+
+  toggle_underline() {
+    this.lexical.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+  }
+
+  set_align(align: Align) {
+    this.lexical.dispatchCommand(FORMAT_ELEMENT_COMMAND, align);
   }
 
   set_size(points: number) {

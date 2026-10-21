@@ -22,6 +22,7 @@
     ListNumbers as ListNumbersIcon,
     TextB as TextBIcon,
     TextItalic as TextItalicIcon,
+    TextUnderline as TextUnderlineIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
@@ -278,6 +279,7 @@
       <div class="format-bar flex shrink-0 items-center gap-1 border-b border-foreground/8 bg-background-light px-2 py-1" role="toolbar" aria-label="Formatting">
         <IconButton label="Bold" size="sm" pressed={editor.bold} onpointerdown={keep_focus} onclick={() => editor.toggle_bold()}><TextBIcon weight="bold" /></IconButton>
         <IconButton label="Italic" size="sm" pressed={editor.italic} onpointerdown={keep_focus} onclick={() => editor.toggle_italic()}><TextItalicIcon weight="bold" /></IconButton>
+        <IconButton label="Underline" size="sm" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
         <Select
           size="sm"
           class="w-28 min-w-0"

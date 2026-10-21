@@ -30,6 +30,7 @@ describe("blocks_of", () => {
       ["\n", false, false, null],
       ["Breakfast fan.", false, false, null],
     ]);
+    expect(blocks.map((block) => block.kind !== "page-break" && block.align)).toEqual(["center", null, null, null, "right", false, null, null]);
     const [one, nested, two] = blocks.slice(2, 5);
     expect([one, nested, two].map((block) => block.kind === "item" && [block.list, block.level, block.list_id])).toEqual([
       ["number", 0, 1],

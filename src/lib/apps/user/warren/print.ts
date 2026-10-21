@@ -1,7 +1,7 @@
 import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
 import { escape_html } from "$lib/core/utils";
 import type { DocNode, WarrenDocument } from "./format";
-import { BOLD, font_size, ITALIC, PAGE_BREAK, STRIKETHROUGH, UNDERLINE } from "./model";
+import { align_of, BOLD, font_size, ITALIC, PAGE_BREAK, STRIKETHROUGH, UNDERLINE } from "./model";
 import { BASE_PT, HEADING_PT, LINE_HEIGHT, PAGE_MM, PageSize, PARAGRAPH_AFTER_PT } from "./page";
 
 const CSS_SIZE: Record<PageSize, string> = { A4: "A4", Letter: "letter", A5: "A5" };
@@ -53,6 +53,11 @@ function inline_html(nodes: DocNode[] | undefined): string {
 
 const filled = (html: string) => html || "<br>";
 
+function align_attr(node: DocNode): string {
+  const align = align_of(node);
+  return align ? ` style="text-align:${align}"` : "";
+}
+
 function list_html(node: DocNode): string {
   const ordered = node.listType === "number";
   const start = ordered && typeof node.start === "number" && node.start > 1 ? ` start="${Math.floor(node.start)}"` : "";
@@ -62,7 +67,7 @@ function list_html(node: DocNode): string {
       const nested = children.filter((child) => child.type === "list");
       const inline = children.filter((child) => child.type !== "list");
       const only_nested = nested.length > 0 && inline.length === 0;
-      return `<li${only_nested ? ` class="nested"` : ""}>${only_nested ? "" : filled(inline_html(inline))}${nested.map(list_html).join("")}</li>`;
+      return `<li${only_nested ? ` class="nested"` : ""}${align_attr(item)}>${only_nested ? "" : filled(inline_html(inline))}${nested.map(list_html).join("")}</li>`;
     })
     .join("");
   return ordered ? `<ol${start}>${items}</ol>` : `<ul>${items}</ul>`;
@@ -75,9 +80,9 @@ export function body_html(document: WarrenDocument): string {
       if (node.type === "list") return list_html(node);
       if (node.type === "heading") {
         const level = Math.min(Math.max(Number(node.tag?.slice(1)) || 3, 1), 3);
-        return `<h${level}>${filled(inline_html(node.children))}</h${level}>`;
+        return `<h${level}${align_attr(node)}>${filled(inline_html(node.children))}</h${level}>`;
       }
-      return `<p>${filled(inline_html(node.children))}</p>`;
+      return `<p${align_attr(node)}>${filled(inline_html(node.children))}</p>`;
     })
     .join("");
 }

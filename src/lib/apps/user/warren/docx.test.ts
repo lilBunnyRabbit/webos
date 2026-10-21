@@ -17,12 +17,13 @@ describe("docx", () => {
 
   it("writes headings, runs, lists, breaks and the page size", () => {
     const xml = document_xml(SAMPLE);
-    expect(xml).toContain(`<w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Jane &amp; Co &lt;CV&gt;</w:t></w:r>`);
+    expect(xml).toContain(`<w:pStyle w:val="Heading1"/><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">Jane &amp; Co &lt;CV&gt;</w:t></w:r>`);
     expect(xml).toContain(`<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">very</w:t></w:r>`);
     expect(xml).toContain(`<w:rPr><w:i/><w:iCs/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>`);
     expect(xml).toContain("<w:br/>");
+    expect(xml).toMatch(/<w:jc w:val="right"\/><\/w:pPr><w:r><w:t xml:space="preserve">Two/);
     expect(xml).toContain(`<w:numPr><w:ilvl w:val="1"/><w:numId w:val="2"/></w:numPr>`);
-    expect(xml).toMatch(/<w:pageBreakBefore\/><\/w:pPr><w:r><w:t xml:space="preserve">Dot/);
+    expect(xml).toMatch(/<w:pageBreakBefore\/><w:numPr>.*?<\/w:numPr><\/w:pPr><w:r><w:t xml:space="preserve">Dot/);
     expect(xml).toContain(`<w:pgSz w:w="12240" w:h="15840"/>`);
   });
 
@@ -42,9 +43,9 @@ describe("print", () => {
   it("lays the document out for the printer with its page size and breaks", () => {
     const html = print_document(SAMPLE, "CV", "/inter.woff2");
     expect(html).toContain("@page{size:letter portrait;margin:20mm}");
-    expect(body_html(SAMPLE)).toContain(`<h1>Jane &amp; Co &lt;CV&gt;</h1>`);
+    expect(body_html(SAMPLE)).toContain(`<h1 style="text-align:center">Jane &amp; Co &lt;CV&gt;</h1>`);
     expect(body_html(SAMPLE)).toContain(`<strong>very</strong><em><span style="font-size:14pt"> fast</span></em><br>`);
-    expect(body_html(SAMPLE)).toContain(`<ol><li>One</li><li class="nested"><ul><li>Nested</li></ul></li><li>Two</li></ol><div class="break"></div>`);
+    expect(body_html(SAMPLE)).toContain(`<ol><li>One</li><li class="nested"><ul><li>Nested</li></ul></li><li style="text-align:right">Two</li></ol><div class="break"></div>`);
     expect(body_html(SAMPLE)).toMatch(/<p><br><\/p>$/);
   });
 });

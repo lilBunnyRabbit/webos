@@ -17,6 +17,7 @@ import {
   $createRangeSelection,
   $getRoot,
   $getSelection,
+  $isElementNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -36,7 +37,7 @@ import {
   type RangeSelection,
   type TextNode,
 } from "lexical";
-import { font_size } from "./model";
+import { Align, align_of, font_size } from "./model";
 import { $create_page_break, PageBreakNode } from "./page-break-node";
 import { BASE_PT, HEADING_PT } from "./page";
 import { find_word, is_word, map_offset, replace_word, word_at } from "./words";
@@ -63,6 +64,8 @@ const THEME = {
 export interface Format {
   bold: boolean;
   italic: boolean;
+  underline: boolean;
+  align: Align;
   block: BlockStyle;
   size: number;
   word: string;
@@ -101,6 +104,12 @@ function $selected_word(selection: RangeSelection): { node: TextNode; start: num
   }
   const range = word_at(node.getTextContent(), selection.anchor.offset);
   return range ? { node, ...range } : null;
+}
+
+function $align_of(node: LexicalNode): Align {
+  const element = $findMatchingParent(node, $isListItemNode) ?? node.getTopLevelElement();
+  if (!$isElementNode(element)) return Align.LEFT;
+  return align_of({ type: element.getType(), format: element.getFormatType() }) ?? Align.LEFT;
 }
 
 function $in_list(): boolean {
@@ -154,6 +163,8 @@ export function read_format(state: EditorState): Format | null {
     return {
       bold: selection.hasFormat("bold"),
       italic: selection.hasFormat("italic"),
+      underline: selection.hasFormat("underline"),
+      align: $align_of(selection.anchor.getNode()),
       block,
       size,
       word: word ? word.node.getTextContent().slice(word.start, word.end) : "",

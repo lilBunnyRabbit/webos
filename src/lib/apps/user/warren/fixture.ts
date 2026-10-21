@@ -9,12 +9,12 @@ export const SAMPLE: WarrenDocument = {
   page: { size: "Letter", flow: "sheets" },
   editor: {
     root: block("root", [
-      block("heading", [text("Jane & Co <CV>")], { tag: "h1" }),
+      block("heading", [text("Jane & Co <CV>")], { tag: "h1", format: "center" }),
       block("paragraph", [text("A fast learner, "), text("very", 1), text(" fast", 2, "font-size: 14pt;"), { type: "linebreak", version: 1 } as DocNode, text("Breakfast fan.")]),
       block("list", [
         block("listitem", [text("One")], { value: 1 }),
         block("listitem", [block("list", [block("listitem", [text("Nested")], { value: 1 })], { listType: "bullet", start: 1, tag: "ul" })], { value: 2 }),
-        block("listitem", [text("Two")], { value: 2 }),
+        block("listitem", [text("Two")], { value: 2, format: "end" }),
       ], { listType: "number", start: 1, tag: "ol" }),
       { type: "page-break", version: 1 } as DocNode,
       block("list", [block("listitem", [text("Dot")], { value: 1 })], { listType: "bullet", start: 1, tag: "ul" }),

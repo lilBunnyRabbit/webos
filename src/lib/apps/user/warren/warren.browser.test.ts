@@ -8,7 +8,7 @@ import { build_docx } from "./docx";
 import { WarrenEditor } from "./editor.svelte";
 import { SAMPLE } from "./fixture";
 import { parse_document, serialize_document } from "./format";
-import { blocks_of, document_text } from "./model";
+import { Align, blocks_of, document_text } from "./model";
 import { count_document, export_document } from "./shell";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -56,6 +56,22 @@ describe("editor", () => {
     editor.select_next("fast");
     await tick();
     expect(editor.word).toBe("fast");
+    dispose();
+  });
+
+  test("underlines the selection and aligns its paragraph", async () => {
+    const { editor, root, dispose } = editor_with();
+    await tick();
+    editor.select_next("fast");
+    editor.toggle_underline();
+    editor.set_align(Align.JUSTIFY);
+    await tick();
+    expect(editor.underline).toBe(true);
+    expect(editor.align).toBe(Align.JUSTIFY);
+    const paragraph = blocks_of(editor.json)[1];
+    expect(paragraph.kind === "paragraph" && paragraph.align).toBe("justify");
+    expect(paragraph.kind === "paragraph" && paragraph.runs.find((run) => run.text === "fast")?.underline).toBe(true);
+    expect(root.querySelector("p")?.style.textAlign).toBe("justify");
     dispose();
   });
 });

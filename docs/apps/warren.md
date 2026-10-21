@@ -4,7 +4,7 @@ Id `warren` · Source: `src/lib/apps/user/warren/` · [brainstorm](../brainstorm
 
 ## What it does
 
-A word processor for CVs, letters and stories. Headings 1–3, bold, italic, font size, bullet and numbered lists, word and character counts, user-placed page breaks on A4, Letter or A5 sheets, "Change everywhere" for a word, a list of the words used most, and synonyms from on-device AI where Chrome has it. Saves `.warren` files; exports `.docx` for Word and PDF through the print dialog. Idea from LaxDOTexe.
+A word processor for CVs, letters and stories. Headings 1–3, bold, italic, underline, font size, alignment (left, centre, right, justify), bullet and numbered lists, word and character counts, user-placed page breaks on A4, Letter or A5 sheets, "Change everywhere" for a word, a list of the words used most, and synonyms from on-device AI where Chrome has it. Saves `.warren` files; exports `.docx` for Word and PDF through the print dialog. Idea from LaxDOTexe.
 
 ## How it works
 
@@ -12,12 +12,13 @@ A word processor for CVs, letters and stories. Headings 1–3, bold, italic, fon
 
 `lexical.ts`, `editor.svelte.ts`. `createEditor` with `HeadingNode`, `ListNode`, `ListItemNode` and `PageBreakNode`, then `registerRichText`, `registerList` and `registerHistory` (400 ms merge window), and `setRootElement` on the page's `contenteditable` through an attachment. No React, no Svelte binding package.
 
-Every Lexical `$` function lives in `lexical.ts`: Svelte reserves the `$` prefix in `.svelte.ts`, so `WarrenEditor` (runes) only calls plain wrappers. `WarrenEditor` keeps the reactive mirror the UI reads: `json` (the serialized state, replaced on every content change), the selection's `bold`, `italic`, `block` and `size`, the selected `word`, `can_undo` / `can_redo`, and `dirty` (a revision counter against the saved one; page settings count as changes).
+Every Lexical `$` function lives in `lexical.ts`: Svelte reserves the `$` prefix in `.svelte.ts`, so `WarrenEditor` (runes) only calls plain wrappers. `WarrenEditor` keeps the reactive mirror the UI reads: `json` (the serialized state, replaced on every content change), the selection's `bold`, `italic`, `underline`, `align`, `block` and `size`, the selected `word`, `can_undo` / `can_redo`, and `dirty` (a revision counter against the saved one; page settings count as changes).
 
 | Piece | Where | Notes |
 |-------|-------|-------|
 | Page break | `page-break-node.ts` | A `DecoratorNode` with `$config()` type `page-break`, a `contenteditable=false` `div.page-break`, inserted with `$insertNodeToNearestRoot` (splits a list it's in) |
 | Block style | `lexical.ts:set_block` | Headings and body through `$setBlocksType`; lists through `INSERT_*_LIST_COMMAND` / `REMOVE_LIST_COMMAND`. Tab and Shift+Tab indent and outdent inside a list only, so Tab still leaves the editor elsewhere |
+| Alignment | `editor.svelte.ts:set_align` | `FORMAT_ELEMENT_COMMAND` (rich text handles it) writes the element's `format`; Lexical's reconciler sets `text-align` on the block. The current value is read from the list item, else the top-level block; `start`/`end` read as left/right |
 | Font size | `lexical.ts:set_size` | `$patchStyleText` writes `font-size: Npt` into the text node's `style` |
 | Undo after open | `lexical.ts:create_lexical` | Lexical's history can't undo the first change after a clear (it has no state to go back to), so `reset_history` sets `history.current` to the loaded state |
 
@@ -39,25 +40,25 @@ The paper is `min(page width, 100cqi − gutter)` wide with `min(margin, 7cqi)` 
 
 ### Layout
 
-At `@container (width >= 44rem)` the tools are a 15rem sidebar of `<details>` groups (Text, Paragraph, Page, Words, Export; open state in app storage `groups`). Below that the sidebar is hidden and a formatting bar sits above the page (bold, italic, paragraph style select, bullets, numbers, More); More opens the same groups in a bottom sheet (the Ask pattern). Spelling is the browser's own `spellcheck` underline.
+At `@container (width >= 44rem)` the tools are a 15rem sidebar of `<details>` groups (Text, Paragraph, Page, Words, Export; open state in app storage `groups`). Below that the sidebar is hidden and a formatting bar sits above the page (bold, italic, underline, paragraph style select, bullets, numbers, More); More opens the same groups in a bottom sheet (the Ask pattern). Spelling is the browser's own `spellcheck` underline.
 
 ### Export
 
-The editor state is walked into blocks (`model.ts:blocks_of`): paragraph, heading (h4–h6 from paste count as h3), list item (kind, level, list id, start) and page break, each with runs (bold, italic, underline, strike, size in pt; a `linebreak` is `\n`, a tab `\t`).
+The editor state is walked into blocks (`model.ts:blocks_of`): paragraph, heading (h4–h6 from paste count as h3), list item (kind, level, list id, start) and page break, each with its alignment (`align_of`: the element `format`, `null` when unset) and runs (bold, italic, underline, strike, size in pt; a `linebreak` is `\n`, a tab `\t`).
 
 **.docx** (`docx.ts`), written into `write_zip` (deflate):
 
 | Part | Holds |
 |------|-------|
 | `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels` | The package wiring: document, styles, numbering, core properties |
-| `word/document.xml` | One `w:p` per block; runs with `w:b`, `w:i`, `w:u`, `w:strike`, `w:sz` (half points); `\n` → `w:br`, `\t` → `w:tab`. A page break becomes `w:pageBreakBefore` on the next paragraph (a trailing one, a `w:br w:type="page"`). `w:sectPr` with `w:pgSz` and `w:pgMar` in twips |
+| `word/document.xml` | One `w:p` per block; runs with `w:b`, `w:i`, `w:u`, `w:strike`, `w:sz` (half points); `\n` → `w:br`, `\t` → `w:tab`. Alignment is `w:jc` (`both` for justify), written in the schema's `w:pPr` order (style, page break, numbering, justification). A page break becomes `w:pageBreakBefore` on the next paragraph (a trailing one, a `w:br w:type="page"`). `w:sectPr` with `w:pgSz` and `w:pgMar` in twips |
 | `word/styles.xml` | Defaults (Inter, 11 pt, line 1.4, 6 pt after), `Normal`, `Heading1`–`3` (22 / 16 / 13 pt bold, keep with next, outline levels), `ListParagraph` |
 | `word/numbering.xml` | Abstract 0 bullets (• ◦ ▪), abstract 1 numbers (decimal, lower letter, lower roman), nine levels at 0.5 in steps; one `w:num` per list with a `startOverride`, so each list restarts |
 | `docProps/core.xml` | Title (the file name), creator "Warren", dates |
 
 Characters XML can't hold (C0 controls) are dropped. A browser test parses every part with `DOMParser` and checks every relationship target exists. Not opened in Word or LibreOffice yet (neither is on the build machine).
 
-**PDF** (`print.ts`): `print_document` builds a standalone page for `print_html`: `@page { size: A4|letter|A5 portrait; margin }`, Inter embedded with `@font-face`, Brand Light ink, and `div.break { break-before: page }`. `document_css(scope)` is shared with the editor, so heading sizes, list markers and spacing match what was typed. Rendered through Chromium's PDF printer, the sample is two Letter pages.
+**PDF** (`print.ts`): `print_document` builds a standalone page for `print_html`: `@page { size: A4|letter|A5 portrait; margin }`, Inter embedded with `@font-face`, Brand Light ink, and `div.break { break-before: page }`; an aligned block carries `style="text-align:…"`. `document_css(scope)` is shared with the editor, so heading sizes, list markers and spacing match what was typed. Rendered through Chromium's PDF printer, the sample is two Letter pages.
 
 Shared numbers are in `page.ts`: page sizes and margins (A4 and Letter 20 mm, A5 15 mm), body 11 pt, headings, line height, paragraph spacing.
 
