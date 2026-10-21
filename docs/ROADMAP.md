@@ -341,6 +341,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
 - [x] Sun & Moon (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Tango-style suns and moons with `=`/`×` signs, 6×6 and 8×8, daily, hints that name the rule
 - [x] Hutches (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): one rabbit per row, column and meadow, none touching (LinkedIn Queens style); generated so the deduction rules alone solve it, hints show the next step, daily at 8×8. Region borders in `$kit/games` (`region_edges`)
+- [x] Hop (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Zip-style path through numbered dots that fills the grid, walls on some puzzles, 6×6 to 8×8, 7×7 daily, hints through forced cells
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

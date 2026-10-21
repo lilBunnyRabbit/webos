@@ -5,3 +5,4 @@ export * from "./plays";
 export * from "./plays.svelte";
 export * from "./stopwatch.svelte";
 export * from "./time";
+export * from "./path";

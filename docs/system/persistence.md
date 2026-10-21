@@ -54,6 +54,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
+| `app.hop.{stats,daily,game,size}` | `user/hop` | Stats per size; daily puzzle; path in progress; last size |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
 | `app.image-tools.test-image` | `user/image-tools` | Test image section: pattern, markings, size and format |

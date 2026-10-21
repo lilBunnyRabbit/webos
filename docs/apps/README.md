@@ -30,6 +30,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [hutches.md](hutches.md) | Hutches (`hutches`) | The generator (king-separated rabbits, grown meadows, reshaping until one answer and logic reach it), `count_solutions`, the deduction rules behind Hint, input and auto-cross |
 | [soundboard.md](soundboard.md) | Soundboard (`soundboard`) | The shared player and play modes, edited time → source time across cuts and crossfades (`timeline.ts`), reading a video's sound (decode, then the record task; 10 min confirm, 1 h refusal), WAV encoding, the board file, pad colour and picture, the trim editor |
 | [sun-and-moon.md](sun-and-moon.md) | Sun & Moon (`sun-and-moon`) | The rules, the line-pattern solver and why it proves uniqueness, the generator (givens first down to one per row, then signs), the five hint rules |
+| [hop.md](hop.md) | Hop (`hop`) | The random path by backbite moves, walls cut from unused edges, the dotted-path counter and its pruning, cutting other answers then removing dots under a search budget, the hint that runs through forced cells |
 
 ## Page shape
 

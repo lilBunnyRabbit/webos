@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.44.0",
+    date: "2026-10-21",
+    title: "Daily puzzles",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["hop"],
+        text: "Hop, a daily path puzzle: draw one line through the numbers in order that fills every cell of the grid, with walls to work around and hints when you're stuck.",
+      },
+    ],
+  },
+  {
     version: "3.43.0",
     date: "2026-10-21",
     title: "Warren gets polished",
