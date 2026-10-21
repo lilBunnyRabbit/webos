@@ -47,6 +47,7 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
+  import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
   import { QrFrames } from "$kit/components/qr-transfer";
@@ -413,6 +414,20 @@
             <span class="font-mono text-2xs text-foreground/80 tabular-nums"
               >{trim.start.toFixed(2)}–{trim.end.toFixed(2)} s{wave_selection ? `, selected ${wave_selection.start.toFixed(2)}–${wave_selection.end.toFixed(2)} s` : ""}</span
             >
+          </div>
+        </Section>
+        <Section
+          title="AI gate"
+          description="Wraps an app that needs on-device AI, from $kit: checking, then why it's unavailable or a one-time download notice, then the app. Live on this device. Ask uses it."
+          flush
+        >
+          <div class="flex h-72 max-w-sm flex-col overflow-auto rounded-xl bg-background ring-1 ring-foreground/10">
+            <AiGate features={["prompt"]} title="This app isn't available on this device">
+              {#snippet children({ notice })}
+                {@render notice?.()}
+                <div class="grid flex-1 place-items-center p-4 text-ui text-foreground/80">The app goes here</div>
+              {/snippet}
+            </AiGate>
           </div>
         </Section>
         <Section

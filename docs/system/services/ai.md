@@ -26,7 +26,7 @@ Two classes, picked by `platform_services` in `kernel/init.ts` and lazy-loaded w
 | `extract` | `(messages, schema: z.ZodType<T>, { signal? }) => Promise<T>` | A structured answer: the last message (a text `user` one) is sent with `responseConstraint: z.toJSONSchema(schema)`, the reply parsed and validated (throws when it doesn't fit). A fresh session per call, destroyed after: nothing is kept (ADR-054) |
 | `measure` | `(text, { signal? }) => Promise<AiUsage>` | `measureContextUsage(text)` on a kept "Token counter" session, with that session's `contextWindow`. Ask uses it for command costs and its instructions |
 
-`AI_REQUIREMENTS` (in `type.ts`) is the one sentence on what's needed: desktop Chrome 138+ for summaries, translation and detection, 148+ for chat, about 22 GB free for the download, no phones or other browsers. Ask and the error messages show it.
+`AI_REQUIREMENTS` (in `type.ts`) is the one sentence on what's needed: desktop Chrome 138+ for summaries, translation and detection, 148+ for chat, about 22 GB free for the download, no phones or other browsers. The kit's `AiGate` (Ask, the AI games) and the error messages show it.
 
 The browser's globals are typed in `built-in-ai.d.ts`, since TypeScript's DOM lib doesn't have them; only the members used are declared.
 
