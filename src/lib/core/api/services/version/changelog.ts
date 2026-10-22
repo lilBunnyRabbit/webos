@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.55.2",
+    date: "2026-10-22",
+    title: "Fresher fonts, smoother updates",
+    changes: [
+      {
+        kind: FIXED,
+        text: "Fixes to the built-in Burrow font now reach a WebOS that already downloaded it, and updating after WebOS updated itself in the background no longer downloads everything again.",
+      },
+    ],
+  },
+  {
     version: "3.55.1",
     date: "2026-10-22",
     title: "Cleaner uninstalls",

@@ -21,7 +21,7 @@ Four items left open by earlier sessions:
 
 ## Action items
 - [x] `on_uninstall_data` + Moonrabbit hook, heartbeat, prompt danger: one release.
-- [ ] Service worker fixes on `generateSW`: its own release.
+- [x] Service worker fixes on `generateSW`: its own release.
 
 ## Next session topics
 - An `app uninstall` shell command.

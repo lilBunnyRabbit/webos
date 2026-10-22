@@ -160,3 +160,6 @@ Decided with the owner ([brainstorm](../brainstorm/2026-10-21_app-font.md)). `Ap
 - **Off the boot path.** The loader is a lazy module; Inter and Hack paint first and the chosen family swaps in. `--font-sans` / `--font-mono` read `--app-font-sans` / `--app-font-mono`, falling back to Inter and Hack, so `@theme inline` utilities follow at runtime.
 - **A broken or missing font** falls back to the default with an error notification: SettingsService now depends on `notifications`.
 - Ways in: Settings › Appearance › Fonts (UI font and code font pickers, a font file per role, installed fonts with Remove), Font Viewer and Font Maker "Use as app font". No shell commands.
+
+## Revision 2026-10-22 (hashed built-in fonts)
+Burrow's faces load from content-hashed asset URLs (`src/assets/fonts/burrow/`, `?url` imports) instead of `public/fonts/`, so the `webos-fonts` CacheFirst cache gets a fixed font as a new entry instead of serving the first copy forever. The runtime rule now matches any `.ttf` or `.ttc`.

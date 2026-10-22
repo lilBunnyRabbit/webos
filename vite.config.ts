@@ -64,6 +64,8 @@ export default defineConfig({
       workbox: {
         // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
+        // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
+        globIgnores: ["**/mammoth-*.js"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Notification clicks (ADR-062): relative to sw.js, so it follows the base.
         importScripts: ["sw-notifications.js"],
@@ -75,9 +77,10 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-wasm", expiration: { maxEntries: 16 } },
           },
-          // Built-in app fonts (Burrow): about 0.5 MB, so cached when first chosen instead of in every install.
+          // Built-in app fonts (Burrow): about 0.5 MB, so cached when first chosen instead of in every install. Content-hashed
+          // names, so a fixed font is a new entry.
           {
-            urlPattern: /\/fonts\/[^/]+\.(ttf|ttc)$/,
+            urlPattern: /\.(ttf|ttc)$/,
             handler: "CacheFirst",
             options: { cacheName: "webos-fonts", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
           },
@@ -86,6 +89,12 @@ export default defineConfig({
             urlPattern: /\.(aff|dic)$/,
             handler: "CacheFirst",
             options: { cacheName: "webos-dictionaries", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
+          },
+          // Warren's .docx import (~100 KB gzipped), which few installs ever use.
+          {
+            urlPattern: /\/assets\/mammoth-[^/]+\.js$/,
+            handler: "CacheFirst",
+            options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
           },
         ],
       },
@@ -126,6 +135,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // A fixed name, so the precache can leave the chunk out.
+        chunkFileNames: (chunk) =>
+          chunk.moduleIds.some((id) => id.includes("/node_modules/mammoth/")) ? "assets/mammoth-[hash].js" : "assets/[name]-[hash].js",
         // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
         manualChunks(id, { getModuleInfo }) {
           if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
@@ -160,7 +172,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts"],
+          include: ["src/**/*.test.ts", "*.test.ts"],
           exclude: ["src/**/*.browser.test.ts"],
           environment: "node",
           // Seeded puzzle generators run 2 s here and 2-3x that on the CI runner: the default 5 s fails them at random.

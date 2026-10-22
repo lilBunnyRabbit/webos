@@ -63,7 +63,7 @@ export function descriptors_of(bytes: Uint8Array): FontFaceDescriptors {
 export const file_faces = (bytes: Uint8Array): FaceSource[] => split_collection(bytes).map((face) => ({ bytes: face }));
 
 export interface ShippedFace {
-  path: string;
+  url: string;
   weight: string;
   style: "normal" | "italic";
 }
@@ -71,7 +71,7 @@ export interface ShippedFace {
 export function fetch_faces(faces: readonly ShippedFace[]): Promise<FaceSource[]> {
   return Promise.all(
     faces.map(async (face) => {
-      const response = await fetch(`${import.meta.env.BASE_URL}${face.path}`);
+      const response = await fetch(face.url);
       if (!response.ok) throw new Error(`The built-in font didn't download (${response.status})`);
       return { bytes: new Uint8Array(await response.arrayBuffer()), descriptors: { weight: face.weight, style: face.style } };
     })

@@ -76,3 +76,5 @@ CONVENTIONS allows inline prop types; `interface Props` required for kit/ui comp
 
 ### Service worker (parked, 2026-10-22)
 A typed `injectManifest` worker with a parallel install was built (branch `worktree-agent-a1230a22823c3773c`, commit 997552b4: 30.1 → 10.8 s after skipping 12 versions; Chromium runs only ~3 fetches at a time inside a worker's install). The owner declined the six workbox devDependencies it needs, then parked the whole topic: "We will work on this later. I need to decide first." Open: generateSW with only the smaller fixes (mammoth runtime cache, hashed Burrow font URLs, import-map `\0` identity, reload when the browser already installed the update), a hand-written worker without workbox, or the built branch. The Burrow stale-font bug stays until then.
+
+Decided 2026-10-22 ([owner calls](2026-10-22_owner-calls.md), "Service worker (decided)"): `generateSW` with the smaller fixes, no new dependencies.
