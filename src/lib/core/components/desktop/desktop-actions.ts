@@ -42,7 +42,7 @@ import PromptDialog from "../dialogs/prompt-dialog.svelte";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { report_file_error } from "../files/file-explorer.errors";
 import { name_problem } from "../files/name-rules";
-import { is_image, save_to_disk, set_wallpaper } from "../files/file-actions";
+import { can_save_to_disk, is_image, save_to_disk, set_wallpaper } from "../files/file-actions";
 import { uninstall_app } from "../apps/app-actions";
 
 // The desktop is the shell, not an app window, so its questions are system dialogs (ADR-025).
@@ -222,7 +222,7 @@ export async function item_menu(items: DesktopItem[], anchor: Position): Promise
       { id: "cut", label: "Cut", icon: ScissorsIcon, shortcut: "Ctrl+X" },
       { id: "copy", label: "Copy", icon: CopyIcon, shortcut: "Ctrl+C" },
       ...(single ? [{ id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2" }] : []),
-      ...(single && !shortcut ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
+      ...(single && !shortcut && can_save_to_disk(item.kind === "directory" ? "directory" : "file") ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),
       ...(single ? style_item(item) : []),
       { separator: true },

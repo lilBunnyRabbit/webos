@@ -35,6 +35,9 @@ export class GifDecoder {
   }
 
   static async open(file: File): Promise<GifDecoder> {
+    if (typeof ImageDecoder !== "function") {
+      throw new Error("This browser can't step through GIF frames (it has no ImageDecoder). Videos still play; for GIFs, use Chrome, Edge or Firefox.");
+    }
     const decoder = new ImageDecoder({ data: await file.arrayBuffer(), type: "image/gif" });
     try {
       await decoder.tracks.ready;

@@ -2,6 +2,7 @@ import type { AppId, AppsService, FilesService, Kernel, NotificationsService, Ta
 import { untrack } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 import { error_message } from "$lib/core/utils";
+import { on_idle } from "$lib/core/utils/idle";
 import { Mode } from "../../kernel/mode";
 import { LatestWriter } from "../files/latest-writer";
 import { TaskJobStatus } from "../tasks/type";
@@ -110,7 +111,7 @@ export class OfflineService implements IOfflineService {
     );
 
     // After an update the old build's cache still has to go, even with nothing picked; off the boot path either way.
-    if (new_build || this.pending().length > 0) requestIdleCallback(() => void this.sync());
+    if (new_build || this.pending().length > 0) on_idle(() => void this.sync());
   }
 
   destroy(): void {

@@ -5,6 +5,56 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.60.1",
+    date: "2026-10-23",
+    title: "More browsers",
+    changes: [
+      {
+        kind: FIXED,
+        text: "WebOS starts in Safari on the Mac, iPhone and iPad instead of stopping at the loading screen.",
+      },
+      {
+        kind: FIXED,
+        text: "Save to disk… works in Firefox and Safari too: a file lands in your downloads. A folder needs a browser with a folder picker, so compress it first there.",
+      },
+      {
+        kind: FIXED,
+        apps: ["image-editor"],
+        text: "Image Editor keeps brightness, contrast, saturation and the other adjustments in images saved from Safari.",
+      },
+      {
+        kind: FIXED,
+        apps: ["cards"],
+        text: "Cards scans EAN, UPC, Code 128 and Code 39 barcodes in browsers that can't read them on their own, like Firefox, Safari and Chrome on Windows.",
+      },
+      {
+        kind: FIXED,
+        apps: ["birdseye", "image-tools"],
+        text: "Birdseye's blurred edges and the soft edge of Image Tools' patches show in Safari too.",
+      },
+      {
+        kind: FIXED,
+        apps: ["gif-player", "hopsprite"],
+        text: "Where a browser can't step through a GIF's frames, GIF Player says so and Hopsprite imports the first frame instead of failing.",
+      },
+      {
+        kind: FIXED,
+        apps: ["paint", "doodlehop", "moonrabbit", "proposals", "font-maker"],
+        text: "Drawing in Paint and Doodlehop, dropping a picture into Moonrabbit or Proposals, and picking a letter pair in Font Maker work in older Safari.",
+      },
+      {
+        kind: FIXED,
+        apps: ["moonrabbit"],
+        text: "Moonrabbit photos added in Safari keep their real picture type, so exported journals show them everywhere.",
+      },
+      {
+        kind: FIXED,
+        apps: ["p2p-transfer"],
+        text: "P2P Transfer shows Share only where the browser can share, instead of a button that fails.",
+      },
+    ],
+  },
+  {
     version: "3.60.0",
     date: "2026-10-23",
     title: "Browser check",

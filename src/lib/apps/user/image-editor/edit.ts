@@ -1,4 +1,5 @@
 import { format_of, type ImageFormat } from "$kit/utils/image-format";
+import { filter_css, FilterKind, type FilterStep } from "$kit/utils/filter/math";
 import { file_stem } from "$lib/core/api/services/files/path";
 import { clamp } from "$lib/core/utils";
 
@@ -126,17 +127,21 @@ export function adjustments_equal(a: Readonly<Adjustments>, b: Readonly<Adjustme
  * A CSS / canvas `filter` for the adjustments. `scale` is screen pixels per image pixel, so a preview at 200% blurs
  * twice as many screen pixels as the export blurs image pixels.
  */
-export function filter_string(adjustments: Readonly<Adjustments>, scale = 1): string {
-  const parts: string[] = [];
+export function adjustment_steps(adjustments: Readonly<Adjustments>, scale = 1): FilterStep[] {
+  const steps: FilterStep[] = [];
   const { brightness, contrast, saturation, hue, blur, grayscale, sepia } = adjustments;
-  if (brightness !== 100) parts.push(`brightness(${brightness}%)`);
-  if (contrast !== 100) parts.push(`contrast(${contrast}%)`);
-  if (saturation !== 100) parts.push(`saturate(${saturation}%)`);
-  if (hue !== 0) parts.push(`hue-rotate(${hue}deg)`);
-  if (grayscale !== 0) parts.push(`grayscale(${grayscale}%)`);
-  if (sepia !== 0) parts.push(`sepia(${sepia}%)`);
-  if (blur !== 0) parts.push(`blur(${+(blur * scale).toFixed(3)}px)`);
-  return parts.length ? parts.join(" ") : "none";
+  if (brightness !== 100) steps.push({ kind: FilterKind.BRIGHTNESS, percent: brightness });
+  if (contrast !== 100) steps.push({ kind: FilterKind.CONTRAST, percent: contrast });
+  if (saturation !== 100) steps.push({ kind: FilterKind.SATURATE, percent: saturation });
+  if (hue !== 0) steps.push({ kind: FilterKind.HUE_ROTATE, degrees: hue });
+  if (grayscale !== 0) steps.push({ kind: FilterKind.GRAYSCALE, percent: grayscale });
+  if (sepia !== 0) steps.push({ kind: FilterKind.SEPIA, percent: sepia });
+  if (blur !== 0) steps.push({ kind: FilterKind.BLUR, radius: +(blur * scale).toFixed(3) });
+  return steps;
+}
+
+export function filter_string(adjustments: Readonly<Adjustments>, scale = 1): string {
+  return filter_css(adjustment_steps(adjustments, scale));
 }
 
 export function resize_to(current: Size, changed: "width" | "height", value: number, keep: boolean): Size {

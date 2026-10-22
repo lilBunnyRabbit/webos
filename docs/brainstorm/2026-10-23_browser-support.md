@@ -49,7 +49,7 @@ Owner: "after we do this and push it. fix all and push." Separate release after 
 
 ## Action items
 - [x] ADR-067, build the gate, list, screen, Settings › About, `compat` command, CLAUDE.md rule, docs/system page. Push (3.60.0).
-- [ ] Fix every unguarded call found. Push (3.60.1).
+- [x] Fix every unguarded call found. Push (3.60.1).
 
 ## Next session topics
 - Real Safari / iOS / Firefox runs (none checked yet).

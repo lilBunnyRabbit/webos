@@ -27,6 +27,8 @@ export type QrSource = ImageBitmap | HTMLVideoElement;
 
 /** jsQR walks every pixel on the main thread; a camera frame at full resolution stalls the preview. */
 const FALLBACK_DECODE_SIZE = 1024;
+/** A 1D code's bars are a module or two wide; scaled down to jsQR's size, a code across a fifth of a photo blurs away. */
+const LINEAR_DECODE_SIZE = 2048;
 
 /** Scales `width` × `height` down (never up) to fit a `max` square, keeping the aspect ratio and at least 1px. */
 export function fit_within(width: number, height: number, max: number): { width: number; height: number } {
@@ -41,10 +43,11 @@ export function source_size(source: QrSource): { width: number; height: number }
 }
 
 /**
- * The native `BarcodeDetector` for the `formats` it reads (its names: `qr_code`, `ean_13`, …), otherwise jsQR behind
- * the same interface, which reads QR codes only. A format the platform lacks is left out rather than dropping to jsQR:
- * macOS reads UPC-A as EAN-13 and lists no `upc_a`. jsQR is imported here, not at the top, so it only ships to
- * browsers that need it (iOS Safari, Firefox).
+ * The native `BarcodeDetector` for the `formats` it reads (its names: `qr_code`, `ean_13`, …), otherwise jsQR for QR
+ * plus the hand-written `linear-barcode` decoder for the asked 1D formats it knows (EAN-13, UPC-A, EAN-8, UPC-E,
+ * Code 128, Code 39). A format the platform lacks is left out rather than dropping to the fallback: macOS reads UPC-A
+ * as EAN-13 and lists no `upc_a`. Both fallbacks are imported here, not at the top, so they only ship to browsers that
+ * need them (Safari, Firefox, Chrome on Windows and Linux).
  */
 export async function create_barcode_detector(formats: string[]): Promise<BarcodeDetector> {
   const Native = (globalThis as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
@@ -53,6 +56,8 @@ export async function create_barcode_detector(formats: string[]): Promise<Barcod
   if (Native && usable.length > 0) return new Native({ formats: usable });
 
   const { default: jsqr } = await import("jsqr");
+  const linear = formats.some((format) => format !== "qr_code") ? await import("./linear-barcode") : null;
+  const linear_formats = linear ? formats.filter((format) => linear.LINEAR_FORMATS.includes(format)) : [];
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Canvas 2D is unavailable");
@@ -66,7 +71,15 @@ export async function create_barcode_detector(formats: string[]): Promise<Barcod
       canvas.height = height;
       context.drawImage(source, 0, 0, width, height);
       const code = jsqr(context.getImageData(0, 0, width, height).data, width, height);
-      return code ? [{ rawValue: code.data, format: "qr_code" }] : [];
+      if (code) return [{ rawValue: code.data, format: "qr_code" }];
+      if (!linear || linear_formats.length === 0) return [];
+      const fine = fit_within(natural.width, natural.height, LINEAR_DECODE_SIZE);
+      canvas.width = fine.width;
+      canvas.height = fine.height;
+      context.drawImage(source, 0, 0, fine.width, fine.height);
+      const pixels = context.getImageData(0, 0, fine.width, fine.height).data;
+      const bars = linear.decode_linear(linear.to_gray(pixels, fine.width, fine.height), linear_formats);
+      return bars ? [{ rawValue: bars.value, format: bars.format }] : [];
     },
   };
 }

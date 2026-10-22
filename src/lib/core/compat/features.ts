@@ -87,8 +87,8 @@ export const FEATURES: Feature[] = [
   {
     id: "idle-callback",
     name: "Idle callbacks",
-    lost: "Start-up schedules background work with it.",
-    level: Level.START,
+    lost: "Background work at start-up runs on a timer instead of when the browser is idle.",
+    level: Level.COSMETIC,
     apps: ["text-editor"],
     min: min("47", "55", null),
     probe: () => global("requestIdleCallback"),
@@ -257,7 +257,7 @@ export const FEATURES: Feature[] = [
   {
     id: "file-pickers",
     name: "File System Access pickers",
-    lost: "Mounting a folder from your device and Save to disk.",
+    lost: "Mounting a folder from your device and saving a folder to disk. Files go to your downloads instead.",
     level: Level.SHELL,
     min: min("86", null, null),
     probe: () => global("showSaveFilePicker") && global("showDirectoryPicker"),
@@ -326,7 +326,7 @@ export const FEATURES: Feature[] = [
   {
     id: "image-decoder",
     name: "Image decoding",
-    lost: "Playing and importing GIFs.",
+    lost: "Playing GIFs; Hopsprite imports only a GIF's first frame.",
     level: Level.APPS,
     apps: ["gif-player", "hopsprite", "image-tools"],
     min: min("94", "133", null),
@@ -345,8 +345,8 @@ export const FEATURES: Feature[] = [
     // Safari has the property but draws without the filter, so this draws once and reads the pixel back.
     id: "canvas-filter",
     name: "Canvas filters",
-    lost: "Image Editor saves without your adjustments; blur in Image Tools and Birdseye.",
-    level: Level.APPS,
+    lost: "Image Editor, Image Tools and Birdseye apply filters by hand: slower, and Birdseye's blur is softer.",
+    level: Level.COSMETIC,
     apps: ["image-editor", "image-tools", "birdseye"],
     min: min("52", "49", null),
     probe: () => {
@@ -364,8 +364,9 @@ export const FEATURES: Feature[] = [
     lost: "Picking a kerning pair and dropping a picture where you point.",
     level: Level.APPS,
     apps: ["font-maker", "moonrabbit", "proposals"],
-    min: min("128", "20", "26.2"),
-    probe: () => "caretPositionFromPoint" in document,
+    // `caretRangeFromPoint` stands in where `caretPositionFromPoint` is missing.
+    min: min("4", "20", "5"),
+    probe: () => "caretPositionFromPoint" in document || "caretRangeFromPoint" in document,
   },
   {
     id: "plaintext-only",
@@ -387,8 +388,8 @@ export const FEATURES: Feature[] = [
   {
     id: "coalesced-events",
     name: "Coalesced pointer events",
-    lost: "Drawing in Paint and Doodlehop fails; other apps draw less smoothly.",
-    level: Level.APPS,
+    lost: "Fast strokes in drawing apps are less smooth.",
+    level: Level.COSMETIC,
     apps: ["paint", "doodlehop", "font-maker", "hopsprite", "proposals", "pdf-tools"],
     min: min("58", "59", "18.2"),
     probe: () => proto("PointerEvent", "getCoalescedEvents"),
@@ -406,7 +407,7 @@ export const FEATURES: Feature[] = [
   {
     id: "web-share",
     name: "Web Share",
-    lost: "Share buttons; P2P Transfer's Share fails.",
+    lost: "Share buttons.",
     level: Level.APPS,
     apps: ["cards", "p2p-transfer", "proposals"],
     min: min("128", null, "12.1"),
@@ -425,7 +426,7 @@ export const FEATURES: Feature[] = [
     // Exposed on macOS, ChromeOS and Android Chrome only; QR codes fall back to a library everywhere.
     id: "barcode-detector",
     name: "Barcode detection",
-    lost: "Scanning shop barcodes in Cards. QR codes still work.",
+    lost: "Cards reads EAN, UPC, Code 128 and Code 39 itself; other barcode types need typing. QR codes still work.",
     level: Level.APPS,
     apps: ["cards"],
     min: min("88", null, null),

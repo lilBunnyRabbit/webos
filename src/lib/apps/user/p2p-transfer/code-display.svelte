@@ -7,6 +7,7 @@
   let { code, label, kind }: { code: string; label: string; kind: string } = $props();
 
   const qr = $derived(qr_path(code));
+  const can_share = typeof navigator.share === "function";
 
   /** Hands the code to a messaging app or nearby share; faster than copy, switch apps, paste. */
   function share() {
@@ -32,7 +33,9 @@
     <span>· ECC L</span>
     <span class="flex">
       <CopyButton text={code} />
-      <IconButton label="Share code" size="sm" onclick={share}><ShareNetworkIcon weight="bold" /></IconButton>
+      {#if can_share}
+        <IconButton label="Share code" size="sm" onclick={share}><ShareNetworkIcon weight="bold" /></IconButton>
+      {/if}
     </span>
   </figcaption>
 </figure>

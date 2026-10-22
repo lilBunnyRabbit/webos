@@ -64,7 +64,7 @@ Each section is a `contenteditable="plaintext-only"` div with `white-space: pre-
 
 - **DOM is the source while typing.** Every `input` reads the runs and hands them up; the component remembers the array it emitted and re-renders from the model only when `content` is some other array (load, switching proposals), so the caret never jumps.
 - **Caret.** A `selectionchange` listener keeps the last range inside the section, so the picture menu inserts where the caret was even after the tap moved focus to the button. With no range the picture goes at the end.
-- **Images in.** Paste (`image_files(clipboardData)`) and drop (at `caretPositionFromPoint`) in the section; the section's picture button opens a menu: Take a photo (mobile, `pick_device_files({ capture: "environment" })`), Choose a picture / From this device… (`pick_device_files`), From files… (the window's file picker, several at once) and Sketch…. `insert_image` (`editor-dom.ts:51`) puts the `<img>` at the range and the caret after it.
+- **Images in.** Paste (`image_files(clipboardData)`) and drop (at the point, `caret_range_at_point` from `$kit/utils/caret`: `caretPositionFromPoint`, or `caretRangeFromPoint` in Safari before 26.2) in the section; the section's picture button opens a menu: Take a photo (mobile, `pick_device_files({ capture: "environment" })`), Choose a picture / From this device… (`pick_device_files`), From files… (the window's file picker, several at once) and Sketch…. `insert_image` (`editor-dom.ts:51`) puts the `<img>` at the range and the caret after it.
 - **Toggle.** A click or tap on a picture flips `data-display`; CSS does the rest (`height: 2lh` inline, `display: block; max-height: 28rem` block). Deleting a picture is Backspace or Delete like a character.
 - The guide question is an `aria-placeholder` and an overlay span shown while the section is empty.
 
@@ -92,7 +92,7 @@ One container query on the app root (`container: proposals`): from 44rem the lis
 
 ## Dependencies & licences
 
-None beyond the platform: `contenteditable="plaintext-only"`, `OffscreenCanvas.convertToBlob` (WebP), `caretPositionFromPoint`, Web Share Level 2.
+None beyond the platform: `contenteditable="plaintext-only"`, `OffscreenCanvas.convertToBlob` (WebP; the data URL takes the type the browser actually wrote, PNG in Safari), `caretPositionFromPoint` (or `caretRangeFromPoint`, through `$kit/utils/caret`), Web Share Level 2.
 
 ## Limits
 

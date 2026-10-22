@@ -128,6 +128,13 @@
       file_path = opened.imported ? null : path;
       untitled = sprite_name_for(name);
       range.value = -1;
+      if (opened.still_gif) {
+        notifications.notify(app_id, {
+          type: NotificationType.WARNING,
+          title: "First frame only",
+          message: "This browser can't read the frames of an animated GIF, so only its first frame was imported.",
+        });
+      }
       if (opened.approximated) {
         notifications.notify(app_id, {
           type: NotificationType.WARNING,

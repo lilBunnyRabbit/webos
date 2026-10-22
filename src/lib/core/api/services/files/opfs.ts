@@ -1,4 +1,5 @@
 import { pick_device_files } from "$lib/core/utils/device-file";
+import { download_blob } from "$lib/core/utils/download";
 import type { FileSystemItem, FileSystemFileItem, ListOptions, CreateFileOptions, UploadOptions } from "./type";
 import { file_stem } from "./path";
 
@@ -378,6 +379,8 @@ const is_abort = (error: unknown) => error instanceof DOMException && error.name
 /** Android and iOS browsers have no folder picker, so mounting is hidden there (ADR-044). */
 export const can_pick_folders = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
+const can_pick_save = typeof window !== "undefined" && "showSaveFilePicker" in window;
+
 /** The browser's folder chooser. Must run inside a user gesture. Resolves `null` on cancel. */
 export async function pick_disk_folder(mode: "read" | "readwrite" = "readwrite"): Promise<FileSystemDirectoryHandle | null> {
   try {
@@ -389,11 +392,16 @@ export async function pick_disk_folder(mode: "read" | "readwrite" = "readwrite")
 }
 
 /**
- * Copies a file or folder out of OPFS onto the real disk. A file goes through the native Save dialog; a folder is copied
- * whole into a folder the user picks (auto-renamed there on clash). Resolves the name written, or `null` if cancelled.
+ * Copies a file or folder out of OPFS onto the real disk. A file goes through the native Save dialog, or the browser's
+ * downloads where there's none (Firefox, Safari); a folder is copied whole into a folder the user picks (auto-renamed
+ * there on clash), so it needs `can_pick_folders`. Resolves the name written, or `null` if cancelled.
  */
 export async function export_to_disk(handle: FileSystemFileHandle | FileSystemDirectoryHandle): Promise<string | null> {
   try {
+    if (handle.kind === "file" && !can_pick_save) {
+      download_blob(await handle.getFile(), handle.name);
+      return handle.name;
+    }
     if (handle.kind === "file") {
       const target = await disk().showSaveFilePicker({ suggestedName: handle.name, startIn: "downloads" });
       await write_file(target, await handle.getFile());

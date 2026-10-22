@@ -16,7 +16,7 @@ The window is wrapped in the kit's `AiGate` with `prompt-image`: on phones, othe
 
 `sketch-pad.svelte` is a raster `<canvas>` sized to its element times `devicePixelRatio`. Strokes are kept as points in **board units** (a 1000 × 1000 square, `ink.ts:9`), not pixels, so a resized window redraws the same drawing at the new size with the same relative line width (12 units, `ink.ts:10`).
 
-- Pointer capture on `pointerdown`; `getCoalescedEvents()` on every move (`sketch-pad.svelte:85`), so a fast flick keeps all its samples; `touch-action: none` on the canvas.
+- Pointer capture on `pointerdown`; `getCoalescedEvents()` on every move (`sketch-pad.svelte:85`, just the event itself in Safari before 18.2, which lacks it), so a fast flick keeps all its samples; `touch-action: none` on the canvas.
 - Each new sample paints one round-capped segment straight onto the canvas; a full redraw only happens when the stroke list, size or theme changes.
 - A stroke ends on `lostpointercapture` (`sketch-pad.svelte:95`), never `pointerup`, so a pointer that leaves the window or is cancelled still ends it.
 - Undo and Clear go through `$kit/utils/history` over the stroke list. Clear pushes an empty list, so Undo brings the drawing back.

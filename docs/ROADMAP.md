@@ -555,6 +555,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Boot budget: entry chunk <= 190 KB gz (was 180 until 2026-10-17), CI gate
 - [x] Backups (ADR-037): `BackupService`, Settings › Backup, `backup` commands
 - [x] Tasks service (ADR-013): after 1.0, additive (shipped 1.3.0)
+- [x] Unguarded web API calls fixed (2026-10-23, 3.60.1, [brainstorm](brainstorm/2026-10-23_browser-support.md#unguarded-calls-decided-fix-all-after-the-screen-ships)): `on_idle` for the boot-path `requestIdleCallback` (Safari), Save to disk through downloads without the Save dialog (folders hidden without a folder picker), P2P Share only with `navigator.share`, ImageDecoder checks (GIF Player message, Hopsprite first frame), `caretRangeFromPoint` and `getCoalescedEvents` fallbacks, canvas filters by hand where `ctx.filter` is ignored (`$kit/utils/filter`: Image Editor export, Image Tools patch, Birdseye edge), Moonrabbit's photo type from the bytes, Cards' hand-written 1D decoder (`$kit/utils/linear-barcode`: EAN/UPC, Code 128, Code 39)
 - [x] Releases posted to Discord (2026-10-21, [brainstorm](brainstorm/2026-10-21_discord-releases.md)): an `announce` job after a successful deploy posts every changelog entry newer than the latest `v*` tag as one embed each, then tags the newest; waits on the owner's webhook secret
 
 ### PWA & Offline

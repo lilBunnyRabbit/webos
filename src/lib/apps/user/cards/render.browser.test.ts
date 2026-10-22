@@ -1,5 +1,5 @@
 import { create_barcode_detector, detect_barcode } from "$kit/utils/qr";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { CardFormat, DETECTOR_FORMATS, FORMATS } from "./formats";
 import { barcode_path } from "./render";
 
@@ -39,4 +39,16 @@ test.each(SAMPLES.filter(([format]) => supported.includes(format)))("%s reads ba
   const detector = await create_barcode_detector(DETECTOR_FORMATS);
   const read = await detect_barcode(detector, await draw(format, code));
   expect(read, FORMATS[format].label).toEqual({ value: code, format });
+});
+
+const HAND_READ: CardFormat[] = [CardFormat.EAN_13, CardFormat.EAN_8, CardFormat.UPC_E, CardFormat.CODE_128, CardFormat.CODE_39];
+
+test.each(SAMPLES.filter(([format]) => HAND_READ.includes(format)))("%s reads back without a native detector", async (format, code) => {
+  vi.stubGlobal("BarcodeDetector", undefined);
+  try {
+    const detector = await create_barcode_detector(DETECTOR_FORMATS);
+    expect(await detect_barcode(detector, await draw(format, code))).toEqual({ value: code, format });
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

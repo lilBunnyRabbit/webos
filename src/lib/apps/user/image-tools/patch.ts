@@ -1,3 +1,5 @@
+import { draw_filtered, FilterKind, type FilterStep } from "$kit/utils/filter";
+
 export interface Pixels {
   data: Uint8ClampedArray;
   width: number;
@@ -756,9 +758,8 @@ export function compose({ original, edited, alignment, ops, colors, feather, sca
   }
 
   patch_context.globalCompositeOperation = "destination-in";
-  if (blur > 0) patch_context.filter = `blur(${blur}px)`;
-  patch_context.drawImage(mask, 0, 0);
-  patch_context.filter = "none";
+  const feathering: FilterStep[] = blur > 0 ? [{ kind: FilterKind.BLUR, radius: blur }] : [];
+  draw_filtered(patch_context, feathering, (target) => target.drawImage(mask, 0, 0), { x: left, y: top, width: right - left, height: bottom - top });
   context.drawImage(patch, left, top, right - left, bottom - top, left, top, right - left, bottom - top);
   return out;
 }

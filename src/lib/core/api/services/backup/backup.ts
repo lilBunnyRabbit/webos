@@ -1,5 +1,6 @@
 import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import { pick_device_files } from "$lib/core/utils/device-file";
+import { download_blob } from "$lib/core/utils/download";
 import type { StreamOptions } from "$lib/core/utils/zip/format";
 import { entry_blob, entry_stream, read_zip, readable, type ZipArchive } from "$lib/core/utils/zip/read";
 import type { ZipSource } from "$lib/core/utils/zip/write";
@@ -226,13 +227,7 @@ export async function save_to_device(
   name: string
 ): Promise<string> {
   if (target === DOWNLOAD) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = name;
-    link.click();
-    // Revoked later: some browsers start reading the URL only after click() returns.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    download_blob(blob, name);
     return name;
   }
   const writable = await target.createWritable();

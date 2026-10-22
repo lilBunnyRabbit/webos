@@ -111,7 +111,7 @@ CLAUDE.md's "Browser support list" rule: a commit that starts using a web API, C
 
 - No real Safari, iOS or Firefox run yet; everything was checked in Chromium with UA overrides and deleted prototype members.
 - `min` versions are copied from MDN data and age; probes stay the truth.
-- The unguarded calls the inventory found (`requestIdleCallback` at boot, Save to disk pickers, P2P Share, `ImageDecoder`, `caretPositionFromPoint`, `getCoalescedEvents`, `ctx.filter`, Moonrabbit's WebP label, Cards' 1D barcodes) are listed but not fixed; their levels follow today's behaviour.
+- Since 3.60.1 the calls the inventory found unguarded have fallbacks; their entries say what is still lost (idle callbacks, canvas filters and coalesced events are cosmetic now, caret from point accepts `caretRangeFromPoint`).
 - The list's text is about half of the 7 KB gz entry, and the boot budget has under 1 KB left.
 
 ## The list
@@ -126,7 +126,6 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `opfs-write` | Writing files | Nothing can be saved, and the first start writes a file. | `api-client` `p2p-transfer` | 86 | 111 | 26 |
 | `web-locks` | Web Locks | Alarms and offline apps coordinate open tabs with it at start-up. | `moonrabbit` | 69 | 96 | 15.4 |
 | `broadcast-channel` | Broadcast Channel | Alarms talk between tabs with it at start-up. |  | 54 | 38 | 15.4 |
-| `idle-callback` | Idle callbacks | Start-up schedules background work with it. | `text-editor` | 47 | 55 | no |
 | `import-maps` | Import maps | WebOS's code can't load. |  | 105 | 108 | 16.4 |
 
 ### Shell (`shell`)
@@ -150,7 +149,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `check-visibility` | checkVisibility() | Settings' side list doesn't follow your scrolling. | `settings` `funky` | 105 | 106 | 17.4 |
 | `subgrid` | Subgrid | File list columns don't line up. |  | 117 | 71 | 16 |
 | `window-zoom` | CSS zoom | Zooming a window doesn't scale its content. |  | 1 | 126 | 3.1 |
-| `file-pickers` | File System Access pickers | Mounting a folder from your device and Save to disk. |  | 86 | no | no |
+| `file-pickers` | File System Access pickers | Mounting a folder from your device and saving a folder to disk. Files go to your downloads instead. |  | 86 | no | no |
 | `pop-out` | Document Picture-in-Picture | Popping a window out to stay on top of other programs. |  | 116 | 151 | no |
 | `notification-actions` | Notification buttons | Alarm and reminder notifications come without their buttons. | `clock` `pomodoro` `calendar` | 53 | 152 | no |
 | `ai-writing` | On-device AI: summarize and translate | The summarize, translate and language commands. |  | 138 | no | no |
@@ -163,16 +162,14 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `video-frame-callback` | Video frame callbacks | Video tracking, frame stepping and camera scanning. | `birdseye` `video-tools` `soundboard` `gif-player` `cards` `p2p-transfer` `qr-reader` | 83 | 132 | 15.4 |
 | `video-encoder` | Video encoding | Saving video. | `birdseye` `video-tools` | 94 | 130 | 16.4 |
 | `audio-encoder` | Audio encoding | Sound in saved video and audio-only export. | `birdseye` `video-tools` | 94 | 130 | 26 |
-| `image-decoder` | Image decoding | Playing and importing GIFs. | `gif-player` `hopsprite` `image-tools` | 94 | 133 | no |
+| `image-decoder` | Image decoding | Playing GIFs; Hopsprite imports only a GIF's first frame. | `gif-player` `hopsprite` `image-tools` | 94 | 133 | no |
 | `capture-stream` | Media capture streams | Taking a sound from a video file. | `soundboard` | 62 | 149 | no |
-| `canvas-filter` | Canvas filters | Image Editor saves without your adjustments; blur in Image Tools and Birdseye. | `image-editor` `image-tools` `birdseye` | 52 | 49 | no |
-| `caret-from-point` | Caret from point | Picking a kerning pair and dropping a picture where you point. | `font-maker` `moonrabbit` `proposals` | 128 | 20 | 26.2 |
+| `caret-from-point` | Caret from point | Picking a kerning pair and dropping a picture where you point. | `font-maker` `moonrabbit` `proposals` | 4 | 20 | 5 |
 | `plaintext-only` | Plain-text editing | Journal entries and proposal sections can't be edited. | `moonrabbit` `proposals` | 51 | 136 | 5 |
-| `coalesced-events` | Coalesced pointer events | Drawing in Paint and Doodlehop fails; other apps draw less smoothly. | `paint` `doodlehop` `font-maker` `hopsprite` `proposals` `pdf-tools` | 58 | 59 | 18.2 |
 | `custom-highlight` | Custom highlights | Find highlights in Warren and the kerning highlight in Font Maker. | `warren` `font-maker` | 105 | 149 | 17.2 |
-| `web-share` | Web Share | Share buttons; P2P Transfer's Share fails. | `cards` `p2p-transfer` `proposals` | 128 | no | 12.1 |
+| `web-share` | Web Share | Share buttons. | `cards` `p2p-transfer` `proposals` | 128 | no | 12.1 |
 | `clipboard-image` | Copying images | Copying an image to the clipboard. | `image-tools` `qr-studio` | 76 | 127 | 13.1 |
-| `barcode-detector` | Barcode detection | Scanning shop barcodes in Cards. QR codes still work. | `cards` | 88 | no | no |
+| `barcode-detector` | Barcode detection | Cards reads EAN, UPC, Code 128 and Code 39 itself; other barcode types need typing. QR codes still work. | `cards` | 88 | no | no |
 | `passkey-prf` | Passkey encryption (PRF) | Unlocking Moonrabbit with a passkey. PIN, pattern and phrase still work. | `moonrabbit` | 133 | 139 | 18 |
 | `webhid` | WebHID | The HID device inspector. | `hid-lab` | 89 | no | no |
 | `eyedropper` | EyeDropper | Picking a colour from the screen. | `paint` | 95 | no | no |
@@ -181,6 +178,9 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 
 | id | Feature | Lost without it | Apps | Chrome | Firefox | Safari |
 |----|---------|-----------------|------|--------|---------|--------|
+| `idle-callback` | Idle callbacks | Background work at start-up runs on a timer instead of when the browser is idle. | `text-editor` | 47 | 55 | no |
+| `canvas-filter` | Canvas filters | Image Editor, Image Tools and Birdseye apply filters by hand: slower, and Birdseye's blur is softer. | `image-editor` `image-tools` `birdseye` | 52 | 49 | no |
+| `coalesced-events` | Coalesced pointer events | Fast strokes in drawing apps are less smooth. | `paint` `doodlehop` `font-maker` `hopsprite` `proposals` `pdf-tools` | 58 | 59 | 18.2 |
 | `wake-lock` | Screen Wake Lock | The screen may sleep while you cook, check out or transfer. | `recipe-box` `cards` `shopping-list` `p2p-transfer` | 84 | 126 | 18.4 |
 | `webp-encode` | WebP encoding | Pictures are saved as larger PNG files. | `cards` `font-maker` `moonrabbit` `proposals` `warren` | 17 | 96 | no |
 | `image-smoothing-quality` | Image smoothing quality | Shrunk images look rougher. | `image-editor` `image-tools` `birdseye` `video-tools` `icon-pack` `nonogram` | 54 | no | 9.1 |
@@ -198,4 +198,3 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `content-visibility` | content-visibility | Long lists and hidden windows render slower. | `csv-viewer` `gw2` | 85 | 125 | 18 |
 | `backdrop-filter` | Backdrop blur | No frosted-glass blur behind dialogs, docks and widgets. |  | 76 | 103 | 18 |
 | `badging` | App badge | The missed-alarm count on the installed app's icon. |  | 81 | no | 17 |
-

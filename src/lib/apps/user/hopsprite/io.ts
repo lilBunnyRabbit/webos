@@ -10,6 +10,8 @@ export interface Opened {
   sprite: Sprite;
   imported: boolean;
   approximated: number;
+  /** A GIF read without `ImageDecoder` (Safari): its first frame only. */
+  still_gif?: boolean;
 }
 
 export function is_sprite_name(name: string): boolean {
@@ -82,7 +84,7 @@ export function sprite_from_frames(width: number, height: number, frames: readon
 
 export async function read_file(file: File): Promise<Opened> {
   if (is_sprite_name(file.name)) return { sprite: parse_sprite(await file.text()), imported: false, approximated: 0 };
-  if (is_gif(file)) {
+  if (is_gif(file) && typeof ImageDecoder === "function") {
     const { width, height, frames } = await decode_gif(file);
     return { ...sprite_from_frames(width, height, frames), imported: true };
   }
@@ -90,7 +92,7 @@ export async function read_file(file: File): Promise<Opened> {
   try {
     check_size(image.bitmap.width, image.bitmap.height);
     const pixels = read_pixels(image.bitmap);
-    return { ...sprite_from_frames(pixels.width, pixels.height, [{ rgba: pixels.data, duration: 100 }]), imported: true };
+    return { ...sprite_from_frames(pixels.width, pixels.height, [{ rgba: pixels.data, duration: 100 }]), imported: true, still_gif: is_gif(file) };
   } finally {
     image.bitmap.close();
   }

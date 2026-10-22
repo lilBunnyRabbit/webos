@@ -84,7 +84,7 @@ Box offers the estimated box at that time (the camera position and the last box 
 
 | Fill | Drawn as |
 |------|----------|
-| Blur (default) | The frame scaled to cover the output, grown by twice the blur radius so the edges don't fade to transparent, under `blur(width / 40) brightness(0.5)` |
+| Blur (default) | The frame scaled to cover the output, grown by twice the blur radius so the edges don't fade to transparent, under `blur(width / 40) brightness(0.5)`. Where the canvas ignores `filter` (Safari), the same filter runs by hand (`$kit/utils/filter`) on a copy shrunk so the blur is 4 px, then scaled back up: full-size blur by hand is too slow per frame |
 | Black | `#000`: it's picture content in the output video, not UI |
 | Colour | One of five theme tokens (Darkest, Window, Primary, Secondary, Tertiary), read from its CSS variable (`read_token`, `render.ts:59`) when drawing |
 

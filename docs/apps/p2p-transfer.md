@@ -12,7 +12,7 @@ A second mode, **By light**, needs no network at all: the sender flashes one fil
 
 ### QR signalling
 
-WebRTC needs an offer and an answer exchanged before the direct link exists; normally a signalling server carries them. Here the user does: the sender shows an offer code, the receiver scans it and shows an answer code, the sender scans that. Codes can also be copied, pasted and shared with the Web Share API.
+WebRTC needs an offer and an answer exchanged before the direct link exists; normally a signalling server carries them. Here the user does: the sender shows an offer code, the receiver scans it and shows an answer code, the sender scans that. Codes can also be copied, pasted and shared with the Web Share API (the Share button shows only where `navigator.share` exists; Firefox on desktop has none).
 
 A raw data-channel SDP is about 1 kB, a dense QR a phone reads poorly off a screen. Only five things in it matter for connecting. `read_sdp` (`kit/utils/p2p/signal.ts:55`) keeps those, `encode_signal` (`signal.ts:189`) packs them as bytes, and `write_sdp` (`signal.ts:264`) rebuilds the fixed rest on the other side.
 

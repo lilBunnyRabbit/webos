@@ -69,7 +69,7 @@ The loop runs again if an app was ticked while a job ran. The lazy `sync.ts` hol
 - Reads `/etc/offline.json` and `/var/lib/offline/state.json`. A state file from this build fills `saved`; a missing one or another build's starts empty and writes `{ build, apps: [] }`.
 - **Migration.** No state file, a version marker (`/var/lib/version/state.json`) and not solo: an existing install's first boot of this version. Sticky toast "Apps now load when you open them" / "Updates take seconds now. Pick the apps that should also work offline." with **Choose apps** → `apps.launch("settings", { section: "offline" })`. A fresh install has no marker yet and gets nothing; the state file is written either way, so it shows once.
 - Effects: the revisions of `/etc` and `/var/lib/offline` re-read the files (skipped while one of this tab's writes is pending), and the open-windows effect above.
-- After an update (state from another build) or with picked apps not saved: `sync()` on `requestIdleCallback`, so the old build's cache is deleted even with nothing picked.
+- After an update (state from another build) or with picked apps not saved: `sync()` on `on_idle` (`requestIdleCallback`, or a `setTimeout` where Safari has none), so the old build's cache is deleted even with nothing picked.
 
 `destroy()` removes the listeners and disposes the effects.
 

@@ -31,6 +31,7 @@ import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
+import { on_idle } from "$lib/core/utils/idle";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
@@ -78,7 +79,7 @@ export class AppsService implements IAppsService {
   }
 
   async init(): Promise<void> {
-    requestIdleCallback(() => void this.meta_ready);
+    on_idle(() => void this.meta_ready);
     await this.init_installed();
     await this.load_recent();
   }

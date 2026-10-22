@@ -88,6 +88,7 @@ None beyond the kit codecs (jSquash, Apache-2.0, for AVIF and JPEG XL). MozJPEG,
 - AVIF and JPEG XL searches on a large photo take minutes (about 8 encodes of tens of seconds each); unmeasured end to end.
 - HEIC isn't read or written.
 - Copy can't carry the fitted bytes unless the result is PNG.
+- Patch feathers its edge with a `blur()` on the mask; where the canvas ignores `filter` (Safari) that blur runs by hand (`$kit/utils/filter`) over the patched area only.
 
 ## Decisions
 
