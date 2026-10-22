@@ -1,7 +1,9 @@
 <script lang="ts">
   import kernel, {
     introduced_apps,
+    search_apps,
     updated_apps,
+    type AiService,
     type AppListing,
     type AppsService,
     type SessionService,
@@ -11,6 +13,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import { set_drag_app } from "$lib/core/components/apps/drag";
+  import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -42,6 +45,7 @@
     LibraryCategory,
     LibraryFilter,
     LibrarySort,
+    SearchSection,
     showcase_sections,
   } from "./library";
 
@@ -68,6 +72,7 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const session = $derived(kernel.service<SessionService>("session"));
   const version = $derived(kernel.service<VersionService>("version"));
+  const ai = $derived(kernel.service<AiService>("ai"));
   void kernel.service<VersionService>("version").load_changelog();
 
   const category = storage.window<LibraryCategory>("category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
@@ -96,7 +101,15 @@
 
   const installed = $derived(new Set([...apps.list({ installed: true })].map(([id]) => id)));
 
-  const filter_query = $derived({ query, filters: filters.value, used, installed });
+  const sentence = new SentenceSearch<AppListing>({
+    apps: () => manifests,
+    query: () => query,
+    shown: () => search_apps(manifests, query),
+    ai: () => ai,
+  });
+  const found = $derived({ related: sentence.related, suggested: sentence.suggested });
+
+  const filter_query = $derived({ query, filters: filters.value, used, installed, ...found });
   const counts = $derived(category_counts(manifests, filter_query));
   const sections = $derived(
     library_sections(manifests, { ...filter_query, category: category.value, sort: sort.value, changelog: version.changelog })
@@ -104,8 +117,8 @@
   // Only for this session, like What's new's "New to you": nothing records which apps were looked at.
   const fresh = $derived(new Set(introduced_apps(version.unseen).map(({ app }) => app)));
   const updated = $derived(updated_apps(version.unseen));
-  const showcase_list = $derived(showcase_sections(manifests, { query, category: showcase_category.value }));
-  const showcase_counts = $derived(category_counts(manifests, { query, filters: [], used: new Set(), installed: new Set() }));
+  const showcase_list = $derived(showcase_sections(manifests, { query, category: showcase_category.value, ...found }));
+  const showcase_counts = $derived(category_counts(manifests, { query, filters: [], used: new Set(), installed: new Set(), ...found }));
   const shown = $derived((showcase ? showcase_list : sections).reduce((sum, section) => sum + section.apps.length, 0));
   const first = $derived(sections[0]?.apps[0]);
 
@@ -312,7 +325,7 @@
             </div>
   
             <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-1 pb-3">
-              {#if sections.length === 0}
+              {#if sections.length === 0 && !sentence.pending}
                 <EmptyState
                   icon={MagnifyingGlassIcon}
                   title="No apps match"
@@ -336,7 +349,9 @@
                   {#each sections as section (section.id)}
                     <section>
                       {#if section.label}
-                        <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{section.label}</p>
+                        <p class="flex items-center gap-1 px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
+                          {#if section.id === SearchSection.SUGGESTED}<SparkleIcon weight="fill" class="size-3 text-primary" />{/if}{section.label}
+                        </p>
                       {/if}
                       {@render tiles(section.apps)}
                     </section>

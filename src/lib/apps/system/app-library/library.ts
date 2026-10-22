@@ -29,8 +29,13 @@ export const LibrarySort = {
 } as const;
 export type LibrarySort = (typeof LibrarySort)[keyof typeof LibrarySort];
 
+export const SearchSection = { RELATED: "related", SUGGESTED: "suggested" } as const;
+export type SearchSection = (typeof SearchSection)[keyof typeof SearchSection];
+
+const SEARCH_LABELS: Record<SearchSection, string> = { [SearchSection.RELATED]: "Related", [SearchSection.SUGGESTED]: "AI suggests" };
+
 export interface LibrarySection {
-  /** A category, or a release version for the recent sort. */
+  /** A category, a release version for the recent sort, or a `SearchSection`. */
   id: string;
   label: string | null;
   apps: AppListing[];
@@ -44,6 +49,9 @@ export interface LibraryQuery {
   used: ReadonlySet<AppId>;
   /** Installed apps, system ones included (ADR-040). */
   installed: ReadonlySet<AppId>;
+  /** The sentence search's apps beyond the matches, best first. */
+  related?: readonly AppListing[];
+  suggested?: readonly AppListing[];
 }
 
 export function category_of(manifest: AppListing): Exclude<LibraryCategory, "all"> {
@@ -65,33 +73,62 @@ export function has_filter(manifest: AppListing, filter: LibraryFilter, { used, 
   }
 }
 
-function matching(apps: Iterable<AppListing>, { query, filters, ...context }: Omit<LibraryQuery, "category">): AppListing[] {
-  return search_apps(apps, query).filter((manifest) => filters.every((filter) => has_filter(manifest, filter, context)));
+type Order = (a: AppListing, b: AppListing) => number;
+
+const by_name: Order = (a, b) => a.name.localeCompare(b.name);
+
+function filtered(list: readonly AppListing[], { filters, ...context }: Pick<LibraryQuery, "filters" | "used" | "installed">): AppListing[] {
+  return list.filter((manifest) => filters.every((filter) => has_filter(manifest, filter, context)));
+}
+
+function matching(apps: Iterable<AppListing>, query: Omit<LibraryQuery, "category">): AppListing[] {
+  return filtered(search_apps(apps, query.query), query);
+}
+
+function search_sections(query: Omit<LibraryQuery, "category">, keep: (manifest: AppListing) => boolean): LibrarySection[] {
+  const sections: [SearchSection, readonly AppListing[]][] = [
+    [SearchSection.RELATED, query.related ?? []],
+    [SearchSection.SUGGESTED, query.suggested ?? []],
+  ];
+  return sections
+    .map(([id, apps]) => ({ id, label: SEARCH_LABELS[id], apps: filtered(apps, query).filter(keep) }))
+    .filter((section) => section.apps.length > 0);
+}
+
+function order_of(query: string, list: readonly AppListing[]): Order {
+  if (!query.trim()) return by_name;
+  const rank = new Map(list.map((manifest, index) => [manifest.id, index]));
+  return (a, b) => rank.get(a.id)! - rank.get(b.id)!;
 }
 
 export function category_counts(apps: Iterable<AppListing>, query: Omit<LibraryQuery, "category">): Record<LibraryCategory, number> {
   const counts = Object.fromEntries(LIBRARY_CATEGORIES.map(({ id }) => [id, 0])) as Record<LibraryCategory, number>;
-  for (const manifest of matching(apps, query)) {
+  for (const manifest of [...matching(apps, query), ...search_sections(query, () => true).flatMap((section) => section.apps)]) {
     counts[LibraryCategory.ALL]++;
     counts[category_of(manifest)]++;
   }
   return counts;
 }
 
-/** The search only narrows; the order always comes from `sort`, so tiles keep their order while typing. */
+/** The sort picks the sections; a search keeps its relevance order inside them, then adds Related and AI suggests. */
 export function library_sections(
   apps: Iterable<AppListing>,
   { category, sort, changelog = [], ...rest }: LibraryQuery & { sort: LibrarySort; changelog?: readonly Release[] }
 ): LibrarySection[] {
-  const list = matching(apps, rest).filter((manifest) => category === LibraryCategory.ALL || category_of(manifest) === category);
+  const in_category = (manifest: AppListing) => category === LibraryCategory.ALL || category_of(manifest) === category;
+  const list = matching(apps, rest).filter(in_category);
+  return [...sorted_sections(list, sort, changelog, order_of(rest.query, list)), ...search_sections(rest, in_category)];
+}
+
+function sorted_sections(list: AppListing[], sort: LibrarySort, changelog: readonly Release[], order: Order): LibrarySection[] {
   if (list.length === 0) return [];
-  if (sort === LibrarySort.CATEGORY) return group_apps(list);
-  if (sort === LibrarySort.RECENT) return recent_sections(list, changelog);
-  return [{ id: LibraryCategory.ALL, label: null, apps: list.sort((a, b) => a.name.localeCompare(b.name)) }];
+  if (sort === LibrarySort.CATEGORY) return group_apps(list).map((section) => ({ ...section, apps: section.apps.sort(order) }));
+  if (sort === LibrarySort.RECENT) return recent_sections(list, changelog, order);
+  return [{ id: LibraryCategory.ALL, label: null, apps: list.sort(order) }];
 }
 
 /** One section per release, newest first, holding the apps it last added or changed; apps it never mentions go last. */
-function recent_sections(list: AppListing[], changelog: readonly Release[]): LibrarySection[] {
+function recent_sections(list: AppListing[], changelog: readonly Release[], order: Order): LibrarySection[] {
   const groups = new Map<number, AppListing[]>();
   for (const manifest of list) {
     const index = recency(changelog, manifest.id);
@@ -104,16 +141,24 @@ function recent_sections(list: AppListing[], changelog: readonly Release[]): Lib
       return {
         id: release?.version ?? "earlier",
         label: release ? `v${release.version} · ${release.title}` : "Earlier",
-        apps: apps.sort((a, b) => a.name.localeCompare(b.name)),
+        apps: apps.sort(order),
       };
     });
 }
 
-export function showcase_sections(apps: Iterable<AppListing>, { query, category }: { query: string; category: LibraryCategory }): LibrarySection[] {
+export function showcase_sections(
+  apps: Iterable<AppListing>,
+  { query, category, related, suggested }: Pick<LibraryQuery, "query" | "category" | "related" | "suggested">
+): LibrarySection[] {
   const list = search_apps(apps, query);
-  return LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL && (category === LibraryCategory.ALL || id === category))
-    .map(({ id, label }) => ({ id, label, apps: list.filter((manifest) => category_of(manifest) === id).sort((a, b) => a.name.localeCompare(b.name)) }))
-    .filter((section) => section.apps.length > 0);
+  const order = order_of(query, list);
+  const in_category = (manifest: AppListing) => category === LibraryCategory.ALL || category_of(manifest) === category;
+  return [
+    ...LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL && (category === LibraryCategory.ALL || id === category))
+      .map(({ id, label }) => ({ id, label, apps: list.filter((manifest) => category_of(manifest) === id).sort(order) }))
+      .filter((section) => section.apps.length > 0),
+    ...search_sections({ query, filters: [], used: new Set(), installed: new Set(), related, suggested }, in_category),
+  ];
 }
 
 export function app_story(manifest: AppListing): { problem: string | null; solution: string } {

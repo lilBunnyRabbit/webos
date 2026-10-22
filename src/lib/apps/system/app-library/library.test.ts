@@ -13,6 +13,7 @@ import {
   LibraryCategory,
   LibraryFilter,
   LibrarySort,
+  SearchSection,
   showcase_sections,
 } from "./library";
 
@@ -90,9 +91,30 @@ describe("library_sections", () => {
     expect(names(library_sections(APPS, { ...BASE, category: LibraryCategory.SYSTEM }))).toEqual(["Text Editor"]);
   });
 
-  test("search keeps the sort's order and tolerates a typo", () => {
-    expect(names(library_sections(APPS, { ...BASE, query: "s" }))).toEqual(["Calculator", "Quick Notes", "Snake", "Sudoku"]);
+  test("search keeps its relevance order and tolerates a typo", () => {
+    expect(names(library_sections(APPS, { ...BASE, query: "s" }))).toEqual(["Snake", "Sudoku", "Quick Notes", "Calculator"]);
     expect(names(library_sections(APPS, { ...BASE, query: "calculater" }))).toEqual(["Calculator"]);
+  });
+
+  test("search keeps its relevance order inside the category sort's sections", () => {
+    const sections = library_sections(APPS, { ...BASE, query: "s", sort: LibrarySort.CATEGORY });
+    expect(sections.map((section) => [section.label, names([section])])).toEqual([
+      ["Productivity", ["Quick Notes"]],
+      ["Utilities", ["Calculator"]],
+      ["Games", ["Snake", "Sudoku"]],
+    ]);
+  });
+
+  test("related and AI picks follow the matches, narrowed by category and filters", () => {
+    const [snake, sudoku, calculator, , quick_notes, diff] = APPS;
+    const query = { ...BASE, query: "zzz", related: [diff, sudoku], suggested: [quick_notes, snake] };
+    expect(library_sections(APPS, query).map((section) => [section.id, section.label, names([section])])).toEqual([
+      [SearchSection.RELATED, "Related", ["Diff", "Sudoku"]],
+      [SearchSection.SUGGESTED, "AI suggests", ["Quick Notes", "Snake"]],
+    ]);
+    expect(names(library_sections(APPS, { ...query, category: AppCategory.GAMES }))).toEqual(["Sudoku", "Snake"]);
+    expect(names(library_sections(APPS, { ...query, filters: [LibraryFilter.WIDGET] }))).toEqual(["Sudoku"]);
+    expect(names(library_sections(APPS, { ...BASE, query: "calc", related: [diff] }))).toEqual([calculator.name, "Diff"]);
   });
 
   test("filters combine with AND", () => {
@@ -110,6 +132,15 @@ describe("category_counts", () => {
     const counts = category_counts(APPS, BASE);
     expect(counts).toMatchObject({ all: 6, games: 2, utilities: 1, developer: 1, productivity: 1, media: 0, system: 1 });
     expect(category_counts(APPS, { ...BASE, filters: [LibraryFilter.FILES] })).toMatchObject({ all: 2, developer: 1, system: 1, games: 0 });
+  });
+
+  test("related and AI picks count too", () => {
+    expect(category_counts(APPS, { ...BASE, query: "calc", related: [APPS[0]], suggested: [APPS[5]] })).toMatchObject({
+      all: 3,
+      utilities: 1,
+      games: 1,
+      developer: 1,
+    });
   });
 });
 
@@ -137,6 +168,12 @@ describe("showcase_sections", () => {
     expect(names(showcase_sections(APPS, { query: "", category: AppCategory.GAMES }))).toEqual(["Snake", "Sudoku"]);
     expect(names(showcase_sections(APPS, { query: "sudoku", category: LibraryCategory.ALL }))).toEqual(["Sudoku"]);
     expect(showcase_sections(APPS, { query: "", category: AppCategory.MEDIA })).toEqual([]);
+  });
+
+  test("a search keeps its order and ends with the related apps", () => {
+    const sections = showcase_sections(APPS, { query: "s", category: LibraryCategory.ALL, related: [APPS[5]] });
+    expect(sections.find((section) => section.id === AppCategory.GAMES)?.apps.map((manifest) => manifest.name)).toEqual(["Snake", "Sudoku"]);
+    expect(sections.at(-1)).toMatchObject({ id: SearchSection.RELATED, label: "Related", apps: [APPS[5]] });
   });
 });
 

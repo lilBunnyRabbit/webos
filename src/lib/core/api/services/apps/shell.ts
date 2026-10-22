@@ -8,10 +8,12 @@ import type { FilesService } from "../files/type";
 import { with_pin, without_pin } from "../settings/taskbar";
 import { TaskbarPosition, TaskbarSize, type SettingsService } from "../settings/type";
 import { author_names } from "./authors";
-import { APP_CATEGORY_LABELS } from "./search";
+import { APP_CATEGORY_LABELS, search_apps } from "./search";
 import type { AppManifest, AppMeta, AppsService } from "./type";
 
 const EXPLORER = "file-explorer";
+const LIBRARY = "app-library";
+const FIND_LIMIT = 10;
 
 function app_value(manifest: AppManifest, meta: AppMeta): Tagged {
   return {
@@ -71,7 +73,8 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
       app: {
         columns: ["id", "name", "category", "authors"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
-        open: (app) => void apps.launch(String(app.id)),
+        // The shell never installs (ADR-040): an app that isn't installed opens in the App Library to be got.
+        open: (app) => void (apps.is_installed(String(app.id)) ? apps.launch(String(app.id)) : apps.launch(LIBRARY, { app: String(app.id) })),
       },
       file: {
         open: (file) => void open_path(String(file.path)),
@@ -116,6 +119,25 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
             const manifest = apps.get(id);
             if (manifest) yield app_value(manifest, await apps.meta(id));
           }
+        },
+      }),
+      define_command({
+        id: "app find",
+        ai: "read",
+        description: "Apps for what you want to do, in your own words, installed or not: app find make pixel art",
+        args: z.object({ words: z.array(z.string()).default([]).describe("What the app should do") }),
+        positional: ["words"],
+        yields: "app",
+        async *run({ args }) {
+          const sentence = args.words.join(" ").trim();
+          if (!sentence) throw new ShellError("say what the app should do, like: app find make pixel art");
+          await apps.meta_ready;
+          const listings = apps.listings();
+          const { build_sentence_index, rank_sentence } = await import("./sentence");
+          const strict = search_apps(listings, sentence);
+          const listed = new Set(strict.map((app) => app.id));
+          const related = rank_sentence(build_sentence_index(listings), sentence).filter((app) => !listed.has(app.id));
+          for (const app of [...strict, ...related].slice(0, FIND_LIMIT)) yield app_value(app, app);
         },
       }),
       define_command({

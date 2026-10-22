@@ -16,5 +16,13 @@ Prototypes against the real catalogue: a weighted ranker (name 6, keywords 3, de
 - **Shell:** `app find <sentence>` yielding `app` values, tagged `ai: "read"` so Ask can answer "which app lets me…". Rejected: no command; command without Ask.
 - App Library keeps relevance order for a search (today it re-sorts by name inside categories).
 
+## Build notes (2026-10-22)
+Decided within scope while building:
+- Neighbouring words of the name, description and pitch are also indexed joined, not only multi-word keywords: with keywords alone Nonogram ("pixel art" keyword, short field) beat Hopsprite for "pixelart", and "play a card game" put GIF Player first. With it: 11/11, 19/20 unseen ("to do list" still misses: the strict search lists Shopping List, RNG Tools and Warren first), 8/8 names.
+- AI suggests shows at most 4 apps (one start menu row). Related has no cap; the 40 % cutoff keeps it short.
+- `app find` searches every app, installed or not, and yields at most 10. Opening an `app` value of an app that isn't installed opens the App Library at it instead of installing, since the shell never installs (ADR-040).
+- The App Library's Related and AI suggests sections follow the category and filters and count in the category counts; the Showcase gets them too.
+- Real Gemini Nano latency wasn't measured (no model in the test browser); the AI row was checked with a stubbed `LanguageModel`.
+
 ## Action items
-- [ ] One builder: weighted ranker + Related group (start menu, drawer, App Library), AI suggests row, `app find`, tests on the sample and unseen query sets.
+- [x] One builder: weighted ranker + Related group (start menu, drawer, App Library), AI suggests row, `app find`, tests on the sample and unseen query sets.

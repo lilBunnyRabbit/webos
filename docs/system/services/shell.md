@@ -67,7 +67,7 @@ define_command({
 - `signal`: aborts on Ctrl+C or window close.
 - `elevated`: true under `sudo`.
 
-`ai: "read"` makes a command eligible for Ask's assistant (ADR-054). The user still switches it on in Ask; the model picks by `usage()` plus `description`, so the description should say what data comes back, naming the app. Never on a command that writes, prints, opens a dialog or launches anything. Tagged today: `cal`, `cal agenda`, `quno ls`, `kanban ls`, `wh status`, `wh ls`, `since`, `list ls`, `list items`. A browser test (`ask/catalogue.browser.test.ts`) keeps all of them under 4,000 characters.
+`ai: "read"` makes a command eligible for Ask's assistant (ADR-054). The user still switches it on in Ask; the model picks by `usage()` plus `description`, so the description should say what data comes back, naming the app. Never on a command that writes, prints, opens a dialog or launches anything. Tagged today: `app find`, `cal`, `cal agenda`, `quno ls`, `kanban ls`, `wh status`, `wh ls`, `since`, `list ls`, `list items`. A browser test (`ask/catalogue.browser.test.ts`) keeps all of them under 4,000 characters.
 
 Throw `ShellError` for a message the user should read as is. Any other error shows its `message` and is logged.
 
@@ -157,7 +157,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 |---------|----------|------------|-------------|
 | shell | `help clear history echo sudo where sort select first last count get kernel services` | | `command`, `history`, `service` |
 | files | `ls cd pwd cat cp mv rm mkdir touch du [-d N] df mount umount mounts`, `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` (piped files; `--dry` previews) | `path` | `file`, `rename`, `storage`, `mount` |
-| apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `app recent` (yields `app` values, newest first; `--clear` forgets them), `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, `taskbar seconds`, plus every app's `shell` (ADR-034) | `app` | `app`, `file.open` |
+| apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `app find <words…>` (`ai: "read"`; strict then sentence search over every app, at most 10), `app recent` (yields `app` values, newest first; `--clear` forgets them), `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, `taskbar seconds`, plus every app's `shell` (ADR-034) | `app` (open: launch, or the App Library for an app that isn't installed) | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | extract (desktop) | `win pop`, `win back` | | |
 | session | `win reopen` | | |

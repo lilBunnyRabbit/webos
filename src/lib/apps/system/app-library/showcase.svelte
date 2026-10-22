@@ -2,9 +2,9 @@
   import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import { Badge, Button, EmptyState } from "$lib/core/components/ui";
-  import { ArrowRight as ArrowRightIcon, MagnifyingGlass as MagnifyingGlassIcon } from "phosphor-svelte";
+  import { ArrowRight as ArrowRightIcon, MagnifyingGlass as MagnifyingGlassIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
   import { CATEGORY_ICONS } from "./category-icons";
-  import { app_story, category_label, LIBRARY_CATEGORIES, LibraryCategory, type LibrarySection } from "./library";
+  import { app_story, category_label, LIBRARY_CATEGORIES, LibraryCategory, SearchSection, type LibrarySection } from "./library";
   import ShowcaseActions from "./showcase-actions.svelte";
 
   interface Props {
@@ -22,6 +22,8 @@
   let { sections, counts, category = $bindable(), total, query, fresh, updated, onselect, onclear }: Props = $props();
 
   const HIGHLIGHTS_ON_CARD = 2;
+
+  const SECTION_ICONS = { ...CATEGORY_ICONS, [SearchSection.RELATED]: MagnifyingGlassIcon, [SearchSection.SUGGESTED]: SparkleIcon };
 </script>
 
 <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -60,10 +62,10 @@
     {/if}
 
     {#each sections as section (section.id)}
-      {@const Icon = CATEGORY_ICONS[section.id as LibraryCategory]}
+      {@const Icon = SECTION_ICONS[section.id as keyof typeof SECTION_ICONS]}
       <section class="flex flex-col gap-3" aria-labelledby="showcase-{section.id}">
         <h3 id="showcase-{section.id}" class="flex items-center gap-2 text-sm font-semibold">
-          <Icon class="size-4 text-primary" weight="duotone" />
+          <Icon class="size-4 text-primary" weight={section.id === SearchSection.SUGGESTED ? "fill" : "duotone"} />
           {section.label}
           <span class="font-mono text-2xs font-normal text-foreground/65">{section.apps.length}</span>
         </h3>

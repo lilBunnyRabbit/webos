@@ -5,6 +5,31 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.52.0",
+    date: "2026-10-22",
+    title: "Search apps in your own words",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Search for apps in your own words, like \"tool to make pixel art\": the start menu, the app drawer and the App Library now show related apps below the exact matches.",
+      },
+      {
+        kind: IMPROVED,
+        text: "With Chrome's on-device AI, a sentence typed into the start menu or the App Library also gets a few apps the AI suggests, worked out on your device.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["app-library"],
+        text: "The App Library keeps the best matches first while you search, instead of sorting them by name.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["terminal", "ask"],
+        text: "Type app find and what you want to do in the Terminal to find an app for it, and Ask can answer which app does something.",
+      },
+    ],
+  },
+  {
     version: "3.51.0",
     date: "2026-10-22",
     title: "Tables, styles and colour in Warren",

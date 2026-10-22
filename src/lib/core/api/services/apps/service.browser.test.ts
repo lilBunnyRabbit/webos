@@ -180,6 +180,36 @@ describe("AppsService recent apps", () => {
   });
 });
 
+describe("app find", () => {
+  async function find(kernel: Kernel, words: string[]): Promise<unknown[]> {
+    const command = (apps(kernel).shell!().commands ?? []).find((candidate) => candidate.id === "app find")!;
+    const yielded: unknown[] = [];
+    for await (const value of command.run({ args: { words } } as never) as AsyncIterable<unknown>) yielded.push(value);
+    return yielded;
+  }
+
+  test("strict matches first, then the sentence search's, installed or not; offered to Ask", async () => {
+    await write(INSTALLED_PATH, serialize_installed([]));
+    const kernel = await boot();
+    const command = (apps(kernel).shell!().commands ?? []).find((candidate) => candidate.id === "app find")!;
+    expect(command.ai).toBe("read");
+    expect(await find(kernel, ["test", "app"])).toMatchObject([{ $type: "app", id: "example", description: "Test app" }]);
+    expect((await find(kernel, ["something", "for", "my", "notes"]))[0]).toMatchObject({ $type: "app", id: "notes" });
+    await expect(find(kernel, [])).rejects.toThrow(/say what the app should do/);
+  });
+
+  test("clicking an app that isn't installed opens it in the App Library", async () => {
+    await write(INSTALLED_PATH, serialize_installed([]));
+    const kernel = await boot();
+    const launch = vi.spyOn(apps(kernel), "launch").mockReturnValue("w");
+    const open = apps(kernel).shell!().values!.app.open!;
+    open({ $type: "app", id: "notes" });
+    expect(launch).toHaveBeenLastCalledWith("app-library", { app: "notes" });
+    open({ $type: "app", id: "settings" });
+    expect(launch).toHaveBeenLastCalledWith("settings");
+  });
+});
+
 describe("AppsService meta (ADR-049)", () => {
   test("every app's meta loads once; an app without one, or an unknown id, resolves {}", async () => {
     const kernel = await boot();

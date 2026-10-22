@@ -3,6 +3,8 @@
     format_keys,
     group_apps,
     search_apps,
+    type AiService,
+    type AppListing,
     type AppManifest,
     type AppsService,
     type DesktopService,
@@ -19,6 +21,7 @@
     PushPin as PushPinIcon,
     PushPinSimple as PushPinSimpleIcon,
     PushPinSimpleSlash as PushPinSimpleSlashIcon,
+    Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
@@ -29,6 +32,7 @@
   import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
   import RecentApps from "../apps/recent-apps.svelte";
   import { set_drag_app } from "../apps/drag";
+  import { SentenceSearch } from "../apps/sentence-search.svelte";
   import { with_pin, without_pin } from "$lib/core/api";
 
   const APP_LIBRARY = "app-library";
@@ -40,6 +44,7 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
+  const ai = $derived(kernel.service<AiService>("ai"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -58,7 +63,13 @@
   const matches = $derived(search_apps(installed, query));
   /** Search covers every app: the ones not installed come after, under Get (ADR-040). */
   const gettable = $derived(query.trim() ? search_apps(apps.listings({ installed: false }), query) : []);
-  const best = $derived(matches[0] ?? gettable[0]);
+  const sentence = new SentenceSearch<AppListing>({
+    apps: () => apps.listings(),
+    query: () => (commanding ? "" : query),
+    shown: () => [...matches, ...gettable],
+    ai: () => ai,
+  });
+  const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);
   const sections = $derived(group_apps(installed));
 
   function close() {
@@ -105,7 +116,7 @@
   }
 </script>
 
-{#snippet app_tile(manifest: AppManifest, get = false, recent = false)}
+{#snippet app_tile(manifest: AppManifest, recent = false)}
   <li class="group relative">
     <button
       class="flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
@@ -123,10 +134,10 @@
         <AppBadge app_id={manifest.id} />
       </span>
       <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
-      {#if get}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
+      {#if !apps.is_installed(manifest.id)}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
       {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
     </button>
-    {#if !get}
+    {#if apps.is_installed(manifest.id)}
       <IconButton
         label="Pin {manifest.name} to desktop"
         size="sm"
@@ -139,12 +150,14 @@
   </li>
 {/snippet}
 
-{#snippet grid(label: string, list: AppManifest[], get = false)}
+{#snippet grid(label: string, list: AppManifest[], ai = false)}
   <section>
-    <p class="px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">{label}</p>
+    <p class="flex items-center gap-1 px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
+      {#if ai}<SparkleIcon weight="fill" class="size-3 text-primary" />{/if}{label}
+    </p>
     <ul class="grid grid-cols-4 gap-1">
       {#each list as manifest (manifest.id)}
-        {@render app_tile(manifest, get)}
+        {@render app_tile(manifest)}
       {/each}
     </ul>
   </section>
@@ -179,17 +192,19 @@
       }}
       onclose={close}
     />
-  {:else if query.trim() && !best}
+  {:else if query.trim() && !best && !sentence.suggested.length && !sentence.pending}
     <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10" />
   {:else if query.trim()}
     <div class="flex flex-col gap-3">
       {#if matches.length}{@render grid("Results", matches)}{/if}
-      {#if gettable.length}{@render grid("Not installed", gettable, true)}{/if}
+      {#if gettable.length}{@render grid("Not installed", gettable)}{/if}
+      {#if sentence.related.length}{@render grid("Related", sentence.related)}{/if}
+      {#if sentence.suggested.length}{@render grid("AI suggests", sentence.suggested, true)}{/if}
     </div>
   {:else}
     <div class="flex flex-col gap-3">
       <RecentApps>
-        {#snippet tile(manifest)}{@render app_tile(manifest, false, true)}{/snippet}
+        {#snippet tile(manifest)}{@render app_tile(manifest, true)}{/snippet}
       </RecentApps>
       {#each sections as section (section.id)}
         {@render grid(section.label, section.apps)}
