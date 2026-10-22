@@ -9,6 +9,7 @@ export const IMAGE = "image";
 export const TABLE = "table";
 export const TITLE = "title";
 export const QUOTE = "quote";
+export const MARK = "mark";
 
 // Like Proposals' pictures, but a page gets printed: a longer edge and a little more quality.
 export const PICTURE = { max_side: 1600, quality: 0.82 } as const;
@@ -36,6 +37,8 @@ export interface Run {
   link: string | null;
   color: string | null;
   highlight: string | null;
+  /** Ids of the comments on this run. */
+  comments?: string[];
 }
 
 export const ListKind = { BULLET: "bullet", NUMBER: "number", CHECK: "check" } as const;
@@ -123,8 +126,9 @@ export function font_size(style: string | undefined): number | null {
   return Number.isFinite(value) && value > 0 ? Math.round(value * 2) / 2 : null;
 }
 
-function runs_of(nodes: DocNode[] | undefined, link: string | null = null): Run[] {
+function runs_of(nodes: DocNode[] | undefined, link: string | null = null, comments: string[] = []): Run[] {
   const runs: Run[] = [];
+  const marked = comments.length ? { comments } : {};
   for (const node of nodes ?? []) {
     if (node.type === "text" || node.type === "tab") {
       const format = typeof node.format === "number" ? node.format : 0;
@@ -139,11 +143,13 @@ function runs_of(nodes: DocNode[] | undefined, link: string | null = null): Run[
         link,
         color: style_colour(node.style, "color"),
         highlight: style_colour(node.style, "background-color"),
+        ...marked,
       });
     } else if (node.type === "linebreak") {
-      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link, color: null, highlight: null });
+      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link, color: null, highlight: null, ...marked });
     } else if (node.children) {
-      runs.push(...runs_of(node.children, LINK_TYPES.includes(node.type) ? safe_url(node.url) : link));
+      const inner = node.type === MARK ? [...new Set([...comments, ...(node.ids ?? [])])] : comments;
+      runs.push(...runs_of(node.children, LINK_TYPES.includes(node.type) ? safe_url(node.url) : link, inner));
     }
   }
   return runs;
@@ -280,4 +286,17 @@ export function picture_size(document: { editor: EditorJson; header?: EditorJson
   };
   for (const part of [document.editor, document.header, document.footer]) if (part) walk(part.root.children);
   return size;
+}
+
+/** Comment ids on `mark` nodes, in the order they first appear. */
+export function mark_ids(editor: EditorJson): string[] {
+  const ids = new Set<string>();
+  const walk = (nodes: DocNode[] | undefined) => {
+    for (const node of nodes ?? []) {
+      if (node.type === MARK) for (const id of node.ids ?? []) ids.add(id);
+      walk(node.children);
+    }
+  };
+  walk(editor.root.children);
+  return [...ids];
 }

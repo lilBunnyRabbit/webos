@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entry_blob, read_zip } from "$lib/core/utils/zip/read";
 import { build_docx, docx_parts, document_xml, escape_xml, numbering_xml, styles_xml } from "./docx";
-import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4, SAMPLE_V5 } from "./fixture";
+import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4, SAMPLE_V5, SAMPLE_V6 } from "./fixture";
 import { resolve_styles } from "./styles";
 import { face_css, font_format } from "./fonts";
 import { BODY_FAMILY, body_html, document_css, NO_FONTS, print_document, zone_padding } from "./print";
@@ -28,6 +28,22 @@ describe("docx", () => {
     expect(xml).toContain(`<w:numPr><w:ilvl w:val="1"/><w:numId w:val="2"/></w:numPr>`);
     expect(xml).toMatch(/<w:pageBreakBefore\/><w:numPr>.*?<\/w:numPr><\/w:pPr><w:r><w:t xml:space="preserve">Dot/);
     expect(xml).toContain(`<w:pgSz w:w="12240" w:h="15840"/>`);
+  });
+
+  it("writes open comments as one range each, across runs and paragraphs", () => {
+    const parts = docx_parts(SAMPLE_V6, "Notes");
+    const xml = parts["word/document.xml"];
+    expect(xml.match(/<w:commentRangeStart w:id="0"\/>/g)).toHaveLength(1);
+    expect(xml.match(/<w:commentRangeEnd w:id="0"\/>/g)).toHaveLength(1);
+    expect(xml).toMatch(/<w:t xml:space="preserve">Hello <\/w:t><\/w:r><w:commentRangeStart w:id="0"\/><w:r><w:t xml:space="preserve">Jane <\/w:t>/);
+    expect(xml).toMatch(/and that<\/w:t><\/w:r><w:commentRangeEnd w:id="0"\/><w:r><w:commentReference w:id="0"\/><\/w:r><w:r><w:t xml:space="preserve"> end\./);
+    expect(xml).not.toContain(`w:id="1"`);
+    const comments = parts["word/comments.xml"];
+    expect(comments).toContain(`<w:comment w:id="0" w:author="Warren" w:date="2026-10-22T09:30:00Z" w:initials="W"><w:p><w:r><w:annotationRef/></w:r><w:r><w:t xml:space="preserve">Say who you are.</w:t></w:r></w:p></w:comment>`);
+    expect(comments).not.toContain("Cut it.");
+    expect(parts["word/_rels/document.xml.rels"]).toContain(`Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"`);
+    expect(parts["[Content_Types].xml"]).toContain(`PartName="/word/comments.xml"`);
+    expect(docx_parts(SAMPLE, "CV")["word/comments.xml"]).toBeUndefined();
   });
 
   it("relates each link once and names the document font", () => {

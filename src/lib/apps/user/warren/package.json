@@ -7,12 +7,15 @@
     "@lexical/html": "0.52.0",
     "@lexical/link": "0.52.0",
     "@lexical/list": "0.52.0",
+    "@lexical/mark": "0.52.0",
     "@lexical/markdown": "0.52.0",
     "@lexical/rich-text": "0.52.0",
     "@lexical/selection": "0.52.0",
     "@lexical/table": "0.52.0",
     "@lexical/utils": "0.52.0",
+    "dictionary-en": "4.0.0",
     "lexical": "0.52.0",
-    "mammoth": "1.13.0"
+    "mammoth": "1.13.0",
+    "nspell": "2.1.5"
   }
 }

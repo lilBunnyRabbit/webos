@@ -2,9 +2,9 @@ import { BUILTIN_FONTS, font_label } from "$lib/core/api/services/settings/fonts
 import type { FontChoice } from "$lib/core/api/services/settings/type";
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip } from "$lib/core/utils/zip/write";
-import type { EditorJson, WarrenDocument } from "./format";
+import type { Comment, EditorJson, WarrenDocument } from "./format";
 import { word_hex } from "./colour";
-import { blocks_of, flat_blocks, ListKind, PAGES_TOKEN, PAGE_TOKEN, type Script, type Align, type Block, type Run, type TableBlock, type TextBlock } from "./model";
+import { blocks_of, flat_blocks, has_text, ListKind, PAGES_TOKEN, PAGE_TOKEN, type Script, type Align, type Block, type Run, type TableBlock, type TextBlock } from "./model";
 import { geometry, Orientation, mm_to_twips, zone_distance } from "./page";
 import { DEFAULT_STYLES, INTER, resolve_styles, type DocStyles, type StyleSpec } from "./styles";
 import { column_percents, grid_rows } from "./table";
@@ -116,6 +116,60 @@ interface Part {
   fields: boolean;
   /** A header cell's runs are bold, as `th` is on screen. */
   bold: boolean;
+  comments: CommentRanges | null;
+}
+
+/**
+ * Word wants one start and one end per comment, but Warren's marks are per run and per block: a comment opens before
+ * the first run that carries it and closes after the last, counted ahead of writing.
+ */
+interface CommentRanges {
+  numbers: Map<string, number>;
+  remaining: Map<string, number>;
+  started: Set<string>;
+}
+
+function comment_ranges(body: Block[], comments: Comment[] | undefined): CommentRanges | null {
+  const open = new Set((comments ?? []).filter((comment) => !comment.resolved).map((comment) => comment.id));
+  const remaining = new Map<string, number>();
+  for (const block of flat_blocks(body)) {
+    if (!has_text(block)) continue;
+    for (const run of block.runs) for (const id of run.comments ?? []) if (open.has(id)) remaining.set(id, (remaining.get(id) ?? 0) + 1);
+  }
+  if (!remaining.size) return null;
+  return { numbers: new Map([...remaining.keys()].map((id, index) => [id, index])), remaining, started: new Set() };
+}
+
+function commented_run_xml(run: Run, part: Part): string {
+  const xml = run_xml(run, part.fields, part.bold);
+  const ranges = part.comments;
+  const ids = (run.comments ?? []).filter((id) => ranges?.remaining.has(id));
+  if (!ranges || !ids.length) return xml;
+  let before = "";
+  let after = "";
+  for (const id of ids) {
+    const number = ranges.numbers.get(id)!;
+    const left = ranges.remaining.get(id)!;
+    if (!ranges.started.has(id)) {
+      before += `<w:commentRangeStart w:id="${number}"/>`;
+      ranges.started.add(id);
+    }
+    ranges.remaining.set(id, left - 1);
+    if (left === 1) after += `<w:commentRangeEnd w:id="${number}"/><w:r><w:commentReference w:id="${number}"/></w:r>`;
+  }
+  return before + xml + after;
+}
+
+export function comments_xml(comments: Comment[] | undefined, numbers: Map<string, number>): string {
+  const items = (comments ?? [])
+    .filter((comment) => numbers.has(comment.id))
+    .map((comment) => {
+      const date = new Date(comment.created).toISOString().replace(/\.\d+Z$/, "Z");
+      const paragraphs = comment.text.split("\n").map((line, index) => `<w:p>${index ? "" : `<w:r><w:annotationRef/></w:r>`}<w:r>${text_xml(line)}</w:r></w:p>`);
+      return `<w:comment w:id="${numbers.get(comment.id)}" w:author="Warren" w:date="${date}" w:initials="W">${paragraphs.join("")}</w:comment>`;
+    })
+    .join("");
+  return `${HEAD}<w:comments ${NAMESPACES}>${items}</w:comments>`;
 }
 
 function run_props(run: Run, bold = false): string {
@@ -161,7 +215,7 @@ function runs_xml(runs: Run[], part: Part): string {
     while (end < runs.length && runs[end].link === link) end++;
     const inner = runs
       .slice(index, end)
-      .map((run) => run_xml(run, part.fields, part.bold))
+      .map((run) => commented_run_xml(run, part))
       .join("");
     xml += link ? `<w:hyperlink r:id="${part.rels.link(link)}" w:history="1">${inner}</w:hyperlink>` : inner;
     index = end;
@@ -317,6 +371,7 @@ interface Written {
   rels: Rels;
   header: { xml: string; rels: Rels } | null;
   footer: { xml: string; rels: Rels } | null;
+  comments: string | null;
 }
 
 function write_parts(document: WarrenDocument, media: MediaMap): Written {
@@ -324,10 +379,12 @@ function write_parts(document: WarrenDocument, media: MediaMap): Written {
   const page = geometry(document.page);
   const column_mm = page.width - page.margins.left - page.margins.right;
   const drawings = { next: 1 };
-  const part = (rels: Rels, fields: boolean): Part => ({ rels, numbering: plan.numbering, media, column_mm, drawings, fields, bold: false });
+  const part = (rels: Rels, fields: boolean, comments: CommentRanges | null = null): Part => ({ rels, numbering: plan.numbering, media, column_mm, drawings, fields, bold: false, comments });
 
   const rels = new Rels(DOCUMENT_BASE_RELS);
-  const body = blocks_xml(plan.body, part(rels, false));
+  const ranges = comment_ranges(plan.body, document.comments);
+  const body = blocks_xml(plan.body, part(rels, false, ranges));
+  if (ranges) rels.add("rIdComments", `${R}/comments`, "comments.xml");
   const zone = (blocks: Block[] | null, tag: "hdr" | "ftr", offset: number) => {
     if (!blocks) return null;
     const zone_rels = new Rels();
@@ -352,6 +409,7 @@ function write_parts(document: WarrenDocument, media: MediaMap): Written {
     rels,
     header,
     footer,
+    comments: ranges ? comments_xml(document.comments, ranges.numbers) : null,
   };
 }
 
@@ -445,7 +503,7 @@ export function numbering_xml(document: WarrenDocument): string {
 
 const MEDIA_TYPES: Record<string, string> = { png: "image/png", jpeg: "image/jpeg" };
 
-export function content_types(written: { header: unknown; footer: unknown }, media: MediaMap): string {
+export function content_types(written: { header: unknown; footer: unknown; comments?: unknown }, media: MediaMap): string {
   const extensions = new Set([...media.values()].map((item) => item.file.split(".").pop() ?? ""));
   return (
     `${HEAD}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
@@ -457,6 +515,7 @@ export function content_types(written: { header: unknown; footer: unknown }, med
     `<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>` +
     (written.header ? `<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>` : "") +
     (written.footer ? `<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>` : "") +
+    (written.comments ? `<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>` : "") +
     `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
     `</Types>`
   );
@@ -493,6 +552,7 @@ export function docx_parts(document: WarrenDocument, title: string, now = new Da
     ...(written.header?.rels.size ? { "word/_rels/header1.xml.rels": written.header.rels.xml() } : {}),
     ...(written.footer ? { "word/footer1.xml": written.footer.xml } : {}),
     ...(written.footer?.rels.size ? { "word/_rels/footer1.xml.rels": written.footer.rels.xml() } : {}),
+    ...(written.comments ? { "word/comments.xml": written.comments } : {}),
   };
 }
 

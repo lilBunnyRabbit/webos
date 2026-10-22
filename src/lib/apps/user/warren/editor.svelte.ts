@@ -1,7 +1,8 @@
 import { picture_data_url } from "$kit/utils/picture";
 import { untrack } from "svelte";
-import { COLLABORATION_TAG, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, HISTORIC_TAG, PASTE_TAG, REDO_COMMAND, UNDO_COMMAND, type EditorState, type LexicalEditor } from "lexical";
-import { create_document, empty_editor, VERSION, type EditorJson, type WarrenDocument } from "./format";
+import { COLLABORATION_TAG, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, HISTORIC_TAG, PASTE_TAG, REDO_COMMAND, UNDO_COMMAND, type EditorState, type LexicalEditor, type RangeSelection } from "lexical";
+import { MarkNode } from "@lexical/mark";
+import { clean_words, create_document, empty_editor, new_document_id, VERSION, type Comment, type EditorJson, type WarrenDocument } from "./format";
 import type { ColourProperty } from "./colour";
 import * as ops from "./lexical";
 import { BlockStyle, LIST_STYLES } from "./lexical";
@@ -85,6 +86,11 @@ export class WarrenEditor {
   image = $state.raw<ops.SelectedImage | null>(null);
   outline = $state.raw<ops.Heading[]>([]);
   goal = $state<number | null>(null);
+  /** Names the version history; `null` for a document from before there was one, until it's saved. */
+  doc_id = $state<string | null>(null);
+  comments = $state.raw<Comment[]>([]);
+  comments_here = $state.raw<string[]>([]);
+  ignored_words = $state.raw<string[]>([]);
   adding = $state(0);
   /** The slash menu, open while a "/" typed at a block start or after a space is followed by a word. */
   slash = $state.raw<Slash | null>(null);
@@ -153,6 +159,23 @@ export class WarrenEditor {
     this.resets = { body: body.reset_history, header: header.reset_history, footer: footer.reset_history };
     this.json = body.editor.getEditorState().toJSON() as unknown as EditorJson;
     this.outline = ops.outline(body.editor.getEditorState());
+    this.disposers.push(body.editor.registerMutationListener(MarkNode, () => this.paint_marks()));
+  }
+
+  get edits(): number {
+    return this.revision;
+  }
+
+  // Lexical's mark DOM carries no ids, so each mark's state (open, resolved, or a comment that's gone) goes on as data.
+  private paint_marks() {
+    const known = new Map(this.comments.map((comment) => [comment.id, comment]));
+    for (const [key, ids] of ops.mark_ids_by_key(this.lexical.getEditorState())) {
+      const element = this.lexical.getElementByKey(key);
+      if (!element) continue;
+      const comments = ids.map((id) => known.get(id)).filter((comment) => comment !== undefined);
+      element.dataset.comment = comments.some((comment) => !comment.resolved) ? "open" : comments.length ? "resolved" : "none";
+      element.toggleAttribute("data-current", ids.some((id) => this.comments_here.includes(id)));
+    }
   }
 
   private editor_of(zone: Zone): LexicalEditor {
@@ -196,6 +219,11 @@ export class WarrenEditor {
     this.highlight = format.highlight;
     this.word = this.active === Zone.BODY ? format.word : "";
     this.selected = this.active === Zone.BODY ? format.selected : "";
+    const here = this.active === Zone.BODY ? ops.comments_at(state) : [];
+    if (here.join() !== this.comments_here.join()) {
+      this.comments_here = here;
+      this.paint_marks();
+    }
   }
 
   private follow_slash(zone: Zone, state: EditorState, previous: EditorState, tags: Set<string>) {
@@ -304,8 +332,12 @@ export class WarrenEditor {
     this.page = { ...document.page };
     this.goal = document.goal ?? null;
     this.styles = resolve_styles(document.styles);
+    this.doc_id = document.id ?? null;
+    this.comments = document.comments ?? [];
+    this.ignored_words = document.ignored_words ?? [];
     this.revision = 0;
     this.saved = 0;
+    this.paint_marks();
   }
 
   /** Markdown as a new document; the count of pictures that weren't inside the file. */
@@ -334,13 +366,106 @@ export class WarrenEditor {
     const styles = style_overrides(this.styles);
     return {
       version: VERSION,
+      ...(this.doc_id ? { id: this.doc_id } : {}),
       page: { ...this.page },
       ...(this.goal ? { goal: this.goal } : {}),
       ...(styles ? { styles } : {}),
       ...zone(Zone.HEADER),
       ...zone(Zone.FOOTER),
+      ...(this.comments.length ? { comments: this.comments } : {}),
+      ...(this.ignored_words.length ? { ignored_words: this.ignored_words } : {}),
       editor: this.lexical.getEditorState().toJSON() as unknown as EditorJson,
     };
+  }
+
+  ensure_id(): string {
+    this.doc_id ??= new_document_id();
+    return this.doc_id;
+  }
+
+  /** A copy (Save as, a template) starts a history of its own. */
+  renew_id(): string {
+    this.doc_id = new_document_id();
+    return this.doc_id;
+  }
+
+  /**
+   * Puts a saved version back as one change Undo takes back. Page setup, styles, the goal and the ignored words come with
+   * it; comments are merged, so a comment made since stays listed.
+   */
+  restore(document: WarrenDocument) {
+    ops.replace_content(this.lexical, document.editor);
+    for (const zone of [Zone.HEADER, Zone.FOOTER] as const) {
+      const json = document[zone];
+      if (!json) {
+        this.set_zone(zone, false);
+        continue;
+      }
+      this.set_zone(zone, true);
+      ops.replace_content(this.zones[zone], json);
+    }
+    this.page = { ...document.page };
+    this.goal = document.goal ?? null;
+    this.styles = resolve_styles(document.styles);
+    this.ignored_words = document.ignored_words ?? [];
+    const restored = new Map((document.comments ?? []).map((comment) => [comment.id, comment]));
+    this.comments = [...(document.comments ?? []), ...this.comments.filter((comment) => !restored.has(comment.id))];
+    this.revision++;
+    this.paint_marks();
+  }
+
+  add_comment(text: string, at: RangeSelection | null, quote: string): boolean {
+    const id = new_document_id();
+    if (!ops.add_comment_mark(this.lexical, id, at)) return false;
+    this.comments = [...this.comments, { id, text, quote, created: Date.now() }];
+    this.revision++;
+    this.paint_marks();
+    return true;
+  }
+
+  capture_body_selection(): RangeSelection | null {
+    return ops.capture_selection(this.lexical);
+  }
+
+  set_comment(id: string, patch: { text?: string; resolved?: boolean }) {
+    this.comments = this.comments.map((comment) => {
+      if (comment.id !== id) return comment;
+      const { resolved, ...rest } = { ...comment, ...patch };
+      return resolved ? { ...rest, resolved } : rest;
+    });
+    this.revision++;
+    this.paint_marks();
+  }
+
+  delete_comment(id: string) {
+    ops.remove_comment_mark(this.lexical, id);
+    this.comments = this.comments.filter((comment) => comment.id !== id);
+    this.revision++;
+  }
+
+  show_comment(id: string, focus: boolean): boolean {
+    const element = ops.select_comment(this.lexical, id);
+    if (!element) return false;
+    element.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (focus) this.lexical.focus();
+    return true;
+  }
+
+  ignore_word(word: string) {
+    this.ignored_words = clean_words([...this.ignored_words, word]) ?? [];
+    this.revision++;
+  }
+
+  replace_word_everywhere(word: string, replacement: string): number {
+    return ops.replace_word_everywhere(this.lexical, word, replacement);
+  }
+
+  replace_selection(at: RangeSelection, text: string) {
+    ops.replace_selection(this.lexical, at, text);
+  }
+
+  insert_below(at: RangeSelection, text: string) {
+    ops.insert_below(this.lexical, at, text);
   }
 
   mark_saved() {
@@ -552,9 +677,10 @@ export class WarrenEditor {
     return this.lexical.getElementByKey(match.key);
   }
 
-  select_next(word: string) {
-    ops.select_next(this.lexical, word);
-    this.lexical.focus();
+  select_next(word: string, focus = true) {
+    const key = ops.select_next(this.lexical, word);
+    if (focus) this.lexical.focus();
+    else if (key) this.lexical.getElementByKey(key)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
   replace_word_here(replacement: string) {

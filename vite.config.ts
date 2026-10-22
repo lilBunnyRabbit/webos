@@ -81,6 +81,12 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-fonts", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
           },
+          // Warren's spelling dictionary (about 190 KB gz): fetched when the spelling list is first switched on.
+          {
+            urlPattern: /\.(aff|dic)$/,
+            handler: "CacheFirst",
+            options: { cacheName: "webos-dictionaries", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
+          },
         ],
       },
       manifest: {

@@ -80,11 +80,14 @@
     onzone: (zone: Margin, on: boolean) => void;
     units: Unit;
     onunits: (units: Unit) => void;
+    spelling: Snippet;
+    comments: Snippet;
+    onword: (word: string) => void;
   }
 
   type Unit = "mm" | "in";
 
-  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind, selection, smart, onsmart, ongo, onpicture, onzone, units, onunits }: Props = $props();
+  let { editor, text, counts, repeats, open, ontoggle, onexport, onchanged, onlink, link_anchor, onfind, selection, smart, onsmart, ongo, onpicture, onzone, units, onunits, spelling, comments, onword }: Props = $props();
 
   const ai = $derived(kernel.service<AiService>("ai"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -506,7 +509,7 @@
           type="button"
           class="flex h-8 items-center justify-between rounded-md px-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-10"
           title="Select the next “{repeat.word}”"
-          onclick={() => editor.select_next(repeat.word)}
+          onclick={() => onword(repeat.word)}
         >
           <span class="truncate">{repeat.word}</span>
           <span class="font-mono text-2xs text-foreground/65 tabular-nums">×{repeat.count}</span>
@@ -552,6 +555,8 @@
   {@render group("picture", "Picture", picture_group)}
   {@render group("page", "Page", page_group)}
   {@render group("words", "Words", words_group)}
+  {@render group("spelling", "Spelling", spelling)}
+  {@render group("comments", `Comments${editor.comments.length ? ` (${editor.comments.filter((comment) => !comment.resolved).length})` : ""}`, comments)}
   {@render group("export", "Export", export_group)}
   {@render group("outline", "Outline", outline_group)}
 </div>

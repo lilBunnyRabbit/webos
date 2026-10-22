@@ -5,6 +5,38 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.54.0",
+    date: "2026-10-22",
+    title: "Review your writing in Warren",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren keeps earlier versions of a saved document as you work: look through them, compare one with what you have now, and bring it back with one click that Undo can take back.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Switch on Warren's spelling list to see every misspelt word with how often it appears, jump to it, pick a suggestion, ignore it or add it to your own dictionary.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Comment on any text in Warren, then resolve, reopen or delete comments from the side list; they go along when you export for Word.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "On a desktop with Chrome's built-in AI, Warren can rewrite a selection shorter, clearer, friendlier or more formal, or summarise it, right on your device.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["warren"],
+        text: "Warren's toolbar buttons are easier to tap on a phone, and the / menu stays inside the window and never hides the line you're typing.",
+      },
+    ],
+  },
+  {
     version: "3.53.0",
     date: "2026-10-22",
     title: "Write faster in Warren",

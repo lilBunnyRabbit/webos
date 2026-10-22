@@ -88,3 +88,22 @@ export const SAMPLE_V5: WarrenDocument = {
     ]) as WarrenDocument["editor"]["root"],
   },
 };
+
+const mark = (ids: string[], children: DocNode[]): DocNode => block("mark", children, { ids });
+
+export const SAMPLE_V6: WarrenDocument = {
+  version: VERSION,
+  id: "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+  page: { size: "A4", flow: "sheets" },
+  comments: [
+    { id: "c-one", text: "Say who you are.", quote: "Jane wrote this", created: Date.UTC(2026, 9, 22, 9, 30) },
+    { id: "c-two", text: "Too long\nCut it.", quote: "and that", created: Date.UTC(2026, 9, 22, 10), resolved: true },
+  ],
+  ignored_words: ["warren"],
+  editor: {
+    root: block("root", [
+      block("paragraph", [text("Hello "), mark(["c-one"], [text("Jane "), text("wrote", 1), text(" this")])]),
+      block("paragraph", [mark(["c-one", "c-two"], [text("and that")]), text(" end.")]),
+    ]) as WarrenDocument["editor"]["root"],
+  },
+};

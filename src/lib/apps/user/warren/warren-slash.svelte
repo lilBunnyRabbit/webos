@@ -26,9 +26,10 @@
     editor: WarrenEditor;
     sheet: boolean;
     anchor: string;
+    sheet_box?: HTMLElement | null;
   }
 
-  let { editor, sheet, anchor }: Props = $props();
+  let { editor, sheet, anchor, sheet_box = $bindable(null) }: Props = $props();
 
   const ICONS: Record<SlashCommand, Component<{ class?: string; weight?: "duotone" }>> = {
     [SlashCommand.TEXT]: TextTIcon,
@@ -49,14 +50,7 @@
 
   const id = $props.id();
   const open = $derived(editor.slash !== null);
-  let popover = $state<HTMLElement>();
   let list = $state<HTMLElement>();
-
-  $effect(() => {
-    if (sheet || !popover) return;
-    if (open && !popover.matches(":popover-open")) popover.showPopover();
-    else if (!open && popover.matches(":popover-open")) popover.hidePopover();
-  });
 
   $effect(() => {
     void editor.slash_index;
@@ -98,6 +92,7 @@
 {#if sheet}
   {#if open}
     <div
+      bind:this={sheet_box}
       class="absolute inset-x-0 bottom-0 z-20 mx-auto flex max-h-[45%] w-full max-w-lg flex-col rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 motion-safe:animate-sheet-in"
       role="dialog"
       aria-label="Insert a block"
@@ -109,18 +104,19 @@
       </div>
     </div>
   {/if}
-{:else}
-  <div bind:this={popover} popover="manual" class="slash m-0 overflow-y-auto rounded-xl bg-background-lighter p-1.5 text-foreground shadow-popover" style="position-anchor: {anchor}">
-    {#if open}{@render items()}{/if}
+{:else if open}
+  <!-- In the window, not the top layer: the window is its containing block, so the fallbacks keep it inside the window. -->
+  <div class="slash absolute z-30 m-0 overflow-y-auto rounded-xl bg-background-lighter p-1.5 text-foreground shadow-popover" style="position-anchor: {anchor}">
+    {@render items()}
   </div>
 {/if}
 
 <style>
   .slash {
-    width: 16rem;
-    max-height: min(20rem, 50vh);
+    width: min(16rem, 100% - 1rem);
+    max-height: min(20rem, 45%);
     position-area: bottom span-right;
-    position-try-fallbacks: flip-block, flip-inline;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
     margin-block: 4px;
   }
 </style>

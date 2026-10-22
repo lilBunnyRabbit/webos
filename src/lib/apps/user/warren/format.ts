@@ -5,8 +5,9 @@ import { clean_spec, STYLE_IDS, type StyleOverrides } from "./styles";
 
 // 2 added `page.font` and link nodes; 3 added `goal`, horizontal rules, check lists and sub/superscript; 4 added images,
 // `page.orientation`, `page.margins`, `header` and `footer`; 5 added tables, title and quote blocks, text colour and
-// highlight, and `styles`. Older files read as they are.
-export const VERSION = 5;
+// highlight, and `styles`; 6 added the document `id` (version history), `comments` with `mark` nodes and `ignored_words`.
+// Older files read as they are.
+export const VERSION = 6;
 export const EXTENSION = ".warren";
 export const GOAL_MAX = 1_000_000;
 
@@ -30,6 +31,8 @@ export interface DocNode {
   rowSpan?: number;
   headerState?: number;
   colWidths?: number[];
+  /** A `mark` node's comment ids. */
+  ids?: string[];
   /** Lexical's NodeState that isn't flat: a table's `borders`. */
   $?: Record<string, unknown>;
 }
@@ -38,8 +41,20 @@ export interface EditorJson {
   root: DocNode & { type: "root"; children: DocNode[] };
 }
 
+export interface Comment {
+  id: string;
+  text: string;
+  /** The text it was made on, shown when that text is gone. */
+  quote: string;
+  /** Epoch ms. */
+  created: number;
+  resolved?: boolean;
+}
+
 export interface WarrenDocument {
   version: typeof VERSION;
+  /** Stable across saves; names the document's version history. Save as gives a copy a new one. */
+  id?: string;
   page: PageSettings;
   /** Word goal, shown as progress in the status bar. */
   goal?: number;
@@ -47,6 +62,10 @@ export interface WarrenDocument {
   styles?: StyleOverrides;
   header?: EditorJson;
   footer?: EditorJson;
+  /** Keyed by the ids on `mark` nodes in the body. */
+  comments?: Comment[];
+  /** Words the spelling list skips in this document, lower case. */
+  ignored_words?: string[];
   editor: EditorJson;
 }
 
@@ -71,6 +90,7 @@ const NodeSchema: z.ZodType<DocNode> = z.lazy(() =>
       rowSpan: z.number().optional(),
       headerState: z.number().optional(),
       colWidths: z.array(z.number()).optional(),
+      ids: z.array(z.string()).optional(),
       $: z.record(z.string(), z.unknown()).optional(),
     })
     .loose()
@@ -88,8 +108,23 @@ const StylesSchema = z.partialRecord(z.enum(STYLE_IDS), z.record(z.string(), z.u
 
 const EditorSchema = z.object({ root: z.object({ type: z.literal("root"), children: z.array(NodeSchema) }).loose() }).loose();
 
+export const DOC_ID = /^[A-Za-z0-9-]{8,64}$/;
+
+export function new_document_id(): string {
+  return crypto.randomUUID();
+}
+
+const CommentSchema = z.object({
+  id: z.string().min(1).max(64),
+  text: z.string().max(10_000),
+  quote: z.string().max(10_000),
+  created: z.number().int().nonnegative(),
+  resolved: z.boolean().optional(),
+});
+
 const DocumentSchema = z.object({
   version: z.number().int().min(1),
+  id: z.string().regex(DOC_ID).optional(),
   page: z.object({
     size: z.enum(PAGE_SIZES),
     flow: z.enum(FLOWS),
@@ -101,6 +136,8 @@ const DocumentSchema = z.object({
   styles: StylesSchema.optional(),
   header: EditorSchema.optional(),
   footer: EditorSchema.optional(),
+  comments: z.array(CommentSchema).optional(),
+  ignored_words: z.array(z.string().min(1).max(100)).optional(),
   editor: EditorSchema,
 });
 
@@ -118,7 +155,18 @@ export function empty_editor(): EditorJson {
 }
 
 export function create_document(): WarrenDocument {
-  return { version: VERSION, page: { ...DEFAULT_PAGE }, editor: empty_editor() };
+  return { version: VERSION, id: new_document_id(), page: { ...DEFAULT_PAGE }, editor: empty_editor() };
+}
+
+function clean_comments(comments: Comment[] | undefined): Comment[] | undefined {
+  const seen = new Set<string>();
+  const clean = (comments ?? []).filter((comment) => !seen.has(comment.id) && seen.add(comment.id)).map(({ resolved, ...comment }) => (resolved ? { ...comment, resolved } : comment));
+  return clean.length ? clean : undefined;
+}
+
+export function clean_words(words: Iterable<string> | undefined): string[] | undefined {
+  const clean = [...new Set([...(words ?? [])].map((word) => word.trim().toLowerCase()).filter(Boolean))].sort();
+  return clean.length ? clean : undefined;
 }
 
 function clean_styles(styles: Partial<Record<string, Record<string, unknown>>> | undefined): StyleOverrides | undefined {
@@ -147,10 +195,13 @@ export function parse_document(text: string): WarrenDocument {
     throw new Error(`This isn't a valid Warren document: ${issue.path.join(".") || "root"} ${issue.message}`);
   }
   const { font, orientation, margins, ...page } = result.data.page;
-  const { goal, header, footer } = result.data;
+  const { id, goal, header, footer } = result.data;
   const styles = clean_styles(result.data.styles);
+  const comments = clean_comments(result.data.comments);
+  const ignored_words = clean_words(result.data.ignored_words);
   return {
     version: VERSION,
+    ...(id ? { id } : {}),
     page: {
       ...page,
       ...(font && font.kind !== "default" ? { font } : {}),
@@ -161,6 +212,8 @@ export function parse_document(text: string): WarrenDocument {
     ...(styles ? { styles } : {}),
     ...(header ? { header: header as EditorJson } : {}),
     ...(footer ? { footer: footer as EditorJson } : {}),
+    ...(comments ? { comments } : {}),
+    ...(ignored_words ? { ignored_words } : {}),
     editor: result.data.editor as EditorJson,
   };
 }
@@ -168,11 +221,14 @@ export function parse_document(text: string): WarrenDocument {
 export function serialize_document(document: WarrenDocument): string {
   return JSON.stringify({
     version: VERSION,
+    id: document.id,
     page: document.page,
     goal: document.goal,
     styles: document.styles,
     header: document.header,
     footer: document.footer,
+    comments: document.comments,
+    ignored_words: document.ignored_words,
     editor: document.editor,
   });
 }

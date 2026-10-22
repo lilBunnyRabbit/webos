@@ -10,6 +10,7 @@ import {
 import { HistoryExtension } from "@lexical/history";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { $createLinkNode, $isLinkNode, $toggleLink, LinkExtension } from "@lexical/link";
+import { $isMarkNode, $unwrapMarkNode, $wrapSelectionInMarkNode, MarkExtension, type MarkNode } from "@lexical/mark";
 import {
   $isListItemNode,
   $isListNode,
@@ -31,8 +32,12 @@ import {
   $getNodeByKey,
   $getRoot,
   $getSelection,
+  $createLineBreakNode,
   $isDecoratorNode,
   $isElementNode,
+  $isLineBreakNode,
+  $isTabNode,
+  $parseSerializedNode,
   $isParagraphNode,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -63,6 +68,7 @@ import {
   type NodeKey,
   type ParagraphNode,
   type RangeSelection,
+  type SerializedLexicalNode,
   type TextNode,
 } from "lexical";
 import { style_colour, type ColourProperty } from "./colour";
@@ -74,7 +80,8 @@ import { $create_title, $is_title, TitleExtension } from "./title-node";
 import { smarten } from "./typography";
 import { $create_page_break, PageBreakExtension } from "./page-break-node";
 import { $create_image, $insert_image, $is_image, $selected_image, ImageExtension, type ImageProps } from "./image-node";
-import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
+import { find_matches, is_word, map_offset, match_case, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
+import type { EditorJson } from "./format";
 
 // Lexical's `$` functions live here: Svelte reserves the prefix in `.svelte.ts` modules.
 
@@ -103,6 +110,8 @@ const THEME = {
   tableCellHeader: "wr-cell-header",
   tableCellSelected: "wr-cell-selected",
   tableSelection: "wr-table-selection",
+  mark: "wr-mark",
+  markOverlap: "wr-mark-overlap",
 };
 
 export const LIST_STYLES: readonly BlockStyle[] = [BlockStyle.BULLET, BlockStyle.NUMBER, BlockStyle.CHECK];
@@ -219,6 +228,7 @@ export function create_lexical(hooks: Hooks, parent?: LexicalEditor): { editor: 
       CheckListExtension,
       HorizontalRuleExtension,
       LinkExtension,
+      MarkExtension,
       configExtension(TableExtension, { hasHorizontalScroll: false, hasCellBackgroundColor: false }),
       TitleExtension,
       PageBreakExtension,
@@ -715,10 +725,241 @@ export function select_match(editor: LexicalEditor, match: Match) {
   });
 }
 
-export function select_next(editor: LexicalEditor, word: string) {
-  const state = editor.getEditorState();
-  const matches = find_all(state, word, true);
-  if (matches.length) select_match(editor, matches[next_after_selection(state, matches)]);
+interface Segment {
+  key: NodeKey;
+  start: number;
+  end: number;
+}
+
+interface BlockText {
+  text: string;
+  segments: Segment[];
+}
+
+// A block's text across its runs (formatting, links, comment marks), so a word split between two runs is one word.
+function $block_texts(): BlockText[] {
+  const blocks: BlockText[] = [];
+  const walk = (element: LexicalNode, current: BlockText | null): BlockText | null => {
+    if (!$isElementNode(element)) return current;
+    for (const child of element.getChildren()) {
+      if ($isTextNode(child) && !$isTabNode(child)) {
+        current ??= { text: "", segments: [] };
+        const text = child.getTextContent();
+        current.segments.push({ key: child.getKey(), start: current.text.length, end: current.text.length + text.length });
+        current.text += text;
+      } else if ($isLineBreakNode(child) || $isTabNode(child)) {
+        if (current) current.text += " ";
+      } else if ($isElementNode(child) && child.isInline()) {
+        current = walk(child, current ?? { text: "", segments: [] });
+      } else {
+        if (current?.segments.length) blocks.push(current);
+        current = null;
+        const inner = walk(child, null);
+        if (inner?.segments.length) blocks.push(inner);
+      }
+    }
+    return current;
+  };
+  const last = walk($getRoot(), null);
+  if (last?.segments.length) blocks.push(last);
+  return blocks;
+}
+
+function $point(block: BlockText, offset: number, end: boolean): { key: NodeKey; offset: number } {
+  const segment = block.segments.find((item) => (end ? offset > item.start && offset <= item.end : offset >= item.start && offset < item.end)) ?? block.segments.at(end ? -1 : 0)!;
+  return { key: segment.key, offset: Math.min(segment.end, Math.max(segment.start, offset)) - segment.start };
+}
+
+interface TextMatch {
+  anchor: { key: NodeKey; offset: number };
+  focus: { key: NodeKey; offset: number };
+  found: string;
+}
+
+function $text_matches(query: string, whole: boolean): TextMatch[] {
+  return $block_texts().flatMap((block) =>
+    find_matches(block.text, query, whole).map((range) => ({ anchor: $point(block, range.start, false), focus: $point(block, range.end, true), found: block.text.slice(range.start, range.end) }))
+  );
+}
+
+export function select_next(editor: LexicalEditor, word: string): NodeKey | null {
+  let selected: NodeKey | null = null;
+  editor.update(() => {
+    const matches = $text_matches(word, true);
+    if (!matches.length) return;
+    const order = $getRoot()
+      .getAllTextNodes()
+      .map((node) => node.getKey());
+    const position = (point: { key: NodeKey; offset: number }) => [order.indexOf(point.key), point.offset] as const;
+    const after = (a: readonly [number, number], b: readonly [number, number]) => a[0] > b[0] || (a[0] === b[0] && a[1] >= b[1]);
+    const selection = $getSelection();
+    const end = $isRangeSelection(selection) ? position(selection.isBackward() ? selection.anchor : selection.focus) : null;
+    const next = (end && matches.find((match) => after(position(match.anchor), end))) || matches[0];
+    const range = $createRangeSelection();
+    range.anchor.set(next.anchor.key, next.anchor.offset, "text");
+    range.focus.set(next.focus.key, next.focus.offset, "text");
+    $setSelection(range);
+    selected = next.anchor.key;
+  }, { discrete: true });
+  return selected;
+}
+
+export function replace_word_everywhere(editor: LexicalEditor, word: string, replacement: string): number {
+  let changed = 0;
+  editor.update(
+    () => {
+      for (const match of $text_matches(word, true).reverse()) {
+        const node = $getNodeByKey(match.anchor.key);
+        if (!$isTextNode(node)) continue;
+        const range = $createRangeSelection();
+        range.anchor.set(match.anchor.key, match.anchor.offset, "text");
+        range.focus.set(match.focus.key, match.focus.offset, "text");
+        // The inserted text takes the selection's format, so without this a bold word would come back plain.
+        range.format = node.getFormat();
+        range.style = node.getStyle();
+        range.insertText(match_case(replacement, match.found));
+        changed++;
+      }
+    },
+    { tag: HISTORY_PUSH_TAG, discrete: true }
+  );
+  return changed;
+}
+
+export function add_comment_mark(editor: LexicalEditor, id: string, at: RangeSelection | null): boolean {
+  let added = false;
+  editor.update(
+    () => {
+      if (at && $getNodeByKey(at.anchor.key) && $getNodeByKey(at.focus.key)) $setSelection(at.clone());
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection) || selection.isCollapsed() || !selection.getTextContent().trim()) return;
+      $wrapSelectionInMarkNode(selection, selection.isBackward(), id);
+      added = true;
+    },
+    { discrete: true }
+  );
+  return added;
+}
+
+function $marks(): MarkNode[] {
+  const marks: MarkNode[] = [];
+  const walk = (node: LexicalNode) => {
+    if ($isMarkNode(node)) marks.push(node);
+    if ($isElementNode(node)) for (const child of node.getChildren()) walk(child);
+  };
+  walk($getRoot());
+  return marks;
+}
+
+export function remove_comment_mark(editor: LexicalEditor, id: string) {
+  editor.update(() => {
+    for (const mark of $marks()) {
+      if (!mark.hasID(id)) continue;
+      if (mark.getIDs().length === 1) $unwrapMarkNode(mark);
+      else mark.deleteID(id);
+    }
+  });
+}
+
+export function select_comment(editor: LexicalEditor, id: string): HTMLElement | null {
+  let key: NodeKey | null = null;
+  editor.update(
+    () => {
+      const marks = $marks().filter((mark) => mark.hasID(id));
+      const first = marks[0]?.getFirstDescendant();
+      const last = marks.at(-1)?.getLastDescendant();
+      if (!$isTextNode(first) || !$isTextNode(last)) return;
+      key = marks[0].getKey();
+      const range = $createRangeSelection();
+      range.anchor.set(first.getKey(), 0, "text");
+      range.focus.set(last.getKey(), last.getTextContentSize(), "text");
+      $setSelection(range);
+    },
+    { discrete: true }
+  );
+  return key ? editor.getElementByKey(key) : null;
+}
+
+export function comments_at(state: EditorState): string[] {
+  return state.read(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return [];
+    return $findMatchingParent(selection.anchor.getNode(), $isMarkNode)?.getIDs() ?? [];
+  });
+}
+
+export function mark_ids_by_key(state: EditorState): Map<NodeKey, string[]> {
+  return state.read(() => new Map($marks().map((mark) => [mark.getKey(), mark.getIDs()])));
+}
+
+/** A saved state's content in place of the editor's, as one ordinary change that Undo takes back. */
+export function replace_content(editor: LexicalEditor, json: EditorJson) {
+  editor.update(
+    () => {
+      const root = $getRoot();
+      root.clear();
+      for (const child of json.root.children) root.append($parseSerializedNode(child as unknown as SerializedLexicalNode));
+      if (root.isEmpty()) root.append($createParagraphNode());
+      root.selectStart();
+    },
+    { tag: HISTORY_PUSH_TAG, discrete: true }
+  );
+}
+
+const BLANK_LINE = /\n\s*\n/;
+
+function $paragraphs(text: string): ParagraphNode[] {
+  return text
+    .split(BLANK_LINE)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const paragraph = $createParagraphNode();
+      part.split("\n").forEach((line, index) => {
+        if (index) paragraph.append($createLineBreakNode());
+        paragraph.append($createTextNode(line));
+      });
+      return paragraph;
+    });
+}
+
+export function replace_selection(editor: LexicalEditor, at: RangeSelection, text: string) {
+  editor.update(
+    () => {
+      if (!$getNodeByKey(at.anchor.key) || !$getNodeByKey(at.focus.key)) return;
+      $setSelection(at.clone());
+      const parts = text
+        .split(BLANK_LINE)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      parts.forEach((part, index) => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+        if (index) selection.insertParagraph();
+        selection.insertRawText(part);
+      });
+    },
+    { tag: HISTORY_PUSH_TAG, discrete: true }
+  );
+}
+
+export function insert_below(editor: LexicalEditor, at: RangeSelection, text: string) {
+  editor.update(
+    () => {
+      const end = $getNodeByKey(at.isBackward() ? at.anchor.key : at.focus.key);
+      const item = end && $findMatchingParent(end, $isListItemNode);
+      const block = item ? $block_of(item) : end && $block_of(end);
+      const paragraphs = $paragraphs(text);
+      if (!block || !paragraphs.length) return;
+      let after: LexicalNode = block;
+      for (const paragraph of paragraphs) {
+        after.insertAfter(paragraph);
+        after = paragraph;
+      }
+      paragraphs.at(-1)!.selectEnd();
+    },
+    { tag: HISTORY_PUSH_TAG, discrete: true }
+  );
 }
 
 /** Replaces one match, if the text there is still what was found. */

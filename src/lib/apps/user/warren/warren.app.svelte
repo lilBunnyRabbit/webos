@@ -1,18 +1,21 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, ShortcutCategory, type DialogsService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { AiAvailability, NotificationType, Platform, ShortcutCategory, type AiService, type DialogsService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { BRAND_LIGHT } from "$lib/core/api/services/settings/themes";
   import { Button, Grabber, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_extension, parent_path } from "$lib/core/api/services/files/path";
-  import { error_message, format_bytes } from "$lib/core/utils";
+  import { error_message, format_bytes, format_datetime } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { print_html } from "$lib/core/utils/print";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     Camera as CameraIcon,
+    ChatTeardropText as ChatTeardropTextIcon,
+    ClockCounterClockwise as ClockCounterClockwiseIcon,
+    Sparkle as SparkleIcon,
     Devices as DevicesIcon,
     Image as ImageIcon,
     Stack as StackIcon,
@@ -41,8 +44,18 @@
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
   import { build_docx, DOCX_TYPE, font_name } from "./docx";
   import { BlockStyle, LIST_STYLES, TableAction, WarrenEditor, Zone, type Margin } from "./editor.svelte";
-  import { EXTENSION, serialize_document, type WarrenDocument } from "./format";
-  import { document_file_name, font_sources, read_document, read_file, stem_of, with_extension, write_file } from "./io";
+  import { clean_words, EXTENSION, new_document_id, parse_document, serialize_document, type Comment, type WarrenDocument } from "./format";
+  import { document_file_name, font_sources, read_file, stem_of, with_extension, write_file } from "./io";
+  import { HISTORY_INTERVAL, type Snapshot } from "./history";
+  import { list_snapshots, write_snapshot } from "./history-files";
+  import WarrenHistory from "./warren-history.svelte";
+  import { SpellList, SpellStatus } from "./spell-list.svelte";
+  import { check_form } from "./spelling";
+  import WarrenSpelling from "./warren-spelling.svelte";
+  import WarrenComments from "./warren-comments.svelte";
+  import WarrenHelp from "./warren-help.svelte";
+  import { HELP_MAX_CHARACTERS, HELP_MODES, type HelpMode } from "./writing-help";
+  import type { RangeSelection } from "lexical";
   import { document_text, picture_size } from "./model";
   import { Flow, geometry, ZONE_GAP_MM, zone_distance } from "./page";
   import { BODY_FAMILY, document_css, style_family, type Families, type PrintFonts } from "./print";
@@ -83,6 +96,14 @@
   const units = storage.persisted<"mm" | "in">("units", "mm", z.enum(["mm", "in"]));
 
   const marks = storage.persisted<boolean>("marks", false, z.boolean());
+
+  const spelling_on = storage.persisted<boolean>("spelling", false, z.boolean());
+  const ignored_everywhere = storage.persisted<string[]>("ignored", [], z.array(z.string()));
+  const dictionary = storage.persisted<string[]>("dictionary", [], z.array(z.string()));
+  const spell = new SpellList();
+
+  const ai = $derived(kernel.service<AiService>("ai"));
+  const ai_on = $derived(!mobile && ai.features.prompt !== AiAvailability.NO);
 
   // Past this the .warren file is slow to open and save, and a phone may run short of memory.
   const LARGE_PICTURES = 5 * 1024 * 1024;
@@ -271,7 +292,9 @@
   $effect(() =>
     win.on_back(() => {
       if (editor.slash) editor.close_slash();
+      else if (history_open) history_open = false;
       else if (sheet) sheet = null;
+      else if (help) help = null;
       else if (finding) {
         finding = false;
         editor.focus();
@@ -299,11 +322,15 @@
         await import_markdown(path, id);
         return;
       }
-      const opened = await read_document(path);
+      const file = await read_file(path);
+      const opened = parse_document(await file.text());
       if (id !== open_request) return;
       editor.load(opened);
       file_path = path;
       draft = null;
+      const text = serialize_document(editor.snapshot());
+      history_base = { text, at: file.lastModified, words: counts.words };
+      last_snapshot = { text, edits: editor.edits, at: Date.now() };
     } catch (reason) {
       if (id === open_request) report_error(app_id, `Couldn't open ${base_name(path)}`, reason);
     } finally {
@@ -318,6 +345,7 @@
     const imported = await docx_to_html(await file.arrayBuffer());
     if (id !== open_request) return;
     editor.load_html(imported.html);
+    forget_history();
     file_path = null;
     draft = { name: document_file_name(base_name(path)), folder: is_system_path(path) ? "/home/Documents" : parent_path(path) };
     if (imported.left_out.length) {
@@ -334,6 +362,7 @@
     const text = await (await read_file(path)).text();
     if (id !== open_request) return;
     const left = editor.load_markdown(text);
+    forget_history();
     file_path = null;
     draft = { name: document_file_name(base_name(path)), folder: is_system_path(path) ? "/home/Documents" : parent_path(path) };
     if (left) {
@@ -354,6 +383,7 @@
   async function create() {
     if (!(await discard_ok())) return;
     editor.reset();
+    forget_history();
     file_path = null;
     draft = null;
     warned_large = false;
@@ -375,6 +405,8 @@
     open_request++;
     loading = false;
     editor.load(document);
+    editor.renew_id();
+    forget_history();
     file_path = null;
     draft = { name: document_file_name(choice.name), folder: "/home/Documents" };
     warned_large = false;
@@ -385,7 +417,7 @@
     if (!path) return;
     const target = with_extension(path, EXTENSION);
     try {
-      await write_file(target, serialize_document(editor.snapshot()));
+      await write_file(target, serialize_document({ ...editor.snapshot(), id: new_document_id() }));
       notifications.notify(app_id, { title: "Saved as a template", message: `${target}. File › New from template… starts from it.` });
     } catch (reason) {
       report_error(app_id, "Couldn't save the template", reason);
@@ -430,13 +462,16 @@
   }
 
   async function write(path: string): Promise<boolean> {
+    editor.ensure_id();
     const snapshot = editor.snapshot();
+    const content = serialize_document(snapshot);
     try {
-      await write_file(path, serialize_document(snapshot));
+      await write_file(path, content);
       file_path = path;
       draft = null;
       editor.mark_saved();
       notifications.notify(app_id, { title: "Document saved", message: path });
+      void record(content, snapshot);
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the document", reason);
@@ -451,7 +486,151 @@
       start_path: folder,
       title: "Save document",
     });
-    return path ? write(with_extension(path, EXTENSION)) : false;
+    if (!path) return false;
+    // A copy of a saved document starts a history of its own; the first save of a new one keeps the id it was made with.
+    if (file_path) {
+      editor.renew_id();
+      forget_history();
+    }
+    return write(with_extension(path, EXTENSION));
+  }
+
+  // The version as opened, kept until the first save writes it into a history that's still empty.
+  let history_base: { text: string; at: number; words: number } | null = null;
+  let last_snapshot = { text: "", edits: 0, at: Date.now() };
+  let history_open = $state(false);
+
+  function forget_history() {
+    history_base = null;
+    last_snapshot = { text: "", edits: editor.edits, at: Date.now() };
+  }
+
+  async function record(content: string, snapshot: WarrenDocument) {
+    const id = snapshot.id;
+    if (!id || content === last_snapshot.text) return;
+    last_snapshot = { text: content, edits: editor.edits, at: Date.now() };
+    try {
+      const base = history_base;
+      history_base = null;
+      if (base && base.text !== content && !(await list_snapshots(id)).length) await write_snapshot(id, base.text, base.words, base.at);
+      await write_snapshot(id, content, count(document_text(snapshot.editor)).words);
+    } catch (reason) {
+      notifications.notify(app_id, { type: NotificationType.WARNING, title: "Couldn't keep this version", message: error_message(reason) });
+    }
+  }
+
+  $effect(() => {
+    const timer = setInterval(() => {
+      if (!file_path || read_only || !editor.doc_id || editor.edits === last_snapshot.edits || Date.now() - last_snapshot.at < HISTORY_INTERVAL) return;
+      const snapshot = editor.snapshot();
+      const content = serialize_document(snapshot);
+      if (content === last_snapshot.text) last_snapshot = { ...last_snapshot, edits: editor.edits };
+      else void record(content, snapshot);
+    }, 30_000);
+    return () => clearInterval(timer);
+  });
+
+  function open_history() {
+    sheet = null;
+    history_open = true;
+  }
+
+  async function restore(document: WarrenDocument, snapshot: Snapshot) {
+    history_open = false;
+    const before = editor.snapshot();
+    if (file_path && !read_only) await record(serialize_document(before), before);
+    editor.restore(document);
+    notifications.notify(app_id, { title: `Restored the version from ${format_datetime(snapshot.at)}`, message: "Undo takes it back; the version before is in the history too." });
+  }
+
+  async function comment() {
+    sheet = null;
+    const quote = editor.selected.trim();
+    const at = editor.capture_body_selection();
+    if (!quote || !at) {
+      notifications.notify(app_id, { type: NotificationType.WARNING, title: "Select the text to comment on first" });
+      return;
+    }
+    const text = await win.prompt("Comment", { detail: `On “${quote.length > 80 ? `${quote.slice(0, 80)}…` : quote}”`, placeholder: "Your comment", confirm_label: "Comment" });
+    if (!text?.trim()) return;
+    if (!editor.add_comment(text.trim(), at, quote.slice(0, 500))) {
+      notifications.notify(app_id, { type: NotificationType.WARNING, title: "Couldn't comment there", message: "The text it was on changed. Select it again." });
+      return;
+    }
+    groups.value = { ...groups.value, comments: true };
+  }
+
+  async function edit_comment(item: Comment) {
+    const text = await win.prompt("Edit comment", { initial: item.text, confirm_label: "Save" });
+    if (text?.trim()) editor.set_comment(item.id, { text: text.trim() });
+  }
+
+  async function delete_comment(item: Comment) {
+    const ok = await win.confirm("Delete this comment?", { detail: item.text, confirm_label: "Delete", danger: true });
+    if (ok) editor.delete_comment(item.id);
+  }
+
+  function show_comment(id: string) {
+    sheet = null;
+    editor.show_comment(id, !mobile);
+  }
+
+  let help = $state.raw<{ mode: HelpMode; text: string; at: RangeSelection } | null>(null);
+
+  async function help_menu(event: MouseEvent) {
+    const text = editor.selected.trim();
+    const at = editor.capture_body_selection();
+    if (!text || !at) {
+      notifications.notify(app_id, { type: NotificationType.WARNING, title: "Select the text first", message: "Writing help rewrites or summarises what's selected." });
+      return;
+    }
+    if (text.length > HELP_MAX_CHARACTERS) {
+      notifications.notify(app_id, { type: NotificationType.WARNING, title: "That's too much at once", message: `Select up to ${HELP_MAX_CHARACTERS.toLocaleString("en")} characters; the on-device model reads no more.` });
+      return;
+    }
+    const choice = await dialogs.menu(
+      HELP_MODES.map((item) => ({ id: item.mode, label: item.label })),
+      { anchor: anchor_of(event) }
+    );
+    if (choice) help = { mode: choice as HelpMode, text, at };
+  }
+
+  function use_help(text: string, how: "replace" | "insert") {
+    const request = help;
+    help = null;
+    if (!request) return;
+    if (how === "replace") editor.replace_selection(request.at, text);
+    else editor.insert_below(request.at, text);
+    editor.focus();
+  }
+
+  $effect(() => {
+    const on = spelling_on.value;
+    untrack(() => (on ? void spell.start(dictionary.value) : spell.stop()));
+  });
+
+  const ignored_words = $derived(new Set([...editor.ignored_words, ...ignored_everywhere.value]));
+
+  $effect(() => {
+    if (spell.status !== SpellStatus.READY) return;
+    const words = text;
+    const ignored = ignored_words;
+    const timer = setTimeout(() => spell.update(words, ignored), 400);
+    return () => clearTimeout(timer);
+  });
+
+  function spell_replace(word: string, replacement: string) {
+    const changes = editor.replace_word_everywhere(word, replacement);
+    if (!changes) changed(0, word);
+  }
+
+  async function spell_add(word: string) {
+    dictionary.value = [...new Set([...dictionary.value, check_form(word)])];
+    try {
+      await spell.add(word);
+    } catch (reason) {
+      report_error(app_id, "Couldn't add the word", reason);
+    }
   }
 
   function save(): Promise<boolean> {
@@ -534,6 +713,7 @@
         { id: "save", label: "Save", icon: FloppyDiskIcon, shortcut: "Mod+S" },
         { id: "save-as", label: "Save as…", icon: FloppyDiskBackIcon, shortcut: "Mod+Shift+S" },
         { id: "save-template", label: "Save as template…", icon: StackPlusIcon },
+        { id: "history", label: "Version history…", icon: ClockCounterClockwiseIcon },
         { separator: true },
         { id: "docx", label: "Export for Word…", icon: FileDocIcon },
         { id: "md", label: "Export as Markdown…", icon: FileMdIcon },
@@ -544,6 +724,7 @@
     if (choice === "new") void create();
     else if (choice === "template") void from_template();
     else if (choice === "save-template") void save_template();
+    else if (choice === "history") open_history();
     else if (choice === "open") void open();
     else if (choice === "save") void save();
     else if (choice === "save-as") void save_as();
@@ -588,6 +769,7 @@
       font_request++;
       drop_faces();
       for (const loaded of Object.values(style_faces)) for (const face of loaded.faces) document.fonts.delete(face);
+      spell.stop();
       editor.destroy();
     };
   });
@@ -612,6 +794,7 @@
   });
 
   const keep_focus = (event: PointerEvent) => event.preventDefault();
+  const TOUCH = "shrink-0 pointer-coarse:size-11";
 
   let resize_handle = $state<HTMLElement | null>(null);
 
@@ -707,6 +890,31 @@
     place();
     scroller.addEventListener("scroll", place, { passive: true });
     return () => scroller.removeEventListener("scroll", place);
+  });
+
+  let slash_sheet = $state<HTMLElement | null>(null);
+
+  // On the phone the menu is a sheet over the bottom of the window: the line being typed is scrolled up above it, with
+  // room added under the page so the last line can get there too.
+  $effect(() => {
+    const box = slash_sheet;
+    const scroller = desk;
+    if (!box || !scroller || !app_root) return;
+    const frame = requestAnimationFrame(() => {
+      const line = untrack(() => slash_box);
+      if (!line || !app_root) return;
+      const origin = app_root.getBoundingClientRect();
+      const bottom = origin.top + line.top + line.height;
+      // From layout, not the sheet's box: it's still sliding in.
+      const top = origin.bottom - box.offsetHeight - 12;
+      if (bottom <= top) return;
+      scroller.style.paddingBottom = `${box.offsetHeight + 24}px`;
+      scroller.scrollBy({ top: bottom - top, behavior: motion_reduced() ? "instant" : "smooth" });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      scroller.style.removeProperty("padding-bottom");
+    };
   });
 
   let focus_mode = $state(false);
@@ -807,7 +1015,24 @@
     onzone={set_zone}
     units={units.value}
     onunits={(value) => (units.value = value)}
-  />
+    onword={(word) => editor.select_next(word, !mobile)}
+  >
+    {#snippet spelling()}
+      <WarrenSpelling
+        list={spell}
+        on={spelling_on.value}
+        onon={(on) => (spelling_on.value = on)}
+        onjump={(word) => editor.select_next(word, !mobile)}
+        onignore={(word) => editor.ignore_word(check_form(word))}
+        onignoreall={(word) => (ignored_everywhere.value = clean_words([...ignored_everywhere.value, check_form(word)]) ?? [])}
+        onadd={spell_add}
+        onreplace={spell_replace}
+      />
+    {/snippet}
+    {#snippet comments()}
+      <WarrenComments {editor} oncomment={comment} onshow={show_comment} onedit={edit_comment} ondelete={delete_comment} />
+    {/snippet}
+  </WarrenTools>
 {/snippet}
 
 <svelte:element this={"style"}>{doc_css}</svelte:element>
@@ -825,20 +1050,28 @@
 >
   {#if !focus_mode}
   <Toolbar class="flex-nowrap gap-1">
-    <Button size="sm" variant="quiet" class="max-w-48 min-w-0 shrink gap-1 pr-1.5" title={file_path ?? "Not saved yet"} onclick={file_menu}>
+    <Button size="sm" variant="quiet" class="max-w-48 min-w-0 shrink gap-1 pr-1.5 pointer-coarse:h-11" title={file_path ?? "Not saved yet"} onclick={file_menu}>
       <span class="min-w-0 truncate">{mobile ? stem : "File"}</span>
       {#if mobile && editor.dirty}<span class="size-2 shrink-0 rounded-full bg-primary"></span>{/if}
       <CaretDownIcon weight="bold" class="size-3 shrink-0 opacity-65" />
     </Button>
-    <IconButton label="Undo (Mod+Z)" size="sm" class="shrink-0" disabled={!editor.can_undo} onpointerdown={keep_focus} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
-    <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.can_redo} onpointerdown={keep_focus} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
+    <IconButton label="Undo (Mod+Z)" size="sm" class={TOUCH} disabled={!editor.can_undo} onpointerdown={keep_focus} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
+    <IconButton label="Redo (Mod+Shift+Z)" size="sm" class={TOUCH} disabled={!editor.can_redo} onpointerdown={keep_focus} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
     <div class="flex-1"></div>
-    <IconButton label="Show ¶ marks (Mod+Shift+8)" size="sm" class="shrink-0" pressed={marks.value} onpointerdown={keep_focus} onclick={() => (marks.value = !marks.value)}><ParagraphIcon weight="bold" /></IconButton>
-    <IconButton label="Focus mode (Mod+Shift+F)" size="sm" class="shrink-0" onpointerdown={keep_focus} onclick={() => (focus_mode = true)}><CornersOutIcon weight="bold" /></IconButton>
+    {#if !mobile}
+      <IconButton label="Comment on the selection" size="sm" class={TOUCH} disabled={!editor.selected.trim()} onpointerdown={keep_focus} onclick={comment}><ChatTeardropTextIcon weight="bold" /></IconButton>
+    {/if}
+    {#if ai_on}
+      <IconButton label="Writing help: rewrite or summarise the selection" size="sm" class={TOUCH} disabled={!editor.selected.trim()} pressed={!!help} onpointerdown={keep_focus} onclick={help_menu}>
+        <SparkleIcon weight="bold" />
+      </IconButton>
+    {/if}
+    <IconButton label="Show ¶ marks (Mod+Shift+8)" size="sm" class={TOUCH} pressed={marks.value} onpointerdown={keep_focus} onclick={() => (marks.value = !marks.value)}><ParagraphIcon weight="bold" /></IconButton>
+    <IconButton label="Focus mode (Mod+Shift+F)" size="sm" class={TOUCH} onpointerdown={keep_focus} onclick={() => (focus_mode = true)}><CornersOutIcon weight="bold" /></IconButton>
   </Toolbar>
   {/if}
 
-  <div class="body grid min-h-0">
+  <div class="body relative grid min-h-0">
     <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
       {@render tools()}
     </aside>
@@ -872,6 +1105,20 @@
 
       {#if finding}
         <WarrenFind {editor} input_id={find_input_id} onclose={() => (finding = false)} onreplaced={changed} />
+      {/if}
+      {#if help}
+        {#key help}
+          <WarrenHelp
+            mode={help.mode}
+            text={help.text}
+            onreplace={(text) => use_help(text, "replace")}
+            oninsert={(text) => use_help(text, "insert")}
+            onclose={() => {
+              help = null;
+              editor.focus();
+            }}
+          />
+        {/key}
       {/if}
 
       <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow} bind:this={desk}>
@@ -916,9 +1163,18 @@
       <div class="absolute inset-0 grid place-items-center bg-background-darker/70"><Spinner label="Opening document" /></div>
     {/if}
     {#if focus_mode}
-      <IconButton label="Leave focus mode (Esc)" size="sm" class="absolute top-2 right-4 z-10 bg-background-light/80 opacity-65 hover:opacity-100" onpointerdown={keep_focus} onclick={() => (focus_mode = false)}>
+      <IconButton
+        label="Leave focus mode (Esc)"
+        size="sm"
+        class="absolute top-2 right-4 z-10 bg-background-light/80 opacity-65 hover:opacity-100 pointer-coarse:size-11 pointer-coarse:opacity-100"
+        onpointerdown={keep_focus}
+        onclick={() => (focus_mode = false)}
+      >
         <CornersInIcon weight="bold" />
       </IconButton>
+    {/if}
+    {#if history_open && !mobile}
+      <WarrenHistory doc_id={editor.doc_id} current={() => editor.snapshot()} sheet={false} families={EDITOR_FAMILIES} paper={PAPER_VARS} onrestore={restore} onclose={() => (history_open = false)} />
     {/if}
   </div>
 
@@ -983,11 +1239,14 @@
       </div>
     </div>
   {/if}
+  {#if history_open && mobile}
+    <WarrenHistory doc_id={editor.doc_id} current={() => editor.snapshot()} sheet families={EDITOR_FAMILIES} paper={PAPER_VARS} onrestore={restore} onclose={() => (history_open = false)} />
+  {/if}
   <WarrenLink id={link_id} anchor={link_anchor} {editor} placement={link_placement} />
   {#if slash_box}
     <div class="pointer-events-none absolute w-px" style="left: {slash_box.left}px; top: {slash_box.top}px; height: {slash_box.height}px; anchor-name: {slash_anchor}"></div>
   {/if}
-  <WarrenSlash {editor} sheet={mobile} anchor={slash_anchor} />
+  <WarrenSlash {editor} sheet={mobile} anchor={slash_anchor} bind:sheet_box={slash_sheet} />
 </div>
 
 <style>
@@ -1323,6 +1582,15 @@
   .warren-doc :global(*::grammar-error) {
     text-decoration: wavy underline var(--info);
     text-decoration-skip-ink: none;
+  }
+
+  .warren-doc :global(.wr-mark[data-comment="open"]) {
+    background: color-mix(in oklch, var(--warning) 26%, transparent);
+    box-shadow: inset 0 -2px color-mix(in oklch, var(--warning) 75%, transparent);
+  }
+
+  .warren-doc :global(.wr-mark[data-comment="open"][data-current]) {
+    background: color-mix(in oklch, var(--warning) 45%, transparent);
   }
 
   .warren-doc :global(.wr-checked),

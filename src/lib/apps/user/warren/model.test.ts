@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4, SAMPLE_V5 } from "./fixture";
+import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4, SAMPLE_V5, SAMPLE_V6 } from "./fixture";
 import { style_colour } from "./colour";
 import { DEFAULT_STYLES, resolve_styles, style_fonts, style_overrides } from "./styles";
 import { column_percents, grid_rows, move_border, parse_tsv, with_column_width } from "./table";
-import { create_document, parse_document, serialize_document } from "./format";
-import { blocks_of, document_text, fill_tokens, font_size, has_text, is_page_number_line, normalize_url, page_number_align, picture_size, safe_image, safe_url } from "./model";
+import { create_document, DOC_ID, parse_document, serialize_document } from "./format";
+import { blocks_of, document_text, fill_tokens, mark_ids, font_size, has_text, is_page_number_line, normalize_url, page_number_align, picture_size, safe_image, safe_url } from "./model";
 import { geometry, margin_preset, preset_margins } from "./page";
 import { smarten } from "./typography";
 import { count, find_matches, find_word, map_offset, match_case, reading_minutes, repeated_words, replace_matches, replace_word, TEXT_MATCH, word_at } from "./words";
@@ -18,7 +18,7 @@ describe("format", () => {
   it("rejects what isn't a Warren document", () => {
     expect(() => parse_document("nope")).toThrow("isn't JSON");
     expect(() => parse_document(JSON.stringify({ version: 1, page: { size: "A3", flow: "sheets" }, editor: SAMPLE.editor }))).toThrow("page.size");
-    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 6 }))).toThrow("newer Warren");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE, version: 7 }))).toThrow("newer Warren");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, goal: -3 }))).toThrow("goal");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, page: { ...SAMPLE.page, font: { kind: "builtin", id: "nope" } } }))).toThrow("page.font");
     expect(() => parse_document(JSON.stringify({ ...SAMPLE, editor: { root: { type: "paragraph", children: [] } } }))).toThrow("editor.root.type");
@@ -26,14 +26,45 @@ describe("format", () => {
 });
 
 describe("format versions", () => {
-  it("opens version 1 to 4 files and saves them as version 5", () => {
-    for (const version of [1, 2, 3, 4]) {
+  it("opens version 1 to 5 files and saves them as version 6", () => {
+    for (const version of [1, 2, 3, 4, 5]) {
       const opened = parse_document(JSON.stringify({ ...SAMPLE, version }));
-      expect(opened.version).toBe(5);
+      expect(opened.version).toBe(6);
       expect(opened.goal).toBeUndefined();
       expect(opened.header).toBeUndefined();
-      expect(JSON.parse(serialize_document(opened)).version).toBe(5);
+      expect(opened.id).toBeUndefined();
+      expect(JSON.parse(serialize_document(opened)).version).toBe(6);
     }
+  });
+
+  it("keeps the id, comments and ignored words", () => {
+    expect(parse_document(serialize_document(SAMPLE_V6))).toEqual(SAMPLE_V6);
+    const messy = { ...SAMPLE_V6, ignored_words: ["Teh", "teh", " warren "], comments: [...SAMPLE_V6.comments!, { ...SAMPLE_V6.comments![0], text: "twice" }, { ...SAMPLE_V6.comments![0], id: "c-three", resolved: false }] };
+    const opened = parse_document(serialize_document(messy));
+    expect(opened.ignored_words).toEqual(["teh", "warren"]);
+    expect(opened.comments!.map((comment) => comment.id)).toEqual(["c-one", "c-two", "c-three"]);
+    expect("resolved" in opened.comments![2]).toBe(false);
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE_V6, id: "../etc" }))).toThrow("id");
+    expect(() => parse_document(JSON.stringify({ ...SAMPLE_V6, comments: [{ id: "x", text: 3 }] }))).toThrow("comments");
+  });
+
+  it("gives every new document its own id", () => {
+    const a = create_document().id!;
+    expect(a).toMatch(DOC_ID);
+    expect(create_document().id).not.toBe(a);
+  });
+
+  it("reads comment marks into runs and lists their ids in order", () => {
+    expect(mark_ids(SAMPLE_V6.editor)).toEqual(["c-one", "c-two"]);
+    const [first, second] = blocks_of(SAMPLE_V6.editor);
+    expect(first.kind === "paragraph" && first.runs.map((run) => [run.text, run.comments ?? []])).toEqual([
+      ["Hello ", []],
+      ["Jane ", ["c-one"]],
+      ["wrote", ["c-one"]],
+      [" this", ["c-one"]],
+    ]);
+    expect(second.kind === "paragraph" && second.runs[0].comments).toEqual(["c-one", "c-two"]);
+    expect(document_text(SAMPLE_V6.editor)).toBe("Hello Jane wrote this\nand that end.");
   });
 
   it("keeps page setup, header, footer and pictures", () => {
