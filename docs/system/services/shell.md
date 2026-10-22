@@ -164,7 +164,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | settings | `theme get`, `theme list`, `theme set`, `theme random`, `theme save`, `theme delete` | `theme` | `theme` |
 | notifications | `notify`, `notifications` | | `notification` |
 | clipboard | `copy`, `paste` | | |
-| version | `version`, `changelog [-c] [--apps]`, `install` | | `release`, `new-app` (click launches) |
+| version | `version`, `changelog [-c] [--apps]`, `install`, `ci status` | | `release`, `new-app` (click launches), `ci-job` (click opens the job on GitHub) |
 | router | `link [id] [-c] [-s]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |

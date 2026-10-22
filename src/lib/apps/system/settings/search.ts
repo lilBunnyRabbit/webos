@@ -75,6 +75,7 @@ export const SETTINGS: SettingEntry[] = [
   { id: "install", page: "about", label: "Install WebOS", keywords: ["pwa", "app", "offline", "home screen"] },
   { id: "build", page: "about", label: "Build", keywords: ["version", "commit", "branch"] },
   { id: "updates", page: "about", label: "Check for updates", keywords: ["update", "reload", "new version"] },
+  { id: "pipeline", page: "about", label: "Pipeline", keywords: ["ci", "build status", "actions", "deploy", "github"] },
   { id: "introduction", page: "about", label: "Introduction", keywords: ["tour", "getting started", "welcome", "help"] },
   { id: "feedback", page: "about", label: "Feedback", keywords: ["bug", "issue", "feature request", "propose an app", "github"] },
   { id: "credits", page: "about", label: "Credits", keywords: ["authors", "who made"] },

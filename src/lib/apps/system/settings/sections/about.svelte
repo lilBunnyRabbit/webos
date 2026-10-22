@@ -11,6 +11,7 @@
   import { format_datetime } from "$lib/core/utils";
   import { installer } from "$lib/core/utils/install.svelte";
   import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
+  import Pipeline from "./pipeline.svelte";
   import {
     ArrowClockwise as ArrowClockwiseIcon,
     ArrowSquareOut as ArrowSquareOutIcon,
@@ -105,6 +106,8 @@
       {/if}
     </SettingRow>
   </Section>
+
+  <Pipeline />
 
   <Section setting="introduction" title="Introduction">
     <SettingRow label="Show the introduction" description="The full-screen tour from your first visit: installing, files, getting around, theme and taskbar.">

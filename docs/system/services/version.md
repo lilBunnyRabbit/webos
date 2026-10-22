@@ -23,6 +23,7 @@ Knows which build is running and detects when a newer build has been deployed, b
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
 | `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to registered apps (installed or not; Open installs through `launch`): what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
 | `show_intro` | `show_intro(): Promise<void>` | Imports `intro-dialog.svelte` and awaits the apps' `meta_ready` (ADR-049: the suggestions show descriptions), then `dialogs.show(IntroDialog, {}, { dismissible: false })`. On first boot `init()` awaits both before returning, so the introduction is up when the splash goes (ADR-036); only a first boot waits for the `app-meta` chunk. Resolves when it closes. Doesn't write the seen marker |
+| `pipeline` | `pipeline(signal?: AbortSignal): Promise<Pipeline \| null>` | The newest Actions run on `master` of `lilBunnyRabbit/webos` and its jobs (`pipeline.ts` `fetch_pipeline`). Two unauthenticated calls to `api.github.com` (`/actions/runs?branch=master&per_page=1`, then `/runs/{id}/jobs`), answered with CORS; no token, no state, nothing stored. GitHub allows 60 calls an hour per IP, so one call costs 2 of them. Throws on a non-OK answer; a used-up limit throws "GitHub's hourly limit is used up until HH:MM" from `x-ratelimit-reset`. `null` when there is no run. Solo inherits it |
 | `init` / `destroy` | | See Lifecycle. |
 | `to_string` | | `VersionService: v{version} ({commit})` |
 
@@ -41,7 +42,13 @@ const ChangeKind = { NEW: "new", IMPROVED: "improved", FIXED: "fixed" } as const
 interface Change { kind: ChangeKind; text: string; apps?: AppId[] }        // apps: whose history the line belongs to
 interface Release { version: string; date: string /* YYYY-MM-DD */; title: string; changes: Change[]; introduces?: AppId[] }
 interface AppIntroduction { app: AppId; release: Release }
+
+const PipelineState = { QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED, SKIPPED } // pipeline_state(status, conclusion)
+interface PipelineJob { name: string; state: PipelineState; started: number | null; completed: number | null; url: string }
+interface Pipeline { state: PipelineState; sha: string; title: string; created: number; url: string; jobs: PipelineJob[] }
 ```
+
+`pipeline.ts` also exports `is_settled(state)`, `is_this_build(pipeline, commit)` (the full sha starts with the build's short hash) and `format_took(ms)` (`38s`, `4m 12s`, `1h 3m`).
 
 `buildTime` and `buildTimestamp` are camelCase on purpose. They're the deployed wire format ([CONVENTIONS → Naming](../../CONVENTIONS.md#naming)).
 
@@ -83,7 +90,7 @@ In solo mode `SoloVersionService` (`version/solo.svelte.ts`, ADR-047) replaces t
 
 ## Consumers
 
-- Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev. Its Install row reads `installer` directly (see [Install](#install)).
+- Settings › About: `info`, "Check now" / "Update and reload", "Show again" (`show_intro()`). Update checks are disabled in dev. Its Install row reads `installer` directly (see [Install](#install)). Its Pipeline section calls `pipeline()`.
 - Settings › What's new: `load_changelog()` on mount, `changelog`, `unseen`, `info.version`.
 - App Library: `load_changelog()` at init, `changelog` (History section, Recently added / updated sort through `app_history` and `recency`) and `unseen` (session-only New / Updated badges through `introduced_apps` and `updated_apps`).
 - Its own toasts (below).
@@ -217,7 +224,7 @@ A worker that activates at any point before those reloads as before. Restart now
 
 ## Shell
 
-Contributes `version`, `changelog`, `install` and the `release` and `new-app` value types (`version/shell.ts`). `changelog --changes` (`-c`) yields one untagged row per change (version, kind, text). `changelog --apps` yields one `new-app` row per introduced app that is still registered (id, name, added, date), newest release first; clicking a row launches the app. `new-app` is its own type because `app`'s columns (id, name, category) would hide when it came; the command's `yields` stays `release`, so `where` after `--apps` completes release columns. `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". See [shell](shell.md#contributions).
+Contributes `version`, `changelog`, `install`, `ci status` and the `release`, `new-app` and `ci-job` value types (`version/shell.ts`). `changelog --changes` (`-c`) yields one untagged row per change (version, kind, text). `changelog --apps` yields one `new-app` row per introduced app that is still registered (id, name, added, date), newest release first; clicking a row launches the app. `new-app` is its own type because `app`'s columns (id, name, category) would hide when it came; the command's `yields` stays `release`, so `where` after `--apps` completes release columns. `install` is `available()` only while not installed; it yields the platform hint when no prompt is held, otherwise "Installing…" then "Installed." or "Install dismissed.". `ci status` yields one `ci-job` row per job of the newest master run (job, status, took: `format_took` of started to completed, `-` while unfinished); clicking a row opens the job on GitHub in a new tab. See [shell](shell.md#contributions).
 
 ## Known gaps
 

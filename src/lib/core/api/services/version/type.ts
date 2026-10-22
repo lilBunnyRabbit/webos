@@ -1,5 +1,6 @@
 import type { IService } from "../../type";
 import type { AppId } from "../apps/type";
+import type { Pipeline } from "./pipeline";
 
 export interface VersionInfo {
   version: string;
@@ -106,4 +107,10 @@ export interface VersionService extends IService {
 
   /** Show the full-screen introduction. Resolves when it closes. */
   show_intro(): Promise<void>;
+
+  /**
+   * The newest CI run on master and its jobs, fetched from GitHub's public API on every call (two requests out of the 60
+   * an hour GitHub allows an IP without a token). `null` when there is no run. Throws offline or past the limit.
+   */
+  pipeline(signal?: AbortSignal): Promise<Pipeline | null>;
 }

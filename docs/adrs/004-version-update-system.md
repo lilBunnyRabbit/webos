@@ -2,6 +2,9 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-22: CI pipeline status ([brainstorm](../brainstorm/2026-10-22_ci-status.md))**
+> `VersionService.pipeline()` reads the newest master Actions run and its jobs from GitHub's public API, no token. The 60-an-hour limit rejected above is fine for a status the user opens, never for update detection, which stays on `version.json`. Shown in Settings › About and as `ci status`.
+
 > **Revision 2026-10-21: update progress ([brainstorm](../brainstorm/2026-10-21_slow-updates.md))**
 > - A release renames most of the precache and Workbox installs it one file at a time, so "Update and reload" could sit on a silent spinner, then the old 8 s timeout threw the half-done install away and cleared everything.
 > - The update screen now shows files done of the total and elapsed seconds. Progress is read from Cache Storage (the new `sw.js` manifest against the precache cache's keys), so the service worker is unchanged. Bytes aren't shown: the manifest Workbox writes has no sizes.

@@ -608,6 +608,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Automated testing on PR
 - [x] Automated deployment to GitHub Pages (`deploy.yml`: check, build, deploy on push to `master`)
 - [ ] Version tagging
+- [x] Pipeline status in Settings › About and `ci status` (newest master run and its jobs, public GitHub API, no token; [brainstorm](brainstorm/2026-10-22_ci-status.md))
 
 ---
 

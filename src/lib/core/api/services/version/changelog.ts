@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.55.0",
+    date: "2026-10-22",
+    title: "See the build pipeline",
+    changes: [
+      {
+        kind: NEW,
+        text: "Settings › About shows the latest build run on GitHub with each of its steps, live while it runs, and whether it's the build you're on; the ci status command lists the same steps.",
+      },
+    ],
+  },
+  {
     version: "3.54.0",
     date: "2026-10-22",
     title: "Review your writing in Warren",

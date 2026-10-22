@@ -4,6 +4,7 @@ import { define_command } from "../shell/define";
 import type { ShellContribution, Value } from "../shell/type";
 import type { AppsService } from "../apps/type";
 import { introduced_apps } from "./history";
+import { format_took } from "./pipeline";
 import type { VersionService } from "./type";
 
 export function version_shell(version: VersionService, apps: () => AppsService): ShellContribution {
@@ -15,6 +16,11 @@ export function version_shell(version: VersionService, apps: () => AppsService):
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name).padEnd(20)} v${String(app.added).padEnd(8)} ${String(app.date)}`,
         open: (app) => void apps().launch(String(app.id)),
       },
+      "ci-job": {
+        columns: ["job", "status", "took"],
+        text: (job) => `${String(job.job).padEnd(10)} ${String(job.status).padEnd(10)} ${String(job.took)}`,
+        open: (job) => void window.open(String(job.url), "_blank", "noopener,noreferrer"),
+      },
       release: {
         columns: ["version", "date", "title"],
         text: (release) => `${String(release.version).padEnd(8)} ${String(release.date)}  ${String(release.title)}`,
@@ -25,6 +31,19 @@ export function version_shell(version: VersionService, apps: () => AppsService):
         id: "version",
         description: "The running WebOS build",
         run: () => ({ version: version.info.version, commit: version.info.commit, built: version.info.buildTime }),
+      }),
+      define_command({
+        id: "ci status",
+        description: "The newest CI run on master, one row per job",
+        yields: "ci-job",
+        async *run({ signal }): AsyncGenerator<Value, void> {
+          const pipeline = await version.pipeline(signal);
+          if (!pipeline) return;
+          for (const job of pipeline.jobs) {
+            const took = job.started && job.completed ? format_took(job.completed - job.started) : "-";
+            yield { $type: "ci-job", job: job.name, status: job.state, took, url: job.url };
+          }
+        },
       }),
       define_command({
         id: "changelog",

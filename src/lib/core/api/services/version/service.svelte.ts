@@ -26,6 +26,7 @@ import {
   type VersionService as IVersionService,
 } from "./type";
 import { version_shell } from "./shell";
+import { fetch_pipeline, type Pipeline } from "./pipeline";
 import { BUILD_INFO } from "./build-info";
 
 const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -148,6 +149,10 @@ export class VersionService implements IVersionService {
     clearInterval(this.poll_interval);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
     window.removeEventListener("vite:preloadError", this.on_preload_error);
+  }
+
+  pipeline(signal?: AbortSignal): Promise<Pipeline | null> {
+    return fetch_pipeline(signal);
   }
 
   to_string(): string {
