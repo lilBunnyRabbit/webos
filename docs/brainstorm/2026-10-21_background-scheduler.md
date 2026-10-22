@@ -96,13 +96,15 @@ Builder 3 removed Pomodoro's Sound switch because the scheduler chimed for every
 
 Built the same day: see the ADR revision "on-fire hook and per-job mute". The handler's argument also carries `due` (the occurrence), for a reminder app with repeating jobs. `on_fire` is listed in the app API as not yet stable, since `Job` isn't on the stable surface.
 
-### Calendar reminders the scheduler's rules can't express (open)
+### Calendar reminders the scheduler's rules can't express (decided 2026-10-22)
 Builder 4: a reminder becomes a job whose rule is the event's rule moved back by the reminder's whole days. Daily, weekly, one-off and most monthly and yearly events map exactly. Month-end clamping and 29 February break the rest: a day ahead of a monthly event on the 31st is the 30th, 29th or 27th depending on the month; a week ahead of the 5th is the previous month's 26th to 29th; a day ahead of a yearly 29 February is the 28th or the 27th. No `{ every: "month", day }` or `{ every: "year" }` fires on those days. Built: these are refused in the editor and `cal add`, nothing approximated. Second, smaller mismatch: minutes come off the wall clock, so across a DST change "1 day before" is 23 or 25 h before (the old in-app check took elapsed time).
 
 Options:
 1. **Lead time on Job** (recommended): `before?: number` (ms) taken off every occurrence of the rule. Calendar's job becomes the event itself (`at` = start, the event's rule, `skip`/`until` on event days) and every combination is exact, in elapsed time like before; the shift code goes. Against: a new Job field and a change in `next_occurrence`, `pending` and the plan, on an API that isn't stable yet; Kanban due dates would want it too, which is speculation today.
 2. **One-shot per occurrence, re-timed in `on_fire`**: no new API, exact. Against: the repeat leaves the scheduler (ADR: the scheduler owns Calendar's repeat), `sched ls` shows "once", and a handler that throws or a leader that closes mid-handler ends the chain.
 3. **Keep the refusal**: the editor says why and the user picks a reminder on the event's day. Against: "remind me a week before rent on the 1st" is a real case.
+
+Decided 2026-10-22 ([owner calls](2026-10-22_owner-calls.md)): option 1, with `before` in minutes taken off the wall clock (not elapsed ms), so today's DST behaviour stays. Built the same day; see the ADR revision "lead time, Calendar reminders as the event".
 
 ## Key takeaways
 - Nothing can fire with every tab closed except the flagged Triggers API; the scheduler says so honestly and summarises what it missed.

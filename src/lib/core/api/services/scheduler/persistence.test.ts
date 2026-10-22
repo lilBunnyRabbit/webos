@@ -28,6 +28,13 @@ describe("parse_registry", () => {
     expect(parse_registry(serialize_registry(registry))).toEqual(registry);
   });
 
+  it("reads a lead time, and a job without one as before", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const reminder = { id: "calendar:reminder-1", app: "calendar", title: "Rent", at: { date: "2026-10-31", time: "10:00", tz: "UTC" }, repeat: { every: "month", day: 31 }, before: 1440, armed: true, kind: "reminder" };
+    expect(parse_registry(text([reminder, alarm])).jobs).toEqual([reminder, alarm]);
+    expect(parse_registry(text([{ ...reminder, before: -5 }, { ...reminder, id: "calendar:reminder-2", before: 1.5 }])).jobs).toEqual([]);
+  });
+
   it("starts empty from no file, broken JSON or another version", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(parse_registry(null)).toEqual(EMPTY_REGISTRY);

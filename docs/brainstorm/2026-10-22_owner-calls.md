@@ -25,6 +25,7 @@ Four items left open by earlier sessions:
 ## Action items
 - [x] `on_uninstall_data` + Moonrabbit hook, heartbeat, prompt danger: one release.
 - [x] Service worker fixes on `generateSW`: its own release.
+- [x] Calendar lead time: `Job.before`, Calendar reminders as the event (ADR-062 revision 2026-10-22).
 
 ## Next session topics
 - An `app uninstall` shell command.

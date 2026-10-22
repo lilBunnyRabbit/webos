@@ -10,6 +10,7 @@ import {
   parse_plain_time,
   wall_to_epoch,
   type PlainDate,
+  type PlainTime,
 } from "$lib/core/utils/zoned";
 import type { Job, JobRepeat, MissedJob } from "./type";
 
@@ -19,12 +20,13 @@ export const MISSED_AFTER = 2 * 60_000;
 /** Candidate days one rule may step through before giving up: decades of a daily rule whose days are all skipped. */
 const MAX_CANDIDATES = 20_000;
 
-export type JobRule = Pick<Job, "at" | "repeat" | "armed" | "snooze_until">;
+export type JobRule = Pick<Job, "at" | "repeat" | "armed" | "snooze_until" | "before">;
 
 /**
  * The first instant strictly after `after` at which the job fires, in its own zone, or `null` for never. A disarmed
  * job never fires; a snooze fires ahead of the rule. A wall time that doesn't exist that day (DST gap) fires shifted
- * forward by the gap; one that happens twice (fall-back) fires at its first pass.
+ * forward by the gap; one that happens twice (fall-back) fires at its first pass. `before` moves every occurrence
+ * earlier on the wall clock; `until` and `skip` still name the rule's own days.
  */
 export function next_occurrence(job: JobRule, after: number): number | null {
   if (!job.armed) return null;
@@ -35,13 +37,17 @@ export function next_occurrence(job: JobRule, after: number): number | null {
 
 function next_regular(job: JobRule, after: number): number | null {
   const { at, repeat } = job;
-  if ("epoch" in at) return at.epoch > after ? at.epoch : null;
+  const before = job.before ?? 0;
+  if ("epoch" in at) {
+    const epoch = at.epoch - before * MINUTE;
+    return epoch > after ? epoch : null;
+  }
 
   const start = parse_date(at.date);
   const time = parse_plain_time(at.time);
   if (!start || !time) return null;
   if (!repeat) {
-    const epoch = wall_to_epoch(start, time, at.tz);
+    const epoch = fire_at(start, time, before, at.tz);
     return epoch > after ? epoch : null;
   }
 
@@ -56,10 +62,22 @@ function next_regular(job: JobRule, after: number): number | null {
     if (++count > MAX_CANDIDATES) return null;
     if (until && compare_dates(date, until) > 0) return null;
     if (skip.has(format_date_key(date))) continue;
-    const epoch = wall_to_epoch(date, time, at.tz);
+    const epoch = fire_at(date, time, before, at.tz);
     if (epoch > after) return epoch;
   }
   return null;
+}
+
+const MINUTE = 60_000;
+const DAY_MINUTES = 1440;
+
+/** Subtracted on the wall clock: "a day before 09:00" is 09:00 the day before, whatever DST does in between. */
+function fire_at(date: PlainDate, time: PlainTime, before: number, zone: string): number {
+  if (before === 0) return wall_to_epoch(date, time, zone);
+  const minutes = time.hours * 60 + time.minutes - before;
+  const days = Math.floor(minutes / DAY_MINUTES);
+  const left = minutes - days * DAY_MINUTES;
+  return wall_to_epoch(add_days(date, days), { hours: Math.floor(left / 60), minutes: left % 60 }, zone);
 }
 
 function max_date(a: PlainDate, b: PlainDate): PlainDate {
@@ -184,7 +202,19 @@ export function next_due(jobs: Job[]): number | null {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function format_repeat(repeat: JobRepeat | undefined): string {
+export function format_repeat(repeat: JobRepeat | undefined, before?: number): string {
+  return before ? `${rule_text(repeat)}, ${format_lead(before)} before` : rule_text(repeat);
+}
+
+function format_lead(minutes: number): string {
+  if (minutes % DAY_MINUTES === 0) return plural(minutes / DAY_MINUTES, "day");
+  if (minutes % 60 === 0) return plural(minutes / 60, "hour");
+  return `${minutes} min`;
+}
+
+const plural = (count: number, unit: string): string => `${count} ${unit}${count === 1 ? "" : "s"}`;
+
+function rule_text(repeat: JobRepeat | undefined): string {
   if (!repeat) return "once";
   const until = repeat.until ? ` until ${repeat.until}` : "";
   switch (repeat.every) {

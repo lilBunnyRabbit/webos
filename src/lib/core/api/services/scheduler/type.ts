@@ -48,6 +48,12 @@ export interface Job {
   /** For a repeating job: the wall time of every occurrence, and `at.date` the first day the rule may fire on. */
   at: JobAt;
   repeat?: JobRepeat;
+  /**
+   * Lead time in whole minutes: every occurrence fires this much earlier, taken off the wall clock in `at.tz`, so a day
+   * before 09:00 is 09:00 the day before across DST. `until` and `skip` still name the rule's own days; `armed_at`,
+   * `last_fired`, `missed_at` and `next()` are the fire instants.
+   */
+  before?: number;
   armed: boolean;
   /** Fires at this instant once, ahead of the rule; cleared when it fires. */
   snooze_until?: number;

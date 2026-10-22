@@ -218,7 +218,8 @@ export class SchedulerService implements ISchedulerService {
     }
     const retimed =
       ("at" in patch && JSON.stringify(patch.at) !== JSON.stringify(current.at)) ||
-      ("repeat" in patch && JSON.stringify(patch.repeat) !== JSON.stringify(current.repeat));
+      ("repeat" in patch && JSON.stringify(patch.repeat) !== JSON.stringify(current.repeat)) ||
+      ("before" in patch && (patch.before ?? 0) !== (current.before ?? 0));
     if (job.armed && (retimed || !current.armed)) job.armed_at = now;
     // Clearing a repeating job's missed_at mustn't bring back the occurrences it skipped.
     if (current.missed_at !== undefined && job.missed_at === undefined && job.repeat) {

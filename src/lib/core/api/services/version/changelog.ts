@@ -13,6 +13,11 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "On a phone, swiping a question like \"Delete this?\" or \"Save changes?\" down now cancels it, the same as tapping Cancel.",
       },
+      {
+        kind: FIXED,
+        apps: ["calendar"],
+        text: "Calendar reminders ahead of events late in the month or on 29 February, like a day before rent on the 31st, now work instead of being refused.",
+      },
     ],
   },
   {
