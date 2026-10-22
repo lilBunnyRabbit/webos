@@ -28,6 +28,7 @@ Run once per finished `app-builder` agent, in the order they report. Pushes go i
 ## Verify on master
 
 - [ ] `bun run check` — 0 errors.
+- [ ] If the group touches `src/lib/core`, `src/lib/kit` or `src/lib/apps/system`: run CI's fork check locally — a scratch `git worktree` with `src/lib/apps/user` deleted, `bun install`, `bun run check`, `bunx vitest run --project browser src/lib/core src/lib/kit src/lib/apps/system`. A core test that needs user apps must skip without them.
 - [ ] `bun run test` — green. A video-tools capture failure that passes on one rerun is the known flake; anything else blocks the push.
 - [ ] Amending the picked commit for the renumber is fine (it's unpushed): `git add <files> && git commit --amend --no-edit` in one command.
 
