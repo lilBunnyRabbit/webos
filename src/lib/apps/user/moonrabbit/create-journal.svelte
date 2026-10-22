@@ -7,15 +7,17 @@
   import { clean_journal_name } from "./journal";
   import { generate_phrase, load_wordlist, phrase_bits, strength_of, Strength } from "./passphrase";
   import StrengthMeter from "./strength-meter.svelte";
-  import { new_recovery } from "./unlock";
+  import QuickSetup from "./quick-setup.svelte";
+  import { new_recovery, type Unlocked } from "./unlock";
 
   interface Props {
     first: boolean;
-    oncreate: (name: string, phrase: string, recovery: Uint8Array<ArrayBuffer>) => Promise<void>;
+    oncreate: (name: string, phrase: string, recovery: Uint8Array<ArrayBuffer>) => Promise<Unlocked>;
+    onfinish: (unlocked: Unlocked) => void;
     oncancel?: () => void;
   }
 
-  let { first, oncreate, oncancel }: Props = $props();
+  let { first, oncreate, onfinish, oncancel }: Props = $props();
 
   let words = $state.raw<string[]>([]);
   const wordset = $derived(new Set(words));
@@ -23,11 +25,12 @@
   let generated = $state("");
   let own = $state(false);
   let typed = $state("");
-  let step = $state<"phrase" | "store">("phrase");
+  let step = $state<"phrase" | "store" | "quick">("phrase");
   let stored = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
   let recovery = $state.raw<{ bytes: Uint8Array<ArrayBuffer>; code: string } | null>(null);
+  let created = $state.raw<Unlocked | null>(null);
 
   const phrase = $derived(own ? typed : generated);
   const bits = $derived(phrase.trim() ? phrase_bits(phrase, wordset) : 0);
@@ -68,7 +71,9 @@ code{display:block;font:600 18pt/1.4 ui-monospace,monospace;letter-spacing:.06em
     busy = true;
     error = null;
     try {
-      await oncreate(clean_name, phrase, recovery.bytes);
+      created = await oncreate(clean_name, phrase, recovery.bytes);
+      recovery = null;
+      step = "quick";
     } catch (reason) {
       error = error_message(reason);
       busy = false;
@@ -118,6 +123,13 @@ code{display:block;font:600 18pt/1.4 ui-monospace,monospace;letter-spacing:.06em
       {#if oncancel}<Button variant="quiet" onclick={oncancel}>Cancel</Button>{/if}
       <Button variant="primary" disabled={!ready} onclick={next}>Continue</Button>
     </div>
+  {:else if step === "quick" && created}
+    {@const unlocked = created}
+    <header class="grid gap-1">
+      <h1 class="text-lg font-semibold">Faster unlock on this device</h1>
+      <p class="text-ui text-foreground/65">Open {unlocked.ref.name} here without typing the phrase. It stays in this browser and never goes into backups. You can change it later in Settings.</p>
+    </header>
+    <QuickSetup journal={unlocked.ref} {phrase} onsaved={() => onfinish(unlocked)} onskip={() => onfinish(unlocked)} />
   {:else if recovery}
     <header class="grid gap-1">
       <h1 class="text-lg font-semibold">Store these somewhere safe</h1>

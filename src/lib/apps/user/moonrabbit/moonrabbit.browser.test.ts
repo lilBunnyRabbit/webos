@@ -1,11 +1,17 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import kernel, { type IService } from "$lib/core/api";
+import { stub_service } from "$lib/core/api/kernel/test-kernel";
+import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
+import { JobKind } from "$lib/core/api/services/scheduler";
+import { SchedulerService } from "$lib/core/api/services/scheduler/service.svelte";
+import manifest from "./index";
 import { clear_opfs, get_root } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { DecryptError, PBKDF2_ITERATIONS, random_bytes, RECOVERY_BYTES, unlock_with_phrase } from "./crypto";
 import { delete_quick, device_key, read_quick } from "./device";
 import { add_activity } from "./activities";
 import { add_to_inbox, inbox_path } from "./inbox";
-import { ENTRIES_DIR, HEADER_FILE, INDEX_FILE, JOURNAL_ROOT, media_token } from "./journal";
+import { APP_ID, ENTRIES_DIR, HEADER_FILE, INDEX_FILE, JOURNAL_ROOT, media_token, REMINDER_JOB } from "./journal";
 import { MAX_ATTEMPTS, pin_secret, QuickGate, QuickMethod, taps_secret } from "./quick";
 import { JournalSession, LockedError } from "./session.svelte";
 import { lock_all } from "./sessions";
@@ -13,6 +19,8 @@ import { child, list_journals, read_bin, remove_bin, write_bin, write_header } f
 import {
   change_phrase,
   create_journal,
+  delete_journal,
+  rename_journal,
   quick_state,
   QuickClosedError,
   regenerate_recovery,
@@ -399,4 +407,85 @@ describe("adding while locked", () => {
     expect(reopened.activities.at(-1)?.label).toBe("Climbing");
     expect(reopened.index[0].activities).toEqual([reopened.activities.at(-1)!.id]);
   });
+});
+
+describe("rename and delete", () => {
+  let scheduler: SchedulerService;
+  const booted: IService[] = [];
+
+  beforeEach(async () => {
+    kernel.services.set("files", files);
+    for (const [name, service] of [
+      ["notifications", new NotificationsService()],
+      ["apps", stub_service("apps", { launch: vi.fn(), get: (id: string) => (id === APP_ID ? manifest : undefined), is_installed: () => true })],
+      ["shell", stub_service("shell", { execute: vi.fn() })],
+    ] as const) {
+      kernel.services.set(name, service);
+      booted.push(service);
+    }
+    scheduler = new SchedulerService(kernel);
+    await scheduler.init();
+    kernel.services.set("scheduler", scheduler);
+    booted.push(scheduler);
+    await vi.waitFor(() => expect(scheduler.is_leader).toBe(true));
+  });
+
+  afterEach(async () => {
+    for (const service of booted.splice(0).reverse()) await service.destroy?.();
+    for (const name of ["files", "notifications", "apps", "shell", "scheduler"]) kernel.services.delete(name);
+  });
+
+  test(
+    "a renamed journal keeps its entries, its phrase, its quick unlock and its inbox",
+    async () => {
+      const created = await journal("Before");
+      const session = open_session(created);
+      const saved = await session.save(session.new_entry("2026-10-22", "written before"));
+      await setup_quick(files, created.ref, PHRASE, { method: QuickMethod.PIN, secret: pin_secret("246810") });
+
+      const renamed = await rename_journal(files, created.ref, "After");
+      expect(renamed.path).toBe(`${JOURNAL_ROOT}/After`);
+      expect(await files.get_directory(`${JOURNAL_ROOT}/Before`)).toBeNull();
+      expect((await list_journals(files)).map((ref) => ref.name)).toEqual(["After"]);
+      expect((await quick_state(files, renamed))?.gate).toBe(QuickGate.OPEN);
+
+      await add_to_inbox(files, renamed, { date: "2026-10-22", created: Date.now(), body: "added while locked, after the rename" });
+
+      const by_quick = open_session(await unlock_quick(files, renamed, pin_secret("246810")));
+      await by_quick.load_index();
+      await expect(by_quick.entry(saved.id)).resolves.toMatchObject({ body: "written before" });
+      expect(await by_quick.merge_inbox()).toBe(1);
+
+      const by_phrase = open_session(await unlock_phrase(files, renamed, PHRASE));
+      await by_phrase.load_index();
+      expect(by_phrase.index.map((meta) => meta.title).sort()).toEqual(["added while locked, after the rename", "written before"]);
+    },
+    SLOW
+  );
+
+  test(
+    "deleting without unlocking removes the folder and this device's quick unlock; the reminder goes with the last journal",
+    async () => {
+      const one = await journal("One");
+      const two = await journal("Two");
+      await setup_quick(files, one.ref, PHRASE, { method: QuickMethod.PIN, secret: pin_secret("135790") });
+      await setup_quick(files, two.ref, PHRASE, { method: QuickMethod.PIN, secret: pin_secret("246810") });
+      await scheduler.schedule(APP_ID, { key: "reminder", title: "Time to write", at: { date: "2026-10-23", time: "21:00", tz: "UTC" }, repeat: { every: "day" }, kind: JobKind.REMINDER });
+
+      const [listed_one] = await list_journals(files);
+      await delete_journal(files, scheduler, { ...listed_one, header: null });
+      expect(await files.get_directory(`${JOURNAL_ROOT}/One`)).toBeNull();
+      expect(await read_quick(one.ref.header.id)).toBeUndefined();
+      expect(await read_quick(two.ref.header.id)).toBeDefined();
+      expect((await list_journals(files)).map((ref) => ref.name)).toEqual(["Two"]);
+      expect(scheduler.get(REMINDER_JOB)).toBeDefined();
+      await expect(unlock_quick(files, two.ref, pin_secret("246810"))).resolves.toMatchObject({ ref: { name: "Two" } });
+
+      await delete_journal(files, scheduler, two.ref);
+      expect(await list_journals(files)).toEqual([]);
+      expect(await read_quick(two.ref.header.id)).toBeUndefined();
+      expect(scheduler.get(REMINDER_JOB)).toBeUndefined();
+    },
+    SLOW
+  );
 });

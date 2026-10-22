@@ -1,4 +1,5 @@
 export interface Lockable {
+  readonly id: string;
   lock(): void;
 }
 
@@ -13,4 +14,9 @@ export function lock_all(): number {
   const sessions = [...unlocked];
   for (const session of sessions) session.lock();
   return sessions.length;
+}
+
+/** Other windows hold the journal's old path; locking them is simpler than moving their open editors along. */
+export function lock_journal(id: string, except?: Lockable): void {
+  for (const session of [...unlocked]) if (session.id === id && session !== except) session.lock();
 }

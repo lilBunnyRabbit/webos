@@ -3,6 +3,8 @@ import { FORMAT_VERSION, type JournalHeader } from "./crypto";
 import { MOOD_LABELS, type Mood } from "./mood";
 
 export const APP_ID = "moonrabbit";
+/** One daily reminder for the app, not per journal. */
+export const REMINDER_JOB = `${APP_ID}:reminder`;
 export const JOURNAL_ROOT = "/home/Journal";
 export const HEADER_FILE = "journal.json";
 export const INDEX_FILE = "index.bin";

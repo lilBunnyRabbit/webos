@@ -45,11 +45,13 @@
     onlock: () => void;
     onswitch: (name: string) => void;
     onnew: () => void;
+    onrename: () => void;
+    ondelete: () => void;
     onerror: (title: string, reason: unknown) => void;
     ontitle: (date: string | null) => void;
   }
 
-  let { session, journals, recovered, idle_minutes = $bindable(), hidden_seconds = $bindable(), onlock, onswitch, onnew, onerror, ontitle }: Props = $props();
+  let { session, journals, recovered, idle_minutes = $bindable(), hidden_seconds = $bindable(), onlock, onswitch, onnew, onrename, ondelete, onerror, ontitle }: Props = $props();
 
   const { window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
@@ -394,7 +396,7 @@
   </StatusBar>
 
   {#if sheet === "settings"}
-    <SettingsSheet {session} bind:idle_minutes bind:hidden_seconds onclose={() => (sheet = null)} />
+    <SettingsSheet {session} bind:idle_minutes bind:hidden_seconds {onrename} {ondelete} onclose={() => (sheet = null)} />
   {:else if sheet === "export"}
     <ExportSheet {session} onclose={() => (sheet = null)} {onerror} />
   {/if}

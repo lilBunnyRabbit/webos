@@ -6,29 +6,29 @@
   import { report_error } from "$kit/utils/report-error";
   import { day_key } from "$lib/core/utils/date";
   import { local_zone } from "$lib/core/utils/zoned";
-  import { ArrowLeft as ArrowLeftIcon, Fingerprint as FingerprintIcon, Carrot as CarrotIcon, DotsNine as DotsNineIcon } from "phosphor-svelte";
+  import { ArrowLeft as ArrowLeftIcon } from "phosphor-svelte";
   import { onMount } from "svelte";
   import ActivitiesEditor from "./activities-editor.svelte";
-  import CarrotPatch from "./carrot-patch.svelte";
   import { DecryptError, parse_recovery_code } from "./crypto";
-  import { APP_ID } from "./journal";
+  import { APP_ID, REMINDER_JOB } from "./journal";
   import { load_wordlist, phrase_bits, strength_of, Strength } from "./passphrase";
-  import { passkey_available } from "./passkey";
-  import PinPad from "./pin-pad.svelte";
-  import { MEADOW, pin_secret, QuickGate, QuickMethod, taps_secret, type Plot, type QuickRecord } from "./quick";
+  import { QuickGate, QuickMethod, type QuickRecord } from "./quick";
+  import QuickSetup from "./quick-setup.svelte";
   import type { JournalSession } from "./session.svelte";
   import Sheet from "./sheet.svelte";
   import StrengthMeter from "./strength-meter.svelte";
-  import { change_phrase, quick_state, regenerate_recovery, remove_quick, setup_quick, type MasterSecret } from "./unlock";
+  import { change_phrase, quick_state, regenerate_recovery, remove_quick, type MasterSecret } from "./unlock";
 
   interface Props {
     session: JournalSession;
     idle_minutes: number;
     hidden_seconds: number;
+    onrename: () => void;
+    ondelete: () => void;
     onclose: () => void;
   }
 
-  let { session, idle_minutes = $bindable(), hidden_seconds = $bindable(), onclose }: Props = $props();
+  let { session, idle_minutes = $bindable(), hidden_seconds = $bindable(), onrename, ondelete, onclose }: Props = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
@@ -39,16 +39,10 @@
 
   let page = $state<Page>(Page.MAIN);
   let quick = $state.raw<{ record: QuickRecord; gate: QuickGate } | null>(null);
-  let passkeys = $state(false);
   let wordset = $state.raw<ReadonlySet<string>>(new Set());
   let error = $state<string | null>(null);
   let busy = $state(false);
 
-  let method = $state<QuickMethod | null>(null);
-  let first_secret = $state<string | null>(null);
-  let secret = $state<string | null>(null);
-  let shuffle = $state(false);
-  let phrase = $state("");
 
   let use_recovery = $state(false);
   let current = $state("");
@@ -63,7 +57,6 @@
 
   onMount(() => {
     void refresh();
-    void passkey_available().then((available) => (passkeys = available));
     void load_wordlist().then((list) => (wordset = new Set(list)));
   });
 
@@ -71,26 +64,10 @@
     page = next;
     error = null;
     busy = false;
-    method = null;
-    first_secret = null;
-    secret = null;
-    shuffle = false;
-    phrase = "";
     current = "";
     next_phrase = "";
     use_recovery = false;
     new_code = null;
-  }
-
-  function entered(value: string) {
-    if (!first_secret) {
-      first_secret = value;
-      error = null;
-    } else if (first_secret === value) secret = value;
-    else {
-      first_secret = null;
-      error = "Those didn't match. Start again.";
-    }
   }
 
   async function run(work: () => Promise<void>) {
@@ -104,26 +81,10 @@
           ? use_recovery
             ? "That recovery code doesn't open this journal."
             : "That phrase doesn't open this journal."
-          : reason instanceof DOMException && reason.name === "NotAllowedError"
-            ? "The passkey was cancelled."
-            : error_message(reason);
+          : error_message(reason);
     } finally {
       busy = false;
     }
-  }
-
-  function save_quick(event: SubmitEvent) {
-    event.preventDefault();
-    if (!method || !phrase) return;
-    const input =
-      method === QuickMethod.PASSKEY
-        ? { method, label: `Moonrabbit · ${session.ref.name}` }
-        : { method, secret: secret ?? "", shuffle: method === QuickMethod.TAPS ? shuffle : undefined };
-    void run(async () => {
-      await setup_quick(files, session.ref, phrase, input);
-      await refresh();
-      go(Page.MAIN);
-    });
   }
 
   async function forget_quick() {
@@ -157,14 +118,13 @@
     });
   }
 
-  const JOB_ID = `${APP_ID}:reminder`;
-  const job = $derived(scheduler.get(JOB_ID));
+  const job = $derived(scheduler.get(REMINDER_JOB));
   const reminder_time = $derived(job && "time" in job.at ? job.at.time : "21:00");
 
   async function set_reminder(on: boolean, time = reminder_time) {
     try {
       if (!on) {
-        await scheduler.cancel(JOB_ID);
+        await scheduler.cancel(REMINDER_JOB);
         return;
       }
       void notifications.request_system();
@@ -182,7 +142,6 @@
         ? `${METHOD_LABELS[quick.record.method]} on this device. The master phrase is still asked every 7 days.`
         : `${METHOD_LABELS[quick.record.method]}, paused until you unlock with the master phrase.`
   );
-  const plots: readonly Plot[] = MEADOW;
 </script>
 
 <Sheet
@@ -280,6 +239,19 @@
           {/snippet}
         </SettingRow>
       </Section>
+
+      <Section title="Journal" description={session.ref.path}>
+        <SettingRow label="Name" description={session.ref.name}>
+          {#snippet children({ id, describedby })}
+            <Button {id} aria-describedby={describedby} size="sm" onclick={onrename}>Rename…</Button>
+          {/snippet}
+        </SettingRow>
+        <SettingRow label="Delete journal" description="Every entry and photo, for good.">
+          {#snippet children({ id, describedby })}
+            <Button {id} aria-describedby={describedby} variant="danger" size="sm" onclick={ondelete}>Delete…</Button>
+          {/snippet}
+        </SettingRow>
+      </Section>
     </div>
   {:else}
     <div class="grid gap-4">
@@ -288,45 +260,13 @@
       {#if page === Page.ACTIVITIES}
         <ActivitiesEditor {session} />
       {:else if page === Page.QUICK}
-        {#if !method}
-          <p class="text-ui text-foreground/65">
-            A passkey can't be guessed. A hop path or a PIN only keeps out someone using this browser: with a copy of the whole browser profile they can be guessed in hours.
-          </p>
-          <div class="grid gap-2">
-            {#if passkeys}
-              <Button size="lg" class="justify-start" onclick={() => (method = QuickMethod.PASSKEY)}><FingerprintIcon weight="bold" />Passkey or fingerprint</Button>
-            {/if}
-            <Button size="lg" class="justify-start" onclick={() => (method = QuickMethod.TAPS)}><CarrotIcon weight="bold" />Carrot patch: 6 hops on a meadow</Button>
-            <Button size="lg" class="justify-start" onclick={() => (method = QuickMethod.PIN)}><DotsNineIcon weight="bold" />6-digit PIN</Button>
-          </div>
-        {:else if method !== QuickMethod.PASSKEY && !secret}
-          <p class="text-ui text-foreground/65">{first_secret ? "Once more to confirm." : method === QuickMethod.TAPS ? "Hop through 6 plots. The same plot twice is fine." : "Pick 6 digits."}</p>
-          <div class="grid justify-items-center">
-            {#key first_secret}
-              {#if method === QuickMethod.TAPS}
-                <CarrotPatch {plots} label="Carrot patch" onsubmit={(hops) => entered(taps_secret(hops))} />
-              {:else}
-                <PinPad label="PIN" onsubmit={(pin) => entered(pin_secret(pin))} />
-              {/if}
-            {/key}
-          </div>
-        {:else}
-          <form class="grid gap-3" onsubmit={save_quick}>
-            {#if method === QuickMethod.TAPS}
-              <label class="flex items-center justify-between gap-3 text-ui">
-                <span>Shuffle the meadow each time<span class="block text-2xs text-foreground/80">The plants move; your path is the same plants. Harder to shoulder-surf.</span></span>
-                <Switch bind:checked={shuffle} />
-              </label>
-            {/if}
-            <label class="grid gap-1.5">
-              <span class="text-ui font-medium">Master phrase</span>
-              <Input bind:value={phrase} type="password" autocomplete="current-password" spellcheck={false} autocapitalize="off" autofocus />
-            </label>
-            <Button variant="primary" type="submit" disabled={busy || !phrase}>
-              {#if busy}<Spinner label="Saving" />{/if}{method === QuickMethod.PASSKEY ? "Create passkey" : "Turn on"}
-            </Button>
-          </form>
-        {/if}
+        <QuickSetup
+          journal={session.ref}
+          onsaved={async () => {
+            await refresh();
+            go(Page.MAIN);
+          }}
+        />
       {:else if page === Page.PHRASE}
         <form class="grid gap-3" onsubmit={save_phrase}>
           <label class="grid gap-1.5">

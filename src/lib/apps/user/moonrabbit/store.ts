@@ -88,3 +88,13 @@ export async function remove_bin(files: FilesService, folder_path: string, name:
     if (!(reason instanceof DOMException && reason.name === "NotFoundError")) throw reason;
   }
 }
+
+/** OPFS has no directory rename: `rename_entry` copies the folder, so every file in it gets a new `lastModified`. */
+export async function rename_journal_folder(files: FilesService, ref: JournalRef, name: string): Promise<JournalRef> {
+  await files.rename_entry(await directory(files, JOURNAL_ROOT), ref.name, name);
+  return { ...ref, name, path: child(JOURNAL_ROOT, name) };
+}
+
+export async function delete_journal_folder(files: FilesService, ref: JournalRef): Promise<void> {
+  await files.delete_entry(await directory(files, JOURNAL_ROOT), ref.name, { recursive: true });
+}

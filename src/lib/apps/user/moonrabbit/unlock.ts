@@ -1,4 +1,4 @@
-import type { FilesService } from "$lib/core/api";
+import type { FilesService, SchedulerService } from "$lib/core/api";
 import {
   create_header,
   from_base64,
@@ -20,7 +20,7 @@ import {
   type JournalHeader,
 } from "./crypto";
 import { delete_quick, device_key, patch_quick, read_quick, write_quick } from "./device";
-import { EMPTY_INDEX } from "./journal";
+import { EMPTY_INDEX, HEADER_FILE, REMINDER_JOB } from "./journal";
 import { create_passkey, passkey_prf } from "./passkey";
 import {
   derive_passkey_key,
@@ -34,7 +34,7 @@ import {
   wrap_quick,
   type QuickRecord,
 } from "./quick";
-import { create_journal_folder, read_header, write_header, type JournalRef } from "./store";
+import { child, create_journal_folder, delete_journal_folder, list_journals, read_header, rename_journal_folder, write_header, type JournalRef } from "./store";
 
 export interface Unlocked {
   ref: JournalRef & { header: JournalHeader };
@@ -207,4 +207,28 @@ export async function unlock_quick(files: FilesService, journal: JournalRef, sec
     else await patch_quick(record.journal_id, { attempts });
     throw new WrongQuickError(MAX_ATTEMPTS - attempts);
   }
+}
+
+/** No secret asked: anyone at this device can delete the folder in Files anyway, and a lost phrase mustn't trap it. */
+export async function delete_journal(files: FilesService, scheduler: SchedulerService, journal: JournalRef): Promise<void> {
+  const id = journal.header?.id ?? (await read_header(files, journal.path))?.header?.id;
+  await delete_journal_folder(files, journal);
+  if (id) await delete_quick(id);
+  if ((await list_journals(files)).length === 0) await scheduler.cancel(REMINDER_JOB);
+}
+
+/**
+ * The copy gives `journal.json` a new `lastModified`, which would read as a restore and pause quick unlock. The stamp
+ * moves along only when the record trusted the header before and the header is the same text after.
+ */
+export async function rename_journal<T extends JournalRef>(files: FilesService, journal: T, name: string): Promise<T> {
+  const before = await files.get_file(child(journal.path, HEADER_FILE));
+  const text = before ? await before.text() : null;
+  const renamed = { ...journal, ...(await rename_journal_folder(files, journal, name)) };
+  const after = await files.get_file(child(renamed.path, HEADER_FILE));
+  const id = journal.header?.id;
+  if (!before || !after || !id || (await after.text()) !== text) return renamed;
+  const record = await read_quick(id);
+  if (record?.header_stamp === before.lastModified) await patch_quick(id, { header_stamp: after.lastModified });
+  return { ...renamed, stamp: after.lastModified };
 }

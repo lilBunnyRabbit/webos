@@ -4,7 +4,7 @@ Id `moonrabbit` · Source: `src/lib/apps/user/moonrabbit/` · [brainstorm](../br
 
 ## What it does
 
-A journal that is encrypted on the device and quick to write in. The first run makes a journal with a generated five-word master phrase and a recovery code; after that the app opens on an unlock screen (master phrase, recovery code, or a per-device quick unlock: passkey, the "Carrot patch" hop path or a 6-digit PIN). Unlocked, a "today" box has focus: one line and Enter is an entry. There is a list newest first, an editor with inline photos, four templates, a rotating prompt, tags, search, several journals, Markdown and print export, and one daily reminder. A tap on one of five faces records the mood (alone it is an entry), with activities, energy and sleep if wanted; Calendar, Year (in pixels) and Insights views show them. While locked, the widget and the locked screen's "Add a quick line" seal a line or a mood into the journal's inbox with its public key; the next unlock merges them in.
+A journal that is encrypted on the device and quick to write in. The first run makes a journal with a generated five-word master phrase and a recovery code, then offers a quick unlock for this device; after that the app opens on an unlock screen (master phrase, recovery code, or a per-device quick unlock: passkey, the "Carrot patch" hop path or a 6-digit PIN). Unlocked, a "today" box has focus: one line and Enter is an entry. There is a list newest first, an editor with inline photos, four templates, a rotating prompt, tags, search, several journals, Markdown and print export, and one daily reminder. A tap on one of five faces records the mood (alone it is an entry), with activities, energy and sleep if wanted; Calendar, Year (in pixels) and Insights views show them. While locked, the widget and the locked screen's "Add a quick line" seal a line or a mood into the journal's inbox with its public key; the next unlock merges them in.
 
 ## How it works
 
@@ -68,6 +68,8 @@ One record per journal in IndexedDB `webos.moonrabbit` › `quick`, keyed by jou
 - **PIN.** 6 digits, typed or tapped.
 - **Gate** (`quick_gate`): open unless 5 wrong tries were used, more than 7 days passed since the last master phrase or recovery unlock on this device (or the clock went back), or `journal.json`'s `lastModified` differs from `header_stamp`. The app writes the header itself only through `write_header`, which updates the stamp; a backup restore stages and moves files, so the stamp changes and the master phrase is asked. A master unlock re-stamps, restarts the 7 days and clears the tries.
 - **Wrong tries.** A wrong path, PIN or passkey fails the GCM unwrap; the count goes up; the fifth deletes the record.
+- **One method per device.** The record holds one method; setting up another replaces it. The lock screen opens on it, with "Use phrase instead" beside it and "Use {method}" to come back.
+- **Where it's offered.** One setup flow (`quick-setup.svelte`): big choice cards (passkey only when available), the honest note on what a path or PIN protects against, then the secret twice. It runs in three places: right after a new journal's recovery-code step ("Faster unlock on this device", with "Not now"), once after a master-phrase unlock on a device with no quick unlock, and in Journal settings › Quick unlock. The first two already hold the phrase the user just made or typed (in the component's state, dropped when the step ends), so they don't ask for it again; settings asks. "Not now" after a phrase unlock is remembered per device in `app.moonrabbit.quick-offer-declined` (journal ids, nothing secret); the first-run "Not now" isn't, so the next phrase unlock asks once more. Without a quick unlock the phrase field says "Set up a fingerprint, a hop path or a PIN after unlocking" (or "in Settings › Quick unlock" once declined).
 
 ### Session and locking
 
@@ -77,7 +79,7 @@ Index writes take a Web Lock per journal (`moonrabbit:{id}`), re-read `index.bin
 
 Auto-lock (`moonrabbit.app.svelte`): idle (no pointer, key, input or wheel in the window) for 5 minutes by default; hidden (`win.is_visible` false: minimized, the tab hidden, another app on top on a phone) for 1 minute on desktop and at once on a phone. Both adjustable in Journal settings (`app.moonrabbit.idle-minutes`, `app.moonrabbit.hidden-seconds`). The hidden-lock waits while the editor's own camera or device file chooser is open (`session.picking`): on a phone the camera hides the page, and locking then would lose the photo; the idle lock still runs. Closing the window locks.
 
-**What never holds journal text:** session restore (the app takes no props and no window state; checked by dumping `session.json` after writing entries), the window title ("Moonrabbit · locked", or the date of the open entry or today), notifications and the reminder ("Time to write", nothing else), localStorage (the last journal's folder name and the two auto-lock numbers), the shell (only `journal lock`; no `ai` commands). The browser test writes a marker string into entries, tags and the template, changes the phrase and the recovery code, then reads every OPFS file byte by byte and every localStorage value: the marker, the phrase and its words appear nowhere.
+**What never holds journal text:** session restore (the app takes no props and no window state; checked by dumping `session.json` after writing entries), the window title ("Moonrabbit · locked", or the date of the open entry or today), notifications and the reminder ("Time to write", nothing else), localStorage (the last journal's folder name, the two auto-lock numbers and the ids of journals whose quick-unlock offer was declined), the shell (only `journal lock`; no `ai` commands). The browser test writes a marker string into entries, tags and the template, changes the phrase and the recovery code, then reads every OPFS file byte by byte and every localStorage value: the marker, the phrase and its words appear nowhere.
 
 ### Adding while locked
 
@@ -110,6 +112,7 @@ Only reading needs a secret (`inbox.ts`, `seal_inbox` and `open_inbox` in `crypt
 - **Export** (sheet): a date range, then Save Markdown… (each entry's mood, activities, energy and sleep as an italic line under its heading) (photos as `data:` URLs, through the save picker, with a "this file isn't encrypted" toast) or Print or PDF (`print_html`, light Markdown: `#` headings, lists, bold, italic; images only as `data:image/...;base64`). Runs inline: decrypting a month takes milliseconds; a year with many photos is unmeasured.
 - **Reminder.** One scheduler job `moonrabbit:reminder`, daily at a chosen time, title "Time to write", no message; a click opens the app.
 - **Several journals.** A picker on the unlock screen and in the toolbar; New journal runs the first-run flow again. Each journal has its own phrase, recovery code and quick unlock.
+- **Rename and delete** (`manage.ts`, `rename_journal` / `delete_journal` in `unlock.ts`), from the lock screen without unlocking and from Journal settings. Neither asks for a secret: the name is the folder name, already shown, and anyone at the device can delete the folder in Files anyway, so a lost phrase mustn't trap a journal. Rename validates like creation (no `\ / : * ? " < > |`, no leading dot) and refuses another journal's name in any case. Everything is bound to the journal id, not the name (additional data, quick record, inbox, Web Locks), so nothing is re-encrypted. OPFS has no directory rename: `rename_entry` copies the folder, which gives `journal.json` a new `lastModified`; the quick record's `header_stamp` moves along only if it trusted the header before and the header text is the same after, so a rename doesn't read as a restore. Other windows with the journal unlocked are locked (`lock_journal`), the window that renamed keeps its session on the new path, and `app.moonrabbit.journal` follows the new name. Delete is a danger confirm, then typing the journal's name; it removes the folder for good (WebOS has no trash; same as deleting a folder in Files), this device's quick record and the declined flag, locks every window on it, and cancels the reminder when no journal is left (the reminder is one per app). A journal whose `journal.json` is damaged can be deleted from its error screen.
 
 ### Strength meter
 
@@ -138,7 +141,7 @@ What stays visible: how many entries and photos there are, their sizes and file 
 |-------|-------------|------|
 | OPFS | `/home/Journal/{name}/…` | The journal (above). In backups under Files, encrypted |
 | IndexedDB | `webos.moonrabbit` › `keys`, `quick` | Device key; quick-unlock records. Not in backups, not removed by uninstalling the app |
-| localStorage | `app.moonrabbit.journal`, `.idle-minutes`, `.hidden-seconds` | Last journal's folder name; auto-lock settings |
+| localStorage | `app.moonrabbit.journal`, `.idle-minutes`, `.hidden-seconds`, `.quick-offer-declined` | Last journal's folder name; auto-lock settings; journal ids whose quick-unlock offer was turned down on this device |
 | Scheduler | `moonrabbit:reminder` in `/var/lib/scheduler/jobs.json` | The reminder |
 | Desktop | `/home/Desktop/{label}.widget` | The widget, when placed (no journal data in it) |
 
@@ -157,7 +160,8 @@ No props, no window state. Shell: `journal lock` (`commands.ts`). The widget (`w
 - The inbox key isn't pinned per device (threat model).
 - Export runs inline, not as a task.
 - A passkey that a provider deletes leaves its quick wrap until the next try fails with "cancelled"; Remove in settings clears it.
-- Uninstalling with "delete data" leaves the IndexedDB database.
+- Uninstalling with "delete data" leaves the IndexedDB database: the apps service only clears `app.{id}.*` localStorage and `/var/lib/apps/{id}`, and has no hook for an app's own stores.
+- Renaming or deleting while another window has the journal open locks that window; a save its editor flushes on the way out can race the folder copy.
 
 ## Decisions
 

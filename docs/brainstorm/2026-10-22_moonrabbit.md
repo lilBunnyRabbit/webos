@@ -48,3 +48,11 @@ Open for the owner:
 ## Follow-up 2026-10-22: after part 2
 - **Inbox key not pinned (decided).** Locked capture trusts `inbox_public_key` in `journal.json`; someone who can rewrite the header could swap in their own key and read lines captured until the next unlock, which refuses the changed header. Owner: "this really is that no one can just directly access it and can encrypt it on other devices. if someones to go ahead and swap headers - go ahead". Rejected: pinning the key per device in IndexedDB or localStorage.
 - **Spellcheck off (decided).** The today box, editor, capture box, search and activity names set `spellcheck=false`, so Chrome's opt-in Enhanced spell check never sends journal text to Google. Rejected: keeping spellcheck.
+
+## Follow-up 2026-10-22 (quick unlock, rename, delete)
+The owner: "for moonrabbit only the text password is an option? why no other lock options", then "I want the option to delete a journal. I created a new one without storing any passwords" and "Also to rename it".
+- **Quick unlock is offered.** A "Faster unlock on this device" step after the recovery code, a one-time offer after a phrase unlock (declining remembered per device), a hint under the phrase field. The phrase stays required at creation; one quick method per device.
+- **Rename and delete need no secret**, from the lock screen and settings. Delete: danger confirm plus the typed name, permanent like a folder delete in Files.
+- **Shell:** still only `journal lock`.
+- [x] Built (ADR-063 revision "quick unlock offered, rename and delete").
+- [ ] Owner: an uninstall hook so "delete data" also removes `webos.moonrabbit` in IndexedDB (needs an apps-service API).
