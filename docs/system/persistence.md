@@ -72,6 +72,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
 | `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
 | `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
+| `app.plots.{stats,daily,game,size}` | `user/plots` | Stats per size; daily puzzle; plots in progress; last size |
 | `app.pdf-tools.{sign,export,images,test-pdf}` | `user/pdf-tools` | Sign ink and date option; Export, Images and Test PDF section settings |
 | `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
 | `app.quick-notes.notes-status` | `user/quick-notes` | Notes status filter |

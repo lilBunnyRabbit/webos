@@ -344,6 +344,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Hop (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Zip-style path through numbered dots that fills the grid, walls on some puzzles, 6×6 to 8×8, 7×7 daily, hints through forced cells
 - [x] Sudoku 6×6 (2026-10-22, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Mini Sudoku-style 6×6 grid with 2×3 boxes beside the classic 9×9, same four difficulties scaled by clue count, hints and notes, its own daily (Game Hub lists Sudoku · 9×9 and Sudoku · 6×6)
 - [x] Tunnels (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md), [page](apps/tunnels.md)): Wend-style word paths, every letter used once, 4×5 / 5×5 / 6×5, uniqueness proven against the full accept list, hints, daily
+- [x] Plots (2026-10-22, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md), [page](apps/plots.md)): LinkedIn Patches-style garden plots, split the grid into rectangles with one clue each (size and shape), 6×6 to 9×9, 7×7 daily, generated so the deduction rules alone solve it, hints place the next proven plot. Second user of `region_edges`
 
 ### Productivity
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

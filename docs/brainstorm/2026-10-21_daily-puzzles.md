@@ -21,7 +21,7 @@ Rules confirmed from LinkedIn help and press (investigation report): Queens (one
 - [x] Sun & Moon (built 2026-10-21, [page](../apps/sun-and-moon.md))
 - [x] Hop (built 2026-10-21, [page](../apps/hop.md))
 - [x] The word game, named **Tunnels** by the owner (built 2026-10-21, [page](../apps/tunnels.md))
-- [ ] Plots (region kit's second user)
+- [x] Plots (built 2026-10-22, [page](../apps/plots.md)), the region kit's second user
 - [x] Sudoku 6×6 (built 2026-10-22): one size-generic model, its own per-mode daily; box borders stay plain modulo, not `region_edges`
 
 ## Next session topics

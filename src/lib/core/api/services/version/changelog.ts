@@ -7,8 +7,14 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.49.0",
     date: "2026-10-22",
-    title: "Mini Sudoku",
+    title: "More daily puzzles",
+    introduces: ["plots"],
     changes: [
+      {
+        kind: NEW,
+        apps: ["plots"],
+        text: "Plots, a daily garden puzzle: drag rectangles to split the grid into plots, each holding one clue that gives its size or shape, with hints when you're stuck.",
+      },
       {
         kind: NEW,
         apps: ["sudoku", "game-hub"],
