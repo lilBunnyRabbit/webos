@@ -26,6 +26,7 @@ export const CHANGELOG: Release[] = [
     version: "3.48.0",
     date: "2026-10-22",
     title: "A locked journal",
+    introduces: ["moonrabbit"],
     changes: [
       {
         kind: NEW,
