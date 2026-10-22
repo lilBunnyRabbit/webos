@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gif_delays, gif_local_frame, gif_start, GIF_TRAILER } from "./gif";
-import { map_pixels, median_cut } from "./quantize";
+import { map_pixels, median_cut } from "$kit/utils/codecs/quantize";
 
 describe("gif with local palettes in the browser", () => {
   it("decodes frames with different palettes and their delays", async () => {

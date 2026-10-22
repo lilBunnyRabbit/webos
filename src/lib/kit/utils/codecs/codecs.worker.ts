@@ -1,8 +1,8 @@
-import { CODECS, CodecFormat, is_avif, is_jxl, type EncodeOptions } from "./formats";
+import { CODECS, CodecFormat, ENCODER_INFO, is_avif, is_codec_format, is_jxl, type EncodeOptions, type EncoderFormat } from "./formats";
 import { ssim, type SsimResult } from "./ssim";
 
 export type CodecRequest =
-  | { id: number; op: "encode"; format: CodecFormat; image: ImageData; options: EncodeOptions }
+  | { id: number; op: "encode"; format: EncoderFormat; image: ImageData; options: EncodeOptions }
   | { id: number; op: "decode"; blob: Blob }
   | { id: number; op: "compare"; a: ImageData; b: ImageData };
 
@@ -37,7 +37,11 @@ async function encode_native(format: CodecFormat, image: ImageData, options: Enc
   return blob;
 }
 
-async function encode(format: CodecFormat, image: ImageData, options: EncodeOptions): Promise<Blob> {
+async function encode(format: EncoderFormat, image: ImageData, options: EncodeOptions): Promise<Blob> {
+  if (!is_codec_format(format)) {
+    const { write_pixels } = await import("./write");
+    return new Blob([await write_pixels(format, image)], { type: ENCODER_INFO[format].mime });
+  }
   const info = CODECS[format];
   const quality = clamp_quality(options.quality, info.quality ?? 100);
   const lossless = options.lossless ?? false;

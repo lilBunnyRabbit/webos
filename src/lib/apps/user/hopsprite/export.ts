@@ -3,7 +3,7 @@ import kernel, { TaskJobStatus, type AppsService, type TasksService } from "$lib
 import { base_name } from "$lib/core/api/services/files/path";
 import { format_bytes } from "$lib/core/utils";
 import { composite } from "./composite";
-import { gif_delays, gif_frame, gif_header, GIF_TRAILER, scale_indices, type GifHeader } from "./gif";
+import { gif_delays, gif_frame, gif_header, GIF_TRAILER, scale_indices, type GifHeader } from "$kit/utils/codecs/gif";
 import { write_text } from "./io";
 import type { Direction, Sprite } from "./model";
 import { index_pixels } from "./quantize";

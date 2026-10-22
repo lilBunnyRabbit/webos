@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { bmp_size, BMP_MAX_BYTES, png_stored_size, PNG_PAD_MIN } from "./test-image-encode";
+import { bmp_size, BMP_MAX_BYTES } from "$kit/utils/codecs/bmp";
+import { png_stored_size, PNG_PAD_MIN } from "./test-image-encode";
 
 export const Pattern = {
   RINGS: "rings",

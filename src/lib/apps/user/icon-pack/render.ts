@@ -2,7 +2,7 @@ import { BRAND_DARK, BRAND_LIGHT } from "$lib/core/api/services/settings/themes"
 import { load_image } from "$kit/utils/image";
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip, type ZipSource } from "$lib/core/utils/zip/write";
-import { write_ico } from "./ico";
+import { write_ico } from "$kit/utils/codecs/ico";
 import {
   APPLE_SIZE,
   CARD_FAMILIES,

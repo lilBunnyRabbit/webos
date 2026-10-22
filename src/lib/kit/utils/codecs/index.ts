@@ -1,6 +1,6 @@
 import type { CodecRequest, CodecResponse, EncodeResult } from "./codecs.worker";
 import CodecWorker from "./codecs.worker?worker";
-import { CODECS, CodecFormat, type EncodeOptions } from "./formats";
+import { CODECS, type CodecFormat, type EncodeOptions, type EncoderFormat } from "./formats";
 import type { SsimResult } from "./ssim";
 
 export * from "./formats";
@@ -115,7 +115,7 @@ export interface CodecCallOptions {
 }
 
 export function encode(
-  format: CodecFormat,
+  format: EncoderFormat,
   image: ImageData,
   options: EncodeOptions = {},
   { signal }: CodecCallOptions = {}

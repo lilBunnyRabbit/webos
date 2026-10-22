@@ -5,7 +5,8 @@ import { parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
 import { encode } from "$kit/utils/codecs";
 import { CODECS, type CodecFormat, type EncodeOptions } from "$kit/utils/codecs/formats";
-import { converted_name, is_image_name, read_image } from "./source";
+import { read_image } from "$kit/utils/codecs/source";
+import { converted_name, is_image_name } from "./source";
 
 const files = () => kernel.service<FilesService>("files");
 

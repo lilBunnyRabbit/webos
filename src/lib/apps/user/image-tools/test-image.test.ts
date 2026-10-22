@@ -15,7 +15,8 @@ import {
   TestFormat,
   type TestImageSpec,
 } from "./test-image";
-import { bmp_size, png_stored_size } from "./test-image-encode";
+import { bmp_size } from "$kit/utils/codecs/bmp";
+import { png_stored_size } from "./test-image-encode";
 
 const spec = (patch: Partial<TestImageSpec> = {}): TestImageSpec => ({ ...DEFAULT_SPEC, ...patch });
 

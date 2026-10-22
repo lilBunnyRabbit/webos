@@ -1,6 +1,16 @@
-import { parse_hex } from "./color";
+import { concat_bytes } from "./pixels";
+import { map_pixels, median_cut } from "./quantize";
+import type { Pixels } from "./ssim";
 
 const MAX_CODES = 4096;
+const HEX = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i;
+
+function hex_rgb(hex: string): [number, number, number] {
+  const match = HEX.exec(hex.trim());
+  if (!match) return [0, 0, 0];
+  const value = parseInt(match[1], 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
 
 export function color_table_bits(colors: number): number {
   let bits = 1;
@@ -133,7 +143,7 @@ export function gif_header({ width, height, palette, loop }: GifHeader): Uint8Ar
   out.byte(0);
   out.byte(0);
   for (let i = 0; i < 1 << table_bits; i++) {
-    const [r, g, b] = i < palette.length ? parse_hex(palette[i]) : [0, 0, 0];
+    const [r, g, b] = i < palette.length ? hex_rgb(palette[i]) : [0, 0, 0];
     out.bytes([r, g, b]);
   }
   if (loop) {
@@ -196,4 +206,41 @@ export function scale_indices(indices: Uint8Array, width: number, height: number
     for (let copy = 0; copy < scale; copy++) out.set(row, (y * scale + copy) * row.length);
   }
   return out;
+}
+
+const ALPHA_CUTOFF = 128;
+const GIF_MAX_SIDE = 0xffff;
+
+const hex_of = (palette: Uint8Array, index: number) =>
+  `#${[0, 1, 2].map((channel) => palette[index * 3 + channel].toString(16).padStart(2, "0")).join("")}`;
+
+/** One still frame: median cut to 256 colours with Floyd–Steinberg, and pixels under half alpha as the one transparent entry. */
+export function encode_gif_image(image: Pixels): Uint8Array<ArrayBuffer> {
+  const { width, height, data } = image;
+  if (width > GIF_MAX_SIDE || height > GIF_MAX_SIDE) throw new Error(`A GIF can't be wider or taller than ${GIF_MAX_SIDE} px`);
+  const count = width * height;
+  let holes = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < ALPHA_CUTOFF) holes++;
+  let opaque: Uint8Array | Uint8ClampedArray = data;
+  if (holes) {
+    opaque = new Uint8Array((count - holes) * 4);
+    for (let source = 0, target = 0; source < data.length; source += 4) {
+      if (data[source + 3] < ALPHA_CUTOFF) continue;
+      opaque.set(data.subarray(source, source + 4), target);
+      target += 4;
+    }
+  }
+  const palette = median_cut(opaque, holes ? 255 : 256);
+  const colors = palette.length / 3;
+  const indices = map_pixels(data, width, height, palette, true);
+  if (holes) for (let i = 0; i < count; i++) if (data[i * 4 + 3] < ALPHA_CUTOFF) indices[i] = colors;
+  const hexes = Array.from({ length: colors }, (_, index) => hex_of(palette, index));
+  const header: GifHeader = {
+    width,
+    height,
+    palette: holes ? [...hexes, "#000000"] : hexes,
+    transparent: holes ? colors : null,
+    loop: false,
+  };
+  return concat_bytes([gif_header(header), gif_frame(header, { indices, delay: 0 }), GIF_TRAILER]);
 }
