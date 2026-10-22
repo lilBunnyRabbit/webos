@@ -75,6 +75,8 @@ A Unix-lite layout (ADR-021), defined in `hierarchy.ts`:
 └ mnt/           empty in OPFS; lists the mount table, one entry per mounted real folder (ADR-044)
 ```
 
+Apps may add their own folder under `/home` the first time they need it, never at boot: Quick Notes' `/home/Notes`, Moonrabbit's `/home/Journal` ([internals](../../apps/moonrabbit.md)). They are ordinary user folders, not in `PATHS`.
+
 | Export | What |
 |--------|------|
 | `PATHS` | `as const` map: `home`, `desktop`, `documents`, `downloads`, `templates`, `etc`, `var`, `var_lib`, `tmp`, `mnt` → the paths above |

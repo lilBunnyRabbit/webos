@@ -22,8 +22,8 @@ Investigation (feature research across Day One, Apple Journal, Daylio, 5-Minute 
 - **AI:** none. No `ai: "read"` commands, no model use. Rejected: an opt-in follow-up question; Ask reading while unlocked.
 
 ## Action items
-- [ ] ADR-063 (journal format, key hierarchy, device key in IndexedDB).
-- [ ] Builder 1: crypto core, format, unlock (master, recovery, passkey PRF, rabbit grid, PIN), auto-lock, today box, entries, list, search, templates, prompts, photos, export, reminder, several journals.
+- [x] ADR-063 (journal format, key hierarchy, device key in IndexedDB).
+- [x] Builder 1: crypto core, format, unlock (master, recovery, passkey PRF, rabbit grid, PIN), auto-lock, today box, entries, list, search, templates, prompts, photos, export, reminder, several journals.
 - [ ] Builder 2: mood (tap, activities, sliders, Year in Pixels, chart), calendar heat map, On This Day, the locked inbox with widget and capture dialog.
 
 ## Next session topics

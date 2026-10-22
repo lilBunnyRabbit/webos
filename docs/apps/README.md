@@ -32,6 +32,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [sun-and-moon.md](sun-and-moon.md) | Sun & Moon (`sun-and-moon`) | The rules, the line-pattern solver and why it proves uniqueness, the generator (givens first down to one per row, then signs), the five hint rules |
 | [hop.md](hop.md) | Hop (`hop`) | The random path by backbite moves, walls cut from unused edges, the dotted-path counter and its pruning, cutting other answers then removing dots under a search budget, the hint that runs through forced cells |
 | [tunnels.md](tunnels.md) | Tunnels (`tunnels`) | The Wend-style generator (snake carve, word fill), the uniqueness proof (trie tracing plus exact cover over the full accept list), the drag path model, hints, Letterer's word lists |
+| [moonrabbit.md](moonrabbit.md) | Moonrabbit (`moonrabbit`) | The encrypted journal format (`journal.json`, `index.bin`, one AES-GCM blob per entry and photo, additional data), the key hierarchy (data key wrapped by PBKDF2 phrase key and HKDF recovery code, X25519 inbox key), per-device quick unlock (passkey PRF, Carrot patch, PIN, device key in IndexedDB, 5 tries, 7 days, restore stamp), locking, the threat model |
 
 ## Page shape
 

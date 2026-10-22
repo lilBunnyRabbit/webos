@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.48.0",
+    date: "2026-10-22",
+    title: "A locked journal",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["moonrabbit"],
+        text: "Moonrabbit is a journal encrypted on your device: write a line in seconds, add photos and templates, and unlock it with a passphrase, a passkey, a hop through the carrot patch or a PIN.",
+      },
+    ],
+  },
+  {
     version: "3.47.0",
     date: "2026-10-22",
     title: "Swipe sheets away",

@@ -621,7 +621,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
   - [ ] Emoji Rebus: guess or make emoji puzzles; Game Hub daily (S)
   - [ ] Café Talk: role-play language practice with corrections (M, needs Proofreader API)
   - [ ] Voice Inbox: speak a thought, filed as todo, idea or event (M, needs audio input)
-  - [ ] Night Journal: private diary with one follow-up question and mood tags (M)
+  - [-] Night Journal, built as Moonrabbit without AI ([brainstorm](brainstorm/2026-10-22_moonrabbit.md), [ADR-063](adrs/063-moonrabbit-journal.md), [internals](apps/moonrabbit.md)): part 1 done (encrypted journal, master phrase and recovery code, passkey, Carrot patch and PIN quick unlock, auto-lock, today box, templates, prompt, photos, search, several journals, export, reminder); part 2 next (mood tap and views, calendar heat map, On This Day, adding while locked)
   - [ ] Photo Bingo: webcam scavenger hunt (M)
   - [ ] Receipt Box: receipt photo to a spending table, totals checked (M; overlaps Shopping List photo reading)
   - [ ] Whiteboard Snap: photo of a board to clean Markdown (S; overlaps photo reading)

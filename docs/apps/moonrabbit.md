@@ -1,0 +1,141 @@
+# Moonrabbit
+
+Id `moonrabbit` · Source: `src/lib/apps/user/moonrabbit/` · [brainstorm](../brainstorm/2026-10-22_moonrabbit.md) · [ADR-063](../adrs/063-moonrabbit-journal.md)
+
+## What it does
+
+A journal that is encrypted on the device and quick to write in. The first run makes a journal with a generated five-word master phrase and a recovery code; after that the app opens on an unlock screen (master phrase, recovery code, or a per-device quick unlock: passkey, the "Carrot patch" hop path or a 6-digit PIN). Unlocked, a "today" box has focus: one line and Enter is an entry. There is a list newest first, an editor with inline photos, four templates, a rotating prompt, tags, search, several journals, Markdown and print export, and one daily reminder. Part 2 (mood views, calendar, On This Day, adding while locked) is not built yet; the format already carries what it needs.
+
+## How it works
+
+### Files
+
+```
+/home/Journal/{name}/
+  journal.json      plain header (below)
+  index.bin         encrypted index: one row per entry
+  entries/{id}.bin  one encrypted entry
+  media/{id}.bin    one encrypted photo (WebP bytes)
+  inbox/            empty; part 2's adding while locked writes here
+```
+
+`/home/Journal` is made by the first journal, not at boot (`store.ts:51`), so the files hierarchy (ADR-021) is unchanged. A taken journal name gets `name (1)` like any other folder. `{id}` is 128 random bits as hex (`crypto.ts:46`), so file names say nothing about dates.
+
+**`journal.json`**, pretty-printed and validated with zod on read (`journal.ts:14`):
+
+```json
+{ "version": 1, "id": "<32 hex>", "kdf": { "iterations": 600000, "salt": "<16 bytes b64>" },
+  "wraps": { "phrase": { "iv": "…", "data": "…" }, "recovery": { "iv": "…", "data": "…" } },
+  "inbox_public_key": "<raw X25519 b64>", "inbox_private_wrapped": { "iv": "…", "data": "…" } }
+```
+
+A folder whose `journal.json` doesn't parse shows "This journal can't be opened"; one without `journal.json` isn't listed.
+
+**`.bin` files** (`crypto.ts:140`): one version byte (`1`), the 12-byte IV, then AES-GCM ciphertext with its 16-byte tag. A different version byte is refused before decrypting.
+
+**Index row** (`journal.ts:31`): `id, date (YYYY-MM-DD), created, updated, title, tags, words, media[], template?, mood?, activities?, energy?, sleep?`. **Entry** (`journal.ts:48`): the same minus the derived fields, plus `body`. The four mood fields are in both schemas now so part 2 needs no migration; nothing writes them yet.
+
+**Body.** Plain text. A photo is the token `![photo](media:{id})` on its line (`journal.ts:63`); tags are `#word` anywhere; the title is the first non-empty line without leading `#`s.
+
+### Keys
+
+| Key | What | Where it lives |
+|-----|------|----------------|
+| Data key | Random AES-GCM 256, encrypts every `.bin`, the inbox private key | Never stored raw. Wrapped in the header (twice) and per device (quick unlock). Unlocked: a non-extractable `CryptoKey` in the window's `JournalSession` |
+| Phrase key | PBKDF2-HMAC-SHA256(NFKC phrase, 16-byte salt, `kdf.iterations`) → AES-GCM key-wrapping key | Derived on unlock, then dropped |
+| Recovery key | HKDF-SHA256(128-bit code, salt = journal id, info `moonrabbit/recovery`) | Derived on unlock, then dropped |
+| Inbox key pair | X25519, made with the journal | Public raw in the header; private PKCS #8 encrypted with the data key |
+| Device key | Non-extractable HMAC-SHA256 `CryptoKey` | IndexedDB `webos.moonrabbit` › `keys` › `device`, one per browser |
+| Quick key | HKDF(HMAC(device key, PBKDF2(secret, salt, 600k))) for a path or PIN; HKDF(passkey PRF output) for a passkey | Derived on unlock, then dropped |
+
+**Additional data.** Every encryption and wrap binds `moonrabbit/1/{journal id}/{item}` (`crypto.ts:51`): `wrap/phrase`, `wrap/recovery`, `wrap/quick/{method}`, `inbox-key`, `index`, `entry/{id}`, `media/{id}`. A file copied over another entry's name, into another journal, or read as a newer format fails its GCM tag. Tested in `crypto.test.ts` and `moonrabbit.browser.test.ts`.
+
+**Rewrapping.** The in-memory data key can't be exported, and Web Crypto's `wrapKey` needs an extractable key. So every rewrap (change phrase, new recovery code, set up quick unlock, raise the iteration count) unwraps the data key again from a secret the user just typed, with `extractable: true`, wraps it and lets that copy go (`unlock.ts`). That is why each of those asks for the master phrase (or the recovery code). Changing the phrase writes only `kdf` and `wraps.phrase` with a new salt; entries are not re-encrypted.
+
+**Iterations.** `kdf.iterations` is read on every unlock. When a stored count is below `PBKDF2_ITERATIONS`, the next phrase unlock rewraps at the current count with a new salt (`unlock.ts:82`). Measured in headless Chromium on the owner's Mac (Apple silicon) via the browser test: 600,000 iterations take about 55 ms; creating a journal took 111 ms end to end in the UI. Phones are slower; unmeasured.
+
+**Recovery code.** 16 random bytes plus a 12-bit SHA-256 checksum, as 28 Crockford base32 characters in seven groups of four (`crypto.ts:186`). Parsing ignores case, spaces and dashes, reads O as 0 and I/L as 1, and a failed checksum says "typo" instead of "wrong code".
+
+**Inbox check.** Every unlock decrypts the inbox private key and compares its public half (JWK `x`) with `inbox_public_key` (`crypto.ts:280`). A header edited to point the inbox at someone else's key refuses to open ("changed outside Moonrabbit").
+
+### Quick unlock (per device)
+
+One record per journal in IndexedDB `webos.moonrabbit` › `quick`, keyed by journal id (`device.ts`): `{ method, wrapped, salt, iterations, credential_id?, shuffle?, attempts, master_at, header_stamp }`.
+
+- **Passkey.** Offered only when `PublicKeyCredential.getClientCapabilities()` reports `extension:prf`. Setup creates a credential with `prf.eval.first = salt`; a provider that returns the PRF output on create is used at once, one that only says `enabled` gets one `get()`, one that says neither gets "can't unlock a journal" and the new credential is reported back with `signalUnknownCredential` so it doesn't linger (`passkey.ts`). Unlock is a `get()` with the stored credential id.
+- **Carrot patch.** 20 plots on a 4 × 5 meadow, each a Phosphor nature icon (carrot, clover, tulip, moon, …), 6 hops, the same plot again allowed. The secret is the sequence of plants (`taps:carrot,moon,…`), not positions, so "Shuffle the meadow" can move the plants every time without changing the path. Arrow keys, Home/End, Enter or Space hop, Backspace undoes.
+- **PIN.** 6 digits, typed or tapped.
+- **Gate** (`quick.ts:56`): open unless 5 wrong tries were used, more than 7 days passed since the last master phrase or recovery unlock on this device (or the clock went back), or `journal.json`'s `lastModified` differs from `header_stamp`. The app writes the header itself only through `write_header`, which updates the stamp; a backup restore stages and moves files, so the stamp changes and the master phrase is asked. A master unlock re-stamps, restarts the 7 days and clears the tries.
+- **Wrong tries.** A wrong path, PIN or passkey fails the GCM unwrap; the count goes up; the fifth deletes the record.
+
+### Session and locking
+
+`JournalSession` (`session.svelte.ts`) is one unlocked journal in one window: the key, the decrypted index, a cache of decrypted entries and photo object URLs. Two windows unlock separately. `lock()` runs the editor's pending save first (each save captures the key before its first `await`, so it lands), then drops the key, clears the caches, revokes the URLs and the window falls back to the unlock screen. `journal lock` locks every session in the tab (`sessions.ts`).
+
+Index writes take a Web Lock per journal (`moonrabbit:{id}`), re-read `index.bin` and apply one change, so two windows saving at once both land (tested). Every window re-reads the index when the journal folder's revision moves.
+
+Auto-lock (`moonrabbit.app.svelte`): idle (no pointer, key, input or wheel in the window) for 5 minutes by default; hidden (`win.is_visible` false: minimized, the tab hidden, another app on top on a phone) for 1 minute on desktop and at once on a phone. Both adjustable in Journal settings (`app.moonrabbit.idle-minutes`, `app.moonrabbit.hidden-seconds`). The hidden-lock waits while the editor's own camera or device file chooser is open (`session.picking`): on a phone the camera hides the page, and locking then would lose the photo; the idle lock still runs. Closing the window locks.
+
+**What never holds journal text:** session restore (the app takes no props and no window state; checked by dumping `session.json` after writing entries), the window title ("Moonrabbit · locked", or the date of the open entry or today), notifications and the reminder ("Time to write", nothing else), localStorage (the last journal's folder name and the two auto-lock numbers), the shell (only `journal lock`; no `ai` commands). The browser test writes a marker string into entries, tags and the template, changes the phrase and the recovery code, then reads every OPFS file byte by byte and every localStorage value: the marker, the phrase and its words appear nowhere.
+
+### Writing
+
+- **Today box.** Focused when the journal opens. Enter saves the text as a new entry dated today; Shift+Enter is a new line. Its placeholder is the day's prompt.
+- **Prompt.** `prompt_for(day, skip)` (`journal.ts:152`) rotates 12 prompts by day number; Skip prompt steps on, Answer opens a new entry headed with it.
+- **Templates.** Morning, Evening, Gratitude 3, Brain dump (`journal.ts:130`), from New.
+- **Editor** (`entry-editor.svelte`): a `contenteditable="plaintext-only"` box like Proposals' sections. The DOM is text nodes and `<img data-media>`; reading it back turns each image into its token. Saves 600 ms after typing stops, encrypted. A new entry isn't written until its first change; closing it untouched writes nothing, deleting it removes the photos it already stored. The date is editable.
+- **Photos.** Paste, drop, or the photo button (camera on phones, this device, WebOS files). Each goes through `picture_data_url` (`$kit/utils/picture`: long edge 1200 px, WebP 0.8), and only the bytes are stored, encrypted, as `media/{id}.bin`. Shown through object URLs revoked on lock. A save drops photos the text no longer references.
+- **Search** decrypts every entry into the session's memory on first use while unlocked, then matches all words; `#tag` matches tags only.
+- **Days written this month** counts distinct dates with an entry, never a streak.
+- **Export** (sheet): a date range, then Save Markdown… (photos as `data:` URLs, through the save picker, with a "this file isn't encrypted" toast) or Print or PDF (`print_html`, light Markdown: `#` headings, lists, bold, italic; images only as `data:image/...;base64`). Runs inline: decrypting a month takes milliseconds; a year with many photos is unmeasured.
+- **Reminder.** One scheduler job `moonrabbit:reminder`, daily at a chosen time, title "Time to write", no message; a click opens the app.
+- **Several journals.** A picker on the unlock screen and in the toolbar; New journal runs the first-run flow again. Each journal has its own phrase, recovery code and quick unlock.
+
+### Strength meter
+
+`phrase_bits` (`passphrase.ts:32`): a word from the EFF list counts log2(7776) ≈ 12.9 bits, a repeated word nothing, any other token half its character-pool bits. Under 40 bits is weak and can't be used; 60 and up is strong. A generated phrase is 65 bits.
+
+## Threat model
+
+| Against | Holds? | Why |
+|---------|--------|-----|
+| Someone reading the files (a backup zip, a copied `/home`, another page on the `github.io` origin) | Yes, with a good phrase | Everything but the header is AES-GCM. A 5-word generated phrase is 65 bits behind 600k PBKDF2: out of reach. A weak own phrase is the weak point, which is why the meter refuses under 40 bits |
+| The same, guessing a PIN or a path | Yes | The quick wraps aren't in the files or backups; they're in IndexedDB with the device key |
+| Someone with a full copy of the browser profile | Partly | Non-extractable only stops page code from exporting the device key; Chrome keeps its material in the profile's IndexedDB files, so a profile copy carries it. Then a 6-digit PIN is 10^6 guesses and a path 20^6 ≈ 6.4 × 10^7, each a 600k PBKDF2: hours to days on a GPU, not years. The 5-try limit doesn't apply offline. Use a passkey or none on a machine you don't control |
+| Someone at the unlocked journal | No | It's open. Auto-lock limits the window |
+| Someone at the locked journal on this device | Yes, 5 tries | Then the quick wrap is gone and the master phrase is needed |
+| Tampering with files | Detected | GCM tags and additional data; a swapped inbox key is caught at unlock |
+| Code running in the page (another WebOS app, a malicious extension) | No | Same origin and same JavaScript realm. WebOS has no isolation between apps (PRINCIPLES: capability system rejected) |
+| Forgotten phrase and lost recovery code | Lost | Nothing can reset them |
+
+What stays visible: how many entries and photos there are, their sizes and file times, the journal names, that the app is used.
+
+## Data
+
+| Store | Path or key | What |
+|-------|-------------|------|
+| OPFS | `/home/Journal/{name}/…` | The journal (above). In backups under Files, encrypted |
+| IndexedDB | `webos.moonrabbit` › `keys`, `quick` | Device key; quick-unlock records. Not in backups, not removed by uninstalling the app |
+| localStorage | `app.moonrabbit.journal`, `.idle-minutes`, `.hidden-seconds` | Last journal's folder name; auto-lock settings |
+| Scheduler | `moonrabbit:reminder` in `/var/lib/scheduler/jobs.json` | The reminder |
+
+No props. Shell: `journal lock` (`commands.ts`).
+
+## Dependencies & licences
+
+- Web Crypto (AES-GCM, PBKDF2, HKDF, HMAC, X25519), WebAuthn PRF, IndexedDB, Web Locks. No packages.
+- `eff-large-wordlist.txt`: EFF's Large Wordlist for Passphrases, Creative Commons Attribution, loaded only when a phrase is made or rated. Source, hash and licence in `EFF-WORDLIST-LICENSE.md` beside it.
+
+## Limits
+
+- Phone timings for 600k PBKDF2 (unlock, PIN, path) are unmeasured.
+- Adding while locked, mood UI, calendar and On This Day are part 2. The inbox key pair exists and is checked on unlock; nothing writes `inbox/` yet.
+- The editor is plain text: `##` and lists show as typed; only the printout renders them.
+- Export runs inline, not as a task.
+- A passkey that a provider deletes leaves its quick wrap until the next try fails with "cancelled"; Remove in settings clears it.
+- Uninstalling with "delete data" leaves the IndexedDB database.
+
+## Decisions
+
+- [Brainstorm 2026-10-22](../brainstorm/2026-10-22_moonrabbit.md): scope, unlock methods, storage, auto-lock, shell, no AI.
+- [ADR-063](../adrs/063-moonrabbit-journal.md): format and key hierarchy, with the build's revision note.
