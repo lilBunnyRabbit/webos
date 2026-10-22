@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: "brackets",
   name: "Brackets",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

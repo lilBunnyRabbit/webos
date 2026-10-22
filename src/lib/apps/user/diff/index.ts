@@ -1,7 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export const DIFF_ACCEPT = [
   "text/*",
@@ -33,7 +33,7 @@ export const DIFF_PROPS = z.object({
 export default define_app({
   id: "diff",
   name: "Diff",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),

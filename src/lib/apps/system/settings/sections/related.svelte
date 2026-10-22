@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService } from "$lib/core/api";
-  import { Button, Section, type IconComponent } from "$lib/core/components/ui";
+  import { AppIcon, Button, Section, type IconComponent } from "$lib/core/components/ui";
   import { ArrowRight as ArrowRightIcon } from "phosphor-svelte";
   import type { Page } from "../ids";
   import { pages_for, RELATED } from "../pages";
@@ -13,7 +13,7 @@
   interface Link {
     key: string;
     label: string;
-    icon: IconComponent;
+    icon: IconComponent | string;
     external: boolean;
     run: () => void;
   }
@@ -35,7 +35,7 @@
     <div class="flex flex-wrap gap-2">
       {#each links as link (link.key)}
         <Button size="sm" variant="secondary" onclick={link.run}>
-          <link.icon weight={link.external ? "duotone" : "bold"} />
+          {#if typeof link.icon === "string"}<AppIcon src={link.icon} class="size-3.5" />{:else}<link.icon weight="bold" />{/if}
           {link.label}
           {#if !link.external}<ArrowRightIcon class="text-foreground/65" weight="bold" />{/if}
         </Button>

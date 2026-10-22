@@ -1,12 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import { ai_icon } from "$kit/components/ai-icon";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: "doodlehop",
   name: "Doodlehop",
-  icon: ai_icon(AppIcon),
+  icon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

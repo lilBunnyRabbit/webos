@@ -3,6 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import AppAnnouncement, { type AnnouncedApp } from "$lib/core/components/announcement/app-announcement.svelte";
   import {
+    AppIcon,
     Badge,
     BoardOverlay,
     Button,
@@ -50,7 +51,6 @@
   import { z } from "zod";
   import { reveal_setting } from "$lib/core/components/ui/setting-anchor";
   import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
-  import { ai_icon } from "$kit/components/ai-icon";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -156,8 +156,8 @@
       return manifest ? [{ manifest, version: "0.34.0" }] : [];
     })
   );
-  const ai_icons = $derived(["terminal", "calculator", "text-editor", "file-explorer"].flatMap((id) => pick(id)?.icon ?? []).map((icon) => ai_icon(icon)));
-  const AI_ICON_SIZES = ["size-4", "size-6", "size-9", "size-12"];
+  const app_icons = $derived(["calculator", "terminal", "paint", "color-games", "ask", "doodlehop"].flatMap((id) => pick(id)?.icon ?? []));
+  const APP_ICON_SIZES = ["size-4", "size-6", "size-9", "size-12"];
 </script>
 
 {#snippet swatch(token: string)}
@@ -469,24 +469,28 @@
           </div>
         </Section>
         <Section
-          title="AI icon"
-          description="An app that needs on-device AI wraps its icon in ai_icon, from $kit: a primary sparkle cut into the top-right corner, in the same box, so every place that draws the icon shows it. Ask, Unsaid, Doodlehop and Alibi use it."
+          title="App icon"
+          description="AppIcon draws a manifest's icon file as CSS masks: the line art in the text colour, the parts marked primary or secondary in those tokens. A square placeholder shows until the file has loaded. Apps that need on-device AI (Ask, Unsaid, Doodlehop, Alibi) carry the primary sparkle in their own file."
           flush
         >
           <div class="flex flex-col gap-3">
-            {#each AI_ICON_SIZES as size (size)}
+            {#each APP_ICON_SIZES as size (size)}
               <div class="flex items-center gap-4">
-                {#each ai_icons as Icon, index (index)}
-                  <Icon class={size} weight="duotone" />
+                {#each app_icons as icon, index (index)}
+                  <AppIcon src={icon} class={size} />
                 {/each}
                 <span class="font-mono text-2xs text-foreground/65">{size}</span>
               </div>
             {/each}
             <div class="flex w-fit items-center gap-4 rounded-lg bg-primary/15 px-3 py-2 text-primary">
-              {#each ai_icons as Icon, index (index)}
-                <Icon class="size-6" weight="fill" />
+              {#each app_icons as icon, index (index)}
+                <AppIcon src={icon} class="size-6" />
               {/each}
               <span class="font-mono text-2xs">primary ink</span>
+            </div>
+            <div class="flex items-center gap-4">
+              <AppIcon src="data:," class="size-9" />
+              <span class="font-mono text-2xs text-foreground/65">not loaded yet</span>
             </div>
           </div>
         </Section>

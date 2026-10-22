@@ -1,14 +1,14 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export const SIZES = ["5", "10", "15", "20"] as const;
 
 export default define_app({
   id: "nonogram",
   name: "Nonogram",
-  icon: AppIcon,
+  icon,
   version: "1.1.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

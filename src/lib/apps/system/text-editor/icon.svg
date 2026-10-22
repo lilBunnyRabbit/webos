@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <style>.primary,.secondary,:target~*{display:none}#primary:target~.primary,#secondary:target~.secondary{display:inline}</style>
+  <view id="primary"/><view id="secondary"/>
+  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.75 4.75h13M6.75 12h7.5M2.75 19.25h9M17 8.5v7M15.25 8.5h3.5M15.25 15.5h3.5"/>
+  </g>
+</svg>

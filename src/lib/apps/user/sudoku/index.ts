@@ -1,13 +1,13 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory, DailyRank } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 import { Size } from "./size";
 
 export default define_app({
   id: "sudoku",
   name: "Sudoku",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

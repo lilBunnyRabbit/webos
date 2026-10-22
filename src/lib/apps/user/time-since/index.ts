@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export const TIME_SINCE_PROPS = z.object({ counter: z.string().optional() });
 
 export default define_app({
   id: "time-since",
   name: "Time Since",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),

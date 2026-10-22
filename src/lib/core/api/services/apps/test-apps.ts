@@ -7,7 +7,7 @@ import { AppsService } from "./service.svelte";
 const never = () => new Promise<never>(() => {});
 
 function stand_in(manifest: Omit<Parameters<typeof define_app>[0], "icon" | "version" | "component">): AppManifest {
-  return { ...define_app({ ...manifest, icon: (() => {}) as never, version: "1.0.0", component: never }), system: false };
+  return { ...define_app({ ...manifest, icon: "", version: "1.0.0", component: never }), system: false };
 }
 
 /** Tests only: stand-in user apps, so core tests keep passing when the user apps are deleted. */

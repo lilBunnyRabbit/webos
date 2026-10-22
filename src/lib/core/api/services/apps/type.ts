@@ -91,7 +91,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   id: AppId;
   name: string;
   version: string;
-  icon: Component;
+  /** URL of the app's `icon.svg`: `import icon from "./icon.svg?no-inline"` (ADR-066). */
+  icon: string;
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;

@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: "lunar-lander",
   name: "Lunar Lander",
-  icon: AppIcon,
+  icon,
   version: "0.1.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

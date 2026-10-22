@@ -25,15 +25,25 @@ export async function save_app(id: AppId, options: SaveOptions): Promise<void> {
   options.on_file?.(0, files.length);
   await pool(files, LANES, async (file) => {
     signal?.throwIfAborted();
-    const url = new URL(base + file, location.origin).href;
-    if (!(await cache.match(url, { ignoreVary: true }))) {
-      // A file the update didn't rename is still in the previous build's cache (or the precache): copy, don't download.
-      const answer = (await caches.match(url, { ignoreVary: true })) ?? (await fetch(url, { signal }));
-      if (!answer.ok) throw new Error(`${file}: ${answer.status}`);
-      await cache.put(url, answer);
-    }
+    await store(cache, new URL(base + file, location.origin).href, signal);
     options.on_file?.(++done, files.length);
   });
+}
+
+async function store(cache: Cache, url: string, signal?: AbortSignal): Promise<void> {
+  if (await cache.match(url, { ignoreVary: true })) return;
+  // A file the update didn't rename is still in the previous build's cache (or the precache): copy, don't download.
+  const answer = (await caches.match(url, { ignoreVary: true })) ?? (await fetch(url, { signal }));
+  if (!answer.ok) throw new Error(`${url}: ${answer.status}`);
+  await cache.put(url, answer);
+}
+
+/** Every installed app's icon, so offline launchers draw it (ADR-066). One that fails keeps its placeholder until the next sync. */
+export async function save_icons(urls: string[], build: number): Promise<number> {
+  const cache = await caches.open(assets_cache(build));
+  let failed = 0;
+  await pool(urls, LANES, (url) => store(cache, new URL(url, location.href).href).catch(() => void failed++));
+  return failed;
 }
 
 export interface SyncApp {

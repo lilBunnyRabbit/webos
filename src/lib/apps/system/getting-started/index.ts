@@ -2,14 +2,14 @@ import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { TOPIC_IDS } from "./ids";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export const GETTING_STARTED_PROPS = z.object({ topic: z.enum(TOPIC_IDS).optional() });
 
 export default define_app({
   id: "getting-started",
   name: "Getting started",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),

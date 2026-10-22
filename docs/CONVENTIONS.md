@@ -45,7 +45,7 @@ src/lib/
     └── user/{id}/                # everything else
         ├── index.ts              # define_app manifest (eager)
         ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (lazy, one `app-meta` chunk, ADR-049)
-        ├── icon.svelte           # the app's own icon
+        ├── icon.svg              # the app's own icon, `import icon from "./icon.svg?no-inline"` (a file, fetched when drawn, ADR-066)
         ├── highlights.ts         # App Library showcase slides, `highlights: () => import("./highlights")` (lazy)
         ├── package.json          # only when the app has its own packages (ADR-045)
         ├── commands.ts           # shell commands, `shell: () => import("./commands")` (lazy, ADR-034)
@@ -97,12 +97,12 @@ Always wrapped in `$derived` so service swapping (ADR-016) stays possible. Never
 ```ts
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: "calculator",
   name: "Calculator",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   defaults: { constraints: { width: { min: 300 } } },
@@ -236,7 +236,7 @@ Current placements:
 Inter (`font-sans`) for everything you read. Hack (`font-mono`) for values: hexes, IDs, sizes, code, and the wordmark. Both are self-hosted in `src/assets/fonts/`, with their licences.
 - `cn()` merges classes. `ov(map, key)` picks a variant from a map (see `desktop-shell.svelte` taskbar positions).
 - Layout problems get solved in CSS (grid, container queries), not JS measurement.
-- App icons are each app's own `icon.svelte` (rules in [design foundations](design/foundations.md#app-icons)). Every other icon: `phosphor-svelte` only. Import with an `Icon` alias, `import { Gear as GearIcon } from "phosphor-svelte"`, which keeps names from clashing with globals like `File`. Size with `class` (`class="size-4"`), not `className`. Phosphor defaults to `1em`, so set a size where the surrounding CSS doesn't.
+- App icons are each app's own `icon.svg`, drawn with `AppIcon` from the UI kit (`<AppIcon src={manifest.icon} class="size-6" />`). The file follows a layer convention: the line art in `currentColor`, the coloured element marked `class="primary"` or `class="secondary"`, and the shared `<style>` plus `<view id="primary"/><view id="secondary"/>` at the top (rules in [design foundations](design/foundations.md#app-icons), checked by `src/lib/apps/icons.test.ts`). Every other icon: `phosphor-svelte` only. Import with an `Icon` alias, `import { Gear as GearIcon } from "phosphor-svelte"`, which keeps names from clashing with globals like `File`. Size with `class` (`class="size-4"`), not `className`. Phosphor defaults to `1em`, so set a size where the surrounding CSS doesn't.
 
 ---
 

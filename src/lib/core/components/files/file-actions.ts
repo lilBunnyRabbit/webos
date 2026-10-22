@@ -1,3 +1,4 @@
+import { app_icon } from "$lib/core/components/ui/app-icon";
 import kernel, {
   apps_for,
   tools_for,
@@ -160,7 +161,7 @@ export async function open_with_items(item: FileSystemItem): Promise<MenuItem[]>
   if (item.kind !== "file" || file_extension(item.name) === SHORTCUT_EXTENSION) return [];
   const file = await item.handle.getFile();
   const apps = [...kernel.service<AppsService>("apps").list()].map(([, manifest]) => manifest);
-  const entry = (app: AppManifest): MenuItem => ({ id: `open_with:${app.id}`, label: app.name, icon: app.icon });
+  const entry = (app: AppManifest): MenuItem => ({ id: `open_with:${app.id}`, label: app.name, icon: app_icon(app.icon) });
   const associated = apps_for(apps, file).map(entry);
   const tools = tools_for(apps, file).map(entry);
   return associated.length && tools.length ? [...associated, { separator: true }, ...tools] : [...associated, ...tools];

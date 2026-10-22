@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import type { AppManifest, DialogProps } from "$lib/core/api";
   import { ClockCounterClockwise as ClockCounterClockwiseIcon } from "phosphor-svelte";
   import { Button } from "../ui";
@@ -30,7 +31,7 @@
   <ul class="flex max-h-44 flex-col gap-0.5 overflow-y-auto rounded-xl bg-background-darker p-1.5 ring-1 ring-inset ring-foreground/8">
     {#each known as app, index (index)}
       <li class="flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui">
-        <app.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
+        <AppIcon src={app.icon} class="size-4 shrink-0 text-foreground/80" />
         <span class="truncate">{app.name}</span>
       </li>
     {/each}

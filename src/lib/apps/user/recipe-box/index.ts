@@ -2,12 +2,12 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
 import { APP_ID, COOK_FILES } from "./constants";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: APP_ID,
   name: "Recipe Box",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),

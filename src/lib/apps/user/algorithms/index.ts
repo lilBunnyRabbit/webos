@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 import { ALGORITHMS_PROPS } from "./props";
 
 export default define_app({
   id: "algorithms",
   name: "Algorithms",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),

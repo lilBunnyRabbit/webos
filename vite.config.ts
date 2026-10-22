@@ -69,7 +69,8 @@ export default defineConfig({
       workbox: {
         // ADR-065: the install precaches only core and the system apps (offline/core.json), so an update takes seconds
         // however many apps there are. User apps load on demand into the per-build runtime cache below.
-        globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
+        // svg: the system apps' icon files (ADR-066); user apps' icons are left out of core by the offline plugin.
+        globPatterns: ["**/*.{js,mjs,css,html,woff2,svg}"],
         manifestTransforms: [async (entries) => ({ manifest: entries.filter((entry) => offline.precached(entry.url)), warnings: [] })],
         // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
         globIgnores: ["**/mammoth-*.js"],

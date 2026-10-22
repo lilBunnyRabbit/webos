@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import kernel, { type AppId, type AppsService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { AppWindow as AppWindowIcon, ArrowUpRight as ArrowUpRightIcon } from "phosphor-svelte";
@@ -15,7 +16,7 @@
 
 <span class={cn("relative inline-flex shrink-0", class_name)}>
   {#if manifest}
-    <manifest.icon class="size-full" />
+    <AppIcon src={manifest.icon} class="size-full" />
   {:else}
     <AppWindowIcon class="size-full" />
   {/if}

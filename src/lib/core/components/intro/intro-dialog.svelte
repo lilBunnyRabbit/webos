@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import kernel, {
     Platform,
     THEME_PRESETS,
@@ -135,7 +136,7 @@
 {#snippet suggestion(manifest: AppListing)}
   <li class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
     <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
-      <manifest.icon class="size-6" weight="duotone" />
+      <AppIcon src={manifest.icon} class="size-6" />
     </span>
     <div class="min-w-0 flex-1">
       <h3 class="text-ui font-semibold">{manifest.name}</h3>

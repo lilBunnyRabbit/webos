@@ -2,12 +2,12 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
 import { APP_ID, HTTP_FILES } from "./methods";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: APP_ID,
   name: "API Client",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),

@@ -167,6 +167,7 @@ export class OfflineService implements IOfflineService {
   private async run_sync(): Promise<void> {
     // The tab that held the lock before may have saved them already.
     await this.reload();
+    if (this.online) await this.save_icons();
     while (!this.destroyed && this.online && this.pending().length > 0) {
       this.syncing = true;
       const { sync_task } = await work();
@@ -202,6 +203,17 @@ export class OfflineService implements IOfflineService {
     }
     // Only once nothing is left: a retry still copies unchanged files out of the old build's cache.
     if (this.pending().length === 0) await this.prune();
+  }
+
+  private async save_icons(): Promise<void> {
+    const urls = [...this.apps_service.list({ installed: true })].flatMap(([, manifest]) => (manifest.system ? [] : [manifest.icon]));
+    try {
+      const { save_icons } = await work();
+      const failed = await save_icons(urls, this.build);
+      if (failed > 0) console.warn(`[OfflineService] ${failed} of ${urls.length} app icons not saved for offline`);
+    } catch (error) {
+      console.warn("[OfflineService] Couldn't save app icons for offline", error);
+    }
   }
 
   private async prune(): Promise<void> {

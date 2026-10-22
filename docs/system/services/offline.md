@@ -28,17 +28,19 @@ The scale rule (ADR-065): nothing here costs more with more apps installed. Boot
 
 - **Roots.** For each `src/lib/apps/user/{id}/index.ts`, the chunks of every module its manifest `import()`s: the component, `commands`, `highlights`, `preview`, `widget`, `on_fire`, `on_uninstall_data`. Chunks named `core`, `app-boot` or `app-meta` are never roots.
 - **Edges.** A chunk's `imports` and `dynamicImports`, its `importedCss` and `importedAssets`, and the hashed file names its code mentions that are assets (worker scripts, `?url` files). Vite's `__vite__mapDeps` preload table is stripped first: it lists every `import()`'s deps, user apps' included. Assets (worker bundles, CSS) are scanned for hashed names too.
-- **Core** (`offline/core.json`): everything `index.html` and the entry reach without entering a root. That is the shell, `core`, `app-boot`, `app-meta`, the fonts the CSS names, and every system app with its lazy pieces.
+- **Icons.** A user app's `icon.svg` (ADR-066) is named by its manifest, so `app-boot` reaches every one. The plugin maps each `apps/user/{id}/icon.svg?no-inline` module to its file (the module's rendered code still holds Vite's `__VITE_ASSET__` placeholder, resolved with `getFileName`), keeps those files out of core and puts each in its app's list. System apps' icons stay in core.
+- **Core** (`offline/core.json`): everything `index.html` and the entry reach without entering a root or a user app's icon. That is the shell, `core`, `app-boot`, `app-meta`, the fonts the CSS names, and every system app with its lazy pieces.
 - **Apps** (`offline/{id}.json`): everything the app's roots reach without entering core.
 - Both leave out what other runtime rules cache (`*.wasm`, `*.onnx`, `*.ttf|ttc`, `*.aff|dic`, `assets/mammoth-*.js`).
 - Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, `BUILD_INFO` and the cache name agree.
 
-Measured at 3.58.0 (production build): the precache went from 844 entries (12.4 MB) to 305 (4.2 MB). 80 app lists, 3 to 42 files each (6 KB to 2.2 MB); every file in `dist/assets` is in core, in a list, or under a runtime rule.
+Measured at 3.58.0 (production build): the precache went from 844 entries (12.4 MB) to 305 (4.2 MB). At 3.59.0, 322: the 14 system icons, `logo.svg` and a second `favicon.svg` entry, since `svg` joined `globPatterns`. 80 app lists, 3 to 42 files each (6 KB to 2.2 MB); every file in `dist/assets` is in core, in a list, or under a runtime rule.
 
 ## Service worker
 
 Still `generateSW` (`vite.config.ts`):
 
+- `globPatterns` includes `svg` for the system apps' icons; user apps' icons aren't in core, so the transform drops them.
 - `manifestTransforms` keeps an entry when it's outside `assets/` (`index.html`, `registerSW.js`, `sw-notifications.js`, icons, manifest) or in core (`offline.precached(url)`).
 - The last `runtimeCaching` rule is `CacheFirst` for `^[^?#]*/webos/assets/` into `webos-assets-{buildTimestamp}`, 200 responses only, no expiration (it could evict a picked app). Earlier rules keep the wasm, model, font, dictionary and mammoth files in their own caches.
 
@@ -52,6 +54,8 @@ Under the lock, while online and some picked, installed app isn't saved:
 2. Each task fetches `{BASE_URL}offline/{id}.json` (`no-cache`), checks its `build` against this page's (another build's list throws "WebOS was updated since this page loaded…", so a stale tab never saves the wrong files), then fetches the files six at a time (`pool`). A file already in this build's cache is skipped; one in any other cache (the previous build's, the precache) is copied with `caches.match`, so an update only downloads the files it renamed. Progress per task, message "Paint · 12 of 40 files".
 3. A finished task adds the app to `saved` and writes the state file. A failed or cancelled job ends the loop.
 4. Once nothing is left: every `webos-assets-*` cache except this build's is deleted (`stale_caches`). Only that prefix: every lilbunnyrabbit site on the host shares the origin.
+
+**Icons.** First, while online, `save_icons` (in `sync.ts`) puts the `icon.svg` of every installed user app in this build's cache, six at a time, copying from an older cache when it's there, so offline launchers draw them. It runs without a task or toast; a failed icon is counted, logged and tried on the next sync, and its tile keeps the placeholder meanwhile. An app installed after that sync gets its icon cached when it's first drawn (the `/assets/` rule).
 
 The loop runs again if an app was ticked while a job ran. The lazy `sync.ts` holds the task-manager import and the downloader, so none of it is on the boot path.
 
@@ -77,7 +81,7 @@ The loop runs again if an app was ticked while a job ran. The lazy `sync.ts` hol
 | `/var/lib/offline/state.json` | Apps saved in this build | `{ "build": 1792699153883, "apps": [...] }`, through `LatestWriter`. Another build's file counts as empty |
 | Cache Storage `webos-assets-{build}` | The files | Written by the service worker (any `/assets/` request) and by this service (`cache.put`) |
 
-Parse and serialize in `persistence.ts` (zod), list helpers in `lists.ts`, both unit-tested (`lists.test.ts`); the service in `service.browser.test.ts`.
+Parse and serialize in `persistence.ts` (zod), list helpers in `lists.ts`, both unit-tested (`lists.test.ts`); the service in `service.browser.test.ts`, `save_icons` in `sync.browser.test.ts`.
 
 ## UI
 

@@ -23,3 +23,4 @@ export { default as Toolbar } from "./toolbar.svelte";
 export * from "./variants";
 export * from "./types";
 export { default as SideNav } from "./side-nav.svelte";
+export { default as AppIcon } from "./app-icon.svelte";

@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import type { AppManifest, DialogProps } from "$lib/core/api";
   import { Checkbox } from "../ui";
 
@@ -55,7 +56,7 @@
       class="flex h-9 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
       onclick={() => resolve({ app_id: app.id, always })}
     >
-      <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-foreground/10"><app.icon class="size-4" weight="duotone" /></span>
+      <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-foreground/10"><AppIcon src={app.icon} class="size-4" /></span>
       <span class="truncate">{app.name}</span>
     </button>
   {/each}

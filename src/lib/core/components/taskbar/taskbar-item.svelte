@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { app_icon } from "$lib/core/components/ui/app-icon";
+  import { AppIcon } from "$lib/core/components/ui";
   import kernel, {
     type DialogsService,
     type ExtractService,
@@ -102,7 +104,7 @@
       group.map((instance) => ({
         id: instance.id,
         label: window_label(instance),
-        icon: extract?.current === instance.id ? PictureInPictureIcon : app.manifest.icon,
+        icon: extract?.current === instance.id ? PictureInPictureIcon : app_icon(app.manifest.icon),
       })),
       { anchor: anchor() }
     );
@@ -171,7 +173,7 @@
   oncontextmenu={menu}
   onclick={() => (single ? activate(single) : pick())}
 >
-  <app.manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight={active ? "fill" : "duotone"} />
+  <AppIcon src={app.manifest.icon} class="size-[calc(var(--taskbar-item)*0.55)]" />
   <AppBadge app_id={app.id} class="top-0.5 right-0.5 ring-background-light" />
   {#if is_out}
     <PictureInPictureIcon class="absolute bottom-0.5 left-0.5 size-3.5 text-primary" weight="fill" aria-label="Popped out" />

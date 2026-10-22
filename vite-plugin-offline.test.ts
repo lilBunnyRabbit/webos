@@ -49,6 +49,18 @@ describe("offline_lists", () => {
     ]);
   });
 
+  test("a user app's icon, named by the boot chunk, goes in its list instead of core", () => {
+    const with_icons = offline_lists(
+      [...bundle.map((entry) => (entry.name === "assets/core-b.js" ? { ...entry, refs: ["assets/icon-n.svg", "assets/icon-o.svg"] } : entry)), file("assets/icon-n.svg"), file("assets/icon-o.svg")],
+      ["index.html"],
+      roots,
+      new Map([["paint", "assets/icon-n.svg"]])
+    );
+    expect(with_icons.core).not.toContain("assets/icon-n.svg");
+    expect(with_icons.core).toContain("assets/icon-o.svg");
+    expect(with_icons.apps.paint).toContain("assets/icon-n.svg");
+  });
+
   test("an app reached only through a core file stays out of core", () => {
     const shared = offline_lists([...bundle, file("assets/late-m.js", ["assets/paint.app-d.js"])], ["index.html", "assets/late-m.js"], roots);
     expect(shared.core).not.toContain("assets/paint.app-d.js");

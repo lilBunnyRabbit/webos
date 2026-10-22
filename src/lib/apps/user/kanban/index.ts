@@ -2,7 +2,7 @@ import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { due_badge } from "./badge.svelte";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export const KANBAN_PROPS = z.object({
   board: z.string().optional(),
@@ -12,7 +12,7 @@ export const KANBAN_PROPS = z.object({
 export default define_app({
   id: "kanban",
   name: "Kanban",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),

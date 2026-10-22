@@ -2,12 +2,12 @@ import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { HUB_ID, Tab } from "./labels";
-import AppIcon from "./icon.svelte";
+import icon from "./icon.svg?no-inline";
 
 export default define_app({
   id: HUB_ID,
   name: "Game Hub",
-  icon: AppIcon,
+  icon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

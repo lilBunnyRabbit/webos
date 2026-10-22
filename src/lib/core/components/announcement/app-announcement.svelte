@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import kernel, { type AppHighlight, type AppsService, type DialogProps } from "$lib/core/api";
   import { APP_CATEGORY_LABELS } from "$lib/core/api/services/apps/search";
   import { cn } from "$lib/core/utils";
@@ -89,7 +90,7 @@
       size === "lg" ? "size-18 rounded-[1.25rem]" : "size-10 rounded-xl"
     )}
   >
-    <manifest.icon class={cn("text-primary", size === "lg" ? "size-10" : "size-6")} weight="duotone" />
+    <AppIcon src={manifest.icon} class={cn("text-primary", size === "lg" ? "size-10" : "size-6")} />
   </span>
 {/snippet}
 

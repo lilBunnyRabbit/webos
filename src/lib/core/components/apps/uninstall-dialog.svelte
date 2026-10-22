@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { AppIcon } from "$lib/core/components/ui";
   import type { AppManifest, DialogProps } from "$lib/core/api";
   import { Button, Checkbox } from "../ui";
 
@@ -10,7 +11,7 @@
 <div class="grid w-[min(24rem,calc(100vw-2rem))] gap-4 rounded-2xl bg-background-lighter p-5 shadow-popover">
   <div class="flex items-start gap-3">
     <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
-      <manifest.icon class="size-5" weight="duotone" />
+      <AppIcon src={manifest.icon} class="size-5" />
     </span>
     <div class="min-w-0 pt-0.5">
       <h2 class="text-sm font-semibold break-words">Uninstall {manifest.name}?</h2>
