@@ -37,7 +37,7 @@
     for (const id of entries.flatMap((entry) => media_of(entry.body))) {
       if (!media.has(id)) media.set(id, `data:image/webp;base64,${to_base64(await session.media_bytes(id))}`);
     }
-    return { title: session.ref.name, from, to, entries, media };
+    return { title: session.ref.name, from, to, entries, media, activities: new Map(session.activities.map((activity) => [activity.id, activity.label])) };
   }
 
   async function save_markdown() {

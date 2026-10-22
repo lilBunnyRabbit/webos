@@ -3,11 +3,13 @@ import { clear_opfs, get_root } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
 import { DecryptError, PBKDF2_ITERATIONS, random_bytes, RECOVERY_BYTES, unlock_with_phrase } from "./crypto";
 import { delete_quick, device_key, read_quick } from "./device";
+import { add_activity } from "./activities";
+import { add_to_inbox, inbox_path } from "./inbox";
 import { ENTRIES_DIR, HEADER_FILE, INDEX_FILE, JOURNAL_ROOT, media_token } from "./journal";
 import { MAX_ATTEMPTS, pin_secret, QuickGate, QuickMethod, taps_secret } from "./quick";
 import { JournalSession, LockedError } from "./session.svelte";
 import { lock_all } from "./sessions";
-import { child, list_journals, read_bin, write_bin, write_header } from "./store";
+import { child, list_journals, read_bin, remove_bin, write_bin, write_header } from "./store";
 import {
   change_phrase,
   create_journal,
@@ -107,12 +109,19 @@ describe("journal on disk", () => {
       const media = await session.add_media(await photo());
       await session.save({ ...first, body: `${first.body}\n${media_token(media)}\nmore ${MARKER}` });
       await session.save(session.new_entry("2026-10-21", `${MARKER} again`, "evening"));
+      await session.save({ ...session.new_entry("2026-10-20", ""), mood: 2, activities: ["walk"], energy: 3, sleep: 6.5 });
+      await session.set_activities(add_activity(session.activities, MARKER, "star"));
+      const [listed] = await list_journals(files);
+      await add_to_inbox(files, { ...listed, header: listed.header! }, { date: "2026-10-22", created: Date.now(), body: `${MARKER} merged`, mood: 5 });
+      expect(await session.merge_inbox()).toBe(1);
+      await add_to_inbox(files, { ...listed, header: listed.header! }, { date: "2026-10-22", created: Date.now(), body: `${MARKER} still waiting` });
       await regenerate_recovery(files, created.ref, { phrase: PHRASE });
       await change_phrase(files, created.ref, { phrase: PHRASE }, `${PHRASE} moon`);
 
       const needles = [MARKER, MARKER.toLowerCase(), PHRASE, "acorn"].map((text) => new TextEncoder().encode(text));
       const written = await every_file(await get_root());
       expect(written.some((file) => file.path.endsWith(".bin"))).toBe(true);
+      expect(written.filter((file) => file.path.includes("/inbox/"))).toHaveLength(1);
       for (const file of written) for (const needle of needles) expect(contains(file.bytes, needle), file.path).toBe(false);
       for (let i = 0; i < localStorage.length; i++) {
         const value = localStorage.getItem(localStorage.key(i)!) ?? "";
@@ -310,4 +319,84 @@ describe("quick unlock", () => {
     },
     SLOW
   );
+});
+
+describe("adding while locked", () => {
+  async function locked_ref(name = "Journal") {
+    const created = await journal(name);
+    const listed = (await list_journals(files)).find((item) => item.name === created.ref.name)!;
+    return { created, ref: { ...listed, header: listed.header! } };
+  }
+
+  async function inbox_names(path: string): Promise<string[]> {
+    const folder = await files.get_directory(path);
+    return folder ? (await files.list(folder)).map((item) => item.name) : [];
+  }
+
+  test("writes with the header alone; the next unlock merges it into entries and empties the inbox", async () => {
+    const { created, ref } = await locked_ref();
+    const id = await add_to_inbox(files, ref, { date: "2026-10-22", created: 1_000, body: "on the bus", mood: 4 });
+    expect(await inbox_names(inbox_path(ref))).toEqual([`${id}.bin`]);
+
+    const session = open_session(await unlock_phrase(files, created.ref, PHRASE));
+    expect(await session.merge_inbox()).toBe(1);
+    expect(session.arrived).toBe(1);
+    expect(session.index).toMatchObject([{ id, date: "2026-10-22", mood: 4, title: "on the bus" }]);
+    await expect(session.entry(id)).resolves.toMatchObject({ body: "on the bus", mood: 4, created: 1_000 });
+    expect(await inbox_names(inbox_path(ref))).toEqual([]);
+    expect(await session.merge_inbox()).toBe(0);
+
+    const reopened = open_session(await unlock_phrase(files, created.ref, PHRASE));
+    await reopened.load_index();
+    expect(reopened.index.map((meta) => meta.id)).toEqual([id]);
+  });
+
+  test("a mood tap alone becomes an entry", async () => {
+    const { created, ref } = await locked_ref();
+    await add_to_inbox(files, ref, { date: "2026-10-22", created: 1, body: "", mood: 2 });
+    const session = open_session(created);
+    await session.merge_inbox();
+    expect(session.index).toMatchObject([{ title: "Feeling bad", mood: 2, words: 0 }]);
+  });
+
+  test("a tampered or moved inbox item is refused and left alone; the rest merge", async () => {
+    const { created, ref } = await locked_ref();
+    const good = await add_to_inbox(files, ref, { date: "2026-10-22", created: 1, body: "fine" });
+    const flipped = await add_to_inbox(files, ref, { date: "2026-10-22", created: 2, body: "flipped" });
+    const moved = await add_to_inbox(files, ref, { date: "2026-10-22", created: 3, body: "moved" });
+    const folder = inbox_path(ref);
+    const bytes = (await read_bin(files, child(folder, `${flipped}.bin`)))!;
+    bytes[bytes.length - 5] ^= 1;
+    await write_bin(files, folder, `${flipped}.bin`, bytes);
+    const other = "c".repeat(32);
+    await write_bin(files, folder, `${other}.bin`, (await read_bin(files, child(folder, `${moved}.bin`)))!);
+    await remove_bin(files, folder, `${moved}.bin`);
+
+    const session = open_session(created);
+    expect(await session.merge_inbox()).toBe(1);
+    expect(session.unreadable).toBe(2);
+    expect(session.index.map((meta) => meta.id)).toEqual([good]);
+    expect((await inbox_names(folder)).sort()).toEqual([`${flipped}.bin`, `${other}.bin`].sort());
+  });
+
+  test("another journal's key can't open an item", async () => {
+    const { ref } = await locked_ref("One");
+    const two = await locked_ref("Two");
+    const id = await add_to_inbox(files, ref, { date: "2026-10-22", created: 1, body: "for one" });
+    await write_bin(files, inbox_path(two.ref), `${id}.bin`, (await read_bin(files, child(inbox_path(ref), `${id}.bin`)))!);
+    const session = open_session(two.created);
+    expect(await session.merge_inbox()).toBe(0);
+    expect(session.unreadable).toBe(1);
+  });
+
+  test("activity names live in the encrypted index and survive entry saves", async () => {
+    const created = await journal();
+    const session = open_session(created);
+    await session.set_activities(add_activity(session.activities, "Climbing", "exercise"));
+    await session.save({ ...session.new_entry("2026-10-22", "x"), activities: [session.activities.at(-1)!.id] });
+    const reopened = open_session(await unlock_phrase(files, created.ref, PHRASE));
+    await reopened.load_index();
+    expect(reopened.activities.at(-1)?.label).toBe("Climbing");
+    expect(reopened.index[0].activities).toEqual([reopened.activities.at(-1)!.id]);
+  });
 });

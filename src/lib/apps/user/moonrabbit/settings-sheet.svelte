@@ -8,6 +8,7 @@
   import { local_zone } from "$lib/core/utils/zoned";
   import { ArrowLeft as ArrowLeftIcon, Fingerprint as FingerprintIcon, Carrot as CarrotIcon, DotsNine as DotsNineIcon } from "phosphor-svelte";
   import { onMount } from "svelte";
+  import ActivitiesEditor from "./activities-editor.svelte";
   import CarrotPatch from "./carrot-patch.svelte";
   import { DecryptError, parse_recovery_code } from "./crypto";
   import { APP_ID } from "./journal";
@@ -33,7 +34,7 @@
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const Page = { MAIN: "main", QUICK: "quick", PHRASE: "phrase", RECOVERY: "recovery" } as const;
+  const Page = { MAIN: "main", QUICK: "quick", PHRASE: "phrase", RECOVERY: "recovery", ACTIVITIES: "activities" } as const;
   type Page = (typeof Page)[keyof typeof Page];
 
   let page = $state<Page>(Page.MAIN);
@@ -184,7 +185,18 @@
   const plots: readonly Plot[] = MEADOW;
 </script>
 
-<Sheet title={page === Page.MAIN ? "Journal settings" : page === Page.QUICK ? "Quick unlock" : page === Page.PHRASE ? "Change master phrase" : "New recovery code"} {onclose}>
+<Sheet
+  title={page === Page.MAIN
+    ? "Journal settings"
+    : page === Page.QUICK
+      ? "Quick unlock"
+      : page === Page.PHRASE
+        ? "Change master phrase"
+        : page === Page.ACTIVITIES
+          ? "Activities"
+          : "New recovery code"}
+  {onclose}
+>
   {#if page === Page.MAIN}
     <div class="grid gap-6">
       <Section title="Quick unlock" description="A faster way in on this device only. It never leaves this browser or goes into backups.">
@@ -194,6 +206,14 @@
               {#if quick}<Button variant="danger" size="sm" onclick={forget_quick}>Remove</Button>{/if}
               <Button {id} aria-describedby={describedby} size="sm" onclick={() => go(Page.QUICK)}>{quick ? "Change" : "Set up"}</Button>
             </div>
+          {/snippet}
+        </SettingRow>
+      </Section>
+
+      <Section title="Mood" description="The activities you can pick when you write or tap a mood.">
+        <SettingRow label="Activities" description={`${session.activities.filter((activity) => !activity.hidden).length} shown`}>
+          {#snippet children({ id, describedby })}
+            <Button {id} aria-describedby={describedby} size="sm" onclick={() => go(Page.ACTIVITIES)}>Edit…</Button>
           {/snippet}
         </SettingRow>
       </Section>
@@ -265,7 +285,9 @@
     <div class="grid gap-4">
       <Button variant="quiet" size="sm" class="justify-self-start" onclick={() => go(Page.MAIN)}><ArrowLeftIcon weight="bold" />Settings</Button>
 
-      {#if page === Page.QUICK}
+      {#if page === Page.ACTIVITIES}
+        <ActivitiesEditor {session} />
+      {:else if page === Page.QUICK}
         {#if !method}
           <p class="text-ui text-foreground/65">
             A passkey can't be guessed. A hop path or a PIN only keeps out someone using this browser: with a copy of the whole browser profile they can be guessed in hours.

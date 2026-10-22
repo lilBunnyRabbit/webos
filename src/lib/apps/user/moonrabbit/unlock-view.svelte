@@ -2,7 +2,8 @@
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, Input, Select, Spinner } from "$lib/core/components/ui";
   import { error_message } from "$lib/core/utils";
-  import { Fingerprint as FingerprintIcon, LockKey as LockKeyIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { Fingerprint as FingerprintIcon, LockKey as LockKeyIcon, PencilSimpleLine as PencilIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { capture } from "./capture";
   import { untrack } from "svelte";
   import CarrotPatch from "./carrot-patch.svelte";
   import { DecryptError, parse_recovery_code } from "./crypto";
@@ -35,6 +36,16 @@
   let phrase = $state("");
   let code = $state("");
   let plots = $state.raw<readonly Plot[]>(MEADOW);
+  let added = $state<string | null>(null);
+
+  async function quick_add() {
+    try {
+      const result = await capture(files, journals, journal.name);
+      if (result) added = `Saved to ${result.ref.name}. It shows up there next time you unlock.`;
+    } catch (reason) {
+      error = error_message(reason);
+    }
+  }
 
   $effect(() => {
     const ref = journal;
@@ -157,6 +168,13 @@
   {/if}
 
   {#if error}<p class="text-center text-ui text-error" role="alert">{error}</p>{/if}
+
+  {#if journal.header}
+    <div class="grid w-full justify-items-center gap-1.5 border-t border-foreground/8 pt-4">
+      <Button onclick={quick_add}><PencilIcon weight="bold" />Add a quick line</Button>
+      <p class="text-center text-2xs text-foreground/80" aria-live="polite">{added ?? "Without unlocking: it's encrypted for this journal and only opens with it."}</p>
+    </div>
+  {/if}
 
   <div class="flex flex-wrap justify-center gap-1">
     {#if mode !== Mode.PHRASE}

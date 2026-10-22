@@ -1,15 +1,19 @@
 <script lang="ts">
   import kernel, { type DialogsService, type FilesService } from "$lib/core/api";
-  import { Button, EmptyState, IconButton, Input, Select, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Input, Segmented, Select, StatusBar, Textarea, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date } from "$lib/core/utils";
   import { day_key } from "$lib/core/utils/date";
   import {
     ArrowsClockwise as ArrowsClockwiseIcon,
     BookOpenText as BookOpenTextIcon,
+    CalendarBlank as CalendarIcon,
+    CaretDown as CaretDownIcon,
+    ChartLine as ChartLineIcon,
     Export as ExportIcon,
+    GridNine as GridNineIcon,
+    Tray as TrayIcon,
     Gear as GearIcon,
-    Image as ImageIcon,
     Lock as LockIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     Plus as PlusIcon,
@@ -17,9 +21,17 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { onMount, tick, untrack } from "svelte";
+  import CalendarView from "./calendar-view.svelte";
   import EntryEditor from "./entry-editor.svelte";
+  import EntryRow from "./entry-row.svelte";
   import ExportSheet from "./export-sheet.svelte";
+  import { inbox_path } from "./inbox";
+  import InsightsView from "./insights-view.svelte";
   import { days_written, matches, prompt_for, TEMPLATES, type Entry, type IndexEntry } from "./journal";
+  import MoodDetails from "./mood-details.svelte";
+  import MoodPicker from "./mood-picker.svelte";
+  import { day_stats, on_this_day, type Details } from "./mood";
+  import YearView from "./year-view.svelte";
   import type { JournalSession } from "./session.svelte";
   import SettingsSheet from "./settings-sheet.svelte";
   import type { JournalRef } from "./store";
@@ -53,6 +65,22 @@
   let sheet = $state<"settings" | "export" | null>(null);
   let everything = $state.raw<Entry[] | null>(null);
   let show_recovered = $state(untrack(() => recovered));
+  let quick_mood = $state<number | undefined>(undefined);
+  let quick_details = $state.raw<Details>({});
+  let quick_more = $state(false);
+
+  const View = { ENTRIES: "entries", CALENDAR: "calendar", YEAR: "year", INSIGHTS: "insights" } as const;
+  type View = (typeof View)[keyof typeof View];
+  let view = $state<View>(View.ENTRIES);
+  const views = [
+    { value: View.ENTRIES, label: "Entries", icon: BookOpenTextIcon },
+    { value: View.CALENDAR, label: "Calendar", icon: CalendarIcon },
+    { value: View.YEAR, label: "Year", icon: GridNineIcon },
+    { value: View.INSIGHTS, label: "Insights", icon: ChartLineIcon },
+  ];
+
+  const stats = $derived(day_stats(session.index));
+  const earlier = $derived(on_this_day(session.index, today));
 
   const prompt = $derived(prompt_for(today, skip));
   const month_days = $derived(days_written(session.index, today.slice(0, 7)));
@@ -66,6 +94,11 @@
   $effect(() => {
     files.revision(session.ref.path);
     untrack(() => session.load_index().catch((reason) => onerror("Couldn't read the journal", reason)));
+  });
+
+  $effect(() => {
+    files.revision(inbox_path(session.ref));
+    untrack(() => session.merge_inbox().catch((reason) => onerror("Couldn't add the entries written while locked", reason)));
   });
 
   $effect(() => {
@@ -122,16 +155,15 @@
     return format_date(new Date(year, month - 1, day));
   }
 
-  function time_of(at: number): string {
-    return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  }
-
   async function quick_save() {
     const text = quick_text.trim();
-    if (!text) return;
+    if (!text && !quick_mood) return;
     try {
-      await session.save(session.new_entry(today, text));
+      await session.save({ ...session.new_entry(today, text), ...(quick_mood ? { mood: quick_mood } : {}), ...quick_details });
       quick_text = "";
+      quick_mood = undefined;
+      quick_details = {};
+      quick_more = false;
       saved_flash = true;
       setTimeout(() => (saved_flash = false), 1500);
     } catch (reason) {
@@ -168,6 +200,7 @@
   }
 
   async function open(meta: IndexEntry) {
+    view = View.ENTRIES;
     try {
       open_entry = { entry: await session.entry(meta.id), fresh: false };
     } catch (reason) {
@@ -188,8 +221,9 @@
   const options = $derived(journals.map((item) => ({ value: item.name, label: item.name })));
 </script>
 
-<div class="relative grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
+<div class="relative flex h-full min-h-0 flex-col">
   <Toolbar>
+    <Segmented bind:value={view} options={views} label="View" size="sm" class="hidden @4xl:flex" />
     {#if journals.length > 1}
       <Select
         size="sm"
@@ -204,25 +238,49 @@
       <IconButton label="New journal" size="sm" onclick={onnew}><PlusIcon weight="bold" /></IconButton>
     {/if}
     <span class="flex-1"></span>
-    <Input bind:value={query} size="sm" class="order-last w-full min-w-0 @md:order-none @md:w-48" placeholder="Search, or #tag" aria-label="Search entries">
-      {#snippet leading()}<MagnifyingGlassIcon />{/snippet}
-      {#snippet trailing()}
-        {#if query}<IconButton label="Clear search" size="sm" class="size-6" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>{/if}
-      {/snippet}
-    </Input>
+    {#if view === View.ENTRIES}
+      <Input bind:value={query} size="sm" class="order-last w-full min-w-0 @md:order-none @md:w-48" placeholder="Search, or #tag" aria-label="Search entries">
+        {#snippet leading()}<MagnifyingGlassIcon />{/snippet}
+        {#snippet trailing()}
+          {#if query}<IconButton label="Clear search" size="sm" class="size-6" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>{/if}
+        {/snippet}
+      </Input>
+    {/if}
     <Button size="sm" onclick={new_menu}><PlusIcon weight="bold" />New</Button>
     <IconButton label="Export" size="sm" onclick={() => (sheet = "export")}><ExportIcon weight="bold" /></IconButton>
     <IconButton label="Journal settings" size="sm" onclick={() => (sheet = "settings")}><GearIcon weight="bold" /></IconButton>
     <Button size="sm" onclick={onlock}><LockIcon weight="bold" />Lock</Button>
   </Toolbar>
 
-  <div class="grid min-h-0 @2xl:grid-cols-[22rem_1fr]">
+  <div class={cn("flex justify-center border-b border-foreground/8 bg-background-light px-2 py-1.5 @4xl:hidden", open_entry && view === View.ENTRIES && "hidden @2xl:flex")}>
+    <Segmented bind:value={view} options={views} label="View" size="sm" />
+  </div>
+
+  {#if view === View.CALENDAR}
+    <div class="min-h-0 flex-1 overflow-auto"><CalendarView index={session.index} days={stats} {today} onopen={open} /></div>
+  {:else if view === View.YEAR}
+    <div class="min-h-0 flex-1 overflow-auto"><YearView index={session.index} days={stats} {today} onopen={open} /></div>
+  {:else if view === View.INSIGHTS}
+    <div class="min-h-0 flex-1 overflow-auto"><InsightsView days={stats} activities={session.activities} {today} /></div>
+  {:else}
+  <div class="grid min-h-0 flex-1 @2xl:grid-cols-[22rem_1fr]">
     <aside class={cn("flex min-h-0 flex-col border-foreground/8 @2xl:border-r", open_entry && "hidden @2xl:flex")}>
       <div class="min-h-0 flex-1 overflow-auto">
         {#if show_recovered}
           <div class="m-3 mb-0 flex items-start gap-2 rounded-lg bg-info/10 px-3 py-2 text-ui">
             <span class="min-w-0 flex-1">Opened with the recovery code. Set a new master phrase so you don't need it again.</span>
             <Button size="sm" onclick={() => ((sheet = "settings"), (show_recovered = false))}>Settings</Button>
+          </div>
+        {/if}
+
+        {#if session.arrived || session.unreadable}
+          <div class="m-3 mb-0 flex items-start gap-2 rounded-lg bg-info/10 px-3 py-2 text-ui" role="status">
+            <TrayIcon class="mt-0.5 size-4 shrink-0 text-info" weight="fill" />
+            <span class="min-w-0 flex-1">
+              {#if session.arrived}{session.arrived} new {session.arrived === 1 ? "entry" : "entries"} since last unlock.{/if}
+              {#if session.unreadable}{session.unreadable} {session.unreadable === 1 ? "item" : "items"} added while locked couldn't be read and stayed in the inbox.{/if}
+            </span>
+            <IconButton label="Dismiss" size="sm" onclick={() => ((session.arrived = 0), (session.unreadable = 0))}><XIcon weight="bold" /></IconButton>
           </div>
         {/if}
 
@@ -243,11 +301,22 @@
             class="max-h-48 min-h-16 resize-none field-sizing-content text-base"
             onkeydown={on_quick_key}
           />
+          <div class="flex flex-wrap items-center gap-1">
+            <MoodPicker value={quick_mood} onchange={(mood) => (quick_mood = mood)} label="Today's mood" />
+            <span class="flex-1"></span>
+            <Button variant="quiet" size="sm" aria-expanded={quick_more} onclick={() => (quick_more = !quick_more)}>
+              {quick_details.activities?.length ? `${quick_details.activities.length} ${quick_details.activities.length === 1 ? "activity" : "activities"}` : "Activities"}
+              <CaretDownIcon weight="bold" class={cn("transition-transform", quick_more && "rotate-180")} />
+            </Button>
+          </div>
+          {#if quick_more}
+            <MoodDetails activities={session.activities} value={quick_details} onchange={(patch) => (quick_details = { ...quick_details, ...patch })} />
+          {/if}
           <div class="flex flex-wrap items-center gap-1.5">
             <Button variant="quiet" size="sm" onclick={() => skip++} title="Show another prompt"><ArrowsClockwiseIcon weight="bold" />Skip prompt</Button>
             <Button variant="quiet" size="sm" onclick={() => start(`## ${prompt}\n\n`, "prompt")}><SparkleIcon weight="bold" />Answer</Button>
             <span class="min-w-0 flex-1 truncate text-right text-2xs text-foreground/80" aria-live="polite">{saved_flash ? "Saved" : ""}</span>
-            <Button variant="primary" size="sm" type="submit" disabled={!quick_text.trim()}>Save</Button>
+            <Button variant="primary" size="sm" type="submit" disabled={!quick_text.trim() && !quick_mood}>Save</Button>
           </div>
         </form>
 
@@ -256,40 +325,36 @@
           {month_days === 1 ? "day" : "days"} written this month
         </p>
 
+        {#if earlier.length && !query.trim()}
+          <section class="mx-2 mt-2 grid gap-1 rounded-lg bg-background-light p-1.5" aria-label="On this day">
+            <h3 class="px-2 pt-1 text-2xs tracking-wide text-foreground/80 uppercase">On this day</h3>
+            <ul class="grid gap-0.5">
+              {#each earlier.slice(0, 4) as group (group.date)}
+                {#each group.entries.slice(0, 2) as meta (meta.id)}
+                  <li><EntryRow {meta} when={group.label} onopen={open} selected={open_entry?.entry.id === meta.id} /></li>
+                {/each}
+              {/each}
+            </ul>
+          </section>
+        {/if}
+
         {#if query.trim() && !everything}
           <p class="px-4 py-3 text-ui text-foreground/65">Searching…</p>
         {:else if days.length === 0}
           <EmptyState
             icon={query.trim() ? MagnifyingGlassIcon : BookOpenTextIcon}
             title={query.trim() ? "No matches" : "No entries yet"}
-            description={query.trim() ? "Search reads every entry, but only while unlocked." : "Write a line above. That's an entry."}
+            description={query.trim() ? "Search reads every entry, but only while unlocked." : "Write a line above, or just tap a face. That's an entry."}
             class="py-10"
           />
         {:else}
-          <div class="grid gap-3 px-2 pt-1 pb-3">
+          <div class="grid gap-3 px-2 pt-3 pb-3">
             {#each days as day (day.date)}
               <section aria-label={label_of(day.date)}>
                 <h3 class="px-2 pb-1 text-2xs tracking-wide text-foreground/80 uppercase">{label_of(day.date)}</h3>
                 <ul class="grid gap-0.5">
                   {#each day.entries as meta (meta.id)}
-                    <li>
-                      <button
-                        type="button"
-                        class={cn(
-                          "grid w-full gap-0.5 rounded-md px-2.5 py-2 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:py-2.5",
-                          open_entry?.entry.id === meta.id && "bg-primary/14 hover:bg-primary/14"
-                        )}
-                        onclick={() => open(meta)}
-                      >
-                        <span class="line-clamp-2 text-ui">{meta.title}</span>
-                        <span class="flex items-center gap-2 font-mono text-2xs text-foreground/80 tabular-nums">
-                          <span>{time_of(meta.created)}</span>
-                          <span>{meta.words} {meta.words === 1 ? "word" : "words"}</span>
-                          {#if meta.media.length}<span class="flex items-center gap-0.5"><ImageIcon class="size-3" />{meta.media.length}</span>{/if}
-                          {#each meta.tags.slice(0, 3) as tag (tag)}<span class="truncate text-primary">#{tag}</span>{/each}
-                        </span>
-                      </button>
-                    </li>
+                    <li><EntryRow {meta} onopen={open} selected={open_entry?.entry.id === meta.id} /></li>
                   {/each}
                 </ul>
               </section>
@@ -319,6 +384,7 @@
       {/if}
     </section>
   </div>
+  {/if}
 
   <StatusBar>
     <span>{session.index.length} {session.index.length === 1 ? "entry" : "entries"}</span>

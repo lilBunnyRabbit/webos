@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FORMAT_VERSION, type JournalHeader } from "./crypto";
+import { MOOD_LABELS, type Mood } from "./mood";
 
 export const APP_ID = "moonrabbit";
 export const JOURNAL_ROOT = "/home/Journal";
@@ -20,7 +21,6 @@ export const HeaderSchema = z.object({
   inbox_private_wrapped: SealedSchema,
 }) satisfies z.ZodType<JournalHeader>;
 
-/** Mood fields are in the schema from the start, so the mood views (part 2) need no migration. */
 const MoodFields = {
   mood: z.number().int().min(1).max(5).optional(),
   activities: z.array(z.string()).optional(),
@@ -42,7 +42,19 @@ export const IndexEntrySchema = z.object({
 });
 export type IndexEntry = z.infer<typeof IndexEntrySchema>;
 
-export const IndexSchema = z.object({ version: z.literal(FORMAT_VERSION), entries: z.array(IndexEntrySchema) });
+export const ActivityDefSchema = z.object({
+  id: z.string().min(1).max(64),
+  label: z.string().min(1).max(40),
+  icon: z.string(),
+  hidden: z.boolean().optional(),
+});
+
+/** `activities` is the journal's own activity list, encrypted with the index; absent until the user edits one. */
+export const IndexSchema = z.object({
+  version: z.literal(FORMAT_VERSION),
+  entries: z.array(IndexEntrySchema),
+  activities: z.array(ActivityDefSchema).optional(),
+});
 export type JournalIndex = z.infer<typeof IndexSchema>;
 
 export const EntrySchema = z.object({
@@ -82,19 +94,30 @@ export function split_media(body: string): ({ text: string } | { media: string }
 
 export function tags_of(body: string): string[] {
   const tags = new Set<string>();
-  for (const match of body.replace(MEDIA_TOKEN, " ").matchAll(/(?:^|\s)#([\p{L}\p{N}_-]+)/gu)) tags.add(match[1].toLowerCase());
+  for (const match of body.replace(MEDIA_TOKEN, " ").matchAll(/(?:^|\s)#([\p{L}\p{N}_-]+)/gu))
+    tags.add(match[1].toLowerCase());
   return [...tags];
 }
 
 export function words_of(body: string): number {
-  return body.replace(MEDIA_TOKEN, " ").split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+  return body
+    .replace(MEDIA_TOKEN, " ")
+    .split(/\s+/)
+    .filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
 }
 
 export function title_of(body: string): string {
   const line = body
     .replace(MEDIA_TOKEN, "")
     .split("\n")
-    .map((text) => text.replace(/^#+\s*/, "").trim())
+    .map((text) =>
+      text
+        .replace(/^#+\s*/, "")
+        .replace(/\*\*(?=\S)(.*?\S)\*\*/g, "$1")
+        .replace(/(?<![*\p{L}\p{N}])\*(?=[^\s*])([^*]*?[^\s*])\*(?!\*)/gu, "$1")
+        .replace(/(?<![\p{L}\p{N}_])_(?=[^\s_])([^_]*?[^\s_])_(?![\p{L}\p{N}_])/gu, "$1")
+        .trim()
+    )
     .find((text) => text.length > 0);
   if (!line) return media_of(body).length ? "Photo" : "Empty entry";
   return line.length > 80 ? `${line.slice(0, 79)}…` : line;
@@ -102,7 +125,9 @@ export function title_of(body: string): string {
 
 export function index_entry(entry: Entry): IndexEntry {
   const { body, ...rest } = entry;
-  return { ...rest, title: title_of(body), tags: tags_of(body), words: words_of(body), media: media_of(body) };
+  const title =
+    !body.trim() && entry.mood ? `Feeling ${MOOD_LABELS[entry.mood as Mood].toLowerCase()}` : title_of(body);
+  return { ...rest, title, tags: tags_of(body), words: words_of(body), media: media_of(body) };
 }
 
 export function newest_first(a: { date: string; created: number }, b: { date: string; created: number }): number {
@@ -118,7 +143,9 @@ export function days_written(entries: readonly { date: string }[], month: string
 export function matches(entry: { body: string; date: string }, tags: readonly string[], query: string): boolean {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const text = entry.body.replace(MEDIA_TOKEN, " ").toLowerCase();
-  return terms.every((term) => (term.startsWith("#") ? tags.includes(term.slice(1)) : text.includes(term) || entry.date.includes(term)));
+  return terms.every((term) =>
+    term.startsWith("#") ? tags.includes(term.slice(1)) : text.includes(term) || entry.date.includes(term)
+  );
 }
 
 export interface Template {
@@ -128,8 +155,16 @@ export interface Template {
 }
 
 export const TEMPLATES: Template[] = [
-  { id: "morning", label: "Morning", body: "## Today I want to\n\n\n## I'm looking forward to\n\n\n## One thing that would make today good\n\n" },
-  { id: "evening", label: "Evening", body: "## What happened today\n\n\n## What went well\n\n\n## What I'd do differently\n\n" },
+  {
+    id: "morning",
+    label: "Morning",
+    body: "## Today I want to\n\n\n## I'm looking forward to\n\n\n## One thing that would make today good\n\n",
+  },
+  {
+    id: "evening",
+    label: "Evening",
+    body: "## What happened today\n\n\n## What went well\n\n\n## What I'd do differently\n\n",
+  },
   { id: "gratitude", label: "Gratitude 3", body: "## Three things I'm grateful for\n\n1. \n2. \n3. \n" },
   { id: "brain-dump", label: "Brain dump", body: "## On my mind\n\n" },
 ];
@@ -156,6 +191,9 @@ export function prompt_for(day: string, skip = 0): string {
 }
 
 export function clean_journal_name(name: string): string | null {
-  const clean = name.trim().replace(/[\\/:*?"<>|]/g, "").slice(0, 60);
+  const clean = name
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "")
+    .slice(0, 60);
   return clean && !clean.startsWith(".") ? clean : null;
 }

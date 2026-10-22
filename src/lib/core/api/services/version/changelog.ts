@@ -14,6 +14,21 @@ export const CHANGELOG: Release[] = [
         apps: ["moonrabbit"],
         text: "Moonrabbit is a journal encrypted on your device: write a line in seconds, add photos and templates, and unlock it with a passphrase, a passkey, a hop through the carrot patch or a PIN.",
       },
+      {
+        kind: NEW,
+        apps: ["moonrabbit"],
+        text: "Tap how you feel in Moonrabbit, add activities, energy and sleep, and see it all as a calendar, a year in pixels, a chart over weeks and which activities go with your better days.",
+      },
+      {
+        kind: NEW,
+        apps: ["moonrabbit"],
+        text: "Add a line or a mood to Moonrabbit without unlocking it, from its widget or the locked screen; it stays sealed until you open the journal.",
+      },
+      {
+        kind: NEW,
+        apps: ["moonrabbit"],
+        text: "Headings, lists, bold and italic show as you type in Moonrabbit, and On This Day brings back what you wrote on this date before.",
+      },
     ],
   },
   {

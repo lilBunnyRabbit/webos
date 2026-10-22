@@ -1,6 +1,6 @@
 # ADR-063: Moonrabbit Journal Encryption
 **Date:** 2026-10-22
-**Status:** Implemented (part 1: crypto core and writing; part 2, mood and the locked inbox, pending)
+**Status:** Implemented
 
 ## Context
 Moonrabbit is a password-protected journal built for quick entries ([brainstorm](../brainstorm/2026-10-22_moonrabbit.md)). WebOS has no backend and no secure hardware of its own: anything stored in OPFS can be copied with the profile, a backup zip or another page on the shared origin, and then attacked offline. Terminal history, session restore, scheduler jobs and window titles are stored or shown in plain text.
@@ -51,6 +51,15 @@ Built as decided, with these details the ADR left open ([internals](../apps/moon
 - **Inbox key check.** Every unlock checks that the wrapped inbox private key matches `inbox_public_key`, so a header pointed at someone else's key is refused before part 2 ever encrypts to it.
 - **Additional data** is `moonrabbit/1/{journal id}/{item}`; a `.bin` is one version byte, the IV, then ciphertext and tag.
 - **Weak own phrases** (under about 40 bits by the meter) can't be used.
-- **Own picker exception.** While a camera or device file chooser the editor opened is up, the hidden-lock waits: on a phone the camera hides the page, and locking then threw the photo away. The idle lock still runs. Owner to confirm.
+- **Own picker exception.** While a camera or device file chooser the editor opened is up, the hidden-lock waits: on a phone the camera hides the page, and locking then threw the photo away. The idle lock still runs. Approved by the owner (revision below).
 - **One session per window.** Each window unlocks on its own; `journal lock` locks every window in the tab. Index writes take a Web Lock per journal so two windows don't drop each other's entries.
 
+
+## Revision 2026-10-22: part 2 built
+The locked inbox, mood and the views ([follow-up](../brainstorm/2026-10-22_moonrabbit.md#follow-up-2026-10-22-part-2), [internals](../apps/moonrabbit.md)):
+- **Own picker exception approved** by the owner: the hidden-lock pauses only while the journal's own camera or file chooser is open; the idle lock still runs.
+- **Inbox item format.** `inbox/{id}.bin` is one version byte, the 32-byte ephemeral X25519 public key, a 12-byte IV, then AES-GCM ciphertext and tag. The AES key is HKDF-SHA256 over the X25519 shared secret, salt = ephemeral public key ‖ journal public key, info `moonrabbit/inbox`; additional data `moonrabbit/1/{journal id}/inbox/{id}`, so an item renamed or copied into another journal fails its tag. The plaintext is `{ date, created, body, mood? }`: activities, energy and sleep need the journal's activity list, which is encrypted, so they're added after unlock.
+- **Merge.** On unlock, and whenever the `inbox/` folder changes while unlocked, each item becomes an entry under the data key with the item's id as its entry id (a merge cut short, or two windows merging at once, never duplicates), the index is updated in one write, then the inbox files are deleted. An item that fails its tag or schema stays in `inbox/` and the journal says how many couldn't be read.
+- **Activity list.** Custom names are as private as entries, so the list (id, name, icon, hidden) lives in the encrypted index as an optional `activities` field; absent means the defaults. Entries store activity ids, so a rename or a hide never rewrites an entry.
+- **Editor.** Live formatting re-renders the `plaintext-only` editor as styled spans that keep every character (markers dimmed), so the stored body stays plain Markdown and the caret maps one to one. Re-rendering breaks the browser's undo, so the editor keeps its own undo history in memory (dropped on lock).
+- **Not built: pinning the inbox key.** A writer while locked can't check `inbox_public_key` against the wrapped private key (that needs the data key), so a header edited to point at another key would receive locked captures until the next unlock refuses it. Pinning the verified key per device is an open decision for the owner.
