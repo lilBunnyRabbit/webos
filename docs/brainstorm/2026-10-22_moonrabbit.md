@@ -44,3 +44,7 @@ Open for the owner:
 
 ## Next session topics
 - Voice memos, location and weather, a time capsule (entries that open later).
+
+## Follow-up 2026-10-22: after part 2
+- **Inbox key not pinned (decided).** Locked capture trusts `inbox_public_key` in `journal.json`; someone who can rewrite the header could swap in their own key and read lines captured until the next unlock, which refuses the changed header. Owner: "this really is that no one can just directly access it and can encrypt it on other devices. if someones to go ahead and swap headers - go ahead". Rejected: pinning the key per device in IndexedDB or localStorage.
+- **Spellcheck off (decided).** The today box, editor, capture box, search and activity names set `spellcheck=false`, so Chrome's opt-in Enhanced spell check never sends journal text to Google. Rejected: keeping spellcheck.

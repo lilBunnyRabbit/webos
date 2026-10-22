@@ -163,3 +163,5 @@ No props, no window state. Shell: `journal lock` (`commands.ts`). The widget (`w
 
 - [Brainstorm 2026-10-22](../brainstorm/2026-10-22_moonrabbit.md): scope, unlock methods, storage, auto-lock, shell, no AI.
 - [ADR-063](../adrs/063-moonrabbit-journal.md): format and key hierarchy, with the build's revision note.
+
+Spellcheck is off in every Moonrabbit text box (`spellcheck=false`): Chrome's Enhanced spell check would otherwise send typed text to Google. The inbox key is not pinned per device, by the owner's call (threat model: the header can be swapped only by someone who can already write the files).

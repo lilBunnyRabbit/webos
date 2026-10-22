@@ -63,3 +63,6 @@ The locked inbox, mood and the views ([follow-up](../brainstorm/2026-10-22_moonr
 - **Activity list.** Custom names are as private as entries, so the list (id, name, icon, hidden) lives in the encrypted index as an optional `activities` field; absent means the defaults. Entries store activity ids, so a rename or a hide never rewrites an entry.
 - **Editor.** Live formatting re-renders the `plaintext-only` editor as styled spans that keep every character (markers dimmed), so the stored body stays plain Markdown and the caret maps one to one. Re-rendering breaks the browser's undo, so the editor keeps its own undo history in memory (dropped on lock).
 - **Not built: pinning the inbox key.** A writer while locked can't check `inbox_public_key` against the wrapped private key (that needs the data key), so a header edited to point at another key would receive locked captures until the next unlock refuses it. Pinning the verified key per device is an open decision for the owner.
+
+## Revision 2026-10-22: spellcheck and the inbox key
+Every Moonrabbit text box sets `spellcheck=false`, so Chrome's Enhanced spell check never sends journal text to Google. The inbox public key is not pinned per device: by the owner's call, a header swapped by someone with write access is out of scope.

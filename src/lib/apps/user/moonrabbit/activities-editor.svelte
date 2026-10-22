@@ -63,6 +63,7 @@
         </IconButton>
         <Input
           size="sm"
+          spellcheck={false}
           class="min-w-0 flex-1"
           value={activity.label}
           aria-label="Name"
@@ -91,7 +92,7 @@
     >
       <NewIcon weight="bold" />
     </IconButton>
-    <Input bind:value={label} size="sm" class="min-w-0 flex-1" placeholder="New activity" aria-label="New activity" maxlength={40} />
+    <Input bind:value={label} spellcheck={false} size="sm" class="min-w-0 flex-1" placeholder="New activity" aria-label="New activity" maxlength={40} />
     <Button size="sm" type="submit" disabled={!label.trim()}><PlusIcon weight="bold" />Add</Button>
   </form>
 </div>

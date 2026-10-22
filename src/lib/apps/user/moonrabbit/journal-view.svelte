@@ -239,7 +239,7 @@
     {/if}
     <span class="flex-1"></span>
     {#if view === View.ENTRIES}
-      <Input bind:value={query} size="sm" class="order-last w-full min-w-0 @md:order-none @md:w-48" placeholder="Search, or #tag" aria-label="Search entries">
+      <Input bind:value={query} spellcheck={false} size="sm" class="order-last w-full min-w-0 @md:order-none @md:w-48" placeholder="Search, or #tag" aria-label="Search entries">
         {#snippet leading()}<MagnifyingGlassIcon />{/snippet}
         {#snippet trailing()}
           {#if query}<IconButton label="Clear search" size="sm" class="size-6" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>{/if}
@@ -293,6 +293,7 @@
         >
           <Textarea
             bind:element={quick_box}
+            spellcheck={false}
             bind:value={quick_text}
             rows={2}
             placeholder={prompt}

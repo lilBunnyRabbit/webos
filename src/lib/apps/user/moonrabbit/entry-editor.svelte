@@ -334,6 +334,7 @@
       aria-multiline="true"
       aria-label="Entry text"
       contenteditable="plaintext-only"
+      spellcheck="false"
       class={cn(
         "entry-editor mx-auto min-h-full max-w-2xl px-4 py-4 text-base leading-relaxed break-words whitespace-pre-wrap outline-none @md:px-8",
         dropping && "ring-2 ring-primary ring-inset"

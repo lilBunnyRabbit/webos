@@ -32,6 +32,7 @@
 <form class="grid w-[min(30rem,calc(100vw-2rem))] gap-3 rounded-2xl bg-background-lighter p-4 shadow-popover" onsubmit={submit}>
   <Textarea
     bind:value={text}
+    spellcheck={false}
     rows={3}
     placeholder="Write a line"
     aria-label="Write a line"
