@@ -104,7 +104,7 @@ Web Locks, `webos:scheduler`, one holder per browser profile:
 - A stolen tab stands down (timer cleared) and queues again.
 - `destroy()` aborts a queued request and releases a held lock.
 
-While there are jobs, the leader keeps one `setTimeout`: to the next due occurrence when it's less than 60 s away, otherwise to the next minute boundary (`60 s - now % 60 s`, the taskbar clock's tick), so a hidden tab's idle wake-up shares the clock's instead of adding its own. With no jobs there's no timer at all: the first `schedule()`, a re-read or another tab's ping runs a pass, which arms it again. Each wake-up runs a **pass**, then re-arms:
+While any job is armed, the leader keeps one `setTimeout`: to the next due occurrence when it's less than 60 s away, otherwise to the next minute boundary (`60 s - now % 60 s`, the taskbar clock's tick), so a hidden tab's idle wake-up shares the clock's instead of adding its own. With no jobs, or only switched-off ones, there's no timer at all: the first `schedule()`, switching a job on, a re-read or another tab's ping runs a pass, which arms it again. A hand edit of `jobs.json` while nothing is armed waits for one of those. Each wake-up runs a **pass**, then re-arms:
 
 1. Under the store lock: read `jobs.json`, `plan()`, write back if changed.
 2. Fire what fired, report what was missed (below), sync triggered notifications.
@@ -247,11 +247,10 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - Added beyond the ADR's API: `missed`, `last_jump`, `triggers`, `is_leader`.
 - Job gains `silent`, and apps gain the manifest's `on_fire` hook (owner follow-up, ADR-062 revision 2026-10-21).
 - The missed summary says "asleep" instead of "closed" when it's found after this tab's first pass.
-- The timer runs only while jobs exist and its idle wake-up lands on the minute; a leader with no jobs runs no pass on a wake-up; going hidden wakes nothing; a pending steal isn't repeated; the badge is cleared only when one is up (health pass, ADR-062 revision 2026-10-21).
+- The timer runs only while a job is armed (no timer for a registry of switched-off jobs, owner call 2026-10-22) and its idle wake-up lands on the minute; a leader with no jobs runs no pass on a wake-up; going hidden wakes nothing; a pending steal isn't repeated; the badge is cleared only when one is up (health pass, ADR-062 revision 2026-10-21).
 
 ## Known gaps
 
-- The idle heartbeat runs while any job exists, armed or not: a registry of only switched-off alarms still wakes the leader once a minute (on the minute) to catch a clock change it has nothing to fire for.
 - Nothing fires with every tab closed unless Triggers is on. On Android a background tab is frozen within about a minute, so only the foreground tab fires.
 - With Triggers on, a job delivered by its trigger while every tab was closed is still reported missed at the next boot: the registry never heard it fired.
 - Whether Chrome replaces a shown notification immediately when a triggered one with the same tag is added (rather than when it triggers) is unverified.

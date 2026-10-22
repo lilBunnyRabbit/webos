@@ -287,6 +287,7 @@ const manifest_fields: Members<
   | "meta"
   | "name"
   | "on_fire"
+  | "on_uninstall_data"
   | "preview"
   | "props"
   | "repository"

@@ -12,6 +12,7 @@ export async function ask_delete(window: WindowHandle, name: string): Promise<bo
   const typed = await window.prompt(`Type “${name}” to delete it`, {
     placeholder: name,
     confirm_label: "Delete journal",
+    danger: true,
     validate: (value) => (value.trim() === name ? null : "That's not this journal's name."),
   });
   return typed !== null;

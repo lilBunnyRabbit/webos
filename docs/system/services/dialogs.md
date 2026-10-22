@@ -67,7 +67,7 @@ Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-
 | Component | Props | Resolves |
 |-----------|-------|----------|
 | `ConfirmDialog` | `message`, `detail?`, `confirm_label?` (default "OK"), `danger?` (red button, Cancel gets focus) | `true` / `false` |
-| `PromptDialog` | `message`, `detail?`, `initial?`, `placeholder?`, `confirm_label?`, `validate?(value) → error \| null`, `select_stem?` (select up to the last dot) | trimmed string, or `null` on Cancel/Esc |
+| `PromptDialog` | `message`, `detail?`, `initial?`, `placeholder?`, `confirm_label?`, `validate?(value) → error \| null`, `select_stem?` (select up to the last dot), `danger?` (red confirm button; the field keeps the initial focus) | trimmed string, or `null` on Cancel/Esc |
 
 ### Context menus (ADR-025)
 

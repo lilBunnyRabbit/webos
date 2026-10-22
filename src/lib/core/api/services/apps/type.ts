@@ -131,6 +131,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   badge?: () => number | null;
   /** Lazy so it costs no boot weight: the leader tab loads it the first time one of the app's jobs fires or is missed. */
   on_fire?: () => Promise<{ default: OnFire }>;
+  /**
+   * Lazy: runs after `uninstall(id, { data: true })` cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS
+   * can't see (IndexedDB, caches). A throw is logged and toasted; the uninstall still completes.
+   */
+  on_uninstall_data?: () => Promise<{ default: () => Promise<void> }>;
   /** What the app renders on the desktop for its `.widget` files (ADR-034). Props are validated against `props`. */
   widget?: () => Promise<{ default: Component<WidgetProps> }>;
   /**

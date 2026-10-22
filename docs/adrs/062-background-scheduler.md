@@ -115,4 +115,7 @@ The first health pass measured the scheduler as the only new idle cost: one wake
 - **Badge.** `seen` is broadcast and `clearAppBadge` called only when a badge is up. Built within scope: the leader posts `{ type: "badge", count }` on the channel when it sets one, so any tab knows; a visible boot still clears unconditionally, because an installed app keeps its badge after the tab that set it closed.
 - **One read at boot.** The folder-revision effect's first run only subscribes.
 - `phase` is documented as a generic timed phase, not Pomodoro's; no behaviour change.
-- Leadership, the store lock and steal rules are otherwise unchanged. Not done: stopping the heartbeat when jobs exist but none is armed (left as a known gap).
+- Leadership, the store lock and steal rules are otherwise unchanged. Not done: stopping the heartbeat when jobs exist but none is armed (left as a known gap; closed 2026-10-22, below).
+
+## Revision 2026-10-22: no heartbeat with nothing armed
+Owner's call in [owner calls](../brainstorm/2026-10-22_owner-calls.md): `arm()` sets no timer when no job has a next occurrence (every job switched off), same as an empty registry. Switching a job on runs a pass, which arms it. Accepted: a hand edit of `jobs.json` while nothing is armed isn't read until a schedule, a ping or a re-read.

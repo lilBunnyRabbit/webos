@@ -144,7 +144,7 @@ Questions that belong to one window's task (confirm, prompt, the file picker) ar
 
 - Confirm: a tinted icon tile, the question as the title (with the item's name in curly quotes), one line on consequences, then Cancel + the verb ("Delete"). `danger` makes the verb red and focuses Cancel.
 - File picker: File Explorer in a `rounded-2xl` frame with a title bar on `background-lighter` showing what's accepted, sized to the window (`min(46rem, 100cqw - 2rem)`), with a footer of the chosen path, Cancel and Open. Unacceptable files stay visible but dimmed, so the folder still looks like itself.
-- Prompt: the title, a large field with the current value selected (`select_stem` for file names), inline validation under the field, then Cancel + the verb ("Create", "Rename").
+- Prompt: the title, a large field with the current value selected (`select_stem` for file names), inline validation under the field, then Cancel + the verb ("Create", "Rename"). A typed-name gate for a destructive action ("Type “x” to delete it") sets `danger`, so the verb is red like the confirm before it.
 
 ## Dates and times
 

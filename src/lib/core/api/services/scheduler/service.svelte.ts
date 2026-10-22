@@ -358,11 +358,12 @@ export class SchedulerService implements ISchedulerService {
 
   private arm(): void {
     clearTimeout(this.timer);
-    // No jobs, nothing to fire or notice: a schedule, a re-read or another tab's ping runs a pass, which arms it again.
-    if (!this.is_leader || this.destroyed || this.jobs.length === 0) return;
-    const now = Date.now();
+    if (!this.is_leader || this.destroyed) return;
     const due = next_due(this.jobs);
-    const until_due = due === null ? Infinity : Math.max(due - now, 0);
+    // Nothing armed, nothing to fire or notice: a schedule, a re-read or another tab's ping runs a pass, which arms it again.
+    if (due === null) return;
+    const now = Date.now();
+    const until_due = Math.max(due - now, 0);
     // The idle wake-up lands on the minute, so a hidden tab shares the taskbar clock's tick instead of adding its own.
     const heartbeat = MAX_DELAY - (now % MAX_DELAY);
     const next = until_due < MAX_DELAY ? until_due : heartbeat;

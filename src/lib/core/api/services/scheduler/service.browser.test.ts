@@ -392,6 +392,21 @@ describe("idle", () => {
     expect(tab.scheduler.is_leader).toBe(true);
   });
 
+  test("with only switched-off jobs the leader keeps no timer; switching one on arms it", async () => {
+    const tab = await open_tab();
+    await vi.waitFor(() => expect(tab.scheduler.is_leader).toBe(true));
+    await tab.scheduler.schedule("clock", reminder("tea", Date.now() + 10 * MINUTE));
+    await sleep(200);
+    const timeouts = vi.spyOn(window, "setTimeout");
+    const armed = () => timeouts.mock.calls.filter(([, delay]) => (delay ?? 0) > 1_000).length;
+    await tab.scheduler.update("clock:tea", { armed: false });
+    await sleep(200);
+    expect(armed()).toBe(0);
+
+    await tab.scheduler.update("clock:tea", { armed: true });
+    await vi.waitFor(() => expect(armed()).toBe(1));
+  });
+
   test("the idle wake-up lands on the minute; a job due sooner sets the time", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const tab = await open_tab();

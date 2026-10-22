@@ -181,6 +181,13 @@ export class AppsService implements IAppsService {
     if (parent && (await this.files_service.exists(parent, id, "directory"))) {
       await this.files_service.delete_entry(parent, id, { recursive: true });
     }
+    if (!manifest.on_uninstall_data) return;
+    try {
+      await (await manifest.on_uninstall_data()).default();
+    } catch (error) {
+      console.error(`[AppsService] ${id}'s uninstall cleanup failed`, error);
+      this.notifications_service.notify("apps", { type: "error", title: `Some of ${manifest.name}'s data is left`, message: String(error) });
+    }
   }
 
   public get meta_ready(): Promise<void> {
