@@ -2,7 +2,7 @@ import type { AppMeta } from "$lib/core/api";
 
 export default {
   description:
-    "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, print posters across several sheets, and generate test images.",
+    "Remove a background, join, trim and split images, slice sprite sheets into frames, pack frames into an atlas, compare two versions, hide parts of an image, squash images smaller, fit one under an upload size limit, print posters across several sheets, and generate test images.",
   keywords: [
     "image",
     "photo",
@@ -55,6 +55,13 @@ export default {
     "shrink",
     "optimize",
     "webp",
+    "file size",
+    "size limit",
+    "upload limit",
+    "under 1mb",
+    "fit",
+    "avif",
+    "jpeg xl",
     "batch",
     "compare",
     "difference",

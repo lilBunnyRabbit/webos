@@ -64,6 +64,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
 | `app.image-tools.test-image` | `user/image-tools` | Test image section: pattern, markings, size and format |
+| `app.image-tools.fit` | `user/image-tools` | Fit section: size limit (preset or custom), format, max side |
 | `app.image-tools.poster` | `user/image-tools` | Poster print section: paper, orientation, sheets across, overlap, margin, crop marks, map |
 | `app.hutches.{stats,daily,game,size,auto-cross}` | `user/hutches` | Stats per size; daily puzzle; game in progress; last size; auto-cross switch |
 | `app.jigsaw.{game,pieces}` | `user/jigsaw` | Puzzle in progress (picture path, seed, piece positions, time; only for a picture from WebOS files); last piece count |

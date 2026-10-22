@@ -98,6 +98,8 @@ export default {
         quality: z.number().int().min(1).max(100).default(80).describe("Quality, 1–100"),
         max: z.number().int().min(1).max(16_384).optional().describe("Longest side in px; smaller images stay as they are"),
         to: arg.path().optional().describe("Output folder, next to each original by default"),
+        under: z.string().optional().describe("Fit each copy under this size, like 1MB; -q becomes the highest quality tried"),
+        floor: z.number().int().min(1).max(100).default(50).describe("With --under: the lowest quality tried before scaling down"),
       }),
       positional: ["paths"],
       short: { format: "f", quality: "q" },
@@ -106,6 +108,21 @@ export default {
       async *run(context) {
         yield* await (await logic()).squash(context);
       },
+    }),
+    define_command({
+      id: "image fit",
+      description: "Save a copy under a size limit, like 1MB, next to the original: lowers the quality first, scales down only when it has to",
+      args: z.object({
+        path: arg.path(),
+        size: z.string().describe("The limit, like 500KB or 2MB; 1 MB counts as 1,000,000 bytes"),
+        format: z.enum(["keep", "jpeg", "webp", "avif", "jxl"]).default("keep").describe("AVIF and JPEG XL are slow on photos"),
+        max: z.number().int().min(1).max(16_384).optional().describe("Longest side in px, before fitting"),
+      }),
+      positional: ["path", "size"],
+      short: { format: "f" },
+      yields: "file",
+      complete: complete_images,
+      run: async (context) => (await logic()).fit(context),
     }),
     define_command({
       id: "imgdiff",

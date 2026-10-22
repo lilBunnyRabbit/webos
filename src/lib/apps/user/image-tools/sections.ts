@@ -10,6 +10,7 @@ export const Section = {
   PATCH: "patch",
   REDACT: "redact",
   SQUASH: "squash",
+  FIT: "fit",
   COMPARE: "compare",
   POSTER: "poster",
   TEST_IMAGE: "test-image",

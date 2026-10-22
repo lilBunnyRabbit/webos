@@ -1,6 +1,7 @@
 import type { AppHighlight } from "$lib/core/api/services/apps/type";
 import {
   ArrowsIn as ArrowsInIcon,
+  ArrowsInSimple as ArrowsInSimpleIcon,
   Bandaids as BandaidsIcon,
   Crop as CropIcon,
   Eraser as EraserIcon,
@@ -19,6 +20,7 @@ export default [
   { icon: BandaidsIcon, title: "Patch", text: "Lay the original under an edited copy and paint back the parts an editor stamped over." },
   { icon: EyeSlashIcon, title: "Redact", text: "Cover names and faces with a box, pixels or a heavy blur, and save a copy without metadata." },
   { icon: ArrowsInIcon, title: "Squash", text: "Save smaller WebP or JPEG copies of many images at once and see what each one saves." },
+  { icon: ArrowsInSimpleIcon, title: "Fit under a size", text: "Get a picture under an upload limit, keeping as much quality as it can." },
   { icon: SquareHalfIcon, title: "Compare", text: "Wipe or fade between two versions of a picture, or see exactly what changed." },
   { icon: PrinterIcon, title: "Poster print", text: "Print one image across several sheets, with crop marks and a map for putting it together." },
 ] satisfies AppHighlight[];

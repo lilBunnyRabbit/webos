@@ -31,6 +31,7 @@ import {
   tile_name,
   transparent_name,
   trimmed_name,
+  fitted_name,
 } from "./naming";
 import { MAX_SHEETS, parse_length, poster_layout, type PosterPaper } from "./poster";
 import { write_poster } from "./poster-pdf";
@@ -53,6 +54,9 @@ import {
 import { generate_test_image, pictures_folder } from "./test-image-job";
 import { images_in, squash_images, type SquashSource } from "./squash-job";
 import { SQUASH_FORMAT_NAMES, type SquashFormatName } from "./squash";
+import { FIT_QUALITY, format_limit, parse_limit, type FitFormat } from "./fit";
+import { run_fit } from "./fit-job";
+import { ENCODER_INFO } from "$kit/utils/codecs/formats";
 
 const APP_ID = "image-tools";
 const POSTER_MARGIN = 10;
@@ -383,6 +387,8 @@ export interface SquashArgs {
   quality: number;
   max?: number;
   to?: string;
+  under?: string;
+  floor: number;
 }
 
 export async function squash(context: CommandContext<SquashArgs>): Promise<FileValue[]> {
@@ -403,6 +409,8 @@ export async function squash(context: CommandContext<SquashArgs>): Promise<FileV
     if (!is_image_file(file)) throw new ShellError(`${path}: not an image`);
     sources.push({ name: file.name, path, file });
   }
+  const under = args.under === undefined ? null : parse_limit(args.under);
+  if (args.under !== undefined && under === null) throw new ShellError(`${args.under}: give the size like 500KB or 2MB`);
   const folder = args.to === undefined ? null : resolve_path(session.cwd, args.to);
   if (folder !== null) await folder_at(folder);
   for (const target of new Set(folder === null ? paths.map(parent_path) : [folder]))
@@ -412,10 +420,42 @@ export async function squash(context: CommandContext<SquashArgs>): Promise<FileV
     app_id: APP_ID,
     sources,
     options: { format: SQUASH_FORMAT_NAMES[args.format], quality: args.quality, max: args.max ?? null },
+    under: under === null ? null : { limit: under, floor: args.floor },
     folder,
     signal,
   });
   if (outcome.status !== TaskJobStatus.DONE)
     throw new ShellError(outcome.status === TaskJobStatus.CANCELLED ? "stopped" : (outcome.error ?? "failed"));
   return Promise.all(outcome.results.flatMap((result) => (result ? [written(result.path)] : [])));
+}
+
+export interface FitArgs {
+  path: string;
+  size: string;
+  format: FitFormat;
+  max?: number;
+}
+
+export async function fit({ args, session, signal, elevated }: CommandContext<FitArgs>): Promise<FileValue> {
+  const limit = parse_limit(args.size);
+  if (limit === null) throw new ShellError(`${args.size}: give the size like 500KB or 2MB`);
+  const path = resolve_path(session.cwd, args.path);
+  const file = await files().get_file(path);
+  if (!file) throw new ShellError(`${path}: no such file`);
+  if (!is_image_file(file) && !/\.jxl$/i.test(file.name)) throw new ShellError(`${path}: not an image`);
+  const folder = parent_path(path);
+  assert_writable(child_path(folder, "x"), elevated);
+  const result = await run_fit(
+    APP_ID,
+    { name: file.name, path, file },
+    { limit, format: args.format, max: args.max ?? null, ...FIT_QUALITY },
+    { signal }
+  );
+  if (!result) throw new ShellError(signal.aborted ? "stopped" : "couldn't fit the image");
+  if (!result.fitted)
+    throw new ShellError(`couldn't get under ${format_limit(limit)}: the smallest try was ${format_limit(result.blob.size)}`);
+  const handle = await files().create_file(await folder_at(folder), fitted_name(file.name, ENCODER_INFO[result.target].extension), {
+    content: result.blob,
+  });
+  return written(child_path(folder, handle.name));
 }

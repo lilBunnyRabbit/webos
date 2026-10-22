@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.56.0",
+    date: "2026-10-22",
+    title: "Fit under a size",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["image-tools"],
+        text: "Image Tools can make a copy of a picture that fits under an upload limit, like 1 MB, lowering the quality first and shrinking it only when it has to.",
+      },
+    ],
+  },
+  {
     version: "3.55.2",
     date: "2026-10-22",
     title: "Fresher fonts, smoother updates",

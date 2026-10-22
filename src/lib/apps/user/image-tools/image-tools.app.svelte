@@ -3,6 +3,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import {
     ArrowsIn as ArrowsInIcon,
+    ArrowsInSimple as ArrowsInSimpleIcon,
     Bandaids as BandaidsIcon,
     Crosshair as CrosshairIcon,
     Crop as CropIcon,
@@ -36,6 +37,7 @@
     { value: Section.PATCH, label: "Patch", icon: BandaidsIcon },
     { value: Section.REDACT, label: "Redact", icon: EyeSlashIcon },
     { value: Section.SQUASH, label: "Squash", icon: ArrowsInIcon },
+    { value: Section.FIT, label: "Fit under a size", icon: ArrowsInSimpleIcon },
     { value: Section.COMPARE, label: "Compare", icon: SquareHalfIcon },
     { value: Section.POSTER, label: "Poster print", icon: PrinterIcon },
     { value: Section.TEST_IMAGE, label: "Test image", icon: CrosshairIcon },
@@ -52,6 +54,7 @@
     [Section.PATCH]: () => import("./patch-section.svelte"),
     [Section.REDACT]: () => import("./redact-section.svelte"),
     [Section.SQUASH]: () => import("./squash-section.svelte"),
+    [Section.FIT]: () => import("./fit-section.svelte"),
     [Section.COMPARE]: () => import("./compare-section.svelte"),
     [Section.POSTER]: () => import("./poster-section.svelte"),
     [Section.TEST_IMAGE]: () => import("./test-image-section.svelte"),
