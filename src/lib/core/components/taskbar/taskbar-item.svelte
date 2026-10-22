@@ -17,6 +17,7 @@
   import { flushSync } from "svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import AppBadge from "../apps/app-badge.svelte";
+  import { keep_offline_item, KEEP_OFFLINE_ID, toggle_keep_offline } from "../apps/offline-actions";
 
   let { group, vertical, position }: { group: WindowInstance[]; vertical: boolean; position: TaskbarPosition } = $props();
 
@@ -131,6 +132,7 @@
       single
         ? [
             pin_item,
+            ...keep_offline_item(app.id),
             { separator: true },
             ...(out
               ? [{ id: "back", label: "Bring back", icon: ArrowSquareInIcon }]
@@ -139,11 +141,12 @@
                 : []),
             { id: "close", label: "Close window", icon: XIcon },
           ]
-        : [pin_item, { separator: true }, { id: "close-all", label: "Close all", icon: XIcon }],
+        : [pin_item, ...keep_offline_item(app.id), { separator: true }, { id: "close-all", label: "Close all", icon: XIcon }],
       { anchor: { x: event.clientX, y: event.clientY } }
     );
     if (choice === "pin") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, app.id);
     else if (choice === "unpin") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, app.id);
+    else if (choice === KEEP_OFFLINE_ID) toggle_keep_offline(app.id);
     else if (choice === "back") void extract?.bring_back();
     else if (choice === "pop" && single) void extract?.pop(single.id);
     else if (choice === "close" && single) void windows.close(single.id);

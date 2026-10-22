@@ -2,6 +2,9 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-22: apps on demand ([ADR-065](065-apps-on-demand.md))**
+> The "every app works offline" promise of the PWA revision is superseded. The worker precaches the core and the system apps only (`offline/core.json`), so an update installs in seconds; user apps load on demand into a per-build runtime cache, and the ones the user keeps offline are downloaded after the reload by OfflineService. The update overlay, its timers and the fallback are unchanged; it now waits for the core files alone.
+
 > **Revision 2026-10-22: service worker fixes on `generateSW` ([owner calls](../brainstorm/2026-10-22_owner-calls.md))**
 > - The worker stays generated (`generateSW`), no new dependencies; the own-worker branch with a parallel install was declined.
 > - "Update and reload" reloads straight away when the browser already installed and activated the new worker: a different active worker than the one the page booted under means the new precache is in place. It no longer unregisters and clears for that case.

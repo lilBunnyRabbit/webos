@@ -98,6 +98,7 @@ What are the implications of this decision?
 | [062](./062-background-scheduler.md) | Background Scheduler | 2026-10-21 | Implemented |
 | [063](./063-moonrabbit-journal.md) | Moonrabbit Journal Encryption | 2026-10-22 | Implemented |
 | [064](./064-kit-encoder-table.md) | Kit Encoder Table | 2026-10-22 | Implemented |
+| [065](./065-apps-on-demand.md) | Apps on Demand, Offline by Choice | 2026-10-22 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

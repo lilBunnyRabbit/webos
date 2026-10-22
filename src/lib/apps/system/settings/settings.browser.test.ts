@@ -31,6 +31,7 @@ const STUBS = {
     list: () => [shortcut(ShortcutCategory.WINDOW), shortcut(ShortcutCategory.APPS), shortcut(ShortcutCategory.SYSTEM)],
   }),
   shell: stub_service("shell", {}),
+  offline: stub_service("offline", { online: true, syncing: false, picked: new Set(), is_picked: () => false, status: () => "not-saved" }),
 };
 
 let host: ReturnType<typeof mount> | null = null;

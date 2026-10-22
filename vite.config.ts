@@ -4,7 +4,8 @@ import type { Plugin } from "vite";
 import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
-import { version_plugin } from "./vite-plugin-version";
+import { get_version_info, version_plugin } from "./vite-plugin-version";
+import { offline_plugin } from "./vite-plugin-offline";
 import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
 import { core_modules } from "./vite-core-chunk";
 import { import_map_plugin } from "./vite-plugin-import-map";
@@ -40,11 +41,14 @@ const VOLATILE = [
 ];
 const APP_INDEX = /\/apps\/(system|user)\/[^/]+\/index\.ts$/;
 const cores = new WeakMap<object, Set<string>>();
+const BASE = "/webos/";
+const info = get_version_info(process.cwd());
+const offline = offline_plugin(info.buildTimestamp);
 
 // https://vite.dev/config/
 export default defineConfig({
   // Served from lilbunnyrabbit.github.io/webos/ (GitHub Pages project site).
-  base: "/webos/",
+  base: BASE,
   plugins: [
     tailwindcss(),
     phosphor_plugin(),
@@ -55,15 +59,18 @@ export default defineConfig({
     //     runes: true,
     //   },
     // }
-    version_plugin(),
+    version_plugin(info),
     import_map_plugin(),
+    offline.plugin,
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
       workbox: {
-        // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
+        // ADR-065: the install precaches only core and the system apps (offline/core.json), so an update takes seconds
+        // however many apps there are. User apps load on demand into the per-build runtime cache below.
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
+        manifestTransforms: [async (entries) => ({ manifest: entries.filter((entry) => offline.precached(entry.url)), warnings: [] })],
         // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
         globIgnores: ["**/mammoth-*.js"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
@@ -95,6 +102,19 @@ export default defineConfig({
             urlPattern: /\/assets\/mammoth-[^/]+\.js$/,
             handler: "CacheFirst",
             options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
+          },
+          // Last, so the rules above keep their files. One cache per build: OfflineService fills it with the picked apps
+          // and deletes older ones after a sync (ADR-065). No expiration, which could evict a picked app.
+          {
+            urlPattern: new RegExp(`^[^?#]*${BASE}assets/`),
+            handler: "CacheFirst",
+            // ignoreVary: OfflineService stores files it fetched itself, and a server's `Vary: Origin` would make a module
+            // import miss them. The names are content-hashed, so any stored copy is the right one.
+            options: {
+              cacheName: `webos-assets-${info.buildTimestamp}`,
+              cacheableResponse: { statuses: [200] },
+              matchOptions: { ignoreVary: true },
+            },
           },
         ],
       },

@@ -559,6 +559,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### PWA & Offline
 - [x] Service Worker (VitePWA + Workbox precache, ADR-004 revision)
 - [ ] Cache strategies (cache-first for assets, network-first for version check)
+- [x] Apps on demand, offline by choice (2026-10-22, [ADR-065](adrs/065-apps-on-demand.md), [brainstorm](brainstorm/2026-10-22_on-demand-apps.md)): the service worker precaches only core and system apps (305 files instead of 844), user apps load on demand into a per-build cache; Settings › Offline and Keep offline pick apps that download after every update as a task; the launcher dims unsaved apps while offline. `OfflineService`
 - [ ] Background sync for queued operations
 - [x] Install prompt customization (`install.svelte.ts`, introduction and Settings › About)
 - [x] Service worker fixes on `generateSW` (2026-10-22, [owner calls](brainstorm/2026-10-22_owner-calls.md)): Burrow fonts at content-hashed URLs, mammoth cached on first use instead of precached, import-map identity without `\0` and queries, "Update and reload" reloads when the browser already installed the update. Parallel install declined
