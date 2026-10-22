@@ -81,7 +81,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.solitaire.{stats,draw}` | `user/solitaire` | Stats; draw one or three |
 | `app.soundboard.{volume,mode}` | `user/soundboard` | Volume and play mode |
 | `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
-| `app.sudoku.{stats,daily,game,difficulty}` | `user/sudoku` | Stats; daily puzzle; game in progress; last difficulty |
+| `app.sudoku.{stats,stats-6x6,daily,daily-6x6,game,difficulty,size}` | `user/sudoku` | Stats per size (9×9 keeps the unsuffixed key); daily puzzle per size; game in progress (with its size); last difficulty and size |
 | `app.tic-tac-toe.{stats,mode}` | `user/tic-tac-toe` | Win/loss/draw counts; last mode |
 | `app.time-since.sort` | `user/time-since` | Counter sort |
 | `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |

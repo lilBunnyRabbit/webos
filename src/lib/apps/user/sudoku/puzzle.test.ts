@@ -13,6 +13,7 @@ import {
   Technique,
   Tier,
 } from "./puzzle";
+import { SHAPES, Size } from "./puzzle";
 
 const parse = (text: string) => text.split("").map(Number);
 
@@ -107,5 +108,63 @@ describe("generate", () => {
     expect(generate(Difficulty.HARD, 42)).toEqual(generate(Difficulty.HARD, 42));
     expect(generate(Difficulty.HARD, 42).givens).not.toEqual(generate(Difficulty.HARD, 43).givens);
     expect(generate(Difficulty.EASY, 42).givens).not.toEqual(generate(Difficulty.MEDIUM, 42).givens);
+  });
+});
+
+describe("6×6", () => {
+  const SIX = SHAPES[Size.SIX];
+  const valid_six = (values: readonly number[]) =>
+    values.length === 36 &&
+    values.every((value, cell) => value >= 1 && value <= 6 && SIX.peers[cell].every((peer) => values[peer] !== value));
+
+  it("has 2×3 boxes: two rows tall, three columns wide", () => {
+    expect([0, 2, 3, 6, 12, 35].map((cell) => SIX.box[cell])).toEqual([0, 0, 1, 0, 2, 5]);
+    expect(SIX.units[12]).toEqual([0, 1, 2, 6, 7, 8]);
+    expect(SIX.peers[0]).toHaveLength(12);
+    expect(SHAPES[Size.NINE].peers).toBe(PEERS);
+  });
+
+  it("draws valid full grids", () => {
+    const rng = create_rng(3);
+    for (let i = 0; i < 50; i++) expect(valid_six(full_grid(rng, Size.SIX))).toBe(true);
+  });
+
+  it.each(DIFFICULTIES)("%s puzzles are unique, consistent and symmetric", (difficulty) => {
+    for (let seed = 1; seed <= 25; seed++) {
+      const puzzle = generate(difficulty, seed * 104729, Size.SIX);
+      expect(puzzle.givens).toHaveLength(36);
+      expect(count_solutions(puzzle.givens)).toBe(1);
+      expect(solve(puzzle.givens)).toEqual(puzzle.solution);
+      expect(valid_six(puzzle.solution)).toBe(true);
+      expect(puzzle.givens.every((given, cell) => !given || given === puzzle.solution[cell])).toBe(true);
+      expect(puzzle.tier).toBe(grade(puzzle.givens));
+      expect(puzzle.givens.every((given, cell) => Boolean(given) === Boolean(puzzle.givens[35 - cell]))).toBe(true);
+    }
+  });
+
+  it("scales the clue counts: easy keeps 16, harder ones fewer", () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const easy = generate(Difficulty.EASY, seed, Size.SIX).givens.filter(Boolean).length;
+      const medium = generate(Difficulty.MEDIUM, seed, Size.SIX).givens.filter(Boolean).length;
+      expect(easy).toBeGreaterThanOrEqual(16);
+      expect(medium).toBeLessThan(16);
+    }
+  });
+
+  it("reaches past singles on hard and expert", () => {
+    const tiers = (difficulty: Difficulty) =>
+      Array.from({ length: 20 }, (_, seed) => generate(difficulty, seed + 1, Size.SIX).tier);
+    expect(tiers(Difficulty.HARD).filter((tier) => tier >= Tier.ADVANCED).length).toBeGreaterThanOrEqual(5);
+    expect(tiers(Difficulty.EXPERT).filter((tier) => tier === Tier.BEYOND).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("deduces only correct digits all the way through", () => {
+    const puzzle = generate(Difficulty.HARD, 5, Size.SIX);
+    const values = [...puzzle.givens];
+    for (let step = next_deduction(values); step; step = next_deduction(values)) {
+      expect(step.digit).toBe(puzzle.solution[step.cell]);
+      values[step.cell] = step.digit;
+    }
+    expect(values.every(Boolean) || puzzle.tier === Tier.BEYOND).toBe(true);
   });
 });

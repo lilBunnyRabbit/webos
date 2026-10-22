@@ -1,24 +1,26 @@
+import { daily_key } from "$kit/games/daily";
 import { daily_seed } from "$kit/games/time";
 import { z } from "zod";
 import {
   bit,
-  box_of,
   candidates,
-  col_of,
   count_bits,
   DIFFICULTIES,
   Difficulty,
   generate,
   next_deduction,
-  PEERS,
-  row_of,
-  UNITS,
+  shape_of,
+  SHAPES,
+  Size,
+  SIZES,
   type Puzzle,
   type Technique,
 } from "./puzzle";
+import { SIZE_LABELS } from "./size";
 
-export { Difficulty, DIFFICULTIES };
+export { Difficulty, DIFFICULTIES, Size, SIZE_LABELS, SIZES };
 export const difficulty_schema = z.enum(Difficulty);
+export const size_schema = z.enum(Size);
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   easy: "Easy",
@@ -33,15 +35,17 @@ export interface Board {
 }
 
 export interface Game extends Board {
+  size: Size;
   difficulty: Difficulty;
   puzzle: Puzzle;
   hints: number;
   solved: boolean;
 }
 
-export function new_game(difficulty: Difficulty, seed: number): Game {
-  const puzzle = generate(difficulty, seed);
-  return { difficulty, puzzle, values: [...puzzle.givens], notes: new Array(81).fill(0), hints: 0, solved: false };
+export function new_game(difficulty: Difficulty, seed: number, size: Size = Size.NINE): Game {
+  const puzzle = generate(difficulty, seed, size);
+  const notes = new Array(puzzle.givens.length).fill(0);
+  return { size, difficulty, puzzle, values: [...puzzle.givens], notes, hints: 0, solved: false };
 }
 
 export function is_given(game: Game, cell: number): boolean {
@@ -58,10 +62,11 @@ export function with_board(game: Game, board: Board): Game {
 }
 
 export function conflicts(values: readonly number[]): Set<number> {
+  const { peers } = shape_of(values);
   const found = new Set<number>();
-  for (let cell = 0; cell < 81; cell++) {
+  for (let cell = 0; cell < values.length; cell++) {
     const value = values[cell];
-    if (value && PEERS[cell].some((peer) => values[peer] === value)) found.add(cell);
+    if (value && peers[cell].some((peer) => values[peer] === value)) found.add(cell);
   }
   return found;
 }
@@ -87,7 +92,7 @@ export function place(game: Game, cell: number, digit: number): Board {
   }
   values[cell] = digit;
   notes[cell] = 0;
-  for (const peer of PEERS[cell]) notes[peer] &= ~bit(digit);
+  for (const peer of shape_of(values).peers[cell]) notes[peer] &= ~bit(digit);
   return { values, notes };
 }
 
@@ -116,15 +121,23 @@ export function same_board(a: Board, b: Board): boolean {
 }
 
 export function completed_units(before: readonly number[], after: readonly number[], cell: number): number[][] {
-  const units = [UNITS[row_of(cell)], UNITS[9 + col_of(cell)], UNITS[18 + box_of(cell)]];
+  const { size, units: all, row, col, box } = shape_of(after);
+  const units = [all[row[cell]], all[size + col[cell]], all[2 * size + box[cell]]];
   const complete = (values: readonly number[], unit: readonly number[]) =>
-    unit.every((c) => values[c]) && new Set(unit.map((c) => values[c])).size === 9;
+    unit.every((c) => values[c]) && new Set(unit.map((c) => values[c])).size === size;
   return units.filter((unit) => complete(after, unit) && !complete(before, unit)).map((unit) => [...unit]);
 }
 
 /** How long each cell of the finished units waits before it lights up: a wave spreading out from `origin`. */
-export function wave_delays(units: readonly (readonly number[])[], origin: number, step_ms = 45): Map<number, number> {
+export function wave_delays(
+  units: readonly (readonly number[])[],
+  origin: number,
+  side = 9,
+  step_ms = 45
+): Map<number, number> {
   const delays = new Map<number, number>();
+  const row_of = (cell: number) => Math.floor(cell / side);
+  const col_of = (cell: number) => cell % side;
   for (const unit of units) {
     for (const cell of unit) {
       const distance = Math.abs(row_of(cell) - row_of(origin)) + Math.abs(col_of(cell) - col_of(origin));
@@ -137,7 +150,7 @@ export function wave_delays(units: readonly (readonly number[])[], origin: numbe
 /** Where the cursor starts: the first blank cell, else the centre. */
 export function first_blank(values: readonly number[]): number {
   const index = values.findIndex((value) => !value);
-  return index < 0 ? 40 : index;
+  return index < 0 ? Math.floor(values.length / 2) : index;
 }
 
 export const HintKind = { FIX: "fix", DEDUCE: "deduce", REVEAL: "reveal" } as const;
@@ -164,7 +177,7 @@ export function hint(game: Game): Hint | null {
     return { cell: deduction.cell, digit: deduction.digit, kind: HintKind.DEDUCE, technique: deduction.technique };
   const cands = candidates(game.values);
   let best = -1;
-  for (let cell = 0; cell < 81; cell++) {
+  for (let cell = 0; cell < game.values.length; cell++) {
     if (!game.values[cell] && (best < 0 || count_bits(cands[cell]) < count_bits(cands[best]))) best = cell;
   }
   return best >= 0 ? { cell: best, digit: solution[best], kind: HintKind.REVEAL } : null;
@@ -176,8 +189,8 @@ export function apply_hint(game: Game, next: Hint): Board {
   return place({ ...game, values }, next.cell, next.digit);
 }
 
-export function cell_name(cell: number): string {
-  return `row ${row_of(cell) + 1}, column ${col_of(cell) + 1}`;
+export function cell_name(cell: number, side = 9): string {
+  return `row ${Math.floor(cell / side) + 1}, column ${(cell % side) + 1}`;
 }
 
 export interface DifficultyRecord {
@@ -209,19 +222,23 @@ export function record(stats: Stats, difficulty: Difficulty, time: number, hints
   return { ...stats, [difficulty]: { solved: current.solved + 1, best } };
 }
 
-/** The puzzle is its seed, so a save is only the player's values and notes on top of it. */
-export const saved_schema = z.object({
-  difficulty: difficulty_schema,
-  seed: z.number().int().nonnegative(),
-  values: z.array(z.number().int().min(0).max(9)).length(81),
-  notes: z.array(z.number().int().min(0).max(0x1ff)).length(81),
-  hints: z.number().int().nonnegative(),
-  elapsed: z.number().nonnegative(),
-});
+/** The puzzle is its seed, so a save is only the player's values and notes on top of it. Saves from before 6×6 have no size. */
+export const saved_schema = z
+  .object({
+    size: size_schema.default(Size.NINE),
+    difficulty: difficulty_schema,
+    seed: z.number().int().nonnegative(),
+    values: z.array(z.number().int().min(0).max(9)),
+    notes: z.array(z.number().int().min(0).max(0x1ff)),
+    hints: z.number().int().nonnegative(),
+    elapsed: z.number().nonnegative(),
+  })
+  .refine(({ size, values, notes }) => values.length === SHAPES[size].cells && notes.length === SHAPES[size].cells);
 export type Saved = z.infer<typeof saved_schema>;
 
 export function to_saved(game: Game, elapsed: number): Saved {
   return {
+    size: game.size,
     difficulty: game.difficulty,
     seed: game.puzzle.seed,
     values: [...game.values],
@@ -232,15 +249,20 @@ export function to_saved(game: Game, elapsed: number): Saved {
 }
 
 export function restore(saved: Saved): Game | null {
-  const game = new_game(saved.difficulty, saved.seed);
+  const game = new_game(saved.difficulty, saved.seed, saved.size);
   if (game.puzzle.givens.some((given, cell) => given && saved.values[cell] !== given)) return null;
   return { ...with_board(game, { values: saved.values, notes: saved.notes }), hints: saved.hints };
 }
 
 export const DAILY_DIFFICULTY = Difficulty.MEDIUM;
 
-export function daily_game(day: string): Game {
-  return new_game(DAILY_DIFFICULTY, daily_seed(day, "sudoku"));
+/**
+ * Each size is its own daily (a mode in Game Hub). The 9×9 seed stays on the bare app id, so its dailies are the ones
+ * played before 6×6 existed.
+ */
+export function daily_game(day: string, size: Size = Size.NINE): Game {
+  const seed = daily_seed(day, size === Size.NINE ? "sudoku" : daily_key("sudoku", size));
+  return new_game(DAILY_DIFFICULTY, seed, size);
 }
 
 /** A daily puzzle in progress, kept apart from the regular save. */

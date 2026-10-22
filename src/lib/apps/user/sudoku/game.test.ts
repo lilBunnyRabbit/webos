@@ -25,6 +25,7 @@ import {
   type Game,
 } from "./game";
 import { bit, candidates } from "./puzzle";
+import { cell_name, Size } from "./game";
 
 const game = new_game(Difficulty.MEDIUM, 7);
 const blanks = game.puzzle.givens.flatMap((given, cell) => (given ? [] : [cell]));
@@ -242,5 +243,64 @@ describe("9×9 puzzles stay the same", () => {
 
   it.each(Object.values(Difficulty))("%s, seed 42", (difficulty) => {
     expect(new_game(difficulty, 42).puzzle.givens.join("")).toBe(SEED_42[difficulty]);
+  });
+});
+
+describe("6×6", () => {
+  const six = new_game(Difficulty.MEDIUM, 11, Size.SIX);
+  const open = six.puzzle.givens.findIndex((value) => !value);
+
+  it("plays 1 to 6 on 36 cells", () => {
+    expect(six.size).toBe(Size.SIX);
+    expect(six.values).toHaveLength(36);
+    expect(six.notes).toHaveLength(36);
+    expect(digit_counts(six.puzzle.solution).slice(1, 7)).toEqual(new Array(6).fill(6));
+    expect(first_blank(new Array(36).fill(1))).toBe(18);
+    expect(cell_name(14, 6)).toBe("row 3, column 3");
+  });
+
+  it("fills notes with 6-bit candidates and clears peers on a placement", () => {
+    const board = auto_notes(six);
+    expect(board.notes.every((mask) => mask < 1 << 6)).toBe(true);
+    const digit = six.puzzle.solution[open];
+    const placed = place({ ...six, notes: board.notes }, open, digit);
+    const row = Math.floor(open / 6);
+    for (let c = row * 6; c < row * 6 + 6; c++) expect(placed.notes[c] & bit(digit)).toBe(0);
+  });
+
+  it("finds the row, column and box a placement completes", () => {
+    const before = [...six.puzzle.solution];
+    before[open] = 0;
+    expect(completed_units(before, six.puzzle.solution, open)).toHaveLength(3);
+  });
+
+  it("is finished by hints alone", () => {
+    for (const difficulty of [Difficulty.EASY, Difficulty.EXPERT]) {
+      let current = new_game(difficulty, 99, Size.SIX);
+      for (let i = 0; i < 36 && !current.solved; i++)
+        current = with_board(current, apply_hint(current, hint(current)!));
+      expect(current.solved).toBe(true);
+    }
+  });
+
+  it("round-trips a save, and an old save without a size restores as 9×9", () => {
+    const played = with_board(six, place(six, open, six.puzzle.solution[open]));
+    const back = restore(saved_schema.parse(JSON.parse(JSON.stringify(to_saved(played, 5000)))))!;
+    expect(back.size).toBe(Size.SIX);
+    expect(back.values).toEqual(played.values);
+    const { size: _, ...old } = to_saved(game, 0);
+    expect(restore(saved_schema.parse(old))!.size).toBe(Size.NINE);
+  });
+
+  it("rejects a save whose grid doesn't fit its size", () => {
+    expect(saved_schema.safeParse({ ...to_saved(six, 0), size: Size.NINE }).success).toBe(false);
+  });
+
+  it("has its own daily, apart from the 9×9 one", () => {
+    const today = daily_game("2026-10-22", Size.SIX);
+    expect(today.size).toBe(Size.SIX);
+    expect(daily_game("2026-10-22", Size.SIX).puzzle.givens).toEqual(today.puzzle.givens);
+    expect(daily_game("2026-10-23", Size.SIX).puzzle.givens).not.toEqual(today.puzzle.givens);
+    expect(daily_game("2026-10-22").size).toBe(Size.NINE);
   });
 });

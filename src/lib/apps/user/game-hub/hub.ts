@@ -40,7 +40,7 @@ export interface DailyGame<T extends GameInfo = GameInfo> {
 }
 
 export function mode_label(mode: string): string {
-  const words = mode.replaceAll("-", " ");
+  const words = mode.replaceAll("-", " ").replace(/(\d)x(\d)/g, "$1×$2");
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 

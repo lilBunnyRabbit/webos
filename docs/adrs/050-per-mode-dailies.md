@@ -34,3 +34,8 @@ Discussion: [brainstorm](../brainstorm/2026-10-18_color-games.md).
 - Game Hub keeps the daily contract of ADR-035: a game offers dailies when its props schema has a `daily` key. A per-mode row launches `{ daily, mode }`, and its label is the mode id in sentence case (`odd-one-out` → "Odd one out"), so the manifest needs no label field. The library card shows "Dailies 2/4" for such a game.
 - The shell's `game-daily` value gains a `mode` field; clicking a mode's row opens that mode.
 - First user: Color Games, whose props are `{ mode, seed, daily, level }`: `daily` for Game Hub, `level` so a Hard practice challenge link replays the same puzzle.
+
+## Revision 2026-10-22: Sudoku sizes
+
+- Second user: Sudoku, whose modes are its sizes, `9x9` and `6x6` (props `{ daily, mode }`). A per-mode record makes every row a mode, so the 9×9 daily's result moved from `sudoku` to `sudoku/9x9`; older days stay under `sudoku`, which streak and totals still count. The 9×9 puzzle seed stays `daily_seed(day, "sudoku")`, so its dailies are unchanged; 6×6 seeds on `sudoku/6x6` like Color Games.
+- `mode_label` writes a size id as a size: `6x6` → "6×6", so the rows read "Sudoku · 9×9" and "Sudoku · 6×6".

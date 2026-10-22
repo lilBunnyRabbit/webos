@@ -42,6 +42,10 @@
     restore,
     same_board,
     saved_schema,
+    Size,
+    SIZE_LABELS,
+    size_schema,
+    SIZES,
     stats_schema,
     to_saved,
     toggle_note,
@@ -50,22 +54,29 @@
     type Board,
     type Game,
   } from "./game";
-  import { bit, box_of, col_of, row_of } from "./puzzle";
+  import { bit, SHAPES } from "./puzzle";
 
   const DIFFICULTY_OPTIONS = DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
-  const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const SIZE_OPTIONS = SIZES.map((value) => ({ value, label: SIZE_LABELS[value] }));
 
-  const { daily: daily_prop }: { daily?: string } = $props();
+  const { daily: daily_prop, mode: mode_prop }: { daily?: string; mode?: Size } = $props();
   const daily_day = untrack(() => daily_prop);
+  const mode_size = untrack(() => mode_prop);
 
   const { window_id, app_id, window: win, storage } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
-  const stats = storage.persisted("stats", empty_stats(), stats_schema);
+  // 9×9 keeps the keys it had before 6×6 existed, so its stats and saves carry over.
+  const key_for = (base: string, of: Size) => (of === Size.NINE ? base : `${base}-${of}`);
+  const all_stats = {
+    [Size.NINE]: storage.persisted("stats", empty_stats(), stats_schema),
+    [Size.SIX]: storage.persisted(key_for("stats", Size.SIX), empty_stats(), stats_schema),
+  };
   const play = track_play(app_id, () => win.is_visible);
 
   // Per window, so two open puzzles don't overwrite each other; storage keeps the last one touched for next time.
-  // A daily puzzle saves under its own key, so it never replaces the regular game.
-  const saved_daily = daily_day ? storage.get("daily", daily_saved_schema) : null;
+  // A daily puzzle saves under its own key per size, so it never replaces the regular game.
+  const daily_size = mode_size ?? Size.NINE;
+  const saved_daily = daily_day ? storage.get(key_for("daily", daily_size), daily_saved_schema) : null;
   const saved = daily_day ? (saved_daily?.day === daily_day ? saved_daily.game : null) : storage.get("game", saved_schema);
   const restored = saved ? restore(saved) : null;
   let daily = $state(daily_day ?? null);
@@ -74,8 +85,13 @@
     : restored
       ? restored.difficulty
       : (storage.get("difficulty", difficulty_schema) ?? Difficulty.EASY);
+  const initial_size = daily_day
+    ? daily_size
+    : (mode_size ?? (restored ? restored.size : (storage.get("size", size_schema) ?? Size.NINE)));
   let difficulty = $state<Difficulty>(initial_difficulty);
-  const initial_game = restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_difficulty, random_seed()));
+  const fresh = () =>
+    daily_day ? daily_game(daily_day, daily_size) : new_game(initial_difficulty, random_seed(), initial_size);
+  const initial_game = restored && restored.size === initial_size ? restored : fresh();
   let game = $state.raw<Game>(initial_game);
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   let new_best = $state(false);
@@ -90,11 +106,18 @@
   const cell_elements: HTMLButtonElement[] = $state([]);
   let board_element = $state<HTMLElement>();
 
+  const size = $derived(game.size);
+  const shape = $derived(SHAPES[size]);
+  const n = $derived(shape.size);
+  const digits = $derived(Array.from({ length: n }, (_, i) => i + 1));
+  const stats = $derived(all_stats[size]);
   const values = $derived(game.values);
   const clashes = $derived(conflicts(values));
   const counts = $derived(digit_counts(values));
   const elapsed = $derived(clock.elapsed);
-  const label = $derived(daily ? `Daily · ${daily}` : DIFFICULTY_LABELS[difficulty]);
+  const label = $derived(
+    daily ? `Daily ${SIZE_LABELS[size]} · ${daily}` : `${DIFFICULTY_LABELS[difficulty]} · ${SIZE_LABELS[size]}`
+  );
   const focus_digit = $derived(game.solved ? 0 : values[selected]);
   const filled = $derived(values.filter(Boolean).length);
   const best = $derived(stats.value[difficulty].best);
@@ -109,7 +132,7 @@
     if (clashes.size) return "A digit repeats in a row, column or box";
     if (notes_mode) return "Notes on: digits go in as candidates";
     if (daily) return label;
-    return "Every row, column and box holds 1 to 9 once";
+    return `Every row, column and box holds 1 to ${n} once`;
   });
 
   $effect(() => {
@@ -134,7 +157,7 @@
   });
 
   function save() {
-    if (daily) storage.set("daily", { day: daily, game: to_saved(game, clock.read()) });
+    if (daily) storage.set(key_for("daily", size), { day: daily, game: to_saved(game, clock.read()) });
     else storage.set("game", to_saved(game, clock.read()));
   }
 
@@ -155,7 +178,7 @@
 
   function finish() {
     const time = clock.pause();
-    if (daily) play.daily(daily, time);
+    if (daily) play.daily(daily, time, undefined, size);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, difficulty, time, game.hints);
   }
@@ -181,7 +204,7 @@
   function celebrate(before: readonly number[], cell: number) {
     const units = completed_units(before, game.values, cell);
     if (!units.length || game.solved) return;
-    wave = wave_delays(units, cell);
+    wave = wave_delays(units, cell, n);
   }
 
   function input(digit: number, as_note = notes_mode) {
@@ -225,7 +248,7 @@
     select(next.cell);
     commit(apply_hint(game, next), game.hints + 1);
     celebrate(before, next.cell);
-    const where = cell_name(next.cell);
+    const where = cell_name(next.cell, n);
     message =
       next.kind === HintKind.FIX
         ? `Hint: ${where} should be ${next.digit}`
@@ -234,9 +257,9 @@
           : `Hint: revealed ${next.digit} at ${where}; this one needs more than the basic techniques`;
   }
 
-  async function start_over(next_difficulty: Difficulty = difficulty) {
+  async function start_over(next_difficulty: Difficulty = difficulty, next_size: Size = size) {
     const progress = !game.solved && undo_stack.length > 0;
-    if (progress && next_difficulty === difficulty) {
+    if (progress && next_difficulty === difficulty && next_size === size) {
       const confirmed = await win.confirm("Start a new puzzle?", {
         detail: "The digits and notes on this one are lost. Statistics stay.",
         confirm_label: "New puzzle",
@@ -246,7 +269,8 @@
     daily = null;
     difficulty = next_difficulty;
     storage.set("difficulty", next_difficulty);
-    game = new_game(next_difficulty, random_seed());
+    storage.set("size", next_size);
+    game = new_game(next_difficulty, random_seed(), next_size);
     clock.reset();
     new_best = false;
     undo_stack = [];
@@ -270,6 +294,18 @@
     start_over(next);
   }
 
+  async function set_size(next: Size) {
+    if (next === size) return;
+    if (!game.solved && undo_stack.length > 0) {
+      const confirmed = await win.confirm(`Switch to ${SIZE_LABELS[next]}?`, {
+        detail: "A new puzzle replaces this one and its progress is lost.",
+        confirm_label: "Switch",
+      });
+      if (!confirmed) return;
+    }
+    start_over(difficulty, next);
+  }
+
   function select(index: number) {
     selected = index;
     if (board_element?.contains(document.activeElement)) cell_elements[index]?.focus();
@@ -279,6 +315,7 @@
     if (event.defaultPrevented || event.altKey || event.metaKey || event.ctrlKey) return;
     if ((event.target as HTMLElement).closest("input, select, textarea")) return;
     const digit = /^(?:Digit|Numpad)([1-9])$/.exec(event.code)?.[1];
+    if (digit && Number(digit) > n) return;
     if (digit) {
       event.preventDefault();
       input(Number(digit), event.shiftKey ? !notes_mode : notes_mode);
@@ -289,7 +326,7 @@
       clear();
       return;
     }
-    const next = grid_key_move(event.key, selected, 9, 9);
+    const next = grid_key_move(event.key, selected, n, n);
     if (next !== null && !event.shiftKey) {
       event.preventDefault();
       select(next);
@@ -298,23 +335,24 @@
 
   function cell_label(index: number): string {
     const value = values[index];
-    const where = `Row ${row_of(index) + 1}, column ${col_of(index) + 1}`;
+    const where = `Row ${shape.row[index] + 1}, column ${shape.col[index] + 1}`;
     if (value) return `${where}, ${value}${is_given(game, index) ? ", given" : ""}${clashes.has(index) ? ", repeats" : ""}`;
-    const notes = DIGITS.filter((d) => game.notes[index] & bit(d));
+    const notes = digits.filter((d) => game.notes[index] & bit(d));
     return `${where}, blank${notes.length ? `, notes ${notes.join(" ")}` : ""}`;
   }
 
   function cell_classes(index: number): string {
-    const row = row_of(index);
-    const col = col_of(index);
+    const { row: rows, col: cols, box, box_rows, box_cols } = shape;
+    const row = rows[index];
+    const col = cols[index];
     const value = values[index];
-    const peer = row === row_of(selected) || col === col_of(selected) || box_of(index) === box_of(selected);
+    const peer = row === rows[selected] || col === cols[selected] || box[index] === box[selected];
     const live = !game.solved;
     return cn(
       "cell relative grid place-items-center border-foreground/15 outline-none transition-[background-color] duration-100",
       "focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-      col < 8 && (col % 3 === 2 ? "border-r-2 border-r-foreground/55" : "border-r"),
-      row < 8 && (row % 3 === 2 ? "border-b-2 border-b-foreground/55" : "border-b"),
+      col < n - 1 && (col % box_cols === box_cols - 1 ? "border-r-2 border-r-foreground/55" : "border-r"),
+      row < n - 1 && (row % box_rows === box_rows - 1 ? "border-b-2 border-b-foreground/55" : "border-b"),
       live && index === selected
         ? "bg-primary/35"
         : live && focus_digit && value === focus_digit
@@ -332,32 +370,35 @@
 
   async function reset_stats() {
     const confirmed = await win.confirm("Reset statistics?", {
-      detail: "Solved counts and best times for every difficulty go back to zero. The puzzle in progress is kept.",
+      detail: `Solved counts and best times for every ${SIZE_LABELS[size]} difficulty go back to zero. The puzzle in progress is kept.`,
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = empty_stats();
+    if (confirmed) all_stats[size].value = empty_stats();
   }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
+    <Segmented size="sm" class="hidden @2xl:inline-flex" label="Size" options={SIZE_OPTIONS} bind:value={() => size, set_size} />
+    <Select class="w-20 @2xl:hidden" size="sm" aria-label="Size" options={SIZE_OPTIONS} bind:value={() => size, set_size} />
     <Segmented size="sm" class="hidden @2xl:inline-flex" label="Difficulty" options={DIFFICULTY_OPTIONS} bind:value={() => difficulty, set_difficulty} />
     <Select class="w-28 @2xl:hidden" size="sm" aria-label="Difficulty" options={DIFFICULTY_OPTIONS} bind:value={() => difficulty, set_difficulty} />
     <div class="flex-1"></div>
-    <IconButton size="sm" label="Redo (Ctrl+Shift+Z)" disabled={!redo_stack.length || game.solved} onclick={redo}>
+    <IconButton size="sm" label="Redo (Ctrl+Shift+Z)" class="hidden @sm:inline-flex" disabled={!redo_stack.length || game.solved} onclick={redo}>
       <RedoIcon weight="bold" />
     </IconButton>
     <IconButton size="sm" label="Statistics" class="@5xl:hidden" pressed={show_stats} onclick={() => (show_stats = !show_stats)}>
       <ChartBarIcon weight={show_stats ? "fill" : "bold"} />
     </IconButton>
-    <Button size="sm" variant="primary" onclick={() => start_over()}>New puzzle</Button>
+    <Button size="sm" variant="primary" class="hidden @md:inline-flex" onclick={() => start_over()}>New puzzle</Button>
+    <Button size="sm" variant="primary" class="@md:hidden" onclick={() => start_over()}>New</Button>
   </Toolbar>
 
   <div class="relative grid min-h-0 @5xl:grid-cols-[1fr_18rem]">
     <div class="area min-h-0 overflow-hidden p-2 select-none [-webkit-touch-callout:none] @md:p-4">
-      <div class="play">
+      <div class="play" style:--n={n}>
         <div class="meta flex items-baseline gap-2 px-0.5 text-ui">
           <span class="font-medium">{label}</span>
           {#if game.hints}<span class="text-foreground/65">· {hint_note}</span>{/if}
@@ -368,13 +409,13 @@
         <div
           bind:this={board_element}
           role="grid"
-          aria-label="Sudoku. Arrows move, 1 to 9 places, Shift with a digit or N for notes, Backspace clears"
+          aria-label="Sudoku. Arrows move, 1 to {n} places, Shift with a digit or N for notes, Backspace clears"
           class="board relative grid overflow-hidden rounded-md border-2 border-foreground/55 bg-background"
         >
-          {#each { length: 9 }, row (row)}
+          {#each { length: n }, row (row)}
             <div role="row" class="contents">
-              {#each { length: 9 }, col (col)}
-                {@const index = row * 9 + col}
+              {#each { length: n }, col (col)}
+                {@const index = row * n + col}
                 {@const value = values[index]}
                 <button
                   bind:this={cell_elements[index]}
@@ -391,13 +432,13 @@
                   {#if value}
                     <span class="digit leading-none">{value}</span>
                   {:else if game.notes[index]}
-                    <span class="notes grid size-full grid-cols-3 grid-rows-3 p-[6%]" aria-hidden="true">
-                      {#each DIGITS as digit (digit)}
+                    <span class={cn("notes grid size-full grid-cols-3 p-[6%]", n === 9 ? "grid-rows-3" : "grid-rows-2")} aria-hidden="true">
+                      {#each digits as digit (digit)}
                         {@const noted = (game.notes[index] & bit(digit)) !== 0}
                         <span
                           class={cn(
                             "grid place-items-center leading-none font-medium tabular-nums",
-                            noted && focus_digit === digit ? "rounded-full bg-primary/25 font-bold text-foreground" : "text-foreground/65"
+                            noted && focus_digit === digit ? "aspect-square self-center rounded-full bg-primary/25 font-bold text-foreground" : "text-foreground/65"
                           )}
                         >
                           {noted ? digit : ""}
@@ -455,8 +496,8 @@
           </div>
 
           <div class="pad grid gap-1" role="group" aria-label="Digits">
-            {#each DIGITS as digit (digit)}
-              {@const left = 9 - counts[digit]}
+            {#each digits as digit (digit)}
+              {@const left = n - counts[digit]}
               <button
                 type="button"
                 class={cn(
@@ -488,7 +529,7 @@
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
       <Grabber class="-mt-2 mb-2 @5xl:hidden" />
-      <Section title="Statistics" description="Puzzles solved per difficulty. Best times count only solves without hints.">
+      <Section title="Statistics · {SIZE_LABELS[size]}" description="Puzzles solved per difficulty. Best times count only solves without hints.">
         {#snippet actions()}
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>
         {/snippet}
@@ -506,9 +547,9 @@
   </div>
 
   <StatusBar>
-    <span class="shrink-0 font-mono tabular-nums">{filled}/81</span>
+    <span class="shrink-0 font-mono tabular-nums">{filled}/{shape.cells}</span>
     <span aria-live="polite">{status}</span>
-    <span class="hidden @2xl:inline">1–9 place · Shift+digit or N notes · H hint</span>
+    <span class="hidden @2xl:inline">1–{n} place · Shift+digit or N notes · H hint</span>
   </StatusBar>
 </div>
 
@@ -524,7 +565,7 @@
     --tools: 3.25rem;
     --board: min(100cqw, 100cqh - var(--meta) - var(--tools) - 3rem - 3 * var(--gap), 40rem);
     --key: clamp(3rem, 100cqh - var(--meta) - var(--tools) - var(--board) - 3 * var(--gap), 5rem);
-    --cell: calc(var(--board) / 9);
+    --cell: calc(var(--board) / var(--n));
     display: grid;
     height: 100%;
     grid-template-columns: var(--board);
@@ -541,8 +582,8 @@
 
   .board {
     grid-area: board;
-    grid-template-columns: repeat(9, 1fr);
-    grid-template-rows: repeat(9, 1fr);
+    grid-template-columns: repeat(var(--n), 1fr);
+    grid-template-rows: repeat(var(--n), 1fr);
   }
 
   .controls {
@@ -556,7 +597,7 @@
   }
 
   .pad {
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(var(--n), 1fr);
     height: var(--key);
   }
 

@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.49.0",
+    date: "2026-10-22",
+    title: "Mini Sudoku",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["sudoku", "game-hub"],
+        text: "Sudoku comes in a quick 6×6 size with 2×3 boxes and digits 1 to 6, at every difficulty and with its own daily puzzle in Game Hub.",
+      },
+    ],
+  },
+  {
     version: "3.48.0",
     date: "2026-10-22",
     title: "A locked journal",

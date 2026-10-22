@@ -162,6 +162,7 @@ describe("per-mode dailies", () => {
   it("labels a mode in sentence case", () => {
     expect(mode_label("recall")).toBe("Recall");
     expect(mode_label("odd-one-out")).toBe("Odd one out");
+    expect(mode_label("6x6")).toBe("6×6");
   });
 
   it("lists one row per mode, in the record's order, beside one-daily games", () => {

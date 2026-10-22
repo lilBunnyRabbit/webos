@@ -1,7 +1,68 @@
 import { create_rng, shuffle, type Rng } from "$lib/core/utils/random";
+import { Size, SIZES } from "./size";
 
-/** Cells are row-major 0..80; a value is 1..9, 0 is blank. Candidate sets are 9-bit masks, bit `d - 1` for digit d. */
-export const ALL = 0x1ff;
+export { Size, SIZES };
+
+/**
+ * Cells are row-major `0..cells - 1`; a value is `1..size`, 0 is blank. Candidate sets are masks, bit `d - 1` for
+ * digit d. A size is its config (side, box rows, box columns); everything else is precomputed from it once.
+ */
+export interface SizeConfig {
+  size: number;
+  box_rows: number;
+  box_cols: number;
+}
+
+export interface Shape extends SizeConfig {
+  cells: number;
+  all: number;
+  row: readonly number[];
+  col: readonly number[];
+  box: readonly number[];
+  /** Rows `0..size - 1`, then columns, then boxes. */
+  units: readonly (readonly number[])[];
+  peers: readonly (readonly number[])[];
+}
+
+function make_shape({ size, box_rows, box_cols }: SizeConfig): Shape {
+  const cells = size * size;
+  const per_band = size / box_cols;
+  const box_index = (cell: number) =>
+    Math.floor(Math.floor(cell / size) / box_rows) * per_band + Math.floor((cell % size) / box_cols);
+  const row = Array.from({ length: cells }, (_, cell) => Math.floor(cell / size));
+  const col = Array.from({ length: cells }, (_, cell) => cell % size);
+  const box = Array.from({ length: cells }, (_, cell) => box_index(cell));
+  const units = [
+    ...Array.from({ length: size }, (_, r) => Array.from({ length: size }, (_, c) => r * size + c)),
+    ...Array.from({ length: size }, (_, c) => Array.from({ length: size }, (_, r) => r * size + c)),
+    ...Array.from({ length: size }, (_, b) =>
+      Array.from(
+        { length: size },
+        (_, i) =>
+          (Math.floor(b / per_band) * box_rows + Math.floor(i / box_cols)) * size + (b % per_band) * box_cols + (i % box_cols)
+      )
+    ),
+  ];
+  const peers = Array.from({ length: cells }, (_, cell) => {
+    const set = new Set([...units[row[cell]], ...units[size + col[cell]], ...units[2 * size + box[cell]]]);
+    set.delete(cell);
+    return [...set];
+  });
+  return { size, box_rows, box_cols, cells, all: (1 << size) - 1, row, col, box, units, peers };
+}
+
+export const SHAPES: Record<Size, Shape> = {
+  [Size.NINE]: make_shape({ size: 9, box_rows: 3, box_cols: 3 }),
+  [Size.SIX]: make_shape({ size: 6, box_rows: 2, box_cols: 3 }),
+};
+
+export function shape_of(values: readonly number[]): Shape {
+  return values.length === SHAPES[Size.SIX].cells ? SHAPES[Size.SIX] : SHAPES[Size.NINE];
+}
+
+/** The classic grid's tables, which the 9×9 tests read directly. */
+export const ALL = SHAPES[Size.NINE].all;
+export const PEERS = SHAPES[Size.NINE].peers;
 
 export const Tier = { SINGLES: 1, BASIC: 2, ADVANCED: 3, BEYOND: 4 } as const;
 export type Tier = (typeof Tier)[keyof typeof Tier];
@@ -24,31 +85,13 @@ export type Technique = (typeof Technique)[keyof typeof Technique];
 
 export interface Puzzle {
   seed: number;
-    givens: readonly number[];
+  givens: readonly number[];
   solution: readonly number[];
-    tier: Tier;
+  tier: Tier;
 }
 
-export const row_of = (cell: number) => Math.floor(cell / 9);
-export const col_of = (cell: number) => cell % 9;
-export const box_of = (cell: number) => Math.floor(cell / 27) * 3 + Math.floor((cell % 9) / 3);
-
-export const UNITS: readonly (readonly number[])[] = [
-  ...Array.from({ length: 9 }, (_, r) => Array.from({ length: 9 }, (_, c) => r * 9 + c)),
-  ...Array.from({ length: 9 }, (_, c) => Array.from({ length: 9 }, (_, r) => r * 9 + c)),
-  ...Array.from({ length: 9 }, (_, b) =>
-    Array.from({ length: 9 }, (_, i) => (Math.floor(b / 3) * 3 + Math.floor(i / 3)) * 9 + (b % 3) * 3 + (i % 3))
-  ),
-];
-
-export const PEERS: readonly (readonly number[])[] = Array.from({ length: 81 }, (_, cell) => {
-  const peers = new Set([...UNITS[row_of(cell)], ...UNITS[9 + col_of(cell)], ...UNITS[18 + box_of(cell)]]);
-  peers.delete(cell);
-  return [...peers];
-});
-
-export const sees = (a: number, b: number) =>
-  a !== b && (row_of(a) === row_of(b) || col_of(a) === col_of(b) || box_of(a) === box_of(b));
+const sees = (shape: Shape, a: number, b: number) =>
+  a !== b && (shape.row[a] === shape.row[b] || shape.col[a] === shape.col[b] || shape.box[a] === shape.box[b]);
 
 const POPCOUNT = Uint8Array.from({ length: 512 }, (_, mask) => {
   let count = 0;
@@ -66,11 +109,12 @@ export function digits_of(mask: number): number[] {
 const lowest_digit = (mask: number) => 32 - Math.clz32(mask & -mask);
 
 export function candidates(values: readonly number[]): number[] {
+  const { peers, all } = shape_of(values);
   return values.map((value, cell) => {
     if (value) return 0;
     let used = 0;
-    for (const peer of PEERS[cell]) if (values[peer]) used |= bit(values[peer]);
-    return ALL & ~used;
+    for (const peer of peers[cell]) if (values[peer]) used |= bit(values[peer]);
+    return all & ~used;
   });
 }
 
@@ -79,14 +123,15 @@ export function candidates(values: readonly number[]): number[] {
  * with `rng` the digits are tried in random order, which is how a full grid is drawn.
  */
 function search(grid: number[], limit: number, rng?: Rng): { count: number; first: number[] | null } {
-  const rows = new Int32Array(9);
-  const cols = new Int32Array(9);
-  const boxes = new Int32Array(9);
-  for (let cell = 0; cell < 81; cell++) {
+  const { size, cells, all, row, col, box } = shape_of(grid);
+  const rows = new Int32Array(size);
+  const cols = new Int32Array(size);
+  const boxes = new Int32Array(size);
+  for (let cell = 0; cell < cells; cell++) {
     const value = grid[cell];
     if (!value) continue;
     const mask = bit(value);
-    const [r, c, b] = [row_of(cell), col_of(cell), box_of(cell)];
+    const [r, c, b] = [row[cell], col[cell], box[cell]];
     if ((rows[r] | cols[c] | boxes[b]) & mask) return { count: 0, first: null };
     rows[r] |= mask;
     cols[c] |= mask;
@@ -99,15 +144,17 @@ function search(grid: number[], limit: number, rng?: Rng): { count: number; firs
     let best = -1;
     let best_mask = 0;
     let best_count = 10;
-    for (let cell = 0; cell < 81; cell++) {
-      if (grid[cell]) continue;
-      const mask = ALL & ~(rows[row_of(cell)] | cols[col_of(cell)] | boxes[box_of(cell)]);
-      const n = POPCOUNT[mask];
-      if (n < best_count) {
-        best = cell;
-        best_mask = mask;
-        best_count = n;
-        if (n <= 1) break;
+    scan: for (let r = 0, cell = 0; r < size; r++) {
+      for (let c = 0; c < size; c++, cell++) {
+        if (grid[cell]) continue;
+        const mask = all & ~(rows[r] | cols[c] | boxes[box[cell]]);
+        const n = POPCOUNT[mask];
+        if (n < best_count) {
+          best = cell;
+          best_mask = mask;
+          best_count = n;
+          if (n <= 1) break scan;
+        }
       }
     }
     if (best < 0) {
@@ -118,7 +165,7 @@ function search(grid: number[], limit: number, rng?: Rng): { count: number; firs
     if (!best_mask) return false;
     const digits = digits_of(best_mask);
     if (rng) shuffle(digits, rng);
-    const [r, c, b] = [row_of(best), col_of(best), box_of(best)];
+    const [r, c, b] = [row[best], col[best], box[best]];
     for (const digit of digits) {
       const mask = bit(digit);
       grid[best] = digit;
@@ -146,14 +193,14 @@ export function solve(values: readonly number[]): number[] | null {
   return search([...values], 1).first;
 }
 
-export function full_grid(rng: Rng): number[] {
-  return search(new Array(81).fill(0), 1, rng).first!;
+export function full_grid(rng: Rng, size: Size = Size.NINE): number[] {
+  return search(new Array(SHAPES[size].cells).fill(0), 1, rng).first!;
 }
 
 export interface Step {
   technique: Technique;
   tier: Tier;
-    place?: { cell: number; digit: number };
+  place?: { cell: number; digit: number };
 }
 
 function* combinations<T>(items: readonly T[], size: number, start = 0, picked: T[] = []): Generator<T[]> {
@@ -167,10 +214,12 @@ function* combinations<T>(items: readonly T[], size: number, start = 0, picked: 
 }
 
 class Logic {
+  readonly shape: Shape;
   values: number[];
   cands: number[];
 
   constructor(values: readonly number[]) {
+    this.shape = shape_of(values);
     this.values = [...values];
     this.cands = candidates(values);
   }
@@ -178,10 +227,10 @@ class Logic {
   place(cell: number, digit: number) {
     this.values[cell] = digit;
     this.cands[cell] = 0;
-    for (const peer of PEERS[cell]) this.cands[peer] &= ~bit(digit);
+    for (const peer of this.shape.peers[cell]) this.cands[peer] &= ~bit(digit);
   }
 
-    strip(cells: Iterable<number>, mask: number): boolean {
+  strip(cells: Iterable<number>, mask: number): boolean {
     let changed = false;
     for (const cell of cells) {
       if (this.cands[cell] & mask) {
@@ -196,12 +245,12 @@ class Logic {
     return this.values.every(Boolean);
   }
 
-    broken(): boolean {
+  broken(): boolean {
     return this.values.some((value, cell) => !value && !this.cands[cell]);
   }
 
   naked_single(): Step | null {
-    for (let cell = 0; cell < 81; cell++) {
+    for (let cell = 0; cell < this.shape.cells; cell++) {
       if (!this.values[cell] && POPCOUNT[this.cands[cell]] === 1) {
         const digit = lowest_digit(this.cands[cell]);
         this.place(cell, digit);
@@ -212,10 +261,11 @@ class Logic {
   }
 
   hidden_single(): Step | null {
+    const { size, units } = this.shape;
     // Boxes first: that's where people scan for them.
-    for (let u = 0; u < 27; u++) {
-      const unit = UNITS[(u + 18) % 27];
-      for (let digit = 1; digit <= 9; digit++) {
+    for (let u = 0; u < 3 * size; u++) {
+      const unit = units[(u + 2 * size) % (3 * size)];
+      for (let digit = 1; digit <= size; digit++) {
         let spot = -1;
         let n = 0;
         for (const cell of unit) {
@@ -234,37 +284,38 @@ class Logic {
   }
 
   intersections(): Step | null {
-    for (let box = 0; box < 9; box++) {
-      const box_cells = UNITS[18 + box];
-      for (let digit = 1; digit <= 9; digit++) {
+    const { size, units, row, col, box } = this.shape;
+    for (let b = 0; b < size; b++) {
+      const box_cells = units[2 * size + b];
+      for (let digit = 1; digit <= size; digit++) {
         const spots = box_cells.filter((cell) => this.cands[cell] & bit(digit));
         if (spots.length < 2) continue;
         for (const [line, offset] of [
-          [row_of, 0],
-          [col_of, 9],
+          [row, 0],
+          [col, size],
         ] as const) {
-          const index = line(spots[0]);
-          if (!spots.every((cell) => line(cell) === index)) continue;
-          const others = UNITS[offset + index].filter((cell) => box_of(cell) !== box);
+          const index = line[spots[0]];
+          if (!spots.every((cell) => line[cell] === index)) continue;
+          const others = units[offset + index].filter((cell) => box[cell] !== b);
           if (this.strip(others, bit(digit))) return { technique: Technique.POINTING, tier: Tier.BASIC };
         }
       }
     }
-    for (let unit = 0; unit < 18; unit++) {
-      for (let digit = 1; digit <= 9; digit++) {
-        const spots = UNITS[unit].filter((cell) => this.cands[cell] & bit(digit));
+    for (let unit = 0; unit < 2 * size; unit++) {
+      for (let digit = 1; digit <= size; digit++) {
+        const spots = units[unit].filter((cell) => this.cands[cell] & bit(digit));
         if (spots.length < 2) continue;
-        const box = box_of(spots[0]);
-        if (!spots.every((cell) => box_of(cell) === box)) continue;
-        const others = UNITS[18 + box].filter((cell) => !UNITS[unit].includes(cell));
+        const b = box[spots[0]];
+        if (!spots.every((cell) => box[cell] === b)) continue;
+        const others = units[2 * size + b].filter((cell) => !units[unit].includes(cell));
         if (this.strip(others, bit(digit))) return { technique: Technique.BOX_LINE, tier: Tier.BASIC };
       }
     }
     return null;
   }
 
-    naked(size: number, technique: Technique, tier: Tier): Step | null {
-    for (const unit of UNITS) {
+  naked(size: number, technique: Technique, tier: Tier): Step | null {
+    for (const unit of this.shape.units) {
       const open = unit.filter((cell) => {
         const n = POPCOUNT[this.cands[cell]];
         return n >= 2 && n <= size;
@@ -279,10 +330,10 @@ class Logic {
     return null;
   }
 
-    hidden(size: number, technique: Technique, tier: Tier): Step | null {
-    for (const unit of UNITS) {
+  hidden(size: number, technique: Technique, tier: Tier): Step | null {
+    for (const unit of this.shape.units) {
       const spots = new Map<number, number[]>();
-      for (let digit = 1; digit <= 9; digit++) {
+      for (let digit = 1; digit <= this.shape.size; digit++) {
         const cells = unit.filter((cell) => this.cands[cell] & bit(digit));
         if (cells.length >= 2 && cells.length <= size) spots.set(digit, cells);
       }
@@ -290,35 +341,36 @@ class Logic {
         const cells = new Set(group.flatMap((digit) => spots.get(digit)!));
         if (cells.size !== size) continue;
         const keep = group.reduce((acc, digit) => acc | bit(digit), 0);
-        if (this.strip(cells, ALL & ~keep)) return { technique, tier };
+        if (this.strip(cells, this.shape.all & ~keep)) return { technique, tier };
       }
     }
     return null;
   }
 
-    fish(size: number, technique: Technique): Step | null {
-    for (let digit = 1; digit <= 9; digit++) {
+  fish(size: number, technique: Technique): Step | null {
+    const { size: n, units } = this.shape;
+    for (let digit = 1; digit <= n; digit++) {
       for (const [base, cover] of [
-        [0, 9],
-        [9, 0],
+        [0, n],
+        [n, 0],
       ]) {
         const lines: { index: number; spots: number }[] = [];
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < n; i++) {
           let spots = 0;
-          UNITS[base + i].forEach((cell, j) => {
+          units[base + i].forEach((cell, j) => {
             if (this.cands[cell] & bit(digit)) spots |= 1 << j;
           });
-          const n = POPCOUNT[spots];
-          if (n >= 2 && n <= size) lines.push({ index: i, spots });
+          const count = POPCOUNT[spots];
+          if (count >= 2 && count <= size) lines.push({ index: i, spots });
         }
         for (const group of combinations(lines, size)) {
           const union = group.reduce((acc, line) => acc | line.spots, 0);
           if (POPCOUNT[union] !== size) continue;
           const own = new Set(group.map((line) => line.index));
           const victims: number[] = [];
-          for (let j = 0; j < 9; j++) {
+          for (let j = 0; j < n; j++) {
             if (!(union & (1 << j))) continue;
-            UNITS[cover + j].forEach((cell, i) => {
+            units[cover + j].forEach((cell, i) => {
               if (!own.has(i)) victims.push(cell);
             });
           }
@@ -334,10 +386,11 @@ class Logic {
    * XYZ-Wing: the pivot is {a,b,c} and could be c itself, so the victims must see it too.
    */
   wings(xyz: boolean): Step | null {
-    for (let pivot = 0; pivot < 81; pivot++) {
+    const { shape } = this;
+    for (let pivot = 0; pivot < shape.cells; pivot++) {
       const pm = this.cands[pivot];
       if (POPCOUNT[pm] !== (xyz ? 3 : 2)) continue;
-      const pincers = PEERS[pivot].filter((cell) => {
+      const pincers = shape.peers[pivot].filter((cell) => {
         const m = this.cands[cell];
         return POPCOUNT[m] === 2 && (xyz ? (m & pm) === m : POPCOUNT[m & pm] === 1);
       });
@@ -348,14 +401,16 @@ class Logic {
         const z = ma & mb;
         if (POPCOUNT[z] !== 1) continue;
         if (xyz ? (ma | mb) !== pm : (z & pm) !== 0 || (ma | mb) !== (pm | z)) continue;
-        const victims = PEERS[a].filter((cell) => cell !== pivot && sees(cell, b) && (!xyz || sees(cell, pivot)));
+        const victims = shape.peers[a].filter(
+          (cell) => cell !== pivot && sees(shape, cell, b) && (!xyz || sees(shape, cell, pivot))
+        );
         if (this.strip(victims, z)) return { technique: xyz ? Technique.XYZ_WING : Technique.Y_WING, tier: Tier.ADVANCED };
       }
     }
     return null;
   }
 
-    step(max: Tier): Step | null {
+  step(max: Tier): Step | null {
     const steps: [Tier, () => Step | null][] = [
       [Tier.SINGLES, () => this.hidden_single()],
       [Tier.SINGLES, () => this.naked_single()],
@@ -397,7 +452,7 @@ export function grade(values: readonly number[], max: Tier = Tier.ADVANCED): Tie
 export interface Deduction {
   cell: number;
   digit: number;
-    technique: Technique;
+  technique: Technique;
 }
 
 export function next_deduction(values: readonly number[]): Deduction | null {
@@ -417,13 +472,13 @@ export type Difficulty = (typeof Difficulty)[keyof typeof Difficulty];
 export const DIFFICULTIES: readonly Difficulty[] = Object.values(Difficulty);
 
 interface Recipe {
-    tier: Tier;
-  /** Stop removing at this many givens, so easy ones stay gentle. */
+  tier: Tier;
+  /** Stop removing at this share of the cells, so easy ones stay gentle: 36 givens on 9×9, 16 on 6×6. */
   floor: number;
 }
 
 const RECIPES: Record<Difficulty, Recipe> = {
-  easy: { tier: Tier.SINGLES, floor: 36 },
+  easy: { tier: Tier.SINGLES, floor: 4 / 9 },
   medium: { tier: Tier.BASIC, floor: 0 },
   hard: { tier: Tier.ADVANCED, floor: 0 },
   expert: { tier: Tier.BEYOND, floor: 0 },
@@ -433,15 +488,18 @@ const RECIPES: Record<Difficulty, Recipe> = {
 export const ATTEMPTS = 60;
 
 function carve(solution: readonly number[], recipe: Recipe, rng: Rng): number[] {
+  const cells = solution.length;
+  const floor = Math.round(cells * recipe.floor);
   const givens = [...solution];
   const order = shuffle(
-    Array.from({ length: 41 }, (_, i) => i),
+    Array.from({ length: Math.ceil(cells / 2) }, (_, i) => i),
     rng
   );
-  let left = 81;
+  let left = cells;
   for (const cell of order) {
-    const pair = cell === 40 ? [40] : [cell, 80 - cell];
-    if (left - pair.length < recipe.floor) continue;
+    const mirror = cells - 1 - cell;
+    const pair = cell === mirror ? [cell] : [cell, mirror];
+    if (left - pair.length < floor) continue;
     for (const c of pair) givens[c] = 0;
     // Logic finishing proves the puzzle unique; past the techniques only the brute-force count can.
     const keeps =
@@ -457,12 +515,12 @@ function carve(solution: readonly number[], recipe: Recipe, rng: Rng): number[] 
  * difficulty's techniques. Retried until the hardest technique needed is exactly the difficulty's; when the attempts
  * run out the closest one wins.
  */
-export function generate(difficulty: Difficulty, seed: number): Puzzle {
+export function generate(difficulty: Difficulty, seed: number, size: Size = Size.NINE): Puzzle {
   const recipe = RECIPES[difficulty];
   const rng = create_rng(seed);
   let best: Puzzle | null = null;
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    const solution = full_grid(rng);
+    const solution = full_grid(rng, size);
     const givens = carve(solution, recipe, rng);
     const tier = grade(givens);
     const puzzle: Puzzle = { seed, givens, solution, tier };
