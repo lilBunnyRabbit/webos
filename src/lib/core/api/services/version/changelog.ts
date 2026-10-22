@@ -7,12 +7,17 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.56.0",
     date: "2026-10-22",
-    title: "Fit under a size",
+    title: "Fit under a size, convert to anything",
     changes: [
       {
         kind: NEW,
         apps: ["image-tools"],
         text: "Image Tools can make a copy of a picture that fits under an upload limit, like 1 MB, lowering the quality first and shrinking it only when it has to.",
+      },
+      {
+        kind: NEW,
+        apps: ["image-tools"],
+        text: "Image Tools can convert a picture to every format at once, from PNG, JPEG, WebP, AVIF and JPEG XL to GIF, BMP, ICO, TIFF, QOI, TGA and PPM, and save any of them or all as a zip.",
       },
     ],
   },

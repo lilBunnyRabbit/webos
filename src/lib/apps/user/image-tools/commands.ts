@@ -125,6 +125,20 @@ export default {
       run: async (context) => (await logic()).fit(context),
     }),
     define_command({
+      id: "image convert-all",
+      description: "Write an image in every format WebOS can, into a folder next to it, or one zip with --zip",
+      args: z.object({
+        path: arg.path(),
+        zip: z.boolean().default(false).describe("One zip of every format instead of a folder"),
+      }),
+      positional: ["path"],
+      yields: "file",
+      complete: complete_images,
+      async *run(context) {
+        yield* await (await logic()).convert_all(context);
+      },
+    }),
+    define_command({
       id: "imgdiff",
       description: "Compare two images: how much changed, in how many regions, and the offset and scale between them",
       args: z.object({

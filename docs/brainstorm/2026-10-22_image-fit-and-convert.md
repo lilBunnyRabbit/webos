@@ -25,7 +25,7 @@ Feasibility (measured, Chromium 153, 10.7 MP photo): JPEG encode ~50 ms, WebP ~0
 ## Action items
 - [x] refactor: kit encoder table (move GIF, ICO, BMP, quantizer; Hopsprite, Icon Pack, Video Tools, Image Tools, Format Lab import from it).
 - [x] feat: Fit section, `image fit`, `squash --under`.
-- [ ] feat: Convert section, `image convert-all`.
+- [x] feat: Convert section, `image convert-all`.
 
 ## Next session topics
 - MozJPEG (smaller JPEGs at equal quality) if the browser encoder isn't enough.

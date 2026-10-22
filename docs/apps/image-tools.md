@@ -4,7 +4,7 @@ Id `image-tools` · Source: `src/lib/apps/user/image-tools/`, writers in `src/li
 
 ## What it does
 
-One app with a section per small image job: remove background, join, trim, split, sprites, atlas, patch, redact, squash, fit under a size, compare, poster print, test image. This page covers the parts with non-obvious internals: Fit (getting an image under an upload limit while keeping as much quality as it can) and the formats it writes through the kit's encoder table. The other sections are forms over canvas operations.
+One app with a section per small image job: remove background, join, trim, split, sprites, atlas, patch, redact, squash, fit under a size, convert, compare, poster print, test image. This page covers the parts with non-obvious internals: Fit (getting an image under an upload limit while keeping as much quality as it can), Convert (one image in every format) and the formats both write through the kit's encoder table. The other sections are forms over canvas operations.
 
 ## How it works
 
@@ -38,6 +38,14 @@ Measured on a generated 2400 × 1600 PNG (gradient, 4000 discs, grain; 5.19 MB),
 
 The section decodes the result for the after side of the swipe compare (`SwipeCompare`, the same stage as Compare). Save writes `{name}-fit.{ext}` next to the original, or to Pictures for a dropped or pasted image; Save as asks. Copy puts the picture on the clipboard as PNG, the only image type the async clipboard carries, so the pasted file's size is up to the app that receives it.
 
+### Convert
+
+`convert_all` (`convert-job.ts:36`) is one task: a Read step decodes the image once (`read_image`, so JPEG XL and AVIF sources work), then a parallel group with a sub-task per format in `ENCODER_FORMATS` order. The codec worker pool (at most 4 workers) caps how many encode at once. A format that fails (a GIF or TGA over 65,535 px a side, say) records its error on its card and the others carry on; Cancel stops them all. Lossy formats use the kit's default quality (JPEG 82, WebP 80, AVIF 60, JPEG XL 75).
+
+Each card shows the size, the change against the source file (`format_share`, shared with Squash) and warnings from `convert_warnings` (`convert.ts:14`): transparency flattened (JPEG, PPM), on-or-off transparency and 256 colours (GIF), shrunk to 256 px (ICO), and "N× the original" from four times the source's size up. An animated source gets one banner: first frame only. Save writes `{stem}{ext}` next to the original (Pictures for a dropped or pasted image); Save all as zip writes `{stem}-formats.zip` (`zip_cards`, `convert-job.ts:115`, deflate through the core zip writer). The section starts converting as soon as an image arrives; a new image cancels the running job.
+
+Measured on the same 2400 × 1600 PNG (4.95 MB in that run), Chromium in Playwright, all twelve formats in under 3 s: JPEG 1.00 MB, WebP 989 KB, AVIF 648 KB, JPEG XL 398 KB, PNG 4.95 MB, GIF 2.61 MB, ICO 116 KB, QOI 7.73 MB, BMP, TIFF, TGA and PPM 10.99 MB each (sizes in binary units, as the section shows them).
+
 ### Formats written
 
 Through the kit's encoder table (`kit/utils/codecs/encoders.ts`, [app API](../system/app-api.md#image-codecs-kitutilscodecs)):
@@ -58,7 +66,8 @@ Through the kit's encoder table (`kit/utils/codecs/encoders.ts`, [app API](../sy
 
 - `app.image-tools.fit`: the Fit section's limit (a preset or `custom`), the custom text, format and max side.
 - Props: `section` (`fit` opens Fit), `path` (the image).
-- Output names: `{stem}-fit{ext}` (Fit, `image fit`), `{stem}-squashed{ext}` (Squash, `squash --under`).
+- Output names: `{stem}-fit{ext}` (Fit, `image fit`), `{stem}-squashed{ext}` (Squash, `squash --under`), `{stem}{ext}`, `{stem}-formats/` and `{stem}-formats.zip` (Convert, `image convert-all`).
+- Convert keeps nothing between visits.
 
 ## Shell
 
@@ -66,6 +75,7 @@ Through the kit's encoder table (`kit/utils/codecs/encoders.ts`, [app API](../sy
 |---------|------|
 | `image fit <path> <size> [-f keep\|jpeg\|webp\|avif\|jxl] [--max px]` | Writes a copy under the limit next to the original; yields the `file`. Refuses to write when nothing fits |
 | `squash <path…> --under <size> [-q ceiling] [--floor 50]` | Squash with every copy fitted under the limit (WebP or JPEG); one task per image |
+| `image convert-all <path> [--zip]` | Writes every format into a new `{stem}-formats` folder next to the image, or one `{stem}-formats.zip` with `--zip`; yields the `file`s. Formats that fail are skipped; it errors only when none was written |
 
 ## Dependencies & licences
 
@@ -81,5 +91,5 @@ None beyond the kit codecs (jSquash, Apache-2.0, for AVIF and JPEG XL). MozJPEG,
 
 ## Decisions
 
-- [Fit and convert brainstorm](../brainstorm/2026-10-22_image-fit-and-convert.md): Fit as its own section, the search, AVIF and JPEG XL allowed as slow tasks, no new dependency.
+- [Fit and convert brainstorm](../brainstorm/2026-10-22_image-fit-and-convert.md): Fit as its own section, the search, AVIF and JPEG XL allowed as slow tasks, Convert in Image Tools rather than Format Lab, no new dependency.
 - [ADR-064](../adrs/064-kit-encoder-table.md): the encoder table in the kit.

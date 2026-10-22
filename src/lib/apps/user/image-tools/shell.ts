@@ -56,6 +56,8 @@ import { images_in, squash_images, type SquashSource } from "./squash-job";
 import { SQUASH_FORMAT_NAMES, type SquashFormatName } from "./squash";
 import { FIT_QUALITY, format_limit, parse_limit, type FitFormat } from "./fit";
 import { run_fit } from "./fit-job";
+import { convert_all as convert_every, zip_cards } from "./convert-job";
+import { converted_name, formats_folder_name, formats_zip_name } from "./convert";
 import { ENCODER_INFO } from "$kit/utils/codecs/formats";
 
 const APP_ID = "image-tools";
@@ -458,4 +460,36 @@ export async function fit({ args, session, signal, elevated }: CommandContext<Fi
     content: result.blob,
   });
   return written(child_path(folder, handle.name));
+}
+
+export async function convert_all({
+  args,
+  session,
+  signal,
+  elevated,
+}: CommandContext<{ path: string; zip: boolean }>): Promise<FileValue[]> {
+  const path = resolve_path(session.cwd, args.path);
+  const file = await files().get_file(path);
+  if (!file) throw new ShellError(`${path}: no such file`);
+  if (!is_image_file(file) && !/\.jxl$/i.test(file.name)) throw new ShellError(`${path}: not an image`);
+  const folder = parent_path(path);
+  assert_writable(child_path(folder, "x"), elevated);
+  const outcome = await convert_every(APP_ID, { name: file.name, path, file }, { signal });
+  if (outcome.status !== TaskJobStatus.DONE)
+    throw new ShellError(outcome.status === TaskJobStatus.CANCELLED ? "stopped" : (outcome.error ?? "failed"));
+  const cards = outcome.cards.filter((card) => card.blob);
+  if (!cards.length) throw new ShellError("no format could be written");
+  const directory = await folder_at(folder);
+  if (args.zip) {
+    const handle = await files().create_file(directory, formats_zip_name(file.name), { content: await zip_cards(file.name, cards) });
+    return [await written(child_path(folder, handle.name))];
+  }
+  const target = await files().create_directory(directory, formats_folder_name(file.name));
+  const target_path = child_path(folder, target.name);
+  const out: FileValue[] = [];
+  for (const card of cards) {
+    const handle = await files().create_file(target, converted_name(file.name, card.format), { content: card.blob! });
+    out.push(await written(child_path(target_path, handle.name)));
+  }
+  return out;
 }
