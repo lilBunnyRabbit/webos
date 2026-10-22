@@ -1,6 +1,6 @@
 import { picture_data_url } from "$kit/utils/picture";
 import { untrack } from "svelte";
-import { FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND, type EditorState, type LexicalEditor } from "lexical";
+import { COLLABORATION_TAG, FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, HISTORIC_TAG, PASTE_TAG, REDO_COMMAND, UNDO_COMMAND, type EditorState, type LexicalEditor } from "lexical";
 import { create_document, empty_editor, VERSION, type EditorJson, type WarrenDocument } from "./format";
 import type { ColourProperty } from "./colour";
 import * as ops from "./lexical";
@@ -10,6 +10,7 @@ import { TableAction, type TableInfo } from "./lexical-table";
 import { Align, page_number_align, PICTURE, type ImageAlign } from "./model";
 import { DEFAULT_PAGE, geometry, type PageSettings } from "./page";
 import { DEFAULT_STYLES, resolve_styles, StyleId, style_overrides, type DocStyles, type StyleSpec } from "./styles";
+import { filter_slash, type SlashCommand, type SlashItem } from "./slash";
 
 export { BlockStyle, LIST_STYLES, TableAction };
 export type { Heading, SelectedImage } from "./lexical";
@@ -35,6 +36,14 @@ export interface PageNumbers {
 }
 
 const CSS_PX_PER_MM = 96 / 25.4;
+
+export interface Slash {
+  zone: Zone;
+  at: ops.SlashAt;
+  query: string;
+}
+
+const SLASH_SKIP = [HISTORIC_TAG, PASTE_TAG, COLLABORATION_TAG, ops.LOAD_TAG];
 
 export interface PictureHooks {
   failed?: (reason: unknown) => void;
@@ -77,6 +86,10 @@ export class WarrenEditor {
   outline = $state.raw<ops.Heading[]>([]);
   goal = $state<number | null>(null);
   adding = $state(0);
+  /** The slash menu, open while a "/" typed at a block start or after a space is followed by a word. */
+  slash = $state.raw<Slash | null>(null);
+  slash_index = $state(0);
+  readonly slash_items = $derived<SlashItem[]>(this.slash ? filter_slash(this.slash.query) : []);
   private history = $state<Record<Zone, { undo: boolean; redo: boolean }>>({
     body: { undo: false, redo: false },
     header: { undo: false, redo: false },
@@ -87,6 +100,7 @@ export class WarrenEditor {
   private readonly disposers: (() => void)[] = [];
   private readonly resets: Record<Zone, () => void>;
   private readonly pictures: PictureHooks;
+  private readonly on_command: (command: SlashCommand) => void;
 
   readonly dirty = $derived(this.revision !== this.saved);
   readonly size = $derived(this.own_size ?? this.styles[style_of(this.block)].size);
@@ -100,9 +114,13 @@ export class WarrenEditor {
     return footer ? { zone: Zone.FOOTER, align: footer } : null;
   });
 
-  /** `smart`: whether typed quotes, dashes and dots become typographic ones, asked on each keystroke. */
-  constructor(on_error: (error: Error) => void, smart: () => boolean = () => true, pictures: PictureHooks = {}) {
+  /**
+   * `smart`: whether typed quotes, dashes and dots become typographic ones, asked on each keystroke. `on_command`: a
+   * slash menu item was picked, after the "/" and its word are gone.
+   */
+  constructor(on_error: (error: Error) => void, smart: () => boolean = () => true, pictures: PictureHooks = {}, on_command: (command: SlashCommand) => void = () => {}) {
     this.pictures = pictures;
+    this.on_command = on_command;
     const create = (zone: Zone, parent?: LexicalEditor) => {
       const built = ops.create_lexical(
         {
@@ -114,11 +132,17 @@ export class WarrenEditor {
             void this.insert_pictures(files, editor);
             return true;
           },
+          on_menu_key: (key, event) => this.menu_key(key, event),
         },
         parent
       );
       this.disposers.push(built.dispose);
-      this.disposers.push(built.editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => this.updated(zone, editorState, dirtyElements.size + dirtyLeaves.size > 0, tags)));
+      this.disposers.push(
+        built.editor.registerUpdateListener(({ editorState, prevEditorState, dirtyElements, dirtyLeaves, tags }) => {
+          this.updated(zone, editorState, dirtyElements.size + dirtyLeaves.size > 0, tags);
+          if (zone === this.active) this.follow_slash(zone, editorState, prevEditorState, tags);
+        })
+      );
       return built;
     };
     const body = create(Zone.BODY);
@@ -174,12 +198,65 @@ export class WarrenEditor {
     this.selected = this.active === Zone.BODY ? format.selected : "";
   }
 
+  private follow_slash(zone: Zone, state: EditorState, previous: EditorState, tags: Set<string>) {
+    const open = this.slash;
+    if (open?.zone === zone) {
+      const query = ops.slash_query(state, open.at);
+      if (query === null) this.close_slash();
+      else if (query !== open.query) {
+        this.slash = { ...open, query };
+        this.slash_index = 0;
+      }
+      return;
+    }
+    if (SLASH_SKIP.some((tag) => tags.has(tag))) return;
+    const at = ops.slash_typed(state, previous);
+    if (!at) return;
+    this.slash = { zone, at, query: "" };
+    this.slash_index = 0;
+  }
+
+  close_slash() {
+    this.slash = null;
+    this.slash_index = 0;
+  }
+
+  /** Runs a slash menu item: the "/" and its word go, then the app does the rest. */
+  pick_slash(index = this.slash_index) {
+    const open = this.slash;
+    const item = this.slash_items[index];
+    if (!open || !item) return;
+    this.close_slash();
+    ops.remove_slash(this.editor_of(open.zone), open.at);
+    this.on_command(item.id);
+  }
+
+  private menu_key(key: ops.MenuKey, event: KeyboardEvent | null): boolean {
+    if (!this.slash) return false;
+    const count = this.slash_items.length;
+    if (key === "escape") this.close_slash();
+    else if (!count) {
+      if (key === "enter" || key === "tab") this.close_slash();
+      return false;
+    } else if (key === "down") this.slash_index = (this.slash_index + 1) % count;
+    else if (key === "up") this.slash_index = (this.slash_index - 1 + count) % count;
+    else this.pick_slash();
+    event?.preventDefault();
+    return true;
+  }
+
+  /** The key of the block the caret is in, for focus mode. */
+  current_block(): string | null {
+    return ops.current_block(this.lexical.getEditorState());
+  }
+
   has(zone: Margin): boolean {
     return (zone === Zone.HEADER ? this.header_json : this.footer_json) !== null;
   }
 
   private activate(zone: Zone) {
     if (this.active === zone) return;
+    this.close_slash();
     this.active = zone;
     this.read(this.target.getEditorState());
   }
@@ -220,6 +297,7 @@ export class WarrenEditor {
     this.load_zone(Zone.HEADER, document.header);
     this.load_zone(Zone.FOOTER, document.footer);
     this.active = Zone.BODY;
+    this.close_slash();
     this.image = null;
     this.json = state.toJSON() as unknown as EditorJson;
     this.outline = ops.outline(state);
@@ -228,6 +306,16 @@ export class WarrenEditor {
     this.styles = resolve_styles(document.styles);
     this.revision = 0;
     this.saved = 0;
+  }
+
+  /** Markdown as a new document; the count of pictures that weren't inside the file. */
+  load_markdown(text: string): number {
+    this.load(create_document());
+    const report = ops.load_markdown(this.lexical, text);
+    this.resets.body();
+    this.json = this.lexical.getEditorState().toJSON() as unknown as EditorJson;
+    this.outline = ops.outline(this.lexical.getEditorState());
+    return report.pictures_left;
   }
 
   load_html(html: string) {

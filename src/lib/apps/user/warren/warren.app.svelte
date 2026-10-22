@@ -18,6 +18,10 @@
     Stack as StackIcon,
     StackPlus as StackPlusIcon,
     CaretDown as CaretDownIcon,
+    CornersIn as CornersInIcon,
+    CornersOut as CornersOutIcon,
+    FileMd as FileMdIcon,
+    Paragraph as ParagraphIcon,
     DotsThree as DotsThreeIcon,
     FileDoc as FileDocIcon,
     FilePdf as FilePdfIcon,
@@ -58,6 +62,11 @@
   import type { FontChoice } from "$lib/core/api/services/settings/type";
   import { count, reading_minutes, repeated_words } from "./words";
   import { report_error } from "$kit/utils/report-error";
+  import { motion_reduced } from "$lib/core/utils/motion";
+  import { is_markdown, MARKDOWN_EXTENSIONS, MARKDOWN_TYPE, to_markdown } from "./markdown";
+  import { draw_marks } from "./marks";
+  import { SlashCommand } from "./slash";
+  import WarrenSlash from "./warren-slash.svelte";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
@@ -72,6 +81,8 @@
   const smart = storage.persisted<boolean>("smart", true, z.boolean());
 
   const units = storage.persisted<"mm" | "in">("units", "mm", z.enum(["mm", "in"]));
+
+  const marks = storage.persisted<boolean>("marks", false, z.boolean());
 
   // Past this the .warren file is slow to open and save, and a phone may run short of memory.
   const LARGE_PICTURES = 5 * 1024 * 1024;
@@ -92,7 +103,8 @@
           message: `Its pictures take ${format_bytes(size)}, so saving and opening slow down. Fewer or smaller pictures keep it quick.`,
         });
       },
-    }
+    },
+    (command) => run_slash(command)
   );
 
   let file_path = $state<string | null>(null);
@@ -256,7 +268,18 @@
 
   $effect(() => win.set_title(file_name));
   $effect(() => win.set_dirty(editor.dirty, { save }));
-  $effect(() => win.on_back(() => (sheet ? ((sheet = null), true) : finding ? ((finding = false), editor.focus(), true) : false)));
+  $effect(() =>
+    win.on_back(() => {
+      if (editor.slash) editor.close_slash();
+      else if (sheet) sheet = null;
+      else if (finding) {
+        finding = false;
+        editor.focus();
+      } else if (focus_mode) focus_mode = false;
+      else return false;
+      return true;
+    })
+  );
 
   async function discard_ok(): Promise<boolean> {
     return !editor.dirty || confirm_discard(win, file_name);
@@ -270,6 +293,10 @@
     try {
       if (file_extension(path) === ".docx") {
         await import_docx(path, id);
+        return;
+      }
+      if (is_markdown(path)) {
+        await import_markdown(path, id);
         return;
       }
       const opened = await read_document(path);
@@ -302,9 +329,25 @@
     }
   }
 
+  // Like a Word file: a new, untitled document named after it.
+  async function import_markdown(path: string, id: number) {
+    const text = await (await read_file(path)).text();
+    if (id !== open_request) return;
+    const left = editor.load_markdown(text);
+    file_path = null;
+    draft = { name: document_file_name(base_name(path)), folder: is_system_path(path) ? "/home/Documents" : parent_path(path) };
+    if (left) {
+      notifications.notify(app_id, {
+        type: NotificationType.WARNING,
+        title: left === 1 ? `A picture in ${base_name(path)} isn't inside the file` : `${left} pictures in ${base_name(path)} aren't inside the file`,
+        message: "Warren doesn't fetch pictures from the web or other files; a web address became a link.",
+      });
+    }
+  }
+
   async function open() {
     if (!(await discard_ok())) return;
-    const chosen = await win.pick_file({ accept: [EXTENSION, ".docx", DOCX_TYPE], start_path: file_path ? parent_path(file_path) : undefined, title: "Open in Warren" });
+    const chosen = await win.pick_file({ accept: [EXTENSION, ".docx", DOCX_TYPE, ...MARKDOWN_EXTENSIONS, MARKDOWN_TYPE], start_path: file_path ? parent_path(file_path) : undefined, title: "Open in Warren" });
     if (chosen) await load(chosen);
   }
 
@@ -349,7 +392,7 @@
     }
   }
 
-  async function picture_menu(event: MouseEvent) {
+  async function picture_menu(event: MouseEvent | { x: number; y: number }) {
     sheet = null;
     const zone = editor.active;
     const choice = await dialogs.menu(
@@ -358,7 +401,7 @@
         { id: "device", label: mobile ? "Choose a picture" : "From this device…", icon: DevicesIcon },
         { id: "files", label: "From files…", icon: FolderOpenIcon },
       ],
-      { anchor: anchor_of(event) }
+      { anchor: event instanceof MouseEvent ? anchor_of(event) : event }
     );
     if (!choice) return;
     let pictures: File[] = [];
@@ -450,9 +493,21 @@
     }
   }
 
-  function export_as(format: "docx" | "pdf") {
+  async function export_markdown() {
+    const path = await win.pick_save({ name: `${stem}.md`, accept: [...MARKDOWN_EXTENSIONS, MARKDOWN_TYPE], start_path: folder, title: "Export as Markdown" });
+    if (!path) return;
+    const target = is_markdown(path) ? path : `${path}.md`;
+    try {
+      await write_file(target, to_markdown(editor.snapshot().editor));
+      notifications.notify(app_id, { title: "Exported as Markdown", message: target });
+    } catch (reason) {
+      report_error(app_id, "Couldn't export the document", reason);
+    }
+  }
+
+  function export_as(format: "docx" | "md" | "pdf") {
     sheet = null;
-    void (format === "docx" ? export_docx() : export_pdf());
+    void (format === "docx" ? export_docx() : format === "md" ? export_markdown() : export_pdf());
   }
 
   function changed(changes: number, word: string) {
@@ -481,6 +536,7 @@
         { id: "save-template", label: "Save as template…", icon: StackPlusIcon },
         { separator: true },
         { id: "docx", label: "Export for Word…", icon: FileDocIcon },
+        { id: "md", label: "Export as Markdown…", icon: FileMdIcon },
         { id: "pdf", label: "Print or save as PDF…", icon: FilePdfIcon, shortcut: "Mod+P" },
       ],
       { anchor: anchor_of(event) }
@@ -491,7 +547,7 @@
     else if (choice === "open") void open();
     else if (choice === "save") void save();
     else if (choice === "save-as") void save_as();
-    else if (choice === "docx" || choice === "pdf") export_as(choice);
+    else if (choice === "docx" || choice === "md" || choice === "pdf") export_as(choice);
   }
 
   function mount_editor(element: HTMLElement) {
@@ -549,6 +605,8 @@
       scoped("subscript", "mod+shift+,", "Subscript", () => editor.toggle_subscript()),
       scoped("superscript", "mod+shift+.", "Superscript", () => editor.toggle_superscript()),
       scoped("clear-formatting", "mod+\\", "Clear formatting", () => editor.clear_formatting()),
+      scoped("focus-mode", "mod+shift+f", "Focus mode", () => (focus_mode = !focus_mode)),
+      scoped("marks", "mod+shift+8", "Show ¶ marks", () => (marks.value = !marks.value)),
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
@@ -593,6 +651,134 @@
     editor.focus();
   }
 
+  const BLOCK_COMMANDS: Partial<Record<SlashCommand, BlockStyle>> = {
+    [SlashCommand.TEXT]: BlockStyle.PARAGRAPH,
+    [SlashCommand.TITLE]: BlockStyle.TITLE,
+    [SlashCommand.H1]: BlockStyle.H1,
+    [SlashCommand.H2]: BlockStyle.H2,
+    [SlashCommand.H3]: BlockStyle.H3,
+    [SlashCommand.BULLETS]: BlockStyle.BULLET,
+    [SlashCommand.NUMBERS]: BlockStyle.NUMBER,
+    [SlashCommand.CHECKLIST]: BlockStyle.CHECK,
+    [SlashCommand.QUOTE]: BlockStyle.QUOTE,
+  };
+
+  let app_root = $state<HTMLElement | null>(null);
+  let desk = $state<HTMLElement | null>(null);
+  let slash_box = $state<{ left: number; top: number; height: number } | null>(null);
+  const slash_anchor = `--warren-slash-${uid}`;
+
+  function run_slash(command: SlashCommand) {
+    const style = BLOCK_COMMANDS[command];
+    if (style) {
+      // A list command on a list of its own kind would take the list off.
+      if (editor.block !== style) editor.set_block(style);
+      return;
+    }
+    if (command === SlashCommand.RULE) editor.insert_rule();
+    else if (command === SlashCommand.PAGE_BREAK) editor.insert_page_break();
+    else if (command === SlashCommand.TABLE) sheet = "table";
+    else if (command === SlashCommand.TEMPLATE) void from_template();
+    else if (command === SlashCommand.PICTURE) {
+      const origin = app_root?.getBoundingClientRect();
+      void picture_menu(slash_box && origin ? { x: origin.left + slash_box.left, y: origin.top + slash_box.top + slash_box.height + 4 } : { x: 0, y: 0 });
+    }
+  }
+
+  // Anchored to the "/" itself, so the menu stays put while the word after it is typed.
+  $effect(() => {
+    const open = editor.slash;
+    const scroller = desk;
+    if (!open || !app_root || !scroller) {
+      slash_box = null;
+      return;
+    }
+    const zone = open.zone === Zone.BODY ? editor.lexical : editor.zones[open.zone];
+    const place = () => {
+      const text = zone.getElementByKey(open.at.key)?.firstChild;
+      if (!(text instanceof Text) || text.length <= open.at.offset || !app_root) return;
+      const range = document.createRange();
+      range.setStart(text, open.at.offset);
+      range.setEnd(text, open.at.offset + 1);
+      const box = range.getBoundingClientRect();
+      const origin = app_root.getBoundingClientRect();
+      slash_box = { left: box.left - origin.left, top: box.top - origin.top, height: box.height };
+    };
+    place();
+    scroller.addEventListener("scroll", place, { passive: true });
+    return () => scroller.removeEventListener("scroll", place);
+  });
+
+  let focus_mode = $state(false);
+
+  // Every block but the caret's is dimmed, and the caret's line is kept in the middle of the desk.
+  $effect(() => {
+    const element = root;
+    const scroller = desk;
+    if (!focus_mode || !element || !scroller) return;
+    let current: HTMLElement | null = null;
+    let frame = 0;
+    const centre = () => {
+      const selection = window.getSelection();
+      if (!selection?.rangeCount || !element.contains(selection.anchorNode)) return;
+      let box = selection.getRangeAt(0).getBoundingClientRect();
+      if (!box.height && current) box = current.getBoundingClientRect();
+      if (!box.height) return;
+      const view = scroller.getBoundingClientRect();
+      const delta = box.top + box.height / 2 - (view.top + view.height / 2);
+      if (Math.abs(delta) > 4) scroller.scrollBy({ top: delta, behavior: motion_reduced() ? "instant" : "smooth" });
+    };
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const key = editor.current_block();
+        const next = key ? editor.lexical.getElementByKey(key) : null;
+        if (next !== current) current?.classList.remove("wr-current");
+        next?.classList.add("wr-current");
+        current = next;
+        centre();
+      });
+    };
+    const half = () => scroller.style.setProperty("--half", `${scroller.clientHeight / 2}px`);
+    half();
+    follow();
+    const stop = editor.lexical.registerUpdateListener(follow);
+    const observer = new ResizeObserver(() => (half(), follow()));
+    observer.observe(scroller);
+    return () => {
+      stop();
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      current?.classList.remove("wr-current");
+      scroller.style.removeProperty("--half");
+    };
+  });
+
+  let marks_layer = $state<HTMLElement | null>(null);
+
+  $effect(() => {
+    const layer = marks_layer;
+    const paper = layer?.parentElement;
+    if (!layer || !paper) return;
+    let frame = 0;
+    const redraw = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => draw_marks([...paper.querySelectorAll<HTMLElement>(".warren-doc, .zone-doc")], layer));
+    };
+    redraw();
+    const stops = [editor.lexical, editor.zones.header, editor.zones.footer].map((lexical) => lexical.registerUpdateListener(redraw));
+    const observer = new ResizeObserver(redraw);
+    observer.observe(paper);
+    document.fonts.addEventListener("loadingdone", redraw);
+    return () => {
+      cancelAnimationFrame(frame);
+      for (const stop of stops) stop();
+      observer.disconnect();
+      document.fonts.removeEventListener("loadingdone", redraw);
+      layer.replaceChildren();
+    };
+  });
+
   // On a phone the jump closes the More sheet and keeps the keyboard down.
   function go_to(key: string) {
     sheet = null;
@@ -626,7 +812,18 @@
 
 <svelte:element this={"style"}>{doc_css}</svelte:element>
 
-<div class="warren relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
+<div
+  bind:this={app_root}
+  class={["warren relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)] bg-background", focus_mode ? "focus grid-rows-[minmax(0,1fr)]" : "grid-rows-[auto_minmax(0,1fr)_auto]"]}
+  onkeydown={(event) => {
+    if (focus_mode && event.key === "Escape" && !event.defaultPrevented) {
+      event.preventDefault();
+      focus_mode = false;
+    }
+  }}
+  role="presentation"
+>
+  {#if !focus_mode}
   <Toolbar class="flex-nowrap gap-1">
     <Button size="sm" variant="quiet" class="max-w-48 min-w-0 shrink gap-1 pr-1.5" title={file_path ?? "Not saved yet"} onclick={file_menu}>
       <span class="min-w-0 truncate">{mobile ? stem : "File"}</span>
@@ -635,7 +832,11 @@
     </Button>
     <IconButton label="Undo (Mod+Z)" size="sm" class="shrink-0" disabled={!editor.can_undo} onpointerdown={keep_focus} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
     <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.can_redo} onpointerdown={keep_focus} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
+    <div class="flex-1"></div>
+    <IconButton label="Show ¶ marks (Mod+Shift+8)" size="sm" class="shrink-0" pressed={marks.value} onpointerdown={keep_focus} onclick={() => (marks.value = !marks.value)}><ParagraphIcon weight="bold" /></IconButton>
+    <IconButton label="Focus mode (Mod+Shift+F)" size="sm" class="shrink-0" onpointerdown={keep_focus} onclick={() => (focus_mode = true)}><CornersOutIcon weight="bold" /></IconButton>
   </Toolbar>
+  {/if}
 
   <div class="body grid min-h-0">
     <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
@@ -673,7 +874,7 @@
         <WarrenFind {editor} input_id={find_input_id} onclose={() => (finding = false)} onreplaced={changed} />
       {/if}
 
-      <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow}>
+      <div class="desk min-h-0 flex-1 overflow-auto bg-background-darker" data-flow={editor.page.flow} bind:this={desk}>
         <div
           class="paper text-foreground"
           style="{PAPER_VARS};--pw:{page.width};--ph:{page.height};--mt:{page.margins.top};--mr:{page.margins.right};--mb:{page.margins.bottom};--ml:{page.margins.left};--hd:{zone_distance(
@@ -681,9 +882,11 @@
           )};--fd:{zone_distance(page.margins.bottom)};--zg:{ZONE_GAP_MM}{body ? `;--doc-font:'${body.family}'` : ''}{style_font_vars}"
           onclick={(event) => event.target === event.currentTarget && editor.focus(Zone.BODY)}
           oncontextmenu={table_menu}
+          onfocusout={() => editor.close_slash()}
           role="presentation"
           {@attach attach_resize}
         >
+          {#if marks.value}<div class="marks" bind:this={marks_layer} aria-hidden="true"></div>{/if}
           <div class="col-resize" bind:this={resize_handle} hidden aria-hidden="true"></div>
           <div class={["zone head", !has_header && "spacer"]} bind:this={head} onclick={(event) => has_header && event.target === event.currentTarget && editor.focus(Zone.HEADER)} role="presentation">
             {#if has_header}
@@ -712,8 +915,14 @@
     {#if loading}
       <div class="absolute inset-0 grid place-items-center bg-background-darker/70"><Spinner label="Opening document" /></div>
     {/if}
+    {#if focus_mode}
+      <IconButton label="Leave focus mode (Esc)" size="sm" class="absolute top-2 right-4 z-10 bg-background-light/80 opacity-65 hover:opacity-100" onpointerdown={keep_focus} onclick={() => (focus_mode = false)}>
+        <CornersInIcon weight="bold" />
+      </IconButton>
+    {/if}
   </div>
 
+  {#if !focus_mode}
   <StatusBar>
     <span>{selection ? `${selection.words.toLocaleString("en")} of ` : ""}{counts.words.toLocaleString("en")} {counts.words === 1 && !selection ? "word" : "words"}</span>
     {#if goal_progress !== null && editor.goal}
@@ -738,6 +947,7 @@
     {#if editor.active !== Zone.BODY}<span class="text-primary">Editing the {editor.active}</span>{/if}
     <span class="hidden @lg:inline">{editor.page.size}{editor.page.orientation === "landscape" ? " landscape" : ""}</span>
   </StatusBar>
+  {/if}
 
   {#if sheet}
     <div class="absolute inset-0 z-20 flex flex-col justify-end">
@@ -774,6 +984,10 @@
     </div>
   {/if}
   <WarrenLink id={link_id} anchor={link_anchor} {editor} placement={link_placement} />
+  {#if slash_box}
+    <div class="pointer-events-none absolute w-px" style="left: {slash_box.left}px; top: {slash_box.top}px; height: {slash_box.height}px; anchor-name: {slash_anchor}"></div>
+  {/if}
+  <WarrenSlash {editor} sheet={mobile} anchor={slash_anchor} />
 </div>
 
 <style>
@@ -795,6 +1009,52 @@
     }
 
     .format-bar {
+      display: none;
+    }
+  }
+
+  .focus .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .focus .sidebar,
+  .focus .format-bar {
+    display: none;
+  }
+
+  /* Room above the first line and below the last, so either can sit in the middle. Margins, not the desk's padding:
+     padding would count towards the desk's own minimum height and push it past the window. */
+  .focus .paper {
+    margin-block: var(--half, 40vh);
+  }
+
+  .focus .warren-doc > :global(:not(ul, ol, table, .wr-current)),
+  .focus .warren-doc :global(li:not(.nested, .wr-current)),
+  .focus .warren-doc :global(:is(td, th) > :not(.wr-current)),
+  .focus .paper :global(.zone) {
+    opacity: 0.3;
+    transition: opacity 150ms var(--ease-out);
+  }
+
+  .marks {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .marks :global(.wr-mark) {
+    position: absolute;
+    color: color-mix(in oklch, var(--primary) 70%, transparent);
+    font-family: Inter, sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    user-select: none;
+  }
+
+  @media print {
+    .marks {
       display: none;
     }
   }

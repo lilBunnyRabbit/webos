@@ -7,6 +7,7 @@ import { error_message } from "$lib/core/utils";
 import { build_docx } from "./docx";
 import { EXTENSION, parse_document } from "./format";
 import { stem_of } from "./io";
+import { to_markdown } from "./markdown";
 import { document_text } from "./model";
 import { count } from "./words";
 
@@ -39,16 +40,16 @@ export async function count_document({ args, session }: CommandContext<{ path: s
   return { $type: "doc-count", name: base_name(path), path, words, characters };
 }
 
-export async function export_document({ args, session, elevated }: CommandContext<{ path: string; docx: boolean }>): Promise<FileValue> {
-  if (!args.docx) throw new ShellError("doc export: pick a format: --docx");
+export async function export_document({ args, session, elevated }: CommandContext<{ path: string; docx: boolean; md: boolean }>): Promise<FileValue> {
+  if (args.docx === args.md) throw new ShellError("doc export: pick one format: --docx or --md");
   const path = resolve_path(session.cwd, args.path);
   const document = await load("doc export", path);
   const folder = parent_path(path);
-  const name = `${stem_of(path)}.docx`;
+  const name = `${stem_of(path)}.${args.md ? "md" : "docx"}`;
   assert_writable(`${folder === "/" ? "" : folder}/${name}`, elevated);
   const directory = await files().get_directory(folder);
   if (!directory) throw new ShellError(`doc export: ${folder}: no such folder`);
-  const handle = await files().create_file(directory, name, { content: await build_docx(document, stem_of(path)) });
+  const handle = await files().create_file(directory, name, { content: args.md ? to_markdown(document.editor) : await build_docx(document, stem_of(path)) });
   const written = `${folder === "/" ? "" : folder}/${handle.name}`;
   const file = await files().get_file(written);
   return file_value(written, "file", file?.size ?? null, file?.lastModified ?? null);

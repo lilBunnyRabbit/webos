@@ -5,6 +5,38 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.53.0",
+    date: "2026-10-22",
+    title: "Write faster in Warren",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren turns Markdown into formatting as you type: # for headings, - or 1. for lists, [] for a checklist, > for a quote, --- for a line, and **bold**, *italic* and ~~strikethrough~~.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Open Markdown files in Warren from Open with, and export any document as Markdown, tables and pictures included.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Type / in Warren to pick a heading, list, table, picture, page break or template from a menu.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Focus mode in Warren hides the tools, dims everything but the paragraph you're writing and keeps your line in the middle of the screen.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Show ¶ marks in Warren to see spaces, line breaks and paragraph ends; they never print.",
+      },
+    ],
+  },
+  {
     version: "3.52.0",
     date: "2026-10-22",
     title: "Search apps in your own words",

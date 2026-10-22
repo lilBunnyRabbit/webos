@@ -12,6 +12,7 @@
     ListChecks as ListChecksIcon,
     Minus as MinusIcon,
     FileDoc as FileDocIcon,
+    FileMd as FileMdIcon,
     FilePdf as FilePdfIcon,
     Link as LinkIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -63,7 +64,7 @@
     repeats: Repeat[];
     open: Record<string, boolean>;
     ontoggle: (group: string, open: boolean) => void;
-    onexport: (format: "docx" | "pdf") => void;
+    onexport: (format: "docx" | "md" | "pdf") => void;
     onchanged: (count: number, word: string) => void;
     onlink: () => void;
     link_anchor: string;
@@ -536,9 +537,10 @@
 {/snippet}
 
 {#snippet export_group()}
-  <div class="grid grid-cols-2 gap-1">
-    <Button size="sm" onclick={() => onexport("docx")}><FileDocIcon weight="bold" />Word</Button>
-    <Button size="sm" onclick={() => onexport("pdf")}><FilePdfIcon weight="bold" />PDF</Button>
+  <div class="grid grid-cols-3 gap-1">
+    <Button size="sm" class="px-1" onclick={() => onexport("docx")}><FileDocIcon weight="bold" />Word</Button>
+    <Button size="sm" class="px-1" onclick={() => onexport("md")}><FileMdIcon weight="bold" />Markdown</Button>
+    <Button size="sm" class="px-1" onclick={() => onexport("pdf")}><FilePdfIcon weight="bold" />PDF</Button>
   </div>
 {/snippet}
 

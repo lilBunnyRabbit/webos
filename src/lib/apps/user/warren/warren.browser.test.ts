@@ -11,6 +11,7 @@ import { parse_document, serialize_document } from "./format";
 import { $getSelection, $isRangeSelection } from "lexical";
 import { Align, blocks_of, document_text } from "./model";
 import { count_document, export_document } from "./shell";
+import { to_markdown } from "./markdown";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -298,7 +299,7 @@ describe("shell", () => {
   test("doc count reads a format 3 file", async () => {
     await files.create_file(await files.get_directory("/home"), "Plan.warren", { content: serialize_document(SAMPLE_V3) });
     expect(await count_document(context({ path: "Plan.warren" }))).toMatchObject({ words: 8 });
-    expect(await export_document(context({ path: "Plan.warren", docx: true }))).toMatchObject({ path: "/home/Plan.docx" });
+    expect(await export_document(context({ path: "Plan.warren", docx: true, md: false }))).toMatchObject({ path: "/home/Plan.docx" });
   });
 
   test("doc count reads a version 1 file too", async () => {
@@ -311,10 +312,16 @@ describe("shell", () => {
   });
 
   test("doc export writes a .docx beside it under a free name", async () => {
-    await expect(export_document(context({ path: "CV.warren", docx: false }))).rejects.toThrow("--docx");
-    expect(await export_document(context({ path: "CV.warren", docx: true }))).toMatchObject({ $type: "file", path: "/home/CV.docx" });
-    expect(await export_document(context({ path: "CV.warren", docx: true }))).toMatchObject({ path: "/home/CV (1).docx" });
+    await expect(export_document(context({ path: "CV.warren", docx: false, md: false }))).rejects.toThrow("--docx or --md");
+    await expect(export_document(context({ path: "CV.warren", docx: true, md: true }))).rejects.toThrow("pick one format");
+    expect(await export_document(context({ path: "CV.warren", docx: true, md: false }))).toMatchObject({ $type: "file", path: "/home/CV.docx" });
+    expect(await export_document(context({ path: "CV.warren", docx: true, md: false }))).toMatchObject({ path: "/home/CV (1).docx" });
     const written = await files.get_file("/home/CV.docx");
     expect((await read_zip(written!)).entries.some((entry) => entry.name === "word/document.xml")).toBe(true);
+  });
+
+  test("doc export --md writes the body as Markdown beside it", async () => {
+    expect(await export_document(context({ path: "CV.warren", docx: false, md: true }))).toMatchObject({ $type: "file", path: "/home/CV.md" });
+    expect(await (await files.get_file("/home/CV.md"))!.text()).toBe(to_markdown(SAMPLE.editor));
   });
 });

@@ -40,6 +40,7 @@ import {
   $setSelection,
   CLEAR_HISTORY_COMMAND,
   COLLABORATION_TAG,
+  COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_EDITOR,
   configExtension,
   defineExtension,
@@ -49,6 +50,10 @@ import {
   PASTE_TAG,
   SKIP_DOM_SELECTION_TAG,
   INDENT_CONTENT_COMMAND,
+  KEY_ARROW_DOWN_COMMAND,
+  KEY_ARROW_UP_COMMAND,
+  KEY_ENTER_COMMAND,
+  KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
   mergeRegister,
   OUTDENT_CONTENT_COMMAND,
@@ -64,6 +69,7 @@ import { style_colour, type ColourProperty } from "./colour";
 import { Align, align_of, font_size, is_page_number_line, PAGE_TOKEN, type ImageAlign } from "./model";
 import { CHECK_CLASS, TABLE_CLASS } from "./print";
 import { $in_table, register_tables } from "./lexical-table";
+import { $load_markdown, register_markdown, type MarkdownImport } from "./lexical-markdown";
 import { $create_title, $is_title, TitleExtension } from "./title-node";
 import { smarten } from "./typography";
 import { $create_page_break, PageBreakExtension } from "./page-break-node";
@@ -136,7 +142,11 @@ export interface Hooks {
   smart: () => boolean;
   /** Picture files pasted or dropped in; `true` when they were taken. */
   on_pictures: (editor: LexicalEditor, files: File[]) => boolean;
+  /** A key the slash menu may want while it's open; `true` when it took the key. */
+  on_menu_key: (key: MenuKey, event: KeyboardEvent | null) => boolean;
 }
+
+export type MenuKey = "down" | "up" | "enter" | "tab" | "escape";
 
 export function heading_of(style: BlockStyle): 1 | 2 | 3 | null {
   return style === BlockStyle.H1 ? 1 : style === BlockStyle.H2 ? 2 : style === BlockStyle.H3 ? 3 : null;
@@ -219,8 +229,15 @@ export function create_lexical(hooks: Hooks, parent?: LexicalEditor): { editor: 
     ],
     register: (editor, _config, state) => {
       const { canUndo, canRedo } = state.getDependency(HistoryExtension).output;
+      const menu_key = (key: MenuKey) => (event: KeyboardEvent | null) => hooks.on_menu_key(key, event);
       return mergeRegister(
         register_tables(editor),
+        register_markdown(editor),
+        editor.registerCommand(KEY_ARROW_DOWN_COMMAND, menu_key("down"), COMMAND_PRIORITY_CRITICAL),
+        editor.registerCommand(KEY_ARROW_UP_COMMAND, menu_key("up"), COMMAND_PRIORITY_CRITICAL),
+        editor.registerCommand(KEY_ENTER_COMMAND, menu_key("enter"), COMMAND_PRIORITY_CRITICAL),
+        editor.registerCommand(KEY_TAB_COMMAND, menu_key("tab"), COMMAND_PRIORITY_CRITICAL),
+        editor.registerCommand(KEY_ESCAPE_COMMAND, menu_key("escape"), COMMAND_PRIORITY_CRITICAL),
         effect(() => hooks.on_can_undo(canUndo.value)),
         effect(() => hooks.on_can_redo(canRedo.value)),
         editor.registerUpdateListener(({ editorState, prevEditorState, tags }) => {
@@ -264,6 +281,8 @@ function smart_typing(editor: LexicalEditor, state: EditorState, previous: Edito
     const text = node.getTextContent();
     const before = previous.read(() => $getNodeByKey(node.getKey())?.getTextContent());
     if (before === undefined || text.length !== before.length + 1 || text.slice(0, offset - 1) + text.slice(offset) !== before) return null;
+    // Hyphens alone at the start of a block are on their way to a `---` rule, not a dash.
+    if (!node.getPreviousSibling() && /^-+$/.test(text.slice(0, offset))) return null;
     const replacement = smarten(text, offset);
     return replacement && { key: node.getKey(), replacement };
   });
@@ -277,6 +296,69 @@ function smart_typing(editor: LexicalEditor, state: EditorState, previous: Edito
     },
     { tag: HISTORY_PUSH_TAG }
   );
+}
+
+export interface SlashAt {
+  key: NodeKey;
+  /** Where the "/" is in the text node. */
+  offset: number;
+}
+
+/** A "/" just typed at a caret, at the start of a block or after a space. */
+export function slash_typed(state: EditorState, previous: EditorState): SlashAt | null {
+  return state.read(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") return null;
+    const node = selection.anchor.getNode();
+    const offset = selection.anchor.offset;
+    if (!$isTextNode(node) || node.getTextContent()[offset - 1] !== "/" || $findMatchingParent(node, $isLinkNode)) return null;
+    const text = node.getTextContent();
+    const before = previous.read(() => $getNodeByKey(node.getKey())?.getTextContent());
+    const typed = before === undefined ? text === "/" : text.length === before.length + 1 && text.slice(0, offset - 1) + text.slice(offset) === before;
+    if (!typed) return null;
+    const prior = offset > 1 ? text[offset - 2] : (node.getPreviousSibling()?.getTextContent().at(-1) ?? "");
+    return prior === "" || /\s/.test(prior) ? { key: node.getKey(), offset: offset - 1 } : null;
+  });
+}
+
+/** What's typed after the "/", while the caret is still right after it in the same word; `null` once it isn't. */
+export function slash_query(state: EditorState, at: SlashAt): string | null {
+  return state.read(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.key !== at.key) return null;
+    const node = $getNodeByKey(at.key);
+    if (!$isTextNode(node) || node.getTextContent()[at.offset] !== "/" || selection.anchor.offset <= at.offset) return null;
+    const query = node.getTextContent().slice(at.offset + 1, selection.anchor.offset);
+    return /\s/.test(query) || query.length > 24 ? null : query;
+  });
+}
+
+/** Takes the "/" and what was typed after it back out. */
+export function remove_slash(editor: LexicalEditor, at: SlashAt) {
+  editor.update(
+    () => {
+      const node = $getNodeByKey(at.key);
+      const selection = $getSelection();
+      if (!$isTextNode(node) || !$isRangeSelection(selection) || selection.anchor.key !== at.key) return;
+      node.spliceText(at.offset, selection.anchor.offset - at.offset, "", true);
+    },
+    { discrete: true }
+  );
+}
+
+/** The block the caret is in: a list item, a block in a table cell, or a top-level block. */
+export function current_block(state: EditorState): NodeKey | null {
+  return state.read(() => {
+    const node = $getSelection()?.getNodes()[0];
+    if (!node) return null;
+    return ($findMatchingParent(node, $isListItemNode) ?? $block_of(node))?.getKey() ?? null;
+  });
+}
+
+export function load_markdown(editor: LexicalEditor, text: string): MarkdownImport {
+  let report: MarkdownImport = { pictures_left: 0 };
+  editor.update(() => (report = $load_markdown(text)), { tag: LOAD_TAG, discrete: true });
+  return report;
 }
 
 export function read_format(state: EditorState): Format | null {

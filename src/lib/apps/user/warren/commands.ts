@@ -28,10 +28,11 @@ export default {
     }),
     define_command({
       id: "doc export",
-      description: "Write a Warren document as a Word .docx next to it",
+      description: "Write a Warren document as a Word .docx or Markdown .md next to it",
       args: z.object({
         path: arg.path(),
         docx: z.boolean().default(false).describe("Export as Word .docx"),
+        md: z.boolean().default(false).describe("Export as Markdown .md"),
       }),
       positional: ["path"],
       yields: "file",

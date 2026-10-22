@@ -11,6 +11,7 @@ export default define_app({
   meta: () => import("./meta"),
   category: AppCategory.PRODUCTIVITY,
   associations: [".warren", ".docx"],
+  tools: [".md", ".markdown", "text/markdown"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 400 } } },
