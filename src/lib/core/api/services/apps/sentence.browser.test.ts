@@ -24,7 +24,10 @@ function score(cases: QueryCase[]) {
   return { hits: cases.length - misses.length, misses: misses.map(([query]) => `${query} → ${shown(query).slice(0, 3).join(", ")}`) };
 }
 
-describe("sentence search on the real catalogue", () => {
+// The fork CI job deletes src/lib/apps/user; these cases name user apps, so they only hold with the full catalogue.
+const full_catalogue = apps.some((manifest) => !manifest.system);
+
+describe.skipIf(!full_catalogue)("sentence search on the real catalogue", () => {
   test("every sample sentence finds a right app in the top 3", () => {
     expect(score(SAMPLE_QUERIES).misses).toEqual([]);
   });
