@@ -96,6 +96,7 @@ What are the implications of this decision?
 | [060](./060-files-by-light.md) | Files by Light | 2026-10-21 | Implemented |
 | [061](./061-ai-games.md) | AI Games | 2026-10-21 | Implemented |
 | [062](./062-background-scheduler.md) | Background Scheduler | 2026-10-21 | Implemented |
+| [063](./063-moonrabbit-journal.md) | Moonrabbit Journal Encryption | 2026-10-22 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
