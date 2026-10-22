@@ -23,6 +23,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [kernel.md](kernel.md) | Service registry, dependency order, lifecycle, boot progress |
 | [persistence.md](persistence.md) | Everything stored: OPFS (user files, `/etc`, `/var/lib`), localStorage keys, versions, what survives reload (including session restore) |
 | [theming.md](theming.md) | How theming works: tokens and the surface ladder, `color-scheme`, `cn`/`tv`, themes, fonts |
+| [compat.md](compat.md) | Browser support check: the list of non-baseline web features, the `boot.ts` gate, the warning screen, dismissal, solo scope, Settings › About and `compat` (ADR-067) |
 
 ### Services
 

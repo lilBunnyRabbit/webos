@@ -33,6 +33,40 @@ function preload_font_plugin(file: RegExp): Plugin {
   };
 }
 
+// ADR-067: `boot.ts` imports `main.ts` only after the browser check, so its chunks would start downloading only then.
+// Preloading them from the HTML fetches them alongside the boot chunk. The stylesheet is only preloaded: applied, it
+// would restyle the warning screen.
+function preload_main_plugin(entry: string): Plugin {
+  let base = "/";
+  return {
+    name: "webos-preload-main",
+    apply: "build",
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml(_, { bundle }) {
+      const chunks = Object.values(bundle ?? {}).filter((file) => file.type === "chunk");
+      const main = chunks.find((chunk) => chunk.moduleIds.includes(entry));
+      if (!main) throw new Error(`preload main: no chunk holds ${entry}`);
+      const linked = new Set(chunks.filter((chunk) => chunk.isEntry).flatMap((chunk) => [chunk.fileName, ...chunk.imports]));
+      const files = new Set<string>();
+      const css = new Set<string>();
+      const walk = (file: string) => {
+        if (files.has(file)) return;
+        files.add(file);
+        const chunk = chunks.find((item) => item.fileName === file);
+        chunk?.viteMetadata?.importedCss.forEach((name) => css.add(name));
+        chunk?.imports.forEach(walk);
+      };
+      walk(main.fileName);
+      return [
+        ...[...files].filter((file) => !linked.has(file)).map((file) => ({ tag: "link", attrs: { rel: "modulepreload", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
+        ...[...css].map((file) => ({ tag: "link", attrs: { rel: "preload", as: "style", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
+      ];
+    },
+  };
+}
+
 // Change with every app edit or every build, so nothing that reaches them may sit in the shared `core` chunk.
 const VOLATILE = [
   "src/lib/apps/index.ts",
@@ -63,6 +97,7 @@ export default defineConfig({
     import_map_plugin(),
     offline.plugin,
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
+    preload_main_plugin(path.resolve("src/main.ts")),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
@@ -154,6 +189,8 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Every engine that can run WebOS has `modulepreload`; the polyfill only cost the boot chunk bytes.
+    modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
         // A fixed name, so the precache can leave the chunk out.
@@ -162,6 +199,8 @@ export default defineConfig({
         // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
         manualChunks(id, { getModuleInfo }) {
           if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
+          // `boot.ts` needs Vite's preload helper before the browser check; in `core` it would load all of core first.
+          if (id === "\0vite/preload-helper.js") return "preload-helper";
           if (!cores.has(getModuleInfo)) {
             cores.set(getModuleInfo, core_modules(getModuleInfo, path.resolve("src/main.ts"), VOLATILE, "src/lib/apps"));
           }

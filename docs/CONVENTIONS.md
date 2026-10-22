@@ -30,6 +30,7 @@ src/lib/
 │   │       ├── inspector.svelte  # Kernel app view, lazy (ADR-020)
 │   │       ├── persistence.ts    # parse/serialize for its files, when it persists
 │   │       └── helper.ts | opfs.ts  # pure logic, no Svelte
+│   ├── compat/                   # browser support list, UA parsing, the warning screen boot.ts shows (ADR-067)
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
 │   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; ui (the UI kit)
 │   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types, zip
@@ -270,6 +271,10 @@ Ask before adding one. The bar: browser-native API first, then own package (`@li
 The root lists `"workspaces": ["src/lib/apps/*/*"]` and `bunfig.toml` sets `linker = "isolated"`, so `bun install` at the root installs every app's packages and a package resolves only from the workspace that declares it: core and other apps can't import it by accident. Apps without packages have no `package.json`. Import an app's packages only from lazy code (the component and what it imports), never from `index.ts`; `bun run budget` catches a slip. Deleting the app's folder deletes its packages with it.
 
 Another app's packages are reached through that app's module, not by importing the package: Image Tools calls PDF Tools' `pdf_lib()` and takes pdf-lib's types from `pdf-tools/pdf`, and the import resolves from PDF Tools' folder. Declare the package yourself only when no such module fits. After moving a package out of the root, `rm -rf node_modules && bun install`: an incremental install leaves the old root link and hides a stray import. Today: `@codemirror/merge` (Diff), `pdf-lib` and `pdfjs-dist` (PDF Tools), `marked` (Text Editor, Markdown PDF), `svgo` and `@codemirror/merge` (SVG Workbench, which takes the merge colours from Diff's `theme.ts`), `culori` (Color Games), `bwip-js` (Cards), the `lexical` packages and `mammoth` (Warren), `onnxruntime-web` (Shopping List, which imports `onnxruntime-web/wasm`: the default entry pulls the 28 MB JSEP (WebGPU) build).
+
+### Web platform features
+
+Use the newest platform API that fits (PRINCIPLES, CLAUDE.md). When it isn't broadly supported, add it to the browser support list, `src/lib/core/compat/features.ts` (ADR-067, [compat](system/compat.md)), in the same commit: level, the apps that use it, `min` versions from MDN and a probe. Removing its last use removes the entry.
 
 ---
 

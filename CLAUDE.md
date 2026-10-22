@@ -92,6 +92,10 @@ References: `src/lib/apps/user/example/task.ts` (parallel group, logs, `parse()`
 - No backend. GitHub Pages is the host.
 - Use the latest web platform features (anchor positioning, popover, `@container`, View Transitions, and so on). The target is the owner's current browser: no polyfills, fallbacks or support checks for older ones. If it works on the owner's machine, it ships. Before building UI or browser behaviour by hand (dismissal, focus, positioning, stacking, animation), check whether a newer platform API does it natively, and bring it up.
 
+## Browser support list
+
+WebOS warns at start-up about features the browser lacks (ADR-067, [compat](docs/system/compat.md)). The list is `src/lib/core/compat/features.ts`. A commit that starts using a web API, CSS or HTML feature that isn't broadly supported (anything MDN doesn't mark Baseline widely available, or that WebOS uses in a newer form than the baseline one) adds or updates its entry in the same commit: `level` (`start`, `shell`, `apps`, `cosmetic`), `apps` (ids that use it directly), `min` for Chrome, Firefox and Safari (the version where it works the way WebOS uses it, from MDN browser-compat-data; `null` when not shipped), and a cheap synchronous `probe()`. A new app id there needs its name in `compat/app-names.ts`. Removing the last use removes the entry. The probes run before WebOS loads, so the file imports nothing.
+
 ## Shell integration: ask every time
 
 The terminal, the Mod+K `>` palette and the OS shortcuts all run on one command system (ADR-033, [shell](docs/system/services/shell.md)). The owner wants new things reachable from it. **When building a new core feature, a new or changed service, or a new app, put the shell question into the grill (AskUserQuestion) before implementing.** Don't decide it silently, and don't skip it because it looks optional.

@@ -113,6 +113,8 @@ Field args are kind `field`. They complete from the columns of the type flowing 
 
 `help [command…]` (all commands as values, a group, or one command's usage and flags), `clear`, `history`, `echo`, `sudo`, `kernel`, `services`.
 
+`compat` yields one `compat` value per entry of the browser support list (ADR-067, [compat](../compat.md)): `feature`, `level` (`start` `shell` `apps` `cosmetic`), `status` (`ok`, `missing`, `outdated`), `apps` (display names) and `min` ("Chrome 129, Firefox 147, Safari 26"), plus `id`. It runs every probe in the live page and is never scoped to a solo app. Its body imports `core/compat/report.ts` on first run, so the list stays out of the `core` chunk. `compat | where status != ok` lists what this browser lacks.
+
 ## Contributions
 
 `IService.shell?(): ShellContribution`, built in each service's own `shell.ts`.
@@ -155,7 +157,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 
 | Service | Commands | Completers | Value types |
 |---------|----------|------------|-------------|
-| shell | `help clear history echo sudo where sort select first last count get kernel services` | | `command`, `history`, `service` |
+| shell | `help clear history echo sudo where sort select first last count get kernel services compat` | | `command`, `history`, `service`, `compat` |
 | files | `ls cd pwd cat cp mv rm mkdir touch du [-d N] df mount umount mounts`, `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` (piped files; `--dry` previews) | `path` | `file`, `rename`, `storage`, `mount` |
 | apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `app find <words…>` (`ai: "read"`; strict then sentence search over every app, at most 10), `app recent` (yields `app` values, newest first; `--clear` forgets them), `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, `taskbar seconds`, plus every app's `shell` (ADR-034) | `app` (open: launch, or the App Library for an app that isn't installed) | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |

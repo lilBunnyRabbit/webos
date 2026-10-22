@@ -510,6 +510,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 ### Error Handling
 - [ ] Error handling strategy
 - [x] Error boundaries for app crashes (per window, Restart app / Close window, error toast)
+- [x] Browser support check (2026-10-23, [ADR-067](adrs/067-browser-support-check.md), [brainstorm](brainstorm/2026-10-23_browser-support.md), [compat](system/compat.md)): `src/boot.ts` probes 61 non-baseline web features before WebOS loads and shows a plain-DOM warning grouped Won't start, Shell, Apps, Cosmetic, with missing vs "may misbehave" (engine older than where the feature works the way WebOS uses it) and the version to update to; Don't show again until something new breaks; a solo link checks only its app; Settings › About › Browser support and the `compat` command list everything. Boot 182.0 → 189.3 KB gz
 
 ### Performance
 - [x] Lazy loading for apps (dynamic imports via `component()`), per-platform shell chunks, lazy service shell command bodies and dialogs boot doesn't show ([ADR-036](adrs/036-boot-loading-screen.md))

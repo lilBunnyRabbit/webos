@@ -105,6 +105,7 @@ Hardcoded colours outside the token system, all deliberate:
 | `index.html` body + `#splash`, `<meta name="theme-color">` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
 | `vite.config.ts` PWA manifest `theme_color` + `background_color` | `#17252C` | Same |
 | `index.html` `#splash-progress` (track, bar, label) | Brand Dark `background_lightest`, `primary`, `foreground` as OKLCH | Same: the boot progress bar shows before any token exists (ADR-036) |
+| `core/compat/screen.ts` (browser support warning) | Brand Dark `background`, `background_light`, `background_lightest`, `foreground`, `primary`, `cottontail`, `warning`, `error` as hex | Shows before any token exists, in engines that may not parse `oklch()` (Firefox before 113) (ADR-067) |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 
 Components that need a token outside a utility read the variable directly: in a `<style>` block (`var(--background-lighter)` for the `<select>` picker in `ui/select.svelte`), in the CodeMirror theme (`$kit/components/code/editor.ts`, ADR-048), or in an arbitrary value (`bg-[light-dark(var(--background-lightest),var(--background-darker))]` in the `field` recipe and Segmented). The Style Guide's swatches use `var(--{token})` with the kebab-case names.

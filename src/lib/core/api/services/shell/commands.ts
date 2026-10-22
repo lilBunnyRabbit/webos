@@ -185,6 +185,15 @@ export function core_shell(host: CoreHost): ShellContribution {
         }
       },
     }),
+    define_command({
+      id: "compat",
+      description: "Web features WebOS uses and whether this browser has them",
+      yields: "compat",
+      async *run() {
+        const { compat_report } = await import("$lib/core/compat/report");
+        for (const row of compat_report()) yield { $type: "compat", ...row };
+      },
+    }),
   ];
 
   return {
@@ -201,6 +210,10 @@ export function core_shell(host: CoreHost): ShellContribution {
       service: {
         columns: ["key", "state"],
         text: (value) => `${String(value.key).padEnd(14)} ${String(value.state)}`,
+      },
+      compat: {
+        columns: ["feature", "level", "status", "apps", "min"],
+        text: (value) => `${String(value.status).padEnd(9)} ${String(value.feature)}`,
       },
     },
   };
