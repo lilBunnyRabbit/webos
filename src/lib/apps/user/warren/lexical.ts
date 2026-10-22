@@ -20,7 +20,8 @@ import {
   ListExtension,
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
-import { $createHeadingNode, $isHeadingNode, HeadingAnnounceExtension, RichTextExtension } from "@lexical/rich-text";
+import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode, HeadingAnnounceExtension, RichTextExtension } from "@lexical/rich-text";
+import { TableExtension } from "@lexical/table";
 import { $getSelectionStyleValueForProperty, $patchStyleText, $setBlocksType } from "@lexical/selection";
 import { $findMatchingParent, $insertNodeToNearestRoot } from "@lexical/utils";
 import {
@@ -34,6 +35,7 @@ import {
   $isElementNode,
   $isParagraphNode,
   $isRangeSelection,
+  $isRootOrShadowRoot,
   $isTextNode,
   $setSelection,
   CLEAR_HISTORY_COMMAND,
@@ -58,21 +60,25 @@ import {
   type RangeSelection,
   type TextNode,
 } from "lexical";
+import { style_colour, type ColourProperty } from "./colour";
 import { Align, align_of, font_size, is_page_number_line, PAGE_TOKEN, type ImageAlign } from "./model";
-import { CHECK_CLASS } from "./print";
+import { CHECK_CLASS, TABLE_CLASS } from "./print";
+import { $in_table, register_tables } from "./lexical-table";
+import { $create_title, $is_title, TitleExtension } from "./title-node";
 import { smarten } from "./typography";
 import { $create_page_break, PageBreakExtension } from "./page-break-node";
 import { $create_image, $insert_image, $is_image, $selected_image, ImageExtension, type ImageProps } from "./image-node";
-import { BASE_PT, HEADING_PT } from "./page";
 import { find_matches, is_word, map_offset, replace_matches, WORD_MATCH, word_at, type MatchOptions } from "./words";
 
 // Lexical's `$` functions live here: Svelte reserves the prefix in `.svelte.ts` modules.
 
 export const BlockStyle = {
   PARAGRAPH: "paragraph",
+  TITLE: "title",
   H1: "h1",
   H2: "h2",
   H3: "h3",
+  QUOTE: "quote",
   BULLET: "bullet",
   NUMBER: "number",
   CHECK: "check",
@@ -85,6 +91,12 @@ const THEME = {
   text: { underline: "wr-underline", strikethrough: "wr-strike", underlineStrikethrough: "wr-underline wr-strike" },
   list: { nested: { listitem: "nested" }, checklist: CHECK_CLASS.list, listitemChecked: CHECK_CLASS.checked, listitemUnchecked: CHECK_CLASS.unchecked },
   hr: "wr-rule",
+  quote: "wr-quote",
+  table: TABLE_CLASS,
+  tableCell: "wr-cell",
+  tableCellHeader: "wr-cell-header",
+  tableCellSelected: "wr-cell-selected",
+  tableSelection: "wr-table-selection",
 };
 
 export const LIST_STYLES: readonly BlockStyle[] = [BlockStyle.BULLET, BlockStyle.NUMBER, BlockStyle.CHECK];
@@ -96,11 +108,15 @@ export interface Format {
   strike: boolean;
   subscript: boolean;
   superscript: boolean;
-  align: Align;
+  /** `null` when the block has no alignment of its own and follows its style. */
+  align: Align | null;
   /** The URL of the link the selection starts in. */
   link: string | null;
   block: BlockStyle;
-  size: number;
+  /** Points, when the text has its own size; `null` follows the style. */
+  size: number | null;
+  color: string | null;
+  highlight: string | null;
   word: string;
   /** The selected text; empty for a caret. */
   selected: string;
@@ -126,13 +142,23 @@ export function heading_of(style: BlockStyle): 1 | 2 | 3 | null {
   return style === BlockStyle.H1 ? 1 : style === BlockStyle.H2 ? 2 : style === BlockStyle.H3 ? 3 : null;
 }
 
+/** The block a node is in, at the top level or inside a table cell. */
+export function $block_of(node: LexicalNode): LexicalNode | null {
+  return $findMatchingParent(node, (candidate) => {
+    const parent = candidate.getParent();
+    return parent !== null && $isRootOrShadowRoot(parent);
+  });
+}
+
 function $block_style(node: LexicalNode): BlockStyle {
   const list = $findMatchingParent(node, $isListNode);
   if (list) {
     const type = list.getListType();
     return type === "number" ? BlockStyle.NUMBER : type === "check" ? BlockStyle.CHECK : BlockStyle.BULLET;
   }
-  const top = node.getTopLevelElement();
+  const top = $block_of(node);
+  if ($is_title(top)) return BlockStyle.TITLE;
+  if ($isQuoteNode(top)) return BlockStyle.QUOTE;
   if ($isHeadingNode(top)) {
     const tag = top.getTag();
     return tag === "h1" ? BlockStyle.H1 : tag === "h2" ? BlockStyle.H2 : BlockStyle.H3;
@@ -154,10 +180,10 @@ function $selected_word(selection: RangeSelection): { node: TextNode; start: num
   return range ? { node, ...range } : null;
 }
 
-function $align_of(node: LexicalNode): Align {
-  const element = $findMatchingParent(node, $isListItemNode) ?? node.getTopLevelElement();
-  if (!$isElementNode(element)) return Align.LEFT;
-  return align_of({ type: element.getType(), format: element.getFormatType() }) ?? Align.LEFT;
+function $align_of(node: LexicalNode): Align | null {
+  const element = $findMatchingParent(node, $isListItemNode) ?? $block_of(node);
+  if (!$isElementNode(element)) return null;
+  return align_of({ type: element.getType(), format: element.getFormatType() });
 }
 
 function $in_list(): boolean {
@@ -183,6 +209,8 @@ export function create_lexical(hooks: Hooks, parent?: LexicalEditor): { editor: 
       CheckListExtension,
       HorizontalRuleExtension,
       LinkExtension,
+      configExtension(TableExtension, { hasHorizontalScroll: false, hasCellBackgroundColor: false }),
+      TitleExtension,
       PageBreakExtension,
       configExtension(ImageExtension, { on_files: hooks.on_pictures }),
       ...(parent ? [configExtension(NestedEditorExtension, { $getParentEditor: () => parent })] : []),
@@ -192,6 +220,7 @@ export function create_lexical(hooks: Hooks, parent?: LexicalEditor): { editor: 
     register: (editor, _config, state) => {
       const { canUndo, canRedo } = state.getDependency(HistoryExtension).output;
       return mergeRegister(
+        register_tables(editor),
         effect(() => hooks.on_can_undo(canUndo.value)),
         effect(() => hooks.on_can_redo(canRedo.value)),
         editor.registerUpdateListener(({ editorState, prevEditorState, tags }) => {
@@ -255,8 +284,8 @@ export function read_format(state: EditorState): Format | null {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return null;
     const block = $block_style(selection.anchor.getNode());
-    const level = heading_of(block);
-    const size = font_size(`font-size: ${$getSelectionStyleValueForProperty(selection, "font-size", "")}`) ?? (level ? HEADING_PT[level] : BASE_PT);
+    const size = font_size(`font-size: ${$getSelectionStyleValueForProperty(selection, "font-size", "")}`);
+    const colour = (property: ColourProperty) => style_colour(`${property}: ${$getSelectionStyleValueForProperty(selection, property, "")}`, property);
     const word = $selected_word(selection);
     return {
       bold: selection.hasFormat("bold"),
@@ -269,9 +298,19 @@ export function read_format(state: EditorState): Format | null {
       link: $findMatchingParent(selection.anchor.getNode(), $isLinkNode)?.getURL() ?? null,
       block,
       size,
+      color: colour("color"),
+      highlight: colour("background-color"),
       word: word ? word.node.getTextContent().slice(word.start, word.end) : "",
       selected: selection.isCollapsed() ? "" : selection.getTextContent(),
     };
+  });
+}
+
+/** Text colour or highlight on the selection; `null` takes it off (Automatic, None). */
+export function set_colour(editor: LexicalEditor, property: ColourProperty, hex: string | null) {
+  editor.update(() => {
+    const selection = $getSelection();
+    if (selection) $patchStyleText(selection, { [property]: hex });
   });
 }
 
@@ -298,7 +337,9 @@ export function set_block(editor: LexicalEditor, style: BlockStyle, current: Blo
   if (in_list) editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
   const level = heading_of(style);
   editor.update(() => {
-    $setBlocksType($getSelection(), () => (level ? $createHeadingNode(`h${level}`) : $createParagraphNode()));
+    $setBlocksType($getSelection(), () =>
+      level ? $createHeadingNode(`h${level}`) : style === BlockStyle.TITLE ? $create_title() : style === BlockStyle.QUOTE ? $createQuoteNode() : $createParagraphNode()
+    );
   });
 }
 
@@ -306,9 +347,10 @@ export function set_block(editor: LexicalEditor, style: BlockStyle, current: Blo
 // (keeping its alignment), any other picture moves out to just after its block.
 function lift_pictures(document: Document): Document {
   const last = new Map<Element, Element>();
+  const is_root = (element: Element) => element === document.body || element.tagName === "TD" || element.tagName === "TH";
   for (const image of [...document.body.querySelectorAll("img")]) {
     let block: Element = image;
-    while (block.parentElement && block.parentElement !== document.body) block = block.parentElement;
+    while (block.parentElement && !is_root(block.parentElement)) block = block.parentElement;
     if (block === image) continue;
     const align = block instanceof HTMLElement ? block.style.textAlign : "";
     if (align && !image.dataset.align) image.dataset.align = align;
@@ -395,9 +437,9 @@ export function insert_image(editor: LexicalEditor, props: Partial<ImageProps> &
     else if (selection.isCollapsed()) {
       // At the start of a block the picture goes before it: Lexical's split would leave an empty copy of the block above.
       const { anchor } = selection;
-      const top = anchor.getNode().getTopLevelElement();
-      const first = top?.getFirstDescendant();
-      if (top && anchor.offset === 0 && (anchor.key === top.getKey() || anchor.key === first?.getKey())) {
+      const top = $block_of(anchor.getNode());
+      const first = $isElementNode(top) ? top.getFirstDescendant() : null;
+      if ($isElementNode(top) && anchor.offset === 0 && (anchor.key === top.getKey() || anchor.key === first?.getKey())) {
         top.insertBefore($create_image(props));
         return;
       }
@@ -512,9 +554,12 @@ export function caret_to(editor: LexicalEditor, key: NodeKey) {
   });
 }
 
+// A page break inside a table cell has no meaning in Word or on paper, so from a table it goes after the table.
 export function insert_page_break(editor: LexicalEditor) {
   editor.update(() => {
-    $insertNodeToNearestRoot($create_page_break());
+    const table = $in_table();
+    if (table) table.insertAfter($create_page_break());
+    else $insertNodeToNearestRoot($create_page_break());
   });
 }
 

@@ -51,6 +51,10 @@
     type PageSize,
   } from "./page";
   import { find_word, reading_minutes, type Counts, type Repeat } from "./words";
+  import { HIGHLIGHT_SWATCHES, TEXT_SWATCHES } from "./colour";
+  import WarrenColour from "./warren-colour.svelte";
+  import WarrenStyles from "./warren-styles.svelte";
+  import WarrenTable from "./warren-table.svelte";
 
   interface Props {
     editor: WarrenEditor;
@@ -201,7 +205,9 @@
     { label: "Superscript (Mod+Shift+.)", icon: TextSuperscriptIcon, pressed: () => editor.superscript, run: () => editor.toggle_superscript() },
   ];
   const STYLES = [
-    { value: BlockStyle.PARAGRAPH, label: "Body" },
+    { value: BlockStyle.PARAGRAPH, label: "Normal" },
+    { value: BlockStyle.TITLE, label: "Title" },
+    { value: BlockStyle.QUOTE, label: "Quote" },
     { value: BlockStyle.H1, label: "H1" },
     { value: BlockStyle.H2, label: "H2" },
     { value: BlockStyle.H3, label: "H3" },
@@ -315,6 +321,8 @@
       }}
     />
   </div>
+  <WarrenColour label="Text colour" value={editor.color} swatches={TEXT_SWATCHES} none="Automatic" start="#c00000" onpick={(hex) => editor.set_colour("color", hex)} />
+  <WarrenColour label="Highlight" value={editor.highlight} swatches={HIGHLIGHT_SWATCHES} none="None" start="#fff3a3" onpick={(hex) => editor.set_colour("background-color", hex)} />
   <label for={smart_id} class="flex min-h-8 cursor-pointer items-center justify-between gap-2 text-ui pointer-coarse:min-h-11">
     <span>Smart quotes and dashes <span class="block text-2xs text-foreground/65">“curly” quotes, -- to –, ... to …</span></span>
     <Switch id={smart_id} checked={smart} onchange={(event) => onsmart(event.currentTarget.checked)} />
@@ -322,7 +330,7 @@
 {/snippet}
 
 {#snippet paragraph_group()}
-  <div class="grid grid-cols-4 gap-1">
+  <div class="grid grid-cols-3 gap-1">
     {#each STYLES as style (style.value)}
       <Button size="sm" variant="quiet" pressed={editor.block === style.value} onpointerdown={keep_focus} onclick={() => editor.set_block(style.value)}>{style.label}</Button>
     {/each}
@@ -396,6 +404,14 @@
   {#if !in_zone}<p class="-mt-1 text-2xs text-foreground/65">Click into a header or footer to add page fields there.</p>{/if}
   <Segmented size="sm" label="Page flow" options={FLOW_OPTIONS} bind:value={() => editor.page.flow, (flow: Flow) => editor.set_page({ flow })} />
   <Button size="sm" onpointerdown={keep_focus} onclick={() => editor.insert_page_break()}><ScissorsIcon weight="bold" />Insert page break</Button>
+{/snippet}
+
+{#snippet styles_group()}
+  <WarrenStyles {editor} />
+{/snippet}
+
+{#snippet table_group()}
+  <WarrenTable {editor} />
 {/snippet}
 
 {#snippet picture_group()}
@@ -529,6 +545,8 @@
 <div class="flex flex-col">
   {@render group("text", "Text", text_group)}
   {@render group("paragraph", "Paragraph", paragraph_group)}
+  {@render group("styles", "Styles", styles_group)}
+  {@render group("table", "Table", table_group)}
   {@render group("picture", "Picture", picture_group)}
   {@render group("page", "Page", page_group)}
   {@render group("words", "Words", words_group)}

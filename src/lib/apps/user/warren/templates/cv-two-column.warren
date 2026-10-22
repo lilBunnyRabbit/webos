@@ -1,0 +1,850 @@
+{
+ "version": 5,
+ "page": {
+  "size": "A4",
+  "flow": "sheets",
+  "margins": {
+   "top": 15,
+   "right": 15,
+   "bottom": 15,
+   "left": 15
+  }
+ },
+ "styles": {
+  "normal": {
+   "size": 10.5,
+   "line": 1.35,
+   "after": 4
+  },
+  "title": {
+   "size": 30,
+   "color": "#1f3a5f",
+   "after": 2
+  },
+  "h2": {
+   "size": 11,
+   "color": "#1f3a5f",
+   "before": 14,
+   "after": 4
+  },
+  "h3": {
+   "size": 11,
+   "before": 8,
+   "after": 1
+  }
+ },
+ "editor": {
+  "root": {
+   "type": "root",
+   "children": [
+    {
+     "type": "title",
+     "children": [
+      {
+       "type": "text",
+       "text": "Your Name",
+       "format": 0,
+       "style": "",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1
+    },
+    {
+     "type": "paragraph",
+     "children": [
+      {
+       "type": "text",
+       "text": "The role you're applying for",
+       "format": 0,
+       "style": "font-size: 13pt; color: #5c6670;",
+       "detail": 0,
+       "mode": "normal",
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    },
+    {
+     "type": "horizontalrule",
+     "version": 1
+    },
+    {
+     "type": "table",
+     "children": [
+      {
+       "type": "tablerow",
+       "children": [
+        {
+         "type": "tablecell",
+         "children": [
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Contact",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "link",
+             "children": [
+              {
+               "type": "text",
+               "text": "you@example.com",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "url": "mailto:you@example.com",
+             "rel": null,
+             "target": null,
+             "title": null
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "+44 7700 900000",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "City, Country",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "link",
+             "children": [
+              {
+               "type": "text",
+               "text": "example.com",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "url": "https://example.com",
+             "rel": null,
+             "target": null,
+             "title": null
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Skills",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "list",
+           "children": [
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "The skill the job asks for first",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 1
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "A tool you use every week",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 2
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "A way you work with people",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 3
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "Something you're learning now",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 4
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "listType": "bullet",
+           "start": 1,
+           "tag": "ul"
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Languages",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "English",
+             "format": 1,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            },
+            {
+             "type": "text",
+             "text": " · native",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Second language",
+             "format": 1,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            },
+            {
+             "type": "text",
+             "text": " · working level",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Interests",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "One or two that say something about you, like a club you run or a thing you make.",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          }
+         ],
+         "direction": null,
+         "format": "",
+         "indent": 0,
+         "version": 1,
+         "colSpan": 1,
+         "rowSpan": 1,
+         "headerState": 0,
+         "backgroundColor": null
+        },
+        {
+         "type": "tablecell",
+         "children": [
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Profile",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Two or three sentences on who you are at work and what you want to do next. Lead with the result you're proudest of, and keep it about the reader's job.",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Experience",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Job Title, Company Name",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h3"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Month Year – Present · City",
+             "format": 2,
+             "style": "font-size: 9.5pt; color: #5c6670;",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "list",
+           "children": [
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "What you changed, with a number: cut the release time from two weeks to two days",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 1
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "What you built or ran, and for whom",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 2
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "What you're trusted with that someone junior isn't",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 3
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "listType": "bullet",
+           "start": 1,
+           "tag": "ul"
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Previous Job Title, Company Name",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h3"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Month Year – Month Year · City",
+             "format": 2,
+             "style": "font-size: 9.5pt; color: #5c6670;",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "list",
+           "children": [
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "The achievement that best fits the job you want",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 1
+            },
+            {
+             "type": "listitem",
+             "children": [
+              {
+               "type": "text",
+               "text": "A second one, from a different part of the work",
+               "format": 0,
+               "style": "",
+               "detail": 0,
+               "mode": "normal",
+               "version": 1
+              }
+             ],
+             "direction": null,
+             "format": "",
+             "indent": 0,
+             "version": 1,
+             "value": 2
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "listType": "bullet",
+           "start": 1,
+           "tag": "ul"
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Education",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "Degree, University Name",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h3"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Year – Year · Grade, if it helps",
+             "format": 2,
+             "style": "font-size: 9.5pt; color: #5c6670;",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          },
+          {
+           "type": "heading",
+           "children": [
+            {
+             "type": "text",
+             "text": "References",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "tag": "h2"
+          },
+          {
+           "type": "paragraph",
+           "children": [
+            {
+             "type": "text",
+             "text": "Available on request.",
+             "format": 0,
+             "style": "",
+             "detail": 0,
+             "mode": "normal",
+             "version": 1
+            }
+           ],
+           "direction": null,
+           "format": "",
+           "indent": 0,
+           "version": 1,
+           "textFormat": 0,
+           "textStyle": ""
+          }
+         ],
+         "direction": null,
+         "format": "",
+         "indent": 0,
+         "version": 1,
+         "colSpan": 1,
+         "rowSpan": 1,
+         "headerState": 0,
+         "backgroundColor": null
+        }
+       ],
+       "direction": null,
+       "format": "",
+       "indent": 0,
+       "version": 1
+      }
+     ],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "colWidths": [
+      32,
+      68
+     ],
+     "$": {
+      "borders": false
+     }
+    },
+    {
+     "type": "paragraph",
+     "children": [],
+     "direction": null,
+     "format": "",
+     "indent": 0,
+     "version": 1,
+     "textFormat": 0,
+     "textStyle": ""
+    }
+   ],
+   "direction": null,
+   "format": "",
+   "indent": 0,
+   "version": 1
+  }
+ }
+}

@@ -2,13 +2,28 @@ import { picture_data_url } from "$kit/utils/picture";
 import { untrack } from "svelte";
 import { FORMAT_ELEMENT_COMMAND, FORMAT_TEXT_COMMAND, REDO_COMMAND, UNDO_COMMAND, type EditorState, type LexicalEditor } from "lexical";
 import { create_document, empty_editor, VERSION, type EditorJson, type WarrenDocument } from "./format";
+import type { ColourProperty } from "./colour";
 import * as ops from "./lexical";
 import { BlockStyle, LIST_STYLES } from "./lexical";
+import * as tables from "./lexical-table";
+import { TableAction, type TableInfo } from "./lexical-table";
 import { Align, page_number_align, PICTURE, type ImageAlign } from "./model";
-import { BASE_PT, DEFAULT_PAGE, geometry, type PageSettings } from "./page";
+import { DEFAULT_PAGE, geometry, type PageSettings } from "./page";
+import { DEFAULT_STYLES, resolve_styles, StyleId, style_overrides, type DocStyles, type StyleSpec } from "./styles";
 
-export { BlockStyle, LIST_STYLES };
+export { BlockStyle, LIST_STYLES, TableAction };
 export type { Heading, SelectedImage } from "./lexical";
+export type { TableInfo } from "./lexical-table";
+
+/** The named style a block follows; lists and table text follow Normal. */
+export function style_of(block: BlockStyle): StyleId {
+  if (block === BlockStyle.TITLE) return StyleId.TITLE;
+  if (block === BlockStyle.H1) return StyleId.H1;
+  if (block === BlockStyle.H2) return StyleId.H2;
+  if (block === BlockStyle.H3) return StyleId.H3;
+  if (block === BlockStyle.QUOTE) return StyleId.QUOTE;
+  return StyleId.NORMAL;
+}
 
 export const Zone = { BODY: "body", HEADER: "header", FOOTER: "footer" } as const;
 export type Zone = (typeof Zone)[keyof typeof Zone];
@@ -48,10 +63,14 @@ export class WarrenEditor {
   strike = $state(false);
   subscript = $state(false);
   superscript = $state(false);
-  align = $state<Align>(Align.LEFT);
   link = $state<string | null>(null);
   block = $state<BlockStyle>(BlockStyle.PARAGRAPH);
-  size = $state(BASE_PT);
+  color = $state<string | null>(null);
+  highlight = $state<string | null>(null);
+  styles = $state.raw<DocStyles>(DEFAULT_STYLES);
+  table = $state.raw<TableInfo | null>(null);
+  private own_size = $state<number | null>(null);
+  private own_align = $state<Align | null>(null);
   word = $state("");
   selected = $state("");
   image = $state.raw<ops.SelectedImage | null>(null);
@@ -70,6 +89,8 @@ export class WarrenEditor {
   private readonly pictures: PictureHooks;
 
   readonly dirty = $derived(this.revision !== this.saved);
+  readonly size = $derived(this.own_size ?? this.styles[style_of(this.block)].size);
+  readonly align = $derived(this.own_align ?? this.styles[style_of(this.block)].align ?? this.styles.normal.align ?? Align.LEFT);
   readonly can_undo = $derived(this.history[this.active].undo);
   readonly can_redo = $derived(this.history[this.active].redo);
   readonly page_numbers = $derived.by<PageNumbers | null>(() => {
@@ -134,6 +155,7 @@ export class WarrenEditor {
 
   private read(state: EditorState) {
     this.image = ops.read_image(state);
+    this.table = tables.read_table(state);
     const format = ops.read_format(state);
     if (!format) return;
     this.bold = format.bold;
@@ -142,10 +164,12 @@ export class WarrenEditor {
     this.strike = format.strike;
     this.subscript = format.subscript;
     this.superscript = format.superscript;
-    this.align = format.align;
+    this.own_align = format.align;
     this.link = format.link;
     this.block = format.block;
-    this.size = format.size;
+    this.own_size = format.size;
+    this.color = format.color;
+    this.highlight = format.highlight;
     this.word = this.active === Zone.BODY ? format.word : "";
     this.selected = this.active === Zone.BODY ? format.selected : "";
   }
@@ -201,6 +225,7 @@ export class WarrenEditor {
     this.outline = ops.outline(state);
     this.page = { ...document.page };
     this.goal = document.goal ?? null;
+    this.styles = resolve_styles(document.styles);
     this.revision = 0;
     this.saved = 0;
   }
@@ -218,10 +243,12 @@ export class WarrenEditor {
 
   snapshot(): WarrenDocument {
     const zone = (zone: Margin) => (this.has(zone) ? { [zone]: this.zones[zone].getEditorState().toJSON() as unknown as EditorJson } : {});
+    const styles = style_overrides(this.styles);
     return {
       version: VERSION,
       page: { ...this.page },
       ...(this.goal ? { goal: this.goal } : {}),
+      ...(styles ? { styles } : {}),
       ...zone(Zone.HEADER),
       ...zone(Zone.FOOTER),
       editor: this.lexical.getEditorState().toJSON() as unknown as EditorJson,
@@ -235,6 +262,16 @@ export class WarrenEditor {
   set_goal(goal: number | null) {
     if (goal === this.goal) return;
     this.goal = goal;
+    this.revision++;
+  }
+
+  set_style(id: StyleId, patch: Partial<StyleSpec>) {
+    this.styles = { ...this.styles, [id]: { ...this.styles[id], ...patch } };
+    this.revision++;
+  }
+
+  reset_style(id: StyleId) {
+    this.styles = { ...this.styles, [id]: DEFAULT_STYLES[id] };
     this.revision++;
   }
 
@@ -329,6 +366,30 @@ export class WarrenEditor {
 
   set_size(points: number) {
     ops.set_size(this.target, points);
+  }
+
+  set_colour(property: ColourProperty, hex: string | null) {
+    ops.set_colour(this.target, property, hex);
+  }
+
+  insert_table(rows: number, columns: number) {
+    tables.insert_table(this.target, rows, columns);
+  }
+
+  table_action(action: TableAction) {
+    tables.table_action(this.target, action);
+  }
+
+  set_table_header(on: boolean) {
+    if (this.table) tables.set_table_header(this.target, this.table.key, on);
+  }
+
+  set_table_borders(on: boolean) {
+    if (this.table) tables.set_table_borders(this.target, this.table.key, on);
+  }
+
+  set_table_widths(widths: number[], key = this.table?.key, editor: LexicalEditor = this.target) {
+    if (key) tables.set_table_widths(editor, key, widths);
   }
 
   set_block(style: BlockStyle) {

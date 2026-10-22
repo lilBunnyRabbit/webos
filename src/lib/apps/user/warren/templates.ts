@@ -21,6 +21,7 @@ const builtin = (id: string, name: string, description: string, text: () => Prom
 
 export const BUILTIN_TEMPLATES: readonly Template[] = [
   builtin("cv", "CV", "Classic one-column CV: profile, experience, education, skills", () => import("./templates/cv.warren?raw")),
+  builtin("cv-two-column", "CV (two-column)", "Contact and skills in a side column beside your experience, laid out with a borderless table", () => import("./templates/cv-two-column.warren?raw")),
   builtin("cover-letter", "Cover letter", "Your name and contact details in the header, then the letter", () => import("./templates/cover-letter.warren?raw")),
   builtin("letter", "Letter", "A formal letter with both addresses, a subject and a sign-off", () => import("./templates/letter.warren?raw")),
   builtin("report", "Report", "Title, summary, findings and next steps, with page numbers", () => import("./templates/report.warren?raw")),

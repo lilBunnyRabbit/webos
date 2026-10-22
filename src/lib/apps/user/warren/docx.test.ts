@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { entry_blob, read_zip } from "$lib/core/utils/zip/read";
-import { build_docx, docx_parts, document_xml, escape_xml, numbering_xml } from "./docx";
-import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4 } from "./fixture";
+import { build_docx, docx_parts, document_xml, escape_xml, numbering_xml, styles_xml } from "./docx";
+import { PIXEL, SAMPLE, SAMPLE_V3, SAMPLE_V4, SAMPLE_V5 } from "./fixture";
+import { resolve_styles } from "./styles";
 import { face_css, font_format } from "./fonts";
-import { BODY_FAMILY, body_html, print_document, zone_padding } from "./print";
+import { BODY_FAMILY, body_html, document_css, NO_FONTS, print_document, zone_padding } from "./print";
 
 describe("docx", () => {
   it("packs every part a Word file needs", async () => {
@@ -92,8 +93,8 @@ describe("print", () => {
     const bytes = new Uint8Array([0, 1, 0, 0, 1, 2, 3]);
     const css = face_css(BODY_FAMILY, [{ bytes, descriptors: { weight: "300 700", style: "italic" } }]);
     expect(css).toBe(`@font-face{font-family:"warren-body";src:url(data:font/ttf;base64,AAEAAAECAw==) format("truetype");font-weight:300 700;font-style:italic}`);
-    expect(print_document(SAMPLE, "CV", "/inter.woff2", css)).toContain(`${css}html,body`);
-    expect(print_document(SAMPLE, "CV", "/inter.woff2", css)).toContain(`font-family:"warren-body",Inter`);
+    expect(print_document(SAMPLE, "CV", "/inter.woff2", { css, body: true })).toContain(`${css}html,body`);
+    expect(print_document(SAMPLE, "CV", "/inter.woff2", { css, body: true })).toContain(`font-family:"warren-body",Inter`);
     expect(font_format(new TextEncoder().encode("wOF2xxxx"))).toEqual({ mime: "font/woff2", format: "woff2" });
   });
 });
@@ -135,7 +136,7 @@ describe("format 4 exports", () => {
   });
 
   it("prints a header and footer on each page with its number", () => {
-    const html = print_document(SAMPLE_V4, "Report", "/inter.woff2", "", { pages: 2, top: 30, bottom: 35 });
+    const html = print_document(SAMPLE_V4, "Report", "/inter.woff2", NO_FONTS, { pages: 2, top: 30, bottom: 35 });
     expect(html).toContain("@page{size:A4 landscape;margin:0}");
     expect(html).toContain(".doc{padding:30mm 15mm 35mm 15mm;");
     expect(html).toContain(`<div class="zone head" style="top:222.5mm">`);
@@ -143,11 +144,62 @@ describe("format 4 exports", () => {
     expect(html).toContain("Jane Doe</strong> · 1</p>");
     expect(html).toContain(`<img src="${PIXEL}" alt="Logo" style="width:40%">`);
     expect(html).toContain(`img-src data:`);
-    expect(print_document(SAMPLE_V4, "Report", "/inter.woff2", "", "measure")).toContain(`<html lang="en" class="measure">`);
+    expect(print_document(SAMPLE_V4, "Report", "/inter.woff2", NO_FONTS, "measure")).toContain(`<html lang="en" class="measure">`);
   });
 
   it("pushes the body down when a header is taller than its margin leaves room for", () => {
     expect(zone_padding(SAMPLE_V4, 5, 5)).toEqual({ top: 25, bottom: 30 });
     expect(zone_padding(SAMPLE_V4, 20, 5)).toEqual({ top: 12.5 + 20 + 4, bottom: 30 });
+  });
+});
+
+describe("format 5 exports", () => {
+  it("writes tables with their grid, spans, header row and borders", () => {
+    const xml = document_xml(SAMPLE_V5);
+    const [table, layout] = xml.match(/<w:tbl>.*?<\/w:tbl>/g)!;
+    expect(table).toContain(`<w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="2410"/><w:gridCol w:w="2410"/></w:tblGrid>`);
+    expect(table).toContain(`<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>`);
+    expect(table).toContain(`<w:tr><w:trPr><w:tblHeader/></w:trPr>`);
+    expect(table).toContain(`<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Skill</w:t></w:r>`);
+    expect(table).toContain(`<w:tcPr><w:tcW w:w="4819" w:type="dxa"/><w:vMerge w:val="restart"/></w:tcPr>`);
+    expect(table).toContain(`<w:tcPr><w:tcW w:w="4820" w:type="dxa"/><w:gridSpan w:val="2"/></w:tcPr>`);
+    expect(table).toContain(`<w:tc><w:tcPr><w:tcW w:w="4819" w:type="dxa"/><w:vMerge/></w:tcPr><w:p/></w:tc>`);
+    expect(table).toContain(`<w:numPr>`);
+    expect(layout).toContain(`<w:top w:val="nil"/>`);
+    expect(layout).toContain(`<w:left w:w="0" w:type="dxa"/>`);
+    expect(numbering_xml(SAMPLE_V5)).toContain(`<w:num w:numId="1">`);
+  });
+
+  it("writes title and quote paragraphs, text colour and highlight", () => {
+    const xml = document_xml(SAMPLE_V5);
+    expect(xml).toContain(`<w:pPr><w:pStyle w:val="Title"/><w:jc w:val="center"/></w:pPr>`);
+    expect(xml).toContain(`<w:pPr><w:pStyle w:val="Quote"/></w:pPr>`);
+    expect(xml).toContain(`<w:rPr><w:color w:val="C00000"/></w:rPr><w:t xml:space="preserve">Red</w:t>`);
+    expect(xml).toContain(`<w:rPr><w:b/><w:bCs/><w:shd w:val="clear" w:color="auto" w:fill="FFF3A3"/></w:rPr><w:t xml:space="preserve">marked</w:t>`);
+  });
+
+  it("writes the document's named styles", () => {
+    const xml = styles_xml("Inter", resolve_styles(SAMPLE_V5.styles));
+    expect(xml).toContain(`<w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-GB"/>`);
+    expect(xml).toMatch(/w:styleId="Normal">.*?<w:color w:val="222222"\/><w:sz w:val="21"\/>/);
+    expect(xml).toMatch(/w:styleId="Heading1">.*?<w:jc w:val="center"\/><w:outlineLvl w:val="0"\/><\/w:pPr><w:rPr><w:b\/><w:bCs\/><w:color w:val="1971C2"\/>/);
+    expect(xml).toMatch(/w:styleId="Title">.*?<w:rFonts w:ascii="Burrow"/);
+    expect(xml).toMatch(/w:styleId="Quote">.*?<w:pBdr>.*?<w:spacing [^>]*\/><w:ind w:left="180"\/>.*?<w:i\/><w:iCs\/>/);
+    expect(docx_parts(SAMPLE_V5, "CV")["word/styles.xml"]).toBe(xml);
+  });
+
+  it("prints tables with their widths, header and borders, and the styles as CSS", () => {
+    const html = body_html(SAMPLE_V5);
+    expect(html).toContain(`<p class="wr-title" style="text-align:center">Jane Doe</p><blockquote>Make it simple.</blockquote>`);
+    expect(html).toContain(`<span style="color:#c00000">Red</span>`);
+    expect(html).toContain(`<strong><span style="background-color:#fff3a3">marked</span></strong>`);
+    expect(html).toContain(`<table class="wr-table"><colgroup><col style="width:50%"><col style="width:25%"><col style="width:25%"></colgroup><thead><tr><th><p>Skill</p></th>`);
+    expect(html).toContain(`<tbody><tr><td rowspan="2"><p>Writing</p></td><td colspan="2"><p><strong>Expert</strong></p></td></tr>`);
+    expect(html).toContain(`<table class="wr-table" data-borders="off">`);
+    const css = document_css(".doc", resolve_styles(SAMPLE_V5.styles));
+    expect(css).toContain(".doc{font-family:Inter,Inter,ui-sans-serif,system-ui,sans-serif;font-size:10.5pt;");
+    expect(css).toContain("color:#222222;");
+    expect(css).toContain(`.doc p.wr-title{font-size:28pt;font-weight:700;font-style:normal;line-height:1.15;margin:0pt 0 10pt;font-family:"warren-font-burrow",Inter}`);
+    expect(css).toContain(".doc h1{font-size:22pt;font-weight:700;font-style:normal;line-height:1.2;margin:17.6pt 0 6pt;color:#1971c2;text-align:center}");
   });
 });

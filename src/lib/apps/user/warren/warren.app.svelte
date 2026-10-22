@@ -27,6 +27,7 @@
     FolderOpen as FolderOpenIcon,
     ListBullets as ListBulletsIcon,
     ListNumbers as ListNumbersIcon,
+    Table as TableIcon,
     TextB as TextBIcon,
     TextItalic as TextItalicIcon,
     TextUnderline as TextUnderlineIcon,
@@ -35,12 +36,15 @@
   import { z } from "zod";
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
   import { build_docx, DOCX_TYPE, font_name } from "./docx";
-  import { BlockStyle, LIST_STYLES, WarrenEditor, Zone, type Margin } from "./editor.svelte";
+  import { BlockStyle, LIST_STYLES, TableAction, WarrenEditor, Zone, type Margin } from "./editor.svelte";
   import { EXTENSION, serialize_document, type WarrenDocument } from "./format";
   import { document_file_name, font_sources, read_document, read_file, stem_of, with_extension, write_file } from "./io";
   import { document_text, picture_size } from "./model";
   import { Flow, geometry, ZONE_GAP_MM, zone_distance } from "./page";
-  import { BODY_FAMILY, document_css } from "./print";
+  import { BODY_FAMILY, document_css, style_family, type Families, type PrintFonts } from "./print";
+  import { style_fonts } from "./styles";
+  import { attach_column_resize } from "./table-resize";
+  import WarrenTable from "./warren-table.svelte";
   import { printable } from "./print-layout";
   import { TEMPLATES_DIR, type Template } from "./templates";
   import WarrenTemplates from "./warren-templates.svelte";
@@ -94,7 +98,7 @@
   let file_path = $state<string | null>(null);
   let draft = $state<{ name: string; folder: string } | null>(null);
   let loading = $state(false);
-  let more = $state(false);
+  let sheet = $state<"more" | "table" | null>(null);
   let root = $state<HTMLElement | null>(null);
 
   const file_name = $derived(file_path ? base_name(file_path) : (draft?.name ?? document_file_name("Untitled")));
@@ -117,12 +121,15 @@
     .map(([key, value]) => `--${key.replaceAll("_", "-")}:${value}`)
     .join(";");
   const STYLE_OPTIONS = [
-    { value: BlockStyle.PARAGRAPH, label: "Body" },
+    { value: BlockStyle.PARAGRAPH, label: "Normal" },
+    { value: BlockStyle.TITLE, label: "Title" },
     { value: BlockStyle.H1, label: "Heading 1" },
     { value: BlockStyle.H2, label: "Heading 2" },
     { value: BlockStyle.H3, label: "Heading 3" },
+    { value: BlockStyle.QUOTE, label: "Quote" },
   ];
-  const DOC_CSS = document_css(".warren-doc", "var(--doc-font,Inter)") + document_css(".zone-doc", "var(--doc-font,Inter)");
+  const EDITOR_FAMILIES: Families = { body: "var(--doc-font,Inter)", builtin: (id) => `var(--wr-font-${id},Inter)` };
+  const doc_css = $derived(document_css(".warren-doc", editor.styles, EDITOR_FAMILIES) + document_css(".zone-doc", editor.styles, EDITOR_FAMILIES));
   const uid = $props.id();
   const link_id = `warren-link-${uid}`;
   const link_anchor = `--warren-link-${uid}`;
@@ -131,7 +138,7 @@
   let finding = $state(false);
 
   function open_find() {
-    more = false;
+    sheet = null;
     if (!finding) {
       finding = true;
       return;
@@ -147,8 +154,8 @@
 
   // From the More sheet the button goes away with the sheet, so there is nothing to anchor to.
   function open_link() {
-    link_placement = mobile ? "sheet" : more ? "center" : "anchor";
-    more = false;
+    link_placement = mobile ? "sheet" : sheet ? "center" : "anchor";
+    sheet = null;
     document.getElementById(link_id)?.showPopover();
   }
 
@@ -193,20 +200,63 @@
     })();
   });
 
-  async function print_faces(): Promise<string> {
+  // The built-in fonts the styles name, each registered once per window like the body font.
+  let style_faces = $state.raw<Record<string, { family: string; sources: FaceSource[]; faces: FontFace[] }>>({});
+  const style_font_key = $derived(style_fonts(editor.styles).join(","));
+
+  $effect(() => {
+    const wanted = style_font_key ? style_font_key.split(",") : [];
+    const current = untrack(() => style_faces);
+    let stale = false;
+    void (async () => {
+      const next: typeof style_faces = {};
+      for (const id of wanted) {
+        const loaded = current[id];
+        if (loaded) {
+          next[id] = loaded;
+          continue;
+        }
+        try {
+          const sources = await font_sources({ kind: "builtin", id });
+          const family = `warren-${window_id}-${id}`;
+          const faces = await load_faces(family, sources);
+          if (stale) return;
+          for (const face of faces) document.fonts.add(face);
+          next[id] = { family, sources, faces };
+        } catch (reason) {
+          report_error(app_id, `Couldn't load a style's font`, reason);
+        }
+      }
+      if (stale) return;
+      for (const [id, loaded] of Object.entries(current)) if (!next[id]) for (const face of loaded.faces) document.fonts.delete(face);
+      style_faces = next;
+    })();
+    return () => (stale = true);
+  });
+
+  const style_font_vars = $derived(
+    Object.entries(style_faces)
+      .map(([id, loaded]) => `;--wr-font-${id}:'${loaded.family}'`)
+      .join("")
+  );
+
+  async function print_faces(): Promise<PrintFonts> {
+    let css = Object.entries(style_faces)
+      .map(([id, loaded]) => face_css(style_family(id), loaded.sources))
+      .join("");
     const choice = editor.page.font;
-    if (!choice || choice.kind === "default") return "";
-    if (body) return face_css(BODY_FAMILY, body.sources);
+    if (!choice || choice.kind === "default") return { css, body: false };
     try {
-      return face_css(BODY_FAMILY, await font_sources(choice));
+      css += face_css(BODY_FAMILY, body ? body.sources : await font_sources(choice));
+      return { css, body: true };
     } catch {
-      return "";
+      return { css, body: false };
     }
   }
 
   $effect(() => win.set_title(file_name));
   $effect(() => win.set_dirty(editor.dirty, { save }));
-  $effect(() => win.on_back(() => (more ? ((more = false), true) : finding ? ((finding = false), editor.focus(), true) : false)));
+  $effect(() => win.on_back(() => (sheet ? ((sheet = null), true) : finding ? ((finding = false), editor.focus(), true) : false)));
 
   async function discard_ok(): Promise<boolean> {
     return !editor.dirty || confirm_discard(win, file_name);
@@ -300,7 +350,7 @@
   }
 
   async function picture_menu(event: MouseEvent) {
-    more = false;
+    sheet = null;
     const zone = editor.active;
     const choice = await dialogs.menu(
       [
@@ -401,7 +451,7 @@
   }
 
   function export_as(format: "docx" | "pdf") {
-    more = false;
+    sheet = null;
     void (format === "docx" ? export_docx() : export_pdf());
   }
 
@@ -481,6 +531,7 @@
     return () => {
       font_request++;
       drop_faces();
+      for (const loaded of Object.values(style_faces)) for (const face of loaded.faces) document.fonts.delete(face);
       editor.destroy();
     };
   });
@@ -504,9 +555,47 @@
 
   const keep_focus = (event: PointerEvent) => event.preventDefault();
 
+  let resize_handle = $state<HTMLElement | null>(null);
+
+  function attach_resize(paper: HTMLElement) {
+    if (mobile || !resize_handle) return;
+    return attach_column_resize(paper, resize_handle, () => [editor.lexical, editor.zones.header, editor.zones.footer]);
+  }
+
+  // The cell menu on a right-click; on the phone the format bar's Table button opens the same tools in a sheet.
+  async function table_menu(event: MouseEvent) {
+    if (mobile || !(event.target instanceof Element) || !event.target.closest("td, th")) return;
+    event.preventDefault();
+    await new Promise(requestAnimationFrame);
+    const table = editor.table;
+    if (!table) return;
+    const choice = await dialogs.menu(
+      [
+        { id: TableAction.ROW_ABOVE, label: "Insert row above" },
+        { id: TableAction.ROW_BELOW, label: "Insert row below" },
+        { id: TableAction.COLUMN_LEFT, label: "Insert column left" },
+        { id: TableAction.COLUMN_RIGHT, label: "Insert column right" },
+        { separator: true },
+        { id: TableAction.MERGE, label: "Merge cells", disabled: !table.can_merge },
+        { id: TableAction.SPLIT, label: "Split cell", disabled: !table.can_split },
+        { id: "header", label: table.header ? "Header row off" : "Header row on" },
+        { id: "borders", label: table.borders ? "Hide borders" : "Show borders" },
+        { separator: true },
+        { id: TableAction.DELETE_ROW, label: "Delete row", danger: true },
+        { id: TableAction.DELETE_COLUMN, label: "Delete column", danger: true },
+        { id: TableAction.DELETE_TABLE, label: "Delete table", danger: true },
+      ],
+      { anchor: { x: event.clientX, y: event.clientY } }
+    );
+    if (choice === "header") editor.set_table_header(!table.header);
+    else if (choice === "borders") editor.set_table_borders(!table.borders);
+    else if (choice) editor.table_action(choice as TableAction);
+    editor.focus();
+  }
+
   // On a phone the jump closes the More sheet and keeps the keyboard down.
   function go_to(key: string) {
-    more = false;
+    sheet = null;
     editor.go_to(key, !mobile);
   }
 </script>
@@ -535,7 +624,7 @@
   />
 {/snippet}
 
-<svelte:element this={"style"}>{DOC_CSS}</svelte:element>
+<svelte:element this={"style"}>{doc_css}</svelte:element>
 
 <div class="warren relative grid h-full min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-background">
   <Toolbar class="flex-nowrap gap-1">
@@ -571,9 +660,13 @@
         />
         <IconButton label="Bullets" size="sm" pressed={editor.block === BlockStyle.BULLET} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.BULLET)}><ListBulletsIcon weight="bold" /></IconButton>
         <IconButton label="Numbers" size="sm" pressed={editor.block === BlockStyle.NUMBER} onpointerdown={keep_focus} onclick={() => editor.set_block(BlockStyle.NUMBER)}><ListNumbersIcon weight="bold" /></IconButton>
-        <IconButton label="Insert picture" size="sm" disabled={editor.adding > 0} onpointerdown={keep_focus} onclick={picture_menu}><ImageIcon weight="bold" /></IconButton>
+        {#if editor.table}
+          <IconButton label="Table" size="sm" pressed onpointerdown={keep_focus} onclick={() => (sheet = "table")}><TableIcon weight="bold" /></IconButton>
+        {:else}
+          <IconButton label="Insert picture" size="sm" disabled={editor.adding > 0} onpointerdown={keep_focus} onclick={picture_menu}><ImageIcon weight="bold" /></IconButton>
+        {/if}
         <div class="flex-1"></div>
-        <IconButton label="More tools" size="sm" onclick={() => (more = true)}><DotsThreeIcon weight="bold" /></IconButton>
+        <IconButton label="More tools" size="sm" onclick={() => (sheet = "more")}><DotsThreeIcon weight="bold" /></IconButton>
       </div>
 
       {#if finding}
@@ -585,10 +678,13 @@
           class="paper text-foreground"
           style="{PAPER_VARS};--pw:{page.width};--ph:{page.height};--mt:{page.margins.top};--mr:{page.margins.right};--mb:{page.margins.bottom};--ml:{page.margins.left};--hd:{zone_distance(
             page.margins.top
-          )};--fd:{zone_distance(page.margins.bottom)};--zg:{ZONE_GAP_MM}{body ? `;--doc-font:'${body.family}'` : ''}"
+          )};--fd:{zone_distance(page.margins.bottom)};--zg:{ZONE_GAP_MM}{body ? `;--doc-font:'${body.family}'` : ''}{style_font_vars}"
           onclick={(event) => event.target === event.currentTarget && editor.focus(Zone.BODY)}
+          oncontextmenu={table_menu}
           role="presentation"
+          {@attach attach_resize}
         >
+          <div class="col-resize" bind:this={resize_handle} hidden aria-hidden="true"></div>
           <div class={["zone head", !has_header && "spacer"]} bind:this={head} onclick={(event) => has_header && event.target === event.currentTarget && editor.focus(Zone.HEADER)} role="presentation">
             {#if has_header}
               <div class="zone-doc" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Header" tabindex="0" {@attach mount_zone(Zone.HEADER)}></div>
@@ -643,29 +739,36 @@
     <span class="hidden @lg:inline">{editor.page.size}{editor.page.orientation === "landscape" ? " landscape" : ""}</span>
   </StatusBar>
 
-  {#if more}
+  {#if sheet}
     <div class="absolute inset-0 z-20 flex flex-col justify-end">
-      <button type="button" tabindex="-1" aria-label="Close" class="absolute inset-0 bg-(--overlay)" onclick={() => (more = false)}></button>
+      <button type="button" tabindex="-1" aria-label="Close" class="absolute inset-0 bg-(--overlay)" onclick={() => (sheet = null)}></button>
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Tools"
+        aria-label={sheet === "table" ? "Table" : "Tools"}
         tabindex="-1"
         class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
         {@attach (element) => element.focus({ preventScroll: true })}
-        {@attach swipe_dismiss({ on_dismiss: () => (more = false) })}
+        {@attach swipe_dismiss({ on_dismiss: () => (sheet = null) })}
         onkeydown={(event) => {
           if (event.key !== "Escape") return;
           event.stopPropagation();
-          more = false;
+          sheet = null;
         }}
       >
         <Grabber class="mt-2 mb-1" />
         <div class="min-h-0 flex-1 overflow-y-auto">
-          {@render tools()}
+          {#if sheet === "table"}
+            <div class="flex flex-col gap-2 px-3 pt-1 pb-3">
+              <h2 class="text-2xs font-semibold tracking-wide text-foreground/65 uppercase">Table</h2>
+              <WarrenTable {editor} ondone={() => (sheet = null)} />
+            </div>
+          {:else}
+            {@render tools()}
+          {/if}
         </div>
         <div class="flex justify-end border-t border-foreground/8 p-2">
-          <Button variant="primary" onclick={() => (more = false)}>Done</Button>
+          <Button variant="primary" onclick={() => (sheet = null)}>Done</Button>
         </div>
       </div>
     </div>
@@ -718,6 +821,7 @@
     background: var(--background-lightest);
     box-shadow: 0 1px 3px color-mix(in oklch, var(--background-darkest) 30%, transparent);
     cursor: text;
+    position: relative;
   }
 
   /* On a phone-sized desk the side margins give way to the text, as before page setup existed. */
@@ -912,6 +1016,41 @@
 
   .warren-doc :global(.wr-rule) {
     cursor: default;
+  }
+
+  /* A borderless table is for layout; on screen its cells keep a faint guide so they can still be found. */
+  .paper :global(table[data-borders="off"] :is(td, th)) {
+    outline: 1px dashed color-mix(in oklch, var(--foreground) 16%, transparent);
+    outline-offset: -1px;
+  }
+
+  .paper :global(.wr-cell-selected) {
+    background: color-mix(in oklch, var(--primary) 20%, transparent);
+  }
+
+  .paper :global(.wr-table-selection) :global(::selection) {
+    background: transparent;
+  }
+
+  .col-resize {
+    position: absolute;
+    z-index: 2;
+    width: 9px;
+    margin-left: -4.5px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .col-resize::after {
+    content: "";
+    position: absolute;
+    inset: 0 3.5px;
+    background: var(--cottontail);
+    opacity: 0.6;
+  }
+
+  .col-resize:global(.dragging)::after {
+    opacity: 1;
   }
 
   .warren-doc::spelling-error,

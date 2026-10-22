@@ -1,10 +1,13 @@
-import { font_label } from "$lib/core/api/services/settings/fonts";
+import { BUILTIN_FONTS, font_label } from "$lib/core/api/services/settings/fonts";
 import type { FontChoice } from "$lib/core/api/services/settings/type";
 import { Method } from "$lib/core/utils/zip/format";
 import { write_zip } from "$lib/core/utils/zip/write";
 import type { EditorJson, WarrenDocument } from "./format";
-import { blocks_of, ListKind, PAGES_TOKEN, PAGE_TOKEN, type Script, type Align, type Block, type Run, type TextBlock } from "./model";
-import { BASE_PT, geometry, HEADING_PT, LINE_HEIGHT, Orientation, PARAGRAPH_AFTER_PT, mm_to_twips, zone_distance } from "./page";
+import { word_hex } from "./colour";
+import { blocks_of, flat_blocks, ListKind, PAGES_TOKEN, PAGE_TOKEN, type Script, type Align, type Block, type Run, type TableBlock, type TextBlock } from "./model";
+import { geometry, Orientation, mm_to_twips, zone_distance } from "./page";
+import { DEFAULT_STYLES, INTER, resolve_styles, type DocStyles, type StyleSpec } from "./styles";
+import { column_percents, grid_rows } from "./table";
 
 export const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -26,6 +29,9 @@ const EMU_PER_MM = 36000;
 // A rule is an empty paragraph with a bottom border, which is what Word itself writes for "---".
 const RULE_BORDER = `<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr>`;
 const FIELDS: Record<string, string> = { [PAGE_TOKEN]: "PAGE", [PAGES_TOKEN]: "NUMPAGES" };
+// Cell padding, the same 4 pt by 6 pt the editor and the PDF use.
+const CELL_MARGIN = { top: 80, side: 120 };
+const STYLE_IDS_DOCX = { title: "Title", quote: "Quote" } as const;
 
 export interface Media {
   file: string;
@@ -108,17 +114,22 @@ interface Part {
   /** `wp:docPr` ids are unique across the whole package. */
   drawings: { next: number };
   fields: boolean;
+  /** A header cell's runs are bold, as `th` is on screen. */
+  bold: boolean;
 }
 
-function run_props(run: Run): string {
-  // `w:rPr` children have a fixed order in the schema: style, bold, italic, strike, size, underline, vertical alignment.
+function run_props(run: Run, bold = false): string {
+  // `w:rPr` children have a fixed order in the schema: style, bold, italic, strike, colour, size, underline, shading,
+  // vertical alignment.
   const props = [
     run.link && `<w:rStyle w:val="Hyperlink"/>`,
-    run.bold && "<w:b/><w:bCs/>",
+    (run.bold || bold) && "<w:b/><w:bCs/>",
     run.italic && "<w:i/><w:iCs/>",
     run.strike && "<w:strike/>",
+    run.color && `<w:color w:val="${word_hex(run.color)}"/>`,
     run.size !== null && `<w:sz w:val="${half_points(run.size)}"/><w:szCs w:val="${half_points(run.size)}"/>`,
     run.underline && `<w:u w:val="single"/>`,
+    run.highlight && `<w:shd w:val="clear" w:color="auto" w:fill="${word_hex(run.highlight)}"/>`,
     run.script && `<w:vertAlign w:val="${VERT_ALIGN[run.script]}"/>`,
   ]
     .filter(Boolean)
@@ -134,8 +145,8 @@ function text_xml(text: string): string {
     .join("");
 }
 
-function run_xml(run: Run, fields: boolean): string {
-  const props = run_props(run);
+function run_xml(run: Run, fields: boolean, bold: boolean): string {
+  const props = run_props(run, bold);
   return (fields ? run.text.split(/(\{pages?\})/) : [run.text])
     .filter((part) => part !== "")
     .map((part) => (fields && part in FIELDS ? `<w:fldSimple w:instr=" ${FIELDS[part]} "><w:r>${props}<w:t>1</w:t></w:r></w:fldSimple>` : `<w:r>${props}${text_xml(part)}</w:r>`))
@@ -150,7 +161,7 @@ function runs_xml(runs: Run[], part: Part): string {
     while (end < runs.length && runs[end].link === link) end++;
     const inner = runs
       .slice(index, end)
-      .map((run) => run_xml(run, part.fields))
+      .map((run) => run_xml(run, part.fields, part.bold))
       .join("");
     xml += link ? `<w:hyperlink r:id="${part.rels.link(link)}" w:history="1">${inner}</w:hyperlink>` : inner;
     index = end;
@@ -159,7 +170,7 @@ function runs_xml(runs: Run[], part: Part): string {
 }
 
 function numbering_of(blocks: Block[], numbering: Numbering = { nums: [], by_list: new Map() }, offset = 0): Numbering {
-  for (const block of blocks) {
+  for (const block of flat_blocks(blocks)) {
     if (block.kind !== "item" || block.list === ListKind.CHECK || numbering.by_list.has(block.list_id + offset)) continue;
     const id = numbering.nums.length + 1;
     numbering.nums.push({ id, abstract: block.list === ListKind.NUMBER ? 1 : 0, level: block.level, start: block.start });
@@ -169,7 +180,7 @@ function numbering_of(blocks: Block[], numbering: Numbering = { nums: [], by_lis
 }
 
 function check_run(checked: boolean): Run {
-  return { text: checked ? "☑ " : "☐ ", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link: null };
+  return { text: checked ? "☑ " : "☐ ", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link: null, color: null, highlight: null };
 }
 
 function paragraph_xml(block: TextBlock, part: Part, break_before: boolean, list_offset: number): string {
@@ -177,6 +188,7 @@ function paragraph_xml(block: TextBlock, part: Part, break_before: boolean, list
   const props: string[] = [];
   const check = block.kind === "item" && block.list === ListKind.CHECK;
   if (block.kind === "heading") props.push(`<w:pStyle w:val="Heading${block.level}"/>`);
+  if (block.kind === "title" || block.kind === "quote") props.push(`<w:pStyle w:val="${STYLE_IDS_DOCX[block.kind]}"/>`);
   // A check item is a plain paragraph: List Paragraph without numbering reads as an unknown style on import.
   if (block.kind === "item" && !check) props.push(`<w:pStyle w:val="ListParagraph"/>`);
   if (break_before) props.push("<w:pageBreakBefore/>");
@@ -213,6 +225,41 @@ function image_xml(block: Extract<Block, { kind: "image" }>, part: Part, break_b
   );
 }
 
+const BORDER_SIDES = ["top", "left", "bottom", "right", "insideH", "insideV"];
+
+function table_xml(block: TableBlock, part: Part, list_offset: number): string {
+  const { rows, columns } = grid_rows(block.rows);
+  const widths = block.widths.length === columns ? block.widths : column_percents(undefined, columns);
+  const total = mm_to_twips(part.column_mm);
+  const grid = widths.map((width) => Math.round((total * width) / 100));
+  const border = block.borders ? `w:val="single" w:sz="4" w:space="0" w:color="auto"` : `w:val="nil"`;
+  // `w:tblPr` children in the schema's order: width, borders, layout, cell margins.
+  const props =
+    `<w:tblPr><w:tblW w:w="${grid.reduce((sum, width) => sum + width, 0)}" w:type="dxa"/>` +
+    `<w:tblBorders>${BORDER_SIDES.map((side) => `<w:${side} ${border}/>`).join("")}</w:tblBorders><w:tblLayout w:type="fixed"/>` +
+    `<w:tblCellMar><w:top w:w="${CELL_MARGIN.top}" w:type="dxa"/><w:left w:w="${block.borders ? CELL_MARGIN.side : 0}" w:type="dxa"/>` +
+    `<w:bottom w:w="${CELL_MARGIN.top}" w:type="dxa"/><w:right w:w="${block.borders ? CELL_MARGIN.side : 0}" w:type="dxa"/></w:tblCellMar></w:tblPr>`;
+  const header_rows = block.rows.findIndex((cells) => !cells.length || !cells.every((cell) => cell.header));
+  const leading = header_rows < 0 ? block.rows.length : header_rows;
+  const body = rows
+    .map((items, index) => {
+      const cells = items
+        .map((item) => {
+          const span = Math.max(1, item.cell.col_span);
+          const width = grid.slice(item.column, item.column + span).reduce((sum, value) => sum + value, 0);
+          const merge = item.continued ? "<w:vMerge/>" : item.cell.row_span > 1 ? `<w:vMerge w:val="restart"/>` : "";
+          const cell_props = `<w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ""}${merge}</w:tcPr>`;
+          const inner = Math.max(1, width - (block.borders ? 2 * CELL_MARGIN.side : 0)) / 1440 * 25.4;
+          const content = item.continued ? "<w:p/>" : blocks_xml(item.cell.blocks, { ...part, column_mm: inner, bold: item.cell.header }, list_offset);
+          return `<w:tc>${cell_props}${content}</w:tc>`;
+        })
+        .join("");
+      return `<w:tr>${index < leading ? "<w:trPr><w:tblHeader/></w:trPr>" : "<w:trPr><w:cantSplit/></w:trPr>"}${cells}</w:tr>`;
+    })
+    .join("");
+  return `<w:tbl>${props}<w:tblGrid>${grid.map((width) => `<w:gridCol w:w="${width}"/>`).join("")}</w:tblGrid>${body}</w:tbl>`;
+}
+
 function blocks_xml(blocks: Block[], part: Part, list_offset = 0): string {
   const body: string[] = [];
   let pending_break = false;
@@ -222,13 +269,22 @@ function blocks_xml(blocks: Block[], part: Part, list_offset = 0): string {
       pending_break = !part.fields;
       continue;
     }
+    if (block.kind === "table") {
+      // A table can't break before itself; the page break goes in an empty paragraph above it.
+      if (pending_break) body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
+      pending_break = false;
+      body.push(table_xml(block, part, list_offset));
+      continue;
+    }
     if (block.kind === "rule") body.push(rule_xml(pending_break));
     else if (block.kind === "image") body.push(image_xml(block, part, pending_break));
     else body.push(paragraph_xml(block, part, pending_break, list_offset));
     pending_break = false;
   }
   if (pending_break) body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
-  return body.join("") || "<w:p/>";
+  // Word wants a paragraph after a table that ends a body, header, footer or cell.
+  if (!body.length || body.at(-1)!.startsWith("<w:tbl>")) body.push("<w:p/>");
+  return body.join("");
 }
 
 interface Plan {
@@ -268,7 +324,7 @@ function write_parts(document: WarrenDocument, media: MediaMap): Written {
   const page = geometry(document.page);
   const column_mm = page.width - page.margins.left - page.margins.right;
   const drawings = { next: 1 };
-  const part = (rels: Rels, fields: boolean): Part => ({ rels, numbering: plan.numbering, media, column_mm, drawings, fields });
+  const part = (rels: Rels, fields: boolean): Part => ({ rels, numbering: plan.numbering, media, column_mm, drawings, fields, bold: false });
 
   const rels = new Rels(DOCUMENT_BASE_RELS);
   const body = blocks_xml(plan.body, part(rels, false));
@@ -303,28 +359,61 @@ export function document_xml(document: WarrenDocument, media: MediaMap = new Map
   return write_parts(document, media).document;
 }
 
-function heading_style(level: 1 | 2 | 3): string {
-  return (
-    `<w:style w:type="paragraph" w:styleId="Heading${level}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>` +
-    `<w:pPr><w:keepNext/><w:spacing w:before="${twips(HEADING_PT[level] * 0.8)}" w:after="${twips(PARAGRAPH_AFTER_PT)}"/><w:outlineLvl w:val="${level - 1}"/></w:pPr>` +
-    `<w:rPr><w:b/><w:bCs/><w:sz w:val="${half_points(HEADING_PT[level])}"/><w:szCs w:val="${half_points(HEADING_PT[level])}"/></w:rPr></w:style>`
-  );
+function style_font(font: string): string {
+  return font === INTER ? "Inter" : (BUILTIN_FONTS[font]?.name ?? "Inter");
 }
 
-export function styles_xml(font: string): string {
+const fonts_xml = (family: string) => `<w:rFonts w:ascii="${family}" w:hAnsi="${family}" w:eastAsia="${family}" w:cs="${family}"/>`;
+
+// A style is based on Normal, so a field only needs writing where it differs from Normal's (or from Word's defaults,
+// for Normal itself, which is based on the document defaults).
+function style_props(spec: StyleSpec, normal: StyleSpec | null, paragraph: string[] = [], outline: number | null = null, indent: string[] = []): string {
+  const differs = <K extends keyof StyleSpec>(key: K) => !normal || spec[key] !== normal[key];
+  const run = [
+    spec.font && differs("font") && fonts_xml(escape_xml(style_font(spec.font))),
+    differs("bold") && (spec.bold ? "<w:b/><w:bCs/>" : normal && `<w:b w:val="0"/><w:bCs w:val="0"/>`),
+    differs("italic") && (spec.italic ? "<w:i/><w:iCs/>" : normal && `<w:i w:val="0"/><w:iCs w:val="0"/>`),
+    differs("color") && `<w:color w:val="${spec.color ? word_hex(spec.color) : "auto"}"/>`,
+    `<w:sz w:val="${half_points(spec.size)}"/><w:szCs w:val="${half_points(spec.size)}"/>`,
+  ]
+    .filter(Boolean)
+    .join("");
+  // `w:pPr` children in the schema's order: keep with next, borders, spacing, indent, justification, outline level.
+  const para = [
+    ...paragraph,
+    `<w:spacing w:before="${twips(spec.before)}" w:after="${twips(spec.after)}" w:line="${Math.round(spec.line * 240)}" w:lineRule="auto"/>`,
+    ...indent,
+    spec.align && `<w:jc w:val="${JUSTIFICATION[spec.align]}"/>`,
+    outline !== null && `<w:outlineLvl w:val="${outline}"/>`,
+  ]
+    .filter(Boolean)
+    .join("");
+  return `<w:pPr>${para}</w:pPr><w:rPr>${run}</w:rPr>`;
+}
+
+function named_style(id: string, name: string, props: string): string {
+  return `<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>${props}</w:style>`;
+}
+
+const QUOTE_BORDER = `<w:pBdr><w:left w:val="single" w:sz="16" w:space="8" w:color="auto"/></w:pBdr>`;
+
+export function styles_xml(font: string, styles: DocStyles = DEFAULT_STYLES): string {
   const family = escape_xml(font);
-  const line = Math.round(LINE_HEIGHT * 240);
+  const { normal } = styles;
+  const heading = (level: 1 | 2 | 3) => named_style(`Heading${level}`, `heading ${level}`, style_props(styles[`h${level}`], normal, ["<w:keepNext/>"], level - 1));
   return (
     `${HEAD}<w:styles xmlns:w="${W}">` +
-    `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${family}" w:hAnsi="${family}" w:eastAsia="${family}" w:cs="${family}"/>` +
-    `<w:sz w:val="${half_points(BASE_PT)}"/><w:szCs w:val="${half_points(BASE_PT)}"/><w:lang w:val="en-GB"/></w:rPr></w:rPrDefault>` +
-    `<w:pPrDefault><w:pPr><w:spacing w:after="${twips(PARAGRAPH_AFTER_PT)}" w:line="${line}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
-    `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>` +
-    heading_style(1) +
-    heading_style(2) +
-    heading_style(3) +
+    `<w:docDefaults><w:rPrDefault><w:rPr>${fonts_xml(family)}` +
+    `<w:sz w:val="${half_points(normal.size)}"/><w:szCs w:val="${half_points(normal.size)}"/><w:lang w:val="en-GB"/></w:rPr></w:rPrDefault>` +
+    `<w:pPrDefault><w:pPr><w:spacing w:after="${twips(normal.after)}" w:line="${Math.round(normal.line * 240)}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
+    `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/>${style_props(normal, null)}</w:style>` +
+    named_style("Title", "Title", style_props(styles.title, normal, ["<w:keepNext/>"])) +
+    heading(1) +
+    heading(2) +
+    heading(3) +
+    named_style("Quote", "Quote", style_props(styles.quote, normal, [QUOTE_BORDER], null, [`<w:ind w:left="${twips(9)}"/>`])) +
     `<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:qFormat/>` +
-    `<w:pPr><w:spacing w:after="${twips(PARAGRAPH_AFTER_PT / 3)}"/><w:contextualSpacing/></w:pPr></w:style>` +
+    `<w:pPr><w:spacing w:after="${twips(normal.after / 3)}"/><w:contextualSpacing/></w:pPr></w:style>` +
     `<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:u w:val="single"/></w:rPr></w:style>` +
     `</w:styles>`
   );
@@ -397,7 +486,7 @@ export function docx_parts(document: WarrenDocument, title: string, now = new Da
     "_rels/.rels": PACKAGE_RELS,
     "docProps/core.xml": core_xml(title, now),
     "word/document.xml": written.document,
-    "word/styles.xml": styles_xml(font_name(document.page.font)),
+    "word/styles.xml": styles_xml(font_name(document.page.font), resolve_styles(document.styles)),
     "word/numbering.xml": numbering_xml(document),
     "word/_rels/document.xml.rels": written.rels.xml(),
     ...(written.header ? { "word/header1.xml": written.header.xml } : {}),
@@ -409,7 +498,7 @@ export function docx_parts(document: WarrenDocument, title: string, now = new Da
 
 export function picture_sources(document: WarrenDocument): string[] {
   const parts: (EditorJson | undefined)[] = [document.editor, document.header, document.footer];
-  const sources = parts.flatMap((part) => (part ? blocks_of(part) : [])).flatMap((block) => (block.kind === "image" ? [block.src] : []));
+  const sources = parts.flatMap((part) => (part ? flat_blocks(blocks_of(part)) : [])).flatMap((block) => (block.kind === "image" ? [block.src] : []));
   return [...new Set(sources)];
 }
 

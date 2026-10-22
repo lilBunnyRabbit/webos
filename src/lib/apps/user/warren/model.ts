@@ -1,9 +1,14 @@
+import { style_colour } from "./colour";
 import type { DocNode, EditorJson } from "./format";
+import { column_percents } from "./table";
 
 export const PAGE_BREAK = "page-break";
 export const RULE = "horizontalrule";
 export const LINK_TYPES = ["link", "autolink"];
 export const IMAGE = "image";
+export const TABLE = "table";
+export const TITLE = "title";
+export const QUOTE = "quote";
 
 // Like Proposals' pictures, but a page gets printed: a longer edge and a little more quality.
 export const PICTURE = { max_side: 1600, quality: 0.82 } as const;
@@ -29,6 +34,8 @@ export interface Run {
   /** Points; `null` is the block's own size. */
   size: number | null;
   link: string | null;
+  color: string | null;
+  highlight: string | null;
 }
 
 export const ListKind = { BULLET: "bullet", NUMBER: "number", CHECK: "check" } as const;
@@ -38,19 +45,45 @@ export const Align = { LEFT: "left", CENTER: "center", RIGHT: "right", JUSTIFY: 
 export type Align = (typeof Align)[keyof typeof Align];
 export const ALIGNS = Object.values(Align);
 
+export interface TableCell {
+  col_span: number;
+  row_span: number;
+  header: boolean;
+  blocks: Block[];
+}
+
+export interface TableBlock {
+  kind: "table";
+  borders: boolean;
+  /** Percent of the table's width per grid column, adding up to 100. */
+  widths: number[];
+  rows: TableCell[][];
+}
+
 export type Block =
   | { kind: "paragraph"; align: Align | null; runs: Run[] }
+  | { kind: "title"; align: Align | null; runs: Run[] }
+  | { kind: "quote"; align: Align | null; runs: Run[] }
   | { kind: "heading"; level: 1 | 2 | 3; align: Align | null; runs: Run[] }
   | { kind: "item"; list: ListKind; level: number; list_id: number; start: number; checked: boolean; align: Align | null; runs: Run[] }
   | { kind: "page-break" }
   | { kind: "rule" }
-  | { kind: "image"; src: string; width: number; align: ImageAlign; alt: string };
+  | { kind: "image"; src: string; width: number; align: ImageAlign; alt: string }
+  | TableBlock;
 
-/** Blocks that hold text, as opposed to page breaks, rules and pictures. */
-export type TextBlock = Exclude<Block, { kind: "page-break" } | { kind: "rule" } | { kind: "image" }>;
+/** Blocks that hold runs of text, as opposed to page breaks, rules, pictures and tables. */
+export type TextBlock = Exclude<Block, { kind: "page-break" } | { kind: "rule" } | { kind: "image" } | TableBlock>;
 
 export function has_text(block: Block): block is TextBlock {
-  return block.kind !== "page-break" && block.kind !== "rule" && block.kind !== "image";
+  return block.kind !== "page-break" && block.kind !== "rule" && block.kind !== "image" && block.kind !== "table";
+}
+
+// Lexical's `TableCellHeaderStates.ROW`.
+export const HEADER_ROW = 1;
+
+// Borderless is for layout (a two-column CV), so borders are on unless the table's NodeState says otherwise.
+export function table_borders(node: DocNode): boolean {
+  return node.$?.borders !== false;
 }
 
 export type ImageAlign = Exclude<Align, "justify">;
@@ -104,9 +137,11 @@ function runs_of(nodes: DocNode[] | undefined, link: string | null = null): Run[
         script: script_of(format),
         size: font_size(node.style),
         link,
+        color: style_colour(node.style, "color"),
+        highlight: style_colour(node.style, "background-color"),
       });
     } else if (node.type === "linebreak") {
-      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link });
+      runs.push({ text: "\n", bold: false, italic: false, underline: false, strike: false, script: null, size: null, link, color: null, highlight: null });
     } else if (node.children) {
       runs.push(...runs_of(node.children, LINK_TYPES.includes(node.type) ? safe_url(node.url) : link));
     }
@@ -134,11 +169,42 @@ function heading_level(tag: string | undefined): 1 | 2 | 3 {
 }
 
 export function blocks_of(editor: EditorJson): Block[] {
+  return blocks_from(editor.root.children, { lists: 0 });
+}
+
+function table_of(node: DocNode, counter: { lists: number }): TableBlock {
+  const rows = (node.children ?? [])
+    .filter((row) => row.type === "tablerow")
+    .map((row) =>
+      (row.children ?? [])
+        .filter((cell) => cell.type === "tablecell")
+        .map((cell) => ({
+          col_span: Math.max(1, Math.floor(cell.colSpan ?? 1)),
+          row_span: Math.max(1, Math.floor(cell.rowSpan ?? 1)),
+          header: ((cell.headerState ?? 0) & HEADER_ROW) !== 0,
+          blocks: blocks_from(cell.children ?? [], counter).filter((block) => block.kind !== "page-break"),
+        }))
+    );
+  return { kind: "table", borders: table_borders(node), widths: column_percents(node.colWidths, grid_columns(rows)), rows };
+}
+
+// A row holds only the cells that start in it, so the widest row is counted with the cells carried down from above.
+export function grid_columns(rows: { col_span: number; row_span: number }[][]): number {
+  const taken: number[] = [];
+  let columns = 0;
+  rows.forEach((cells, index) => {
+    const own = cells.reduce((sum, cell) => sum + cell.col_span, 0);
+    columns = Math.max(columns, (taken[index] ?? 0) + own);
+    for (const cell of cells) for (let below = 1; below < cell.row_span; below++) taken[index + below] = (taken[index + below] ?? 0) + cell.col_span;
+  });
+  return columns;
+}
+
+function blocks_from(nodes: DocNode[], counter: { lists: number }): Block[] {
   const blocks: Block[] = [];
-  let lists = 0;
 
   const list = (node: DocNode, level: number) => {
-    const id = ++lists;
+    const id = ++counter.lists;
     const kind = node.listType === "number" ? ListKind.NUMBER : node.listType === "check" ? ListKind.CHECK : ListKind.BULLET;
     const start = typeof node.start === "number" && node.start > 0 ? Math.floor(node.start) : 1;
     for (const item of node.children ?? []) {
@@ -149,22 +215,28 @@ export function blocks_of(editor: EditorJson): Block[] {
     }
   };
 
-  for (const node of editor.root.children) {
+  for (const node of nodes) {
     if (node.type === PAGE_BREAK) blocks.push({ kind: "page-break" });
     else if (node.type === RULE) blocks.push({ kind: "rule" });
     else if (node.type === IMAGE) {
       const src = safe_image(node.src);
       if (src) blocks.push({ kind: "image", src, width: image_width(node.width), align: image_align(node.align), alt: node.alt ?? "" });
-    }
+    } else if (node.type === TABLE) blocks.push(table_of(node, counter));
     else if (node.type === "heading") blocks.push({ kind: "heading", level: heading_level(node.tag), align: align_of(node), runs: runs_of(node.children) });
+    else if (node.type === TITLE || node.type === QUOTE) blocks.push({ kind: node.type, align: align_of(node), runs: runs_of(node.children) });
     else if (node.type === "list") list(node, 0);
     else blocks.push({ kind: "paragraph", align: align_of(node), runs: runs_of(node.children) });
   }
   return blocks;
 }
 
+/** Every block in reading order, a table's cells row by row after the table itself. */
+export function flat_blocks(blocks: Block[]): Block[] {
+  return blocks.flatMap((block) => (block.kind === "table" ? [block, ...block.rows.flatMap((row) => row.flatMap((cell) => flat_blocks(cell.blocks)))] : [block]));
+}
+
 export function document_text(editor: EditorJson): string {
-  return blocks_of(editor)
+  return flat_blocks(blocks_of(editor))
     .flatMap((block) => (has_text(block) ? [block.runs.map((run) => run.text).join("")] : []))
     .join("\n");
 }

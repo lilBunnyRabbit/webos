@@ -5,6 +5,33 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.51.0",
+    date: "2026-10-22",
+    title: "Tables, styles and colour in Warren",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren has tables: pick a size, add and remove rows and columns, merge cells, make a header row, drag column borders, hide the borders for a layout, and paste tab-separated text as a table; they come through in Word files both ways and in PDFs.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "A new two-column CV template in Warren puts your contact details and skills beside your experience.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Warren documents have their own styles for Normal text, Title, Headings and Quote, with size, spacing, line height, colour, alignment and font, saved with the document and carried into Word and PDF.",
+      },
+      {
+        kind: NEW,
+        apps: ["warren"],
+        text: "Colour text and highlight it in Warren with a swatch or any colour you pick.",
+      },
+    ],
+  },
+  {
     version: "3.50.0",
     date: "2026-10-22",
     title: "Journals your way",

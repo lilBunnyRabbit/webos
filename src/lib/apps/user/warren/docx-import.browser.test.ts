@@ -3,7 +3,7 @@ import { build_docx } from "./docx";
 import { word_like_docx } from "./docx-fixture";
 import { docx_to_html, left_out } from "./docx-import";
 import { WarrenEditor } from "./editor.svelte";
-import { SAMPLE, SAMPLE_V3 } from "./fixture";
+import { SAMPLE, SAMPLE_V3, SAMPLE_V5 } from "./fixture";
 import { blocks_of, document_text } from "./model";
 
 function editor_from(html: string) {
@@ -37,17 +37,18 @@ describe("docx import", () => {
     editor.destroy();
   });
 
-  it("reads a Word-shaped file, keeps its picture and says what it left out", async () => {
+  it("reads a Word-shaped file with its title, picture and table", async () => {
     const { html, left_out: dropped } = await docx_to_html(await word_like_docx());
-    expect(html).toContain("<h1>Jane Doe</h1><h1>Experience</h1>");
+    expect(html).toContain(`<p class="title">Jane Doe</p><h1>Experience</h1>`);
     expect(html).toContain("Led a <strong>small</strong> team, <em>on time</em> and <u>on budget</u>.");
     expect(html).toContain("<ul><li>Shipped the app</li><li>Hired three people</li></ul>");
     expect(html).toContain(`<a href="https://example.com/jane">my site</a>`);
-    expect(dropped).toEqual(["1 table (the text is kept)"]);
+    expect(dropped).toEqual([]);
 
     const editor = editor_from(html);
     const blocks = blocks_of(editor.json);
-    expect(blocks.map((block) => block.kind)).toEqual(["heading", "heading", "paragraph", "item", "item", "paragraph", "image", "paragraph", "paragraph", "page-break", "heading"]);
+    expect(blocks.map((block) => block.kind)).toEqual(["title", "heading", "paragraph", "item", "item", "paragraph", "image", "table", "page-break", "heading"]);
+    expect(blocks[7].kind === "table" && blocks[7].rows.map((cells) => cells.length)).toEqual([2]);
     const runs = blocks[2].kind === "paragraph" ? blocks[2].runs : [];
     expect(runs.map((run) => [run.text, run.bold, run.italic, run.underline])).toEqual([
       ["Led a ", false, false, false],
@@ -62,8 +63,27 @@ describe("docx import", () => {
     editor.destroy();
   });
 
+  it("reads format 5 exports back: tables with spans and header rows, title and quote", async () => {
+    const { html, left_out: dropped } = await docx_to_html(await (await build_docx(SAMPLE_V5, "CV")).arrayBuffer());
+    expect(dropped).toEqual([]);
+    expect(html).toContain(`<p class="title">Jane Doe</p><blockquote>Make it simple.</blockquote>`);
+    expect(html).toContain(`<thead><tr><th><p><strong>Skill</strong></p></th>`);
+    expect(html).toContain(`<td rowspan="2"><p>Writing</p></td><td colspan="2">`);
+    const editor = editor_from(html);
+    const blocks = blocks_of(editor.json);
+    expect(blocks.map((block) => block.kind)).toEqual(["title", "quote", "paragraph", "table", "table", "paragraph"]);
+    const table = blocks[3];
+    expect(table.kind === "table" && table.rows.map((cells) => cells.map((cell) => [cell.col_span, cell.row_span, cell.header]))).toEqual([
+      [[1, 1, true], [1, 1, true], [1, 1, true]],
+      [[1, 2, false], [2, 1, false]],
+      [[1, 1, false], [1, 1, false]],
+    ]);
+    expect(document_text(editor.json)).toBe(document_text(SAMPLE_V5.editor));
+    editor.destroy();
+  });
+
   it("names what was left out", () => {
-    expect(left_out("<p>x</p>", 0, 0)).toEqual([]);
-    expect(left_out("<table><tr></tr></table><table>", 2, 3)).toEqual(["2 pictures", "2 tables (the text is kept)", "3 unsupported styles"]);
+    expect(left_out(0, 0)).toEqual([]);
+    expect(left_out(2, 3)).toEqual(["2 pictures", "3 unsupported styles"]);
   });
 });

@@ -2,7 +2,7 @@
   import type { DialogProps } from "$lib/core/api";
   import { tilde_path } from "$lib/core/api/services/files/path";
   import { Button, Spinner } from "$lib/core/components/ui";
-  import { Article as ArticleIcon, Envelope as EnvelopeIcon, File as FileIcon, FilePlus as FilePlusIcon, IdentificationCard as IdentificationCardIcon, Notebook as NotebookIcon, UserList as UserListIcon } from "phosphor-svelte";
+  import { Article as ArticleIcon, Envelope as EnvelopeIcon, File as FileIcon, FilePlus as FilePlusIcon, IdentificationBadge as IdentificationBadgeIcon, IdentificationCard as IdentificationCardIcon, Notebook as NotebookIcon, UserList as UserListIcon } from "phosphor-svelte";
   import type { Component } from "svelte";
   import { BUILTIN_TEMPLATES, TEMPLATES_DIR, user_templates, type Template } from "./templates";
 
@@ -10,6 +10,7 @@
 
   const ICONS: Record<string, Component> = {
     "builtin:cv": IdentificationCardIcon,
+    "builtin:cv-two-column": IdentificationBadgeIcon,
     "builtin:cover-letter": UserListIcon,
     "builtin:letter": EnvelopeIcon,
     "builtin:report": NotebookIcon,

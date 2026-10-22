@@ -60,3 +60,31 @@ export const SAMPLE_V4: WarrenDocument = {
     ]) as WarrenDocument["editor"]["root"],
   },
 };
+
+const cell = (children: DocNode[], extra: Record<string, unknown> = {}): DocNode => block("tablecell", children, { colSpan: 1, rowSpan: 1, headerState: 0, ...extra });
+const row = (cells: DocNode[]): DocNode => block("tablerow", cells);
+const line = (value: string, format = 0, style = "") => block("paragraph", [text(value, format, style)]);
+
+export const SAMPLE_V5: WarrenDocument = {
+  version: VERSION,
+  page: { size: "A4", flow: "sheets" },
+  styles: { normal: { size: 10.5, color: "#222222" }, h1: { color: "#1971c2", align: "center" }, title: { font: "burrow" } },
+  editor: {
+    root: block("root", [
+      block("title", [text("Jane Doe")], { format: "center" }),
+      block("quote", [text("Make it simple.")]),
+      block("paragraph", [text("Red", 0, "color: #c00000;"), text(" and "), text("marked", 1, "background-color: #fff3a3;")]),
+      block(
+        "table",
+        [
+          row([cell([line("Skill")], { headerState: 1 }), cell([line("Level")], { headerState: 1 }), cell([line("Years")], { headerState: 1 })]),
+          row([cell([line("Writing")], { rowSpan: 2 }), cell([line("Expert", 1)], { colSpan: 2 })]),
+          row([cell([line("Good")]), cell([block("list", [block("listitem", [text("Five")], { value: 1 })], { listType: "bullet", start: 1, tag: "ul" })])]),
+        ],
+        { colWidths: [50, 25, 25] }
+      ),
+      block("table", [row([cell([line("Left")]), cell([line("Right")])])], { $: { borders: false } }),
+      block("paragraph", []),
+    ]) as WarrenDocument["editor"]["root"],
+  },
+};

@@ -1,8 +1,14 @@
 {
- "version": 4,
+ "version": 5,
  "page": {
   "size": "A4",
   "flow": "sheets"
+ },
+ "styles": {
+  "normal": {
+   "line": 1.5,
+   "after": 8
+  }
  },
  "editor": {
   "root": {

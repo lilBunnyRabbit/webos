@@ -1,6 +1,6 @@
 import type { WarrenDocument } from "./format";
 import { geometry } from "./page";
-import { has_zones, print_document, zone_padding, type PrintLayout } from "./print";
+import { has_zones, NO_FONTS, print_document, zone_padding, type PrintFonts, type PrintLayout } from "./print";
 
 const PX_PER_MM = 96 / 25.4;
 
@@ -21,10 +21,10 @@ function load_frame(html: string, width_mm: number): Promise<HTMLIFrameElement> 
  * Lays the print page out once on screen: the header's and footer's heights set where the body starts and ends, then
  * the body in page-tall columns counts the pages, which Chrome fragments the same way it fragments printed pages.
  */
-export async function measure_layout(document_: WarrenDocument, inter_url: string, body_faces = ""): Promise<PrintLayout | null> {
+export async function measure_layout(document_: WarrenDocument, inter_url: string, fonts: PrintFonts = NO_FONTS): Promise<PrintLayout | null> {
   if (!has_zones(document_)) return null;
   const page = geometry(document_.page);
-  const frame = await load_frame(print_document(document_, "", inter_url, body_faces, "measure"), page.width);
+  const frame = await load_frame(print_document(document_, "", inter_url, fonts, "measure"), page.width);
   try {
     const target = frame.contentDocument!;
     await target.fonts.ready;
@@ -41,7 +41,7 @@ export async function measure_layout(document_: WarrenDocument, inter_url: strin
   }
 }
 
-export async function printable(document_: WarrenDocument, title: string, inter_url: string, body_faces = ""): Promise<string> {
-  const layout = await measure_layout(document_, inter_url, body_faces);
-  return print_document(document_, title, inter_url, body_faces, layout);
+export async function printable(document_: WarrenDocument, title: string, inter_url: string, fonts: PrintFonts = NO_FONTS): Promise<string> {
+  const layout = await measure_layout(document_, inter_url, fonts);
+  return print_document(document_, title, inter_url, fonts, layout);
 }
