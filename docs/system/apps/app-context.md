@@ -50,7 +50,7 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 
 | Member | Type | Behaviour |
 |--------|------|-----------|
-| `confirm(message, options?)` | `Promise<boolean>` | `ConfirmDialog` sheet, `dismissible: false`. `false` on Cancel or if the window closes. Options: `detail`, `confirm_label`, `danger` |
+| `confirm(message, options?)` | `Promise<boolean>` | `ConfirmDialog` sheet, `dismissible: false, swipe_cancels: true`. `false` on Cancel, a swipe down on a phone, or if the window closes. Options: `detail`, `confirm_label`, `danger` |
 | `prompt(message, options?)` | `Promise<string \| null>` | `PromptDialog` sheet. Esc or Cancel → `null`. Options: `detail`, `initial`, `placeholder`, `confirm_label`, `validate`, `select_stem`, `danger` (red confirm button, the field keeps focus) |
 | `pick_file(options?)` | `Promise<string \| null>`, `Promise<string[]>` with `multiple: true` | `FilePickerDialog` sheet (imported on first use, like the other two pickers): File Explorer in picker mode. Options: `accept` (association syntax: `.md`, `image/*`), `start_path` (default `/home`), `title`, `multiple`. Resolves the chosen path; with `multiple: true`, every chosen path (several files from one folder, or several from "This device…"), `[]` on Cancel |
 | `pick_directory(options?)` | `Promise<string \| null>` | The same for folders: "Select folder" takes the selected subfolder or the open folder |

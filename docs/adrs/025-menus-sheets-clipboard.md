@@ -113,3 +113,6 @@ Single item only; multi-select comes later (ADR-011).
 
 ## Related
 - ADR-003, ADR-011, ADR-018, ADR-019, ADR-022
+
+## Revision 2026-10-22: a swipe cancels a confirm
+Owner: a swipe down on a confirm sheet is Cancel. `DialogOptions.swipe_cancels` (optional, default `false`) lets a `dismissible: false` sheet still swipe away on phones, resolving `null`, which its caller reads as Cancel; it gets the grabber too. Set by `WindowHandle.confirm`, the save-changes sheet, the desktop delete confirms and the shell's `sudo` question. Restore, the first-boot intro and file conflicts (whose `null` means skip) keep rubber-banding. Esc and the outside click stay blocked on desktop ([owner calls](../brainstorm/2026-10-22_owner-calls.md)).

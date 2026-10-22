@@ -61,7 +61,7 @@ export function create_window_handle(id: WindowId): WindowHandle {
 
     async confirm(message, options = {}) {
       // A confirm needs an explicit answer: no Esc, no outside click (ADR-025).
-      const answer = await dialogs().show(ConfirmDialog, { message, ...options }, { window: id, dismissible: false });
+      const answer = await dialogs().show(ConfirmDialog, { message, ...options }, { window: id, dismissible: false, swipe_cancels: true });
       return answer === true;
     },
     prompt(message, options = {}) {

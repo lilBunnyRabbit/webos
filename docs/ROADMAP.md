@@ -595,7 +595,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Home icon drag, back in an edit mode with `touch-action: none` (2026-10-19); still to check on the Samsung phone
 - [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
 - [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes
-- [x] Swipe down to dismiss every bottom sheet: menus, dialogs and window sheets docked to the bottom, the app drawer, in-app sheets and game stats panels; one `swipe_dismiss` attachment and a kit `Grabber` (2026-10-22, [mobile](system/shell/mobile.md#swipe-down-to-dismiss))
+- [x] Swipe down to dismiss every bottom sheet: menus, dialogs and window sheets docked to the bottom, the app drawer, in-app sheets and game stats panels; one `swipe_dismiss` attachment and a kit `Grabber` (2026-10-22, [mobile](system/shell/mobile.md#swipe-down-to-dismiss)); a swipe on a confirm or save-changes sheet is Cancel (`swipe_cancels`, 3.57.0)
 - [x] Conditional service registration in `init.ts`
 - [ ] Virtual keyboard handling
 - [ ] Touch gesture support

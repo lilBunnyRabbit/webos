@@ -22,7 +22,7 @@ Types (`type.ts`):
 | Type | Shape |
 |------|-------|
 | `DialogProps<T>` | `{ resolve(value: T \| null): void }`. The host injects it; your component declares it in its `Props` |
-| `DialogOptions` | `{ anchor?: Position; dismissible?: boolean; window?: WindowId }`. `anchor`: viewport point, e.g. the click. `dismissible` (default `true`): `false` for a question that must be answered, so Esc and outside clicks do nothing and only the dialog's own buttons close it. `window`: bind the dialog to a window as a sheet |
+| `DialogOptions` | `{ anchor?: Position; dismissible?: boolean; swipe_cancels?: boolean; window?: WindowId }`. `anchor`: viewport point, e.g. the click. `dismissible` (default `true`): `false` for a question that must be answered, so Esc and outside clicks do nothing and only the dialog's own buttons close it. `swipe_cancels` (default `false`): with `dismissible: false`, a swipe down on a phone still resolves `null`, for questions whose Cancel is harmless (stable since 3.57). `window`: bind the dialog to a window as a sheet |
 | `DialogEntry` | `{ id, component, props, point: Position, anchored: boolean, dismissible: boolean, window: WindowId \| null, origin: WindowId \| null, resolve(value: unknown): void }` |
 | `DialogId` | `string` (uuid) |
 
@@ -57,7 +57,7 @@ Because `resolve` is idempotent, a dialog that resolves a value and is then clos
 
 `show(..., { window: id })` pushes an entry with `window: id` and focuses that window, so a question in a background window is never answered blind. The window renders it (`components/window/window-sheets.svelte`), not the host:
 
-- A plain element, not `<dialog>`: a native modal would go to the top layer and escape the window. The sheet layer is `absolute inset-0` inside the window's content area, on the shared `--overlay` scrim with a 2px blur, centred (`animate-pop-in`). On mobile (`kernel.platform`) it docks to the bottom instead (`items-end`, `p-2`, `animate-sheet-in`), takes `swipe_dismiss` with `on_dismiss: entry.resolve(null)` and, when dismissible, a `Grabber` over its top edge ([mobile shell](../shell/mobile.md#swipe-down-to-dismiss)).
+- A plain element, not `<dialog>`: a native modal would go to the top layer and escape the window. The sheet layer is `absolute inset-0` inside the window's content area, on the shared `--overlay` scrim with a 2px blur, centred (`animate-pop-in`). On mobile (`kernel.platform`) it docks to the bottom instead (`items-end`, `p-2`, `animate-sheet-in`), takes `swipe_dismiss` with `on_dismiss: entry.resolve(null)` and, when dismissible or `swipe_cancels`, a `Grabber` over its top edge ([mobile shell](../shell/mobile.md#swipe-down-to-dismiss)).
 - While the window has sheets, its app content is wrapped in `inert`: no clicks, focus or screen-reader access. The titlebar stays live, so the window can still be moved, minimized or closed. Closing resolves the sheets with `null`.
 - On mount, focus goes to the sheet's first `[autofocus]`, else its first input or button. Only the top sheet is interactive (lower ones are `inert`).
 - Esc resolves `null` if the entry is dismissible.

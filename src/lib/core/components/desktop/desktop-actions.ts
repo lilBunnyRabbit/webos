@@ -130,7 +130,7 @@ export async function remove_items(items: DesktopItem[]): Promise<void> {
         confirm_label: "Delete",
         danger: true,
       },
-      { dismissible: false }
+      { dismissible: false, swipe_cancels: true }
     );
     if (!confirmed) return;
     for (const item of items) {

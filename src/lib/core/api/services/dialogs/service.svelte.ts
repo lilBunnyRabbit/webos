@@ -33,7 +33,7 @@ export class DialogsService implements IDialogsService {
         (await this.show(
           (await import("$lib/core/components/dialogs/save-changes-dialog.svelte")).default,
           { title, can_save },
-          { window: id, dismissible: false }
+          { window: id, dismissible: false, swipe_cancels: true }
         )) ?? CloseChoice.CANCEL
     );
 
@@ -99,6 +99,7 @@ export class DialogsService implements IDialogsService {
         point: options.anchor ?? this.fallback_point(origin),
         anchored: options.anchor !== undefined,
         dismissible: options.dismissible ?? true,
+        swipe_cancels: options.swipe_cancels ?? false,
         window: options.window ?? null,
         origin,
         resolve: (value) => {

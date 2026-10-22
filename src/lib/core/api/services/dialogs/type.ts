@@ -50,6 +50,11 @@ export interface DialogOptions {
    */
   dismissible?: boolean;
   /**
+   * With `dismissible: false`: swiping the docked sheet down on a phone still resolves `null`, which the caller reads as
+   * Cancel. For questions with a harmless Cancel (confirm, save changes); not for ones whose `null` picks an answer.
+   */
+  swipe_cancels?: boolean;
+  /**
    * Bind the dialog to a window: it renders as a sheet over that window's content, blocks only that window, moves
    * with it and resolves `null` if the window closes. Without it, the dialog is system-level (ADR-025).
    */
@@ -64,6 +69,8 @@ export interface DialogEntry {
   /** `true`: dropdown below/right of `point`. `false`: centered on it. */
   anchored: boolean;
   dismissible: boolean;
+  /** Swipe down resolves `null` even when not dismissible. */
+  swipe_cancels: boolean;
   /** The window this sheet belongs to, or `null` for a system dialog. */
   window: WindowId | null;
   /** A system dialog opened while the popped-out window's document had focus renders there (ADR-043). */

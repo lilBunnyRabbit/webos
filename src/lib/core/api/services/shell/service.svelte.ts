@@ -197,7 +197,7 @@ export class ShellService implements IShellService {
     const answer = await this.dialogs_service.show(
       ConfirmDialog,
       { message: "Change system files?", detail: line, confirm_label: "Run", danger: true },
-      { dismissible: false }
+      { dismissible: false, swipe_cancels: true }
     );
     return answer === true;
   }

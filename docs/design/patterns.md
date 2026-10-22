@@ -135,7 +135,7 @@ On a phone, anything that rises from the bottom closes by swiping it down: menus
 - `{@attach swipe_dismiss({ on_dismiss, dismissible })}` (`$lib/core/utils/swipe-dismiss`) on the sheet's own box, which must be positioned (`relative`, `absolute` or `fixed`). `on_dismiss` is the same call as its Cancel, Back and scrim tap, never a second close path.
 - Touch only; the sheet follows the finger, and up it rubber-bands. Past a quarter of its height or on a flick it slides away, otherwise it springs back. With Motion off it closes without sliding.
 - An inner list scrolls first: the swipe only starts with the scroller at its top. Nothing inside a sheet should need a downward drag of its own (sliders are exempt).
-- `dismissible: false` (a confirm, Restore) keeps the gesture as feedback: it gives a little and comes back, with no grabber.
+- `dismissible: false` with a harmless Cancel (a confirm, save changes, the `sudo` question) sets `swipe_cancels`: swiping it away is Cancel, with a grabber. One whose dismissal would pick a real answer (Restore, the intro, a file conflict) keeps the gesture as feedback only: it gives a little and comes back, with no grabber.
 - The Style Guide shows one under Feedback. Behaviour in depth: [mobile shell](../system/shell/mobile.md#swipe-down-to-dismiss).
 
 ## Window sheets
