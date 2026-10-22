@@ -119,3 +119,6 @@ The first health pass measured the scheduler as the only new idle cost: one wake
 
 ## Revision 2026-10-22: no heartbeat with nothing armed
 Owner's call in [owner calls](../brainstorm/2026-10-22_owner-calls.md): `arm()` sets no timer when no job has a next occurrence (every job switched off), same as an empty registry. Switching a job on runs a pass, which arms it. Accepted: a hand edit of `jobs.json` while nothing is armed isn't read until a schedule, a ping or a re-read.
+
+## Revision 2026-10-22: on the stable app API
+`schedule`, `update`, `cancel`, `get`, `list`, `jobs`, the `Job` types and the manifest's `on_fire` are stable from 3.57. `Job` can still gain optional fields in a minor (the Calendar lead-time question). Decided in [owner calls](../brainstorm/2026-10-22_owner-calls.md); listed in [app API](../system/app-api.md).

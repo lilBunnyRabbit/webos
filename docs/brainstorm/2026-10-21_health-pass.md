@@ -69,7 +69,7 @@ CONVENTIONS allows inline prop types; `interface Props` required for kit/ui comp
 - [x] Fork + tidy: stand-in test apps, CI fork browser tests, interests/samples/Getting started guards, Style Guide ai_icon demo, video helpers to kit, WebM app name, duplicate parsers and types, Warren find effect, dead exports and imports, `scripts/perf/` harness (Soundboard still imports `VIDEO_ACCEPT` / `is_video_name` through Video Tools' re-export)
 
 ## Next session topics
-- Promote `tasks.run` and the AI calls to the stable app API.
+- Promote `tasks.run` and the AI calls to the stable app API. Done 2026-10-22 ([owner calls](2026-10-22_owner-calls.md)).
 - Window focus shadow transition (~79 ms task per focus switch with 10 windows @4×, pre-existing).
 - Launcher first-open cost grows with app count (74 user apps).
 - Heap grows ~0.4 MB per 10 window open/close cycles (pre-existing).

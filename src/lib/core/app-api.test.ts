@@ -52,6 +52,39 @@ import type {
   WindowId,
   WindowOptions,
   WindowsService,
+  AiAvailability,
+  AiFeature,
+  AiImagePart,
+  AiMessage,
+  AiPart,
+  AiService,
+  AiTextPart,
+  AiUsage,
+  DetectedLanguage,
+  FireOutcome,
+  Job,
+  JobAction,
+  JobAt,
+  JobFire,
+  JobId,
+  JobInput,
+  JobKind,
+  JobOpen,
+  JobPatch,
+  JobRepeat,
+  LanguagePair,
+  OnFire,
+  Repeat,
+  SchedulerService,
+  SummarizeOptions,
+  TaskContext,
+  TaskJob,
+  TaskJobId,
+  TaskJobStatus,
+  TaskReport,
+  TaskRunOptions,
+  TasksService,
+  TranslateOptions,
 } from "$lib/core/api";
 import type { FileValue } from "$lib/core/api/services/files/shell";
 import type {
@@ -133,13 +166,18 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     "$lib/core/api",
     () => import("$lib/core/api"),
     [
+      "AiAvailability",
+      "AiFeature",
       "AppCategory",
       "ArgKind",
       "FILE_PROPS",
+      "FireOutcome",
+      "JobKind",
       "NotificationType",
       "Platform",
       "ShellError",
       "ShortcutCategory",
+      "TaskJobStatus",
       "WidgetStyle",
       "WindowFlag",
       "arg",
@@ -250,6 +288,8 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     ["create_rng", "pick", "random_int", "random_seed", "shuffle"],
   ],
   ["$lib/core/utils/ticker.svelte", () => import("$lib/core/utils/ticker.svelte"), ["Ticker"]],
+  ["$kit/utils/report-error", () => import("$kit/utils/report-error"), ["report_error"]],
+  ["$kit/utils/flash.svelte", () => import("$kit/utils/flash.svelte"), ["Flash"]],
 ];
 
 describe("app API 1.0", () => {
@@ -338,6 +378,18 @@ const command_members: Members<
 > = true;
 const command_context_members: Members<CommandContext, "args" | "elevated" | "input" | "piped" | "session" | "signal"> =
   true;
+const task_context_members: Members<TaskContext, "message" | "pace" | "signal"> = true;
+/** A removed stable method fails `Pick`'s constraint; internal members can come and go. */
+type StableMethods = [
+  Pick<TasksService, "run">,
+  Pick<AiService, "availability" | "detect" | "extract" | "features" | "measure" | "prompt" | "summarize" | "translate">,
+  Pick<SchedulerService, "cancel" | "get" | "jobs" | "list" | "schedule" | "update">,
+];
+/** `on_fire` and `on_uninstall_data` are lazy modules whose default export is the handler. */
+const app_on_fire_form: NonNullable<AppConfig["on_fire"]> extends () => Promise<{ default: OnFire }> ? true : false = true;
+const app_on_uninstall_form: NonNullable<AppConfig["on_uninstall_data"]> extends () => Promise<{ default: () => Promise<void> }>
+  ? true
+  : false = true;
 const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "render" | "text"> = true;
 /** An app's commands are a module whose default export is the contribution, loaded on first use (ADR-034 revision). */
 const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
@@ -431,4 +483,38 @@ type StableTypes = [
   Bounds,
   Dimensions,
   Position,
+  StableMethods,
+  AiAvailability,
+  AiFeature,
+  AiImagePart,
+  AiMessage,
+  AiPart,
+  AiService,
+  AiTextPart,
+  AiUsage,
+  DetectedLanguage,
+  FireOutcome,
+  Job,
+  JobAction,
+  JobAt,
+  JobFire,
+  JobId,
+  JobInput,
+  JobKind,
+  JobOpen,
+  JobPatch,
+  JobRepeat,
+  LanguagePair,
+  OnFire,
+  Repeat,
+  SchedulerService,
+  SummarizeOptions,
+  TaskContext,
+  TaskJob,
+  TaskJobId,
+  TaskJobStatus,
+  TaskReport,
+  TaskRunOptions<unknown>,
+  TasksService,
+  TranslateOptions,
 ];

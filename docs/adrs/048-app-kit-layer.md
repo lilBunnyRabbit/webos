@@ -37,3 +37,6 @@ Discussion: [brainstorm](../brainstorm/2026-10-18_app-kit-layer.md).
 ## Revisions
 
 - **2026-10-18:** The shim period is over (ADR-049). 3.0.0 deletes `$lib/core/games` (`index`, `time`, `daily`, `direction`) and `$lib/core/utils/image`, with their `app-api.test.ts` pins and their entries in the `kit-boundary.test.ts` allow list, which now holds only `app-api.test.ts`. Apps import `$kit/games` and `$kit/utils/image`; nothing in the repo still used the old paths.
+
+## Revision 2026-10-22: on the stable app API
+`report_error` and `Flash` (`text`, `show`, `clear`) are stable from 3.57. Decided in [owner calls](../brainstorm/2026-10-22_owner-calls.md); listed in [app API](../system/app-api.md).
