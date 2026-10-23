@@ -30,20 +30,20 @@
 
 <style>
   .ui-slider::-webkit-slider-runnable-track {
-    height: 4px;
+    height: 6px;
     border-radius: 9999px;
-    background: linear-gradient(to right, var(--primary) var(--fill), color-mix(in oklch, var(--edge-control) 55%, transparent) var(--fill));
-    box-shadow: var(--shadow-track);
+    background: linear-gradient(to right, var(--primary) var(--fill), light-dark(color-mix(in oklch, var(--background), var(--background-dark)), var(--background-darker)) var(--fill));
+    box-shadow: var(--shadow-track), 0 0 0 1px var(--hairline);
   }
 
   .ui-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     margin-top: -5px;
     border-radius: 9999px;
-    background: var(--foreground);
-    box-shadow: var(--shadow-raised);
+    background: var(--knob);
+    box-shadow: var(--shadow-control), 0 0 0 1px var(--hairline-strong);
     transition: scale 150ms var(--ease-out);
   }
 
@@ -53,37 +53,37 @@
   }
 
   .ui-slider::-moz-range-track {
-    height: 4px;
+    height: 6px;
     border-radius: 9999px;
-    background: color-mix(in oklch, var(--edge-control) 55%, transparent);
-    box-shadow: var(--shadow-track);
+    background: light-dark(color-mix(in oklch, var(--background), var(--background-dark)), var(--background-darker));
+    box-shadow: var(--shadow-track), 0 0 0 1px var(--hairline);
   }
 
   .ui-slider::-moz-range-progress {
-    height: 4px;
+    height: 6px;
     border-radius: 9999px;
     background: var(--primary);
   }
 
   .ui-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border: none;
     border-radius: 9999px;
-    background: var(--foreground);
-    box-shadow: var(--shadow-raised);
+    background: var(--knob);
+    box-shadow: var(--shadow-control), 0 0 0 1px var(--hairline-strong);
   }
 
   @media (pointer: coarse) {
     .ui-slider::-webkit-slider-thumb {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       margin-top: -8px;
     }
 
     .ui-slider::-moz-range-thumb {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
     }
   }
 </style>

@@ -41,7 +41,7 @@ Text uses four levels and nothing else:
 
 Filled buttons use the brand modifiers: hover `opacity-85`, active `opacity-70`. Neutral states use foreground fills: hover `bg-foreground/6`–`/8`, selected `bg-foreground/10`.
 
-Edges come from the surface, in the background's own hue, never from `foreground` (whose hue can be far off: Dark Purple's text is hue 60 on a hue 300 body). Decorative hairlines are `hairline` (`ring-hairline`, `border-hairline`, `divide-hairline`), `hairline-strong` where it has to hold against a busy backdrop (focused window, popovers, dock separators). Control edges (fields, segmented, switch track) are `edge`, solved for 3:1 non-text against the field and every surface a field sits on, `edge-hover` one step further. See Soft surfaces for how they're derived. The brand's `border` modifier (0.76) is for edges that must stand out on every shade.
+Edges come from the surface, in the background's own hue, never from `foreground` (whose hue can be far off: Dark Purple's text is hue 60 on a hue 300 body). Decorative hairlines are `hairline` (`ring-hairline`, `border-hairline`, `divide-hairline`), `hairline-strong` where it has to hold against a busy backdrop (focused window, popovers, dock separators). Control edges (fields, segmented, switch track, checkbox) rest on `hairline-strong` and let the well's depth carry the shape; hover brings `edge`, solved for 3:1 non-text against the field and every surface a field sits on, and focus the `cottontail` ring (owner's call 2026-10-24: soft at rest over a 3:1 resting outline). See Soft surfaces for how they're derived. The brand's `border` modifier (0.76) is for edges that must stand out on every shade.
 
 ## Surface ladder
 
@@ -142,16 +142,18 @@ Where light or shadow has no headroom (Neon Black's body is pure black, Electric
 
 | Token | Use |
 |-------|-----|
-| `shadow-lit` | The lit edge alone: titlebars, toolbars, Section cards. `shadow-raised` and `shadow-popover` include it |
-| `shadow-control` | Buttons (`primary`, `secondary`, `danger`): lit edge and a short drop. Secondary adds a `hairline` ring |
-| `shadow-pressed` | A button while held, a toggle that's on (`pressed`), the active taskbar item, an app tile while held (`in-active:`) |
-| `shadow-recessed` | Fields, segmented tracks, switch tracks: an inner shadow. The `edge` ring draws the outline |
-| `shadow-track` | Slider grooves, where a 4px groove can't take the field's drop |
+| `shadow-lit` | The lit edge alone: titlebars, toolbars. `shadow-raised`, `shadow-card` and `shadow-popover` include it |
+| `shadow-card` | Section cards and panels in a window: lit edge and a wide, faint drop, so they float without reading as buttons |
+| `shadow-control` | Buttons (`primary`, `secondary`, `danger`), the selected segment, the active side-nav item, a checked checkbox, switch and slider knobs, `Kbd` keycaps: lit edge and a short drop. Secondary adds a `hairline` ring |
+| `shadow-pressed` | A button while held, a toggle that's on (`pressed`), the active taskbar item, an app tile while its own button is held (`group-active/tile:`) |
+| `shadow-recessed` | Fields, segmented tracks, switch tracks, an unchecked checkbox: a deep inner shadow and a lit bottom lip |
+| `shadow-track` | Slider grooves (6px, `bg-field`), where a groove can't take the field's drop |
+| `bg-knob` (`--knob`) | Switch knob and slider thumb: `background-lightest` in light palettes, foreground mixed 88% into the body in dark ones, where paper is too dark to read |
 
 Rules:
 
 - Pressed and on use the same sink. Held buttons also move down 1px (`active:translate-y-px`); disabled buttons lose their shadow.
-- Control edges still need 3:1: fields, the switch and segmented tracks take `ring-edge`. The shadow is depth, not the edge.
+- Controls are soft at rest: `ring-hairline-strong` plus the well's depth. Hover adds `ring-edge` (3:1), focus the `cottontail` ring. Raised parts on a control (selected segment, knobs, a checked checkbox) take `shadow-control`.
 - Tiles in a floating layer (start menu, phone drawer, announcements) are `background-lightest`, one above the `lighter` panel, so a raised tile never reads as sunk.
 - Selection and on-state keep `primary`. Lists, tables, the terminal, editors and canvases stay flat: dense content would turn every row into a button.
 - Settings › Shadows scales the drops and inner shadows; the lit edge isn't a shadow and stays.

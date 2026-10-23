@@ -124,7 +124,7 @@
           class={cn(
             "flex h-8 pointer-coarse:h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-ui font-medium transition-colors duration-150",
             drill && "h-11 pointer-coarse:h-11 @2xl:h-8 @2xl:pointer-coarse:h-10",
-            active ? "bg-foreground/10 text-foreground" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+            active ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
           )}
           onclick={() => pick(item)}
         >

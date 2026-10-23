@@ -7,7 +7,7 @@ const TW_MERGE_CONFIG = {
   extend: {
     classGroups: {
       "font-size": [{ text: ["2xs", "ui"] }],
-      shadow: [{ shadow: ["raised", "popover", "window", "window-focused"] }],
+      shadow: [{ shadow: ["raised", "card", "popover", "window", "window-focused", "lit", "control", "pressed", "recessed", "track"] }],
     },
   },
 };

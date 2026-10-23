@@ -33,6 +33,9 @@ Two root causes sat in theming, not Soft:
 - Setting rows' curved divider ends fixed (rounded only while targeted).
 Token polish runs as two parallel variations for the owner to compare: **A** derives every edge and shadow from the surface in its own hue; **B** takes light from the foreground and shape from one crisp outline, with flat filled buttons.
 
+### Kit pass (decided: soft at rest)
+Owner: "not even all style guide foundations and all are in this style? like the sidebars ... inputs, sliders, toggle, checbox". The 3:1 resting ring made fields and tracks read as outlined. Decided: soft at rest (hairline-strong + deep well, lit lip), 3:1 edge on hover, cottontail on focus. Rejected: keep 3:1 at rest (outlined look). Then raised the selected segment, active side-nav item, keycaps, switch and slider knobs (shared `--knob`), a custom checkbox, `shadow-card` for Section cards, 6px slider groove.
+
 ## Key takeaways
 - Neumorphism's tactile part (lit edges, recessed fields, press-in) fits WebOS; its "one surface colour" part fights the ladder and the dark brand.
 
