@@ -255,8 +255,8 @@
                     aria-pressed={chosen_statement === statement.id}
                     disabled={over}
                     class={cn(
-                      "flex min-h-9 w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left text-ui transition-colors pointer-coarse:min-h-11",
-                      "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none disabled:hover:bg-transparent",
+                      "flex min-h-9 w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-left text-ui transition-[background-color,box-shadow,color] pointer-coarse:min-h-11",
+                      "hover:bg-background-lighter hover:shadow-control active:shadow-pressed focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none disabled:hover:bg-transparent disabled:hover:shadow-none",
                       chosen_statement === statement.id && "bg-primary/12 ring-1 ring-primary/40 ring-inset hover:bg-primary/12",
                       is_lie && "bg-error/10"
                     )}

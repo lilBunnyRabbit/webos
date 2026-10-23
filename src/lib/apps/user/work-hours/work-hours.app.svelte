@@ -315,8 +315,8 @@
                       aria-selected={cell === selected.value}
                       aria-label="{long_date(cell)}, {minutes ? format_hours(minutes) : 'no hours'}{has_note ? ', has a note' : ''}"
                       class={cn(
-                        "relative flex min-h-12 min-w-0 flex-col justify-between rounded-md p-1.5 text-left transition-colors @md:min-h-16",
-                        "hover:bg-foreground/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+                        "relative flex min-h-12 min-w-0 flex-col justify-between rounded-md p-1.5 text-left transition-[background-color,box-shadow] @md:min-h-16",
+                        "hover:bg-background-lighter hover:shadow-control active:shadow-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
                         is_weekend(cell) ? "bg-foreground/3" : "bg-background-light",
                         cell === selected.value && "bg-primary/14 hover:bg-primary/18"
                       )}
@@ -370,7 +370,7 @@
                       />
                     </div>
                   {:else}
-                    <div class="group flex min-h-8 items-center gap-2 rounded-md px-1.5 hover:bg-foreground/6">
+                    <div class="group flex min-h-8 items-center gap-2 rounded-md px-1.5">
                       <span class="font-mono text-2xs whitespace-nowrap tabular-nums">{entry.start}–{entry.end}</span>
                       <span class={cn("min-w-0 flex-1 truncate text-ui", !entry.description && "text-foreground/45")}>{entry.description || "No description"}</span>
                       <span class="font-mono text-2xs tabular-nums text-foreground/65">{format_hours(entry_minutes(entry))}</span>

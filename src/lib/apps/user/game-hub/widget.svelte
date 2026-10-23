@@ -51,7 +51,7 @@
         {@const solved = solved_today[entry.key]}
         <li>
           <button
-            class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+            class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 transition-[background-color,box-shadow] hover:bg-background-lighter hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
             title={solved ? `${entry.name}: solved in ${format_time(solved.ms)}${solved.score === undefined ? "" : `, score ${solved.score}`}` : `${entry.name}: today's puzzle`}
             onclick={() => apps.launch(entry.game.id, daily_props(entry, today.value))}
           >
@@ -65,7 +65,7 @@
       {/each}
       <li style:grid-column="-2 / -1">
         <button
-          class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+          class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 transition-[background-color,box-shadow] hover:bg-background-lighter hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
           onclick={() => apps.launch(HUB_ID)}
         >
           <span class="grid size-9 place-items-center rounded-lg bg-background-lightest shadow-raised ring-1 ring-hairline"><ArrowSquareOutIcon class="size-5" /></span>

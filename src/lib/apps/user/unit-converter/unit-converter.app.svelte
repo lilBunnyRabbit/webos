@@ -245,8 +245,8 @@
                     onclick={() => pick_target(unit)}
                     class={cn(
                       "flex min-h-8 items-center gap-3 rounded-md px-2.5 py-1 text-left transition-colors duration-150 pointer-coarse:min-h-10",
-                      "hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-                      is_to && "bg-primary/14 hover:bg-primary/14"
+                      "focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+                      is_to && "bg-primary/14"
                     )}
                   >
                     <span class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">

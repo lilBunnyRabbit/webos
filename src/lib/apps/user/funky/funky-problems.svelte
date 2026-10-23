@@ -26,7 +26,7 @@
     {@const at = diagnostic.span ? line_col(source, diagnostic.span.from) : null}
     <button
       type="button"
-      class="flex items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none disabled:hover:bg-transparent"
+      class="flex items-start gap-2 rounded-md px-2 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
       disabled={!diagnostic.span}
       onclick={() => diagnostic.span && onreveal(diagnostic.span)}
     >

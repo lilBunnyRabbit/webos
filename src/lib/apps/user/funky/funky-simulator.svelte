@@ -270,7 +270,7 @@
       <button
         type="button"
         class={cn(
-          "flex h-8 items-center gap-2 rounded-md px-2 text-left hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none pointer-coarse:h-10",
+          "flex h-8 items-center gap-2 rounded-md px-2 text-left focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none pointer-coarse:h-10",
           index >= 0 && "bg-primary/8"
         )}
         aria-pressed={index >= 0}

@@ -469,10 +469,10 @@
               <button
                 type="button"
                 class={cn(
-                  "relative flex flex-col items-center justify-center gap-1 rounded-lg text-2xs font-medium whitespace-nowrap text-foreground/80 outline-none transition-[background-color,opacity] duration-150",
-                  "hover:bg-foreground/8 active:shadow-pressed disabled:pointer-events-none disabled:opacity-38",
+                  "relative flex flex-col items-center justify-center gap-1 rounded-lg text-2xs font-medium whitespace-nowrap text-foreground/80 outline-none transition-[background-color,box-shadow,color,opacity] duration-150",
+                  "hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed disabled:pointer-events-none disabled:opacity-38",
                   "focus-visible:ring-2 focus-visible:ring-cottontail",
-                  pressed && "bg-primary/15 text-foreground shadow-pressed hover:bg-primary/20"
+                  pressed && "bg-primary/15 text-foreground shadow-pressed hover:bg-primary/20 hover:shadow-pressed"
                 )}
                 aria-pressed={pressed}
                 {disabled}

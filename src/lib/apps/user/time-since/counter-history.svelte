@@ -94,7 +94,7 @@
   <Section title="Runs" description="Deleting the newest run undoes the reset that ended it.">
     <ul class="p-1">
       {#each newest_first as entry (entry.index)}
-        <li class="group flex h-8 items-center gap-2 rounded-md px-2 hover:bg-foreground/6 pointer-coarse:h-10">
+        <li class="group flex h-8 items-center gap-2 rounded-md px-2 pointer-coarse:h-10">
           <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/65 tabular-nums">
             {format_datetime(entry.run.started_at)}<span class="hidden @md:inline">{" – "}{format_datetime(entry.run.ended_at)}</span>
           </span>
