@@ -168,7 +168,7 @@
   const PAD_TONES = {
     digit: "secondary",
     operator: "secondary",
-    function: "quiet",
+    function: "secondary",
     equals: "primary",
   } as const;
 </script>
@@ -230,7 +230,7 @@
             class={cn(
               "h-full min-h-0 px-0 font-mono text-lg @md:text-xl",
               pad.tone === "operator" && "text-primary",
-              pad.tone === "function" && "bg-foreground/4",
+              pad.tone === "function" && "bg-foreground/4 text-foreground/80",
               pad.class
             )}
             onmousedown={(event) => event.preventDefault()}
@@ -245,7 +245,7 @@
     <aside
       aria-label="History"
       class={cn(
-        "flex min-h-0 flex-col @2xl:static @2xl:flex @2xl:border-l @2xl:border-foreground/8 @2xl:bg-transparent",
+        "flex min-h-0 flex-col @2xl:static @2xl:flex @2xl:border-l @2xl:border-hairline @2xl:bg-transparent",
         show_history.value ? "absolute inset-0 bg-background" : "hidden"
       )}
     >

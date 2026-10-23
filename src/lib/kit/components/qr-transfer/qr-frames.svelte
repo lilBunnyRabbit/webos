@@ -34,7 +34,7 @@
 </script>
 
 <figure class="flex w-full flex-col items-center gap-2">
-  <div class="aspect-square w-full max-w-72 overflow-hidden rounded-lg ring-1 ring-foreground/8">
+  <div class="aspect-square w-full max-w-72 overflow-hidden rounded-lg ring-1 ring-hairline">
     <!-- Scanners expect dark modules on a light field, so the colours flip with the theme's colour scheme. -->
     <svg viewBox="0 0 {qr.size} {qr.size}" role="img" aria-label="{label}{many ? `, code ${shown + 1} of ${frames.length}` : ''}" shape-rendering="crispEdges" class="size-full bg-[light-dark(var(--background),var(--foreground))]">
       <path d={qr.d} class="fill-[light-dark(var(--foreground),var(--background-darkest))]" />

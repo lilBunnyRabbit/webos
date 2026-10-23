@@ -348,7 +348,7 @@
   </Toolbar>
 
   {#if read_only}
-    <div class="flex flex-wrap items-center gap-2 border-b border-foreground/8 bg-info/10 px-3 py-1.5 text-ui">
+    <div class="flex flex-wrap items-center gap-2 border-b border-hairline bg-info/10 px-3 py-1.5 text-ui">
       <LockSimpleIcon class="size-4 shrink-0 text-info" weight="fill" />
       <span class="min-w-0 flex-1">This is a system file, so it opens read-only. Save as… keeps a copy you can edit.</span>
       <Button size="sm" variant="secondary" onclick={save_as}>Save as…</Button>
@@ -356,7 +356,7 @@
   {/if}
 
   {#if stale_modified !== null}
-    <div role="alert" class="flex flex-wrap items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-1.5 text-ui">
+    <div role="alert" class="flex flex-wrap items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-1.5 text-ui">
       <WarningIcon class="size-4 shrink-0 text-warning" weight="fill" />
       <span class="min-w-0 flex-1">This file changed on disk. Reload it, or keep your version and save over it.</span>
       <Button size="sm" variant="secondary" onclick={keep_mine}>Keep mine</Button>
@@ -374,7 +374,7 @@
         srcdoc={preview_srcdoc}
         class={cn(
           "block size-full min-h-0 border-0 bg-background",
-          mode === MarkdownMode.SPLIT && "border-t border-foreground/8 @2xl:border-t-0 @2xl:border-l"
+          mode === MarkdownMode.SPLIT && "border-t border-hairline @2xl:border-t-0 @2xl:border-l"
         )}
       ></iframe>
     {/if}

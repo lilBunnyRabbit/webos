@@ -110,7 +110,7 @@
     <IconButton label="Back to all apps" class="-ml-1 @4xl:hidden" onclick={onback}>
       <ArrowLeftIcon weight="bold" />
     </IconButton>
-    <span class="relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+    <span class="relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-hairline">
       <AppIcon src={manifest.icon} class="size-8" />
       <AppBadge app_id={manifest.id} />
     </span>
@@ -168,7 +168,7 @@
         {@render heading("What it does")}
         <ul class="flex flex-col gap-1.5">
           {#each module.default as highlight (highlight.title)}
-            <li class="flex gap-2.5 rounded-lg bg-background-light p-2.5 ring-1 ring-foreground/8">
+            <li class="flex gap-2.5 rounded-lg bg-background-light p-2.5 shadow-card ring-1 ring-hairline">
               <span class="grid size-7 shrink-0 place-items-center rounded-md bg-primary/12 text-primary">
                 <highlight.icon class="size-4" weight="duotone" />
               </span>
@@ -231,7 +231,7 @@
       {@render heading("History")}
       <ol class="flex flex-col">
         {#each changes as { release, change }, index (index)}
-          <li class="flex flex-col gap-1 border-b border-foreground/8 py-2 first:pt-0">
+          <li class="flex flex-col gap-1 border-b border-hairline py-2 first:pt-0">
             <div class="flex items-center gap-2">
               <Badge tone={KINDS[change.kind].tone}>{KINDS[change.kind].label}</Badge>
               <span class="font-mono text-2xs text-foreground/65">v{release.version}</span>

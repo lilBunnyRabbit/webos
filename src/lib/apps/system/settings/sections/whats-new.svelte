@@ -19,7 +19,7 @@
   <p class="text-ui text-foreground/65">Every release of WebOS, newest first. You're on v{version.info.version}.</p>
 
   {#each version.changelog as release (release.version)}
-    <article class="flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+    <article class="flex flex-col gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
       <header class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h2 class="text-sm font-semibold">{release.title}</h2>
         <Badge class="font-mono">v{release.version}</Badge>

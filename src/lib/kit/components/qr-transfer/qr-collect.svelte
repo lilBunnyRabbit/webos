@@ -74,7 +74,7 @@
 </script>
 
 <div class="flex w-full flex-col items-center gap-3">
-  <div class="relative aspect-square w-full max-w-72 overflow-hidden rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] ring-1 ring-foreground/8">
+  <div class="relative aspect-square w-full max-w-72 overflow-hidden rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] ring-1 ring-hairline">
     {#if camera.active}
       <video {@attach camera.preview} autoplay muted playsinline aria-label={label} class="size-full object-cover"></video>
     {:else}

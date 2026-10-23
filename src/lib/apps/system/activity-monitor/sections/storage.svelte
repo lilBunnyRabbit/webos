@@ -75,7 +75,7 @@
         <span class="text-ui">Used</span>
         <span class="font-mono text-ui tabular-nums">{format_bytes(usage)} of {format_bytes(total)}</span>
       </div>
-      <span class="h-1.5 overflow-hidden rounded-full bg-foreground/12">
+      <span class="h-1.5 overflow-hidden rounded-full bg-field shadow-track">
         <span class="block h-full rounded-full bg-primary" style:width="{Math.max(total > 0 ? (usage / total) * 100 : 0, 2)}%"></span>
       </span>
     </div>

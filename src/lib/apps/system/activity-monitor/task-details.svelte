@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { TaskJob } from "$lib/core/api";
+  import { button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     Article as ArticleIcon,
@@ -48,14 +49,14 @@
       <span class={cn("min-w-0 truncate text-ui", node.group && "font-medium")} title={node.name}>{node.name}</span>
       <span class="min-w-0 flex-1 basis-16 truncate text-foreground/55">{node.mode ?? node.note ?? ""}</span>
       {#if node.status === "in-progress" || node.status === "error"}
-        <span class="h-1 w-12 shrink-0 overflow-hidden rounded-full bg-foreground/12">
+        <span class="h-1 w-12 shrink-0 overflow-hidden rounded-full bg-field shadow-track">
           <span class={cn("block h-full rounded-full", node.status === "error" ? "bg-error" : "bg-primary")} style:width="{node.progress * 100}%"></span>
         </span>
         <span class="w-8 shrink-0 text-right text-foreground/55 tabular-nums">{percent(node.progress)}</span>
       {/if}
       {#if node.logs.length}
         <button
-          class={cn("flex h-6 shrink-0 items-center gap-1 rounded-md px-1.5 text-foreground/55 hover:bg-foreground/8 hover:text-foreground", logs_open && "bg-foreground/8 text-foreground")}
+          class={button({ variant: "quiet", size: "sm", pressed: logs_open, class: cn("h-6 gap-1 px-1.5 text-2xs pointer-coarse:h-8", !logs_open && "text-foreground/55") })}
           aria-label="{logs_open ? 'Hide' : 'Show'} logs of {node.name}"
           aria-expanded={logs_open}
           onclick={() => toggle(node.id)}
@@ -75,7 +76,7 @@
       </div>
     {/if}
     {#if node.children.length}
-      <ul class="ml-1.5 border-l border-foreground/10 pl-3">
+      <ul class="ml-1.5 border-l border-hairline pl-3">
         {#each node.children as child (child.id)}
           {@render row(child)}
         {/each}

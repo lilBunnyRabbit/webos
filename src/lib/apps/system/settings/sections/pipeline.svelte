@@ -105,7 +105,7 @@
               target="_blank"
               rel="noopener noreferrer"
               title={`${job.name}: ${LABELS[job.state]}`}
-              class="flex h-6 items-center gap-1.5 rounded-md bg-foreground/6 px-2 text-2xs pointer-coarse:h-8 text-foreground/80 hover:bg-foreground/10 hover:text-foreground"
+              class={button({ size: "sm", class: "h-6 gap-1 px-2 text-2xs text-foreground/80 pointer-coarse:h-8" })}
             >
               <state.icon class={cn("size-3.5", state.class)} weight="fill" />
               {job.name}

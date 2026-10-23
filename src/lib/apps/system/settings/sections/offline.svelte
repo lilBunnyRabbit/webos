@@ -75,8 +75,8 @@
           <ul class="relative" style:height="{rows.length * ROW}px" aria-label="Installed apps">
             {#each rows.slice(first, last) as app, index (app.id)}
               {@const status = STATUS[offline.status(app.id)]}
-              <li class="absolute inset-x-0 flex items-center gap-3 border-b border-foreground/6 px-3" style:top="{(first + index) * ROW}px" style:height="{ROW}px">
-                <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-background-light ring-1 ring-foreground/10">
+              <li class="absolute inset-x-0 flex items-center gap-3 border-b border-hairline px-3" style:top="{(first + index) * ROW}px" style:height="{ROW}px">
+                <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-background-light shadow-raised ring-1 ring-hairline">
                   <AppIcon src={app.icon} class="size-5" />
                 </span>
                 <label for="offline-{app.id}" class="flex min-w-0 flex-1 flex-col">

@@ -144,7 +144,7 @@
 {#snippet icon_tile(manifest: AppListing, size: "sm" | "md")}
   <span
     class={cn(
-      "relative grid shrink-0 place-items-center bg-background-light shadow-raised ring-1 ring-foreground/10",
+      "relative grid shrink-0 place-items-center bg-background-light shadow-raised ring-1 ring-hairline",
       size === "md" ? "size-11 rounded-xl pointer-coarse:size-14 pointer-coarse:rounded-2xl" : "size-6 rounded-md pointer-coarse:size-8"
     )}
   >
@@ -366,7 +366,7 @@
       <aside
         aria-label="App details"
         class={cn(
-          "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-background @4xl:w-80 @4xl:flex-none @4xl:border-l @4xl:border-foreground/8",
+          "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-background @4xl:w-80 @4xl:flex-none @4xl:border-l @4xl:border-hairline",
           selected ? "flex" : "hidden @4xl:flex"
         )}
       >

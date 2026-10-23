@@ -7,7 +7,7 @@
     type VersionService,
   } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
-  import { AppIcon, Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
+  import { AppIcon, Badge, button, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
   import { installer } from "$lib/core/utils/install.svelte";
   import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
@@ -52,7 +52,7 @@
 </script>
 
 <div class="flex flex-col gap-8">
-  <div class="flex flex-col items-start gap-3 rounded-xl bg-background-light p-5 ring-1 ring-foreground/8">
+  <div class="flex flex-col items-start gap-3 rounded-xl bg-background-light p-5 shadow-card ring-1 ring-hairline">
     <LogoLockup height={40} />
     <div>
       <h2 class="text-base font-semibold">WebOS</h2>
@@ -165,7 +165,7 @@
               {href}
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-ui text-foreground/80 hover:bg-foreground/8 hover:text-foreground"
+              class={button({ variant: "quiet", size: "sm" })}
             >
               {#if author.github}<GithubLogoIcon class="size-4" weight="duotone" /> <span class="font-mono text-2xs">{author.github}</span>
               {:else}<LinkIcon class="size-4" /> Website{/if}

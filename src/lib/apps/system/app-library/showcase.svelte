@@ -74,10 +74,10 @@
             {@const story = app_story(manifest)}
             <li>
               <article
-                class="relative flex h-full flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8 transition-shadow duration-150 hover:ring-foreground/20 has-[.card-open:focus-visible]:outline-2 has-[.card-open:focus-visible]:outline-cottontail"
+                class="relative flex h-full flex-col gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline transition-shadow duration-150 hover:ring-hairline-strong has-[.card-open:focus-visible]:outline-2 has-[.card-open:focus-visible]:outline-cottontail"
               >
                 <div class="flex items-start gap-3">
-                  <span class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
+                  <span class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-hairline">
                     <AppIcon src={manifest.icon} class="size-6" />
                     <AppBadge app_id={manifest.id} />
                   </span>

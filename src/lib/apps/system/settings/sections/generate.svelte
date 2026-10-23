@@ -90,7 +90,7 @@
 <Section setting="theme-create" title="Generate" description="New colours from a few rules. Text always stays readable; lock a colour to keep it, save the ones you like." flush>
   <div class="@container flex flex-col gap-4">
     <div class="grid gap-4 @xl:grid-cols-[minmax(0,1fr)_13rem]">
-      <div class="flex flex-col gap-1 rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <div class="flex flex-col gap-1 rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         <SettingRow label="Mode">
           {#snippet children({ id, describedby })}
             <Segmented {id} aria-describedby={describedby} label="Mode" size="sm" options={MODES} bind:value={mode} />
@@ -125,8 +125,8 @@
 
     <ul class="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2" aria-label="Colours">
       {#each TOKENS as { token, label } (token)}
-        <li class="flex items-center gap-2 rounded-xl bg-background-light p-1.5 pr-1 ring-1 ring-foreground/8">
-          <span class="size-7 shrink-0 rounded-lg ring-1 ring-foreground/12" style:background={preview[token]}></span>
+        <li class="flex items-center gap-2 rounded-xl bg-background-light p-1.5 pr-1 shadow-card ring-1 ring-hairline">
+          <span class="size-7 shrink-0 rounded-lg ring-1 ring-hairline-strong" style:background={preview[token]}></span>
           <span class="min-w-0 flex-1 truncate text-ui">{label}</span>
           <IconButton
             size="sm"

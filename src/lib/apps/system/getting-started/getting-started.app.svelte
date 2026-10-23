@@ -54,7 +54,7 @@
       </div>
       <div class="flex items-center gap-3">
         <div
-          class="h-1.5 flex-1 overflow-hidden rounded-full bg-foreground/10"
+          class="h-1.5 flex-1 overflow-hidden rounded-full bg-field shadow-track"
           role="progressbar"
           aria-label="Tried"
           aria-valuemin={0}
@@ -72,8 +72,8 @@
         <li
           bind:this={cards[entry.id]}
           class={cn(
-            "flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 transition-shadow duration-300",
-            focus === entry.id ? "ring-2 ring-primary" : "ring-foreground/8"
+            "flex flex-col gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 transition-shadow duration-300",
+            focus === entry.id ? "ring-2 ring-primary" : "ring-hairline"
           )}
         >
           <div class="flex items-start gap-3">

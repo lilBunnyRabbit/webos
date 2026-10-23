@@ -31,7 +31,7 @@
 </script>
 
 {#if links.length > 0}
-  <Section title="Related" flush class="border-t border-foreground/8 pt-5">
+  <Section title="Related" flush class="rounded-none border-t border-hairline pt-5">
     <div class="flex flex-wrap gap-2">
       {#each links as link (link.key)}
         <Button size="sm" variant="secondary" onclick={link.run}>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconButton, Slider } from "$lib/core/components/ui";
+  import { button, IconButton, Slider } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { MagnifyingGlassMinus as MagnifyingGlassMinusIcon, MagnifyingGlassPlus as MagnifyingGlassPlusIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
@@ -189,7 +189,7 @@
       </IconButton>
       <button
         type="button"
-        class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-11"
+        class={button({ variant: "quiet", size: "sm", class: "min-w-11 px-1.5 font-mono text-2xs tabular-nums pointer-coarse:h-11" })}
         title="Fit"
         onclick={reset}>{Math.round(camera.scale * 100)}%</button
       >
@@ -214,7 +214,7 @@
     <div bind:this={fit} class="relative" style:aspect-ratio="{width} / {height}" style:width="min(100cqw, calc(100cqh * {width / height}))">
       <div
         bind:this={layer}
-        class="checker absolute inset-0 origin-top-left rounded-xs ring-1 ring-foreground/10"
+        class="checker absolute inset-0 origin-top-left rounded-xs ring-1 ring-hairline"
         style:transform="translate({camera.offset_x}px, {camera.offset_y}px) scale({camera.scale})"
         style:--zoom={camera.scale}
       >

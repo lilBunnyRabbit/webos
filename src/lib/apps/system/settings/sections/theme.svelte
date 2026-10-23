@@ -124,7 +124,7 @@
             <IconButton
               size="sm"
               label="Options for {entry.name}"
-              class="absolute top-2.5 right-2.5 size-7 bg-background-light/90 shadow-raised hover:bg-background-light pointer-coarse:size-9"
+              class="absolute top-2.5 right-2.5 size-7 bg-background-light/90 shadow-control hover:bg-background-light pointer-coarse:size-9"
               onclick={(event) => menu_below(event, entry)}
             >
               <DotsThreeIcon weight="bold" />

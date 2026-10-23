@@ -471,7 +471,7 @@ The controls (and the sample panel's width) are bound to local `$state` and do n
 
 **Display.** Mono, right-aligned, wrapping. While typing: the expression large, and the live result below it (`preview`: trailing operators dropped and open brackets closed, then evaluated; hidden for a lone number or an unfinished expression). After `=`: the solved expression small with `=`, the result large. Errors show in `error`. `=` completes the expression the same way, so `2 × (3 + 4` gives 14.
 
-**Layout.** Toolbar (Copy result, History toggle as a `pressed` `IconButton`), then the display over a 4×6 keypad of kit `Button`s (`secondary` digits, `secondary` + `text-primary` operators, `quiet` functions, `primary` equals spanning two rows, `0` spanning two columns). From `@2xl` the history is a side panel; below that the toggle shows it over the keypad, and picking an entry closes it. The keypad fills the window, so a phone gets large touch targets.
+**Layout.** Toolbar (Copy result, History toggle as a `pressed` `IconButton`), then the display over a 4×6 keypad of kit `Button`s (`secondary` digits, `secondary` + `text-primary` operators, `secondary` functions on a faint `foreground/4` tint so they read as a different key row, `primary` equals spanning two rows, `0` spanning two columns). From `@2xl` the history is a side panel; below that the toggle shows it over the keypad, and picking an entry closes it. The keypad fills the window, so a phone gets large touch targets.
 
 **Interactions.**
 
@@ -589,7 +589,7 @@ A [shell](services/shell.md) session per window (opening it calls `shell.load()`
 
 Ctrl means the Control key on every platform; Cmd+C still copies.
 
-**Touch.** The key row shows on `pointer-coarse`: Ctrl (sticky: the next typed letter acts as Ctrl+letter), Tab, Esc, arrows, `|`, `~`, `/`. Its buttons `preventDefault` on pointerdown, so the field keeps focus and the soft keyboard stays up. `index.html` sets `interactive-widget=resizes-content`, so on Android the layout shrinks above the keyboard and the row stays visible.
+**Touch.** The key row shows on `pointer-coarse`: Ctrl (sticky: the next typed letter acts as Ctrl+letter), Tab, Esc, arrows, `|`, `~`, `/`. Its buttons are raised `secondary` keycaps (Ctrl sinks in as `pressed` while latched) and `preventDefault` on pointerdown, so the field keeps focus and the soft keyboard stays up. `index.html` sets `interactive-widget=resizes-content`, so on Android the layout shrinks above the keyboard and the row stays visible.
 
 **Persistence.**
 - Window state holds `cwd`, `scrollback` (the last 100 entries as text, 20 000 characters each, cached per entry while its output is unchanged; a running entry's output is saved once a second, not per streamed batch) and `started`. Session restore therefore brings back the folder and the screen.

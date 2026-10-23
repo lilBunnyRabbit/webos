@@ -22,7 +22,7 @@
   <article class="mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-4 pb-8 @2xl:px-8 @2xl:pt-6">
     <div class="flex items-start gap-3">
       <IconButton label="Back to the showcase" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
-      <span class="relative grid size-16 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+      <span class="relative grid size-16 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-hairline">
         <AppIcon src={manifest.icon} class="size-9" />
         <AppBadge app_id={manifest.id} />
       </span>
@@ -40,12 +40,12 @@
 
     <div class="grid gap-3 @xl:grid-cols-2">
       {#if story.problem}
-        <section class="flex flex-col gap-1.5 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+        <section class="flex flex-col gap-1.5 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
           <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">The problem</h3>
           <p class="text-sm text-pretty">{story.problem}</p>
         </section>
       {/if}
-      <section class="flex flex-col gap-1.5 rounded-xl bg-background-light p-4 ring-1 ring-primary/30">
+      <section class="flex flex-col gap-1.5 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-primary/30">
         <h3 class="flex items-center gap-1.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">
           <ArrowRightIcon class="size-3 text-primary" weight="bold" aria-hidden="true" /> What {manifest.name} does
         </h3>
@@ -55,7 +55,7 @@
 
     {#if manifest.preview}
       {#await manifest.preview() then image}
-        <img src={image.default} alt="{manifest.name} in use" class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-foreground/8" />
+        <img src={image.default} alt="{manifest.name} in use" class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-hairline" />
       {/await}
     {/if}
 
@@ -69,7 +69,7 @@
           <h3 class="text-sm font-semibold">Highlights</h3>
           <ul class="grid gap-2 @xl:grid-cols-2">
             {#each module.default as highlight (highlight.title)}
-              <li class="flex gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+              <li class="flex gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
                 <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
                   <highlight.icon class="size-4.5" weight="duotone" />
                 </span>

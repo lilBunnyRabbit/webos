@@ -294,7 +294,7 @@
         </div>
       {:else if kind === "audio"}
         <div class="flex h-full flex-col items-center justify-center gap-5 p-8">
-          <div class="grid size-28 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+          <div class="grid size-28 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-hairline">
             <MusicNoteIcon class="size-12 text-primary" weight="duotone" />
           </div>
           <p class="max-w-full truncate text-sm font-medium">{file.name}</p>

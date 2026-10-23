@@ -41,7 +41,7 @@
         <SettingRow label={label(token)}>
           {#snippet children({ id, describedby })}
             <label
-              class="relative size-8 pointer-coarse:size-10 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-foreground/15 ring-inset"
+              class="relative size-8 pointer-coarse:size-10 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-hairline-strong ring-inset"
               style:background={value}
               title="Pick {label(token).toLowerCase()}"
             >

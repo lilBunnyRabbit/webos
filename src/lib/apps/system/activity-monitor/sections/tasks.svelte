@@ -37,7 +37,7 @@
   {#if tasks.jobs.length === 0}
     <EmptyState icon={ListChecksIcon} title="No tasks" description="Compressing, extracting and PDF jobs show up here. The Example app runs a demo." />
   {:else}
-    <ul class="divide-y divide-foreground/8">
+    <ul class="divide-y divide-hairline">
       {#each tasks.jobs as job (job.id)}
         {@const open = expanded.has(job.id)}
         <li class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 px-3 py-2.5 text-ui">
@@ -64,7 +64,7 @@
             <span class="ml-auto shrink-0 tabular-nums">{Math.round(job.progress * 100)}%</span>
           </div>
           {#if job.status === TaskJobStatus.RUNNING}
-            <div class="col-span-2 col-start-2 h-1 overflow-hidden rounded-full bg-foreground/12">
+            <div class="col-span-2 col-start-2 h-1 overflow-hidden rounded-full bg-field shadow-track">
               <div class="h-full rounded-full bg-primary transition-[width] duration-300" style:width="{job.progress * 100}%"></div>
             </div>
           {/if}
@@ -79,7 +79,7 @@
   {/if}
 </Section>
 
-<section aria-label="Task engine" class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8 @container">
+<section aria-label="Task engine" class="flex items-center gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline @container">
   <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
     <PackageIcon class="size-5" weight="duotone" />
   </span>

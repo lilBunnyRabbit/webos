@@ -43,7 +43,7 @@
 </script>
 
 {#snippet notice()}
-  <div class="flex items-center gap-2 border-b border-foreground/8 bg-background-light px-3 py-2 text-ui text-foreground/80">
+  <div class="flex items-center gap-2 border-b border-hairline bg-background-light px-3 py-2 text-ui text-foreground/80">
     <span class="min-w-0 flex-1">{download}</span>
   </div>
 {/snippet}

@@ -77,7 +77,7 @@
       description={kernel.platform === Platform.MOBILE ? "Hold the home screen, then Add widget." : "Pin one from an app's menu or the desktop's right-click menu."}
     />
   {:else}
-    <div class="@container divide-y divide-foreground/8">
+    <div class="@container divide-y divide-hairline">
       <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
         <SortHeader label="Widget" key="name" {sort} {onsort} />
         <span class="hidden @xl:block">Props</span>

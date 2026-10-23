@@ -41,7 +41,7 @@
     <Segmented bind:value={filter} options={FILTERS} label="Show" size="sm" />
 
     {#each visible(sections) as section (section.group + section.title)}
-      <article class="flex flex-col gap-2 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+      <article class="flex flex-col gap-2 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
         <header class="flex flex-wrap items-baseline gap-x-2">
           <h2 class="text-sm font-semibold">{section.title}</h2>
           {#if section.title !== section.group}<span class="text-2xs text-foreground/55">{section.group}</span>{/if}

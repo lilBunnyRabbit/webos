@@ -49,7 +49,7 @@
 
 {#if loaded}
   <Section title="Import theme" description={name === loaded.name ? path : `${path} · saved as “${name}”, since “${loaded.name}” is taken`} flush>
-    <div class="flex flex-wrap items-end gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+    <div class="flex flex-wrap items-end gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
       <div class="grid w-40">
         <ThemeCard preset={{ name, theme: loaded.theme, group: ThemeGroup.WEBOS }} active={false} onselect={import_theme} />
       </div>

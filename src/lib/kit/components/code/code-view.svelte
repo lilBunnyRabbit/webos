@@ -81,4 +81,4 @@
   });
 </script>
 
-<div class={cn("min-h-0 overflow-hidden rounded-md ring-1 ring-foreground/8", class_name)} {@attach mount}></div>
+<div class={cn("min-h-0 overflow-hidden rounded-md ring-1 ring-hairline", class_name)} {@attach mount}></div>

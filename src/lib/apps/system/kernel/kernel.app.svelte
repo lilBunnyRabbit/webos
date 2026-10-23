@@ -46,7 +46,7 @@
   <ul class="flex flex-col gap-2">
     {#each services as [key, service] (key)}
       {@const open = expanded.value.includes(key)}
-      <li class="rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <li class="rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         <button
           class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-foreground/4"
           aria-expanded={open}

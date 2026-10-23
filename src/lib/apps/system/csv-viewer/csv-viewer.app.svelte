@@ -93,7 +93,7 @@
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
           <div class="min-h-0 overflow-auto" onclick={inspect}>
             <div class="w-max min-w-full font-mono text-ui">
-              <div class="sticky top-0 z-10 grid h-7 items-center border-b border-foreground/8 bg-background-light font-medium" style:grid-template-columns={template}>
+              <div class="sticky top-0 z-10 grid h-7 items-center border-b border-hairline bg-background-light font-medium" style:grid-template-columns={template}>
                 <span class="sticky left-0 z-10 h-full bg-background-light"></span>
                 {#each columns as column (column)}
                   {@const label = header ? (header[column] ?? "") : column_label(column)}
@@ -101,7 +101,7 @@
                 {/each}
               </div>
               {#each body.slice(0, shown) as row, index (index)}
-                <div class="grid h-7 items-center border-b border-foreground/6 [contain-intrinsic-block-size:auto_1.75rem] [content-visibility:auto]" style:grid-template-columns={template}>
+                <div class="grid h-7 items-center border-b border-hairline [contain-intrinsic-block-size:auto_1.75rem] [content-visibility:auto]" style:grid-template-columns={template}>
                   <span class="sticky left-0 flex h-full items-center justify-end bg-background pr-3 text-2xs text-foreground/65 tabular-nums select-none">{index + 1}</span>
                   {#each columns as column (column)}
                     <span
@@ -124,7 +124,7 @@
 
         {#if inspected}
           {@const label = header ? (header[inspected.column] ?? column_label(inspected.column)) : column_label(inspected.column)}
-          <div class="flex items-start gap-2 border-t border-foreground/8 bg-background-light px-3 py-2 text-ui">
+          <div class="flex items-start gap-2 border-t border-hairline bg-background-light px-3 py-2 text-ui">
             <span class="shrink-0 font-mono text-2xs text-foreground/80 pt-0.5">{inspected.row + 1} · {label}</span>
             <span class="max-h-24 min-w-0 flex-1 overflow-y-auto font-mono break-words whitespace-pre-wrap select-text">{inspected.value || "(empty)"}</span>
           </div>

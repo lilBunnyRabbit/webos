@@ -58,10 +58,10 @@
   </Section>
 
   <Section title="Preview" flush>
-    <div class="grid place-items-center rounded-xl bg-background-darker p-6 ring-1 ring-foreground/8">
+    <div class="grid place-items-center rounded-xl bg-background-darker p-6 shadow-recessed ring-1 ring-inset ring-hairline">
       <div
         class={cn(
-          "relative flex aspect-[16/10] w-full max-w-80 gap-1.5 rounded-lg bg-background-darkest p-1.5 ring-1 ring-foreground/12",
+          "relative flex aspect-[16/10] w-full max-w-80 gap-1.5 rounded-lg bg-background-darkest p-1.5 shadow-raised ring-1 ring-hairline-strong",
           {
             bottom: "flex-col-reverse",
             top: "flex-col",
@@ -83,7 +83,7 @@
           {/each}
         </div>
         <div class="relative flex-1">
-          <div class="absolute top-[18%] left-[16%] h-1/2 w-1/2 rounded-sm bg-background shadow-raised ring-1 ring-foreground/10"></div>
+          <div class="absolute top-[18%] left-[16%] h-1/2 w-1/2 rounded-sm bg-background shadow-raised ring-1 ring-hairline"></div>
         </div>
       </div>
     </div>

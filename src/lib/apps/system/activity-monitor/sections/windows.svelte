@@ -65,7 +65,7 @@
   {#if rows.length === 0}
     <EmptyState icon={AppWindowIcon} title="No windows" />
   {:else}
-    <div class="@container divide-y divide-foreground/8">
+    <div class="@container divide-y divide-hairline">
       <div class={cn(GRID, "h-8 px-3 text-2xs tracking-wide text-foreground/65 uppercase")}>
         <SortHeader label="Window" key="name" {sort} {onsort} />
         <span class="hidden @2xl:block">Activity</span>

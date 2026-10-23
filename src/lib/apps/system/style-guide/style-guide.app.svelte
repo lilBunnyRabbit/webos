@@ -163,7 +163,7 @@
 
 {#snippet swatch(token: string)}
   <div class="flex items-center gap-2.5">
-    <span class="size-9 shrink-0 rounded-lg ring-1 ring-foreground/12 ring-inset" style:background="var(--{token})"></span>
+    <span class="size-9 shrink-0 rounded-lg ring-1 ring-hairline-strong ring-inset" style:background="var(--{token})"></span>
     <span class="min-w-0">
       <span class="block truncate text-ui font-medium">{token}</span>
       <span class="block truncate font-mono text-2xs text-foreground/80">--{token}</span>
@@ -194,7 +194,7 @@
 
       {#if section.value === "colour"}
         <Section title="Surface ladder" description="Darkest at the bottom of the stack. At most three shades inside one window or panel." flush>
-          <div class="flex overflow-hidden rounded-xl ring-1 ring-foreground/10">
+          <div class="flex overflow-hidden rounded-xl ring-1 ring-hairline">
             {#each LADDER as token (token)}
               <div class="flex h-24 flex-1 flex-col justify-end p-2" style:background="var(--{token})">
                 <span class="font-mono text-2xs text-foreground/80">{token.replace("background", "bg")}</span>
@@ -215,7 +215,7 @@
         <Section title="Opacity modifiers" description="Alpha on existing colours, never new colours." flush>
           <div class="grid grid-cols-2 gap-2 @xl:grid-cols-5">
             {#each [["hover", "85"], ["secondary", "80"], ["active", "70"], ["muted", "65"], ["disabled", "38"]] as [label, alpha] (label)}
-              <div class="rounded-lg bg-background-light p-3 ring-1 ring-foreground/8">
+              <div class="rounded-lg bg-background-light p-3 shadow-card ring-1 ring-hairline">
                 <span class="block text-ui font-medium" style:opacity={Number(alpha) / 100}>{label}</span>
                 {@render specimen(`opacity-${alpha}`)}
               </div>
@@ -236,7 +236,7 @@
           <div class="grid grid-cols-3 gap-3 @xl:grid-cols-6">
             {#each RADII as radius (radius)}
               <div class="flex flex-col items-center gap-2">
-                <span class="size-14 bg-background-lighter ring-1 ring-foreground/12" style:border-radius="var(--radius-{radius})"></span>
+                <span class="size-14 bg-background-lighter ring-1 ring-hairline-strong" style:border-radius="var(--radius-{radius})"></span>
                 {@render specimen(`rounded-${radius}`)}
               </div>
             {/each}
@@ -263,7 +263,7 @@
           </div>
         </Section>
         <Section title="App frame" description="Toolbar and status bar sit one shade lighter than content, split by hairlines." flush>
-          <div class="overflow-hidden rounded-xl ring-1 ring-foreground/10">
+          <div class="overflow-hidden rounded-xl ring-1 ring-hairline">
             <Toolbar>
               <IconButton label="New" size="sm"><PlusIcon weight="bold" /></IconButton>
               <span class="flex-1 px-1 text-ui font-medium">Toolbar</span>
@@ -279,7 +279,7 @@
           {#snippet actions()}
             <Segmented label="Demo width" size="sm" bind:value={demo_width} options={[{ value: "wide", label: "Wide" }, { value: "narrow", label: "Narrow" }]} />
           {/snippet}
-          <div class={["@container mx-auto h-80 overflow-hidden rounded-xl ring-1 ring-foreground/10", demo_width === "wide" ? "w-full" : "w-80"]}>
+          <div class={["@container mx-auto h-80 overflow-hidden rounded-xl ring-1 ring-hairline", demo_width === "wide" ? "w-full" : "w-80"]}>
             <SideNav label="Demo pages" back_label="Demo" items={DEMO_PAGES} bind:value={demo_page} bind:open={demo_open}>
               {#snippet header()}
                 <Input size="sm" placeholder="Search" aria-label="Search the demo">
@@ -299,7 +299,7 @@
           </div>
         </Section>
         <Section title="Resize handle" description="A splitter between two panes: drag, arrow keys, Home and End; double-click or Enter folds the pane." flush>
-          <div class="flex h-32 overflow-hidden rounded-xl ring-1 ring-foreground/10">
+          <div class="flex h-32 overflow-hidden rounded-xl ring-1 ring-hairline">
             <div class="min-w-0 flex-1 bg-background p-4 text-ui text-foreground/65">Content</div>
             <ResizeHandle
               axis="column"
@@ -436,7 +436,7 @@
           description="Two versions of a picture under one divider, from $kit: drag or use the slider to wipe, pinch or Ctrl+scroll to zoom, drag to pan when zoomed in."
           flush
         >
-          <div class="flex h-72 flex-col overflow-hidden rounded-xl bg-background-darker ring-1 ring-foreground/10">
+          <div class="flex h-72 flex-col overflow-hidden rounded-xl bg-background-darker ring-1 ring-hairline">
             <SwipeCompare width={320} height={200} left={sharp} right={blurred} left_label="Sharp" right_label="Blurred" bind:split class="flex-1" />
           </div>
         </Section>
@@ -446,7 +446,7 @@
           flush
         >
           <div class="flex flex-col gap-2">
-            <div class="relative aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10">
+            <div class="relative aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-hairline">
               {@render sharp()}
               <CropFrame bind:rect={crop} bounds={{ width: 320, height: 200 }} />
             </div>
@@ -470,7 +470,7 @@
           description="Wraps an app that needs on-device AI, from $kit: checking, then why it's unavailable or a one-time download notice, then the app. Live on this device. Ask uses it."
           flush
         >
-          <div class="flex h-72 max-w-sm flex-col overflow-auto rounded-xl bg-background ring-1 ring-foreground/10">
+          <div class="flex h-72 max-w-sm flex-col overflow-auto rounded-xl bg-background ring-1 ring-hairline">
             <AiGate features={["prompt"]} title="This app isn't available on this device">
               {#snippet children({ notice })}
                 {@render notice?.()}
@@ -531,9 +531,9 @@
           </div>
         </Section>
         <Section title="Board overlay" description="A game's pause and end screen over its board: title, one mono line, actions with the primary last." flush>
-          <div class="relative size-56 overflow-hidden rounded-lg bg-background-darker ring-1 ring-foreground/8">
+          <div class="relative size-56 overflow-hidden rounded-lg bg-field shadow-recessed ring-1 ring-inset ring-hairline">
             <div class="grid size-full grid-cols-4 gap-1.5 p-2">
-              {#each Array.from({ length: 16 }, (_, i) => i) as cell (cell)}<span class="rounded-md bg-foreground/8"></span>{/each}
+              {#each Array.from({ length: 16 }, (_, i) => i) as cell (cell)}<span class="rounded-md bg-raised shadow-raised"></span>{/each}
             </div>
             <BoardOverlay title="Game over" detail="Score 1234 · Best 2048">
               <Button size="sm" variant="quiet">Undo</Button>
@@ -558,7 +558,7 @@
           description="A grabber on top; by touch it follows the finger down and closes past a quarter of its height or on a flick, otherwise springs back. The list scrolls first. Back, the scrim and Done close it too."
           flush
         >
-          <div class="relative h-72 overflow-hidden rounded-lg bg-background-darker ring-1 ring-foreground/8">
+          <div class="relative h-72 overflow-hidden rounded-lg bg-background-darker ring-1 ring-hairline">
             <div class="grid size-full place-items-center">
               <Button size="sm" onclick={() => (sheet_open = true)}>Open sheet</Button>
             </div>
@@ -568,7 +568,7 @@
                 <div
                   role="dialog"
                   aria-label="Sample sheet"
-                  class="relative flex max-h-[85%] flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 motion-safe:animate-sheet-in"
+                  class="relative flex max-h-[85%] flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-hairline motion-safe:animate-sheet-in"
                   {@attach swipe_dismiss({ on_dismiss: () => (sheet_open = false) })}
                 >
                   <Grabber class="mt-2 mb-1" />
@@ -577,7 +577,7 @@
                       <li class="flex h-10 items-center px-2 text-ui">Row {row}</li>
                     {/each}
                   </ul>
-                  <div class="flex justify-end border-t border-foreground/8 p-2">
+                  <div class="flex justify-end border-t border-hairline p-2">
                     <Button size="sm" variant="primary" onclick={() => (sheet_open = false)}>Done</Button>
                   </div>
                 </div>
