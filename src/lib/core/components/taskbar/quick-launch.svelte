@@ -165,7 +165,7 @@
             draggable="true"
             aria-label={manifest.name}
             title="{manifest.name} · Shift-click for a new window"
-            class="relative grid size-(--taskbar-item) place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-foreground/10 active:shadow-pressed"
+            class="relative grid size-(--taskbar-item) place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed"
             onclick={(event) => open(manifest, event.shiftKey)}
             onauxclick={(event) => event.button === 1 && apps.launch(manifest.id)}
             oncontextmenu={(event) => menu(manifest, event)}

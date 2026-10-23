@@ -14,7 +14,7 @@
   aria-pressed={windows.showing_desktop}
   title="Show desktop (Alt+Shift+D)"
   class={cn(
-    "group grid shrink-0 place-items-center rounded-md transition-colors duration-150 hover:bg-foreground/10",
+    "group grid shrink-0 place-items-center rounded-md transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
     vertical ? "h-[calc(var(--taskbar-item)*0.3)] w-full" : "h-full w-[calc(var(--taskbar-item)*0.3)]"
   )}
   onclick={() => window_transition(windows.list(), () => windows.toggle_desktop())}

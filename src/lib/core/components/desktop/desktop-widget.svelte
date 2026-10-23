@@ -60,7 +60,7 @@
     draggable="true"
     class={cn(
       "flex h-6 shrink-0 cursor-grab items-center gap-1.5 border-b border-hairline px-2 text-left text-2xs font-medium text-foreground/65 select-none",
-      "hover:bg-foreground/6 focus-visible:bg-foreground/8 focus-visible:outline-none active:cursor-grabbing",
+      "hover:text-foreground active:cursor-grabbing",
       clear && "rounded-t-xl border-transparent bg-background-light/70 hover:bg-background-light/85 opacity-0 backdrop-blur-lg transition-opacity duration-150 group-focus-within/widget:opacity-100 group-hover/widget:opacity-100",
       selected && "bg-primary/14 text-foreground/85 opacity-100 hover:bg-primary/18"
     )}

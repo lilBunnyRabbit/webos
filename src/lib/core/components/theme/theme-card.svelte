@@ -15,7 +15,7 @@
   aria-pressed={active}
   class={cn(
     "group flex flex-col gap-2 rounded-xl p-1.5 text-left transition-colors duration-150",
-    active ? "bg-background-lighter shadow-control" : "hover:bg-foreground/6"
+    active ? "bg-background-lighter shadow-control" : "hover:text-foreground"
   )}
   onclick={onselect}
 >

@@ -137,7 +137,7 @@
       <button
         role="option"
         aria-selected={row_index === index}
-        class={cn("flex h-8 w-full items-center gap-3 rounded-md px-2 text-left", row_index === index && (naming || chosen) ? "bg-primary/12" : "hover:bg-foreground/6")}
+        class={cn("flex h-8 w-full items-center gap-3 rounded-md px-2 text-left", row_index === index && (naming || chosen) ? "bg-primary/12" : "hover:bg-background-lighter hover:shadow-control focus:bg-background-lighter focus:shadow-control")}
         onpointerdown={(event) => event.preventDefault()}
         onclick={row.apply}
       >

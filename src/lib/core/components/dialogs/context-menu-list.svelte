@@ -92,8 +92,8 @@
         aria-expanded={open}
         data-label={item.label}
         class={cn(
-          "flex h-8 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10",
-          open && "bg-foreground/8"
+          "flex h-8 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-[background-color,box-shadow] outline-none hover:bg-background-lighter hover:shadow-control focus:bg-background-lighter focus:shadow-control",
+          open && "bg-background-lighter shadow-control"
         )}
         style:anchor-name="--submenu-{uid}-{index}"
         onpointerenter={() => !sheet && (open_index = index)}
@@ -133,7 +133,7 @@
         data-label={item.label}
         class={cn(
           "flex h-8 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none disabled:opacity-38",
-          item.danger ? "text-error hover:bg-error/12 focus:bg-error/12" : "hover:bg-foreground/8 focus:bg-foreground/10"
+          item.danger ? "text-error hover:bg-error/12 focus:bg-error/12" : "hover:bg-background-lighter hover:shadow-control focus:bg-background-lighter focus:shadow-control"
         )}
         onpointerenter={() => (open_index = null)}
         onclick={() => onselect(item.id)}

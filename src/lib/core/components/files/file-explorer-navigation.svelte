@@ -66,7 +66,7 @@
         disabled={last}
         class={cn(
           "h-7 pointer-coarse:h-9 shrink-0 rounded-md px-1.5 text-ui transition-colors duration-150",
-          last ? "font-medium text-foreground" : "text-foreground/80 hover:bg-foreground/8 hover:text-foreground",
+          last ? "font-medium text-foreground" : "text-foreground/80 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
           index === 0 && "font-mono"
         )}
         onclick={() => onnavigatepath(crumb.segments)}

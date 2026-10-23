@@ -86,7 +86,7 @@
 {#snippet app_tile(manifest: AppListing, size: "lg" | "sm")}
   <span
     class={cn(
-      "relative grid shrink-0 place-items-center bg-background-lightest shadow-raised ring-1 ring-hairline",
+      "relative grid shrink-0 place-items-center bg-background-lighter shadow-raised ring-1 ring-hairline",
       size === "lg" ? "size-18 rounded-[1.25rem]" : "size-10 rounded-xl"
     )}
   >

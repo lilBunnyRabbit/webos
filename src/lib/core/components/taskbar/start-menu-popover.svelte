@@ -128,7 +128,7 @@
 {#snippet app_tile(manifest: AppManifest, recent = false)}
   <li class="group relative">
     <button
-      class="group/tile flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:bg-foreground/8 focus-visible:bg-foreground/8"
+      class="group/tile flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 hover:text-foreground"
       onclick={() => launch(manifest)}
       oncontextmenu={(event) => menu(manifest, event, recent)}
       draggable="true"
@@ -138,7 +138,7 @@
         requestAnimationFrame(close);
       }}
     >
-      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-lightest shadow-raised ring-1 ring-hairline transition-shadow duration-150 group-active/tile:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
+      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-lighter shadow-raised ring-1 ring-hairline transition-shadow duration-150 group-active/tile:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
         <AppIcon src={manifest.icon} class="size-6" />
         <AppBadge app_id={manifest.id} />
       </span>
@@ -232,7 +232,7 @@
     {:else}
       <button
         type="button"
-        class="flex items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:bg-foreground/8 hover:text-foreground"
+        class="flex items-center gap-1 rounded-md px-1 py-0.5 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed"
         onclick={() => {
           close();
           void shell.execute("shortcuts sheet");

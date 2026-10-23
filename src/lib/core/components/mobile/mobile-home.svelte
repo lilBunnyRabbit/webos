@@ -315,7 +315,7 @@
                 onclick={(event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
                 tabindex={editing ? -1 : undefined}
                 class={cn(
-                  "group/tile relative flex size-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-2 active:bg-foreground/6",
+                  "group/tile relative flex size-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-2",
                   drop_before === item.name && "before:absolute before:top-3 before:-left-px before:h-12 before:w-0.5 before:rounded-full before:bg-primary"
                 )}
               >
@@ -353,7 +353,7 @@
       )}
     >
       <button
-        class="grid size-14 place-items-center rounded-2xl text-foreground/80 active:bg-foreground/10"
+        class="grid size-14 place-items-center rounded-2xl text-foreground/80 active:shadow-pressed"
         aria-label="All apps"
         onclick={ondrawer}
       >

@@ -11,7 +11,7 @@
     onrecents,
   }: { running: number; unread: boolean; switcher: boolean; onback: () => void; onhome: () => void; onrecents: () => void } = $props();
 
-  const button = "relative grid h-10 w-16 place-items-center rounded-xl text-foreground/80 transition-colors duration-150 active:bg-foreground/10";
+  const button = "relative grid h-10 w-16 place-items-center rounded-xl text-foreground/80 transition-[background-color,box-shadow] duration-150 active:shadow-pressed";
 </script>
 
 <!-- Buttons, not gestures: every screen edge belongs to the device (ADR-016). -->
@@ -25,7 +25,7 @@
   <button class={button} aria-label="Home" onclick={onhome}>
     <HouseIcon class="size-5.5" weight="bold" />
   </button>
-  <button class={cn(button, switcher && "bg-foreground/10 text-foreground")} aria-label={unread ? "Running apps, new notifications" : "Running apps"}
+  <button class={cn(button, switcher && "bg-field text-foreground shadow-pressed")} aria-label={unread ? "Running apps, new notifications" : "Running apps"}
     aria-pressed={switcher} onclick={onrecents}>
     <CardsIcon class="size-5.5" weight={switcher ? "fill" : "bold"} />
     {#if running > 0}

@@ -39,7 +39,7 @@
     aria-current={active ? "page" : undefined}
     class={cn(
       "flex h-7 w-full items-center gap-2 rounded-md px-2 text-ui transition-colors duration-150",
-      active ? "bg-foreground/10 font-medium text-foreground" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+      active ? "bg-background-lighter text-foreground shadow-control font-medium" : "text-foreground/80 hover:text-foreground"
     )}
     title={locked ? `${label} is locked: click to reconnect` : undefined}
     onclick={() => !active && go(path, locked)}

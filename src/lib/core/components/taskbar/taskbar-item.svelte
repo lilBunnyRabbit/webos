@@ -165,8 +165,8 @@
   title={label}
   data-reveal={revealing || menu_open || undefined}
   class={cn(
-    "relative grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-foreground/10 active:shadow-pressed",
-    (active || menu_open) && "bg-foreground/10 shadow-pressed",
+    "relative grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
+    (active || menu_open) && "bg-field text-foreground shadow-pressed",
     all_minimized && "text-foreground/65"
   )}
   style:view-transition-name={flies_in ? `window-${flies_in.id}` : undefined}

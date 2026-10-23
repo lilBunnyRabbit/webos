@@ -15,7 +15,7 @@ export const button = merge_tv({
     variant: {
       primary: "bg-primary text-background shadow-control [--edge-lit:oklch(from_var(--primary)_calc(l+0.1)_c_h)] hover:opacity-85 active:translate-y-px active:shadow-pressed",
       secondary: "bg-raised text-foreground shadow-control ring-1 ring-hairline hover:bg-raised-hover active:translate-y-px active:bg-raised active:shadow-pressed",
-      quiet: "text-foreground/80 hover:bg-foreground/8 hover:text-foreground active:bg-foreground/12 active:shadow-pressed",
+      quiet: "text-foreground/80 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
       danger: "bg-error text-background shadow-control [--edge-lit:oklch(from_var(--error)_calc(l+0.1)_c_h)] hover:opacity-85 active:translate-y-px active:shadow-pressed",
     },
     // Touch screens get finger-sized targets; the look stays the same (docs/design/components.md).
@@ -45,7 +45,7 @@ export type ButtonVariants = VariantProps<typeof button>;
 export const field = merge_tv({
   base: [
     "w-full min-w-0 rounded-md text-ui text-foreground",
-    "bg-field shadow-recessed ring-1 ring-inset ring-hairline-strong transition-[box-shadow,background-color] duration-150",
+    "bg-field shadow-recessed ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150",
     "placeholder:text-foreground/65 hover:ring-edge",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
     "disabled:opacity-38",
@@ -76,3 +76,4 @@ export const badge = merge_tv({
   defaultVariants: { tone: "neutral" },
 });
 export type BadgeVariants = VariantProps<typeof badge>;
+

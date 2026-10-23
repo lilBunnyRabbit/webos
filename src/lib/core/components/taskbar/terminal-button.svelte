@@ -30,7 +30,7 @@
 <button
   aria-label="Terminal"
   title="Terminal (Alt+Shift+↵)"
-  class={cn("grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10", focused && "bg-foreground/10")}
+  class={cn("grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed", focused && "bg-field text-foreground shadow-pressed")}
   onclick={toggle}
 >
   <TerminalWindowIcon class="size-[calc(var(--taskbar-item)*0.5)]" weight={newest ? "fill" : "bold"} />

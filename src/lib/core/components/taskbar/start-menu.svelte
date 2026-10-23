@@ -37,8 +37,8 @@
   popovertarget="start-menu-popover"
   popovertargetaction="toggle"
   class={cn(
-    "grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10",
-    open && "bg-foreground/10"
+    "grid size-(--taskbar-item) shrink-0 place-items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
+    open && "bg-field text-foreground shadow-pressed"
   )}
 >
   <LogoMark class="size-[calc(var(--taskbar-item)*0.6)] text-primary" />

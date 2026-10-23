@@ -65,7 +65,7 @@
       data-window-button
       aria-label="Reset zoom, now {percent}%"
       title="Reset zoom"
-      class="h-7 min-w-10 rounded-md px-1 font-mono text-2xs text-foreground/80 tabular-nums transition-colors hover:bg-foreground/8 hover:text-foreground"
+      class="h-7 min-w-10 rounded-md px-1 font-mono text-2xs text-foreground/80 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed"
       onclick={() => (zoom = 1)}
     >
       {percent}%

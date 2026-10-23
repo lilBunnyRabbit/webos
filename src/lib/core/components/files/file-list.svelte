@@ -334,7 +334,7 @@
           {@attach mobile && !picker && long_press({ on_menu: (point) => item_menu([item], point) })}
           role="row"
           class={cn(
-            "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-[0.75rem_1fr_auto_auto] items-center gap-x-3 [contain-intrinsic-size:auto_2rem] [content-visibility:auto] pointer-coarse:[contain-intrinsic-size:auto_2.75rem] rounded-md px-2 text-left transition-[background-color,opacity] duration-100 hover:bg-foreground/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+            "col-span-4 grid h-8 pointer-coarse:h-11 grid-cols-[0.75rem_1fr_auto_auto] items-center gap-x-3 [contain-intrinsic-size:auto_2rem] [content-visibility:auto] pointer-coarse:[contain-intrinsic-size:auto_2.75rem] rounded-md px-2 text-left transition-[background-color,opacity] duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
             !multi && !picker?.multiple && "focus:bg-primary/12",
             clipboard.is_cut(join_path(handler.segments, item.name)) && "opacity-50",
             list_handler.dragging.has(item.name) && "opacity-40",

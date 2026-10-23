@@ -53,7 +53,7 @@
       data-option
       autofocus={index === 0}
       role="menuitem"
-      class="flex h-9 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
+      class="flex h-9 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-[background-color,box-shadow] outline-none hover:bg-background-lighter hover:shadow-control focus:bg-background-lighter focus:shadow-control"
       onclick={() => resolve({ app_id: app.id, always })}
     >
       <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-hairline"><AppIcon src={app.icon} class="size-4" /></span>

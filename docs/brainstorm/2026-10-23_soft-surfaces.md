@@ -36,6 +36,9 @@ Token polish runs as two parallel variations for the owner to compare: **A** der
 ### Kit pass (decided: soft at rest)
 Owner: "not even all style guide foundations and all are in this style? like the sidebars ... inputs, sliders, toggle, checbox". The 3:1 resting ring made fields and tracks read as outlined. Decided: soft at rest (hairline-strong + deep well, lit lip), 3:1 edge on hover, cottontail on focus. Rejected: keep 3:1 at rest (outlined look). Then raised the selected segment, active side-nav item, keycaps, switch and slider knobs (shared `--knob`), a custom checkbox, `shadow-card` for Section cards, 6px slider groove.
 
+### Second taste pass (decided: all B)
+Owner: "i like it but i dont love it": the field outline was "too thin random color", "just a no" for switches and sliders, select chevron jumped, start menu tiles too light, and see-through hover/selected fills were "mixing 2 different styles". Live options page (https://claude.ai/artifact/Eu8Wp7yZRXkL12mEYG3jLs); owner: "all b". Wells lose their resting outline; knobs become panel-colour and raised (slider with a primary dot); tiles in floating layers take the panel colour; state fills become lift / chip / sunk. Select chevron is a centred mask that turns in place.
+
 ## Key takeaways
 - Neumorphism's tactile part (lit edges, recessed fields, press-in) fits WebOS; its "one surface colour" part fights the ladder and the dark brand.
 

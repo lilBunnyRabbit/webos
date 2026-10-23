@@ -146,15 +146,16 @@ Where light or shadow has no headroom (Neon Black's body is pure black, Electric
 | `shadow-card` | Section cards and panels in a window: lit edge and a wide, faint drop, so they float without reading as buttons |
 | `shadow-control` | Buttons (`primary`, `secondary`, `danger`), the selected segment, the active side-nav item, a checked checkbox, switch and slider knobs, `Kbd` keycaps: lit edge and a short drop. Secondary adds a `hairline` ring |
 | `shadow-pressed` | A button while held, a toggle that's on (`pressed`), the active taskbar item, an app tile while its own button is held (`group-active/tile:`) |
-| `shadow-recessed` | Fields, segmented tracks, switch tracks, an unchecked checkbox: a deep inner shadow and a lit bottom lip |
-| `shadow-track` | Slider grooves (6px, `bg-field`), where a groove can't take the field's drop |
-| `bg-knob` (`--knob`) | Switch knob and slider thumb: `background-lightest` in light palettes, foreground mixed 88% into the body in dark ones, where paper is too dark to read |
+| `shadow-recessed` | Fields, segmented tracks, switch tracks, an unchecked checkbox: a deep inner shadow, a lit lip inside the bottom and a lit line under it. No outline at rest |
+| `shadow-track` | Slider grooves (8px), where a groove can't take the field's drop |
 
 Rules:
 
 - Pressed and on use the same sink. Held buttons also move down 1px (`active:translate-y-px`); disabled buttons lose their shadow.
-- Controls are soft at rest: `ring-hairline-strong` plus the well's depth. Hover adds `ring-edge` (3:1), focus the `cottontail` ring. Raised parts on a control (selected segment, knobs, a checked checkbox) take `shadow-control`.
-- Tiles in a floating layer (start menu, phone drawer, announcements) are `background-lightest`, one above the `lighter` panel, so a raised tile never reads as sunk.
+- Controls are soft at rest: no outline (`ring-transparent`), the well's depth carries the shape. Hover adds `ring-edge` (3:1), focus the `cottontail` ring. Raised parts on a control (selected segment, a checked checkbox) take `shadow-control`.
+- Knobs are the panel colour (`background-lighter`), raised with `shadow-control` and a `hairline`: the switch knob over a sunk track (on: primary mixed 85% into the well), the slider thumb with a 3px primary dot over a groove filled with the same softened primary.
+- No see-through foreground tints for state (owner, 2026-10-24: "mixing 2 different styles"). A quiet control lifts on hover (`hover:bg-background-lighter hover:shadow-control`) and sinks on press (`active:shadow-pressed`); a selected row is a raised chip (`bg-background-lighter shadow-control`); an open or latched toggle sinks (`bg-field shadow-pressed`); the current item of a menu or listbox lifts on hover and focus. Nav rows and list rows only brighten their text on hover. Static chips and badges keep their tint.
+- Tiles in a floating layer (start menu, phone drawer, announcements) are the panel's own colour, raised by `shadow-raised` alone, so icons keep their contrast.
 - Selection and on-state keep `primary`. Lists, tables, the terminal, editors and canvases stay flat: dense content would turn every row into a button.
 - Settings › Shadows scales the drops and inner shadows; the lit edge isn't a shadow and stays.
 

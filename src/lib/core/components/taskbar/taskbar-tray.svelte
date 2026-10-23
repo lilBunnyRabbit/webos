@@ -42,9 +42,9 @@
   popovertarget="notification-center-popover"
   popovertargetaction="toggle"
   class={cn(
-    "flex shrink-0 items-center rounded-xl transition-colors duration-150 hover:bg-foreground/10",
+    "flex shrink-0 items-center rounded-xl transition-[background-color,box-shadow] duration-150 hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
     vertical ? "flex-col gap-1 pt-2" : "gap-0.5 pl-2.5",
-    open && "bg-foreground/10"
+    open && "bg-field text-foreground shadow-pressed"
   )}
 >
   <span class="relative grid size-[calc(var(--taskbar-item)*0.5)] place-items-center">
@@ -72,7 +72,7 @@
   }}
 >
   {#if open}
-    <NotificationList class="max-h-full" item_class="hover:bg-foreground/4" />
+    <NotificationList class="max-h-full" item_class="hover:text-foreground" />
   {/if}
 </div>
 

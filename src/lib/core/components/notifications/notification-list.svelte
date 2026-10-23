@@ -39,7 +39,7 @@
   </header>
 
   {#if running > 0}
-    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => (apps.launch("activity-monitor", { section: "tasks" }), ui.close())}>
+    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed" onclick={() => (apps.launch("activity-monitor", { section: "tasks" }), ui.close())}>
       <span>{running} {running === 1 ? "task" : "tasks"} running</span>
       <span class="text-primary">Show</span>
     </button>
