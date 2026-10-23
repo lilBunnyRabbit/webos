@@ -37,7 +37,7 @@
         <button
           type="button"
           class={cn(
-            "flex w-full flex-col gap-1 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cottontail focus-visible:ring-inset",
+            "flex w-full flex-col gap-1 rounded-md px-2.5 py-2 text-left transition-colors focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cottontail focus-visible:ring-inset",
             proposal.id === selected && "bg-primary/14 hover:bg-primary/18"
           )}
           aria-current={proposal.id === selected ? "true" : undefined}

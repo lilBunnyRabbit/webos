@@ -196,7 +196,7 @@
         {#if card.checklist.length > 0}
           <ul class="grid gap-0.5">
             {#each card.checklist as item (item.id)}
-              <li class="group flex min-h-8 items-center gap-2 rounded-md px-1.5 hover:bg-foreground/6">
+              <li class="group flex min-h-8 items-center gap-2 rounded-md px-1.5">
                 <Checkbox checked={item.done} aria-label="Done: {item.text}" onchange={() => change((card) => update_check(card, item.id, { done: !item.done }))} />
                 <input
                   value={check_text.value(`${card_id} ${item.id}`, item.text)}

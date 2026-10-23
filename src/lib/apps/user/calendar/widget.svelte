@@ -51,7 +51,7 @@
       <li>
         <button
           type="button"
-          class={cn("flex w-full min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-foreground/6", ended && "opacity-55")}
+          class={cn("flex w-full min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left", ended && "opacity-55")}
           onclick={() => apps.launch(APP_ID, { day: occurrence.day })}
         >
           <span class={cn("size-2 shrink-0 rounded-full", EVENT_DOT[occurrence.event.color])}></span>

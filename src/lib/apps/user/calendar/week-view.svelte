@@ -67,7 +67,7 @@
           <button
             type="button"
             class={cn(
-              "truncate rounded-sm bg-foreground/6 px-1.5 text-left text-2xs leading-5 hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-cottontail",
+              "truncate rounded-sm bg-foreground/6 px-1.5 text-left text-2xs leading-5 hover:opacity-85 focus-visible:outline-2 focus-visible:outline-cottontail",
               column.done && "text-foreground/55 line-through"
             )}
             title="Due on Kanban: {card.title}"
@@ -97,7 +97,7 @@
           {#each blocks as entry (entry.id)}
             <button
               type="button"
-              class="absolute inset-x-0 grid content-start overflow-hidden border-l-2 border-dashed border-foreground/40 bg-foreground/5 px-1.5 py-0.5 text-left text-2xs text-foreground/80 hover:bg-foreground/8 focus-visible:outline-2 focus-visible:outline-cottontail"
+              class="absolute inset-x-0 grid content-start overflow-hidden border-l-2 border-dashed border-foreground/40 bg-foreground/5 px-1.5 py-0.5 text-left text-2xs text-foreground/80 hover:text-foreground focus-visible:outline-2 focus-visible:outline-cottontail"
               style:top="{(minutes_of(entry.start) / 60) * HOUR}px"
               style:height="{((minutes_of(entry.end) - minutes_of(entry.start)) / 60) * HOUR}px"
               title="Worked {entry.start}–{entry.end}. Open Work Hours"

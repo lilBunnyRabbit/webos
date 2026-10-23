@@ -26,9 +26,9 @@
       disabled={!editable}
       title={editable ? (won ? "Clear this result" : `${names.get(slot.id)} wins`) : undefined}
       class={cn(
-        "flex h-8 w-full min-w-0 items-center gap-2 px-2 text-left text-ui transition-colors",
+        "flex h-8 w-full min-w-0 items-center gap-2 px-2 text-left text-ui transition-[background-color,box-shadow,color]",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cottontail",
-        editable && "cursor-pointer hover:bg-foreground/6",
+        editable && "cursor-pointer hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
         won && state.status === MatchStatus.DONE && "bg-primary/14 font-medium text-primary hover:bg-primary/20",
         lost && "text-foreground/50"
       )}

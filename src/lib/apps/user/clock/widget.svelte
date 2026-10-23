@@ -50,7 +50,7 @@
   const weekday = $derived(date.toLocaleDateString("en-US", { weekday: "long" }));
   const line_class = $derived(
     cn(
-      "flex min-w-0 items-center justify-center gap-1.5 px-2 py-1 text-2xs hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none",
+      "flex min-w-0 items-center justify-center gap-1.5 px-2 py-1 text-2xs hover:text-foreground focus-visible:bg-primary/12 focus-visible:outline-none",
       bare ? "rounded-lg text-foreground/85" : "text-foreground/65"
     )
   );

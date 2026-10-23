@@ -287,7 +287,7 @@
                   </div>
                   {#if turn.ran}
                     <details class="group/ran max-w-full text-2xs text-foreground/65">
-                      <summary class="flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-0.5 hover:bg-foreground/6 pointer-coarse:py-2">
+                      <summary class="flex cursor-pointer list-none items-center gap-1 rounded-md px-1 py-0.5 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed pointer-coarse:py-2">
                         <CaretRightIcon weight="bold" class="size-3 transition-transform group-open/ran:rotate-90" />
                         {turn.ran.failed ? "Couldn't read" : "Read"} <code class="font-mono">{turn.ran.line}</code>
                       </summary>

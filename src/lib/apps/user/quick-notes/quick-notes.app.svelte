@@ -285,7 +285,7 @@
           {:else}
             <ul class="grid gap-0.5">
               {#each todos as todo (todo.line)}
-                <li class="group flex min-h-8 items-center gap-2.5 rounded-md px-2 hover:bg-foreground/6">
+                <li class="group flex min-h-8 items-center gap-2.5 rounded-md px-2">
                   <Checkbox checked={todo.done} aria-label={todo.text} onchange={() => update_todo(set_todo(todo_text, todo.n, !todo.done))} />
                   <span class={cn("min-w-0 flex-1 text-ui", todo.done && "text-foreground/45 line-through")}>{todo.text}</span>
                   <IconButton label="Remove" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" onclick={() => update_todo(remove_todo(todo_text, todo.n))}>
@@ -321,7 +321,7 @@
                     <button
                       type="button"
                       class={cn(
-                        "grid w-full gap-0.5 rounded-md px-2.5 py-2 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none",
+                        "grid w-full gap-0.5 rounded-md px-2.5 py-2 text-left focus-visible:bg-primary/12 focus-visible:outline-none",
                         note.id === selected_id.value && "bg-primary/14 hover:bg-primary/14"
                       )}
                       onclick={() => (selected_id.value = note.id)}

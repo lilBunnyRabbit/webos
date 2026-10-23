@@ -89,7 +89,7 @@
 {#snippet header(Icon: Component, title: string, tab: ClockTab, label: string)}
   <button
     type="button"
-    class="flex min-h-10 w-full min-w-0 items-center gap-2 rounded-t-xl px-3 text-sm font-semibold hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:min-h-11"
+    class="flex min-h-10 w-full min-w-0 items-center gap-2 rounded-t-xl px-3 text-sm font-semibold transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:min-h-11"
     aria-label={label}
     onclick={() => onopen(tab)}
   >

@@ -79,8 +79,8 @@
           <button
             type="button"
             class={cn(
-              "flex w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-colors duration-150",
-              "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
+              "flex w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-[background-color,box-shadow] duration-150",
+              "hover:bg-background-lighter active:shadow-pressed focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
             )}
             onclick={() => onopen(entry.path)}
           >

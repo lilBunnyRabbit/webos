@@ -279,7 +279,7 @@
                 {#each group.codepoints as code (code)}
                   {@const missing = current.info.codepoints !== null && !current.info.codepoints.has(code)}
                   <div
-                    class={cn("grid aspect-square place-items-center rounded-sm text-2xl hover:bg-foreground/6", missing && "opacity-38")}
+                    class={cn("grid aspect-square place-items-center rounded-sm text-2xl", missing && "opacity-38")}
                     style:font-family="'{current.family}'"
                     title={`${code_label(code)}${missing ? " · not in this font" : ""}`}
                   >

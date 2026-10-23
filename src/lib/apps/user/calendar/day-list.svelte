@@ -43,7 +43,7 @@
       <li>
         <button
           type="button"
-          class="flex w-full min-w-0 items-center gap-3 rounded-md bg-foreground/6 px-3 py-2 text-left hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-cottontail"
+          class="flex w-full min-w-0 items-center gap-3 rounded-md bg-foreground/6 px-3 py-2 text-left hover:opacity-85 focus-visible:outline-2 focus-visible:outline-cottontail"
           onclick={() => actions.open_card(card.id)}
         >
           <span class="flex w-20 shrink-0 items-center gap-1 text-2xs text-foreground/80"><KanbanIcon class="size-3.5" />Due</span>
@@ -56,7 +56,7 @@
       <li>
         <button
           type="button"
-          class="flex w-full min-w-0 items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+          class="flex w-full min-w-0 items-center gap-3 rounded-md px-3 py-2 text-left transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
           onclick={actions.open_work}
         >
           <span class="flex w-20 shrink-0 items-center gap-1 text-2xs text-foreground/80"><ClockUserIcon class="size-3.5" />Worked</span>

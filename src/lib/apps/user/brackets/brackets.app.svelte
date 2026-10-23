@@ -155,7 +155,7 @@
       <IconButton label="All brackets" size="sm" onclick={() => (open_path.value = null)}><ArrowLeftIcon weight="bold" /></IconButton>
       <button
         type="button"
-        class="min-w-0 truncate rounded-md px-1.5 py-1 text-left text-sm font-semibold hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+        class="min-w-0 truncate rounded-md px-1.5 py-1 text-left text-sm font-semibold transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
         title="Rename"
         disabled={!bracket}
         onclick={rename}

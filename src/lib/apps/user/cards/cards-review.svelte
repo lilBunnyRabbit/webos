@@ -46,7 +46,7 @@
         <div class="flex flex-col">
           <p class="px-1 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">New · {review.added.length}</p>
           {#each review.added as draft, index (index)}
-            <label class="flex min-h-11 items-center gap-3 rounded-lg px-1 hover:bg-foreground/4">
+            <label class="flex min-h-11 items-center gap-3 rounded-lg px-1">
               <Checkbox bind:checked={added[index]} class="size-5" />
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-medium">{display_name(draft)}</span>
@@ -60,7 +60,7 @@
         <div class="flex flex-col">
           <p class="px-1 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Changed · {review.changed.length}</p>
           {#each review.changed as change, index (index)}
-            <label class="flex min-h-11 items-center gap-3 rounded-lg px-1 hover:bg-foreground/4">
+            <label class="flex min-h-11 items-center gap-3 rounded-lg px-1">
               <Checkbox bind:checked={changed[index]} class="size-5" />
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-medium">{display_name(change.card)}</span>

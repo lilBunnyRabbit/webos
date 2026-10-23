@@ -41,7 +41,7 @@
       {@const left = left_count(list)}
       {@const items = preview(list)}
       <li class="flex items-stretch overflow-hidden rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
-        <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left hover:bg-foreground/4" onclick={() => onopen(list.id)}>
+        <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left transition-[background-color,box-shadow,color] hover:bg-background-lighter" onclick={() => onopen(list.id)}>
           <ListMark {list} size="lg" />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="flex items-baseline gap-2">
@@ -60,7 +60,7 @@
 
   <button
     type="button"
-    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline-strong text-sm font-medium text-foreground/80 hover:bg-foreground/4"
+    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline-strong text-sm font-medium text-foreground/80 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed"
     onclick={onnew}
   >
     <PlusIcon weight="bold" /> New list

@@ -108,7 +108,7 @@
   <li>
     <button
       type="button"
-      class="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-foreground/8 active:bg-foreground/12 focus-visible:outline-2 focus-visible:outline-cottontail pointer-coarse:py-3"
+      class="flex w-full items-center gap-3 px-4 py-2 text-left transition-[background-color,box-shadow] hover:bg-background-lighter hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail pointer-coarse:py-3"
       onclick={() => add(item)}
     >
       <img src={item.icon} alt="" class="size-7 shrink-0 rounded-sm" loading="lazy" referrerpolicy="no-referrer" />

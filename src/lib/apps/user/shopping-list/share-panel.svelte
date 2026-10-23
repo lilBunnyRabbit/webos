@@ -61,7 +61,7 @@
       </div>
       <div class="flex flex-col">
         {#each lists as list (list.id)}
-          <label class="flex min-h-12 items-center gap-3 rounded-lg px-1 hover:bg-foreground/4">
+          <label class="flex min-h-12 items-center gap-3 rounded-lg px-1">
             <Checkbox checked={picked.has(list.id)} onchange={(event) => toggle(list.id, event.currentTarget.checked)} class="size-5" />
             <ListMark {list} size="md" />
             <span class="min-w-0 flex-1 truncate font-medium">{list.name}</span>

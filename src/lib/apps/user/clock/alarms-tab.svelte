@@ -93,7 +93,7 @@
         {@const on = alarm.on}
         {@const snoozed = is_snoozed(alarm, now)}
         <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3 shadow-card ring-1 ring-hairline">
-          <button type="button" class="grid min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left hover:bg-foreground/4 focus-visible:bg-primary/12 focus-visible:outline-none" onclick={() => edit(alarm)}>
+          <button type="button" class="grid min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:bg-primary/12 focus-visible:outline-none" onclick={() => edit(alarm)}>
             <span class={cn("font-mono text-3xl leading-tight font-medium tabular-nums", !on && "text-foreground/45")}>{alarm.time}</span>
             <span class="truncate text-2xs text-foreground/65">
               {[alarm.label, repeat_label(alarm.days)].filter(Boolean).join(" · ")}{#if on && alarm.next !== null && alarm.next > now}

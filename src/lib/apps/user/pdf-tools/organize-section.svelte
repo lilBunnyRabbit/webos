@@ -251,7 +251,7 @@
             aria-selected={is_selected}
             tabindex={is_selected || (!selected && index === 0) ? 0 : -1}
             class={cn(
-              "group relative flex cursor-grab flex-col gap-1.5 rounded-lg p-2 outline-none select-none hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
+              "group relative flex cursor-grab flex-col gap-1.5 rounded-lg p-2 outline-none select-none transition-[background-color,box-shadow] hover:bg-background-lighter hover:shadow-control focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
               is_selected && "bg-primary/14 hover:bg-primary/18",
               reorder.from === index && "opacity-40"
             )}

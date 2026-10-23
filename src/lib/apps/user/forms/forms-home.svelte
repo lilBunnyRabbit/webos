@@ -50,7 +50,7 @@
           <li class="border-b border-hairline last:border-b-0">
             <button
               type="button"
-              class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 pointer-coarse:py-3.5"
+              class="flex w-full items-center gap-3 px-3 py-2.5 text-left focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none focus-visible:ring-inset pointer-coarse:py-3.5"
               title={form.path}
               onclick={() => onopen(form.path)}
             >

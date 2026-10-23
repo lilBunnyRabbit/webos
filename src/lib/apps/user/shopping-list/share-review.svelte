@@ -64,7 +64,7 @@
                 <div class="flex flex-col">
                   <p class="px-1 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{group.title} · {changes.length}</p>
                   {#each changes as change (change.id)}
-                    <label class="flex min-h-11 items-center gap-3 rounded-lg px-1 hover:bg-foreground/4">
+                    <label class="flex min-h-11 items-center gap-3 rounded-lg px-1">
                       <Checkbox checked={picked.has(change.id)} onchange={(event) => toggle(change.id, event.currentTarget.checked)} class="size-5" />
                       {#if change.kind === ChangeKind.NEW_LIST}
                         <ListMark list={change.list} size="sm" />

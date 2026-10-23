@@ -58,7 +58,7 @@
               <button
                 type="button"
                 class={cn(
-                  "grid size-6 shrink-0 place-items-center rounded-full font-mono text-2xs tabular-nums hover:bg-foreground/8 focus-visible:outline-2 focus-visible:outline-cottontail",
+                  "grid size-6 shrink-0 place-items-center rounded-full font-mono text-2xs tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail",
                   outside && "text-foreground/45",
                   day === today && "bg-primary font-semibold text-background hover:bg-primary hover:opacity-85"
                 )}
@@ -75,7 +75,7 @@
               {#if worked > 0}
                 <button
                   type="button"
-                  class="flex min-w-0 items-center justify-center gap-1 rounded-sm font-mono text-2xs leading-4 text-foreground/65 tabular-nums hover:bg-foreground/6 hover:text-foreground focus-visible:outline-2 focus-visible:outline-cottontail @xl:px-1"
+                  class="flex min-w-0 items-center justify-center gap-1 rounded-sm font-mono text-2xs leading-4 text-foreground/65 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail @xl:px-1"
                   title="Worked {format_hours(worked)} h. Open Work Hours"
                   onclick={(click) => {
                     click.stopPropagation();
@@ -114,7 +114,7 @@
                     {@const { card, column: lane } = item.entry}
                     <button
                       type="button"
-                      class="flex w-full min-w-0 items-center gap-1 rounded-sm bg-foreground/6 px-1.5 text-left text-2xs leading-5 hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-cottontail"
+                      class="flex w-full min-w-0 items-center gap-1 rounded-sm bg-foreground/6 px-1.5 text-left text-2xs leading-5 hover:opacity-85 focus-visible:outline-2 focus-visible:outline-cottontail"
                       title="Due on Kanban: {card.title}"
                       onclick={(click) => {
                         click.stopPropagation();
@@ -131,7 +131,7 @@
                 <li>
                   <button
                     type="button"
-                    class="rounded-sm px-1.5 text-2xs leading-5 text-foreground/80 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+                    class="rounded-sm px-1.5 text-2xs leading-5 text-foreground/80 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
                     onclick={(click) => {
                       click.stopPropagation();
                       actions.show_day(day);

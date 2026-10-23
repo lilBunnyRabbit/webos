@@ -35,7 +35,7 @@
     <button
       type="button"
       class={cn(
-        "flex min-w-0 items-center gap-1.5 rounded-md px-1 text-left hover:bg-foreground/6 active:bg-foreground/10",
+        "flex min-w-0 items-center gap-1.5 rounded-md px-1 text-left transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
         tall ? "min-h-8 text-sm" : "min-h-6 text-ui pointer-coarse:min-h-8"
       )}
       aria-label="Open {list.name}, {left} left"

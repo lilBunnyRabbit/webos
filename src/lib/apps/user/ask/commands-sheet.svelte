@@ -70,7 +70,7 @@
     {#each catalogue as command (command.id)}
       {@const cost = costs[command.id]}
       <li>
-        <label class="flex cursor-pointer items-start gap-3 px-4 py-2 hover:bg-foreground/4 pointer-coarse:py-3">
+        <label class="flex cursor-pointer items-start gap-3 px-4 py-2 pointer-coarse:py-3">
           <Switch class="mt-0.5" checked={on.includes(command.id)} onchange={(event) => ontoggle(command.id, event.currentTarget.checked)} />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="flex items-baseline gap-2">

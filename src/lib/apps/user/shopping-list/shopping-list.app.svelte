@@ -691,7 +691,7 @@
           {#if all && target}
             <button
               type="button"
-              class="flex h-10 shrink-0 items-center gap-1 rounded-lg pr-1.5 pl-1 hover:bg-foreground/6"
+              class="flex h-10 shrink-0 items-center gap-1 rounded-lg pr-1.5 pl-1 transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed"
               aria-label="Add to “{target.name}”, change list"
               onclick={pick_target}
             >

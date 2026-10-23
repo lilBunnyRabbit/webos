@@ -124,7 +124,7 @@
         </div>
         <ul class="flex flex-col gap-0.5 pt-1">
           {#each items as item (item.id)}
-            <li class="flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6 pointer-coarse:h-10">
+            <li class="flex h-8 items-center gap-2 rounded-md pl-2 pointer-coarse:h-10">
               {#if item.directory}
                 <FolderIcon weight="fill" class="size-4 shrink-0 text-primary" />
               {:else}

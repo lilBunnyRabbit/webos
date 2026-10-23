@@ -481,7 +481,7 @@
       <IconButton label="Pixel grid" size="sm" pressed={prefs.grid.value} onclick={() => (prefs.grid.value = !prefs.grid.value)}><GridFourIcon weight="bold" /></IconButton>
       <span class="hidden @sm:contents">
         <IconButton label="Zoom out" size="sm" onclick={() => viewport.step(-1)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
-        <button type="button" class="h-7 w-12 rounded-md text-center font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/8" title="Actual size" onclick={() => viewport.zoom_to(1)}>
+        <button type="button" class="h-7 w-12 rounded-md text-center font-mono text-2xs text-foreground/80 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed" title="Actual size" onclick={() => viewport.zoom_to(1)}>
           {Math.round(viewport.zoom * 100)}%
         </button>
         <IconButton label="Zoom in" size="sm" onclick={() => viewport.step(1)}><MagnifyingGlassPlusIcon weight="bold" /></IconButton>

@@ -156,7 +156,7 @@
             tabindex="0"
             onkeydown={(event) => on_key(event, index)}
             class={cn(
-              "relative flex h-10 cursor-grab items-center gap-2 rounded-md pl-1 outline-none select-none hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset pointer-coarse:h-12",
+              "relative flex h-10 cursor-grab items-center gap-2 rounded-md pl-1 outline-none select-none focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset pointer-coarse:h-12",
               reorder.from === index && "opacity-40"
             )}
           >

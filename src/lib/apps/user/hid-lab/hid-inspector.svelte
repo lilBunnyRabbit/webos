@@ -50,8 +50,8 @@
         <button
           type="button"
           class={cn(
-            "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 pointer-coarse:py-3.5",
-            active ? "bg-foreground/8" : "hover:bg-foreground/4"
+            "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-[background-color,box-shadow] duration-150 pointer-coarse:py-3.5",
+            active && "bg-background-lighter text-foreground shadow-control"
           )}
           aria-current={active ? "true" : undefined}
           onclick={() => session.select(device)}

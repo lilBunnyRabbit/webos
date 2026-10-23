@@ -27,7 +27,7 @@
 <div class="border-b border-hairline bg-background-light text-2xs text-foreground/75">
   <button
     type="button"
-    class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-foreground/4 pointer-coarse:py-2.5"
+    class="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:text-foreground pointer-coarse:py-2.5"
     aria-expanded={open}
     onclick={() => (open = !open)}
   >

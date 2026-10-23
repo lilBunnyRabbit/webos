@@ -341,7 +341,7 @@
             {#each grids as grid, i (i)}
               <button
                 type="button"
-                class={cn("flex flex-col items-center gap-1 rounded-lg p-1 text-2xs outline-none focus-visible:ring-2 focus-visible:ring-cottontail", i === mask ? "bg-primary/14 ring-1 ring-primary ring-inset" : "hover:bg-foreground/6")}
+                class={cn("flex flex-col items-center gap-1 rounded-lg p-1 text-2xs outline-none focus-visible:ring-2 focus-visible:ring-cottontail", i === mask ? "bg-primary/14 ring-1 ring-primary ring-inset" : "transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed")}
                 aria-pressed={i === mask}
                 onclick={() => (picked_mask = i)}
               >

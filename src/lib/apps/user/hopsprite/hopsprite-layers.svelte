@@ -82,7 +82,7 @@
     {#each layers as layer (layer.id)}
       {@const active = layer.id === editor.layer.id}
       <li
-        class={["row flex h-8 items-center gap-0.5 rounded-md pr-0.5", active ? "active bg-primary/14" : "hover:bg-foreground/6"]}
+        class={["row flex h-8 items-center gap-0.5 rounded-md pr-0.5", active && "active bg-primary/14"]}
         oncontextmenu={(event) => layer_menu(layer, event)}
       >
         <IconButton

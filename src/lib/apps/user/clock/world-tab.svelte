@@ -90,7 +90,7 @@
         <li>
           <button
             type="button"
-            class="flex min-h-10 w-full items-center gap-3 rounded-md px-2.5 py-1.5 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none disabled:opacity-38"
+            class="flex min-h-10 w-full items-center gap-3 rounded-md px-2.5 py-1.5 text-left transition-[background-color,box-shadow] hover:bg-background-lighter hover:shadow-control focus-visible:bg-primary/12 focus-visible:outline-none disabled:opacity-38"
             disabled={added}
             onclick={() => add(place)}
           >

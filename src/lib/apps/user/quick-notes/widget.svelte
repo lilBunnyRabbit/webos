@@ -78,7 +78,7 @@
   <div class="flex h-full flex-col">
     <ul class="min-h-0 flex-1 overflow-auto p-1.5">
       {#each todos as todo (todo.line)}
-        <li class="flex min-h-7 items-center gap-2 rounded-md px-1.5 hover:bg-foreground/6">
+        <li class="flex min-h-7 items-center gap-2 rounded-md px-1.5">
           <Checkbox
             checked={todo.done}
             aria-label={todo.text}

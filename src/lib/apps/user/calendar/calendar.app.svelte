@@ -251,7 +251,7 @@
       <span class="relative min-w-0 flex-1">
         <button
           type="button"
-          class="max-w-full truncate rounded-md px-1.5 py-1 text-left text-sm font-semibold hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
+          class="max-w-full truncate rounded-md px-1.5 py-1 text-left text-sm font-semibold transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed focus-visible:outline-2 focus-visible:outline-cottontail"
           title="Jump to a date"
           onclick={() => date_input?.showPicker()}
         >

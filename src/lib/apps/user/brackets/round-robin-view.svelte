@@ -83,7 +83,7 @@
             <button
               type="button"
               class={cn(
-                "flex h-8 min-w-0 items-center rounded-md px-2 text-ui transition-colors hover:bg-foreground/6",
+                "flex h-8 min-w-0 items-center rounded-md px-2 text-ui transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed",
                 "focus-visible:outline-2 focus-visible:outline-cottontail",
                 align === "right" ? "justify-end text-right" : "justify-start text-left",
                 won && "bg-primary/14 font-medium text-primary hover:bg-primary/20",

@@ -164,7 +164,7 @@
             {@const locked = node.entry !== null && !node.directory && !readable(node.entry)}
             <li
               class={cn(
-                "grid h-8 grid-cols-[2.25rem_minmax(0,1fr)_4.5rem] items-center rounded-md hover:bg-foreground/6 pointer-coarse:h-10 @md:grid-cols-[2.25rem_minmax(0,1fr)_4.5rem_4.5rem_3.5rem]",
+                "grid h-8 grid-cols-[2.25rem_minmax(0,1fr)_4.5rem] items-center rounded-md pointer-coarse:h-10 @md:grid-cols-[2.25rem_minmax(0,1fr)_4.5rem_4.5rem_3.5rem]",
                 covered && "bg-primary/14 hover:bg-primary/18",
                 active?.key === node.key && "ring-1 ring-primary/60 ring-inset"
               )}
