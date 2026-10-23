@@ -149,7 +149,7 @@
     <div class="m-auto flex max-w-sm flex-col items-center gap-4 p-6 text-center">
       <div class="grid grid-cols-5 gap-1.5" aria-hidden="true">
         {#each { length: ROUNDS }, index (index)}
-          <span class={cn("size-6 rounded-md ring-1 ring-hairline-strong ring-inset", index < guesses.length ? "bg-foreground/40 shadow-control" : "bg-field shadow-recessed")}></span>
+          <span class={cn("size-6 rounded-md ring-1 ring-transparent ring-inset", index < guesses.length ? "bg-foreground/40 shadow-control" : "bg-field shadow-recessed")}></span>
         {/each}
       </div>
       <div>

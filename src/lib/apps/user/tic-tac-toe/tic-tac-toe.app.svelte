@@ -198,7 +198,7 @@
                   onclick={() => play_human(cell)}
                   onfocus={() => (active = cell)}
                   class={cn(
-                    "grid place-items-center rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-hairline-strong ring-inset transition-[background-color,opacity,box-shadow] duration-150",
+                    "grid place-items-center rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-transparent ring-inset transition-[background-color,opacity,box-shadow] duration-150",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
                     !mark && !result && !computer_turn && "cursor-pointer hover:ring-edge",
                     result && !winning && "opacity-38",

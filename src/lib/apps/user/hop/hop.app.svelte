@@ -327,7 +327,7 @@
             role="application"
             aria-label="Hop, {n} by {n}. Draw one path from 1 to {end_number} through the numbers in order, filling every cell. Arrows extend the path or step back, Backspace steps back, H gives a hint"
             tabindex="0"
-            class="board relative grid touch-none overflow-hidden rounded-xl bg-field shadow-recessed ring-1 ring-hairline-strong outline-none select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-cottontail"
+            class="board relative grid touch-none overflow-hidden rounded-xl bg-field shadow-recessed ring-1 ring-transparent outline-none select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-cottontail"
             onpointerdown={on_pointerdown}
             onpointermove={on_pointermove}
             onlostpointercapture={end_stroke}

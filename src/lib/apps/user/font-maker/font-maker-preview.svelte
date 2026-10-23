@@ -146,7 +146,7 @@
     aria-readonly="true"
     aria-label="Sample in your font. Tap between two letters, or use the arrow keys, to kern them"
     tabindex="0"
-    class="preview min-h-12 cursor-text overflow-hidden rounded-md bg-field px-3 py-2 text-2xl leading-tight @md:text-3xl break-words whitespace-pre-wrap text-foreground shadow-recessed ring-1 ring-hairline-strong ring-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail"
+    class="preview min-h-12 cursor-text overflow-hidden rounded-md bg-field px-3 py-2 text-2xl leading-tight @md:text-3xl break-words whitespace-pre-wrap text-foreground shadow-recessed ring-1 ring-transparent ring-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail"
     style:font-family={ready ? `"${family}", var(--font-sans)` : "var(--font-sans)"}
     onclick={pick}
     {onkeydown}

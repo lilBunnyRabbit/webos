@@ -82,7 +82,7 @@
     class={cn(
       "relative flex min-h-44 flex-col items-center justify-center gap-2 rounded-xl p-4 text-center ring-inset transition-[box-shadow] duration-150",
       "bg-field shadow-recessed",
-      focused ? "ring-2 ring-cottontail" : "ring-1 ring-hairline-strong hover:ring-edge"
+      focused ? "ring-2 ring-cottontail" : "ring-1 ring-transparent hover:ring-edge"
     )}
   >
     <textarea

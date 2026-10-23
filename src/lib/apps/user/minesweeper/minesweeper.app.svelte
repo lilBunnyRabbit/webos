@@ -299,7 +299,7 @@
           role="grid"
           aria-label="Minefield"
           tabindex="-1"
-          class="board m-auto grid touch-manipulation rounded-lg bg-field p-(--pad) shadow-recessed ring-1 ring-hairline-strong ring-inset select-none [-webkit-touch-callout:none]"
+          class="board m-auto grid touch-manipulation rounded-lg bg-field p-(--pad) shadow-recessed ring-1 ring-transparent ring-inset select-none [-webkit-touch-callout:none]"
           style:--cols={config.width}
           style:--rows={config.height}
           onkeydown={on_board_keydown}

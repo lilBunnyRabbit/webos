@@ -51,7 +51,7 @@
     <div role="listitem" class="contents" aria-label="Typing {current ? [...current].map(display).join(' ') : 'nothing yet'}">
       {#each { length }, i (i)}
         <span
-          class={cn("tile ring-1 ring-inset", current[i] ? "bg-raised shadow-raised ring-foreground/45 pop" : "bg-field shadow-recessed ring-hairline-strong", shake && "shake")}
+          class={cn("tile ring-1 ring-inset", current[i] ? "bg-raised shadow-raised ring-foreground/45 pop" : "bg-field shadow-recessed ring-transparent", shake && "shake")}
           aria-hidden="true">{current[i] ? display(current[i]) : ""}</span
         >
       {/each}

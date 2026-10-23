@@ -438,7 +438,7 @@
     <div class="flex min-h-0 flex-col justify-start @3xl:justify-center">
       <div class="flex aspect-(--ratio) min-h-0 shrink overflow-hidden p-2 @md:p-4 [container-type:size] @3xl:aspect-auto @3xl:flex-1" style:--ratio="{cols} / {rows}">
         {#if game}
-          <div class="board relative m-auto rounded-xl bg-field p-[calc(var(--cell)*0.12)] shadow-recessed ring-1 ring-hairline-strong ring-inset" style:--cols={cols} style:--rows={rows}>
+          <div class="board relative m-auto rounded-xl bg-field p-[calc(var(--cell)*0.12)] shadow-recessed ring-1 ring-transparent ring-inset" style:--cols={cols} style:--rows={rows}>
             <!-- svelte-ignore a11y_interactive_supports_focus -->
             <div
               bind:this={cells_element}

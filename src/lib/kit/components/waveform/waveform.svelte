@@ -365,7 +365,7 @@
 
 <div class={cn("waveform grid gap-1.5", class_name)} role="group" aria-label={label}>
   <div class="flex items-center gap-2">
-    <div class="flex items-center gap-0.5 rounded-lg bg-field p-0.5 shadow-recessed ring-1 ring-inset ring-hairline-strong" role="group" aria-label="Zoom">
+    <div class="flex items-center gap-0.5 rounded-lg bg-field p-0.5 shadow-recessed ring-1 ring-inset ring-transparent" role="group" aria-label="Zoom">
       <IconButton label="Zoom out" size="sm" class="pointer-coarse:size-11" disabled={!zoomed} onclick={() => zoom_by(1 / ZOOM_STEP)}>
         <ZoomOutIcon weight="bold" />
       </IconButton>

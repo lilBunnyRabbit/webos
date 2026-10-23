@@ -56,7 +56,7 @@
           type="time"
           required
           bind:value={draft.time}
-          class="h-16 rounded-lg bg-field px-3 text-center font-mono text-4xl font-medium tabular-nums shadow-recessed ring-1 ring-hairline-strong ring-inset transition-[box-shadow] duration-150 hover:ring-edge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail [&::-webkit-calendar-picker-indicator]:opacity-50"
+          class="h-16 rounded-lg bg-field px-3 text-center font-mono text-4xl font-medium tabular-nums shadow-recessed ring-1 ring-transparent ring-inset transition-[box-shadow] duration-150 hover:ring-edge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail [&::-webkit-calendar-picker-indicator]:opacity-50"
         />
       </label>
       <fieldset class="grid gap-1.5">

@@ -309,7 +309,7 @@
             cn(
               over && game.status === Status.CRACKED && "bg-success/15 text-success ring-success/40",
               over && game.status === Status.DECLASSIFIED && "bg-foreground text-background ring-foreground",
-              !over && (index === typed.length ? "bg-field shadow-recessed ring-2 ring-primary" : "bg-field shadow-recessed ring-hairline-strong")
+              !over && (index === typed.length ? "bg-field shadow-recessed ring-2 ring-primary" : "bg-field shadow-recessed ring-transparent")
             ),
             "lg"
           )}

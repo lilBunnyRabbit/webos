@@ -173,7 +173,7 @@
     <div
       role="img"
       aria-label={`Board: ${board_label}`}
-      class="board relative size-[96cqmin] touch-none rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-hairline-strong ring-inset select-none [container-type:size]"
+      class="board relative size-[96cqmin] touch-none rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-transparent ring-inset select-none [container-type:size]"
       onpointerdown={on_pointerdown}
       onpointerup={on_pointerup}
       onlostpointercapture={() => (swipe = null)}
