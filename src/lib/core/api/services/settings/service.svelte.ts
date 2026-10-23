@@ -82,11 +82,12 @@ export class SettingsService implements ISettingsService {
           document.documentElement.style.setProperty(`--${key.replaceAll("_", "-")}`, value);
         }
         // Native controls (scrollbars, pickers, date inputs) and light-dark() follow the palette, not the OS preference.
-        // The probe forces a style recalc; a background that doesn't reference other tokens can't change without changing here.
-        const background = this.theme.background;
-        if (background === probed && !background.includes("var(")) return;
-        probed = background;
-        document.documentElement.style.colorScheme = background_lightness() > 0.6 ? "light" : "dark";
+        // The probe forces a style recalc; colours that don't reference other tokens can't change without changing here.
+        const pair = `${this.theme.background} ${this.theme.foreground}`;
+        if (pair === probed && !pair.includes("var(")) return;
+        probed = pair;
+        // By text polarity, not background lightness: dark text on a mid-tone background is a light palette.
+        document.documentElement.style.colorScheme = lightness("foreground") < lightness("background") ? "light" : "dark";
       });
 
       $effect(() => {
@@ -248,10 +249,10 @@ export class SettingsService implements ISettingsService {
   }
 }
 
-/** Lightness of the applied background, whatever syntax the theme wrote it in (hex, oklch(from …), color-mix). */
-function background_lightness(): number {
+/** Lightness of an applied theme colour, whatever syntax the theme wrote it in (hex, oklch(from …), color-mix). */
+function lightness(token: "background" | "foreground"): number {
   const probe = document.createElement("span");
-  probe.style.color = "oklch(from var(--background) l c h)";
+  probe.style.color = `oklch(from var(--${token}) l c h)`;
   document.body.append(probe);
   const lightness = Number(/oklch\(\s*([\d.]+)/.exec(getComputedStyle(probe).color)?.[1] ?? 0);
   probe.remove();
