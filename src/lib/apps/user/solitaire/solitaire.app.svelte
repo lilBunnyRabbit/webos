@@ -405,7 +405,7 @@
       >
         <button
           type="button"
-          class={cn("stock grid place-items-center border border-dashed border-foreground/20 text-foreground/40", slot_classes("s"))}
+          class={cn("stock grid place-items-center bg-field text-foreground/40 shadow-recessed ring-1 ring-hairline-strong", slot_classes("s"))}
           style:grid-area="s"
           aria-label={game.stock.length ? `Stock, ${game.stock.length} cards: draw` : game.waste.length ? "Turn the waste over" : "Stock empty"}
           tabindex="-1"
@@ -433,7 +433,7 @@
         {#each game.foundations as cards, index (index)}
           {@const id: PileId = `f${index}`}
           {@const Icon = SUIT_ICONS[SUITS[index]]}
-          <div class={cn("foundation grid place-items-center border border-dashed border-foreground/20", slot_classes(id))} style:grid-area={id} data-drop={id}>
+          <div class={cn("foundation grid place-items-center bg-field shadow-recessed ring-1 ring-hairline-strong", slot_classes(id))} style:grid-area={id} data-drop={id}>
             <Icon weight="fill" class="size-[calc(var(--w)*0.4)] text-foreground/15" />
             {#each cards.slice(-2) as card, i (card)}
               {@render card_at(id, card, true, Math.min(cards.length, 2) - i)}
@@ -444,7 +444,7 @@
         {#each game.tableau as column, index (index)}
           {@const id: PileId = `t${index}`}
           <div class="column relative" style:grid-area={id} style:--down={column.hidden} style:--up={column.cards.length - column.hidden} data-drop={id}>
-            <div class={cn("h-(--h) border border-dashed border-foreground/15", slot_classes(id))}></div>
+            <div class={cn("h-(--h) bg-field shadow-recessed ring-1 ring-hairline-strong", slot_classes(id))}></div>
             {#each column.cards as card, i (card)}
               <div class="contents" style:--i={i}>
                 {@render card_at(id, card, i >= column.hidden, column.cards.length - i, "stacked")}
@@ -489,8 +489,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-60 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-60 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

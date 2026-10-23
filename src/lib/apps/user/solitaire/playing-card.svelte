@@ -22,7 +22,7 @@
 {#if up}
   <div
     class={cn(
-      "face relative size-full overflow-hidden rounded-[calc(var(--w)*0.09)] border border-foreground/20 bg-background-lighter shadow-sm",
+      "face relative size-full overflow-hidden rounded-[calc(var(--w)*0.09)] border border-foreground/20 bg-background-lighter shadow-raised",
       is_red(card) ? "text-error" : "text-foreground",
       class_name
     )}
@@ -33,7 +33,7 @@
     <Icon weight="fill" class="pip absolute" />
   </div>
 {:else}
-  <div class={cn("back size-full rounded-[calc(var(--w)*0.09)] border border-foreground/20 shadow-sm", class_name)}></div>
+  <div class={cn("back size-full rounded-[calc(var(--w)*0.09)] border border-foreground/20", class_name)}></div>
 {/if}
 
 <style>
@@ -64,6 +64,8 @@
     background-image:
       repeating-linear-gradient(45deg, color-mix(in oklab, var(--background) 22%, transparent) 0 2px, transparent 2px 7px),
       repeating-linear-gradient(-45deg, color-mix(in oklab, var(--background) 22%, transparent) 0 2px, transparent 2px 7px);
-    box-shadow: inset 0 0 0 calc(var(--w) * 0.05) var(--primary);
+    box-shadow:
+      inset 0 0 0 calc(var(--w) * 0.05) var(--primary),
+      var(--shadow-raised);
   }
 </style>

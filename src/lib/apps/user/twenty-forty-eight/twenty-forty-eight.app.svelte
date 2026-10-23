@@ -173,13 +173,13 @@
     <div
       role="img"
       aria-label={`Board: ${board_label}`}
-      class="board relative size-[96cqmin] touch-none rounded-[3cqmin] bg-foreground/6 select-none [container-type:size]"
+      class="board relative size-[96cqmin] touch-none rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-hairline-strong ring-inset select-none [container-type:size]"
       onpointerdown={on_pointerdown}
       onpointerup={on_pointerup}
       onlostpointercapture={() => (swipe = null)}
     >
       {#each CELLS as cell (cell.row * SIZE + cell.col)}
-        <div class="cell rounded-[2cqw] bg-foreground/5" style:--row={cell.row} style:--col={cell.col}></div>
+        <div class="cell rounded-[2cqw] bg-foreground/5 shadow-track" style:--row={cell.row} style:--col={cell.col}></div>
       {/each}
 
       {#each rendered as tile (tile.id)}
@@ -190,16 +190,16 @@
           style:--row={tile.row}
           style:--col={tile.col}
         >
-          <div
-            class={cn(
-              "grid size-full place-items-center rounded-[2cqw] font-mono leading-none font-bold tabular-nums",
-              tile_class(tile.value),
-              text_class(tile.value),
-              merged && "pop",
-              spawned && "appear"
-            )}
-          >
-            {tile.value}
+          <div class={cn("size-full rounded-[2cqw] bg-background-lighter shadow-control", merged && "pop", spawned && "appear")}>
+            <div
+              class={cn(
+                "grid size-full place-items-center rounded-[2cqw] font-mono leading-none font-bold tabular-nums",
+                tile_class(tile.value),
+                text_class(tile.value)
+              )}
+            >
+              {tile.value}
+            </div>
           </div>
         </div>
       {/each}

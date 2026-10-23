@@ -327,7 +327,7 @@
             role="application"
             aria-label="Hop, {n} by {n}. Draw one path from 1 to {end_number} through the numbers in order, filling every cell. Arrows extend the path or step back, Backspace steps back, H gives a hint"
             tabindex="0"
-            class="board relative grid touch-none overflow-hidden rounded-xl bg-[light-dark(var(--background-lightest),var(--background-darker))] ring-1 ring-foreground/22 outline-none select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-cottontail"
+            class="board relative grid touch-none overflow-hidden rounded-xl bg-field shadow-recessed ring-1 ring-hairline-strong outline-none select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-cottontail"
             onpointerdown={on_pointerdown}
             onpointermove={on_pointermove}
             onlostpointercapture={end_stroke}
@@ -362,7 +362,7 @@
               {#if number}
                 <span
                   class={cn(
-                    "dot pointer-events-none absolute grid place-items-center rounded-full bg-foreground font-mono font-semibold text-background tabular-nums",
+                    "dot pointer-events-none absolute grid place-items-center rounded-full bg-foreground shadow-raised font-mono font-semibold text-background tabular-nums",
                     cell === head && playing && "ring-3 ring-primary"
                   )}
                   style:--r={Math.floor(cell / n)}
@@ -400,8 +400,8 @@
 
     <aside
       class={cn(
-        "flex-col gap-4 overflow-auto p-4 @5xl:static @5xl:flex @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_panel ? "absolute inset-x-0 bottom-0 z-30 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
+        "flex-col gap-4 overflow-auto p-4 @5xl:static @5xl:flex @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_panel ? "absolute inset-x-0 bottom-0 z-30 flex max-h-[70%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_panel = false) })}
     >

@@ -100,12 +100,12 @@
 >
   <div class="grid shrink-0 grid-cols-2 gap-2">
     <figure class="flex flex-col gap-1">
-      <div class="h-20 rounded-xl ring-1 ring-foreground/10 @sm:h-24" style:background-color="#{target}" role="img" aria-label="The colour to name"></div>
+      <div class="h-20 rounded-xl ring-1 ring-hairline @sm:h-24" style:background-color="#{target}" role="img" aria-label="The colour to name"></div>
       <figcaption class="text-2xs text-foreground/65">Target <span class="font-mono">{over ? `#${target}` : "#??????"}</span></figcaption>
     </figure>
     <figure class="flex flex-col gap-1">
       {#if last}
-        <div class="h-20 rounded-xl ring-1 ring-foreground/10 @sm:h-24" style:background-color="#{last}" role="img" aria-label="Your last guess, #{last}"></div>
+        <div class="h-20 rounded-xl ring-1 ring-hairline @sm:h-24" style:background-color="#{last}" role="img" aria-label="Your last guess, #{last}"></div>
       {:else}
         <div class="grid h-20 place-items-center rounded-xl border border-dashed border-foreground/20 text-ui text-foreground/50 @sm:h-24">Your guess</div>
       {/if}
@@ -128,9 +128,10 @@
               class={cn(
                 "flex h-10 flex-col items-center justify-center rounded-md font-mono text-base font-semibold ring-1 ring-inset @sm:h-11",
                 hint === Hint.EXACT && "bg-success/15 text-success ring-success/40",
-                hint && hint !== Hint.EXACT && "bg-background-light ring-foreground/15",
+                hint && hint !== Hint.EXACT && "bg-raised shadow-control ring-hairline",
+                !hint && "bg-field shadow-recessed",
                 !hint && active && column === typed.length && "ring-2 ring-primary",
-                !hint && !(active && column === typed.length) && "ring-foreground/10",
+                !hint && !(active && column === typed.length) && "ring-hairline-strong",
                 !hint && !active && "opacity-60"
               )}
               aria-hidden={entry ? "true" : undefined}

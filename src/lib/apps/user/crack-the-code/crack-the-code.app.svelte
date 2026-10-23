@@ -270,14 +270,14 @@
           <h2 class="tracking-[0.2em] uppercase">Intercept log</h2>
           <span class="font-mono tabular-nums">best {best}/{length} · latest first</span>
         </div>
-        <ol class="min-h-0 flex-1 overflow-auto rounded-lg bg-background-light ring-1 ring-foreground/8">
+        <ol class="min-h-0 flex-1 overflow-auto rounded-lg bg-background-light ring-1 ring-hairline">
           {#each log as row (row.number)}
             {@const perfect = row.matches === length}
-            <li class={cn("flex items-center gap-3 border-b border-dashed border-foreground/10 px-3 py-2 last:border-b-0", row.number === used && "bg-primary/6")}>
+            <li class={cn("flex items-center gap-3 border-b border-dashed border-hairline px-3 py-2 last:border-b-0", row.number === used && "bg-primary/6")}>
               <span class="w-9 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">#{String(row.number).padStart(3, "0")}</span>
               <span class="flex gap-1">
                 {#each row.digits as digit, index (index)}
-                  {@render digit_tile(digit, perfect ? "bg-success/15 text-success ring-success/40" : "bg-background ring-foreground/15", "sm")}
+                  {@render digit_tile(digit, perfect ? "bg-success/15 text-success ring-success/40" : "bg-raised shadow-control ring-hairline", "sm")}
                 {/each}
               </span>
               <span class="ml-auto flex items-center gap-2" aria-label="{row.matches} of {length} in place">
@@ -309,7 +309,7 @@
             cn(
               over && game.status === Status.CRACKED && "bg-success/15 text-success ring-success/40",
               over && game.status === Status.DECLASSIFIED && "bg-foreground text-background ring-foreground",
-              !over && (index === typed.length ? "bg-background ring-2 ring-primary" : "bg-background ring-foreground/20")
+              !over && (index === typed.length ? "bg-field shadow-recessed ring-2 ring-primary" : "bg-field shadow-recessed ring-hairline-strong")
             ),
             "lg"
           )}
@@ -347,8 +347,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

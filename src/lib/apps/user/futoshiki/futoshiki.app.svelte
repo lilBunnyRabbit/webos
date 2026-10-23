@@ -368,9 +368,9 @@
                   onclick={() => move(index)}
                   class={cn(
                     "cell relative grid place-items-center rounded-[14%] font-mono leading-none tabular-nums outline-none",
-                    "ring-1 ring-foreground/22 ring-inset transition-[background-color,box-shadow,color] duration-100",
+                    "ring-1 ring-hairline-strong ring-inset transition-[background-color,box-shadow,color] duration-100",
                     "focus-visible:ring-2 focus-visible:ring-cottontail",
-                    "bg-[light-dark(var(--background-lightest),var(--background-darker))]",
+                    given ? "bg-raised shadow-control" : "bg-field shadow-recessed",
                     given ? "font-bold text-foreground" : "font-medium text-primary",
                     in_line && !selected && "bg-[color-mix(in_oklab,var(--primary)_8%,var(--background))]",
                     same && !selected && "bg-primary/18",
@@ -436,7 +436,7 @@
               variant={notes_mode ? "quiet" : "secondary"}
               class={cn(
                 "h-11 px-0 font-mono text-lg tabular-nums pointer-coarse:h-13",
-                notes_mode && "text-base ring-1 ring-foreground/22 ring-inset",
+                notes_mode && "text-base ring-1 ring-hairline-strong ring-inset",
                 counts[digit] >= n && "opacity-38"
               )}
               aria-label={notes_mode ? `Note ${digit}` : `Place ${digit}`}
@@ -474,8 +474,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

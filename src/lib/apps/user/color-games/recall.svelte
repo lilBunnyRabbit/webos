@@ -130,7 +130,7 @@
 </script>
 
 {#snippet pair(target: string, guess: string, size: "lg" | "sm")}
-  <div class={cn("grid grid-cols-2 overflow-hidden ring-1 ring-foreground/10", size === "lg" ? "rounded-2xl" : "rounded-lg")}>
+  <div class={cn("grid grid-cols-2 overflow-hidden ring-1 ring-hairline", size === "lg" ? "rounded-2xl" : "rounded-lg")}>
     <div style:background-color={target} class={size === "lg" ? "min-h-32" : "h-10"}></div>
     <div style:background-color={guess} class={size === "lg" ? "min-h-32" : "h-10"}></div>
   </div>
@@ -149,7 +149,7 @@
     <div class="m-auto flex max-w-sm flex-col items-center gap-4 p-6 text-center">
       <div class="grid grid-cols-5 gap-1.5" aria-hidden="true">
         {#each { length: ROUNDS }, index (index)}
-          <span class={cn("size-6 rounded-md ring-1 ring-foreground/15", index < guesses.length ? "bg-foreground/40" : "bg-foreground/8")}></span>
+          <span class={cn("size-6 rounded-md ring-1 ring-hairline-strong ring-inset", index < guesses.length ? "bg-foreground/40 shadow-control" : "bg-field shadow-recessed")}></span>
         {/each}
       </div>
       <div>
@@ -173,7 +173,7 @@
     </div>
   {:else if phase === Phase.GUESS}
     <div class="grid min-h-0 flex-1 grid-rows-[minmax(6rem,1fr)_auto] gap-3 overflow-auto p-3 @xl:grid-cols-[1fr_minmax(16rem,22rem)] @xl:grid-rows-1 @xl:p-4">
-      <div class="min-h-24 rounded-2xl ring-1 ring-foreground/10" style:background-color={guess_hex} role="img" aria-label="Your colour, {guess_hex}"></div>
+      <div class="min-h-24 rounded-2xl ring-1 ring-hairline" style:background-color={guess_hex} role="img" aria-label="Your colour, {guess_hex}"></div>
       <div class="flex flex-col gap-2 @xl:justify-center">
         <div class="flex items-center justify-between gap-2">
           <span class="text-ui font-medium">Colour {current + 1} of {ROUNDS}</span>

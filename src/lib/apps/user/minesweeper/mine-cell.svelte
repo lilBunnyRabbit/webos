@@ -62,8 +62,8 @@
   class={cn(
     "grid place-items-center rounded-[18%] font-mono leading-none font-bold transition-[background-color] duration-100",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:ring-inset",
-    shown ? "bg-foreground/4" : "bg-foreground/14 shadow-raised",
-    !shown && !finished && "cursor-pointer hover:bg-foreground/20",
+    shown ? "bg-transparent" : "bg-raised shadow-control ring-1 ring-hairline",
+    !shown && !finished && "cursor-pointer hover:bg-raised-hover active:shadow-pressed",
     shown && mine && exploded && "bg-error/30",
     shown && !mine && NUMBER_COLOURS[count]
   )}

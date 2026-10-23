@@ -227,7 +227,7 @@
 
     {#if difficulty === Difficulty.CUSTOM}
       <form
-        class="flex flex-wrap items-center gap-2 border-b border-foreground/8 bg-background-light px-3 py-2 text-ui"
+        class="flex flex-wrap items-center gap-2 border-b border-hairline bg-background-light px-3 py-2 text-ui"
         onsubmit={apply_custom}
       >
         <label class="flex items-center gap-1.5">
@@ -299,7 +299,7 @@
           role="grid"
           aria-label="Minefield"
           tabindex="-1"
-          class="board m-auto grid touch-manipulation select-none [-webkit-touch-callout:none]"
+          class="board m-auto grid touch-manipulation rounded-lg bg-field p-(--pad) shadow-recessed ring-1 ring-hairline-strong ring-inset select-none [-webkit-touch-callout:none]"
           style:--cols={config.width}
           style:--rows={config.height}
           onkeydown={on_board_keydown}
@@ -338,8 +338,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
@@ -374,11 +374,12 @@
 
 <style>
   .board {
-    --gap: 0.125rem;
+    --gap: 0.1875rem;
+    --pad: 0.375rem;
     --min: 1.5rem;
     --fit: min(
-      (100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols),
-      (100cqh - (var(--rows) - 1) * var(--gap)) / var(--rows)
+      (100cqw - 2 * var(--pad) - (var(--cols) - 1) * var(--gap)) / var(--cols),
+      (100cqh - 2 * var(--pad) - (var(--rows) - 1) * var(--gap)) / var(--rows)
     );
     --cell: clamp(var(--min), var(--fit), 3rem);
     grid-template-columns: repeat(var(--cols), var(--cell));

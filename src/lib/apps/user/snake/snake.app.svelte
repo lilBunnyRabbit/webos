@@ -238,7 +238,7 @@
         role="application"
         aria-label="Snake board. Arrow keys or WASD to steer, Space to pause."
         tabindex="0"
-        class="relative size-[100cqmin] touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
+        class="relative size-[100cqmin] touch-none overflow-hidden rounded-lg ring-1 ring-hairline outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
         onpointerdown={on_pointerdown}
         onpointermove={on_pointermove}
         onpointerup={end_swipe}

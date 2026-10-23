@@ -362,7 +362,7 @@
         role="application"
         aria-label="Lunar Lander. {game.design.help}. P pauses, R restarts."
         tabindex="0"
-        class="relative aspect-[8/5] w-[min(100cqw,160cqh)] touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
+        class="relative aspect-[8/5] w-[min(100cqw,160cqh)] touch-none overflow-hidden rounded-lg ring-1 ring-hairline outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
         onpointerdown={on_board_pointerdown}
         onpointerup={release}
         onpointercancel={release}
@@ -406,7 +406,7 @@
   <StatusBar>
     <span class="flex items-center gap-1.5">
       Fuel
-      <span class="h-1.5 w-12 overflow-hidden rounded-full bg-foreground/10" role="meter" aria-label="Fuel" aria-valuemin={0} aria-valuemax={100} aria-valuenow={fuel}>
+      <span class="h-1.5 w-12 overflow-hidden rounded-full bg-field shadow-track" role="meter" aria-label="Fuel" aria-valuemin={0} aria-valuemax={100} aria-valuenow={fuel}>
         <span class="block h-full origin-left rounded-full {fuel_low ? 'bg-warning' : 'bg-primary'}" style:transform="scaleX({fuel / 100})"></span>
       </span>
       <span class="w-8 tabular-nums">{env.infinite_fuel ? "∞" : `${fuel}%`}</span>

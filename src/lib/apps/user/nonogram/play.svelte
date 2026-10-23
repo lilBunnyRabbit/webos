@@ -437,8 +437,8 @@
     {#if tracks_stats}
       <aside
         class={cn(
-          "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-          show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+          "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+          show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
         )}
         {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
       >
@@ -465,7 +465,7 @@
   </div>
 
   <!-- Narrow windows (phones) keep the tools under the board, where a thumb reaches them. -->
-  <div class="flex flex-wrap items-center justify-center gap-2 border-t border-foreground/8 px-3 py-2 @2xl:hidden">
+  <div class="flex flex-wrap items-center justify-center gap-2 border-t border-hairline px-3 py-2 @2xl:hidden">
     <span class="font-mono text-sm text-foreground/80 tabular-nums" aria-hidden="true">{format_time(clock.elapsed)}</span>
     {@render tools("md")}
   </div>

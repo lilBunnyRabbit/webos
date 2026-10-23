@@ -38,9 +38,9 @@
   <label
     title={label}
     class={cn(
-      "relative grid cursor-pointer place-items-center rounded-sm transition-colors duration-150",
+      "relative grid cursor-pointer place-items-center rounded-sm duration-150",
       size === "sm" ? "size-6 pointer-coarse:size-8" : "size-8 pointer-coarse:size-9",
-      "text-foreground/80 hover:bg-foreground/6 hover:text-foreground has-checked:bg-background-light has-checked:text-foreground has-checked:shadow-raised",
+      "text-foreground/80 transition-[color,background-color,box-shadow] hover:text-foreground has-checked:bg-background-lighter has-checked:text-foreground has-checked:shadow-control",
       "has-focus-visible:outline-2 has-focus-visible:outline-cottontail",
       is_disabled && "pointer-events-none opacity-38"
     )}
@@ -50,7 +50,7 @@
   </label>
 {/snippet}
 
-<div role="radiogroup" aria-label="Colour" class={cn("inline-flex gap-0.5 rounded-md bg-[light-dark(var(--background-lightest),var(--background-darker))] p-0.5 ring-1 ring-foreground/30 ring-inset", class_name)}>
+<div role="radiogroup" aria-label="Colour" class={cn("inline-flex gap-0.5 rounded-md bg-field p-0.5 shadow-recessed ring-1 ring-hairline-strong ring-inset transition-shadow duration-150 hover:ring-edge", class_name)}>
   {#each palette as ink, index (ink)}
     {@const color = index + 1}
     {#snippet swatch()}

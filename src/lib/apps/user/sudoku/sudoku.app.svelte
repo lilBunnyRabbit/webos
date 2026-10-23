@@ -410,7 +410,7 @@
           bind:this={board_element}
           role="grid"
           aria-label="Sudoku. Arrows move, 1 to {n} places, Shift with a digit or N for notes, Backspace clears"
-          class="board relative grid overflow-hidden rounded-md border-2 border-foreground/55 bg-background"
+          class="board relative grid overflow-hidden rounded-md border-2 border-foreground/55 bg-background shadow-card"
         >
           {#each { length: n }, row (row)}
             <div role="row" class="contents">
@@ -470,9 +470,9 @@
                 type="button"
                 class={cn(
                   "relative flex flex-col items-center justify-center gap-1 rounded-lg text-2xs font-medium whitespace-nowrap text-foreground/80 outline-none transition-[background-color,opacity] duration-150",
-                  "hover:bg-foreground/6 active:opacity-70 disabled:pointer-events-none disabled:opacity-38",
+                  "hover:bg-foreground/8 active:shadow-pressed disabled:pointer-events-none disabled:opacity-38",
                   "focus-visible:ring-2 focus-visible:ring-cottontail",
-                  pressed && "bg-primary/15 text-foreground hover:bg-primary/20"
+                  pressed && "bg-primary/15 text-foreground shadow-pressed hover:bg-primary/20"
                 )}
                 aria-pressed={pressed}
                 {disabled}
@@ -501,10 +501,10 @@
               <button
                 type="button"
                 class={cn(
-                  "flex flex-col items-center justify-center rounded-lg bg-foreground/6 text-primary outline-none transition-[background-color,opacity] duration-150",
-                  "hover:bg-foreground/10 active:opacity-70 disabled:pointer-events-none disabled:opacity-38",
+                  "flex flex-col items-center justify-center rounded-lg bg-raised text-primary shadow-control ring-1 ring-hairline outline-none transition-[background-color,opacity,box-shadow,translate] duration-150",
+                  "hover:bg-raised-hover active:translate-y-px active:shadow-pressed disabled:pointer-events-none disabled:opacity-38 disabled:shadow-none",
                   "focus-visible:ring-2 focus-visible:ring-cottontail",
-                  focus_digit === digit && "bg-primary/20 hover:bg-primary/25",
+                  focus_digit === digit && "bg-primary/20 shadow-pressed hover:bg-primary/25",
                   notes_mode && "text-foreground/80"
                 )}
                 aria-label={notes_mode ? `Note ${digit}` : `${digit}, ${left} left`}
@@ -523,8 +523,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

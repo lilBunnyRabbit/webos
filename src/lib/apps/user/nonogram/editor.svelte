@@ -308,7 +308,7 @@
       </Button>
     </Toolbar>
 
-    <div class="flex min-h-9 items-center justify-center gap-2 border-b border-foreground/8 px-3 py-1.5 text-center" aria-live="polite">
+    <div class="flex min-h-9 items-center justify-center gap-2 border-b border-hairline px-3 py-1.5 text-center" aria-live="polite">
       {#if empty}
         <span class="text-ui text-foreground/65">Draw a picture; its clues build around it as you go.</span>
       {:else if checking}
@@ -337,7 +337,7 @@
       />
     </div>
 
-    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-foreground/8 px-3 py-2 @5xl:hidden">
+    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-hairline px-3 py-2 @5xl:hidden">
       <div class="flex items-center gap-2 @2xl:hidden">{@render shape()}</div>
       {@render tools("md")}
     </div>

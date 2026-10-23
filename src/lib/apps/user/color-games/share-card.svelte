@@ -29,7 +29,7 @@
 </script>
 
 <div class="flex w-full max-w-md flex-col gap-3">
-  <pre class="overflow-x-auto rounded-lg bg-background-darker px-3 py-2.5 font-mono text-2xs leading-relaxed whitespace-pre-wrap text-foreground/80 ring-1 ring-foreground/8 [overflow-wrap:anywhere]">{text}</pre>
+  <pre class="overflow-x-auto rounded-lg bg-background-darker px-3 py-2.5 font-mono text-2xs leading-relaxed whitespace-pre-wrap text-foreground/80 ring-1 ring-hairline [overflow-wrap:anywhere]">{text}</pre>
   <div class="flex flex-wrap justify-end gap-2">
     <Button onclick={next.run}>{next.label}</Button>
     <Button variant="primary" onclick={copy}>

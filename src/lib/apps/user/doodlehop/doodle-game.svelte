@@ -280,7 +280,7 @@
         role="application"
         aria-label="Drawing board. Draw with the mouse, a pen or a finger. {undo_keys} to undo."
         tabindex="0"
-        class="relative aspect-square w-[min(100cqw,calc(100cqh-4rem))] overflow-hidden rounded-lg bg-background-darker ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
+        class="relative aspect-square w-[min(100cqw,calc(100cqh-4rem))] overflow-hidden rounded-lg bg-background-darker ring-1 ring-hairline outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
       >
         <SketchPad {strokes} enabled={drawing} onpen={(down) => queue?.pen(down)} onstroke={add_stroke} />
 

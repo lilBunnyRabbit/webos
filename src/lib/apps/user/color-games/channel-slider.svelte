@@ -43,7 +43,9 @@
     height: 14px;
     border-radius: 9999px;
     background: var(--track);
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 15%, transparent);
+    box-shadow:
+      var(--shadow-track),
+      inset 0 0 0 1px var(--hairline-strong);
   }
 
   .channel::-moz-range-track {

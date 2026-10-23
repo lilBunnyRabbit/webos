@@ -16,7 +16,7 @@
 
 <ul class="mx-auto grid max-w-4xl grid-cols-2 gap-3 @xl:grid-cols-3" aria-label="Your drawings">
   {#each results as result, i (i)}
-    <li class="flex min-w-0 flex-col gap-2 rounded-lg bg-background-light p-2 ring-1 ring-foreground/8">
+    <li class="flex min-w-0 flex-col gap-2 rounded-lg bg-background-light p-2 shadow-card ring-1 ring-hairline">
       <div class="overflow-hidden rounded-md bg-background-darker">
         <SketchPad strokes={result.strokes} />
       </div>

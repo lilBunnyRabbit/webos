@@ -401,7 +401,7 @@
         tabindex="0"
         aria-label={mode === Mode.PLAY ? "Maze. Arrow keys or WASD move, Shift runs to the next junction." : "Maze"}
         class={cn(
-          "relative size-[100cqmin] rounded-lg bg-background-light ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail",
+          "relative size-[100cqmin] rounded-lg bg-background-light shadow-card ring-1 ring-hairline outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail",
           mode === Mode.PLAY && "touch-none"
         )}
         onpointerdown={on_pointerdown}

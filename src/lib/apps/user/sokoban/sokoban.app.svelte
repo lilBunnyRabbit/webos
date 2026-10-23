@@ -288,7 +288,7 @@
             <div
               class={cn(
                 "grid place-items-center",
-                tile === Tile.WALL && "rounded-[12%] bg-foreground/22",
+                tile === Tile.WALL && "rounded-[12%] bg-foreground/22 shadow-raised",
                 tile === Tile.FLOOR && "bg-foreground/7"
               )}
             >
@@ -302,7 +302,7 @@
         {#each game.boxes as box, id (id)}
           {@const home = goal_set.has(box)}
           <div class="piece" style:--row={Math.floor(box / level.width)} style:--col={box % level.width} aria-hidden="true">
-            <div class={cn("size-[80%] rounded-[18%] ring-2 ring-background/35 ring-inset", home ? "bg-success" : "bg-secondary")}></div>
+            <div class={cn("size-[80%] rounded-[18%] shadow-control ring-2 ring-background/35 ring-inset", home ? "bg-success" : "bg-secondary")}></div>
           </div>
         {/each}
 
@@ -312,7 +312,7 @@
           style:--col={game.player % level.width}
           aria-hidden="true"
         >
-          <div class="size-[62%] rounded-full bg-primary"></div>
+          <div class="size-[62%] rounded-full bg-primary shadow-control"></div>
         </div>
 
         {#if solved}
@@ -330,8 +330,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
@@ -359,7 +359,7 @@
     </aside>
   </div>
 
-  <div class="hidden items-center gap-2 border-t border-foreground/8 bg-background-light px-3 py-2 pointer-coarse:flex" role="toolbar" aria-label="Play">
+  <div class="hidden items-center gap-2 border-t border-hairline bg-background-light px-3 py-2 pointer-coarse:flex" role="toolbar" aria-label="Play">
     <IconButton label="Undo" disabled={!game.log || solved} onclick={step_back}>
       <UndoIcon weight="bold" />
     </IconButton>

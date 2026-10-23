@@ -446,12 +446,12 @@
             <button
               type="button"
               class={cn(
-                "grid h-10 place-items-center rounded-md font-mono text-base font-semibold tabular-nums transition-[background-color,opacity] duration-150 @md:h-9 pointer-coarse:h-11",
+                "grid h-10 place-items-center rounded-md font-mono text-base font-semibold tabular-nums transition-[background-color,opacity,box-shadow,translate] duration-150 @md:h-9 pointer-coarse:h-11",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
-                "disabled:pointer-events-none disabled:opacity-38",
+                "disabled:pointer-events-none disabled:opacity-38 disabled:shadow-none",
                 pressed
-                  ? "bg-primary/15 text-primary hover:bg-primary/20"
-                  : "bg-foreground/8 hover:bg-foreground/12 active:bg-foreground/16",
+                  ? "bg-primary/15 text-primary shadow-pressed hover:bg-primary/20"
+                  : "bg-raised shadow-control ring-1 ring-hairline hover:bg-raised-hover active:translate-y-px active:shadow-pressed",
                 !pressed && !game.solved && used_by_peers & bit(digit) && "text-foreground/35"
               )}
               aria-label={tool === "notes" ? `Note ${digit}` : `Digit ${digit}`}
@@ -488,8 +488,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @5xl:static @5xl:block @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

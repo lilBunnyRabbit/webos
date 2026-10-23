@@ -187,7 +187,7 @@
 {#snippet frame(width: number, height: number, label: string, content: Snippet)}
   <figure class="flex min-h-0 min-w-0 flex-col gap-2">
     <div class="grid min-h-0 flex-1 place-items-center [container-type:size]">
-      <div class="relative overflow-hidden rounded-xs ring-1 ring-foreground/10" style:aspect-ratio="{width} / {height}" style:width="min(100cqw, calc(100cqh * {width / height}))">
+      <div class="relative overflow-hidden rounded-xs ring-1 ring-hairline" style:aspect-ratio="{width} / {height}" style:width="min(100cqw, calc(100cqh * {width / height}))">
         {@render content()}
       </div>
     </div>
@@ -207,7 +207,7 @@
     </Button>
   </Toolbar>
 
-  <div class="flex min-h-9 items-center justify-center gap-2 border-b border-foreground/8 px-3 py-1.5 text-center" aria-live="polite">
+  <div class="flex min-h-9 items-center justify-center gap-2 border-b border-hairline px-3 py-1.5 text-center" aria-live="polite">
     {#if !picture}
       <span class="text-ui text-foreground/65">Pick a picture; it becomes a drawing you can tweak.</span>
     {:else if !current || current.state === "running"}
@@ -266,7 +266,7 @@
     </div>
   {/if}
 
-  <div class={["flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-foreground/8 px-3 py-2", picture ? "flex" : "hidden"]}>
+  <div class={["flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-hairline px-3 py-2", picture ? "flex" : "hidden"]}>
     <label class="flex items-center gap-2 text-ui text-foreground/80">
       Size
       <Slider size="sm" class="w-28" min={IMPORT_SIDE.min} max={IMPORT_SIDE.max} step={1} bind:value={side} />

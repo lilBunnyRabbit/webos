@@ -118,7 +118,7 @@
             aria-label="Tile {index + 1}"
             disabled={!clock.running}
             class={cn(
-              "aspect-square min-h-0 rounded-md ring-1 ring-foreground/10 transition-transform duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cottontail active:scale-95 disabled:cursor-default",
+              "aspect-square min-h-0 rounded-md ring-1 ring-hairline transition-transform duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cottontail active:scale-95 disabled:cursor-default",
               flash === index && "miss"
             )}
             style:background-color={index === round.odd ? round.odd_color : round.base}

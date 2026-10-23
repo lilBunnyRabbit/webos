@@ -198,9 +198,9 @@
                   onclick={() => play_human(cell)}
                   onfocus={() => (active = cell)}
                   class={cn(
-                    "grid place-items-center rounded-[3cqmin] bg-background-light ring-1 ring-foreground/8 transition-[background-color,opacity,box-shadow] duration-150",
+                    "grid place-items-center rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-hairline-strong ring-inset transition-[background-color,opacity,box-shadow] duration-150",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
-                    !mark && !result && !computer_turn && "cursor-pointer hover:bg-foreground/8",
+                    !mark && !result && !computer_turn && "cursor-pointer hover:ring-edge",
                     result && !winning && "opacity-38",
                     winning && "bg-primary/12 ring-2 ring-primary"
                   )}
@@ -220,8 +220,8 @@
 
     <aside
       class={cn(
-        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "overflow-auto p-4 @3xl:static @3xl:block @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

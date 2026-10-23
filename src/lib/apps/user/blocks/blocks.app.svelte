@@ -410,7 +410,7 @@
             role="application"
             aria-label="Blocks field. Left and Right move, Down drops softly, Up or X rotates, Z rotates back, Space drops, C holds, P pauses."
             tabindex="0"
-            class="relative h-[calc(var(--cell)*20)] w-[calc(var(--cell)*10)] touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
+            class="relative h-[calc(var(--cell)*20)] w-[calc(var(--cell)*10)] touch-none overflow-hidden rounded-lg ring-1 ring-hairline outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
             onpointerdown={on_pointerdown}
             onpointermove={on_pointermove}
             onpointerup={on_pointerup}
@@ -487,8 +487,8 @@
 
     <aside
       class={cn(
-        "flex flex-col gap-5 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-foreground/8 bg-background" : "hidden"
+        "flex flex-col gap-5 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 max-h-[60%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

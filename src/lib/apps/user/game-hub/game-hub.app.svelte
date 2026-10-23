@@ -95,7 +95,7 @@
 </script>
 
 {#snippet game_icon(icon: string, size: "sm" | "md")}
-  <span class={cn("grid shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10", size === "md" ? "size-11" : "size-8 rounded-lg")}>
+  <span class={cn("grid shrink-0 place-items-center rounded-xl bg-background-lightest shadow-raised ring-1 ring-hairline", size === "md" ? "size-11" : "size-8 rounded-lg")}>
     <AppIcon src={icon} class={size === "md" ? "size-6" : "size-4.5"} />
   </span>
 {/snippet}
@@ -129,7 +129,7 @@
           {@const daily = daily_state.get(game.id)}
           <li class="flex">
             <button
-              class="flex w-full items-start gap-3 rounded-xl bg-background-light p-3 text-left ring-1 ring-foreground/8 transition-[box-shadow,opacity] duration-150 hover:ring-foreground/20 focus-visible:outline-2 focus-visible:outline-cottontail active:opacity-70"
+              class="flex w-full items-start gap-3 rounded-xl bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-[box-shadow,translate] duration-150 hover:ring-hairline-strong focus-visible:outline-2 focus-visible:outline-cottontail active:translate-y-px active:shadow-pressed"
               onclick={() => apps.launch(game.id)}
             >
               {@render game_icon(game.icon, "md")}
@@ -168,7 +168,7 @@
                 {solved_count === dailies.length ? "All solved. New puzzles at midnight." : `${solved_count} of ${dailies.length} solved`}
               </p>
             </div>
-            <div class={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 ring-1", current_streak ? "bg-primary/10 ring-primary/25" : "bg-background-light ring-foreground/8")}>
+            <div class={cn("flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 ring-1", current_streak ? "bg-primary/10 ring-primary/25" : "bg-background-light shadow-card ring-hairline")}>
               <FireIcon class={cn("size-6", current_streak ? "text-primary" : "text-foreground/45")} weight={current_streak ? "fill" : "regular"} />
               <div class="leading-tight">
                 <p class="font-mono text-base font-semibold tabular-nums">{current_streak}</p>
@@ -178,7 +178,7 @@
           </header>
 
           <Section title="Puzzles of the day">
-            <ul class="divide-y divide-foreground/8">
+            <ul class="divide-y divide-hairline">
               {#each dailies as entry (entry.key)}
                 {@const solved = solved_today[entry.key]}
                 <li class="flex items-center gap-3 px-4 py-2.5">
@@ -206,7 +206,7 @@
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 @md:px-6">
         <dl class="grid grid-cols-2 gap-3 @md:grid-cols-4">
           {#each [{ label: "Play time", value: format_duration(total.ms) }, { label: "Sessions", value: String(total.sessions) }, { label: "Games played", value: `${total.played} of ${games.length}` }, { label: "Dailies solved", value: String(total.dailies) }] as tile (tile.label)}
-            <div class="rounded-xl bg-background-light px-4 py-3 ring-1 ring-foreground/8">
+            <div class="rounded-xl bg-background-light px-4 py-3 shadow-card ring-1 ring-hairline">
               <dt class="text-2xs text-foreground/65">{tile.label}</dt>
               <dd class="mt-0.5 font-mono text-lg font-semibold tabular-nums">{tile.value}</dd>
             </div>
@@ -214,7 +214,7 @@
         </dl>
 
         <Section title="By game">
-          <ul class="divide-y divide-foreground/8">
+          <ul class="divide-y divide-hairline">
             {#each by_time as { game, stats } (game.id)}
               <li class="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 px-4 py-2.5">
                 {@render game_icon(game.icon, "sm")}
@@ -223,7 +223,7 @@
                     <p class="truncate text-ui font-medium">{game.name}</p>
                     <p class="shrink-0 font-mono text-ui tabular-nums">{format_duration(stats?.ms ?? 0)}</p>
                   </div>
-                  <div class="mt-1 h-1 overflow-hidden rounded-full bg-foreground/8">
+                  <div class="mt-1 h-1 overflow-hidden rounded-full bg-field shadow-track">
                     <div class="h-full rounded-full bg-primary" style:width="{((stats?.ms ?? 0) / top_ms) * 100}%"></div>
                   </div>
                   <p class="mt-1 text-2xs text-foreground/65">
