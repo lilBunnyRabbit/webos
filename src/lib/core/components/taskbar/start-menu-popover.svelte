@@ -138,7 +138,7 @@
         requestAnimationFrame(close);
       }}
     >
-      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10", !offline.can_open(manifest.id) && "opacity-38")}>
+      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-shadow duration-150 in-active:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
         <AppIcon src={manifest.icon} class="size-6" />
         <AppBadge app_id={manifest.id} />
       </span>

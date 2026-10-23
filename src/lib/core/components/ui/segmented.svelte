@@ -34,7 +34,7 @@
 </script>
 
 <!-- A radio group drawn as one control: arrow keys, labels and form state come from the radios themselves. -->
-<div role="radiogroup" {id} aria-label={label} aria-describedby={describedby} class={cn("inline-flex bg-[light-dark(var(--background-lightest),var(--background-darker))] p-0.5 ring-1 ring-inset ring-foreground/30", size === "sm" ? "rounded-md" : "rounded-lg", class_name)}>
+<div role="radiogroup" {id} aria-label={label} aria-describedby={describedby} class={cn("inline-flex bg-field p-0.5 shadow-recessed ring-1 ring-inset ring-foreground/30", size === "sm" ? "rounded-md" : "rounded-lg", class_name)}>
   {#each options as option (option.value)}
     <label
       class={cn(

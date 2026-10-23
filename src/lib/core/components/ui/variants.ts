@@ -8,15 +8,15 @@ import { tv as merge_tv } from "$lib/core/utils";
 export const button = merge_tv({
   base: [
     "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap font-medium",
-    "transition-[background-color,opacity,color] duration-150",
-    "disabled:pointer-events-none disabled:opacity-38 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "transition-[background-color,opacity,color,box-shadow,translate] duration-150",
+    "disabled:pointer-events-none disabled:opacity-38 disabled:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   ],
   variants: {
     variant: {
-      primary: "bg-primary text-background hover:opacity-85 active:opacity-70",
-      secondary: "bg-foreground/8 text-foreground hover:bg-foreground/12 active:bg-foreground/16",
-      quiet: "text-foreground/80 hover:bg-foreground/8 hover:text-foreground active:bg-foreground/12",
-      danger: "bg-error text-background hover:opacity-85 active:opacity-70",
+      primary: "bg-primary text-background shadow-control hover:opacity-85 active:translate-y-px active:shadow-pressed",
+      secondary: "bg-foreground/8 text-foreground shadow-control hover:bg-foreground/12 active:translate-y-px active:bg-foreground/12 active:shadow-pressed",
+      quiet: "text-foreground/80 hover:bg-foreground/8 hover:text-foreground active:bg-foreground/12 active:shadow-pressed",
+      danger: "bg-error text-background shadow-control hover:opacity-85 active:translate-y-px active:shadow-pressed",
     },
     // Touch screens get finger-sized targets; the look stays the same (docs/design/components.md).
     size: {
@@ -27,9 +27,9 @@ export const button = merge_tv({
     icon: {
       true: "px-0",
     },
-    // A toggle that is on: the primary tint, the same selection colour lists use (docs/design/foundations.md).
+    // A toggle that is on: the primary tint, the same selection colour lists use, sunk in (docs/design/foundations.md).
     pressed: {
-      true: "bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary active:bg-primary/25",
+      true: "bg-primary/15 text-primary shadow-pressed hover:bg-primary/20 hover:text-primary active:bg-primary/25",
     },
   },
   compoundVariants: [
@@ -41,13 +41,11 @@ export const button = merge_tv({
 });
 export type ButtonVariants = VariantProps<typeof button>;
 
-/** Recessed field: sits one shade darker than the surface instead of drawing a border. */
+/** Recessed field: a well below the surface with an inner shadow, and a 30% ring for the 3:1 edge. */
 export const field = merge_tv({
   base: [
     "w-full min-w-0 rounded-md text-ui text-foreground",
-    // Recessed in dark palettes, raised paper in light ones: a darker tan field on cream reads as a button.
-    "bg-[light-dark(var(--background-lightest),var(--background-darker))]",
-    "ring-1 ring-inset ring-foreground/30 transition-[box-shadow,background-color] duration-150",
+    "bg-field shadow-recessed ring-1 ring-inset ring-foreground/30 transition-[box-shadow,background-color] duration-150",
     "placeholder:text-foreground/65 hover:ring-foreground/45",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
     "disabled:opacity-38",

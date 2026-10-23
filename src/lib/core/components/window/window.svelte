@@ -137,7 +137,7 @@
         if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
       }}
       class={cn(
-        "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light pr-1.5 pl-3 select-none touch-none",
+        "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light shadow-lit pr-1.5 pl-3 select-none touch-none",
         geometry_handler.move.active && "cursor-grabbing"
       )}
     >

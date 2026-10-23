@@ -119,7 +119,7 @@
 </script>
 
 {#if result && (result.status !== EntryStatus.DONE || result.values.length > 0)}
-  <div class="flex flex-col gap-2 rounded-xl bg-[light-dark(var(--background-lightest),var(--background-darker))] p-3 font-mono text-2xs">
+  <div class="flex flex-col gap-2 rounded-xl bg-field p-3 font-mono text-2xs">
     <div class="flex items-center gap-2 text-foreground/65">
       <span class="truncate">› {result.input}</span>
       {#if result.status === EntryStatus.RUNNING}<Spinner class="ml-auto" />{/if}

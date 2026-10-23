@@ -89,6 +89,7 @@
   ];
   const RADII = ["xs", "sm", "md", "lg", "xl", "2xl"];
   const SHADOWS = ["raised", "popover", "window", "window-focused"];
+  const SOFT = ["lit", "control", "pressed", "recessed", "track"];
 
   let name = $state("Notes");
   let query = $state("");
@@ -251,6 +252,16 @@
             {/each}
           </div>
         </Section>
+        <Section title="Soft surfaces" description="Raised things catch light on their top edge; fields, tracks and pressed buttons sink in. Lists, editors and the terminal stay flat." flush>
+          <div class="grid grid-cols-2 gap-6 rounded-xl bg-background-light p-6 @xl:grid-cols-5">
+            {#each SOFT as shadow (shadow)}
+              <div class="flex flex-col items-center gap-3">
+                <span class={["h-12 w-full rounded-lg", shadow === "recessed" || shadow === "track" ? "bg-field" : "bg-background-lighter"]} style:box-shadow="var(--shadow-{shadow})"></span>
+                {@render specimen(`shadow-${shadow}`)}
+              </div>
+            {/each}
+          </div>
+        </Section>
         <Section title="App frame" description="Toolbar and status bar sit one shade lighter than content, split by hairlines." flush>
           <div class="overflow-hidden rounded-xl ring-1 ring-foreground/10">
             <Toolbar>
@@ -348,7 +359,7 @@
           </div>
         </Section>
       {:else if section.value === "inputs"}
-        <Section title="Fields" description="Recessed in dark themes, raised paper in light ones (light-dark()); a 30% ring marks the edge.">
+        <Section title="Fields" description="A recessed well (bg-field) with an inner shadow; a 30% ring marks the edge.">
           <SettingRow label="Name">
             {#snippet children({ id })}<Input {id} bind:value={name} class="w-56" />{/snippet}
           </SettingRow>

@@ -38,6 +38,9 @@
   --color-background-lighter: var(--background-lighter);
   --color-background-lightest: var(--background-lightest);
 
+  /* Recessed wells (fields, segmented tracks): one step below the surface in light palettes, two in dark ones. */
+  --color-field: light-dark(var(--background), var(--background-darker));
+
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
@@ -72,9 +75,19 @@
   --radius-2xl: calc(18px * var(--radius-scale, 1));
   --radius-3xl: calc(24px * var(--radius-scale, 1));
 
-  /* Elevation: shadows are cast in the darkest shade, never black, so they stay on-palette in every theme. */
-  --shadow-raised: 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) calc(40% * var(--shadow-strength, 1)), transparent);
-  --shadow-popover: 0 0.5rem 1.5rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(55% * var(--shadow-strength, 1)), transparent),
+  /* Elevation: shadows are cast in the darkest shade, never black, so they stay on-palette in every theme.
+     Soft surfaces (docs/design/foundations.md): raised things also catch light on their top edge in the lightest
+     shade, recessed things (fields, tracks, pressed buttons) take an inner shadow. */
+  --shadow-lit: inset 0 1px 0 var(--edge-lit);
+  --shadow-raised: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) calc(40% * var(--shadow-strength, 1)), transparent);
+  --shadow-control: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent),
+    0 2px 5px -1px color-mix(in oklch, var(--background-darkest) calc(30% * var(--shadow-strength, 1)), transparent);
+  --shadow-pressed: inset 0 2px 4px 0 color-mix(in oklch, var(--background-darkest) calc(50% * var(--shadow-strength, 1)), transparent);
+  --shadow-recessed: inset 0 2px 3px 0 color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent),
+    inset 0 -1px 0 var(--edge-lit);
+  /* Recessed at slider-track height: a 4px groove can't take the field's 2px drop. */
+  --shadow-track: inset 0 1px 1px 0 color-mix(in oklch, var(--background-darkest) calc(60% * var(--shadow-strength, 1)), transparent);
+  --shadow-popover: inset 0 1px 0 var(--edge-lit), 0 0.5rem 1.5rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(55% * var(--shadow-strength, 1)), transparent),
     0 0 0 1px color-mix(in oklch, var(--foreground) 16%, transparent);
   --shadow-window: 0 1.25rem 3rem -0.75rem color-mix(in oklch, var(--background-darkest) calc(70% * var(--shadow-strength, 1)), transparent),
     0 0.25rem 0.75rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent);
@@ -115,6 +128,8 @@
   html {
     /* The one scrim behind every floating layer (start menu, menus, dialogs). */
     --overlay: color-mix(in oklch, var(--background-darkest) 60%, transparent);
+    /* The lit top edge of soft surfaces. Lighter in dark palettes, where the lightest shade is close to the surface. */
+    --edge-lit: light-dark(color-mix(in oklch, var(--background-lightest) 85%, transparent), color-mix(in oklch, var(--background-lightest) 45%, transparent));
     /* Settings › Text & interface › Text size writes --text-scale. Everything is in rem, so the whole UI scales with it. */
     font-size: calc(100% * var(--text-scale, 1));
     font-feature-settings: "cv11", "ss01";

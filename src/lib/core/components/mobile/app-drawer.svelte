@@ -93,7 +93,7 @@
       class="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-3 pb-2 transition-colors duration-150 active:bg-foreground/8"
       onclick={() => launch(manifest)}
     >
-      <span class={cn("relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10", !offline.can_open(manifest.id) && "opacity-38")}>
+      <span class={cn("relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-shadow duration-150 in-active:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
         <AppIcon src={manifest.icon} class="size-7" />
         <AppBadge app_id={manifest.id} />
       </span>

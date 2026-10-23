@@ -15,7 +15,7 @@
 <!-- Apps sit on a raised tile, files and folders are bare glyphs, so a program never reads as a document. -->
 {#if item.kind === "shortcut" || item.kind === "widget"}
   <div
-    class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-transform duration-150 group-hover:-translate-y-0.5"
+    class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-[translate,box-shadow] duration-150 group-hover:-translate-y-0.5 in-active:translate-y-0 in-active:shadow-pressed"
   >
     <ShortcutIcon app_id={item.app_id} badge={false} class="size-6" />
     <AppBadge app_id={item.app_id} />

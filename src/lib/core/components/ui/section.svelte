@@ -41,7 +41,7 @@
   {#if flush}
     {@render children()}
   {:else}
-    <div class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <div class="divide-y divide-foreground/8 rounded-xl bg-background-light shadow-lit ring-1 ring-foreground/8">
       {@render children()}
     </div>
   {/if}

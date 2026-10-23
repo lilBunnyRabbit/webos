@@ -55,13 +55,13 @@ Each palette defines the brand's seven background shades. Brand Dark and Brand L
 | background | `bg-background` | Window content, the page an app draws on |
 | light | `bg-background-light` | Chrome and raised things in a window: titlebars, toolbars, side nav, cards, the taskbar |
 | lighter | `bg-background-lighter` | Floating layers above windows: start menu, menus, toasts, dialogs, select pickers |
-| lightest | `bg-background-lightest` | Light palettes' fields (see below); specimens |
+| lightest | `bg-background-lightest` | The lit top edge of soft surfaces (`--edge-lit`); specimens |
 
 **Scrim:** every floating layer that takes focus (start menu, menus, dialogs) sits on `--overlay`, the darkest shade at 60%. Centered questions also blur what's behind. Toasts don't use it: they don't take focus.
 
 **Three shades per window or panel, at most.** The desktop and dock are the frame around them and don't count. A typical app uses `background` + `background-light` (chrome, cards) + its fields.
 
-**Fields** use `light-dark(var(--background-lightest), var(--background-darker))`: recessed in dark palettes, raised paper in light ones. A darker tan field on cream reads as a button. `color-scheme` follows the palette, so `light-dark()` picks the right one.
+**Fields** use `bg-field` (`light-dark(var(--background), var(--background-darker))`): a well one shade below the surface in light palettes, two in dark ones, with `shadow-recessed` so it reads as sunk in rather than as a darker button. `color-scheme` follows the palette, so `light-dark()` picks the right one. Segmented tracks use it too.
 
 ## Typography
 
@@ -120,6 +120,25 @@ Shadows are cast in `background-darkest`, never black, so they stay on-palette i
 | `shadow-popover` | Menus, toasts, dialogs, the taskbar (includes a hairline) |
 | `shadow-window` | Unfocused windows |
 | `shadow-window-focused` | The focused window |
+
+### Soft surfaces
+
+WebOS borrows the tactile half of neumorphism and keeps the surface ladder (brainstorm 2026-10-23_soft-surfaces). Raised things catch light on their top edge, recessed things take an inner shadow, buttons sink when pressed. No new colour: the lit edge is `--edge-lit`, `background-lightest` at 85% in light palettes and 45% in dark ones; shadows stay in `background-darkest`.
+
+| Token | Use |
+|-------|-----|
+| `shadow-lit` | The lit edge alone: titlebars, toolbars, Section cards. `shadow-raised` and `shadow-popover` include it |
+| `shadow-control` | Buttons (`primary`, `secondary`, `danger`): lit edge and a short drop |
+| `shadow-pressed` | A button while held, a toggle that's on (`pressed`), the active taskbar item, an app tile while held (`in-active:`) |
+| `shadow-recessed` | Fields, segmented tracks, switch tracks: inner shadow and a lit bottom lip |
+| `shadow-track` | Slider grooves, where a 4px groove can't take the field's drop |
+
+Rules:
+
+- Pressed and on use the same sink. Held buttons also move down 1px (`active:translate-y-px`); disabled buttons lose their shadow.
+- Control edges still need 3:1: fields keep the `foreground/30` ring, the switch `/45`. The shadow is depth, not the edge.
+- Selection and on-state keep `primary`. Lists, tables, the terminal, editors and canvases stay flat: dense content would turn every row into a button.
+- Settings › Shadows scales the drops and inner shadows; the lit edge isn't a shadow and stays.
 
 Settings › Text & interface › Shadows multiplies the darkest-shade opacity: None 0, Subtle 0.5, Default 1, Strong 1.4 (capped at 100%). Hairlines stay. Text size (Small 15px, Medium 16px, Large 17px root) scales everything set in rem, so design in rem, not px, for anything that should grow with it.
 
