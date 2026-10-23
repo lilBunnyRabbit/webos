@@ -118,7 +118,7 @@
       </EmptyState>
     {:else}
       <div class="flex flex-col p-2">
-        <div class="flex h-8 items-center justify-between border-b border-foreground/8 px-2">
+        <div class="flex h-8 items-center justify-between border-b border-hairline px-2">
           <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">In the archive</h3>
           <IconButton label="Remove all" size="sm" onclick={() => (items = [])} disabled={!!job}><TrashIcon weight="bold" /></IconButton>
         </div>
@@ -152,7 +152,7 @@
   <StatusBar>
     {#if job}
       <span class="flex items-center gap-2">
-        <span class="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-foreground/10">
+        <span class="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-field shadow-track">
           <span class="block h-full rounded-full bg-primary transition-[width] duration-200" style:width="{job.progress * 100}%"></span>
         </span>
         Compressing · {job.message ?? ""}

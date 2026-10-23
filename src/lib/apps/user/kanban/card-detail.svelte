@@ -113,7 +113,7 @@
   {@const { card, column } = found}
   {@const progress = checklist_progress(card)}
   <div class="flex h-full min-h-0 flex-col">
-    <header class="flex h-11 shrink-0 items-center gap-2 border-b border-foreground/8 px-2">
+    <header class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-2">
       <IconButton label="Close" size="sm" onclick={onclose}><X weight="bold" /></IconButton>
       <Select
         size="sm"
@@ -150,7 +150,7 @@
               class={cn(
                 "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium transition-colors pointer-coarse:h-9",
                 "focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none",
-                on ? LABEL_CHIP[label.color] : "bg-foreground/6 text-foreground/70 hover:bg-foreground/10"
+                on ? cn(LABEL_CHIP[label.color], "shadow-pressed") : "bg-raised text-foreground/70 shadow-control ring-1 ring-hairline hover:bg-raised-hover hover:text-foreground"
               )}
               onclick={() => change((card) => toggle_label(card, label.id))}
               {@attach long_press({ on_menu: (point) => label_menu(label, point) })}
@@ -188,7 +188,7 @@
           <h3 class="text-2xs tracking-wide text-foreground/65 uppercase">Checklist</h3>
           {#if progress.total > 0}
             <span class="font-mono text-2xs text-foreground/65 tabular-nums">{progress.done}/{progress.total}</span>
-            <span class="h-1 flex-1 overflow-hidden rounded-full bg-foreground/8">
+            <span class="h-1 flex-1 overflow-hidden rounded-full bg-field shadow-track">
               <span class="block h-full rounded-full bg-success transition-[width]" style:width="{(progress.done / progress.total) * 100}%"></span>
             </span>
           {/if}

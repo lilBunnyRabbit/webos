@@ -262,7 +262,7 @@
   </Toolbar>
 
   <div class="body grid min-h-0">
-    <nav class="list-pane min-h-0 overflow-y-auto border-foreground/8 bg-background-light" aria-label="Proposals">
+    <nav class="list-pane min-h-0 overflow-y-auto border-hairline bg-background-light" aria-label="Proposals">
       <ProposalsList {proposals} selected={selected_id} bind:filter onselect={show} oncreate={add} />
     </nav>
 

@@ -184,7 +184,7 @@
     class={cn(
       "grid shrink-0 place-items-center rounded-full transition-colors",
       store ? "size-8" : "size-6",
-      item.checked ? "bg-primary text-background" : "ring-2 ring-foreground/45 ring-inset"
+      item.checked ? "bg-primary text-background shadow-control [--edge-lit:oklch(from_var(--primary)_calc(l+0.1)_c_h)]" : "bg-field shadow-recessed ring-1 ring-hairline-strong ring-inset"
     )}
   >
     {#if item.checked}<CheckIcon weight="bold" class={store ? "size-4.5" : "size-3.5"} />{/if}

@@ -12,8 +12,8 @@ export const SWATCH: Record<PadColor, string> = {
 };
 
 export const TILE = {
-  idle: "bg-(color:--pad)/18 ring-(color:--pad)/35 hover:bg-(color:--pad)/26",
-  playing: "bg-(color:--pad)/38 ring-(color:--pad)",
+  idle: "bg-(color:--pad)/18 shadow-control ring-(color:--pad)/35 hover:bg-(color:--pad)/26 active:shadow-pressed",
+  playing: "bg-(color:--pad)/38 shadow-pressed ring-(color:--pad)",
   bar: "bg-(color:--pad)",
 };
 

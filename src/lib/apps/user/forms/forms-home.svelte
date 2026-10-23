@@ -45,9 +45,9 @@
   {#if forms && forms.length > 0}
     <section class="flex flex-col gap-1.5" aria-label="Your forms">
       <h2 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Your forms</h2>
-      <ul class="flex flex-col overflow-hidden rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <ul class="flex flex-col overflow-hidden rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         {#each forms as form (form.path)}
-          <li class="border-b border-foreground/8 last:border-b-0">
+          <li class="border-b border-hairline last:border-b-0">
             <button
               type="button"
               class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 pointer-coarse:py-3.5"

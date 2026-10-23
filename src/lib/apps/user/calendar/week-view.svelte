@@ -39,10 +39,10 @@
 </script>
 
 <div class="grid h-full grid-rows-[auto_auto_minmax(0,1fr)]">
-  <div class="grid overflow-hidden border-b border-foreground/8 [scrollbar-gutter:stable]" style:grid-template-columns={columns}>
+  <div class="grid overflow-hidden border-b border-hairline [scrollbar-gutter:stable]" style:grid-template-columns={columns}>
     <span></span>
     {#each days as day (day)}
-      <div class="grid justify-items-center gap-0.5 border-l border-foreground/8 py-1.5">
+      <div class="grid justify-items-center gap-0.5 border-l border-hairline py-1.5">
         <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{format_day(day, { weekday: "short" })}</span>
         <span
           class={cn("grid size-7 place-items-center rounded-full font-mono text-ui tabular-nums", day === today && "bg-primary font-semibold text-background")}
@@ -52,10 +52,10 @@
     {/each}
   </div>
 
-  <div class="grid max-h-28 overflow-y-auto border-b border-foreground/8 [scrollbar-gutter:stable]" style:grid-template-columns={columns}>
+  <div class="grid max-h-28 overflow-y-auto border-b border-hairline [scrollbar-gutter:stable]" style:grid-template-columns={columns}>
     <span class="self-center pr-1 text-right text-2xs text-foreground/65">All day</span>
     {#each days as day (day)}
-      <div class="grid min-w-0 content-start gap-0.5 border-l border-foreground/8 p-0.5">
+      <div class="grid min-w-0 content-start gap-0.5 border-l border-hairline p-0.5">
         {#each sources.events(day).filter((occurrence) => occurrence.event.all_day) as occurrence (occurrence.event.id)}
           <button
             type="button"
@@ -90,7 +90,7 @@
         {@const inset = blocks.length > 0 ? 14 : 0}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div
-          class="hours relative border-l border-foreground/8"
+          class="hours relative border-l border-hairline"
           style:--hour="{HOUR}px"
           ondblclick={(event) => event.target === event.currentTarget && create_at(day, event)}
         >
@@ -139,7 +139,7 @@
 
 <style>
   .hours {
-    background-image: linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 8%, transparent) 1px, transparent 1px);
+    background-image: linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
     background-size: 100% var(--hour);
   }
 </style>

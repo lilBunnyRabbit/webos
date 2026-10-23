@@ -145,7 +145,7 @@
   </Toolbar>
 
   <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[18rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-    <aside class="flex max-h-64 flex-col gap-5 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+    <aside class="flex max-h-64 flex-col gap-5 overflow-auto border-b border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
       <div class="flex flex-col gap-2.5">
         <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Pages</h3>
         {@render number("Pages", "pages", 1, MAX_PAGES)}

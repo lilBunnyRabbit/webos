@@ -28,10 +28,10 @@
 <div class="mx-auto flex max-w-xl flex-col gap-3 p-3">
   <button
     type="button"
-    class="flex min-h-14 items-center gap-3 rounded-xl px-3 text-left ring-1 ring-foreground/10 ring-inset hover:bg-foreground/4"
+    class="flex min-h-14 items-center gap-3 rounded-xl bg-background-light px-3 text-left shadow-card ring-1 ring-hairline hover:bg-background-lighter"
     onclick={() => onopen(null)}
   >
-    <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-foreground/8"><StackIcon weight="bold" class="size-6" /></span>
+    <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-raised shadow-raised"><StackIcon weight="bold" class="size-6" /></span>
     <span class="min-w-0 flex-1 font-medium">All lists</span>
     <span class="font-mono text-sm text-foreground/65 tabular-nums">{total} left</span>
   </button>
@@ -40,7 +40,7 @@
     {#each lists as list (list.id)}
       {@const left = left_count(list)}
       {@const items = preview(list)}
-      <li class="flex items-stretch overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/8">
+      <li class="flex items-stretch overflow-hidden rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left hover:bg-foreground/4" onclick={() => onopen(list.id)}>
           <ListMark {list} size="lg" />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -60,7 +60,7 @@
 
   <button
     type="button"
-    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-foreground/25 text-sm font-medium text-foreground/80 hover:bg-foreground/4"
+    class="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-hairline-strong text-sm font-medium text-foreground/80 hover:bg-foreground/4"
     onclick={onnew}
   >
     <PlusIcon weight="bold" /> New list

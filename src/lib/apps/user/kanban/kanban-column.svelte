@@ -76,7 +76,7 @@
   data-column={column.id}
   aria-label={column.name}
   class={cn(
-    "flex max-h-full w-[calc(100cqw-3rem)] shrink-0 flex-col rounded-xl bg-foreground/4 @md:w-72",
+    "flex max-h-full w-[calc(100cqw-3rem)] shrink-0 flex-col rounded-xl bg-field shadow-recessed ring-1 ring-hairline ring-inset @md:w-72",
     drag.kind === DragKind.COLUMN && drag.id === column.id && "opacity-40"
   )}
 >
@@ -106,7 +106,7 @@
         <button
           type="button"
           class={cn(
-            "w-full cursor-grab touch-manipulation rounded-lg bg-background-light p-2.5 text-left shadow-raised select-none",
+            "w-full cursor-grab touch-manipulation rounded-lg bg-background-light p-2.5 text-left shadow-raised ring-1 ring-hairline select-none",
             "transition-[background-color,opacity] duration-150 hover:bg-background-lighter",
             "focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none active:cursor-grabbing",
             drag.kind === DragKind.CARD && drag.id === card.id && "opacity-40"
@@ -123,7 +123,7 @@
     {/each}
     {#if indicator === null}<li class="relative h-0" aria-hidden="true"><span class="absolute inset-x-1 -top-0.5 h-0.5 rounded-full bg-primary"></span></li>{/if}
     {#if column.cards.length === 0 && !composing}
-      <li class="grid h-12 place-items-center rounded-lg border border-dashed border-foreground/12 text-2xs text-foreground/45">
+      <li class="grid h-12 place-items-center rounded-lg border border-dashed border-hairline text-2xs text-foreground/45">
         {column.done ? "Finished cards land here" : "Drop cards here"}
       </li>
     {/if}

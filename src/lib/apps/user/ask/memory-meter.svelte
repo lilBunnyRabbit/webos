@@ -24,14 +24,14 @@
   ]);
 </script>
 
-<div class="border-b border-foreground/8 bg-background-light text-2xs text-foreground/75">
+<div class="border-b border-hairline bg-background-light text-2xs text-foreground/75">
   <button
     type="button"
     class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-foreground/4 pointer-coarse:py-2.5"
     aria-expanded={open}
     onclick={() => (open = !open)}
   >
-    <span class="h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-foreground/10" role="meter" aria-label="Chat memory" aria-valuenow={full} aria-valuemin={0} aria-valuemax={100}>
+    <span class="h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-field shadow-track" role="meter" aria-label="Chat memory" aria-valuenow={full} aria-valuemin={0} aria-valuemax={100}>
       <span class={["block h-full rounded-full transition-[width]", tone]} style:width="{full}%"></span>
     </span>
     <span class="shrink-0 tabular-nums">

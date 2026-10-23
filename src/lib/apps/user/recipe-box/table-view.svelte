@@ -39,7 +39,7 @@
         {/each}
       </ul>
     {/if}
-    <div class="overflow-x-auto overscroll-x-contain rounded-md ring-1 ring-foreground/12">
+    <div class="overflow-x-auto overscroll-x-contain rounded-md ring-1 ring-hairline">
       <table class="w-full min-w-max border-collapse text-ui">
         <caption class="sr-only">{title}: ingredients on the left, each step joins the rows it spans, the dish on the right</caption>
         <tbody>
@@ -51,7 +51,7 @@
                   rowspan={cell.rows}
                   colspan={cell.columns}
                   class={cn(
-                    "border border-foreground/12 px-2.5 py-1.5 align-middle",
+                    "border border-hairline px-2.5 py-1.5 align-middle",
                     node.kind === "ingredient" && "bg-background-light",
                     node.kind === "step" && "max-w-72 min-w-40 leading-5",
                     node.kind === "dish" && "bg-primary/12 text-center font-semibold text-primary"

@@ -124,7 +124,7 @@
       <HopspriteSwatches {editor} class="max-h-48 overflow-y-auto p-0.5" />
     {/if}
 
-    <div class="flex items-center gap-1 border-t border-foreground/8 pt-2">
+    <div class="flex items-center gap-1 border-t border-hairline pt-2">
       <span class="flex-1 font-mono text-2xs text-foreground/80 tabular-nums">{palette.length - 1}/{MAX_COLORS - 1} colours</span>
       <IconButton label="Swap with the second colour (X)" size="sm" onclick={() => ([editor.primary, editor.secondary] = [editor.secondary, editor.primary])}>
         <ArrowsLeftRightIcon weight="bold" />

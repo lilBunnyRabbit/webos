@@ -53,7 +53,7 @@
             aria-checked={color === option}
             aria-label={names[option]}
             title={names[option]}
-            class={cn("grid size-10 place-items-center rounded-full ring-2 transition-shadow ring-inset", color === option ? "ring-foreground" : "ring-transparent hover:ring-foreground/20")}
+            class={cn("grid size-10 place-items-center rounded-full ring-2 transition-shadow ring-inset", color === option ? "ring-foreground" : "ring-transparent hover:ring-edge")}
             onclick={() => (color = option)}
           >
             <span class={cn("size-7 rounded-full", COLOR_DOT[option])}></span>
@@ -75,7 +75,7 @@
             title={ICON_NAME[option]}
             class={cn(
               "grid aspect-square place-items-center rounded-xl ring-1 transition-colors ring-inset",
-              icon === option ? cn(COLOR_TILE[color], "ring-2 ring-current") : "text-foreground ring-foreground/15 hover:bg-foreground/6"
+              icon === option ? cn(COLOR_TILE[color], "shadow-control ring-2 ring-current") : "bg-raised text-foreground shadow-control ring-hairline hover:bg-raised-hover"
             )}
             onclick={() => (icon = option)}
           >
@@ -85,7 +85,7 @@
       </div>
     </div>
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+  <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 py-3">
     <Button variant="quiet" onclick={oncancel}>Cancel</Button>
     <Button type="submit" variant="primary" disabled={!can_save}>{confirm_label}</Button>
   </div>

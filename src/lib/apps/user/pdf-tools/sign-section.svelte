@@ -363,7 +363,7 @@
                   {/if}
                   {#if is_selected}
                     <button
-                      class="absolute -top-3 -right-3 grid size-6 place-items-center rounded-full bg-background-light text-foreground shadow-raised hover:bg-background-lighter pointer-coarse:size-8"
+                      class="absolute -top-3 -right-3 grid size-6 place-items-center rounded-full bg-background-light text-foreground shadow-control ring-1 ring-hairline hover:bg-background-lighter active:translate-y-px active:shadow-pressed pointer-coarse:size-8"
                       aria-label="Remove this signature"
                       onclick={remove_selected}><XIcon weight="bold" class="size-3" /></button
                     >
@@ -376,7 +376,7 @@
         </div>
       </div>
 
-      <aside class="flex shrink-0 flex-col gap-3 border-t border-foreground/8 bg-background-light p-3 @3xl:w-72 @3xl:border-t-0 @3xl:border-l">
+      <aside class="flex shrink-0 flex-col gap-3 border-t border-hairline bg-background-light p-3 @3xl:w-72 @3xl:border-t-0 @3xl:border-l">
         {#if drawing}
           <div class="flex flex-col gap-2">
             <p class="text-ui font-medium">Draw your signature</p>

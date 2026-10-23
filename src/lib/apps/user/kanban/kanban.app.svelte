@@ -492,13 +492,13 @@
   </Toolbar>
 
   {#if folder && folder_missing}
-    <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+    <div class="flex items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-2 text-ui">
       <Warning class="size-4 shrink-0 text-warning" weight="fill" />
       <span class="min-w-0 flex-1">Couldn't open {folder.path}. A mounted folder may need reconnecting in Files.</span>
       <Button variant="quiet" size="sm" onclick={() => (settings_open.value = true)}>Change…</Button>
     </div>
   {:else if data.error}
-    <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+    <div class="flex items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-2 text-ui">
       <Warning class="size-4 shrink-0 text-warning" weight="fill" />
       <span class="min-w-0 flex-1">Couldn't read your boards ({data.error}). The next change replaces the file.</span>
     </div>
@@ -539,7 +539,7 @@
         {/each}
         <div class="relative flex shrink-0 snap-center">
           {#if column_marker === null && drag.kind === DragKind.COLUMN}<span class="absolute inset-y-2 -left-2 w-0.5 rounded-full bg-primary" aria-hidden="true"></span>{/if}
-          <Button variant="quiet" size="md" class="w-[calc(100cqw-3rem)] justify-start bg-foreground/4 text-foreground/65 @md:w-72" onclick={new_column}>
+          <Button variant="quiet" size="md" class="w-[calc(100cqw-3rem)] justify-start bg-field text-foreground/65 ring-1 ring-hairline ring-inset @md:w-72" onclick={new_column}>
             <Plus weight="bold" />Add column
           </Button>
         </div>
@@ -547,7 +547,7 @@
 
       {#if panel}
         <aside
-          class="absolute inset-0 z-10 bg-background @3xl:left-auto @3xl:w-[26rem] @3xl:border-l @3xl:border-foreground/8 @3xl:shadow-popover"
+          class="absolute inset-0 z-10 bg-background @3xl:left-auto @3xl:w-[26rem] @3xl:border-l @3xl:border-hairline @3xl:shadow-popover"
           aria-label={panel === "card" ? "Card" : panel === "settings" ? "Folder settings" : "Archive"}
         >
           {#if panel === "settings" && folder}

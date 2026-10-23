@@ -53,7 +53,7 @@
 </script>
 
 <form class="flex h-full min-h-0 flex-col" onsubmit={save}>
-  <header class="flex h-11 shrink-0 items-center gap-2 border-b border-foreground/8 px-2">
+  <header class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-2">
     <IconButton label="Close" size="sm" onclick={onclose}><X weight="bold" /></IconButton>
     <h2 class="flex-1 truncate text-ui font-semibold">Folder board</h2>
     <Button variant="primary" size="sm" type="submit">Save</Button>

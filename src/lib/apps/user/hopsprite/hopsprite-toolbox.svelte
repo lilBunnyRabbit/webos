@@ -35,7 +35,7 @@
 
 <div class="toolbox" role="toolbar" aria-label="Tools">
   {#each TOOL_GROUPS as group, g (g)}
-    {#if g > 0}<span class="divider shrink-0 bg-foreground/10" aria-hidden="true"></span>{/if}
+    {#if g > 0}<span class="divider shrink-0 bg-hairline-strong" aria-hidden="true"></span>{/if}
     {#each group as item (item)}
       {@const Icon = ICONS[item]}
       <IconButton label="{TOOL_LABELS[item]} ({TOOL_KEYS[item].toUpperCase()})" pressed={tool === item} class="shrink-0" onclick={() => (tool = item)}>

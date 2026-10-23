@@ -10,7 +10,7 @@
 
   const PRESETS = [1, 3, 5, 10, 15, 25, 30, 60];
   const FIELD =
-    "h-14 w-18 rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] text-center font-mono text-3xl tabular-nums ring-1 ring-foreground/30 ring-inset [appearance:textfield] focus-visible:outline-2 focus-visible:outline-cottontail [&::-webkit-inner-spin-button]:appearance-none";
+    "h-14 w-18 rounded-lg bg-field text-center font-mono text-3xl tabular-nums ring-1 ring-foreground/30 ring-inset [appearance:textfield] focus-visible:outline-2 focus-visible:outline-cottontail [&::-webkit-inner-spin-button]:appearance-none";
 
   let label = $state("");
   let hours = $state(0);
@@ -44,7 +44,7 @@
 <div class="h-full overflow-auto">
   <div class="mx-auto grid max-w-2xl gap-3 p-2 @md:p-4">
     {#if show_form}
-      <form class="grid gap-4 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8" onsubmit={create}>
+      <form class="grid gap-4 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline" onsubmit={create}>
         <div class="flex flex-wrap items-end justify-center gap-2">
           <label class="grid justify-items-center gap-1">
             <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Hours</span>
@@ -80,7 +80,7 @@
           {@const state = timer_state(timer)}
           {@const remaining = timer_remaining(timer, now)}
           {@const progress = 1 - remaining / timer.duration_ms}
-          <li class="grid gap-2 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+          <li class="grid gap-2 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
             <div class="flex min-w-0 items-center gap-2">
               <label class="group flex min-w-0 flex-1 items-center gap-1">
                 <Input
@@ -99,7 +99,7 @@
               <IconButton label="Delete timer" size="sm" onclick={() => attempt("Couldn't delete the timer", remove_timer(timer))}><Trash /></IconButton>
             </div>
             <p class={cn("font-mono text-4xl font-medium tabular-nums", state !== TimerState.RUNNING && "text-foreground/80")}>{format_time(Math.ceil(remaining / 1000) * 1000)}</p>
-            <div class="h-1 overflow-hidden rounded-full bg-foreground/10" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
+            <div class="h-1 overflow-hidden rounded-full bg-field shadow-track" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
               <div class="h-full rounded-full bg-primary" style:width="{Math.min(100, progress * 100)}%"></div>
             </div>
             <div class="flex items-center gap-2">

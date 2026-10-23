@@ -119,14 +119,14 @@
         {@const progress = 1 - remaining / timer.duration_ms}
         {@const paused = timer.end_at === null}
         {@const name = timer.label || format_duration(timer.duration_ms)}
-        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
+        <li class="grid rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
           {@render header(HourglassIcon, name, ClockTab.TIMERS, `Open timers (${name})`)}
           <div class="grid gap-2 px-3 pb-3">
             <div class="flex items-baseline gap-2">
               <p class={cn("font-mono text-3xl font-medium tabular-nums", paused && "text-foreground/80")}>{format_time(Math.ceil(remaining / 1000) * 1000)}</p>
               {#if paused}<Badge>Paused</Badge>{/if}
             </div>
-            <div class="h-1 overflow-hidden rounded-full bg-foreground/10" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
+            <div class="h-1 overflow-hidden rounded-full bg-field shadow-track" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Elapsed">
               <div class="h-full rounded-full bg-primary" style:width="{Math.min(100, progress * 100)}%"></div>
             </div>
             <div class="flex items-center gap-2">
@@ -142,7 +142,7 @@
       {/each}
 
       {#if !idle}
-        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
+        <li class="grid rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
           {@render header(TimerIcon, stopwatch.laps.length ? `Stopwatch · ${stopwatch.laps.length} lap${stopwatch.laps.length === 1 ? "" : "s"}` : "Stopwatch", ClockTab.STOPWATCH, "Open the stopwatch")}
           <div class="grid gap-2 px-3 pb-3">
             <p class={cn("font-mono text-3xl font-medium tabular-nums", !running && "text-foreground/80")} aria-live="off">{format_stopwatch(elapsed)}</p>
@@ -162,7 +162,7 @@
 
       {#if upcoming}
         {@const alarm = upcoming.alarm}
-        <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
+        <li class="grid rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
           {@render header(AlarmIcon, "Next alarm", ClockTab.ALARMS, "Open alarms")}
           <div class="flex items-center gap-3 px-3 pb-3">
             <span class="grid min-w-0 flex-1">
@@ -176,7 +176,7 @@
         </li>
       {/if}
 
-      <li class="grid rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <li class="grid rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         {@render header(GlobeHemisphereWestIcon, "World clock", ClockTab.WORLD, "Open the world clock")}
         <ul class="grid gap-x-4 px-3 pb-2 @md:grid-cols-2" aria-label="Cities">
           <li class="flex min-h-8 items-center gap-2 text-ui">

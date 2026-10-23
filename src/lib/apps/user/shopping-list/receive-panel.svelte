@@ -23,7 +23,7 @@
     </div>
     <QrCollect app={SHARE_APP} label="Camera for share codes" {foreign} visible={() => win.is_visible} onpayload={(payload) => onreceive(read_share(payload))} />
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+  <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 py-3">
     <Button variant="quiet" onclick={oncancel}>Cancel</Button>
   </div>
 </section>

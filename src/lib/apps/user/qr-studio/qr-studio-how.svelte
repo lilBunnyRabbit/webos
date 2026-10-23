@@ -140,7 +140,7 @@
 </script>
 
 {#snippet stat(label: string, value: string)}
-  <div class="flex flex-col gap-0.5 rounded-lg bg-foreground/5 px-3 py-2">
+  <div class="flex flex-col gap-0.5 rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
     <dt class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{label}</dt>
     <dd class="truncate font-mono text-sm tabular-nums">{value}</dd>
   </div>
@@ -206,7 +206,7 @@
           </p>
           <ul class="flex flex-col gap-1.5">
             {#each code.segments as segment, i (i)}
-              <li class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-lg bg-foreground/5 px-3 py-2 text-ui">
+              <li class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-lg bg-background-light px-3 py-2 text-ui shadow-card ring-1 ring-hairline">
                 <span class="font-medium">{MODE_NAMES[segment.mode]}</span>
                 <span class="order-last w-full min-w-0 truncate font-mono @md:order-none @md:w-auto @md:flex-1">{describe_segment(segment)}</span>
                 <span class="ml-auto font-mono text-2xs text-foreground/65 tabular-nums">{segment.bits.length} bits · {MODE_COST[segment.mode]}</span>
@@ -228,7 +228,7 @@
             <span class="flex items-center gap-1.5"><span class="h-3 w-4 rounded-xs bg-foreground/20"></span> terminator and fill</span>
             <span class="flex items-center gap-1.5"><span class="h-3 w-4 rounded-xs ring-1 ring-foreground/25 ring-inset"></span> pad bytes</span>
           </div>
-          <div class="rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] p-3 font-mono text-2xs leading-6 break-all ring-1 ring-foreground/8 ring-inset">{#each shown_parts as part, i (i)}<span class={cn("rounded-xs px-px", BIT_STYLE[part.kind])}>{part.bits}</span>{/each}{#if total_bits > BITS_SHOWN}<span class="text-foreground/65"> … {total_bits - BITS_SHOWN} more bits</span>{/if}</div>
+          <div class="rounded-lg bg-field p-3 font-mono text-2xs leading-6 break-all ring-1 ring-hairline ring-inset">{#each shown_parts as part, i (i)}<span class={cn("rounded-xs px-px", BIT_STYLE[part.kind])}>{part.bits}</span>{/each}{#if total_bits > BITS_SHOWN}<span class="text-foreground/65"> … {total_bits - BITS_SHOWN} more bits</span>{/if}</div>
         </section>
 
         <section class="flex flex-col gap-3">
@@ -359,7 +359,7 @@
               />
               <span class="font-mono text-2xs text-foreground/65">mask {mask}: {MASK_FORMULAS[mask]}</span>
             </div>
-            <div class="overflow-auto rounded-lg ring-1 ring-foreground/8 ring-inset">
+            <div class="overflow-auto rounded-lg ring-1 ring-hairline ring-inset">
               <table class="w-full text-ui">
                 <thead class="text-left text-2xs font-medium tracking-wide text-foreground/65 uppercase">
                   <tr>

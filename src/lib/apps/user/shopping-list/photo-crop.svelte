@@ -50,7 +50,7 @@
       {/if}
     </div>
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+  <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 py-3">
     <Button variant="quiet" onclick={oncancel}>Cancel</Button>
     <Button variant={framed ? "secondary" : "primary"} disabled={!size} onclick={() => onread(null)}>Read all</Button>
     {#if framed}

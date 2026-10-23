@@ -40,7 +40,7 @@
     <div role="listitem" class="contents" aria-label={row_label(row)}>
       {#each row.marks as mark, i (i)}
         <span
-          class={cn("tile", FILL[mark], index === reveal && "reveal")}
+          class={cn("tile shadow-raised", FILL[mark], index === reveal && "reveal")}
           style:--delay="{i * 110}ms"
           aria-hidden="true">{display(row.guess[i])}</span
         >
@@ -51,14 +51,14 @@
     <div role="listitem" class="contents" aria-label="Typing {current ? [...current].map(display).join(' ') : 'nothing yet'}">
       {#each { length }, i (i)}
         <span
-          class={cn("tile ring-1 ring-inset", current[i] ? "ring-foreground/45 pop" : "ring-foreground/15", shake && "shake")}
+          class={cn("tile ring-1 ring-inset", current[i] ? "bg-raised shadow-raised ring-foreground/45 pop" : "bg-field shadow-recessed ring-hairline-strong", shake && "shake")}
           aria-hidden="true">{current[i] ? display(current[i]) : ""}</span
         >
       {/each}
     </div>
   {/if}
   {#each { length: blanks * length }, i (i)}
-    <span class="tile ring-1 ring-foreground/10 ring-inset" aria-hidden="true"></span>
+    <span class="tile bg-field shadow-recessed ring-1 ring-hairline ring-inset" aria-hidden="true"></span>
   {/each}
 </div>
 

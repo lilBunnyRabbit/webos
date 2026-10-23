@@ -662,7 +662,7 @@
               In the cart · <span class="font-mono tabular-nums">{done.length}</span>
             </button>
             {#if cart_open.value}
-              <ul class="flex flex-col divide-y divide-foreground/6 [--row-background:var(--color-background)]">
+              <ul class="flex flex-col divide-y divide-hairline [--row-background:var(--color-background)]">
                 {#each done as item (item.id)}
                   {@render row(item, all ? owner_of(item.id) : undefined)}
                 {/each}
@@ -677,7 +677,7 @@
   {#if (view === View.LIST || view === View.EDIT) && file.ready && !home}
     <div inert={view === View.EDIT}>
       {#if done.length > 0}
-        <div class="border-t border-foreground/8 bg-background-light">
+        <div class="border-t border-hairline bg-background-light">
           <div class="mx-auto flex max-w-xl items-center justify-between gap-2 px-3 pt-2">
             <p class={cn("font-mono text-foreground/80 tabular-nums", store.value ? "text-sm" : "text-ui")} aria-live="polite">{done.length} of {items.length} in the cart</p>
             <Button size={store.value ? "lg" : "md"} variant={open_items.length === 0 ? "primary" : "secondary"} onclick={clear_done}>
@@ -712,7 +712,7 @@
         aria-modal="true"
         aria-label="Edit item"
         tabindex="-1"
-        class="relative mx-auto flex max-h-[90%] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+        class="relative mx-auto flex max-h-[90%] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-background shadow-popover outline-none motion-safe:animate-sheet-in"
         {@attach (element) => element.focus({ preventScroll: true })}
         {@attach swipe_dismiss({ on_dismiss: () => close_side_view() })}
         onkeydown={(event) => {
@@ -731,7 +731,7 @@
 </div>
 
 {#snippet card(rows: Item[])}
-  <ul class="flex flex-col divide-y divide-foreground/8 overflow-hidden rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/8 [--row-background:var(--color-background-light)]">
+  <ul class="flex flex-col divide-y divide-hairline overflow-hidden rounded-xl bg-background-light shadow-card ring-1 ring-hairline [--row-background:var(--color-background-light)]">
     {#each rows as item (item.id)}
       {@render row(item)}
     {/each}

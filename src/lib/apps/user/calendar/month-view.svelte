@@ -23,7 +23,7 @@
 </script>
 
 <div class="flex h-full flex-col overflow-auto @xl:grid @xl:grid-rows-[auto_minmax(0,1fr)] @xl:overflow-hidden">
-  <div class="grid shrink-0 grid-cols-7 border-b border-foreground/8" aria-hidden="true">
+  <div class="grid shrink-0 grid-cols-7 border-b border-hairline" aria-hidden="true">
     {#each WEEKDAYS as name (name)}
       <span class="px-2 py-1.5 text-center text-2xs font-medium tracking-wide text-foreground/65 uppercase @xl:text-left">
         <span class="@xl:hidden">{name.slice(0, 1)}</span><span class="hidden @xl:inline">{name.slice(0, 3)}</span>
@@ -46,8 +46,8 @@
             aria-selected={day === selected}
             class={cn(
               "relative flex min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden p-1",
-              column > 0 && "border-l border-foreground/8",
-              row > 0 && "border-t border-foreground/8",
+              column > 0 && "border-l border-hairline",
+              row > 0 && "border-t border-hairline",
               outside && "bg-foreground/3",
               day === selected && "bg-primary/10"
             )}
@@ -149,7 +149,7 @@
     {/each}
   </div>
 
-  <section class="grid shrink-0 content-start gap-2 border-t border-foreground/8 p-2 @xl:hidden" aria-label="Selected day">
+  <section class="grid shrink-0 content-start gap-2 border-t border-hairline p-2 @xl:hidden" aria-label="Selected day">
     <div class="flex items-center gap-2 px-1">
       <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">{day_title(selected, today)}</h2>
       <Button variant="quiet" size="sm" onclick={() => actions.create(selected)}><PlusIcon weight="bold" />Event</Button>

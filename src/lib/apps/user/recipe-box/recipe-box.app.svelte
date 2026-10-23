@@ -265,7 +265,7 @@
         class="mx-3 mt-3 shrink-0 *:flex-1 @4xl:hidden"
       />
       <div class="grid min-h-0 flex-1 @4xl:grid-cols-2">
-        <div class={cn("min-h-0 flex-col p-3 @4xl:flex @4xl:border-r @4xl:border-foreground/8", edit_panel === EditPanel.SOURCE ? "flex" : "hidden")}>
+        <div class={cn("min-h-0 flex-col p-3 @4xl:flex @4xl:border-r @4xl:border-hairline", edit_panel === EditPanel.SOURCE ? "flex" : "hidden")}>
           <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
         </div>
         <div class={cn("min-h-0 overflow-y-auto @4xl:block", edit_panel === EditPanel.PREVIEW ? "block" : "hidden")} aria-label="Preview">

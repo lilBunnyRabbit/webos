@@ -251,7 +251,7 @@
               {:else}
                 <button
                   type="button"
-                  class="grid aspect-[1.586] w-full place-items-center rounded-lg text-ui text-foreground/65 ring-1 ring-foreground/20 ring-inset hover:bg-foreground/6"
+                  class="grid aspect-[1.586] w-full place-items-center rounded-lg bg-field text-ui text-foreground/65 shadow-recessed ring-1 ring-hairline-strong ring-inset transition-[box-shadow] duration-150 hover:ring-edge"
                   onclick={() => add_photo(side, "device")}
                 >
                   <span class="flex flex-col items-center gap-1"><PlusIcon class="size-5" />Add {side}</span>
@@ -265,7 +265,7 @@
     </div>
   </div>
 
-  <div class="shrink-0 border-t border-foreground/8 bg-background-light p-3 @lg:hidden">
+  <div class="shrink-0 border-t border-hairline bg-background-light p-3 @lg:hidden">
     <Button size="lg" variant="primary" type="submit" class="w-full"><CheckIcon weight="bold" />Save card</Button>
   </div>
 </form>

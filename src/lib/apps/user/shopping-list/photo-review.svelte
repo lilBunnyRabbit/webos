@@ -64,7 +64,7 @@
         </li>
       {/each}
     </ul>
-    <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+    <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 py-3">
       <Button variant="quiet" onclick={oncancel}>Cancel</Button>
       <Button variant="primary" disabled={chosen.length === 0} onclick={() => onadd(chosen)}>
         <PlusIcon weight="bold" /> Add {chosen.length} {chosen.length === 1 ? "item" : "items"}

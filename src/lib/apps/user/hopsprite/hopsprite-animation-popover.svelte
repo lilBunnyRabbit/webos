@@ -132,7 +132,7 @@
     />
     <p class="font-mono text-2xs text-foreground/80 tabular-nums">{sprite.frames.length} frames · {(total / 1000).toFixed(2)} s</p>
 
-    <div class="flex items-center justify-between gap-2 border-t border-foreground/8 pt-3">
+    <div class="flex items-center justify-between gap-2 border-t border-hairline pt-3">
       <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Tags</p>
       <Button size="sm" variant="quiet" onclick={ontag}><TagIcon weight="bold" />{many ? `Tag ${indices.length} frames` : "Tag frame"}</Button>
     </div>
@@ -152,7 +152,7 @@
       <p class="text-2xs text-foreground/80">Shift-click frames to pick a range, then tag it to play or export just that part.</p>
     {/if}
 
-    <div class="flex items-center justify-between gap-3 border-t border-foreground/8 pt-3">
+    <div class="flex items-center justify-between gap-3 border-t border-hairline pt-3">
       <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Onion skin</p>
       <Switch checked={onion.value.enabled} aria-label="Show onion skin" onchange={(event) => update_onion({ enabled: event.currentTarget.checked })} />
     </div>

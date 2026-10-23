@@ -29,10 +29,10 @@
 <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
   <section class="flex flex-col gap-2">
     <h2 class="px-1 text-sm font-semibold">Standings</h2>
-    <div class="overflow-hidden rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <div class="overflow-hidden rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
       <table class="w-full text-ui tabular-nums">
         <thead>
-          <tr class="h-8 border-b border-foreground/8 {header}">
+          <tr class="h-8 border-b border-hairline {header}">
             <th class="w-10 pl-3 text-left font-medium">#</th>
             <th class="text-left font-medium">Player</th>
             <th class="hidden w-10 text-right font-medium @md:table-cell" title="Played">P</th>
@@ -45,7 +45,7 @@
         </thead>
         <tbody>
           {#each view.standings as row (row.player)}
-            <tr class="h-8 border-b border-foreground/5 last:border-0">
+            <tr class="h-8 border-b border-hairline last:border-0">
               <td class="pl-3 font-mono text-2xs text-foreground/65">{row.rank}</td>
               <td class="max-w-0 truncate pr-2">{names.get(row.player)}</td>
               <td class="hidden text-right font-mono text-2xs text-foreground/65 @md:table-cell">{row.played}</td>
@@ -75,7 +75,7 @@
         Round {round.round}
         {#if round.resting}<span class="text-2xs font-normal text-foreground/65">{names.get(round.resting)} sits out</span>{/if}
       </h2>
-      <div class="flex flex-col divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <div class="flex flex-col divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         {#each round.fixtures as fixture (fixture.id)}
           {@const result = view.results.get(fixture.id)}
           {#snippet side(player: string, align: "left" | "right")}

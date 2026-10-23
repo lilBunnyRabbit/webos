@@ -77,7 +77,7 @@
       {/if}
     </div>
   </div>
-  <div class="flex shrink-0 items-center justify-end gap-2 border-t border-foreground/8 bg-background-light p-3">
+  <div class="flex shrink-0 items-center justify-end gap-2 border-t border-hairline bg-background-light p-3">
     <Button variant="quiet" onclick={onclose}>Cancel</Button>
     <Button variant="primary" disabled={count === 0} onclick={() => onapply(picked(added), picked(changed))}>Apply {count}</Button>
   </div>

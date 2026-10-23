@@ -96,7 +96,7 @@
 
   {#if save_error}<p class="text-ui text-error">{save_error}</p>{/if}
 
-  <div class="sticky -bottom-5 -mx-5 -mb-5 flex flex-wrap items-center justify-end gap-2 border-t border-foreground/8 bg-background-lighter px-5 py-3">
+  <div class="sticky -bottom-5 -mx-5 -mb-5 flex flex-wrap items-center justify-end gap-2 border-t border-hairline bg-background-lighter px-5 py-3">
     <Button variant="quiet" onclick={() => resolve(null)}>Cancel</Button>
     <Button variant="primary" type="submit" disabled={!editor.pcm || saving}>{saving ? "Adding…" : "Add pad"}</Button>
   </div>

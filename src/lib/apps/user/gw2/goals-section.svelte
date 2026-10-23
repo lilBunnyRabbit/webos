@@ -142,7 +142,7 @@
           {/if}
 
           {#if adding}
-            <div class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+            <div class="flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
               <div class="flex flex-wrap items-center gap-2">
                 <Input bind:value={query} type="search" placeholder="Search your items, or type an item id" aria-label="Item" class="min-w-48 flex-1">
                   {#snippet leading()}<MagnifyingGlassIcon />{/snippet}
@@ -152,7 +152,7 @@
                   <Input type="number" min={1} max={1_000_000} bind:value={new_target} class="w-24 font-mono tabular-nums" />
                 </label>
               </div>
-              <ul class="max-h-72 overflow-auto rounded-lg bg-background ring-1 ring-foreground/8">
+              <ul class="max-h-72 overflow-auto rounded-lg bg-background ring-1 ring-hairline">
                 {#if lookup}
                   {@render item_row(lookup)}
                 {:else if lookup_error}
@@ -182,7 +182,7 @@
           {:else}
             <ul class="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
               {#each board as { goal, progress } (goal.id)}
-                <li class={cn("flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8", progress.done && "ring-success/40")}>
+                <li class={cn("flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline", progress.done && "ring-success/40")}>
                   <div class="flex items-start gap-3">
                     <img src={goal.icon} alt="" class="size-10 shrink-0 rounded-md" loading="lazy" referrerpolicy="no-referrer" />
                     <div class="min-w-0 flex-1">

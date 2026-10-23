@@ -236,12 +236,12 @@
           <MemoryMeter {usage} {instructions} {questions} onnew={new_chat} />
         {/if}
         {#if load_error}
-          <div role="alert" class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+          <div role="alert" class="flex items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-2 text-ui">
             <WarningIcon weight="fill" class="size-4 shrink-0 text-warning" />
             <span class="min-w-0 flex-1">Couldn't open the file: {load_error}</span>
           </div>
         {:else if source?.clipped}
-          <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+          <div class="flex items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-2 text-ui">
             <WarningIcon weight="fill" class="size-4 shrink-0 text-warning" />
             <span class="min-w-0 flex-1">
               {source.name} is long: only its first {MAX_FILE_CHARS.toLocaleString("en")} characters fit, so answers cover that part.
@@ -313,7 +313,7 @@
         {/if}
       </div>
 
-      <div class="flex items-end gap-2 border-t border-foreground/8 bg-background-light p-2">
+      <div class="flex items-end gap-2 border-t border-hairline bg-background-light p-2">
         <Textarea
           bind:value={draft}
           bind:element={composer}
@@ -340,7 +340,7 @@
             aria-modal="true"
             aria-label="What Ask can read"
             tabindex="-1"
-            class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+            class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-popover outline-none motion-safe:animate-sheet-in"
             {@attach (element) => element.focus({ preventScroll: true })}
             {@attach swipe_dismiss({ on_dismiss: () => (choosing = false) })}
             onkeydown={(event) => {
@@ -351,7 +351,7 @@
           >
             <Grabber class="mt-2 mb-1" />
             <CommandsSheet {catalogue} on={enabled.value.on} ready={availability === AiAvailability.READY} ontoggle={toggle} />
-            <div class="flex justify-end border-t border-foreground/8 p-2">
+            <div class="flex justify-end border-t border-hairline p-2">
               <Button variant="primary" onclick={() => (choosing = false)}>Done</Button>
             </div>
           </div>

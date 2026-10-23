@@ -56,7 +56,7 @@
           type="time"
           required
           bind:value={draft.time}
-          class="h-16 rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] px-3 text-center font-mono text-4xl font-medium tabular-nums ring-1 ring-foreground/30 ring-inset focus-visible:outline-2 focus-visible:outline-cottontail [&::-webkit-calendar-picker-indicator]:opacity-50"
+          class="h-16 rounded-lg bg-field px-3 text-center font-mono text-4xl font-medium tabular-nums shadow-recessed ring-1 ring-hairline-strong ring-inset transition-[box-shadow] duration-150 hover:ring-edge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail [&::-webkit-calendar-picker-indicator]:opacity-50"
         />
       </label>
       <fieldset class="grid gap-1.5">
@@ -92,7 +92,7 @@
       {#each alarms as alarm (alarm.id)}
         {@const on = alarm.on}
         {@const snoozed = is_snoozed(alarm, now)}
-        <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3 ring-1 ring-foreground/8">
+        <li class="flex items-center gap-3 rounded-lg bg-background-light pr-3 shadow-card ring-1 ring-hairline">
           <button type="button" class="grid min-w-0 flex-1 rounded-l-lg px-3 py-2.5 text-left hover:bg-foreground/4 focus-visible:bg-primary/12 focus-visible:outline-none" onclick={() => edit(alarm)}>
             <span class={cn("font-mono text-3xl leading-tight font-medium tabular-nums", !on && "text-foreground/45")}>{alarm.time}</span>
             <span class="truncate text-2xs text-foreground/65">

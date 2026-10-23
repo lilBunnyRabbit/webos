@@ -49,7 +49,7 @@
 <div
   data-status={state.status}
   class={cn(
-    "w-full overflow-hidden rounded-lg bg-background-light ring-1 ring-foreground/10 shadow-raised",
+    "w-full overflow-hidden rounded-lg bg-background-light ring-1 ring-hairline shadow-raised",
     ready && "ring-primary/50",
     walkover && "opacity-60"
   )}

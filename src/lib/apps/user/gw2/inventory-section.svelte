@@ -111,7 +111,7 @@
           {:else}
             {#if picked}
               {@const item = names.get(picked.item_id)}
-              <div class="sticky top-0 z-10 flex items-start gap-3 rounded-xl bg-background-light p-3 shadow-sm ring-1 ring-foreground/8">
+              <div class="sticky top-0 z-10 flex items-start gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
                 {#if item}
                   <img
                     src={item.icon}
@@ -136,7 +136,7 @@
                     {#each picked.places as place, index (index)}
                       <li
                         class={cn(
-                          "rounded-md px-1.5 py-0.5 text-2xs ring-1 ring-foreground/10",
+                          "rounded-md px-1.5 py-0.5 text-2xs ring-1 ring-hairline",
                           place.equipped ? "bg-secondary/12 text-secondary" : "bg-background text-foreground/80"
                         )}
                       >
@@ -163,7 +163,7 @@
                     <button
                       type="button"
                       class={cn(
-                        "relative block aspect-square w-full overflow-hidden rounded-md bg-background-light p-0.5 ring-1 ring-foreground/10 ring-inset hover:brightness-110 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cottontail",
+                        "relative block aspect-square w-full overflow-hidden rounded-md bg-background-light p-0.5 ring-1 ring-hairline ring-inset hover:brightness-110 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cottontail",
                         item && RARITY_COLORS[item.rarity] && "ring-2 ring-(--rarity)",
                         selected === row.item_id && "outline-2 outline-offset-2 outline-foreground"
                       )}

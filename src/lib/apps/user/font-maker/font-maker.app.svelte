@@ -514,7 +514,7 @@
       <FontMakerGrid {project} selected={editor.char} onselect={select} />
     </div>
 
-    <section class="editor-pane flex min-h-0 flex-col gap-2 overflow-y-auto border-foreground/8 bg-background-light p-3" aria-label="Editing {editor.char}">
+    <section class="editor-pane flex min-h-0 flex-col gap-2 overflow-y-auto border-hairline bg-background-light p-3" aria-label="Editing {editor.char}">
       <div class="flex items-center gap-1">
         <IconButton label="All characters" size="sm" class="back shrink-0" onclick={() => (pane = "grid")}><ArrowLeftIcon weight="bold" /></IconButton>
         <IconButton label="Previous character ([)" size="sm" class="shrink-0" onclick={() => editor.step(-1)}><CaretLeftIcon weight="bold" /></IconButton>
@@ -564,7 +564,7 @@
         </div>
       </div>
 
-      <div class="canvas-wrap min-h-48 flex-1 overflow-hidden rounded-lg bg-background ring-1 ring-foreground/8">
+      <div class="canvas-wrap min-h-48 flex-1 overflow-hidden rounded-lg bg-background ring-1 ring-hairline">
         <FontMakerCanvas
           char={editor.char}
           glyph={canvas_glyph}

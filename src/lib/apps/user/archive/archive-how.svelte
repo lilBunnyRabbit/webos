@@ -81,7 +81,7 @@
           { label: "Saved", value: saved === null ? "—" : `${saved}%` },
           { label: "Repeats", value: `${stats.matches} · ${covered}% of text` },
         ] as stat (stat.label)}
-          <div class="flex flex-col gap-0.5 rounded-lg bg-foreground/5 px-3 py-2">
+          <div class="flex flex-col gap-0.5 rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
             <dt class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{stat.label}</dt>
             <dd class="truncate font-mono text-sm tabular-nums">{stat.value}</dd>
           </div>
@@ -95,7 +95,7 @@
           <span class="flex items-center gap-1.5"><span class="h-3 w-4 rounded-xs ring-2 ring-primary ring-inset"></span> where it was copied from</span>
         </div>
         <!-- Template whitespace would show under pre-wrap, so the runs sit on one line. -->
-        <div role="presentation" class="min-h-24 rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] p-3 ring-1 ring-foreground/8 ring-inset font-mono text-ui leading-7 break-words whitespace-pre-wrap" onmouseleave={() => (active = null)}>{#each segments as segment, index (index)}{#if segment.kind === "match"}<!-- svelte-ignore a11y_no_noninteractive_tabindex --><mark
+        <div role="presentation" class="min-h-24 rounded-lg bg-field p-3 ring-1 ring-hairline ring-inset font-mono text-ui leading-7 break-words whitespace-pre-wrap" onmouseleave={() => (active = null)}>{#each segments as segment, index (index)}{#if segment.kind === "match"}<!-- svelte-ignore a11y_no_noninteractive_tabindex --><mark
                 tabindex="0"
                 class={cn(
                   "rounded-xs bg-primary/25 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary",

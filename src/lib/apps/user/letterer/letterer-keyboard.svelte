@@ -29,9 +29,9 @@
   function key_class(key: string): string {
     const open = boards.filter((board) => !board.solved);
     const marks = (open.length ? open : boards).map((board) => board.marks.get(key));
-    if (single && (marks[0] === Mark.CORRECT || marks[0] === Mark.PRESENT)) return cn(FILL[marks[0]], "text-background");
+    if (single && (marks[0] === Mark.CORRECT || marks[0] === Mark.PRESENT)) return cn(FILL[marks[0]], "text-background shadow-control");
     if (marks.length && marks.every((mark) => mark === Mark.ABSENT)) return "bg-foreground/4 text-foreground/40";
-    return "bg-foreground/10 text-foreground";
+    return "bg-raised text-foreground shadow-control ring-1 ring-hairline hover:bg-raised-hover";
   }
 
   function key_label(key: string): string {
@@ -60,7 +60,7 @@
           aria-label={key_label(key)}
           class={cn(
             "relative grid h-11 min-w-0 place-items-center overflow-hidden rounded-md text-sm font-semibold uppercase transition-colors duration-150",
-            "hover:opacity-85 active:opacity-70 disabled:opacity-38",
+            "hover:opacity-85 active:translate-y-px active:shadow-pressed disabled:opacity-38 disabled:shadow-none",
             wide ? "flex-[1.5] px-1" : "flex-1",
             key_class(key)
           )}

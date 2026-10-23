@@ -72,7 +72,7 @@
       {#if error}<p class="text-ui text-error">{error}</p>{/if}
     {/if}
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
+  <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 py-3">
     {#if frames}
       <Button variant="quiet" onclick={() => (frames = null)}>Change lists</Button>
       <Button variant="primary" onclick={onclose}>Done</Button>

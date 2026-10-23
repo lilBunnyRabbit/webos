@@ -40,7 +40,7 @@
     {#if preview}
       <p class="text-2xs text-foreground/65 italic">Preview: this is what people see when they open the form's link.</p>
     {:else if questions(form).length > 0}
-      <div class="mt-2 flex flex-col gap-3 border-t border-foreground/8 pt-5">
+      <div class="mt-2 flex flex-col gap-3 border-t border-hairline pt-5">
         <label class="flex flex-col gap-1.5">
           <span class="text-ui font-medium">Your name <span class="font-normal text-foreground/65">(optional)</span></span>
           <Input bind:value={respondent} placeholder="Who's answering?" autocomplete="name" />

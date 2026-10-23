@@ -20,7 +20,7 @@
     {:else if field.kind === FieldKind.CHECK}
       <label
         class={cn(
-          "flex min-h-11 cursor-pointer items-start gap-3 rounded-lg bg-background-light px-3 py-2.5 ring-1 ring-foreground/8 transition-colors duration-150",
+          "flex min-h-11 cursor-pointer items-start gap-3 rounded-lg bg-background-light px-3 py-2.5 shadow-card ring-1 ring-hairline transition-colors duration-150",
           answers[field.key] === true && "bg-primary/8 ring-primary/40"
         )}
       >

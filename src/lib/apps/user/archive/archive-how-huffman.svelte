@@ -104,7 +104,7 @@
       { label: "Huffman", value: bits_label(analysis.bits) },
       { label: "Ratio", value: ratio === null ? "—" : `${ratio.toFixed(2)} : 1` },
     ] as stat (stat.label)}
-      <div class="flex flex-col gap-0.5 rounded-lg bg-foreground/5 px-3 py-2">
+      <div class="flex flex-col gap-0.5 rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
         <dt class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{stat.label}</dt>
         <dd class="truncate font-mono text-sm tabular-nums">{stat.value}</dd>
       </div>
@@ -134,7 +134,7 @@
     <p class="rounded-lg bg-foreground/5 px-3 py-6 text-center text-ui text-foreground/65">No repeats, so there are no distances to code.</p>
   {:else}
     <div class="grid gap-3 @2xl:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
-      <div class="max-h-80 overflow-auto rounded-lg ring-1 ring-foreground/8 ring-inset" onmouseleave={() => (active = null)} role="presentation">
+      <div class="max-h-80 overflow-auto rounded-lg ring-1 ring-hairline ring-inset" onmouseleave={() => (active = null)} role="presentation">
         <table class="w-full text-ui">
           <thead class="sticky top-0 bg-background-light text-left text-2xs font-medium tracking-wide text-foreground/65 uppercase">
             <tr>
@@ -165,7 +165,7 @@
         </table>
       </div>
 
-      <div class="overflow-auto rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] ring-1 ring-foreground/8 ring-inset" onmouseleave={() => (active = null)} role="presentation">
+      <div class="overflow-auto rounded-lg bg-field ring-1 ring-hairline ring-inset" onmouseleave={() => (active = null)} role="presentation">
         <svg
           width={layout.columns * COLUMN + PAD * 2}
           height={layout.depth * ROW + PAD * 2 + LEAF.height}
@@ -215,7 +215,7 @@
       <span class="flex items-center gap-1.5"><span class="h-3 w-4 rounded-xs bg-primary"></span> uses the symbol you point at</span>
     </div>
     <!-- Template whitespace would show under pre-wrap, so the cells sit on one line. -->
-    <div role="presentation" class="max-h-64 min-h-16 overflow-auto rounded-lg bg-[light-dark(var(--background-lightest),var(--background-darker))] p-3 ring-1 ring-foreground/8 ring-inset font-mono text-ui leading-7 break-words whitespace-pre-wrap" onmouseleave={() => (active = null)}>{#each cells as cell, index (index)}{#if cell.kind === "char"}<span role="presentation" class={cn("rounded-xs bg-foreground/8", is_active(cell.uses[0]) && "bg-primary text-background")} onmouseenter={() => point(cell.uses[0])}>{cell.text}</span>{:else}<span class="mx-px inline-flex rounded-xs bg-primary/25 text-2xs leading-5 align-[1px]" title={cell.text}>{#each cell.uses as use, part (part)}<span role="presentation" class={cn("rounded-xs px-1", is_active(use) && "bg-primary text-background")} onmouseenter={() => point(use)}>{cell.parts[part]}</span>{/each}</span>{/if}{/each}</div>
+    <div role="presentation" class="max-h-64 min-h-16 overflow-auto rounded-lg bg-field p-3 ring-1 ring-hairline ring-inset font-mono text-ui leading-7 break-words whitespace-pre-wrap" onmouseleave={() => (active = null)}>{#each cells as cell, index (index)}{#if cell.kind === "char"}<span role="presentation" class={cn("rounded-xs bg-foreground/8", is_active(cell.uses[0]) && "bg-primary text-background")} onmouseenter={() => point(cell.uses[0])}>{cell.text}</span>{:else}<span class="mx-px inline-flex rounded-xs bg-primary/25 text-2xs leading-5 align-[1px]" title={cell.text}>{#each cell.uses as use, part (part)}<span role="presentation" class={cn("rounded-xs px-1", is_active(use) && "bg-primary text-background")} onmouseenter={() => point(use)}>{cell.parts[part]}</span>{/each}</span>{/if}{/each}</div>
     <p class="min-h-10 text-ui text-foreground/80" aria-live="polite">
       {#if active_symbol && active}
         {describe(active_symbol, (active.alphabet === Alphabet.LITERAL ? analysis.literal : analysis.distance).flat_width)}

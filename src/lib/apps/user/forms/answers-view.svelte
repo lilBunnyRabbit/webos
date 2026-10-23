@@ -56,7 +56,7 @@
 </script>
 
 {#snippet card(response: FormResponse, title: string, actions: import("svelte").Snippet | null)}
-  <article class="flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+  <article class="flex flex-col gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
     <header class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
         <h3 class="truncate text-sm font-semibold">{title}</h3>
@@ -78,7 +78,7 @@
           <li class="flex flex-col gap-0.5 text-ui">
             <span class="font-medium break-words"><InlineText text={column.label} /></span>
             {#if is_answered(value)}
-              <p class="rounded-md bg-background-darker px-2.5 py-1.5 break-words whitespace-pre-wrap">{value}</p>
+              <p class="rounded-md bg-field px-2.5 py-1.5 break-words whitespace-pre-wrap">{value}</p>
             {:else}
               <p class="text-foreground/65 italic">No answer</p>
             {/if}
@@ -138,12 +138,12 @@
     {:else if mode === Mode.SUMMARY}
       <ul class="flex flex-col gap-3">
         {#each columns as column (column.key)}
-          <li class="flex flex-col gap-2 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+          <li class="flex flex-col gap-2 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
             <span class="text-ui font-medium break-words"><InlineText text={column.label} /></span>
             {#if column.check}
               {@const ticked = totals.get(column.key) ?? 0}
               <div class="flex items-center gap-3">
-                <div class="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/8" role="img" aria-label="{ticked} of {responses.length} ticked">
+                <div class="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-field shadow-track" role="img" aria-label="{ticked} of {responses.length} ticked">
                   <div class="h-full rounded-full bg-primary" style:width="{(ticked / responses.length) * 100}%"></div>
                 </div>
                 <span class="shrink-0 font-mono text-2xs tabular-nums">{ticked} / {responses.length}</span>
@@ -155,7 +155,7 @@
               {:else}
                 <ul class="flex flex-col gap-1.5">
                   {#each written as entry, index (index)}
-                    <li class="rounded-md bg-background-darker px-2.5 py-1.5 text-ui">
+                    <li class="rounded-md bg-field px-2.5 py-1.5 text-ui">
                       <p class="break-words whitespace-pre-wrap">{entry.value}</p>
                       <p class="text-2xs text-foreground/65">{entry.who}</p>
                     </li>
@@ -174,10 +174,10 @@
         {@render card(response, who(response, index), remove)}
       {/each}
     {:else}
-      <div class="overflow-x-auto rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <div class="overflow-x-auto rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         <table class="w-full border-collapse text-left text-ui">
           <thead>
-            <tr class="border-b border-foreground/8 text-2xs tracking-wide text-foreground/65 uppercase">
+            <tr class="border-b border-hairline text-2xs tracking-wide text-foreground/65 uppercase">
               <th class="sticky left-0 z-10 min-w-40 bg-background-light px-3 py-2 font-medium">Question</th>
               {#each responses as response, index (`${response.submitted_at}-${index}`)}
                 <th class="max-w-48 truncate px-3 py-2 font-medium normal-case" title={who(response, index)}>{who(response, index)}</th>
@@ -187,7 +187,7 @@
           </thead>
           <tbody>
             {#each columns as column (column.key)}
-              <tr class="border-b border-foreground/8 last:border-b-0">
+              <tr class="border-b border-hairline last:border-b-0">
                 <th scope="row" class="sticky left-0 z-10 min-w-40 bg-background-light px-3 py-2 align-top font-medium break-words">
                   <InlineText text={column.label} />
                 </th>

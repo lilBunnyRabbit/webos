@@ -71,7 +71,7 @@
     </div>
   {/if}
 
-  <ul class={cn("grid min-w-0", !bare && "border-t border-foreground/8")} aria-label="Running">
+  <ul class={cn("grid min-w-0", !bare && "border-t border-hairline")} aria-label="Running">
     {#each lines.shown as item (item.key)}
       <li class="grid">
         <button type="button" class={line_class} onclick={() => apps.launch(APP_ID, { tab: item.tab })}>

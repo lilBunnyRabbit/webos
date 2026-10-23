@@ -49,7 +49,7 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-  <div class="flex flex-col gap-2 border-b border-foreground/8 p-3">
+  <div class="flex flex-col gap-2 border-b border-hairline p-3">
     <Input size="sm" type="search" placeholder="Search titles, tags, ingredients" aria-label="Search recipes" bind:value={query}>
       {#snippet leading()}<MagnifyingGlassIcon class="size-3.5" />{/snippet}
     </Input>
@@ -79,7 +79,7 @@
           <button
             type="button"
             class={cn(
-              "flex w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 text-left ring-1 ring-foreground/8 transition-colors duration-150",
+              "flex w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-colors duration-150",
               "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
             )}
             onclick={() => onopen(entry.path)}

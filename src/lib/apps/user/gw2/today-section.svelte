@@ -69,7 +69,7 @@
           {#if current.error}<StaleNotice error={current.error} />{/if}
           {#if vault_data.meta_progress_complete}
             {@const meta = fraction(vault_data.meta_progress_current ?? 0, vault_data.meta_progress_complete)}
-            <div class="flex flex-col gap-2 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+            <div class="flex flex-col gap-2 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
               <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <span class="text-sm font-semibold">{tab === Tab.DAILY ? "Daily" : "Weekly"} reward</span>
                 <span class="font-mono text-ui tabular-nums">{format_progress(vault_data.meta_progress_current ?? 0, vault_data.meta_progress_complete)}</span>
@@ -83,7 +83,7 @@
           {#if objectives.length === 0}
             <p class="px-1 text-ui text-foreground/65">No objectives right now.</p>
           {:else}
-            <ul class="flex flex-col divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+            <ul class="flex flex-col divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
               {#each objectives as objective (objective.id)}
                 {@const value = fraction(objective.progress_current, objective.progress_complete)}
                 {@const done = value >= 1}

@@ -53,7 +53,7 @@
   }
 </script>
 
-<div class="border-t border-foreground/8 bg-background-light">
+<div class="border-t border-hairline bg-background-light">
   {#if chips.length > 0}
     <div class="mx-auto flex max-w-xl items-center gap-1.5 overflow-x-auto px-3 pt-2 [scrollbar-width:none]" aria-label={typing ? "Suggestions" : "Buy again"} role="group">
       {#if !typing}

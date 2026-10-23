@@ -49,7 +49,7 @@
   </div>
 
   {#if laps.length > 0}
-    <div class="min-h-0 overflow-auto border-t border-foreground/8">
+    <div class="min-h-0 overflow-auto border-t border-hairline">
       <table class="mx-auto w-full max-w-md text-ui">
         <thead class="sticky top-0 bg-background">
           <tr class="text-2xs tracking-wide text-foreground/65 uppercase">
@@ -60,7 +60,7 @@
         </thead>
         <tbody class="font-mono tabular-nums">
           {#each laps as lap (lap.n)}
-            <tr class="border-t border-foreground/6">
+            <tr class="border-t border-hairline">
               <td class="h-8 px-4 text-foreground/65">{lap.n}</td>
               <td class={cn("h-8 px-4 text-right", extremes && lap.split_ms === extremes.best && "text-success", extremes && lap.split_ms === extremes.worst && "text-error")}>
                 {format_stopwatch(lap.split_ms)}

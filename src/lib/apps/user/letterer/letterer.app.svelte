@@ -395,8 +395,8 @@
 
     <aside
       class={cn(
-        "flex-col gap-6 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
+        "flex-col gap-6 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >
@@ -427,7 +427,7 @@
             </div>
           {/each}
         </dl>
-        <div class="flex flex-col gap-1 border-t border-foreground/8 px-4 py-3">
+        <div class="flex flex-col gap-1 border-t border-hairline px-4 py-3">
           <p class="pb-1 text-2xs text-foreground/65">{survival ? "Words per run" : "Wins by guesses"}</p>
           {#each distribution.bars as bar (bar.label)}
             <div class="grid grid-cols-[1.5rem_1fr] items-center gap-2 font-mono text-2xs tabular-nums">

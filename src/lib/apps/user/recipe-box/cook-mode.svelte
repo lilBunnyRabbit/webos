@@ -86,7 +86,7 @@
         <SunIcon class="size-3.5" weight={awake ? "fill" : "regular"} />{awake ? "Screen on" : "Screen may sleep"}
       </span>
     </div>
-    <div class="mx-4 mt-2 h-1 shrink-0 overflow-hidden rounded-full bg-foreground/8" aria-hidden="true">
+    <div class="mx-4 mt-2 h-1 shrink-0 overflow-hidden rounded-full bg-field shadow-track" aria-hidden="true">
       <div class="h-full rounded-full bg-primary transition-[width] duration-200" style:width={`${((index + 1) / all.length) * 100}%`}></div>
     </div>
 
@@ -98,7 +98,7 @@
       {#if ingredients.length > 0}
         <ul class="flex flex-wrap gap-2" aria-label="Ingredients in this step">
           {#each ingredients as item, item_index (item_index)}
-            <li class="rounded-lg bg-foreground/6 px-3 py-2 text-sm">
+            <li class="rounded-lg bg-background-light px-3 py-2 text-sm shadow-card ring-1 ring-hairline">
               <span class="font-mono text-xs text-foreground/80">{format_amount(adjust(item.amount, factor, system))}</span>
               {item.name}
             </li>
@@ -118,7 +118,7 @@
     </div>
 
     {#if timers.list.length > 0}
-      <ul class="flex shrink-0 flex-wrap gap-2 border-t border-foreground/8 bg-background-light px-4 py-2" aria-label="Timers">
+      <ul class="flex shrink-0 flex-wrap gap-2 border-t border-hairline bg-background-light px-4 py-2" aria-label="Timers">
         {#each timers.list as timer (timer.id)}
           <li class={cn("flex items-center gap-2 rounded-lg py-1 pr-1 pl-3", timer.done ? "bg-success/12 text-success" : "bg-tertiary/12 text-tertiary")}>
             <TimerIcon class="size-4" weight={timer.done ? "fill" : "regular"} />
@@ -134,7 +134,7 @@
       </ul>
     {/if}
 
-    <div class="grid shrink-0 grid-cols-2 gap-2 border-t border-foreground/8 bg-background-light p-3">
+    <div class="grid shrink-0 grid-cols-2 gap-2 border-t border-hairline bg-background-light p-3">
       <Button size="lg" disabled={index === 0} onclick={() => go(-1)}><ArrowLeftIcon />Back</Button>
       <Button size="lg" variant="primary" disabled={index >= all.length - 1} onclick={() => go(1)} {@attach focus_once}>Next<ArrowRightIcon /></Button>
     </div>

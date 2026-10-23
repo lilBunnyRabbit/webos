@@ -61,7 +61,7 @@
           {#if shown.length === 0}
             <p class="px-1 text-ui text-foreground/65">{query ? "No currency matches." : "The wallet is empty."}</p>
           {:else}
-            <ul class="grid gap-px overflow-hidden rounded-xl bg-foreground/8 ring-1 ring-foreground/8 @xl:grid-cols-2">
+            <ul class="grid gap-px overflow-hidden rounded-xl bg-hairline shadow-card ring-1 ring-hairline @xl:grid-cols-2">
               {#each shown as row (row.id)}
                 <li class="flex items-center gap-3 bg-background-light px-4 py-2.5" title={row.description}>
                   <img src={row.icon} alt="" class="size-7 shrink-0 rounded-sm" loading="lazy" referrerpolicy="no-referrer" />

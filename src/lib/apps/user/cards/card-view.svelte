@@ -127,7 +127,7 @@
     </div>
   </div>
 
-  <div class="flex shrink-0 justify-center border-t border-foreground/8 bg-background-light p-3">
+  <div class="flex shrink-0 justify-center border-t border-hairline bg-background-light p-3">
     <Button size="lg" variant="primary" class="w-full @lg:w-auto @lg:min-w-72" onclick={oncheckout}><StorefrontIcon weight="bold" />Show at checkout</Button>
   </div>
 </div>

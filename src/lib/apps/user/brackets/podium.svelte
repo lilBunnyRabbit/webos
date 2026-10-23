@@ -17,7 +17,7 @@
 </script>
 
 {#if champion}
-  <section class="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8" aria-live="polite">
+  <section class="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline" aria-live="polite">
     <div class="flex min-w-0 items-center gap-3">
       <div class="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
         <TrophyIcon class="size-6" weight="fill" />

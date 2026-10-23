@@ -120,7 +120,7 @@
         width={size.width}
         height={size.height}
         style:--ratio={size.width / size.height}
-        class="pad touch-none rounded-lg ring-1 ring-foreground/12 select-none"
+        class="pad touch-none rounded-lg ring-1 ring-hairline select-none"
         aria-label="Sketch pad"
         onpointerdown={start}
         onpointermove={move}

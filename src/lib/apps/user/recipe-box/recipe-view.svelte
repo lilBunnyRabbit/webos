@@ -66,7 +66,7 @@
         {:else}
           <ul class="flex flex-col">
             {#each ingredients as entry (`${entry.name}|${entry.optional}`)}
-              <li class="flex items-baseline gap-3 border-b border-foreground/6 py-1.5 text-ui last:border-0">
+              <li class="flex items-baseline gap-3 border-b border-hairline py-1.5 text-ui last:border-0">
                 <span class="w-24 shrink-0 font-mono text-xs text-foreground/80 tabular-nums">{format_amounts(entry.amounts) || "—"}</span>
                 <span class="min-w-0">
                   {entry.name}{#if entry.optional}<span class="text-foreground/65">{" (optional)"}</span>{/if}

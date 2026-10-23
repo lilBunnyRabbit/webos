@@ -64,7 +64,7 @@
     {/each}
   </ul>
 
-  <p class="flex min-w-0 items-center gap-1.5 border-t border-foreground/8 px-3 py-1.5 text-2xs text-foreground/80">
+  <p class="flex min-w-0 items-center gap-1.5 border-t border-hairline px-3 py-1.5 text-2xs text-foreground/80">
     <BellIcon class={cn("size-3.5 shrink-0", upcoming && "text-primary")} weight={upcoming ? "fill" : "regular"} />
     {#if upcoming}
       {@const at = new Date(upcoming.at)}

@@ -61,7 +61,7 @@
       {#if busy}<Spinner label="Reading the sheet" class="size-3.5" />{/if}Use guides
     </Button>
   </Toolbar>
-  <p class={["border-b border-foreground/8 px-3 py-2 text-ui", found ? "text-foreground/80" : "bg-warning/10"]} aria-live="polite">
+  <p class={["border-b border-hairline px-3 py-2 text-ui", found ? "text-foreground/80" : "bg-warning/10"]} aria-live="polite">
     {found
       ? "Found the four corner squares. Drag a corner if it's off."
       : "Couldn't find the corner squares. Drag each corner onto its square; the top left one has a hole."}

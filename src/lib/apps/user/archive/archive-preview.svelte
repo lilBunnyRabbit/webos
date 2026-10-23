@@ -53,7 +53,7 @@
 </script>
 
 <div class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
-  <div class="flex h-11 items-center gap-2 border-b border-foreground/8 pr-1.5 pl-3">
+  <div class="flex h-11 items-center gap-2 border-b border-hairline pr-1.5 pl-3">
     <span class="min-w-0 flex-1 truncate text-ui font-medium" title={entry.name}>{name}</span>
     {#if loaded?.kind === "text"}
       <Button size="sm" onclick={() => loaded?.kind === "text" && on_analyze(loaded.text.slice(0, HOW_LIMIT))}><LightbulbIcon weight="bold" /> How it compresses</Button>
@@ -77,7 +77,7 @@
     {/if}
   </div>
 
-  <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t border-foreground/8 px-3 py-2 font-mono text-2xs text-foreground/80 tabular-nums">
+  <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t border-hairline px-3 py-2 font-mono text-2xs text-foreground/80 tabular-nums">
     <dt class="text-foreground/65">Size</dt>
     <dd class="truncate">{format_bytes(entry.size)} → {format_bytes(entry.compressed_size)} · saved {format_ratio(entry.size, entry.compressed_size)}</dd>
     <dt class="text-foreground/65">Method</dt>

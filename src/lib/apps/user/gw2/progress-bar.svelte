@@ -5,7 +5,7 @@
 </script>
 
 <div
-  class="h-1.5 overflow-hidden rounded-full bg-foreground/10"
+  class="h-1.5 overflow-hidden rounded-full bg-field shadow-track"
   role="progressbar"
   aria-label={label}
   aria-valuenow={Math.round(value * 100)}

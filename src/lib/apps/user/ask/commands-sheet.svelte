@@ -44,7 +44,7 @@
 </script>
 
 <div class="flex min-h-0 flex-col">
-  <div class="flex flex-col gap-1.5 border-b border-foreground/8 px-4 pt-1 pb-3">
+  <div class="flex flex-col gap-1.5 border-b border-hairline px-4 pt-1 pb-3">
     <h2 class="text-sm font-semibold">What Ask can read</h2>
     <p class="text-ui text-foreground/75">
       Switch on what Ask may look up to answer you. It only reads; it never changes anything. Each one takes a little of the
@@ -52,7 +52,7 @@
     </p>
     {#if rules}
       <div class="mt-1 flex flex-col gap-1">
-        <div class="h-1.5 overflow-hidden rounded-full bg-foreground/10" role="meter" aria-label="Memory used by picking" aria-valuenow={share} aria-valuemin={0} aria-valuemax={100}>
+        <div class="h-1.5 overflow-hidden rounded-full bg-field shadow-track" role="meter" aria-label="Memory used by picking" aria-valuenow={share} aria-valuemin={0} aria-valuemax={100}>
           <div class={["h-full rounded-full transition-[width]", share > 50 ? "bg-warning" : "bg-primary"]} style:width="{share}%"></div>
         </div>
         <p class="text-2xs text-foreground/65">

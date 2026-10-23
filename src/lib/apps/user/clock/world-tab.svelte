@@ -66,7 +66,7 @@
 
 {#if adding}
   <div class="flex h-full flex-col">
-    <div class="flex items-center gap-2 border-b border-foreground/8 p-2">
+    <div class="flex items-center gap-2 border-b border-hairline p-2">
       <Input
         bind:element={search_input}
         bind:value={query}
@@ -131,7 +131,7 @@
         <ul class="grid gap-1" aria-label="Cities">
           {#each rows as row (row.place.entry)}
             {@const day = is_daytime(row.wall.hour)}
-            <li class="group flex min-h-14 items-center gap-3 rounded-lg bg-background-light px-3 py-2 ring-1 ring-foreground/8">
+            <li class="group flex min-h-14 items-center gap-3 rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
               <span class="grid size-8 shrink-0 place-items-center rounded-md bg-foreground/6 text-foreground/65" title={day ? "Daytime" : "Night"}>
                 {#if day}<SunIcon weight="duotone" class="size-4.5" />{:else}<MoonIcon weight="duotone" class="size-4.5" />{/if}
               </span>

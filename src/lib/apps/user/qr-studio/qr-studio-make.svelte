@@ -245,7 +245,7 @@
       {/if}
     </div>
 
-    <aside class="flex flex-col gap-5 border-t border-foreground/8 bg-background-light p-3 @2xl:order-1 @2xl:min-h-0 @2xl:overflow-auto @2xl:border-t-0 @2xl:border-r">
+    <aside class="flex flex-col gap-5 border-t border-hairline bg-background-light p-3 @2xl:order-1 @2xl:min-h-0 @2xl:overflow-auto @2xl:border-t-0 @2xl:border-r">
       <div class="flex flex-col gap-2.5">
         {@render heading("Content")}
         <QrStudioContent bind:content={content.value} />

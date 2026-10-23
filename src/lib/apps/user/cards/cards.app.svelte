@@ -549,7 +549,7 @@
       {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2 border-t border-foreground/8 bg-background-light p-3">
+    <div class="flex shrink-0 items-center gap-2 border-t border-hairline bg-background-light p-3">
       {#if cards.length > 0}
         <Input size="lg" inputmode="search" bind:value={query} placeholder="Search cards" aria-label="Search cards" class="flex-1" enterkeyhint="search">
           {#snippet leading()}<MagnifyingGlassIcon />{/snippet}

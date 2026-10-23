@@ -24,7 +24,7 @@
   }
 </script>
 
-<section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+<section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
   <header class="flex items-center gap-2">
     <FlagCheckeredIcon class="size-4 shrink-0 text-primary" weight="duotone" />
     <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">{title}</h2>

@@ -148,7 +148,7 @@
     {:else}
       <div class="grid h-full grid-cols-1 @3xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="min-h-0 overflow-auto px-2 pb-2">
-          <div class="sticky top-0 z-10 grid h-8 grid-cols-[2.25rem_minmax(0,1fr)_4.5rem] items-center border-b border-foreground/8 bg-background text-2xs font-medium tracking-wide text-foreground/65 uppercase @md:grid-cols-[2.25rem_minmax(0,1fr)_4.5rem_4.5rem_3.5rem]">
+          <div class="sticky top-0 z-10 grid h-8 grid-cols-[2.25rem_minmax(0,1fr)_4.5rem] items-center border-b border-hairline bg-background text-2xs font-medium tracking-wide text-foreground/65 uppercase @md:grid-cols-[2.25rem_minmax(0,1fr)_4.5rem_4.5rem_3.5rem]">
             <span></span>
             <span class="px-1">Name</span>
             <span class="text-right">Size</span>
@@ -202,7 +202,7 @@
         </div>
 
         {#if active?.entry}
-          <aside class="absolute inset-0 z-20 bg-background @3xl:static @3xl:z-auto @3xl:border-l @3xl:border-foreground/8 @3xl:bg-background-light">
+          <aside class="absolute inset-0 z-20 bg-background @3xl:static @3xl:z-auto @3xl:border-l @3xl:border-hairline @3xl:bg-background-light">
             <ArchivePreview
               blob={opened.blob}
               entry={active.entry}
@@ -211,7 +211,7 @@
             />
           </aside>
         {:else}
-          <aside class="hidden flex-col items-center justify-center gap-2 border-l border-foreground/8 bg-background-light p-6 text-center text-ui text-foreground/65 @3xl:flex">
+          <aside class="hidden flex-col items-center justify-center gap-2 border-l border-hairline bg-background-light p-6 text-center text-ui text-foreground/65 @3xl:flex">
             <FileIcon weight="duotone" class="size-6" />
             Select a file to preview it.
           </aside>
@@ -223,7 +223,7 @@
   <StatusBar>
     {#if job}
       <span class="flex items-center gap-2">
-        <span class="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-foreground/10">
+        <span class="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-field shadow-track">
           <span class="block h-full rounded-full bg-primary transition-[width] duration-200" style:width="{job.progress * 100}%"></span>
         </span>
         Extracting · {job.message ?? ""}

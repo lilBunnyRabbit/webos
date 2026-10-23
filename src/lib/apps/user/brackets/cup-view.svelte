@@ -41,10 +41,10 @@
       {title}
       <span class="text-2xs font-normal text-foreground/65">{subtitle}</span>
     </h2>
-    <div class="overflow-x-auto rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <div class="overflow-x-auto rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
       <table class="w-full text-ui tabular-nums">
         <thead>
-          <tr class="h-8 border-b border-foreground/8 {header}">
+          <tr class="h-8 border-b border-hairline {header}">
             <th class="w-10 pl-3 text-left font-medium">#</th>
             <th class="text-left font-medium">Player</th>
             {#each { length: view.format.races }, race (race)}
@@ -55,7 +55,7 @@
         </thead>
         <tbody>
           {#each rows as row (row.player)}
-            <tr class="h-8 border-b border-foreground/5 last:border-0">
+            <tr class="h-8 border-b border-hairline last:border-0">
               <td class="pl-3 font-mono text-2xs text-foreground/65">{row.rank}</td>
               <td class="max-w-0 truncate pr-2">{names.get(row.player)}</td>
               {#each row.races as points, race (race)}

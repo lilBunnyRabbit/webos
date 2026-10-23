@@ -542,7 +542,7 @@
 
   <div>
     {#if share_open && ready}
-      <div class="border-b border-foreground/8 bg-background-light px-3 py-3">
+      <div class="border-b border-hairline bg-background-light px-3 py-3">
         <div class="mx-auto max-w-3xl">
           {#if share_link}
             <LinkBox link={share_link} label="Form link: anyone who opens it can fill it in" />
@@ -558,7 +558,7 @@
     {#if view.value === View.BUILD}
       <div class="grid h-full min-h-0 grid-rows-2 @2xl:grid-cols-2 @2xl:grid-rows-1">
         <div class="flex min-h-0 min-w-0 flex-col">
-          <div class="flex items-center justify-end gap-1 border-b border-foreground/8 px-2 py-1">
+          <div class="flex items-center justify-end gap-1 border-b border-hairline px-2 py-1">
             <span class="mr-auto hidden truncate px-1 text-2xs text-foreground/65 @4xl:inline">
               <code class="font-mono">- [ ]</code> tick · <code class="font-mono">- [_]</code> short · <code class="font-mono">- [...]</code> long · <code class="font-mono">| note</code>
             </span>
@@ -567,7 +567,7 @@
           </div>
           <div class="min-h-0 flex-1" {@attach mount}></div>
         </div>
-        <div class="min-h-0 overflow-auto border-t border-foreground/8 bg-background-darker @2xl:border-t-0 @2xl:border-l">
+        <div class="min-h-0 overflow-auto border-t border-hairline bg-background-darker @2xl:border-t-0 @2xl:border-l">
           <FillView {form} shared={{ source, name: stem }} preview />
         </div>
       </div>

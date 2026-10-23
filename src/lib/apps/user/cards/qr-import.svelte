@@ -63,7 +63,7 @@
       {/if}
     </div>
   </div>
-  <div class="grid shrink-0 gap-2 border-t border-foreground/8 bg-background-light p-3 @md:grid-cols-2">
+  <div class="grid shrink-0 gap-2 border-t border-hairline bg-background-light p-3 @md:grid-cols-2">
     {#if camera.active}
       <Button size="lg" onclick={() => camera.stop()}><CameraSlashIcon weight="bold" />Stop camera</Button>
     {:else}

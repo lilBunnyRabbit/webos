@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Lexer, type Token, type Tokens } from "marked";
-  import { CopyButton } from "$lib/core/components/ui";
+  import { Checkbox, CopyButton } from "$lib/core/components/ui";
   import { safe_href } from "./ask";
 
   let { text }: { text: string } = $props();
@@ -38,7 +38,7 @@
       <svelte:element this={part.ordered ? "ol" : "ul"} start={part.ordered && part.start !== 1 ? part.start : undefined} class={["grid gap-1 pl-5 marker:text-foreground/55", part.ordered ? "list-decimal" : "list-disc"]}>
         {#each part.items as item, i (i)}
           <li class={["[&>p]:inline", item.task && "-ml-5 list-none"]}>
-            {#if item.task}<input type="checkbox" checked={item.checked} disabled class="mr-1.5 align-middle accent-primary" />{/if}
+            {#if item.task}<Checkbox checked={item.checked} disabled class="mr-1.5 align-middle" />{/if}
             {@render blocks(item.tokens.filter((token: Token) => token.type !== "checkbox"))}
           </li>
         {/each}
@@ -58,13 +58,13 @@
           </thead>
           <tbody>
             {#each part.rows as row, r (r)}
-              <tr>{#each row as cell, i (i)}<td class={["border-b border-foreground/8 px-2 py-1", align(cell.align)]}>{@render inline(cell.tokens)}</td>{/each}</tr>
+              <tr>{#each row as cell, i (i)}<td class={["border-b border-hairline px-2 py-1", align(cell.align)]}>{@render inline(cell.tokens)}</td>{/each}</tr>
             {/each}
           </tbody>
         </table>
       </div>
     {:else if part.type === "hr"}
-      <hr class="border-foreground/10" />
+      <hr class="border-hairline" />
     {:else if part.type === "text"}
       <p>{@render inline(part.tokens ?? [])}</p>
     {:else if part.type === "html"}

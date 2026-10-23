@@ -84,7 +84,7 @@
             aria-checked={unit === option}
             class={cn(
               "h-9 min-w-12 rounded-full px-3 font-mono text-sm ring-1 transition-colors ring-inset pointer-coarse:h-11",
-              unit === option ? "bg-primary text-background ring-primary" : "text-foreground ring-foreground/20 hover:bg-foreground/6"
+              unit === option ? "bg-primary text-background shadow-control ring-primary [--edge-lit:oklch(from_var(--primary)_calc(l+0.1)_c_h)]" : "bg-raised text-foreground shadow-control ring-hairline hover:bg-raised-hover"
             )}
             onclick={() => (unit = option)}
           >
@@ -94,7 +94,7 @@
       </div>
     </div>
   </div>
-  <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+  <div class="flex items-center justify-end gap-2 border-t border-hairline bg-background-light px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
     <Button variant="quiet" onclick={oncancel}>Cancel</Button>
     <Button type="submit" variant="primary" disabled={!can_save}>Save</Button>
   </div>

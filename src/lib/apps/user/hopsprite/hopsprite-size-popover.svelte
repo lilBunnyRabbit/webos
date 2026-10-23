@@ -93,7 +93,7 @@
                 role="radio"
                 aria-checked={anchor_x === x && anchor_y === y}
                 aria-label="Anchor {y === 0 ? 'top' : y === 1 ? 'bottom' : 'middle'} {x === 0 ? 'left' : x === 1 ? 'right' : 'centre'}"
-                class={["size-6 rounded-xs transition-colors", anchor_x === x && anchor_y === y ? "bg-primary" : "bg-foreground/10 hover:bg-foreground/20"]}
+                class={["size-6 rounded-xs transition-colors", anchor_x === x && anchor_y === y ? "bg-primary shadow-pressed" : "bg-raised shadow-control ring-1 ring-hairline hover:bg-raised-hover"]}
                 onclick={() => ((anchor_x = x), (anchor_y = y))}
               ></button>
             {/each}

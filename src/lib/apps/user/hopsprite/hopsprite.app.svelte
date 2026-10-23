@@ -450,7 +450,7 @@
     </Button>
   </Toolbar>
 
-  <div class="area-tools border-r border-foreground/8 bg-background-light p-1">
+  <div class="area-tools border-r border-hairline bg-background-light p-1">
     <HopspriteToolbox bind:tool={prefs.tool.value} />
   </div>
 
@@ -512,7 +512,7 @@
       </span>
     </div>
     <HopspriteSwatches {editor} class="min-h-12 shrink overflow-y-auto p-0.5" />
-    <HopspriteLayers {editor} class="side-wide min-h-28 flex-1 border-t border-foreground/8 pt-2" />
+    <HopspriteLayers {editor} class="side-wide min-h-28 flex-1 border-t border-hairline pt-2" />
   </aside>
 
   <div class="area-strip-handle">
@@ -533,7 +533,7 @@
     <HopspriteStrip {editor} {playing} mode={prefs.play_mode} {range} onion={prefs.onion} ontoggleplay={toggle_play} />
   </div>
 
-  <div class="area-dock items-center gap-2 border-t border-foreground/8 bg-background-light px-2 py-1.5">
+  <div class="area-dock items-center gap-2 border-t border-hairline bg-background-light px-2 py-1.5">
     <HopspriteWells {editor} size="sm" popover="color-{popover}" anchor="--dock-wells-{popover}" onopen={() => (palette_in_popover = true)} />
     <Separator vertical />
     <div class="min-w-0 flex-1"><HopspriteToolbox bind:tool={prefs.tool.value} /></div>
