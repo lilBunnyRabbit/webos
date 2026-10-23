@@ -134,7 +134,7 @@
   <section class="flex flex-col gap-2">
     {@render heading("Social card", `${PackFile.CARD} · ${CARD_WIDTH} × ${CARD_HEIGHT}`)}
     {#if card}
-      <canvas {@attach paint(card)} class="block h-auto w-full max-w-3xl rounded-lg ring-1 ring-foreground/10" style:aspect-ratio="{CARD_WIDTH} / {CARD_HEIGHT}"></canvas>
+      <canvas {@attach paint(card)} class="block h-auto w-full max-w-3xl rounded-lg ring-1 ring-hairline" style:aspect-ratio="{CARD_WIDTH} / {CARD_HEIGHT}"></canvas>
     {:else}
       <div class="max-w-3xl rounded-lg bg-foreground/6" style:aspect-ratio="{CARD_WIDTH} / {CARD_HEIGHT}"></div>
     {/if}

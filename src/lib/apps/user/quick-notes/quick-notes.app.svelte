@@ -275,7 +275,7 @@
   <div class="min-h-0">
     {#if tab.value === Tab.TODO}
       <div class="flex h-full flex-col">
-        <form class="flex items-center gap-2 border-b border-foreground/8 p-2" onsubmit={add}>
+        <form class="flex items-center gap-2 border-b border-hairline p-2" onsubmit={add}>
           <Input bind:value={capture_text} size="sm" class="min-w-0 flex-1" placeholder="Add a todo, #tags inline" aria-label="Add a todo" />
           <Button variant="secondary" size="sm" type="submit" disabled={!capture_text.trim()}><Plus weight="bold" />Add</Button>
         </form>
@@ -299,8 +299,8 @@
       </div>
     {:else}
       <div class="grid h-full @2xl:grid-cols-[18rem_1fr]">
-        <aside class={cn("flex min-h-0 flex-col border-foreground/8 @2xl:border-r", selected && "hidden @2xl:flex")}>
-          <div class="flex items-center gap-2 border-b border-foreground/8 p-2">
+        <aside class={cn("flex min-h-0 flex-col border-hairline @2xl:border-r", selected && "hidden @2xl:flex")}>
+          <div class="flex items-center gap-2 border-b border-hairline p-2">
             <Input bind:value={query} size="sm" class="min-w-0 flex-1" placeholder="Filter, or #tag" aria-label="Filter notes" />
             {#if tab.value === Tab.NOTES}
               <Select size="sm" bind:value={filter_status.value} aria-label="Status" class="w-auto" options={status_options.filter((option) => option.value !== NoteStatus.RAW)} />
@@ -344,7 +344,7 @@
         <section class={cn("min-h-0 flex-col", selected ? "flex" : "hidden @2xl:flex")}>
           {#if selected}
             {@const note = selected}
-            <header class="flex flex-wrap items-center gap-2 border-b border-foreground/8 px-2 py-1.5">
+            <header class="flex flex-wrap items-center gap-2 border-b border-hairline px-2 py-1.5">
               <IconButton label="Back" size="sm" class="@2xl:hidden" onclick={() => (selected_id.value = null)}><ArrowLeft /></IconButton>
               <Segmented bind:value={() => note.status, (status) => set_status(note, status)} options={status_options} label="Status" size="sm" />
               <span class="flex-1"></span>
@@ -371,7 +371,7 @@
               class="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3 ring-0 focus-visible:ring-0"
             />
             {#if links.length > 0 || backlinks.length > 0}
-              <div class="grid gap-1 border-t border-foreground/8 px-3 py-2 text-ui">
+              <div class="grid gap-1 border-t border-hairline px-3 py-2 text-ui">
                 {#if links.length > 0}
                   <div class="flex flex-wrap items-center gap-1.5">
                     <span class="w-20 shrink-0 text-2xs tracking-wide text-foreground/55 uppercase">Links to</span>
@@ -397,7 +397,7 @@
                 {/if}
               </div>
             {/if}
-            <div class="flex flex-wrap items-center gap-2 border-t border-foreground/8 px-3 py-1.5 font-mono text-2xs text-foreground/55">
+            <div class="flex flex-wrap items-center gap-2 border-t border-hairline px-3 py-1.5 font-mono text-2xs text-foreground/55">
               {#if note.created}<span>{format_datetime(new Date(note.created))}</span>{/if}
               {#if note.from}
                 <Button variant="quiet" size="sm" class="h-5 px-1 font-mono text-2xs" onclick={() => open_source(note.from)}>from {note.from}</Button>

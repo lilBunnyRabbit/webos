@@ -33,7 +33,7 @@
       icon={UsbIcon}
       title="WebHID isn't available here"
       description="Chrome and Edge on a computer have it. Phones, Safari and Firefox don't, so devices can't be connected here. The descriptor parser below works anywhere."
-      class="h-auto rounded-xl bg-background-light p-6 ring-1 ring-foreground/8"
+      class="h-auto rounded-xl bg-background-light p-6 shadow-card ring-1 ring-hairline"
     />
   {:else}
     <Section

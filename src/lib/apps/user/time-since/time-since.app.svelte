@@ -166,7 +166,7 @@
 
   <div class="flex min-h-0 flex-col">
   {#if file.error}
-    <div class="flex items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-2 text-ui">
+    <div class="flex items-center gap-2 border-b border-hairline bg-warning/10 px-3 py-2 text-ui">
       <Warning weight="fill" class="size-4 shrink-0 text-warning" />
       <span class="min-w-0 flex-1">Your counters file couldn't be read. The next change replaces it.</span>
     </div>
@@ -181,12 +181,12 @@
       </EmptyState>
     {:else}
       <div class="grid h-full @2xl:grid-cols-[20rem_1fr]">
-        <aside class={cn("min-h-0 overflow-auto border-foreground/8 @2xl:border-r", selected && "hidden @2xl:block")}>
+        <aside class={cn("min-h-0 overflow-auto border-hairline @2xl:border-r", selected && "hidden @2xl:block")}>
           <ul class="grid gap-2 p-3">
             {#each counters as counter (counter.id)}
               <li
                 class={cn(
-                  "flex items-center gap-1 rounded-xl bg-background-light pr-2 ring-1 ring-foreground/8 transition-colors hover:ring-foreground/20",
+                  "flex items-center gap-1 rounded-xl bg-background-light pr-2 shadow-card ring-1 ring-hairline transition-colors hover:ring-hairline-strong",
                   counter.id === selected_id.value && "bg-primary/10 ring-primary/40 hover:ring-primary/50"
                 )}
                 {@attach long_press({ on_menu: (point) => counter_menu(counter, point) })}
@@ -216,7 +216,7 @@
           {#if selected}
             {@const counter = selected}
             {@const sticky = can_pin ? widget_for(counter.id) : undefined}
-            <header class="flex items-center gap-1 border-b border-foreground/8 px-2 py-1.5">
+            <header class="flex items-center gap-1 border-b border-hairline px-2 py-1.5">
               <IconButton label="Back" size="sm" class="@2xl:hidden" onclick={() => (selected_id.value = null)}><ArrowLeft /></IconButton>
               <h2 class="min-w-0 flex-1 truncate px-1 text-sm font-semibold">{counter.name}</h2>
               {#if can_pin}

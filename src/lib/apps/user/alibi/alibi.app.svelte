@@ -282,9 +282,9 @@
                     aria-pressed={chosen_card === card.id}
                     disabled={over}
                     class={cn(
-                      "flex h-full min-h-11 w-full flex-col gap-0.5 rounded-lg bg-background-light px-3 py-2 text-left ring-1 ring-foreground/8 ring-inset transition-colors",
-                      "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none disabled:hover:bg-background-light",
-                      chosen_card === card.id && "bg-primary/12 ring-primary/40 hover:bg-primary/12",
+                      "flex h-full min-h-11 w-full flex-col gap-0.5 rounded-lg bg-background-light px-3 py-2 text-left shadow-control ring-1 ring-hairline ring-inset transition-[background-color,box-shadow,translate] duration-150 active:translate-y-px active:shadow-pressed disabled:shadow-none",
+                      "hover:bg-background-lighter focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none disabled:hover:bg-background-light",
+                      chosen_card === card.id && "bg-primary/12 shadow-pressed ring-primary/40 hover:bg-primary/12",
                       breaks && "ring-error/40"
                     )}
                     onclick={() => (chosen_card = chosen_card === card.id ? null : card.id)}
@@ -319,7 +319,7 @@
         </section>
 
         <section
-          class="relative flex min-h-80 flex-col border-t border-foreground/8 @2xl:min-h-0 @2xl:border-t-0 @2xl:border-l"
+          class="relative flex min-h-80 flex-col border-t border-hairline @2xl:min-h-0 @2xl:border-t-0 @2xl:border-l"
           aria-label="Interrogation"
         >
           <!-- column-reverse keeps the view pinned to the newest answer while it streams; mb-auto keeps a short transcript at the top. -->
@@ -369,7 +369,7 @@
         </section>
       </div>
 
-      <div class="flex items-end gap-2 border-t border-foreground/8 bg-background-light p-2">
+      <div class="flex items-end gap-2 border-t border-hairline bg-background-light p-2">
         <Textarea
           bind:value={draft}
           bind:element={composer}

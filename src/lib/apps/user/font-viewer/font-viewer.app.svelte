@@ -263,7 +263,7 @@
           {/if}
 
           <Section title="Waterfall">
-            <div class="flex flex-col divide-y divide-foreground/8">
+            <div class="flex flex-col divide-y divide-hairline">
               {#each WATERFALL_SIZES as step (step)}
                 <div class="flex items-baseline gap-3 px-3 py-1.5">
                   <span class="w-10 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{step}</span>

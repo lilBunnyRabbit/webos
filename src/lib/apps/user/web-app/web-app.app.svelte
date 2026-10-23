@@ -133,7 +133,7 @@
         </div>
 
         {#if frame === "loaded" && !hint_closed.value}
-          <div class="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 border-t border-foreground/8 bg-background-light py-1 pr-1 pl-3 text-ui text-foreground/80">
+          <div class="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 border-t border-hairline bg-background-light py-1 pr-1 pl-3 text-ui text-foreground/80">
             <span class="min-w-0 flex-1">Blank page? Some sites refuse to be shown inside other pages.</span>
             <a href={app.url} target="_blank" rel="noopener noreferrer" class={button({ variant: "quiet", size: "sm" })}>Open in a tab</a>
             <IconButton label="Hide this hint" size="sm" onclick={() => (hint_closed.value = true)}><XIcon weight="bold" /></IconButton>

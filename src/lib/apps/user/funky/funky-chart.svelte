@@ -68,7 +68,7 @@
   <svg
     viewBox="0 0 {WIDTH} {HEIGHT}"
     preserveAspectRatio="none"
-    class="block h-40 w-full touch-pan-y rounded-md bg-[light-dark(var(--background-lightest),var(--background-darker))] outline-none focus-visible:ring-2 focus-visible:ring-cottontail @lg:h-48"
+    class="block h-40 w-full touch-pan-y rounded-md bg-field ring-1 ring-hairline ring-inset outline-none focus-visible:ring-2 focus-visible:ring-cottontail @lg:h-48"
     role="slider"
     tabindex="0"
     aria-label="Graph of {series.map((entry) => entry.name).join(', ') || 'nothing yet'} over time. Left and right arrows move the cursor, Escape clears it."

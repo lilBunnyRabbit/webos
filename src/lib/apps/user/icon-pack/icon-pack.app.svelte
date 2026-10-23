@@ -166,7 +166,7 @@
 {/snippet}
 
 {#snippet swatch(label: string, value: string, set: (value: string) => void)}
-  <label class="relative size-8 shrink-0 cursor-pointer pointer-coarse:size-10 overflow-hidden rounded-md ring-1 ring-foreground/15 ring-inset" style:background={value} title={label}>
+  <label class="relative size-8 shrink-0 cursor-pointer pointer-coarse:size-10 overflow-hidden rounded-md ring-1 ring-hairline-strong ring-inset" style:background={value} title={label}>
     <input type="color" class="absolute inset-0 cursor-pointer opacity-0" aria-label={label} {value} oninput={(event) => set(event.currentTarget.value)} />
   </label>
 {/snippet}
@@ -206,7 +206,7 @@
   {:else}
     <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
       <aside
-        class="order-2 flex max-h-64 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
+        class="order-2 flex max-h-64 flex-col gap-4 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
       >
         <Segmented label="Settings" options={PANELS} bind:value={panel} class="sticky top-0 z-10 w-full shrink-0 *:flex-1 @2xl:hidden" />
 

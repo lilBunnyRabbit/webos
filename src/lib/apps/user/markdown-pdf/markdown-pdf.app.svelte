@@ -396,7 +396,7 @@
         class={cn(
           "block size-full min-h-0 border-0 bg-background-darker",
           view.value === View.EDIT && "hidden",
-          view.value === View.SPLIT && "border-t border-foreground/8 @2xl:border-t-0 @2xl:border-l"
+          view.value === View.SPLIT && "border-t border-hairline @2xl:border-t-0 @2xl:border-l"
         )}
       ></iframe>
     </div>

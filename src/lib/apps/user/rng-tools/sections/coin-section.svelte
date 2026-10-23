@@ -42,8 +42,8 @@
     <output aria-live="polite" class="flex flex-col items-center gap-2">
       <span
         class={cn(
-          "grid size-24 place-items-center rounded-full ring-2",
-          latest === undefined ? "text-foreground/35 ring-foreground/15" : "text-primary ring-primary/60"
+          "grid size-24 place-items-center rounded-full bg-raised shadow-raised ring-2",
+          latest === undefined ? "text-foreground/35 ring-hairline-strong" : "text-primary ring-primary/60"
         )}
       >
         <CoinIcon class="size-12" weight={latest === undefined ? "regular" : "duotone"} />
@@ -66,7 +66,7 @@
   {#snippet actions()}
     <Button size="sm" variant="quiet" disabled={total === 0} onclick={() => (tally.value = { heads: 0, tails: 0 })}><ResetIcon weight="bold" />Reset</Button>
   {/snippet}
-  <dl class="grid grid-cols-3 divide-x divide-foreground/8 text-center">
+  <dl class="grid grid-cols-3 divide-x divide-hairline text-center">
     {#each counts as { label, count, share } (label)}
       <div class="flex flex-col gap-0.5 p-4">
         <dt class="text-2xs uppercase tracking-wide text-foreground/65">{label}</dt>

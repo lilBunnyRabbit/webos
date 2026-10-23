@@ -93,7 +93,7 @@
         {#if loaded}<li class="px-1.5 py-1 text-ui text-foreground/55">Nothing to do.</li>{/if}
       {/each}
     </ul>
-    <form class="border-t border-foreground/8 p-1.5" onsubmit={add}>
+    <form class="border-t border-hairline p-1.5" onsubmit={add}>
       <Input bind:value={adding} size="sm" class="w-full" placeholder="Add a todo" aria-label="Add a todo" />
     </form>
   </div>

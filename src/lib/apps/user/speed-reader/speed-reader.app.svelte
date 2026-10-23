@@ -329,7 +329,7 @@
       </Toolbar>
 
       {#if show_settings}
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-foreground/8 bg-background-light px-3 py-2 text-ui text-foreground/80">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-hairline bg-background-light px-3 py-2 text-ui text-foreground/80">
           <label class="flex items-center gap-2" title="Words shown faded on each side of the current one">
             Ghost words
             <Input
@@ -392,7 +392,7 @@
         </div>
       </button>
 
-      <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 pt-2 pb-2.5">
+      <div class="flex flex-col gap-2 border-t border-hairline bg-background-light px-3 pt-2 pb-2.5">
         <div class="flex items-center justify-center gap-2">
           <IconButton label="Jump to start (Home)" onclick={() => step_to(0)}><SkipBackIcon weight="bold" /></IconButton>
           <IconButton label="Previous word (←)" onclick={() => step_to(index - 1)}><CaretLeftIcon weight="bold" /></IconButton>

@@ -205,7 +205,7 @@
       <div class="mx-auto flex max-w-2xl flex-col gap-6 p-4 @md:p-6">
         <div class="grid grid-cols-2 gap-2 @lg:grid-cols-4">
           {#each [{ label: "Today", value: String(today_stats.sessions), detail: today_stats.sessions === 1 ? "session" : "sessions" }, { label: "Focused today", value: format_minutes(today_stats.ms), detail: "" }, { label: "Streak", value: String(day_streak), detail: day_streak === 1 ? "day" : "days" }, { label: "All time", value: String(all_time.sessions), detail: format_minutes(all_time.ms) }] as tile (tile.label)}
-            <div class="flex flex-col gap-1 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+            <div class="flex flex-col gap-1 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
               <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">{tile.label}</span>
               <span class="truncate font-mono text-lg font-medium tabular-nums">{tile.value} <span class="text-2xs font-normal text-foreground/65">{tile.detail}</span></span>
             </div>

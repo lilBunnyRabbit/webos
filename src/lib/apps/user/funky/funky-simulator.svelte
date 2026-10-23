@@ -348,7 +348,7 @@
     {/each}
   </section>
 
-  <details class="group rounded-lg bg-background-light p-3">
+  <details class="group rounded-lg bg-background-light p-3 shadow-card ring-1 ring-hairline">
     <summary class="cursor-pointer text-ui font-medium">How the simulator models Funky Trees</summary>
     <p class="mt-2 text-2xs text-foreground/65">
       There is no flight model: the world only changes when you or the script change it. "Documented" comes from the game's notes or the funkyguide; "assumed" hasn't been checked in the game.

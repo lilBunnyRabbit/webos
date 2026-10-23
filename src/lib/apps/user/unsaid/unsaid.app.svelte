@@ -199,7 +199,7 @@
             <div class="grid min-h-48 place-items-center"><Spinner label="Shuffling cards" /></div>
           {:else}
             {@const shown = play ?? round.cards.at(-1)!}
-            <section class="relative min-h-48 rounded-lg bg-background-light p-4 ring-1 ring-foreground/8" aria-label="Card">
+            <section class="relative min-h-48 rounded-lg bg-background-light p-4 shadow-card ring-1 ring-hairline" aria-label="Card">
               <div class={cn(!started && "invisible")}>
               <div class="flex items-start justify-between gap-2">
                 <Badge>{CATEGORY_LABELS[shown.card.category]}</Badge>
@@ -228,9 +228,9 @@
             </section>
 
             {#if started && over}
-              <ol class="flex flex-col rounded-lg bg-background-light ring-1 ring-foreground/8" aria-label="Round">
+              <ol class="flex flex-col rounded-lg bg-background-light shadow-card ring-1 ring-hairline" aria-label="Round">
                 {#each round.cards as each, index (index)}
-                  <li class="flex items-center gap-3 border-b border-foreground/8 px-3 py-2 last:border-b-0">
+                  <li class="flex items-center gap-3 border-b border-hairline px-3 py-2 last:border-b-0">
                     <span class="min-w-0 flex-1 truncate text-ui font-medium">{each.card.word}</span>
                     <span class="text-2xs text-foreground/65">
                       {#if each.status !== CardStatus.PASSED}{clues(each.clues.length)}{:else if each.clues.length}passed after {clues(each.clues.length)}{:else}passed{/if}
@@ -242,7 +242,7 @@
             {:else if started && play}
               <ol class="flex flex-col gap-2" aria-label="Clues">
                 {#each play.clues as clue, index (index)}
-                  <li class="rounded-lg bg-background-light px-3 py-2 ring-1 ring-foreground/8">
+                  <li class="rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
                     <p class="text-ui"><span class="mr-1.5 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>{clue.text}</p>
                     <ul class="mt-1.5 flex flex-wrap gap-1.5" aria-label="Guesses">
                       {#each clue.guesses as guess, rank (rank)}
@@ -253,7 +253,7 @@
                   </li>
                 {/each}
                 {#if pending}
-                  <li class="flex items-center gap-2 rounded-lg bg-background-light px-3 py-2 ring-1 ring-foreground/8">
+                  <li class="flex items-center gap-2 rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
                     <span class="min-w-0 flex-1 text-ui"><span class="mr-1.5 font-mono text-2xs text-foreground/65 tabular-nums">{play.clues.length + 1}</span>{pending}</span>
                     <Spinner label="Guessing" />
                   </li>

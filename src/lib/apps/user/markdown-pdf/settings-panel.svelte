@@ -33,9 +33,9 @@
 
 <aside
   aria-label="Page settings"
-  class="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 flex-col border-l border-foreground/8 bg-background-light shadow-popover @3xl:static @3xl:w-72 @3xl:shadow-none"
+  class="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 flex-col border-l border-hairline bg-background-light shadow-popover @3xl:static @3xl:w-72 @3xl:shadow-none"
 >
-  <header class="flex h-10 shrink-0 items-center justify-between border-b border-foreground/8 pr-1.5 pl-4">
+  <header class="flex h-10 shrink-0 items-center justify-between border-b border-hairline pr-1.5 pl-4">
     <h2 class="text-ui font-semibold">Page settings</h2>
     <IconButton label="Close page settings" size="sm" onclick={onclose}><XIcon weight="bold" /></IconButton>
   </header>

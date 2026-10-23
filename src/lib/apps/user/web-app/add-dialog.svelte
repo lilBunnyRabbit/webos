@@ -74,7 +74,7 @@
     <Input bind:value={() => name, (value) => (typed_name = value)} size="lg" maxlength={60} spellcheck="false" placeholder="Web app" />
   </label>
 
-  <div class="flex min-w-0 items-center gap-3 rounded-lg bg-foreground/4 p-3">
+  <div class="flex min-w-0 items-center gap-3 rounded-lg bg-background-lightest p-3 shadow-raised ring-1 ring-hairline">
     <Favicon src={url ? favicon_url({ url }) : null} class="size-8 rounded-md" />
     <div class="min-w-0 flex-1">
       <p class="truncate text-ui font-medium">{name || "Web app"}</p>

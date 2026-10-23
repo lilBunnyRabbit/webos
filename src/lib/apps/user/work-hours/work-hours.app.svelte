@@ -240,7 +240,7 @@
   </Toolbar>
 
   {#if running}
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-foreground/8 bg-primary/8 px-3 py-2">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-hairline bg-primary/8 px-3 py-2">
       <span class="flex items-center gap-2 text-ui">
         <span class="size-2 animate-pulse rounded-full bg-primary"></span>
         Clocked in at <span class="font-mono">{clock_time(new Date(running.start))}</span>
@@ -266,13 +266,13 @@
       <div class="mx-auto grid max-w-6xl gap-4 p-3 @3xl:grid-cols-[minmax(0,1fr)_20rem] @3xl:p-4">
         <section class="grid min-w-0 content-start gap-3">
           <div class="grid grid-cols-3 gap-2">
-            <div class="rounded-lg bg-background-light px-3 py-2">
+            <div class="rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
               <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Month</p>
               <p class="font-mono text-lg font-medium tabular-nums">{format_hours(live_total)}</p>
             </div>
             <button
               type="button"
-              class="rounded-lg bg-background-light px-3 py-2 text-left transition-colors hover:bg-foreground/8"
+              class="rounded-lg bg-background-light px-3 py-2 text-left shadow-control ring-1 ring-hairline transition-[background-color,box-shadow,translate] duration-150 hover:bg-background-lighter active:translate-y-px active:shadow-pressed"
               onclick={edit_target}
               title="Set the monthly target"
             >
@@ -281,14 +281,14 @@
                 <p class="font-mono text-lg font-medium tabular-nums">
                   {format_hours(target_minutes)}<span class="ml-1.5 text-2xs text-foreground/65">{Math.round(progress * 100)}%</span>
                 </p>
-                <div class="mt-1 h-1 overflow-hidden rounded-full bg-foreground/10">
+                <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-field shadow-track">
                   <div class={cn("h-full rounded-full", progress >= 1 ? "bg-success" : "bg-primary")} style:width="{progress * 100}%"></div>
                 </div>
               {:else}
                 <p class="text-ui text-foreground/65 @md:py-1">Set one</p>
               {/if}
             </button>
-            <div class="rounded-lg bg-background-light px-3 py-2">
+            <div class="rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
               <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Today</p>
               <p class="font-mono text-lg font-medium tabular-nums">
                 {format_hours(day_minutes(month_of(today) === month.value ? file.days[today] : undefined) + running_today)}
@@ -350,7 +350,7 @@
           </div>
         </section>
 
-        <aside class="grid min-w-0 content-start gap-3 rounded-lg bg-background-light p-3">
+        <aside class="grid min-w-0 content-start gap-3 rounded-lg bg-background-light p-3 shadow-card ring-1 ring-hairline">
           <header class="flex items-baseline justify-between gap-2">
             <h3 class="truncate text-sm font-medium">{long_date(selected.value)}</h3>
             <span class="font-mono text-ui tabular-nums text-foreground/80">{format_hours(day_minutes(day) + (selected.value === today ? running_today : 0))}</span>
@@ -389,14 +389,14 @@
             </p>
           {/if}
 
-          <div class="grid gap-2 border-t border-foreground/8 pt-3">
+          <div class="grid gap-2 border-t border-hairline pt-3">
             <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Add an entry</p>
             {#key `${selected.value}:${add_key}:${entries.length}`}
               <EntryForm initial={untrack(() => add_initial)} submit_label="Add" onsubmit={add} />
             {/key}
           </div>
 
-          <label class="grid gap-1.5 border-t border-foreground/8 pt-3">
+          <label class="grid gap-1.5 border-t border-hairline pt-3">
             <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Note</span>
             <Textarea
               size="sm"

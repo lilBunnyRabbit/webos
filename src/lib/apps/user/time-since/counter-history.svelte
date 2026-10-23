@@ -42,7 +42,7 @@
 {#if stats}
   <div class="grid grid-cols-2 gap-2 @lg:grid-cols-4">
     {#each tiles as tile (tile.label)}
-      <div class="rounded-lg bg-background-light px-3 py-2 ring-1 ring-foreground/8">
+      <div class="rounded-lg bg-background-light px-3 py-2 shadow-card ring-1 ring-hairline">
         <div class="text-2xs tracking-wide text-foreground/65 uppercase">{tile.label}</div>
         <div class="truncate font-mono text-sm tabular-nums">{tile.value}</div>
       </div>

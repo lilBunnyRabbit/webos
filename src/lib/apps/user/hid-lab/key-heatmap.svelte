@@ -13,7 +13,7 @@
   const { shape, presses, held, layout, mac }: Props = $props();
 
   const FILL = [
-    "bg-foreground/6 text-foreground/65",
+    "bg-raised text-foreground/65",
     "bg-primary/20 text-foreground",
     "bg-primary/40 text-foreground",
     "bg-primary/65 text-foreground",
@@ -36,9 +36,9 @@
             {@const count = presses.get(cap.code) ?? 0}
             <div
               class={cn(
-                "grid h-7 min-w-0 place-items-center overflow-hidden rounded-sm px-0.5 text-2xs font-medium transition-colors duration-150 @md:h-8",
+                "grid h-7 min-w-0 place-items-center overflow-hidden rounded-sm px-0.5 text-2xs font-medium transition-[background-color,box-shadow] duration-150 @md:h-8",
                 FILL[heat(count)],
-                held.has(cap.code) && "outline-2 outline-offset-1 outline-cottontail"
+                held.has(cap.code) ? "shadow-pressed outline-2 outline-offset-1 outline-cottontail" : "shadow-control"
               )}
               style:grid-column="span {cap.width * 4}"
               title="{cap.code}: {count === 0 ? 'not tested' : `${count}×`}"

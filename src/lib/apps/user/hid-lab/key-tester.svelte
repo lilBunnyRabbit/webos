@@ -80,9 +80,9 @@
 <div class="flex flex-col gap-6">
   <div
     class={cn(
-      "relative flex min-h-44 flex-col items-center justify-center gap-2 rounded-xl p-4 text-center ring-1 transition-colors duration-150",
-      "bg-[light-dark(var(--background-lightest),var(--background-darker))]",
-      focused ? "ring-2 ring-cottontail" : "ring-foreground/12"
+      "relative flex min-h-44 flex-col items-center justify-center gap-2 rounded-xl p-4 text-center ring-inset transition-[box-shadow] duration-150",
+      "bg-field shadow-recessed",
+      focused ? "ring-2 ring-cottontail" : "ring-1 ring-hairline-strong hover:ring-edge"
     )}
   >
     <textarea
@@ -179,7 +179,7 @@
         </thead>
         <tbody class="font-mono">
           {#each tester.log as entry (entry.id)}
-            <tr class={cn("border-t border-foreground/8", entry.repeat && "text-foreground/65")}>
+            <tr class={cn("border-t border-hairline", entry.repeat && "text-foreground/65")}>
               <td class="px-3 py-1">
                 {#if entry.type === EntryType.DOWN}
                   <ArrowDownIcon class="size-3.5" aria-label="down" />

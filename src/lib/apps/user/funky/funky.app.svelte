@@ -311,7 +311,7 @@
   </Toolbar>
 
   {#if example}
-    <div class="flex items-start gap-2 border-b border-foreground/8 bg-background-light px-3 py-1.5 text-ui">
+    <div class="flex items-start gap-2 border-b border-hairline bg-background-light px-3 py-1.5 text-ui">
       <span class="min-w-0 flex-1"><span class="font-medium">{example.name}.</span> <span class="text-foreground/80">{example.description}</span></span>
       <IconButton label="Hide the description" size="sm" onclick={() => (example = null)}><XIcon weight="bold" /></IconButton>
     </div>
@@ -333,14 +333,14 @@
       {/if}
     </div>
 
-    <div class={cn("flex min-h-0 min-w-0 flex-col @4xl:border-l @4xl:border-foreground/8", view.value === View.CODE && "hidden @4xl:flex")}>
-      <div class="hidden overflow-x-auto border-b border-foreground/8 p-2 @4xl:block">
+    <div class={cn("flex min-h-0 min-w-0 flex-col @4xl:border-l @4xl:border-hairline", view.value === View.CODE && "hidden @4xl:flex")}>
+      <div class="hidden overflow-x-auto border-b border-hairline p-2 @4xl:block">
         <Segmented size="sm" label="Panel" bind:value={() => panel, (next) => (view.value = next)} options={VIEW_OPTIONS} />
       </div>
       {#if !result.ok && panel !== View.PROBLEMS && panel !== View.IMPORT}
         <button
           type="button"
-          class="flex items-center gap-2 border-b border-foreground/8 bg-error/10 px-3 py-1.5 text-left text-ui hover:bg-error/15"
+          class="flex items-center gap-2 border-b border-hairline bg-error/10 px-3 py-1.5 text-left text-ui hover:bg-error/15"
           onclick={() => (view.value = View.PROBLEMS)}
         >
           <WarningCircleIcon class="size-4 shrink-0 text-error" weight="fill" />

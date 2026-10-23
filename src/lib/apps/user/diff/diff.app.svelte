@@ -322,7 +322,7 @@
 </script>
 
 {#snippet header(side: DiffSide, role: string, tone: "a" | "b")}
-  <div class={cn("flex min-h-9 min-w-0 items-center gap-1 py-0.5 pr-1 pl-3", tone === "b" && "border-t border-foreground/8 @lg:border-t-0 @lg:border-l")}>
+  <div class={cn("flex min-h-9 min-w-0 items-center gap-1 py-0.5 pr-1 pl-3", tone === "b" && "border-t border-hairline @lg:border-t-0 @lg:border-l")}>
     <span class={cn("size-2 shrink-0 rounded-full", tone === "a" ? "bg-error" : "bg-success")}></span>
     <span class="ml-1 shrink-0 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{role}</span>
     <span class="ml-1.5 min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={side.path ?? side.name ?? undefined}>
@@ -381,7 +381,7 @@
     </IconButton>
   </Toolbar>
 
-  <div class="grid shrink-0 border-b border-foreground/8 bg-background-light @lg:grid-cols-2">
+  <div class="grid shrink-0 border-b border-hairline bg-background-light @lg:grid-cols-2">
     {@render header(left, "Original", "a")}
     {@render header(right, "Changed", "b")}
   </div>

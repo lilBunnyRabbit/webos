@@ -225,7 +225,7 @@
           <output aria-live="polite" class="flex max-h-60 flex-wrap gap-1.5 overflow-y-auto">
             {#if values}
               {#each values as value (value)}
-                <span class="grid h-9 min-w-9 place-items-center rounded-lg bg-primary/12 px-2 font-mono text-sm font-semibold text-primary tabular-nums">{value}</span>
+                <span class="grid h-9 min-w-9 place-items-center rounded-lg bg-primary/12 px-2 shadow-control font-mono text-sm font-semibold text-primary tabular-nums">{value}</span>
               {/each}
             {:else}
               <span class="flex h-9 items-center text-ui text-foreground/65">Not drawn yet</span>

@@ -56,7 +56,7 @@
     </div>
     <ol class="flex flex-col gap-2">
       {#each entries as entry, index (entry.name)}
-        <li class="flex flex-col gap-1 rounded-lg bg-background-light p-2.5">
+        <li class="flex flex-col gap-1 rounded-lg bg-background-light p-2.5 shadow-card ring-1 ring-hairline">
           <div class="flex items-center gap-1">
             {#if kind === "setters"}<span class="w-5 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>{/if}
             <button

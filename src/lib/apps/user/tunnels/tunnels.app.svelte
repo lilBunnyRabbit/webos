@@ -438,7 +438,7 @@
     <div class="flex min-h-0 flex-col justify-start @3xl:justify-center">
       <div class="flex aspect-(--ratio) min-h-0 shrink overflow-hidden p-2 @md:p-4 [container-type:size] @3xl:aspect-auto @3xl:flex-1" style:--ratio="{cols} / {rows}">
         {#if game}
-          <div class="board relative m-auto rounded-xl bg-background-light p-[calc(var(--cell)*0.12)] ring-1 ring-foreground/8" style:--cols={cols} style:--rows={rows}>
+          <div class="board relative m-auto rounded-xl bg-field p-[calc(var(--cell)*0.12)] shadow-recessed ring-1 ring-hairline-strong ring-inset" style:--cols={cols} style:--rows={rows}>
             <!-- svelte-ignore a11y_interactive_supports_focus -->
             <div
               bind:this={cells_element}
@@ -529,8 +529,8 @@
 
     <aside
       class={cn(
-        "flex-col gap-6 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-foreground/8 @3xl:bg-transparent",
-        show_stats ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
+        "flex-col gap-6 overflow-auto p-4 @3xl:static @3xl:flex @3xl:max-h-none @3xl:border-t-0 @3xl:border-l @3xl:border-hairline @3xl:bg-transparent",
+        show_stats ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_stats = false) })}
     >

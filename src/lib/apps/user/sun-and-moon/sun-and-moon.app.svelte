@@ -270,7 +270,7 @@
 
 {#snippet sign(edge: Edge, state: SignState, row: number, col: number, axis: "across" | "down")}
   <span
-    class={cn("sign pointer-events-none absolute grid place-items-center rounded-full bg-background ring-1 ring-foreground/22 transition-colors", sign_class(state))}
+    class={cn("sign pointer-events-none absolute grid place-items-center rounded-full bg-background shadow-control ring-1 ring-hairline-strong transition-colors", sign_class(state))}
     data-axis={axis}
     style:--r={row}
     style:--c={col}
@@ -334,9 +334,9 @@
                   onclick={() => (given ? move(index) : tap(index))}
                   class={cn(
                     "cell relative grid place-items-center rounded-[12%] outline-none",
-                    "ring-1 ring-foreground/22 ring-inset transition-[background-color,box-shadow] duration-100",
+                    "ring-1 ring-inset transition-[background-color,box-shadow] duration-100",
                     "focus-visible:ring-2 focus-visible:ring-cottontail",
-                    given ? "bg-foreground/12" : "bg-[light-dark(var(--background-lightest),var(--background-darker))] pointer-fine:hover:bg-foreground/6",
+                    given ? "bg-raised shadow-control ring-hairline" : "bg-field shadow-recessed ring-hairline-strong pointer-fine:hover:ring-edge",
                     selected && "ring-2 ring-primary",
                     wrong && "bg-error/10 ring-2 ring-error",
                     flash?.index === index && (flash.fix ? "flash-fix" : "flash")
@@ -386,8 +386,8 @@
 
     <aside
       class={cn(
-        "flex-col gap-4 overflow-auto p-4 @5xl:static @5xl:flex @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-foreground/8 @5xl:bg-transparent",
-        show_panel ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-foreground/8 bg-background" : "hidden"
+        "flex-col gap-4 overflow-auto p-4 @5xl:static @5xl:flex @5xl:max-h-none @5xl:border-t-0 @5xl:border-l @5xl:border-hairline @5xl:bg-transparent",
+        show_panel ? "absolute inset-x-0 bottom-0 z-20 flex max-h-[70%] border-t border-hairline bg-background" : "hidden"
       )}
       {@attach swipe_dismiss({ on_dismiss: () => (show_panel = false) })}
     >
