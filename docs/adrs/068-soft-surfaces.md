@@ -1,6 +1,6 @@
 # ADR-068: Soft Surfaces
 **Date:** 2026-10-23
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The owner wanted the look pushed toward neumorphism. Depth today comes from the seven-shade surface ladder, hairline rings and four cast shadows in `background-darkest` (ADR-024, docs/design/foundations.md). A comparison page drew Flat (today), Soft and full neumorphism in Brand Dark and Brand Light ([brainstorm](../brainstorm/2026-10-23_soft-surfaces.md)). Full neumorphism goes muddy in Brand Dark, merges the ladder, loses 3:1 control edges and makes every card look pressable.

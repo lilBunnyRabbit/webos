@@ -11,7 +11,11 @@ export const CHANGELOG: Release[] = [
     changes: [
       {
         kind: IMPROVED,
-        text: "A softer look: buttons catch light on their top edge and sink in when you press them, and text fields, switches and sliders sit recessed.",
+        text: "A softer look across WebOS and every app: buttons, keys and tiles catch light and sink in when you press them, fields, switches and sliders sit recessed, and cards float.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Every theme keeps its shades in order, so menus and cards stand out properly in very light and very dark themes, and borders follow the theme's own colour.",
       },
     ],
   },

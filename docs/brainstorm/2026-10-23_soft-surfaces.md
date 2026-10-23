@@ -46,7 +46,7 @@ Owner: "not even all style guide foundations and all are in this style? like the
 - [x] Variations A and B built; owner: "i barely see the differences. which one do you think is better". Picked A: the only one with control edges at 3:1 against both the field and the card in 23 of 24 presets (B: 2.0–2.9 on dark cards), and edges in the surface's own hue fix the foreground-hue clash. Merged into `soft-surfaces`.
 - [x] Held app tile pressed every tile (`in-active:` matches any `:active` ancestor, and the grid itself is active); now `group-active/tile:` on each tile's own button.
 - [ ] Owner looks at phase 1 in the dev server.
-- [ ] Phase 2: user apps sweep in batches.
+- [x] Phase 2: app sweep in five parallel batches (system and kit, media and dev tools, productivity 1 and 2, games), merged into `soft-surfaces`; core dialogs and theme cards after. Media stages, cameras, QR and print previews kept as they were.
 
 ## Next session topics
 - Owner's verdict on phase 1; tuning `--edge-lit` and the recessed depth in Brand Light.

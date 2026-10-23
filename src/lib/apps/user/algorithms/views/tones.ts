@@ -31,7 +31,7 @@ export const TONE_TINT: Record<Tone, string> = {
   [Tone.MARK]: "bg-tertiary/15 ring-tertiary/70",
   [Tone.DONE]: "bg-success/15 ring-success/70",
   [Tone.BAD]: "bg-error/15 ring-error",
-  [Tone.MUTED]: "bg-transparent ring-foreground/10 text-foreground/45",
+  [Tone.MUTED]: "bg-transparent ring-hairline text-foreground/45",
   [Tone.WALL]: "bg-foreground/70 ring-foreground/70 text-background",
 };
 

@@ -101,7 +101,7 @@ What are the implications of this decision?
 | [065](./065-apps-on-demand.md) | Apps on Demand, Offline by Choice | 2026-10-22 | Implemented |
 | [066](./066-app-icons-as-files.md) | App Icons as Files | 2026-10-22 | Implemented |
 | [067](./067-browser-support-check.md) | Browser Support Check | 2026-10-23 | Implemented |
-| [068](./068-soft-surfaces.md) | Soft Surfaces | 2026-10-23 | Accepted |
+| [068](./068-soft-surfaces.md) | Soft Surfaces | 2026-10-23 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

@@ -117,7 +117,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Typography and spacing (docs/design/foundations.md)
 - [x] UI kit: buttons, inputs, select, switch, segmented, sections, toolbar, status bar (ADR-024)
 - [x] Surface ladder tokens per theme, elevation, motion (ADR-024)
-- [-] Soft surfaces (ADR-068, [brainstorm](brainstorm/2026-10-23_soft-surfaces.md)): lit edges, recessed fields, press-in. Tokens, kit, shell and Style Guide done; user apps sweep open
+- [x] Soft surfaces (ADR-068, [brainstorm](brainstorm/2026-10-23_soft-surfaces.md)): lit edges, recessed fields, press-in, surface-derived edges; tokens, kit, shell, Style Guide and every app
 - [x] AI mark on app icons (2026-10-21, [brainstorm](brainstorm/2026-10-21_ai-icon-mark.md)): `ai_icon` in the app kit (baked into the icon files since ADR-066) puts a `primary` sparkle in the top-right corner of Ask, Unsaid, Doodlehop and Alibi, the apps that need on-device AI to work
 
 ### Window Enhancements
