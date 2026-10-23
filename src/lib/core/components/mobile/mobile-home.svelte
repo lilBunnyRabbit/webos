@@ -315,7 +315,7 @@
                 onclick={(event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
                 tabindex={editing ? -1 : undefined}
                 class={cn(
-                  "relative flex size-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-2 active:bg-foreground/6",
+                  "group/tile relative flex size-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-2 active:bg-foreground/6",
                   drop_before === item.name && "before:absolute before:top-3 before:-left-px before:h-12 before:w-0.5 before:rounded-full before:bg-primary"
                 )}
               >
@@ -375,7 +375,7 @@
             {@attach editing ? undefined : item_menu(item, true)}
             onclick={(event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
             tabindex={editing ? -1 : undefined}
-            class="rounded-2xl"
+            class="group/tile rounded-2xl"
           >
             <HomeIcon {item} label={false} class="shadow-none" />
           </button>

@@ -37,7 +37,7 @@
   aria-pressed={selected}
   draggable="true"
   class={cn(
-    "group flex size-full flex-col items-center gap-1.5 rounded-xl px-1 pt-2 transition-[background-color,opacity] duration-150 select-none",
+    "group group/tile flex size-full flex-col items-center gap-1.5 rounded-xl px-1 pt-2 transition-[background-color,opacity] duration-150 select-none",
     "hover:bg-foreground/6 focus-visible:bg-foreground/8",
     selected && "bg-primary/14 ring-1 ring-primary/40 ring-inset hover:bg-primary/18",
     drop_target && "bg-primary/18 ring-2 ring-primary/70 ring-inset",

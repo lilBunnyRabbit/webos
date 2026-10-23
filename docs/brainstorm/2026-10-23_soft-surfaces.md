@@ -24,12 +24,24 @@ Owner: "soft might just work. i want to do the whole app change so i can see it.
 - Built tokens: `shadow-lit`, `shadow-control`, `shadow-pressed`, `shadow-recessed`, `shadow-track`, `--edge-lit`, `bg-field`. Light fields moved from raised paper to a recessed well, since the inner shadow now says "sunk in".
 - Owner: "dont push this. i first need to see it". Work stays on branch `soft-surfaces` until they've looked.
 
+### Judge pass across all 26 presets (decided fixes)
+Owner: "the border colors are not working that great with all themes. i really want polished ui for this. they should do visual passes with different themes and really polish it".
+Three judges (light, dark, extreme presets) measured every theme. Findings: the `foreground/30` field ring fails 3:1 in every preset; the lit edge is invisible in dark presets and drew a dark line on primary fills and on near-white derived presets; shadows in `background-darkest` vanish on dark palettes and glow on saturated ones (While True, Red & Black, Brand Light ochre); tiles in floating layers read sunk.
+Two root causes sat in theming, not Soft:
+- **Ladder (decided: monotonic).** `derive_surfaces()` reflected off black and white, so near-white presets got "lighter" shades darker than `background` and pure-black presets got seven blacks. Now steps shrink toward the end and the light side floors at L 0.12; saved themes with the old expressions re-derive on load. Rejected: tokens only (menus stay darker than windows in 6 light presets).
+- **Scheme (decided: by text polarity).** `color-scheme` came from background L > 0.6, so Red & Black (dark text on mid red) was "dark". Now light when foreground is darker than background. Rejected: keep the threshold.
+- Setting rows' curved divider ends fixed (rounded only while targeted).
+Token polish runs as two parallel variations for the owner to compare: **A** derives every edge and shadow from the surface in its own hue; **B** takes light from the foreground and shape from one crisp outline, with flat filled buttons.
+
 ## Key takeaways
 - Neumorphism's tactile part (lit edges, recessed fields, press-in) fits WebOS; its "one surface colour" part fights the ladder and the dark brand.
 
 ## Action items
 - [x] Owner reviews the comparison page; grill the open questions before any code.
 - [x] Phase 1: tokens, kit, window, taskbar, app tiles, Style Guide, design docs (branch `soft-surfaces`, not pushed).
+- [x] Judge pass, ladder and scheme fixes (cbbf9f7a).
+- [x] Variations A and B built; owner: "i barely see the differences. which one do you think is better". Picked A: the only one with control edges at 3:1 against both the field and the card in 23 of 24 presets (B: 2.0–2.9 on dark cards), and edges in the surface's own hue fix the foreground-hue clash. Merged into `soft-surfaces`.
+- [x] Held app tile pressed every tile (`in-active:` matches any `:active` ancestor, and the grid itself is active); now `group-active/tile:` on each tile's own button.
 - [ ] Owner looks at phase 1 in the dev server.
 - [ ] Phase 2: user apps sweep in batches.
 

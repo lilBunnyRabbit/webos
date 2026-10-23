@@ -16,7 +16,7 @@
 {#if item.kind === "shortcut" || item.kind === "widget"}
   <span
     class={cn(
-      "relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-hairline transition-shadow duration-150 in-active:shadow-pressed",
+      "relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light text-foreground shadow-raised ring-1 ring-hairline transition-shadow duration-150 group-active/tile:shadow-pressed",
       class_name
     )}
   >
