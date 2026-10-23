@@ -33,7 +33,7 @@
 </script>
 
 <div class="flex h-[min(30rem,calc(100cqh-2rem))] w-[min(46rem,calc(100cqw-2rem))] flex-col overflow-hidden rounded-2xl bg-background shadow-popover">
-  <div class="flex shrink-0 items-center gap-2 border-b border-foreground/8 bg-background-lighter px-4 py-2.5">
+  <div class="flex shrink-0 items-center gap-2 border-b border-hairline bg-background-lighter px-4 py-2.5">
     <h2 class="text-ui font-semibold">{title ?? (kind === "file" && multiple ? "Open files" : TITLES[kind])}</h2>
     {#if accept?.length}<span class="truncate font-mono text-2xs text-foreground/80">{accept.join(" ")}</span>{/if}
   </div>

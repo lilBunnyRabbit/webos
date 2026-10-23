@@ -62,7 +62,7 @@
 
 {#if picker.kind === "save"}
   <form
-    class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5"
+    class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline bg-background-light px-3 py-2.5"
     onsubmit={(event) => {
       event.preventDefault();
       if (save_path) picker.onchoose([save_path]);
@@ -81,7 +81,7 @@
     <Button type="submit" variant={existing && !system ? "danger" : "primary"} disabled={!save_path}>{existing && !system ? "Replace" : "Save"}</Button>
   </form>
 {:else}
-  <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5">
+  <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline bg-background-light px-3 py-2.5">
     {#if picker.kind === "file" || files.can_mount}<div class="flex w-full items-center gap-1">{@render sources()}</div>{/if}
     <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={choices.join("\n") || undefined}>
       {choices.length > 1 ? `${choices.length} files` : (choices[0] ?? empty_label)}

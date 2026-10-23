@@ -110,7 +110,7 @@
     {#each handler.drag_targets as target, idx (idx)}
       {#if target.x >= 0 && target.y >= 0 && target.x < desktop.container.grid.columns && target.y < desktop.container.grid.rows}
         <div
-          class="pointer-events-none size-full rounded-xl bg-foreground/6 ring-1 ring-foreground/20 ring-inset"
+          class="pointer-events-none size-full rounded-xl bg-foreground/6 ring-1 ring-hairline-strong ring-inset"
           style:grid-column="{target.x + 1} / span {target.w}"
           style:grid-row="{target.y + 1} / span {target.h}"
         ></div>

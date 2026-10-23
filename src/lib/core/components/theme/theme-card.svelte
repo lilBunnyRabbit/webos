@@ -15,12 +15,12 @@
   aria-pressed={active}
   class={cn(
     "group flex flex-col gap-2 rounded-xl p-1.5 text-left transition-colors duration-150",
-    active ? "bg-foreground/10" : "hover:bg-foreground/6"
+    active ? "bg-background-lighter shadow-control" : "hover:bg-foreground/6"
   )}
   onclick={onselect}
 >
   <span
-    class={cn("relative block aspect-[16/10] w-full overflow-hidden rounded-lg ring-1 transition-shadow", active ? "ring-2 ring-primary" : "ring-foreground/12")}
+    class={cn("relative block aspect-[16/10] w-full overflow-hidden rounded-lg ring-1 transition-shadow", active ? "ring-2 ring-primary" : "ring-hairline")}
     style:--background={theme.background}
     style:--foreground={theme.foreground}
     style:--primary={theme.primary}

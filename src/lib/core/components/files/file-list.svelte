@@ -307,7 +307,7 @@
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description={`Nothing here is called "${search}".`} />
   {:else}
     <div role="grid" aria-label="Folder contents" aria-multiselectable={picker ? picker.multiple : multi} class="grid grid-cols-[1.25rem_1fr_auto_auto] gap-x-3 px-2 pb-2">
-      <div role="row" class="sticky top-0 z-10 col-span-4 grid grid-cols-subgrid border-b border-foreground/8 bg-background px-2 pt-2 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
+      <div role="row" class="sticky top-0 z-10 col-span-4 grid grid-cols-subgrid border-b border-hairline bg-background px-2 pt-2 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
         <div role="columnheader" class="col-span-2">Name</div>
         <div role="columnheader" class="w-16 text-right">Size</div>
         <div role="columnheader" class="hidden w-24 @md:block">Modified</div>

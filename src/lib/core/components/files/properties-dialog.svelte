@@ -48,7 +48,7 @@
 
 <div class="grid w-[min(26rem,calc(100vw-2rem))] gap-4 rounded-2xl bg-background-lighter p-5 shadow-popover">
   <div class="flex items-center gap-3">
-    <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-background-light ring-1 ring-foreground/10">
+    <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-background-light ring-1 ring-hairline">
       {#await details}
         <FileIcon {name} {kind} weight="duotone" class="size-6" />
       {:then loaded}
@@ -66,7 +66,7 @@
   {#await details}
     <div class="grid h-28 place-items-center"><Spinner label="Reading properties" /></div>
   {:then loaded}
-    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
       {#each loaded.rows as [label, value] (label)}
         <dt class="text-ui text-foreground/80">{label}</dt>
         <dd class="min-w-0 truncate text-right font-mono text-2xs leading-5" title={value}>{value}</dd>

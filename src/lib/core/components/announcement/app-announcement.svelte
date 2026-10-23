@@ -106,7 +106,7 @@
     <img
       {src}
       alt="{manifest.name} in use"
-      class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-foreground/8"
+      class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-hairline"
     />
   {/if}
 {/snippet}
@@ -137,7 +137,7 @@
         <ul class="relative flex flex-col gap-1.5 px-4 pb-4">
           {#each apps as { manifest, version }, index (manifest.id)}
             {@const done = opened.includes(manifest.id)}
-            <li class="flex items-center gap-3 rounded-xl bg-background-light p-2.5 pr-3 ring-1 ring-foreground/8">
+            <li class="flex items-center gap-3 rounded-xl bg-background-light p-2.5 pr-3 shadow-card ring-1 ring-hairline">
               {@render app_tile(manifest, "sm")}
               <div class="min-w-0 flex-1">
                 <p class="flex items-baseline gap-2">
@@ -182,7 +182,7 @@
             {#if extra?.highlights.length}
               <ul class="grid gap-2 @md:grid-cols-2">
                 {#each extra.highlights as highlight (highlight.title)}
-                  <li class="flex gap-3 rounded-xl bg-background-light p-3.5 ring-1 ring-foreground/8">
+                  <li class="flex gap-3 rounded-xl bg-background-light p-3.5 shadow-card ring-1 ring-hairline">
                     <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary">
                       <highlight.icon class="size-4.5" weight="duotone" />
                     </span>
@@ -195,7 +195,7 @@
               </ul>
             {/if}
 
-            <div class="flex flex-col gap-1.5 rounded-xl bg-background-darker p-3 ring-1 ring-foreground/8 ring-inset @md:flex-row @md:items-center @md:justify-between">
+            <div class="flex flex-col gap-1.5 rounded-xl bg-background-darker p-3 ring-1 ring-hairline ring-inset @md:flex-row @md:items-center @md:justify-between">
               <p class="flex items-center gap-2 text-ui text-foreground/80">
                 <ListBulletsIcon class="size-4 shrink-0 text-foreground/65" weight="duotone" />
                 Start menu › {category(manifest)}
@@ -210,7 +210,7 @@
       {/if}
     </div>
 
-    <footer class="flex items-center gap-3 border-t border-foreground/8 bg-background-light px-4 py-3 @md:px-5">
+    <footer class="flex items-center gap-3 border-t border-hairline bg-background-light px-4 py-3 @md:px-5">
       {#if !listed && apps.length > 1}
         <div class="flex gap-1.5" role="img" aria-label="App {page + 1} of {apps.length}">
           {#each apps as { manifest }, index (manifest.id)}

@@ -56,13 +56,13 @@
       class="flex h-9 pointer-coarse:h-11 items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-foreground/8 focus:bg-foreground/10"
       onclick={() => resolve({ app_id: app.id, always })}
     >
-      <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-foreground/10"><AppIcon src={app.icon} class="size-4" /></span>
+      <span class="grid size-6 shrink-0 place-items-center rounded-md bg-background-light ring-1 ring-hairline"><AppIcon src={app.icon} class="size-4" /></span>
       <span class="truncate">{app.name}</span>
     </button>
   {/each}
 
   {#if extension}
-    <label class="mt-1 flex cursor-pointer items-center gap-2 border-t border-foreground/8 px-2 pt-2.5 pb-1 text-foreground/80">
+    <label class="mt-1 flex cursor-pointer items-center gap-2 border-t border-hairline px-2 pt-2.5 pb-1 text-foreground/80">
       <Checkbox bind:checked={always} />
       Always use for <span class="font-mono">{extension}</span>
     </label>

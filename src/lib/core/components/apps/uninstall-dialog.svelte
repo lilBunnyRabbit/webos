@@ -10,7 +10,7 @@
 
 <div class="grid w-[min(24rem,calc(100vw-2rem))] gap-4 rounded-2xl bg-background-lighter p-5 shadow-popover">
   <div class="flex items-start gap-3">
-    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-hairline">
       <AppIcon src={manifest.icon} class="size-5" />
     </span>
     <div class="min-w-0 pt-0.5">
@@ -21,7 +21,7 @@
     </div>
   </div>
 
-  <label class="flex items-start gap-2.5 rounded-xl bg-background-light p-3 text-ui ring-1 ring-foreground/8">
+  <label class="flex items-start gap-2.5 rounded-xl bg-background-light p-3 text-ui ring-1 ring-hairline">
     <Checkbox bind:checked={data} class="mt-0.5" />
     <span>
       <span class="font-medium">Also delete its saved data</span>

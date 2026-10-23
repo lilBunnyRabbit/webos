@@ -30,7 +30,7 @@
 </script>
 
 <div class="flex h-dvh w-full flex-col overflow-hidden bg-background-darkest pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
-  <header class="flex shrink-0 items-center gap-2 border-b border-foreground/10 bg-background px-3 pt-[env(safe-area-inset-top)]">
+  <header class="flex shrink-0 items-center gap-2 border-b border-hairline bg-background px-3 pt-[env(safe-area-inset-top)]">
     <div class="flex h-11 min-w-0 flex-1 items-center gap-2 pointer-coarse:h-13">
       {#if manifest}
         <AppIcon src={manifest.icon} class="size-4 shrink-0 text-foreground/80" />

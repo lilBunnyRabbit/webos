@@ -57,14 +57,14 @@
 {#snippet tile(label: string, active: boolean, onselect: () => void, preview: Wallpaper | null, dots = false)}
   <button
     aria-pressed={active}
-    class={cn("group flex flex-col gap-1.5 rounded-xl p-1.5 text-left transition-colors duration-150", active ? "bg-foreground/10" : "hover:bg-foreground/6")}
+    class={cn("group flex flex-col gap-1.5 rounded-xl p-1.5 text-left transition-colors duration-150", active ? "bg-background-lighter shadow-control" : "hover:bg-foreground/6")}
     onclick={onselect}
     disabled={busy}
   >
     <span
       class={cn(
         "relative isolate grid aspect-[16/10] w-full place-items-center overflow-hidden rounded-lg ring-1 transition-shadow",
-        active ? "ring-2 ring-primary" : "ring-foreground/12",
+        active ? "ring-2 ring-primary" : "ring-hairline",
         dots && "dots"
       )}
     >

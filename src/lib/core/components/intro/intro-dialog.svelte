@@ -120,7 +120,7 @@
 {#snippet points(items: Point[])}
   <ul class="grid gap-3 @xl:grid-cols-2">
     {#each items as item (item.title)}
-      <li class="flex gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+      <li class="flex gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
         <span class={cn("grid size-9 shrink-0 place-items-center rounded-lg", item.tone === "warning" ? "bg-warning/12 text-warning" : "bg-primary/12 text-primary")}>
           <item.icon class="size-5" weight="duotone" />
         </span>
@@ -134,8 +134,8 @@
 {/snippet}
 
 {#snippet suggestion(manifest: AppListing)}
-  <li class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
-    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
+  <li class="flex items-center gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
+    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-hairline">
       <AppIcon src={manifest.icon} class="size-6" />
     </span>
     <div class="min-w-0 flex-1">
@@ -217,7 +217,7 @@
                 <DownloadSimpleIcon weight="bold" /> Install WebOS
               </Button>
             {:else}
-              <p class="flex items-start gap-2 rounded-lg bg-background p-3 text-ui text-foreground/80 ring-1 ring-foreground/8">
+              <p class="flex items-start gap-2 rounded-lg bg-background p-3 text-ui text-foreground/80 ring-1 ring-hairline">
                 <InfoIcon class="mt-0.5 size-4 shrink-0 text-primary" weight="duotone" />
                 <span>{installer.hint}</span>
               </p>
@@ -261,7 +261,7 @@
               <ThemeCard {preset} active={preset === active_preset} onselect={() => (settings.theme = { ...preset.theme })} />
             {/each}
           </div>
-          <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
             <div>
               <h3 class="text-ui font-semibold">Taskbar</h3>
               <p class="text-ui text-foreground/65">Which screen edge it docks to.</p>

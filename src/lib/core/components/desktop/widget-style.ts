@@ -4,7 +4,7 @@ import { WidgetStyle } from "$lib/core/api";
 export function widget_surface(style: WidgetStyle): string {
   switch (style) {
     case WidgetStyle.GLASS:
-      return "bg-background-light/50 ring-1 ring-foreground/8 backdrop-blur-lg";
+      return "bg-background-light/50 ring-1 ring-hairline backdrop-blur-lg";
     case WidgetStyle.CLEAR:
       return "";
     default:

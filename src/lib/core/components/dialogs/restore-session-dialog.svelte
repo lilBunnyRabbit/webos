@@ -28,7 +28,7 @@
     </div>
   </div>
 
-  <ul class="flex max-h-44 flex-col gap-0.5 overflow-y-auto rounded-xl bg-background-darker p-1.5 ring-1 ring-inset ring-foreground/8">
+  <ul class="flex max-h-44 flex-col gap-0.5 overflow-y-auto rounded-xl bg-field p-1.5 shadow-recessed ring-1 ring-inset ring-hairline">
     {#each known as app, index (index)}
       <li class="flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui">
         <AppIcon src={app.icon} class="size-4 shrink-0 text-foreground/80" />

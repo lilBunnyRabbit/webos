@@ -124,7 +124,7 @@
         <div
           class={cn(
             switcher
-              ? "relative h-[calc(100cqh*var(--card-scale))] w-[calc(100cqw*var(--card-scale))] overflow-hidden rounded-2xl shadow-window-focused ring-1 ring-foreground/12"
+              ? "relative h-[calc(100cqh*var(--card-scale))] w-[calc(100cqw*var(--card-scale))] overflow-hidden rounded-2xl shadow-window-focused ring-1 ring-hairline"
               : "h-full w-full animate-pop-in"
           )}
           style:view-transition-name="window-{id}"

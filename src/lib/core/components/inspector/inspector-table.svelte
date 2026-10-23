@@ -12,7 +12,7 @@
 {#if empty}
   <p class="text-ui text-foreground/65">{empty_text}</p>
 {:else}
-  <div class="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+  <div class="overflow-x-auto rounded-lg ring-1 ring-hairline">
     <table class="w-full text-left text-ui">
       <thead class="bg-foreground/6 text-2xs tracking-wide text-foreground/80 uppercase">
         <tr>
@@ -21,7 +21,7 @@
           {/each}
         </tr>
       </thead>
-      <tbody class="font-mono [&_td]:px-2 [&_td]:py-1 [&_td]:whitespace-nowrap [&_tr]:border-t [&_tr]:border-foreground/8">
+      <tbody class="font-mono [&_td]:px-2 [&_td]:py-1 [&_td]:whitespace-nowrap [&_tr]:border-t [&_tr]:border-hairline">
         {@render children()}
       </tbody>
     </table>

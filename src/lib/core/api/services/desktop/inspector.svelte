@@ -22,7 +22,7 @@
 {#if detailed}
   {#if grid.columns > 0 && grid.rows > 0}
     <div
-      class="grid w-fit gap-px rounded-sm border border-foreground/15 bg-foreground/10 p-px"
+      class="grid w-fit gap-px rounded-sm border border-hairline-strong bg-foreground/10 p-px"
       style:grid-template-columns="repeat({grid.columns}, 0.5rem)"
       aria-hidden="true"
     >

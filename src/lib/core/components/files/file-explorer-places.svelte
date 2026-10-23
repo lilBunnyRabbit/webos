@@ -50,7 +50,7 @@
 {/snippet}
 
 <!-- Only in roomy windows: the list matters more than shortcuts when space is tight. -->
-<nav aria-label="Places" class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto border-r border-foreground/8 bg-background-light p-2 @3xl:flex">
+<nav aria-label="Places" class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto border-r border-hairline bg-background-light p-2 @3xl:flex">
   <div class="flex flex-col gap-0.5">
     <p class="px-2 pb-1 text-2xs font-medium tracking-wide text-foreground/80 uppercase">Places</p>
     {#each PLACES as item (item.path)}

@@ -76,12 +76,12 @@
     </div>
   </div>
 
-  <div class="min-h-32 flex-auto shrink-[1000] overflow-y-auto border-y border-foreground/8 bg-background px-3 py-1" role="table" aria-label="Preview">
+  <div class="min-h-32 flex-auto shrink-[1000] overflow-y-auto border-y border-hairline bg-background px-3 py-1" role="table" aria-label="Preview">
     {#each plan.steps as entry (entry.path)}
       {@const changed = entry.new_name !== entry.name}
       <div
         role="row"
-        class="grid grid-cols-1 gap-x-2 border-b border-foreground/6 py-1.5 [contain-intrinsic-size:auto_2.5rem] [content-visibility:auto] last:border-0 @md:grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] @md:items-center"
+        class="grid grid-cols-1 gap-x-2 border-b border-hairline py-1.5 [contain-intrinsic-size:auto_2.5rem] [content-visibility:auto] last:border-0 @md:grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] @md:items-center"
       >
         <span role="cell" class="truncate text-ui text-foreground/65" title={entry.name}>{entry.name}</span>
         <ArrowRightIcon class="hidden size-3.5 text-foreground/65 @md:block" aria-hidden="true" />
