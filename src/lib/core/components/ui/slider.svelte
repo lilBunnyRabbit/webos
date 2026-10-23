@@ -32,7 +32,7 @@
   .ui-slider::-webkit-slider-runnable-track {
     height: 4px;
     border-radius: 9999px;
-    background: linear-gradient(to right, var(--primary) var(--fill), color-mix(in oklch, var(--foreground) 20%, transparent) var(--fill));
+    background: linear-gradient(to right, var(--primary) var(--fill), color-mix(in oklch, var(--edge-control) 55%, transparent) var(--fill));
     box-shadow: var(--shadow-track);
   }
 
@@ -55,7 +55,7 @@
   .ui-slider::-moz-range-track {
     height: 4px;
     border-radius: 9999px;
-    background: color-mix(in oklch, var(--foreground) 20%, transparent);
+    background: color-mix(in oklch, var(--edge-control) 55%, transparent);
     box-shadow: var(--shadow-track);
   }
 

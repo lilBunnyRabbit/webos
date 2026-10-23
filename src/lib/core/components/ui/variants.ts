@@ -13,10 +13,10 @@ export const button = merge_tv({
   ],
   variants: {
     variant: {
-      primary: "bg-primary text-background shadow-control hover:opacity-85 active:translate-y-px active:shadow-pressed",
-      secondary: "bg-foreground/8 text-foreground shadow-control hover:bg-foreground/12 active:translate-y-px active:bg-foreground/12 active:shadow-pressed",
+      primary: "bg-primary text-background shadow-control [--edge-lit:oklch(from_var(--primary)_calc(l+0.1)_c_h)] hover:opacity-85 active:translate-y-px active:shadow-pressed",
+      secondary: "bg-raised text-foreground shadow-control ring-1 ring-hairline hover:bg-raised-hover active:translate-y-px active:bg-raised active:shadow-pressed",
       quiet: "text-foreground/80 hover:bg-foreground/8 hover:text-foreground active:bg-foreground/12 active:shadow-pressed",
-      danger: "bg-error text-background shadow-control hover:opacity-85 active:translate-y-px active:shadow-pressed",
+      danger: "bg-error text-background shadow-control [--edge-lit:oklch(from_var(--error)_calc(l+0.1)_c_h)] hover:opacity-85 active:translate-y-px active:shadow-pressed",
     },
     // Touch screens get finger-sized targets; the look stays the same (docs/design/components.md).
     size: {
@@ -41,12 +41,12 @@ export const button = merge_tv({
 });
 export type ButtonVariants = VariantProps<typeof button>;
 
-/** Recessed field: a well below the surface with an inner shadow, and a 30% ring for the 3:1 edge. */
+/** Recessed field: a well below the surface with an inner shadow, and the control edge for 3:1. */
 export const field = merge_tv({
   base: [
     "w-full min-w-0 rounded-md text-ui text-foreground",
-    "bg-field shadow-recessed ring-1 ring-inset ring-foreground/30 transition-[box-shadow,background-color] duration-150",
-    "placeholder:text-foreground/65 hover:ring-foreground/45",
+    "bg-field shadow-recessed ring-1 ring-inset ring-edge transition-[box-shadow,background-color] duration-150",
+    "placeholder:text-foreground/65 hover:ring-edge-hover",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
     "disabled:opacity-38",
   ],

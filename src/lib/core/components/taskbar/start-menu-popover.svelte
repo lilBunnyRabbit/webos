@@ -138,7 +138,7 @@
         requestAnimationFrame(close);
       }}
     >
-      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10 transition-shadow duration-150 in-active:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
+      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-lightest shadow-raised ring-1 ring-hairline transition-shadow duration-150 in-active:shadow-pressed", !offline.can_open(manifest.id) && "opacity-38")}>
         <AppIcon src={manifest.icon} class="size-6" />
         <AppBadge app_id={manifest.id} />
       </span>
@@ -224,7 +224,7 @@
   {/if}
 </div>
 
-<footer class="flex items-center justify-between gap-3 border-t border-foreground/10 bg-background-light px-4 py-2.5">
+<footer class="flex items-center justify-between gap-3 border-t border-hairline bg-background-light px-4 py-2.5">
   <span class="flex items-center gap-2 text-ui font-semibold"><LogoLockup height={20} /> WebOS</span>
   <div class="flex items-center gap-2 text-2xs text-foreground/80">
     {#if commanding}<span class="flex items-center gap-1"><Kbd>↵</Kbd> run</span>

@@ -101,10 +101,10 @@
       "flex shrink-0 bg-background-light",
       drill
         ? cn(
-            "min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3 @2xl:w-56 @2xl:flex-none @2xl:border-r @2xl:border-foreground/8 @2xl:p-2",
+            "min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3 @2xl:w-56 @2xl:flex-none @2xl:border-r @2xl:border-hairline @2xl:p-2",
             open && "hidden @2xl:flex"
           )
-        : "gap-1 overflow-x-auto border-b border-foreground/8 p-1.5 @2xl:w-52 @2xl:flex-col @2xl:overflow-x-visible @2xl:border-r @2xl:border-b-0 @2xl:p-2"
+        : "gap-1 overflow-x-auto border-b border-hairline p-1.5 @2xl:w-52 @2xl:flex-col @2xl:overflow-x-visible @2xl:border-r @2xl:border-b-0 @2xl:p-2"
     )}
   >
     {#if header}<div class="mb-1 shrink-0">{@render header()}</div>{/if}
@@ -148,7 +148,7 @@
   <div class="flex h-full min-h-0 flex-col @2xl:flex-row">
     {@render navigation()}
     <div class={cn("min-h-0 min-w-0 flex-1 flex-col", open ? "flex" : "hidden @2xl:flex")}>
-      <div bind:this={bar} class="flex shrink-0 items-center border-b border-foreground/8 bg-background-light p-1.5 @2xl:hidden">
+      <div bind:this={bar} class="flex shrink-0 items-center border-b border-hairline bg-background-light p-1.5 @2xl:hidden">
         <Button variant="quiet" size="sm" onclick={back}><CaretLeftIcon weight="bold" />{back_label}</Button>
       </div>
       {@render children()}

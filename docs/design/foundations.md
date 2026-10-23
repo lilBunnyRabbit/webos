@@ -41,7 +41,7 @@ Text uses four levels and nothing else:
 
 Filled buttons use the brand modifiers: hover `opacity-85`, active `opacity-70`. Neutral states use foreground fills: hover `bg-foreground/6`–`/8`, selected `bg-foreground/10`.
 
-Edges: decorative hairlines `foreground/8`–`/10`; control edges (fields, segmented, switch track) `foreground/30`–`/45` so the control is findable (3:1 non-text). The brand's `border` modifier (0.76) is for edges that must stand out on every shade.
+Edges come from the surface, in the background's own hue, never from `foreground` (whose hue can be far off: Dark Purple's text is hue 60 on a hue 300 body). Decorative hairlines are `hairline` (`ring-hairline`, `border-hairline`, `divide-hairline`), `hairline-strong` where it has to hold against a busy backdrop (focused window, popovers, dock separators). Control edges (fields, segmented, switch track) are `edge`, solved for 3:1 non-text against the field and every surface a field sits on, `edge-hover` one step further. See Soft surfaces for how they're derived. The brand's `border` modifier (0.76) is for edges that must stand out on every shade.
 
 ## Surface ladder
 
@@ -55,13 +55,13 @@ Each palette defines the brand's seven background shades. Brand Dark and Brand L
 | background | `bg-background` | Window content, the page an app draws on |
 | light | `bg-background-light` | Chrome and raised things in a window: titlebars, toolbars, side nav, cards, the taskbar |
 | lighter | `bg-background-lighter` | Floating layers above windows: start menu, menus, toasts, dialogs, select pickers |
-| lightest | `bg-background-lightest` | The lit top edge of soft surfaces (`--edge-lit`); specimens |
+| lightest | `bg-background-lightest` | App tiles inside floating layers (start menu, phone drawer, announcements), so they stay lighter than the `lighter` panel; specimens |
 
 **Scrim:** every floating layer that takes focus (start menu, menus, dialogs) sits on `--overlay`, the darkest shade at 60%. Centered questions also blur what's behind. Toasts don't use it: they don't take focus.
 
 **Three shades per window or panel, at most.** The desktop and dock are the frame around them and don't count. A typical app uses `background` + `background-light` (chrome, cards) + its fields.
 
-**Fields** use `bg-field` (`light-dark(var(--background), var(--background-darker))`): a well one shade below the surface in light palettes, two in dark ones, with `shadow-recessed` so it reads as sunk in rather than as a darker button. `color-scheme` follows the palette, so `light-dark()` picks the right one. Segmented tracks use it too.
+**Fields** use `bg-field` (`light-dark(color-mix(in oklch, var(--background), var(--background-dark)), var(--background-darker))`): half a step below the window body in light palettes, two steps in dark ones, so a field never matches the surface it sits on, with `shadow-recessed` and the `edge` ring so it reads as sunk in rather than as a darker button. `color-scheme` follows the palette, so `light-dark()` picks the right one. Segmented and switch tracks use it too.
 
 ## Typography
 
@@ -112,37 +112,53 @@ The px values are the Default corners. Settings › Text & interface › Corners
 
 ## Elevation
 
-Shadows are cast in `background-darkest`, never black, so they stay on-palette in light themes too.
+Shadows are cast in `--shadow-ink`: the window body's hue at 30% of its lightness and muted chroma, never black and never a saturated darkest shade (While True's orange desktop, Red & Black's red no longer glow). Dark palettes take it at full weight, so a field or a tile on the desktop still casts; light palettes take it at 45%, so paper doesn't go grey.
 
 | Token | Use |
 |-------|-----|
 | `shadow-raised` | Icon tiles, the selected segment, small lifted chips |
-| `shadow-popover` | Menus, toasts, dialogs, the taskbar (includes a hairline) |
+| `shadow-popover` | Menus, toasts, dialogs, the taskbar (includes a `hairline-strong` ring) |
 | `shadow-window` | Unfocused windows |
 | `shadow-window-focused` | The focused window |
 
 ### Soft surfaces
 
-WebOS borrows the tactile half of neumorphism and keeps the surface ladder (brainstorm 2026-10-23_soft-surfaces). Raised things catch light on their top edge, recessed things take an inner shadow, buttons sink when pressed. No new colour: the lit edge is `--edge-lit`, `background-lightest` at 85% in light palettes and 45% in dark ones; shadows stay in `background-darkest`.
+WebOS borrows the tactile half of neumorphism and keeps the surface ladder (brainstorm 2026-10-23_soft-surfaces). Raised things catch light on their top edge, recessed things take an inner shadow, buttons sink when pressed.
+
+Every edge and shadow is derived from the surface it belongs to, in the background's hue, through relative OKLCH (`oklch(from var(--…) …)`) and `light-dark()`. No new colour, nothing tinted by the foreground. The tokens live on `html` in `app.css`; the `@theme` names make them utilities.
+
+| Token | Utility | Derived as |
+|-------|---------|------------|
+| `--edge-control` | `ring-edge` | Solved for 3.1–3.2:1. OKLCH lightness cubed is close to luminance, so `pow()` turns the target ratio into a lightness: dark palettes go up from `background-lighter` (the lightest surface a field sits on), light ones down from `background-dark` (darker than any field). Hue of that shade, chroma ×0.7. Clamped at black or white where the palette has no room |
+| `--edge-control-hover` | `ring-edge-hover` | The same at 4.4–4.5:1 |
+| `--hairline` | `ring-hairline`, `border-hairline`, `divide-hairline`, `bg-hairline` | The body's hue pushed to the far end (light: lightness ×0.3; dark: 75% of the way to white), see-through so one token works on every shade. Alpha 0.10, rising to 0.18–0.22 near pure black or white and on mid-tone light bodies |
+| `--hairline-strong` | `ring-hairline-strong`, `bg-hairline-strong` | The same ink at 0.16–0.32 |
+| `--shadow-ink` | (inside every `shadow-*`) | Body hue, lightness ×0.3, chroma ×0.5–0.6; 45% alpha in light palettes |
+| `--edge-lit` | (inside `shadow-lit`, `-raised`, `-control`, `-popover`) | A see-through highlight always lighter than what it lies on. Dark: 70% toward white at 0.16. Light: one step up (at most 0.12) at 0.85, chroma fading to neutral near white. Primary and danger buttons swap in their own fill +0.1 lightness, so a filled button never gets a dark notch or a glaring white line |
+| `--raised` | `bg-raised` | Secondary button fill: paper lifted above the surface, never a hole. Dark: the hairline ink at 0.10. Light: one step up (at most 0.10) at 0.7 |
+| `--raised-hover` | `bg-raised-hover` | Dark 0.15; light one step further, opaque |
+
+Where light or shadow has no headroom (Neon Black's body is pure black, Electric White's pure white), the hairline firms up and a crisp outline carries the shape: tiles, cards, windows and secondary buttons all have one.
 
 | Token | Use |
 |-------|-----|
 | `shadow-lit` | The lit edge alone: titlebars, toolbars, Section cards. `shadow-raised` and `shadow-popover` include it |
-| `shadow-control` | Buttons (`primary`, `secondary`, `danger`): lit edge and a short drop |
+| `shadow-control` | Buttons (`primary`, `secondary`, `danger`): lit edge and a short drop. Secondary adds a `hairline` ring |
 | `shadow-pressed` | A button while held, a toggle that's on (`pressed`), the active taskbar item, an app tile while held (`in-active:`) |
-| `shadow-recessed` | Fields, segmented tracks, switch tracks: inner shadow and a lit bottom lip |
+| `shadow-recessed` | Fields, segmented tracks, switch tracks: an inner shadow. The `edge` ring draws the outline |
 | `shadow-track` | Slider grooves, where a 4px groove can't take the field's drop |
 
 Rules:
 
 - Pressed and on use the same sink. Held buttons also move down 1px (`active:translate-y-px`); disabled buttons lose their shadow.
-- Control edges still need 3:1: fields keep the `foreground/30` ring, the switch `/45`. The shadow is depth, not the edge.
+- Control edges still need 3:1: fields, the switch and segmented tracks take `ring-edge`. The shadow is depth, not the edge.
+- Tiles in a floating layer (start menu, phone drawer, announcements) are `background-lightest`, one above the `lighter` panel, so a raised tile never reads as sunk.
 - Selection and on-state keep `primary`. Lists, tables, the terminal, editors and canvases stay flat: dense content would turn every row into a button.
 - Settings › Shadows scales the drops and inner shadows; the lit edge isn't a shadow and stays.
 
 Settings › Text & interface › Shadows multiplies the darkest-shade opacity: None 0, Subtle 0.5, Default 1, Strong 1.4 (capped at 100%). Hairlines stay. Text size (Small 15px, Medium 16px, Large 17px root) scales everything set in rem, so design in rem, not px, for anything that should grow with it.
 
-Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for dividers). Focused windows get `ring-foreground/16`.
+Hairlines are `ring-1 ring-hairline` (or `border-hairline` / `divide-hairline` for dividers). Focused windows get `ring-hairline-strong`.
 
 ## Motion
 

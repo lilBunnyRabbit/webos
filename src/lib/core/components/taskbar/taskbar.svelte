@@ -73,7 +73,7 @@
     class={cn(
       "relative flex items-center gap-1 bg-background-light/90 p-1.5 backdrop-blur-xl",
       flush
-        ? { bottom: "border-t", top: "border-b", left: "border-r", right: "border-l" }[taskbar.position] + " border-foreground/8"
+        ? { bottom: "border-t", top: "border-b", left: "border-r", right: "border-l" }[taskbar.position] + " border-hairline"
         : "rounded-2xl shadow-popover",
       vertical ? "h-full w-[calc(var(--taskbar-item)+0.75rem)] flex-col" : "h-[calc(var(--taskbar-item)+0.75rem)] w-full flex-row"
     )}
@@ -83,7 +83,7 @@
 
     <StartMenu />
 
-    <div role="separator" class={cn("shrink-0 bg-foreground/12", vertical ? "mx-auto my-0.5 h-px w-[calc(var(--taskbar-item)*0.6)]" : "mx-0.5 h-[calc(var(--taskbar-item)*0.6)] w-px")}></div>
+    <div role="separator" class={cn("shrink-0 bg-hairline-strong", vertical ? "mx-auto my-0.5 h-px w-[calc(var(--taskbar-item)*0.6)]" : "mx-0.5 h-[calc(var(--taskbar-item)*0.6)] w-px")}></div>
 
     <QuickLaunch {vertical} />
 

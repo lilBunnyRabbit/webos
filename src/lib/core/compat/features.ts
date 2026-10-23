@@ -140,10 +140,11 @@ export const FEATURES: Feature[] = [
     probe: () => proto("HTMLDialogElement", "closedBy"),
   },
   {
-    // Relative OKLCH (122 / 128 / 18) and `abs()` (138 / 118 / 15.4) in derived themes.
+    // Relative OKLCH (122 / 128 / 18) and `abs()` (138 / 118 / 15.4) in derived themes; relative OKLCH also derives every
+    // edge, hairline and shadow ink in app.css.
     id: "relative-colors",
     name: "Relative colours",
-    lost: "Themes other than Brand Dark and Brand Light get wrong surface and state colours.",
+    lost: "Field edges, hairlines and shadows disappear, and themes other than Brand Dark and Brand Light get wrong surface and state colours.",
     level: Level.SHELL,
     apps: ["settings"],
     min: min("138", "128", "18"),

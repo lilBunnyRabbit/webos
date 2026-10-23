@@ -189,5 +189,5 @@
       </div>
     {/if}
   </div>
-  <div role="separator" class={cn("shrink-0 bg-foreground/12", vertical ? "mx-auto my-0.5 h-px w-[calc(var(--taskbar-item)*0.6)]" : "mx-0.5 h-[calc(var(--taskbar-item)*0.6)] w-px")}></div>
+  <div role="separator" class={cn("shrink-0 bg-hairline-strong", vertical ? "mx-auto my-0.5 h-px w-[calc(var(--taskbar-item)*0.6)]" : "mx-0.5 h-[calc(var(--taskbar-item)*0.6)] w-px")}></div>
 {/if}

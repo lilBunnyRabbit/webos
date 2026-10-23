@@ -112,7 +112,7 @@
   data-window-id={id}
   class={cn(
     "absolute pointer-events-auto rounded-xl bg-background ring-1 transition-[box-shadow] duration-200",
-    is_focused ? "shadow-window-focused ring-foreground/16" : "shadow-window ring-foreground/8",
+    is_focused ? "shadow-window-focused ring-hairline-strong" : "shadow-window ring-hairline",
     is_maximized && !geometry_handler.move.active && "rounded-none shadow-none ring-0",
     (is_minimized || is_out) && "hidden"
   )}
@@ -137,7 +137,7 @@
         if (!(event.target as Element).closest("[data-window-button]")) view_transition(() => windows.toggle_maximize(id));
       }}
       class={cn(
-        "group/titlebar flex items-center justify-between gap-2 border-b border-foreground/8 bg-background-light shadow-lit pr-1.5 pl-3 select-none touch-none",
+        "group/titlebar flex items-center justify-between gap-2 border-b border-hairline bg-background-light shadow-lit pr-1.5 pl-3 select-none touch-none",
         geometry_handler.move.active && "cursor-grabbing"
       )}
     >

@@ -242,7 +242,7 @@
             {/each}
           </div>
         </Section>
-        <Section title="Elevation" description="Shadows are cast in the darkest shade, so they stay on-palette in every theme." flush>
+        <Section title="Elevation" description="Shadows are cast in an ink from the window body's hue, so they stay on-palette and never glow." flush>
           <div class="grid grid-cols-2 gap-6 rounded-xl bg-background-darker p-6 @xl:grid-cols-4">
             {#each SHADOWS as shadow (shadow)}
               <div class="flex flex-col items-center gap-3">
@@ -359,7 +359,7 @@
           </div>
         </Section>
       {:else if section.value === "inputs"}
-        <Section title="Fields" description="A recessed well (bg-field) with an inner shadow; a 30% ring marks the edge.">
+        <Section title="Fields" description="A recessed well (bg-field) with an inner shadow; the edge ring, solved for 3:1 from the surface, marks the outline.">
           <SettingRow label="Name">
             {#snippet children({ id })}<Input {id} bind:value={name} class="w-56" />{/snippet}
           </SettingRow>

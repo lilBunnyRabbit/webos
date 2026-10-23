@@ -17,7 +17,7 @@
 <!-- Buttons, not gestures: every screen edge belongs to the device (ADR-016). -->
 <nav
   aria-label="Navigation"
-  class="flex shrink-0 items-center justify-center gap-6 border-t border-foreground/8 bg-background-light/90 px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl select-none"
+  class="flex shrink-0 items-center justify-center gap-6 border-t border-hairline bg-background-light/90 px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl select-none"
 >
   <button class={button} aria-label="Back" onclick={onback}>
     <CaretLeftIcon class="size-5.5" weight="bold" />

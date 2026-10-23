@@ -8,6 +8,6 @@ export function widget_surface(style: WidgetStyle): string {
     case WidgetStyle.CLEAR:
       return "";
     default:
-      return "bg-background-light shadow-raised ring-1 ring-foreground/10";
+      return "bg-background-light shadow-raised ring-1 ring-hairline";
   }
 }

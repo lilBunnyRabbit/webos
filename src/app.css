@@ -38,8 +38,17 @@
   --color-background-lighter: var(--background-lighter);
   --color-background-lightest: var(--background-lightest);
 
-  /* Recessed wells (fields, segmented tracks): one step below the surface in light palettes, two in dark ones. */
-  --color-field: light-dark(var(--background), var(--background-darker));
+  /* Recessed wells (fields, segmented and switch tracks): half a step below the window body in light palettes, two
+     steps in dark ones, so a field never matches the surface it sits on. */
+  --color-field: light-dark(color-mix(in oklch, var(--background), var(--background-dark)), var(--background-darker));
+
+  /* Edges derived from the surface, in the background's own hue (docs/design/foundations.md, Soft surfaces). */
+  --color-edge: var(--edge-control);
+  --color-edge-hover: var(--edge-control-hover);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-raised: var(--raised);
+  --color-raised-hover: var(--raised-hover);
 
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -75,24 +84,23 @@
   --radius-2xl: calc(18px * var(--radius-scale, 1));
   --radius-3xl: calc(24px * var(--radius-scale, 1));
 
-  /* Elevation: shadows are cast in the darkest shade, never black, so they stay on-palette in every theme.
-     Soft surfaces (docs/design/foundations.md): raised things also catch light on their top edge in the lightest
-     shade, recessed things (fields, tracks, pressed buttons) take an inner shadow. */
+  /* Elevation: shadows are cast in --shadow-ink, the window body's hue pushed dark, never black and never the foreground's
+     hue. Soft surfaces (docs/design/foundations.md): raised things also catch light on their top edge (--edge-lit),
+     recessed things (fields, tracks, pressed buttons) take an inner shadow. */
   --shadow-lit: inset 0 1px 0 var(--edge-lit);
-  --shadow-raised: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) calc(40% * var(--shadow-strength, 1)), transparent);
-  --shadow-control: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent),
-    0 2px 5px -1px color-mix(in oklch, var(--background-darkest) calc(30% * var(--shadow-strength, 1)), transparent);
-  --shadow-pressed: inset 0 2px 4px 0 color-mix(in oklch, var(--background-darkest) calc(50% * var(--shadow-strength, 1)), transparent);
-  --shadow-recessed: inset 0 2px 3px 0 color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent),
-    inset 0 -1px 0 var(--edge-lit);
+  --shadow-raised: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--shadow-ink) calc(45% * var(--shadow-strength, 1)), transparent);
+  --shadow-control: inset 0 1px 0 var(--edge-lit), 0 1px 2px 0 color-mix(in oklch, var(--shadow-ink) calc(40% * var(--shadow-strength, 1)), transparent),
+    0 2px 5px -1px color-mix(in oklch, var(--shadow-ink) calc(25% * var(--shadow-strength, 1)), transparent);
+  --shadow-pressed: inset 0 2px 4px 0 color-mix(in oklch, var(--shadow-ink) calc(55% * var(--shadow-strength, 1)), transparent);
+  --shadow-recessed: inset 0 2px 3px 0 color-mix(in oklch, var(--shadow-ink) calc(45% * var(--shadow-strength, 1)), transparent);
   /* Recessed at slider-track height: a 4px groove can't take the field's 2px drop. */
-  --shadow-track: inset 0 1px 1px 0 color-mix(in oklch, var(--background-darkest) calc(60% * var(--shadow-strength, 1)), transparent);
-  --shadow-popover: inset 0 1px 0 var(--edge-lit), 0 0.5rem 1.5rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(55% * var(--shadow-strength, 1)), transparent),
-    0 0 0 1px color-mix(in oklch, var(--foreground) 16%, transparent);
-  --shadow-window: 0 1.25rem 3rem -0.75rem color-mix(in oklch, var(--background-darkest) calc(70% * var(--shadow-strength, 1)), transparent),
-    0 0.25rem 0.75rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(45% * var(--shadow-strength, 1)), transparent);
-  --shadow-window-focused: 0 1.75rem 4rem -0.75rem color-mix(in oklch, var(--background-darkest) calc(85% * var(--shadow-strength, 1)), transparent),
-    0 0.375rem 1rem -0.25rem color-mix(in oklch, var(--background-darkest) calc(55% * var(--shadow-strength, 1)), transparent);
+  --shadow-track: inset 0 1px 1px 0 color-mix(in oklch, var(--shadow-ink) calc(55% * var(--shadow-strength, 1)), transparent);
+  --shadow-popover: inset 0 1px 0 var(--edge-lit), 0 0.5rem 1.5rem -0.25rem color-mix(in oklch, var(--shadow-ink) calc(50% * var(--shadow-strength, 1)), transparent),
+    0 0 0 1px var(--hairline-strong);
+  --shadow-window: 0 1.25rem 3rem -0.75rem color-mix(in oklch, var(--shadow-ink) calc(60% * var(--shadow-strength, 1)), transparent),
+    0 0.25rem 0.75rem -0.25rem color-mix(in oklch, var(--shadow-ink) calc(40% * var(--shadow-strength, 1)), transparent);
+  --shadow-window-focused: 0 1.75rem 4rem -0.75rem color-mix(in oklch, var(--shadow-ink) calc(75% * var(--shadow-strength, 1)), transparent),
+    0 0.375rem 1rem -0.25rem color-mix(in oklch, var(--shadow-ink) calc(50% * var(--shadow-strength, 1)), transparent);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -128,8 +136,52 @@
   html {
     /* The one scrim behind every floating layer (start menu, menus, dialogs). */
     --overlay: color-mix(in oklch, var(--background-darkest) 60%, transparent);
-    /* The lit top edge of soft surfaces. Lighter in dark palettes, where the lightest shade is close to the surface. */
-    --edge-lit: light-dark(color-mix(in oklch, var(--background-lightest) 85%, transparent), color-mix(in oklch, var(--background-lightest) 45%, transparent));
+    /* Every edge and shadow comes from the surface, in the background's hue, so a foreground of another hue never
+       tints them. Contrast is solved, not guessed: OKLCH lightness cubed is close to luminance, so pow() finds the
+       lightness that sits 3.2:1 from the surface. Where the palette has no room (a mid-red body, pure white), the
+       clamp lands on black or white, the closest it can get. */
+    /* Control edge (fields, switch, segmented): 3:1 against the field and any surface it sits on. Dark palettes go up
+       from the lighter shade (dialogs, the lightest surface a field sits on); light ones go down from the dark shade,
+       which is darker than any field. */
+    --edge-control: light-dark(
+      oklch(from var(--background-dark) pow(max(0, calc((l * l * l + 0.05) / 3.2 - 0.05)), 0.3333) calc(c * 0.7) h),
+      oklch(from var(--background-lighter) pow(min(1, calc((l * l * l + 0.05) * 3.1 - 0.05)), 0.3333) calc(c * 0.7) h)
+    );
+    --edge-control-hover: light-dark(
+      oklch(from var(--background-dark) pow(max(0, calc((l * l * l + 0.05) / 4.5 - 0.05)), 0.3333) calc(c * 0.7) h),
+      oklch(from var(--background-lighter) pow(min(1, calc((l * l * l + 0.05) * 4.4 - 0.05)), 0.3333) calc(c * 0.7) h)
+    );
+    /* Hairlines: the body's hue pushed toward the far end, see-through so one token works on every shade. Near pure
+       black or white the shadows and lit edge have no room, so the hairline firms up and carries the shape. */
+    --hairline: light-dark(
+      oklch(from var(--background) calc(l * 0.3) calc(c * 0.6) h / clamp(0.1, calc(0.1 + max(0, l - 0.95) * 1.6 + max(0, 0.8 - l) * 0.3), 0.2)),
+      oklch(from var(--background) calc(l + (1 - l) * 0.75) calc(c * 0.5) h / clamp(0.1, calc(0.22 - l * 0.45), 0.22))
+    );
+    --hairline-strong: light-dark(
+      oklch(from var(--background) calc(l * 0.3) calc(c * 0.6) h / clamp(0.16, calc(0.16 + max(0, l - 0.95) * 2.4 + max(0, 0.8 - l) * 0.4), 0.3)),
+      oklch(from var(--background) calc(l + (1 - l) * 0.75) calc(c * 0.5) h / clamp(0.16, calc(0.32 - l * 0.6), 0.32))
+    );
+    /* Shadow ink: the body's hue, dark and muted, so saturated darkest shades don't glow and dark palettes still cast.
+       Light palettes take it at half weight. */
+    --shadow-ink: light-dark(
+      oklch(from var(--background) calc(l * 0.32) calc(c * 0.5) h / 0.45),
+      oklch(from var(--background) calc(l * 0.3) calc(c * 0.6) h)
+    );
+    /* Lit top edge: a see-through highlight in the body's hue, always lighter than what it lies on. Primary and danger
+       buttons swap in a step above their own fill (button recipe). */
+    --edge-lit: light-dark(
+      oklch(from var(--background) calc(l + min(0.12, (1 - l) * 0.9)) calc(c * min(1, (1 - l) * 6)) h / 0.85),
+      oklch(from var(--background) calc(l + (1 - l) * 0.7) calc(c * 0.5) h / 0.16)
+    );
+    /* Secondary button fill: paper lifted above the surface, never a hole cut into it. */
+    --raised: light-dark(
+      oklch(from var(--background) calc(l + min(0.1, (1 - l) * 0.9)) calc(c * min(1, (1 - l) * 6)) h / 0.7),
+      oklch(from var(--background) calc(l + (1 - l) * 0.7) calc(c * 0.5) h / 0.1)
+    );
+    --raised-hover: light-dark(
+      oklch(from var(--background) calc(l + min(0.14, (1 - l) * 0.95)) calc(c * min(1, (1 - l) * 6)) h),
+      oklch(from var(--background) calc(l + (1 - l) * 0.7) calc(c * 0.5) h / 0.15)
+    );
     /* Settings › Text & interface › Text size writes --text-scale. Everything is in rem, so the whole UI scales with it. */
     font-size: calc(100% * var(--text-scale, 1));
     font-feature-settings: "cv11", "ss01";
@@ -200,19 +252,19 @@
 
 /* Untiled file and folder glyphs on the desktop and phone home lift off any wallpaper. */
 .bare-glyph {
-  filter: drop-shadow(0 1px 1.5px color-mix(in oklch, var(--background-darkest) 70%, transparent));
+  filter: drop-shadow(0 1px 1.5px color-mix(in oklch, var(--shadow-ink) 70%, transparent));
 }
 
 [data-wallpaper-image] .bare-glyph {
-  filter: drop-shadow(0 0 1px var(--background)) drop-shadow(0 1px 2px color-mix(in oklch, var(--background-darkest) 60%, transparent));
+  filter: drop-shadow(0 0 1px var(--background)) drop-shadow(0 1px 2px color-mix(in oklch, var(--shadow-ink) 60%, transparent));
 }
 
 /* Clear widgets: thin text on a photo needs a wider halo than a glyph does. */
 .bare-text {
-  filter: drop-shadow(0 1px 2px color-mix(in oklch, var(--background-darkest) 70%, transparent));
+  filter: drop-shadow(0 1px 2px color-mix(in oklch, var(--shadow-ink) 70%, transparent));
 }
 
 [data-wallpaper-image] .bare-text {
   filter: drop-shadow(0 0 1px var(--background)) drop-shadow(0 0 3px color-mix(in oklch, var(--background) 80%, transparent))
-    drop-shadow(0 1px 3px color-mix(in oklch, var(--background-darkest) 60%, transparent));
+    drop-shadow(0 1px 3px color-mix(in oklch, var(--shadow-ink) 60%, transparent));
 }

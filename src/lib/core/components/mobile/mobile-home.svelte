@@ -360,7 +360,7 @@
         <SquaresFourIcon class="size-7" weight="duotone" />
       </button>
 
-      <div role="separator" class="mx-0.5 h-8 w-px shrink-0 bg-foreground/12"></div>
+      <div role="separator" class="mx-0.5 h-8 w-px shrink-0 bg-hairline-strong"></div>
 
       {#each dock as item (item.name)}
         <div
