@@ -206,7 +206,7 @@
     {/if}
   </div>
   {#if error}<p class="text-2xs text-error">{error}</p>{/if}
-  <div class="min-h-0 flex-1 rounded-lg bg-background ring-1 ring-foreground/10">
+  <div class="min-h-0 flex-1 rounded-lg bg-background ring-1 ring-hairline">
     <Stage {bounds} label="Graph editor" role="group" class="h-full" pannable={(event) => !(event.target as Element).closest("[data-node]")}>
       {#snippet children(to_point)}
         <rect

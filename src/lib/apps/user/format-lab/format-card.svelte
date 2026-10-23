@@ -33,7 +33,7 @@
   </div>
 {/snippet}
 
-<article class={["flex flex-col gap-2.5 rounded-xl bg-background-light p-3 ring-1", shown ? "ring-primary/60" : "ring-foreground/8"]} aria-labelledby="{id}-title">
+<article class={["flex flex-col gap-2.5 rounded-xl bg-background-light p-3 shadow-card ring-1", shown ? "ring-primary/60" : "ring-hairline"]} aria-labelledby="{id}-title">
   <header class="flex flex-wrap items-center gap-2">
     <h3 id="{id}-title" class="text-sm font-semibold">{info.label}</h3>
     {#if busy}

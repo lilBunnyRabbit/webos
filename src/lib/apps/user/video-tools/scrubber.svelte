@@ -67,7 +67,7 @@
   onpointermove={drag}
   onlostpointercapture={() => (grip = null)}
 >
-  <div class="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-foreground/12"></div>
+  <div class="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-field shadow-track"></div>
   <div class="absolute top-1/2 h-2 -translate-y-1/2 bg-primary/45" style:left={percent(from)} style:right="calc(100% - {percent(to)})"></div>
   <div class="pointer-events-none absolute inset-y-1 w-0.5 -translate-x-1/2 rounded-full bg-foreground" style:left={percent(time)}></div>
   {#each [["from", from], ["to", to]] as const as [target, value] (target)}

@@ -78,7 +78,7 @@
                 {:else if suggestions?.list?.length}
                   <div class="flex flex-wrap gap-1" aria-label="Suggestions">
                     {#each suggestions.list as suggestion (suggestion)}
-                      <Button size="sm" variant="quiet" class="bg-foreground/6" title="Change every “{item.word}” to “{suggestion}”" onclick={() => act((word) => onreplace(word, suggestion))}>{suggestion}</Button>
+                      <Button size="sm" title="Change every “{item.word}” to “{suggestion}”" onclick={() => act((word) => onreplace(word, suggestion))}>{suggestion}</Button>
                     {/each}
                   </div>
                 {:else}

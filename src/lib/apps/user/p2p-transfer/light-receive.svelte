@@ -60,7 +60,7 @@
 </script>
 
 {#if receiver.phase === LightPhase.DONE && receiver.saved_path}
-  <section class="flex flex-col items-center gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">
+  <section class="flex flex-col items-center gap-3 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline">
     <span class="font-mono text-2xs font-medium tracking-wide text-success uppercase">Saved · SHA-256 checked</span>
     <span class="max-w-full truncate text-sm font-semibold">{receiver.header?.name}</span>
     <span class="max-w-full truncate font-mono text-2xs text-foreground/80" title={receiver.saved_path}>→ {receiver.saved_path}</span>
@@ -85,7 +85,7 @@
     {/if}
   </div>
 
-  <section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8" aria-live="polite">
+  <section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline" aria-live="polite">
     <div class="flex items-end justify-between gap-3">
       <div class="flex min-w-0 flex-col">
         <span class="font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">

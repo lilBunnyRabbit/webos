@@ -50,14 +50,14 @@
       {@const Icon = PLATFORM_ICONS[report.id]}
       {@const result = verdict(report)}
       {@const info = PLATFORMS[report.id]}
-      <details class="group rounded-xl bg-background-light ring-1 ring-foreground/8" open={report.id === focus}>
+      <details class="group rounded-xl bg-background-light shadow-card ring-1 ring-hairline" open={report.id === focus}>
         <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-3 hover:bg-foreground/4 [&::-webkit-details-marker]:hidden">
           <CaretRightIcon class="size-3.5 shrink-0 text-foreground/65 transition-transform group-open:rotate-90" weight="bold" />
           <span class="grid size-6 shrink-0 place-items-center rounded-md bg-foreground/8 text-foreground/80"><Icon class="size-3.5" weight="bold" /></span>
           <span class="min-w-0 flex-1 truncate text-ui font-medium">{info.name}</span>
           <Badge tone={result.tone}>{result.label}</Badge>
         </summary>
-        <ul class="flex flex-col divide-y divide-foreground/8 border-t border-foreground/8">
+        <ul class="flex flex-col divide-y divide-hairline border-t border-hairline">
           {#each [...report.checks].sort((a, b) => ORDER[a.severity] - ORDER[b.severity]) as check, index (index)}
             {@const SeverityIcon = ICONS[check.severity]}
             <li class="flex gap-2.5 px-3 py-2">
@@ -72,7 +72,7 @@
             </li>
           {/each}
         </ul>
-        <footer class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-foreground/8 px-3 py-2 text-2xs text-foreground/65">
+        <footer class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-hairline px-3 py-2 text-2xs text-foreground/65">
           <span class="font-mono">{info.bot}</span>
           <a class="inline-flex items-center gap-1 text-primary hover:opacity-85" href={info.docs} target="_blank" rel="noopener noreferrer">
             Docs <ArrowSquareOutIcon class="size-3" weight="bold" />

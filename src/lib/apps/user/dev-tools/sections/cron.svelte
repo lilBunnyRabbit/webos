@@ -36,7 +36,7 @@
   {#if parsed && !parsed.ok}
     <p role="alert" class="rounded-md bg-error/12 px-3 py-2 text-ui text-error">{parsed.error}</p>
   {:else if parsed?.ok}
-    <p class="rounded-xl bg-background-light px-3 py-2 text-sm font-medium ring-1 ring-foreground/8">{describe_cron(parsed.schedule)}</p>
+    <p class="rounded-xl bg-background-light px-3 py-2 text-sm font-medium shadow-card ring-1 ring-hairline">{describe_cron(parsed.schedule)}</p>
   {:else}
     <p class="text-ui text-foreground/65">Five fields with ranges (1-5), steps (*/15), lists (1,15) and names (mon, jan), or a macro like @daily.</p>
   {/if}
@@ -62,7 +62,7 @@
       </label>
     {/snippet}
     {#if runs.length}
-      <ol class="max-h-96 divide-y divide-foreground/8 overflow-y-auto rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <ol class="max-h-96 divide-y divide-hairline overflow-y-auto rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         {#each runs as run (run.getTime())}
           <li class="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-1 pr-1 pl-3">
             <span class="min-w-0 flex-1 font-mono text-ui tabular-nums">{format_datetime(run)}</span>

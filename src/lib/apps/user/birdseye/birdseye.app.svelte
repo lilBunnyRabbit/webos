@@ -384,7 +384,7 @@
 {#snippet progress(title: string, current: TaskJob)}
   <div class="flex flex-col gap-1.5">
     {@render heading(title)}
-    <div class="h-1.5 overflow-hidden rounded-full bg-foreground/12">
+    <div class="h-1.5 overflow-hidden rounded-full bg-field shadow-track">
       <div class="h-full bg-primary transition-[width]" style:width="{Math.round(current.progress * 100)}%"></div>
     </div>
     <p class="px-0.5 font-mono text-2xs text-foreground/80 tabular-nums">{current.message ?? "Starting"}</p>
@@ -512,7 +512,7 @@
         </div>
       </div>
 
-      <aside class="flex min-h-0 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:border-t-0 @2xl:border-l">
+      <aside class="flex min-h-0 flex-col gap-4 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:border-t-0 @2xl:border-l">
         <div class="flex flex-col gap-2">
           {@render heading("Track")}
           {#if track.length}

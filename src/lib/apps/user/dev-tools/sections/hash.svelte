@@ -53,7 +53,7 @@
   {#await hashes}
     <div class="flex h-24 items-center justify-center"><Spinner label="Hashing" /></div>
   {:then list}
-    <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <dl class="divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
       {#each list as hash (hash.algorithm)}
         <div class="flex items-center gap-3 px-3 py-2">
           <dt class="w-16 shrink-0 text-ui font-medium">{hash.algorithm}</dt>

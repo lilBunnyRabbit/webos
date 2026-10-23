@@ -101,7 +101,7 @@
   {#each panes as pane (pane.label)}
     <figure class="flex min-h-0 min-w-0 flex-col gap-1.5">
       <div
-        class={["pane relative min-h-24 flex-1 touch-none overflow-hidden rounded-md ring-1 ring-foreground/10 select-none [container-type:size]", backdrop]}
+        class={["pane relative min-h-24 flex-1 touch-none overflow-hidden rounded-md ring-1 ring-hairline select-none [container-type:size]", backdrop]}
         role="img"
         aria-label={pane.label}
         onpointerdown={on_pointerdown}

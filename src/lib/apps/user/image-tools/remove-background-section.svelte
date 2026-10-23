@@ -140,7 +140,7 @@
   <figure class="flex min-h-0 min-w-0 flex-col gap-2">
     <div class="grid min-h-0 flex-1 place-items-center [container-type:size]">
       <div
-        class="checker overflow-hidden rounded-xs ring-1 ring-foreground/10"
+        class="checker overflow-hidden rounded-xs ring-1 ring-hairline"
         style:aspect-ratio="{width} / {height}"
         style:width="min(100cqw, calc(100cqh * {width / height}))"
       >
@@ -183,12 +183,12 @@
     </EmptyState>
   {:else}
     <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[15rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-      <aside class="flex max-h-44 flex-col gap-2 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+      <aside class="flex max-h-44 flex-col gap-2 overflow-auto border-b border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
         <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Colours to remove</h3>
         <ul class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-1.5">
           {#each colours as colour, index (index)}
-            <li class="flex items-center gap-2 rounded-lg bg-background-darker p-1 ring-1 ring-inset ring-foreground/8">
-              <label class="relative size-7 pointer-coarse:size-9 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background={colour} title="Pick colour {index + 1}">
+            <li class="flex items-center gap-2 rounded-lg bg-background-darker p-1 ring-1 ring-inset ring-hairline">
+              <label class="relative size-7 pointer-coarse:size-9 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-hairline-strong" style:background={colour} title="Pick colour {index + 1}">
                 <input
                   type="color"
                   class="absolute inset-0 cursor-pointer opacity-0"

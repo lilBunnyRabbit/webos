@@ -103,7 +103,7 @@ code{display:block;font:600 18pt/1.4 ui-monospace,monospace;letter-spacing:.06em
       {#if own}
         <Input bind:value={typed} autocomplete="new-password" spellcheck={false} autocapitalize="off" placeholder="Several words you'll remember" aria-label="Your own master phrase" />
       {:else}
-        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
           {#if generated}
             <p class="min-w-0 flex-1 font-mono text-base leading-relaxed break-words" aria-live="polite">{generated}</p>
             <IconButton label="Another phrase" onclick={reroll}><ArrowsClockwiseIcon weight="bold" /></IconButton>
@@ -139,14 +139,14 @@ code{display:block;font:600 18pt/1.4 ui-monospace,monospace;letter-spacing:.06em
     <div class="grid gap-3">
       <div class="grid gap-1.5">
         <span class="text-2xs tracking-wide text-foreground/80 uppercase">Master phrase</span>
-        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
           <p class="min-w-0 flex-1 font-mono text-base break-words">{phrase}</p>
           <CopyButton text={phrase} label="Copy phrase" />
         </div>
       </div>
       <div class="grid gap-1.5">
         <span class="text-2xs tracking-wide text-foreground/80 uppercase">Recovery code</span>
-        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
           <p class="min-w-0 flex-1 font-mono text-base tracking-wide break-all">{recovery.code}</p>
           <CopyButton text={recovery.code} label="Copy recovery code" />
           <IconButton label="Print recovery code" onclick={print_code}><PrinterIcon weight="bold" /></IconButton>

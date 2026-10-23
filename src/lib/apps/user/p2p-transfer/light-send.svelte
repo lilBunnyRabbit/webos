@@ -57,8 +57,8 @@
     <Button variant="primary" onclick={() => sender.stop()}><StopIcon weight="fill" /> Stop</Button>
   </section>
 {:else}
-  <section class="flex flex-col rounded-xl bg-background-light ring-1 ring-foreground/8">
-    <header class="flex items-baseline justify-between gap-3 border-b border-foreground/8 px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase tabular-nums">
+  <section class="flex flex-col rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
+    <header class="flex items-baseline justify-between gap-3 border-b border-hairline px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase tabular-nums">
       <span>File</span>
       <span>up to 2 MB</span>
     </header>
@@ -71,7 +71,7 @@
     {:else}
       <p class="px-3 py-6 text-center text-ui text-foreground/65">One file, sent as a stream of codes the other phone films. No network needed.</p>
     {/if}
-    <div class="flex flex-wrap gap-1 border-t border-foreground/8 p-1">
+    <div class="flex flex-wrap gap-1 border-t border-hairline p-1">
       <Button variant="quiet" size="sm" onclick={add_from_files}><PlusIcon weight="bold" /> {sender.file ? "Other file…" : "Pick file…"}</Button>
       <Button variant="quiet" size="sm" onclick={add_from_device}><DevicesIcon weight="bold" /> From device…</Button>
     </div>

@@ -50,7 +50,7 @@
 <div
   role="dialog"
   tabindex="-1"
-  class="flex shrink-0 flex-col gap-2 border-b border-foreground/8 bg-background-light px-3 py-2"
+  class="flex shrink-0 flex-col gap-2 border-b border-hairline bg-background-light px-3 py-2"
   aria-label="Writing help"
   onkeydown={(event) => {
     if (event.key !== "Escape") return;

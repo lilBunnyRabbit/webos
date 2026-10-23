@@ -444,7 +444,7 @@
     <div class="grid min-h-0 grid-cols-[minmax(0,1fr)] @2xl:grid-cols-[15rem_minmax(0,1fr)]">
       <aside
         class={[
-          "min-h-0 flex-col gap-4 overflow-auto bg-background-light p-3 @2xl:flex @2xl:border-r @2xl:border-foreground/8",
+          "min-h-0 flex-col gap-4 overflow-auto bg-background-light p-3 @2xl:flex @2xl:border-r @2xl:border-hairline",
           view.value === View.OPTIONS ? "flex" : "hidden",
         ]}
       >
@@ -468,7 +468,7 @@
       </aside>
 
       <div class={["min-h-0 flex-col @2xl:flex", view.value === View.OPTIONS ? "hidden" : "flex"]}>
-        <div class="hidden items-center gap-2 border-b border-foreground/8 px-3 py-1.5 @2xl:flex">
+        <div class="hidden items-center gap-2 border-b border-hairline px-3 py-1.5 @2xl:flex">
           <Segmented size="sm" label="View" options={TABS} bind:value={() => shown, (next) => (view.value = next)} />
         </div>
 

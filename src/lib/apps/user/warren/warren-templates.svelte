@@ -31,7 +31,7 @@
 {#snippet card(name: string, description: string, Icon: Component, pick: () => void)}
   <button
     type="button"
-    class="flex min-h-14 min-w-0 items-center gap-3 rounded-lg bg-foreground/4 px-3 py-2 text-left hover:bg-foreground/8 focus-visible:outline-2 focus-visible:outline-cottontail active:opacity-70"
+    class="flex min-h-14 min-w-0 items-center gap-3 rounded-lg bg-background-lightest px-3 py-2 text-left shadow-raised ring-1 ring-hairline transition-[box-shadow,translate] duration-150 hover:ring-hairline-strong focus-visible:outline-2 focus-visible:outline-cottontail active:translate-y-px active:shadow-pressed"
     onclick={pick}
   >
     <Icon weight="duotone" class="size-6 shrink-0 text-primary" />

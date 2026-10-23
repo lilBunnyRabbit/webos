@@ -380,7 +380,7 @@
         </div>
       </div>
 
-      <aside class="flex min-h-0 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:border-t-0 @2xl:border-l">
+      <aside class="flex min-h-0 flex-col gap-4 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:border-t-0 @2xl:border-l">
         <div class="flex flex-col gap-1">
           {@render heading("Part")}
           {@render row("In", format_time(from))}
@@ -428,7 +428,7 @@
         {#if running && job}
           <div class="flex flex-col gap-1.5">
             {@render heading("Saving")}
-            <div class="h-1.5 overflow-hidden rounded-full bg-foreground/12">
+            <div class="h-1.5 overflow-hidden rounded-full bg-field shadow-track">
               <div class="h-full bg-primary transition-[width]" style:width="{Math.round(job.progress * 100)}%"></div>
             </div>
             <p class="px-0.5 font-mono text-2xs text-foreground/80 tabular-nums">{job.message ?? "Starting"}</p>
@@ -439,7 +439,7 @@
           <div class="flex flex-col gap-2" {@attach (node) => node.scrollIntoView({ block: "nearest", behavior: "smooth" })}>
             {@render heading("Saved")}
             {#if result.output === Output.GIF}
-              <img src={result.url} alt="The saved GIF" class="checker max-h-48 w-full rounded-xs object-contain ring-1 ring-foreground/10" />
+              <img src={result.url} alt="The saved GIF" class="checker max-h-48 w-full rounded-xs object-contain ring-1 ring-hairline" />
             {:else if result.output === Output.WEBM}
               <!-- svelte-ignore a11y_media_has_caption -->
               <video src={result.url} controls class="max-h-48 w-full rounded-xs bg-background-darkest"></video>

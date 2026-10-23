@@ -98,7 +98,7 @@
 
 <div class="grid min-h-0 gap-3 @4xl:h-full @4xl:grid-cols-[minmax(0,1fr)_19rem] @4xl:grid-rows-[minmax(0,1fr)]">
   <section class="flex min-h-0 min-w-0 flex-col gap-2" aria-label="Visualisation">
-    <div class="flex min-h-[22rem] flex-col gap-3 rounded-xl bg-background-light/60 p-3 ring-1 ring-foreground/8 @4xl:min-h-0 @4xl:flex-1 @4xl:overflow-hidden">
+    <div class="flex min-h-[22rem] flex-col gap-3 rounded-xl bg-background-light/60 p-3 ring-1 ring-hairline @4xl:min-h-0 @4xl:flex-1 @4xl:overflow-hidden">
       {#if stage_override}
         {@render stage_override()}
       {:else if step}
@@ -130,7 +130,7 @@
   </section>
 
   <aside class="flex min-h-0 min-w-0 flex-col gap-3 @4xl:overflow-y-auto @4xl:pr-1" aria-label="Explanation">
-    <div class="flex flex-col gap-1.5 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+    <div class="flex flex-col gap-1.5 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
       <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">What happens</span>
       <p class="min-h-[2.75rem] text-sm text-pretty" aria-live="polite">{step?.note ?? ""}</p>
       {#if recording.truncated}
@@ -141,7 +141,7 @@
     {#if step?.counters && Object.keys(step.counters).length}
       <dl class="grid grid-cols-2 gap-1.5">
         {#each Object.entries(step.counters) as [key, value] (key)}
-          <div class="flex flex-col rounded-lg bg-background-light px-2.5 py-1.5 ring-1 ring-foreground/8">
+          <div class="flex flex-col rounded-lg bg-background-light px-2.5 py-1.5 shadow-card ring-1 ring-hairline">
             <dt class="truncate text-2xs text-foreground/80">{counter_label(key)}</dt>
             <dd class="font-mono text-sm font-semibold tabular-nums">{value}</dd>
           </div>
@@ -162,7 +162,7 @@
     {#if pseudocode.length}
       <div class="flex flex-col gap-1.5">
         <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Pseudocode</span>
-        <ol class="rounded-xl bg-background-darker py-2 font-mono text-2xs leading-5 ring-1 ring-foreground/8">
+        <ol class="rounded-xl bg-background-darker py-2 font-mono text-2xs leading-5 ring-1 ring-hairline">
           {#each pseudocode as line, n (n)}
             {@const indent = line.length - line.trimStart().length}
             <li

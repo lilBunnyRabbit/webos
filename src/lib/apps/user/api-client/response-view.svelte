@@ -82,7 +82,7 @@
   </div>
 
   {#if tab === Tab.HEADERS}
-    <div class="min-h-0 flex-1 overflow-auto rounded-md ring-1 ring-foreground/8">
+    <div class="min-h-0 flex-1 overflow-auto rounded-md ring-1 ring-hairline">
       <dl class="grid grid-cols-[minmax(6rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-1 p-3 font-mono text-2xs">
         {#each response.headers as header (header.name)}
           <dt class="text-foreground/65">{header.name}</dt>
@@ -96,7 +96,7 @@
   {:else if response.blob.size === 0}
     <EmptyState icon={FileIcon} title="No body" description="The server sent headers only." />
   {:else if image_url}
-    <div class="checker grid min-h-0 flex-1 place-items-center overflow-auto rounded-md p-3 ring-1 ring-foreground/8">
+    <div class="checker grid min-h-0 flex-1 place-items-center overflow-auto rounded-md p-3 ring-1 ring-hairline">
       <img src={image_url} alt="Response body" class="max-h-full max-w-full object-contain" />
     </div>
   {:else if response.text === null}

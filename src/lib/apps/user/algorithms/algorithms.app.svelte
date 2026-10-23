@@ -188,7 +188,7 @@
             aria-current={item.id === entry.id ? "page" : undefined}
             class={cn(
               "h-7 shrink-0 rounded-md px-2.5 text-ui font-medium whitespace-nowrap transition-colors duration-150 pointer-coarse:h-9",
-              item.id === entry.id ? "bg-primary/15 text-primary" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+              item.id === entry.id ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
             )}
             onclick={() => (section.value = item.id)}
           >
@@ -196,7 +196,7 @@
           </button>
         {/each}
       </nav>
-      <div class="flex shrink-0 items-center gap-0.5 border-l border-foreground/8 pl-1.5">
+      <div class="flex shrink-0 items-center gap-0.5 border-l border-hairline pl-1.5">
         <IconButton label="Open…" size="sm" onclick={open}><FolderOpenIcon weight="bold" /></IconButton>
         <IconButton label="Save" size="sm" disabled={!definition} onclick={save}><FloppyDiskIcon weight="bold" /></IconButton>
         <IconButton label="Copy a link to this input" size="sm" disabled={!definition} onclick={share}><LinkSimpleIcon weight="bold" /></IconButton>

@@ -37,7 +37,7 @@
       <CopyButton text={pretty(object)} />
     {/snippet}
     <pre
-      class="max-h-80 overflow-auto rounded-xl bg-background-light p-3 font-mono text-2xs leading-relaxed break-words whitespace-pre-wrap ring-1 ring-foreground/8">{pretty(object)}</pre>
+      class="max-h-80 overflow-auto rounded-xl bg-background-light p-3 font-mono text-2xs leading-relaxed break-words whitespace-pre-wrap shadow-card ring-1 ring-hairline">{pretty(object)}</pre>
   </Section>
 {/snippet}
 
@@ -61,7 +61,7 @@
 
   {#if times.length}
     <Section title="Times" flush>
-      <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+      <dl class="divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         {#each times as time (time.claim)}
           <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-1.5">
             <dt class="w-24 shrink-0 text-ui text-foreground/65">{time.label} <span class="font-mono text-2xs">{time.claim}</span></dt>

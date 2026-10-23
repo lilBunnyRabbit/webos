@@ -168,8 +168,8 @@
         <Handshake steps={STEPS[role]} {step} />
 
         {#if session.phase === Phase.SETUP && role === "send"}
-          <section class="flex flex-col rounded-xl bg-background-light ring-1 ring-foreground/8">
-            <header class="flex items-baseline justify-between gap-3 border-b border-foreground/8 px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase tabular-nums">
+          <section class="flex flex-col rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
+            <header class="flex items-baseline justify-between gap-3 border-b border-hairline px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase tabular-nums">
               <span>Manifest</span>
               <span>{sender.files.length} file{sender.files.length === 1 ? "" : "s"} · {format_bytes(sender.total)}</span>
             </header>
@@ -183,7 +183,7 @@
             {:else}
               <p class="px-3 py-6 text-center text-ui text-foreground/65">Add the files to send. They're read on this device and go straight to the other one.</p>
             {/each}
-            <div class="flex flex-wrap gap-1 border-t border-foreground/8 p-1">
+            <div class="flex flex-wrap gap-1 border-t border-hairline p-1">
               <Button variant="quiet" size="sm" onclick={add_from_files}><PlusIcon weight="bold" /> Add file…</Button>
               <Button variant="quiet" size="sm" onclick={add_from_device}><DevicesIcon weight="bold" /> From device…</Button>
             </div>
@@ -229,7 +229,7 @@
           {/if}
         {:else}
           {@const tone = session.phase === Phase.INTERRUPTED ? "error" : session.phase === Phase.DONE ? "success" : "primary"}
-          <section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+          <section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
             <div class="flex items-end justify-between gap-3">
               <div class="flex flex-col">
                 <span class="font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">
@@ -264,8 +264,8 @@
             </div>
           {/if}
 
-          <section class="flex flex-col rounded-xl bg-background-light ring-1 ring-foreground/8">
-            <header class="border-b border-foreground/8 px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">Files</header>
+          <section class="flex flex-col rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
+            <header class="border-b border-hairline px-3 py-2 font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">Files</header>
             {#each session.entries as entry, index (index)}
               {@const bytes = session.progress[index] ?? 0}
               {@const path = role === "receive" ? receiver.saved_path(entry) : null}

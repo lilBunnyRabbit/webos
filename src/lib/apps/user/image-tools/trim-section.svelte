@@ -134,7 +134,7 @@
   <figure class="flex min-h-0 min-w-0 flex-col gap-2">
     <div class="grid min-h-0 flex-1 place-items-center [container-type:size]">
       <div
-        class="checker relative overflow-hidden rounded-xs ring-1 ring-foreground/10"
+        class="checker relative overflow-hidden rounded-xs ring-1 ring-hairline"
         style:aspect-ratio="{width} / {height}"
         style:width="min(100cqw, calc(100cqh * {width / height}))"
       >

@@ -113,7 +113,7 @@
       {#each { length: TABLE_PICKER.columns }, column (column)}
         <button
           type="button"
-          class={["cell size-5 rounded-sm ring-1 ring-foreground/20 ring-inset pointer-coarse:size-10", hover && row < hover.rows && column < hover.columns ? "bg-primary/35 ring-primary" : "bg-foreground/4"]}
+          class={["cell size-5 rounded-sm ring-1 ring-hairline-strong ring-inset pointer-coarse:size-10", hover && row < hover.rows && column < hover.columns ? "bg-primary/35 ring-primary" : "bg-foreground/4"]}
           aria-label="{row + 1} by {column + 1} table"
           onpointerdown={keep_focus}
           onpointerenter={(event) => event.pointerType !== "touch" && (hover = { rows: row + 1, columns: column + 1 })}

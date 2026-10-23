@@ -29,7 +29,7 @@
 </script>
 
 {#snippet rows(entries: [string, string][], mono_keys = true)}
-  <dl class="divide-y divide-foreground/8">
+  <dl class="divide-y divide-hairline">
     {#each entries as [key, value], index (index)}
       <div class="grid gap-x-4 gap-y-0.5 px-4 py-2 @sm:grid-cols-[min(13rem,38%)_1fr] @sm:items-baseline">
         <dt class={mono_keys ? "font-mono text-2xs text-foreground/65 wrap-anywhere" : "text-2xs text-foreground/65 @sm:text-ui"}>{key}</dt>

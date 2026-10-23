@@ -216,7 +216,7 @@
     {/if}
   {:else}
     <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[16rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-      <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+      <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
         <div class="flex flex-col gap-1.5">
           <div class="flex items-center justify-between px-0.5">
             <h3 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Images</h3>
@@ -259,7 +259,7 @@
         <div class="flex flex-col gap-2.5">
           <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Background</h3>
           <div class="flex items-center gap-2">
-            <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-foreground/15" style:background title="Pick background colour">
+            <label class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-inset ring-hairline-strong" style:background title="Pick background colour">
               <input type="color" class="absolute inset-0 cursor-pointer opacity-0" bind:value={background} />
             </label>
             <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{background}</span>
@@ -278,7 +278,7 @@
         <div class="grid h-max min-h-full w-max min-w-full place-items-center">
           <canvas
             {@attach paint(result)}
-            class="checker block ring-1 ring-foreground/15 [image-rendering:pixelated]"
+            class="checker block ring-1 ring-hairline-strong [image-rendering:pixelated]"
             style:width={column ? `${zoom}cqw` : undefined}
             style:height={column ? undefined : `${zoom}cqh`}
           ></canvas>

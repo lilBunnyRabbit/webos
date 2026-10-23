@@ -21,7 +21,7 @@
 
 {#snippet node(title: string, Icon: typeof MonitorIcon, endpoint: string, type: string | null | undefined)}
   <div class="flex min-w-0 flex-col items-center gap-1 text-center">
-    <div class={cn("grid size-10 place-items-center rounded-xl ring-1 ring-inset transition-colors duration-150", up ? "bg-primary/12 text-primary ring-primary/40" : "bg-foreground/6 text-foreground/65 ring-foreground/10")}>
+    <div class={cn("grid size-10 place-items-center rounded-xl ring-1 ring-inset transition-colors duration-150", up ? "bg-primary/12 text-primary ring-primary/40" : "bg-foreground/6 text-foreground/65 ring-hairline")}>
       <Icon class="size-5" />
     </div>
     <span class="text-ui font-medium">{title}</span>
@@ -30,7 +30,7 @@
   </div>
 {/snippet}
 
-<section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8" aria-label="Where your files go">
+<section class="flex flex-col gap-3 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline" aria-label="Where your files go">
   <h2 class="font-mono text-2xs font-medium tracking-wide text-foreground/80 uppercase">Data path</h2>
 
   <div class="grid grid-cols-[minmax(0,1fr)_minmax(4rem,1.4fr)_minmax(0,1fr)] items-start gap-2">
@@ -52,7 +52,7 @@
     {@render node("Other device", DeviceMobileIcon, known ? format_endpoint(link!.remote) : "—", known ? link?.remote?.type : null)}
   </div>
 
-  <div class="flex items-start gap-2.5 rounded-lg border border-dashed border-foreground/16 p-2.5">
+  <div class="flex items-start gap-2.5 rounded-lg border border-dashed border-hairline-strong p-2.5">
     <CloudIcon class="mt-0.5 size-4 shrink-0 text-foreground/65" />
     <p class="min-w-0 text-2xs leading-relaxed text-foreground/80">
       <span class="font-mono">stun.l.google.com</span> only tells each device its public address while connecting. It never sees a byte of your files, and there is no WebOS server.

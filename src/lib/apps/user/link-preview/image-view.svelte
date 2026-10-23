@@ -58,7 +58,7 @@
       <div class="grid place-items-center bg-foreground/4 p-3">
         <PreviewImage src={card.image} alt={card.image_alt} class="max-h-80 max-w-full rounded-md object-contain" />
       </div>
-      <dl class="divide-y divide-foreground/8">
+      <dl class="divide-y divide-hairline">
         {@render row("URL", card.image, true)}
         {@render row("Declared size", declared ? `${declared.width} × ${declared.height}` : "Not declared (og:image:width and og:image:height)")}
         {@render row("Loaded size", loaded_label())}
@@ -80,7 +80,7 @@
       <div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3 p-3">
         {#each FRAMES as frame (frame.label)}
           <figure class="flex min-w-0 flex-col gap-1.5">
-            <div style:aspect-ratio={frame.ratio} class="overflow-hidden rounded-md ring-1 ring-foreground/8">
+            <div style:aspect-ratio={frame.ratio} class="overflow-hidden rounded-md ring-1 ring-hairline">
               <PreviewImage src={card.image} class="size-full" />
             </div>
             <figcaption class="flex flex-col">

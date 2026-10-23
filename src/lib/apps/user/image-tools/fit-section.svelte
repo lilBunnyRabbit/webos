@@ -289,7 +289,7 @@
   {:else}
     <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
       <aside
-        class="order-2 flex max-h-72 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
+        class="order-2 flex max-h-72 flex-col gap-4 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
       >
         <div class="flex flex-col gap-2.5">
           {@render heading("Limit")}

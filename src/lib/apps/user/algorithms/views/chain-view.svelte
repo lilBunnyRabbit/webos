@@ -10,7 +10,7 @@
 
 <div class="flex flex-wrap items-end gap-y-3">
   {#if view.items.length === 0}
-    <span class="rounded-md px-2.5 py-1.5 font-mono text-ui text-foreground/65 ring-1 ring-foreground/12 ring-inset">empty</span>
+    <span class="rounded-md px-2.5 py-1.5 font-mono text-ui text-foreground/65 ring-1 ring-hairline ring-inset">empty</span>
   {/if}
   {#each view.items as item, index (index)}
     <div class="flex items-end">
@@ -23,7 +23,7 @@
         <span
           class={cn(
             "grid min-h-9 min-w-10 place-items-center rounded-md px-2 font-mono text-ui tabular-nums ring-1 transition-colors duration-150 ring-inset",
-            item.tone ? TONE_TINT[item.tone] : "bg-background-light ring-foreground/20"
+            item.tone ? TONE_TINT[item.tone] : "bg-background-light ring-hairline-strong"
           )}>{item.text}</span
         >
       </div>

@@ -59,7 +59,7 @@
     <Select size="sm" options={zone_options} bind:value={value.zone} aria-label="Time zone" class="w-52 max-w-full" />
   {/snippet}
   {#if parsed.ok}
-    <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <dl class="divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
       {#each rows as row (row.label)}
         <div class="flex items-center gap-3 px-3 py-1.5">
           <dt class="w-28 shrink-0 truncate text-ui text-foreground/65" title={row.label}>{row.label}</dt>

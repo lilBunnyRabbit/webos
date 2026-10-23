@@ -72,7 +72,7 @@
 <svelte:element this={"style"}>{css}</svelte:element>
 
 {#snippet header()}
-  <div class="flex h-11 shrink-0 items-center gap-1 border-b border-foreground/8 px-2">
+  <div class="flex h-11 shrink-0 items-center gap-1 border-b border-hairline px-2">
     {#if picked}
       <IconButton label="All versions" size="sm" class="pointer-coarse:size-11" onclick={() => (picked = null)}><CaretLeftIcon weight="bold" /></IconButton>
       <h2 class="min-w-0 flex-1 truncate text-ui font-semibold">{format_datetime(picked.snapshot.at)}</h2>
@@ -121,7 +121,7 @@
         </ol>
       {/if}
     </div>
-    <div class="flex shrink-0 justify-end gap-2 border-t border-foreground/8 p-2">
+    <div class="flex shrink-0 justify-end gap-2 border-t border-hairline p-2">
       <Button disabled={!picked.document} variant="primary" onclick={() => picked?.document && onrestore(picked.document, picked.snapshot)}>
         <ArrowCounterClockwiseIcon weight="bold" />Restore this version
       </Button>
@@ -167,7 +167,7 @@
       aria-modal="true"
       aria-label="Version history"
       tabindex="-1"
-      class="relative mx-auto flex h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+      class="relative mx-auto flex h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-hairline outline-none motion-safe:animate-sheet-in"
       {@attach (element) => element.focus({ preventScroll: true })}
       {@attach swipe_dismiss({ on_dismiss: onclose })}
       onkeydown={on_key}
@@ -182,7 +182,7 @@
     role="dialog"
     aria-label="Version history"
     tabindex="-1"
-    class="absolute inset-y-0 right-0 z-20 flex w-[min(26rem,100%)] flex-col border-l border-foreground/10 bg-background-light shadow-raised outline-none motion-safe:animate-in motion-safe:slide-in-from-right"
+    class="absolute inset-y-0 right-0 z-20 flex w-[min(26rem,100%)] flex-col border-l border-hairline bg-background-light shadow-raised outline-none motion-safe:animate-in motion-safe:slide-in-from-right"
     {@attach (element) => element.focus({ preventScroll: true })}
     onkeydown={on_key}
   >

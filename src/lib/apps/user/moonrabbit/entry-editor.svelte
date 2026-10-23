@@ -284,7 +284,7 @@
 </script>
 
 <article class="flex h-full min-h-0 flex-col" aria-label="Entry">
-  <header class="flex flex-wrap items-center gap-2 border-b border-foreground/8 px-2 py-1.5">
+  <header class="flex flex-wrap items-center gap-2 border-b border-hairline px-2 py-1.5">
     <IconButton label="All entries" size="sm" class="@2xl:hidden" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
     <Input
       type="date"
@@ -305,7 +305,7 @@
     <IconButton label="Delete entry" size="sm" onclick={remove}><TrashIcon weight="bold" /></IconButton>
   </header>
 
-  <div class="grid gap-2 border-b border-foreground/8 px-2 py-1.5">
+  <div class="grid gap-2 border-b border-hairline px-2 py-1.5">
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
       <MoodPicker value={current.mood} onchange={(mood) => set_details({ mood })} label="Mood of this entry" />
       <span class="flex-1"></span>
@@ -355,7 +355,7 @@
     {/if}
   </div>
 
-  <footer class="flex flex-wrap items-center gap-2 border-t border-foreground/8 px-3 py-1.5 font-mono text-2xs text-foreground/80">
+  <footer class="flex flex-wrap items-center gap-2 border-t border-hairline px-3 py-1.5 font-mono text-2xs text-foreground/80">
     <span>{words} {words === 1 ? "word" : "words"}</span>
     <span class="hidden @sm:inline">written {format_datetime(current.created)}</span>
     {#each tags as tag (tag)}<Badge tone="primary">#{tag}</Badge>{/each}

@@ -127,8 +127,8 @@
         tabindex={index === focus ? 0 : -1}
         aria-label={ICONS[plot].name}
         class={cn(
-          "relative grid aspect-square min-h-11 place-items-center rounded-xl bg-background-light text-foreground/80 ring-1 ring-foreground/8 transition-[background-color,transform] select-none hover:bg-foreground/8 active:scale-95 disabled:opacity-38 [&_svg]:size-6 @sm:[&_svg]:size-7",
-          index === current && "bg-primary/15 text-primary ring-primary/40 hover:bg-primary/15"
+          "relative grid aspect-square min-h-11 place-items-center rounded-xl bg-raised text-foreground/80 shadow-control ring-1 ring-hairline transition-[background-color,box-shadow,translate] select-none hover:bg-raised-hover active:translate-y-px active:shadow-pressed disabled:opacity-38 disabled:shadow-none [&_svg]:size-6 @sm:[&_svg]:size-7",
+          index === current && "bg-primary/15 text-primary shadow-pressed ring-primary/40 hover:bg-primary/15"
         )}
         disabled={busy}
         onfocus={() => (focus = index)}

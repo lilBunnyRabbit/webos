@@ -255,7 +255,7 @@
     {/if}
   {:else}
     <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[16rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-      <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+      <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
         <div class="flex flex-col gap-2.5">
           <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Output</h3>
           <Segmented size="sm" label="Format" options={FORMATS} bind:value={settings.value.format} class="self-start" />

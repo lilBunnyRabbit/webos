@@ -276,7 +276,7 @@
 </script>
 
 {#snippet group(id: string, title: string, body: Snippet)}
-  <details class="group/tools border-b border-foreground/8" open={open[id] ?? true} ontoggle={(event) => ontoggle(id, event.currentTarget.open)}>
+  <details class="group/tools border-b border-hairline" open={open[id] ?? true} ontoggle={(event) => ontoggle(id, event.currentTarget.open)}>
     <summary class="flex h-9 cursor-pointer list-none items-center gap-1.5 px-3 text-2xs font-semibold tracking-wide text-foreground/65 uppercase select-none hover:text-foreground pointer-coarse:h-11 [&::-webkit-details-marker]:hidden">
       <CaretRightIcon weight="bold" class="size-3 transition-transform group-open/tools:rotate-90" />
       {title}
@@ -484,7 +484,7 @@
           {#if synonyms.list.length}
             <div class="flex flex-wrap gap-1" aria-label="Synonyms">
               {#each synonyms.list as synonym (synonym)}
-                <Button size="sm" variant="quiet" class="bg-foreground/6" pressed={replacement === synonym} onclick={() => (replacement = synonym)}>{synonym}</Button>
+                <Button size="sm" pressed={replacement === synonym} onclick={() => (replacement = synonym)}>{synonym}</Button>
               {/each}
             </div>
           {:else}

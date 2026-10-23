@@ -593,7 +593,7 @@
   <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @md:grid-cols-[auto_minmax(0,1fr)] @md:grid-rows-1">
     <aside
       class={[
-        "flex-wrap items-center gap-3 overflow-auto border-b border-foreground/8 bg-background-light p-2",
+        "flex-wrap items-center gap-3 overflow-auto border-b border-hairline bg-background-light p-2",
         "@md:flex @md:w-44 @md:flex-col @md:flex-nowrap @md:items-stretch @md:border-r @md:border-b-0",
         panel_open.value ? "flex" : "hidden",
       ]}
@@ -695,7 +695,7 @@
       class="stage relative grid min-h-0 min-w-0 overflow-auto bg-background-darker p-4"
     >
       <div
-        class="checker relative m-auto shrink-0 ring-1 ring-foreground/10"
+        class="checker relative m-auto shrink-0 ring-1 ring-hairline"
         style:width="{width * zoom}px"
         style:height="{height * zoom}px"
       >

@@ -1072,12 +1072,12 @@
   {/if}
 
   <div class="body relative grid min-h-0">
-    <aside class="sidebar min-h-0 overflow-y-auto border-r border-foreground/8 bg-background-light" aria-label="Tools">
+    <aside class="sidebar min-h-0 overflow-y-auto border-r border-hairline bg-background-light" aria-label="Tools">
       {@render tools()}
     </aside>
 
     <div class="flex min-h-0 min-w-0 flex-col">
-      <div class="format-bar flex shrink-0 items-center gap-1 border-b border-foreground/8 bg-background-light px-2 py-1" role="toolbar" aria-label="Formatting">
+      <div class="format-bar flex shrink-0 items-center gap-1 border-b border-hairline bg-background-light px-2 py-1" role="toolbar" aria-label="Formatting">
         <IconButton label="Bold" size="sm" pressed={editor.bold} onpointerdown={keep_focus} onclick={() => editor.toggle_bold()}><TextBIcon weight="bold" /></IconButton>
         <IconButton label="Italic" size="sm" pressed={editor.italic} onpointerdown={keep_focus} onclick={() => editor.toggle_italic()}><TextItalicIcon weight="bold" /></IconButton>
         <IconButton label="Underline" size="sm" pressed={editor.underline} onpointerdown={keep_focus} onclick={() => editor.toggle_underline()}><TextUnderlineIcon weight="bold" /></IconButton>
@@ -1184,7 +1184,7 @@
     {#if goal_progress !== null && editor.goal}
       <span class="flex shrink-0 items-center gap-1.5" title="Word goal: {editor.goal.toLocaleString('en')}">
         <span
-          class="relative h-1.5 w-12 overflow-hidden rounded-full bg-foreground/12"
+          class="relative h-1.5 w-12 overflow-hidden rounded-full bg-field shadow-track"
           role="progressbar"
           aria-label="Word goal"
           aria-valuemin={0}
@@ -1213,7 +1213,7 @@
         aria-modal="true"
         aria-label={sheet === "table" ? "Table" : "Tools"}
         tabindex="-1"
-        class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in"
+        class="relative mx-auto flex max-h-[85%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background-light shadow-raised ring-1 ring-hairline outline-none motion-safe:animate-sheet-in"
         {@attach (element) => element.focus({ preventScroll: true })}
         {@attach swipe_dismiss({ on_dismiss: () => (sheet = null) })}
         onkeydown={(event) => {
@@ -1233,7 +1233,7 @@
             {@render tools()}
           {/if}
         </div>
-        <div class="flex justify-end border-t border-foreground/8 p-2">
+        <div class="flex justify-end border-t border-hairline p-2">
           <Button variant="primary" onclick={() => (sheet = null)}>Done</Button>
         </div>
       </div>

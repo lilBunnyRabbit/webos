@@ -122,7 +122,7 @@
     {label}
     <span class="flex items-center gap-2">
       <span class="font-mono text-2xs text-foreground/80 uppercase">{spec[key]}</span>
-      <span class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-foreground/15 ring-inset" style:background={spec[key]}>
+      <span class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-hairline-strong ring-inset" style:background={spec[key]}>
         <input type="color" class="absolute inset-0 cursor-pointer opacity-0" aria-label={label} value={spec[key]} oninput={(event) => update({ [key]: event.currentTarget.value })} />
       </span>
     </span>
@@ -148,7 +148,7 @@
   </Toolbar>
 
   <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[18rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-    <aside class="flex max-h-64 flex-col gap-5 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
+    <aside class="flex max-h-64 flex-col gap-5 overflow-auto border-b border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
       <div class="flex flex-col gap-2.5">
         <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Size</h3>
         <Segmented
@@ -228,7 +228,7 @@
 
     <div class="stage grid min-h-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center p-6">
       {#if plan.ok}
-        <canvas {@attach paint(preview)} class="max-h-full max-w-full ring-1 ring-foreground/15 [image-rendering:pixelated]" aria-label="Preview, {sized.width} by {sized.height}"></canvas>
+        <canvas {@attach paint(preview)} class="max-h-full max-w-full ring-1 ring-hairline-strong [image-rendering:pixelated]" aria-label="Preview, {sized.width} by {sized.height}"></canvas>
       {:else}
         <p role="alert" class="flex max-w-sm items-start gap-2 text-ui text-error"><WarningCircleIcon weight="bold" class="mt-0.5 size-4 shrink-0" />{plan.error}</p>
       {/if}

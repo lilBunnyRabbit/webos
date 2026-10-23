@@ -96,7 +96,7 @@
             {#if cert.is_ca}<Badge tone="info">CA</Badge>{/if}
             <Badge tone={STATE_TONES[validity.state]}>{validity.text}</Badge>
           {/snippet}
-          <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+          <dl class="divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
             {#each rows(cert) as row (row.label)}
               <div class="flex items-center gap-3 px-3 py-1.5">
                 <dt class="w-20 shrink-0 text-ui text-foreground/65">{row.label}</dt>

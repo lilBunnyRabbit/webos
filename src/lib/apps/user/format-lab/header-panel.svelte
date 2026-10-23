@@ -43,7 +43,7 @@
 
 <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-5 @md:px-6">
   <Section title="What the file says" description={header ? "Read from the header, without decoding." : "Only AVIF and JPEG XL headers are read; this is what the decoder reports."}>
-    <dl class="divide-y divide-foreground/8">
+    <dl class="divide-y divide-hairline">
       {#each rows as row (row.label)}
         <div class="flex items-baseline gap-4 px-4 py-2.5">
           <dt class="w-28 shrink-0 text-ui text-foreground/65">{row.label}</dt>

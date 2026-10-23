@@ -72,7 +72,7 @@
   class={cn(
     "flex items-start gap-3 rounded-xl p-3 ring-1 ring-inset",
     now.tone === "act" && "bg-primary/12 ring-primary/30",
-    now.tone === "wait" && "bg-background-light ring-foreground/8",
+    now.tone === "wait" && "bg-background-light ring-hairline",
     now.tone === "ok" && "bg-success/12 ring-success/30",
     now.tone === "warn" && "bg-warning/12 ring-warning/30",
     now.tone === "error" && "bg-error/12 ring-error/30"

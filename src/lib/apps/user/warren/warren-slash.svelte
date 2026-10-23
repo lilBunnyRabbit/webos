@@ -93,7 +93,7 @@
   {#if open}
     <div
       bind:this={sheet_box}
-      class="absolute inset-x-0 bottom-0 z-20 mx-auto flex max-h-[45%] w-full max-w-lg flex-col rounded-t-2xl bg-background-light shadow-raised ring-1 ring-foreground/10 motion-safe:animate-sheet-in"
+      class="absolute inset-x-0 bottom-0 z-20 mx-auto flex max-h-[45%] w-full max-w-lg flex-col rounded-t-2xl bg-background-light shadow-raised ring-1 ring-hairline motion-safe:animate-sheet-in"
       role="dialog"
       aria-label="Insert a block"
       {@attach swipe_dismiss({ on_dismiss: () => editor.close_slash() })}

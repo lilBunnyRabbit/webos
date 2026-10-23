@@ -379,7 +379,7 @@
           onkeydown={on_keydown}
           onscroll={on_scroll} {@attach fine_wheel}>
           <div class="sticky top-0 w-max min-w-full overflow-hidden" style:height="{viewport_height}px">
-            <div class="flex items-center gap-4 border-b border-foreground/8 bg-background-light px-3 whitespace-nowrap text-foreground/65 *:shrink-0" style:height="{ROW}px">
+            <div class="flex items-center gap-4 border-b border-hairline bg-background-light px-3 whitespace-nowrap text-foreground/65 *:shrink-0" style:height="{ROW}px">
               <span style:width="{digits}ch">Offset</span>
               <span>
                 {#each COLUMNS as column (column)}<span class={cn("inline-block w-[2.5ch] text-center", column === 8 && "ml-[1ch]")}>{hex_byte(column)}</span>{/each}
@@ -424,7 +424,7 @@
       {/if}
 
       {#if show_inspector}
-        <div class="flex flex-wrap items-start gap-x-4 gap-y-1 border-t border-foreground/8 bg-background-light px-3 py-2">
+        <div class="flex flex-wrap items-start gap-x-4 gap-y-1 border-t border-hairline bg-background-light px-3 py-2">
           <Segmented size="sm" label="Byte order" options={endian_options} bind:value={endian} />
           <dl class="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-4 gap-y-0.5 font-mono text-2xs">
             {#each inspection as item (item.label)}

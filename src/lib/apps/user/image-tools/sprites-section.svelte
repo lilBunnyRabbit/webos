@@ -380,7 +380,7 @@
     {/if}
   {:else}
     <div class="flex min-h-0 flex-col overflow-y-auto @4xl:grid @4xl:grid-cols-[16rem_minmax(0,1fr)_17rem] @4xl:overflow-hidden">
-      <aside class="order-2 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-r @4xl:border-foreground/8">
+      <aside class="order-2 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-r @4xl:border-hairline">
         <Section title="Sheet" flush>
           <p class="font-mono text-2xs break-all text-foreground/65">{source.name} · {sprite.width}×{sprite.height}</p>
           <div class="grid grid-cols-2 gap-2">
@@ -497,7 +497,7 @@
         <SpriteSheet bind:this={sheet} bind:zoom {sprite} {show_labels} pan_mode={space_held} />
       </div>
 
-      <aside class="order-3 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-l @4xl:border-foreground/8">
+      <aside class="order-3 flex flex-col gap-6 p-4 @4xl:order-none @4xl:overflow-y-auto @4xl:border-l @4xl:border-hairline">
         <Section title="Preview" flush>
           <SpritePreview bind:this={preview} {sprite} />
           <SpriteNumberField label="FPS" min={1} max={120} value={sprite.fps} onchange={(v) => (sprite.fps = Math.max(1, Math.min(120, v)))} />

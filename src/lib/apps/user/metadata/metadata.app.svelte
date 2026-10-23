@@ -172,7 +172,7 @@
         <div class="mx-auto flex max-w-3xl flex-col gap-5 p-3 @sm:p-5">
           {#each found.groups as group (group.title)}
             <Section title={group.title} flush>
-              <dl class="divide-y divide-foreground/8 rounded-xl bg-background-light ring-1 ring-foreground/8">
+              <dl class="divide-y divide-hairline rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
                 {#each group.rows as row, index (index)}
                   <div class="grid gap-x-4 gap-y-0.5 px-4 py-2 @sm:grid-cols-[min(11rem,35%)_1fr] @sm:items-baseline">
                     <dt class="text-2xs text-foreground/65 @sm:text-ui">{row.label}</dt>

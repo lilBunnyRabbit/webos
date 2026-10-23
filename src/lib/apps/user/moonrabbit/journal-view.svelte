@@ -254,7 +254,7 @@
     <Button size="sm" onclick={onlock}><LockIcon weight="bold" />Lock</Button>
   </Toolbar>
 
-  <div class={cn("flex justify-center border-b border-foreground/8 bg-background-light px-2 py-1.5 @4xl:hidden", open_entry && view === View.ENTRIES && "hidden @2xl:flex")}>
+  <div class={cn("flex justify-center border-b border-hairline bg-background-light px-2 py-1.5 @4xl:hidden", open_entry && view === View.ENTRIES && "hidden @2xl:flex")}>
     <Segmented bind:value={view} options={views} label="View" size="sm" />
   </div>
 
@@ -266,7 +266,7 @@
     <div class="min-h-0 flex-1 overflow-auto"><InsightsView days={stats} activities={session.activities} {today} /></div>
   {:else}
   <div class="grid min-h-0 flex-1 @2xl:grid-cols-[22rem_1fr]">
-    <aside class={cn("flex min-h-0 flex-col border-foreground/8 @2xl:border-r", open_entry && "hidden @2xl:flex")}>
+    <aside class={cn("flex min-h-0 flex-col border-hairline @2xl:border-r", open_entry && "hidden @2xl:flex")}>
       <div class="min-h-0 flex-1 overflow-auto">
         {#if show_recovered}
           <div class="m-3 mb-0 flex items-start gap-2 rounded-lg bg-info/10 px-3 py-2 text-ui">
@@ -287,7 +287,7 @@
         {/if}
 
         <form
-          class="grid gap-2 border-b border-foreground/8 p-3"
+          class="grid gap-2 border-b border-hairline p-3"
           onsubmit={(event) => {
             event.preventDefault();
             void quick_save();

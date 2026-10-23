@@ -409,7 +409,7 @@
   {:else}
     <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] @2xl:grid-cols-[17rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
       <aside
-        class="order-2 flex max-h-64 flex-col gap-4 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
+        class="order-2 flex max-h-64 flex-col gap-4 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:order-none @2xl:max-h-none @2xl:border-t-0 @2xl:border-r"
       >
         {#if original && edited}
           <Segmented label="Settings" options={PANELS} bind:value={panel} class="sticky top-0 z-10 w-full shrink-0 *:flex-1 @2xl:hidden" />
@@ -531,7 +531,7 @@
             >
               <div
                 bind:this={overlay}
-                class="checker absolute inset-0 origin-top-left rounded-xs ring-1 ring-foreground/10"
+                class="checker absolute inset-0 origin-top-left rounded-xs ring-1 ring-hairline"
                 style:transform="translate({camera.offset_x}px, {camera.offset_y}px) scale({camera.scale})"
                 style:--zoom={camera.scale}
               >

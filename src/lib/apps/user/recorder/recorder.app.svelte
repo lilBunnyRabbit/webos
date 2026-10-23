@@ -231,7 +231,7 @@
   <div class="min-h-0 overflow-auto">
     <div class="mx-auto grid max-w-5xl gap-6 p-4 @md:p-6 @3xl:grid-cols-[minmax(0,1fr)_17rem]">
       <div class="flex min-w-0 flex-col gap-4">
-        <div class={cn("relative grid min-h-64 place-items-center overflow-hidden rounded-xl", visual ? "aspect-video bg-background-darker" : "bg-background-light")}>
+        <div class={cn("relative grid min-h-64 place-items-center overflow-hidden rounded-xl", visual ? "aspect-video bg-background-darker" : "bg-background-light shadow-card ring-1 ring-hairline")}>
           {#if session.phase === Phase.ERROR && session.error}
             {@const copy = error_copy(session.error.kind, session.error.source)}
             <EmptyState icon={ERROR_ICON[session.error.source]} tone="error" title={copy.title} description={copy.description}>

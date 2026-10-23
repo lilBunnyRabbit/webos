@@ -31,7 +31,7 @@
 
 {#snippet item(comment: Comment)}
   {@const here = anchored.has(comment.id)}
-  <li class={["flex flex-col gap-1 rounded-lg p-2 ring-1", editor.comments_here.includes(comment.id) ? "bg-warning/12 ring-warning/40" : "ring-foreground/8"]}>
+  <li class={["flex flex-col gap-1 rounded-lg p-2 ring-1", editor.comments_here.includes(comment.id) ? "bg-warning/12 ring-warning/40" : "ring-hairline"]}>
     <button
       type="button"
       class="min-h-8 rounded-md text-left focus-visible:bg-primary/12 focus-visible:outline-none disabled:cursor-default pointer-coarse:min-h-11"
@@ -39,7 +39,7 @@
       title={here ? "Show the text it's on" : undefined}
       onclick={() => onshow(comment.id)}
     >
-      <span class={["line-clamp-2 border-l-2 pl-1.5 text-2xs italic", here ? "border-warning text-foreground/80" : "border-foreground/20 text-foreground/65 line-through"]}>{comment.quote}</span>
+      <span class={["line-clamp-2 border-l-2 pl-1.5 text-2xs italic", here ? "border-warning text-foreground/80" : "border-hairline-strong text-foreground/65 line-through"]}>{comment.quote}</span>
       <span class="mt-1 block text-ui break-words whitespace-pre-wrap">{comment.text}</span>
     </button>
     <div class="flex items-center gap-0.5">

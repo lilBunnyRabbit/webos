@@ -38,7 +38,7 @@
             data-position={position}
             class={cn(
               "group relative cursor-grab rounded-sm bg-background-darker ring-2 select-none active:cursor-grabbing",
-              index === sprite.selected ? "ring-foreground" : "ring-foreground/20 hover:ring-foreground/50",
+              index === sprite.selected ? "ring-foreground" : "ring-hairline-strong hover:ring-edge",
               drop_at === position && drag_from !== null && drag_from !== position && "ring-primary",
               drag_from === position && "opacity-38"
             )}

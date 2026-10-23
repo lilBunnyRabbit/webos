@@ -17,7 +17,7 @@
   const status = $derived(stalled ? { label: "Stalled", dot: "bg-warning motion-safe:animate-pulse" } : STATES[phase]);
 </script>
 
-<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-foreground/8 bg-background-light px-3 py-1.5 font-mono text-2xs text-foreground/80 uppercase tabular-nums" role="status">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-hairline bg-background-light px-3 py-1.5 font-mono text-2xs text-foreground/80 uppercase tabular-nums" role="status">
   <span class="flex items-center gap-1.5 text-foreground">
     <span class={cn("size-1.5 rounded-full", status.dot)}></span>
     {status.label}

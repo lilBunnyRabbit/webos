@@ -110,7 +110,7 @@
 
 <svelte:element this={"style"}>{HIGHLIGHT_CSS}</svelte:element>
 
-<div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-foreground/8 bg-background-light px-2 py-1.5" role="search" aria-label="Find and replace">
+<div class="flex shrink-0 flex-wrap items-center gap-1 border-b border-hairline bg-background-light px-2 py-1.5" role="search" aria-label="Find and replace">
   <Input
     id={input_id}
     size="sm"

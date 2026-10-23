@@ -114,7 +114,7 @@
       {/each}
     </div>
     {#if about}
-      <div class="grid gap-4 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8 @2xl:grid-cols-[minmax(0,1fr)_auto]">
+      <div class="grid gap-4 rounded-xl bg-background-light p-4 shadow-card ring-1 ring-hairline @2xl:grid-cols-[minmax(0,1fr)_auto]">
         <div class="flex max-w-prose flex-col gap-2">
           <p class="text-sm text-pretty">{definition.intro}</p>
           <p class="flex gap-2 text-sm text-pretty text-foreground/80">
@@ -130,7 +130,7 @@
         <table class="h-fit text-ui">
           <tbody>
             {#each complexity as row (row.label)}
-              <tr class="border-b border-foreground/8 last:border-b-0">
+              <tr class="border-b border-hairline last:border-b-0">
                 <th scope="row" class="py-1 pr-4 text-left font-medium text-foreground/80">{row.label}</th>
                 <td class="py-1 text-right font-mono tabular-nums">{row.value}</td>
               </tr>

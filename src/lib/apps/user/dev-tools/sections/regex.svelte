@@ -60,17 +60,17 @@
   {/snippet}
   {#if value.text !== ""}
     <pre
-      class="max-h-64 overflow-auto rounded-xl bg-background-light p-3 font-mono text-ui leading-relaxed break-words whitespace-pre-wrap ring-1 ring-foreground/8">{#each segments as segment, i (i)}{#if segment.match === null}{segment.text}{:else}<mark
+      class="max-h-64 overflow-auto rounded-xl bg-background-light p-3 font-mono text-ui leading-relaxed break-words whitespace-pre-wrap shadow-card ring-1 ring-hairline">{#each segments as segment, i (i)}{#if segment.match === null}{segment.text}{:else}<mark
             class={cn("rounded-sm text-foreground", segment.match % 2 ? "bg-primary/35" : "bg-primary/20")}
             title="Match {segment.match + 1}">{segment.text}</mark
           >{/if}{/each}</pre>
   {/if}
 
   {#if matches.length}
-    <div class="max-h-96 overflow-auto rounded-xl bg-background-light ring-1 ring-foreground/8">
+    <div class="max-h-96 overflow-auto rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
       <table class="w-full text-left">
         <thead class="sticky top-0 bg-background-light text-2xs tracking-wide text-foreground/65 uppercase">
-          <tr class="border-b border-foreground/8">
+          <tr class="border-b border-hairline">
             <th class="w-10 px-3 py-1.5 font-medium">#</th>
             <th class="w-16 px-3 py-1.5 text-right font-medium">Index</th>
             <th class="px-3 py-1.5 font-medium">Match</th>
@@ -78,7 +78,7 @@
             <th class="w-10"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-foreground/8 font-mono text-2xs">
+        <tbody class="divide-y divide-hairline font-mono text-2xs">
           {#each matches as match, i (i)}
             <tr>
               <td class="px-3 py-1.5 align-top text-foreground/65 tabular-nums">{i + 1}</td>

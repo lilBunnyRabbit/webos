@@ -287,7 +287,7 @@
         </form>
       {:else if new_code}
         <p class="text-ui text-foreground/65">Your new recovery code. Store it now; it isn't shown again and the old one no longer works.</p>
-        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+        <div class="flex items-center gap-2 rounded-xl bg-background-light p-3 shadow-card ring-1 ring-hairline">
           <p class="min-w-0 flex-1 font-mono text-base tracking-wide break-all">{new_code}</p>
           <CopyButton text={new_code} label="Copy recovery code" />
         </div>

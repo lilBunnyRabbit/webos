@@ -40,14 +40,14 @@
   }
 
   const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-  const key_class = "grid h-12 place-items-center rounded-xl bg-background-light text-lg font-medium tabular-nums ring-1 ring-foreground/8 hover:bg-foreground/8 active:scale-95 disabled:opacity-38 transition-[background-color,transform]";
+  const key_class = "grid h-12 place-items-center rounded-xl bg-raised text-lg font-medium tabular-nums shadow-control ring-1 ring-hairline transition-[background-color,box-shadow,translate] hover:bg-raised-hover active:translate-y-px active:shadow-pressed disabled:opacity-38 disabled:shadow-none";
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <div class="grid w-full max-w-64 justify-items-center gap-4 rounded-xl p-1 outline-none focus-visible:ring-2 focus-visible:ring-cottontail" role="group" aria-label={label} tabindex="0" onkeydown={on_key} {@attach (element) => element.focus({ preventScroll: true })}>
   <div class="flex gap-2.5" role="status" aria-label={`${pin.length} of ${PIN_LENGTH} digits`}>
     {#each Array.from({ length: PIN_LENGTH }, (_, i) => i) as i (i)}
-      <span class={cn("size-3 rounded-full ring-1 ring-foreground/30 transition-colors", i < pin.length && "bg-primary ring-primary")}></span>
+      <span class={cn("size-3 rounded-full ring-1 ring-edge transition-colors", i < pin.length && "bg-primary ring-primary")}></span>
     {/each}
   </div>
   <div class="grid w-full grid-cols-3 gap-2">

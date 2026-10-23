@@ -292,7 +292,7 @@
         {/if}
       </div>
 
-      <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 py-2">
+      <div class="flex flex-col gap-2 border-t border-hairline bg-background-light px-3 py-2">
         <div class="flex items-center justify-between font-mono text-2xs text-foreground/80 tabular-nums">
           <span>Frame {index + 1} / {frame_count}</span>
           <span>{format_ms(timing.current)} / {format_ms(timing.total)}</span>

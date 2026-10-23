@@ -61,7 +61,7 @@
 </script>
 
 <div class="flex flex-col gap-2">
-  <div class="checker grid h-56 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center overflow-hidden rounded-lg ring-1 ring-foreground/8">
+  <div class="checker grid h-56 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center overflow-hidden rounded-lg ring-1 ring-hairline">
     {#if length}
       <button type="button" class="grid size-full grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] place-items-center p-2" title="Select this frame on the sheet" onclick={() => frame_index !== null && (sprite.selected = frame_index)}>
         <canvas class={cn("max-h-full max-w-full cursor-pointer", cell.w < 200 && "[image-rendering:pixelated]")} {@attach draw}></canvas>

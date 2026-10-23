@@ -310,13 +310,13 @@
     </EmptyState>
   {:else}
     <div class="grid min-h-0 flex-1 @3xl:grid-cols-[14rem_minmax(0,1fr)]">
-      <nav aria-label="Requests" class="hidden min-h-0 flex-col gap-0.5 overflow-y-auto border-r border-foreground/8 bg-background-light p-2 @3xl:flex">
+      <nav aria-label="Requests" class="hidden min-h-0 flex-col gap-0.5 overflow-y-auto border-r border-hairline bg-background-light p-2 @3xl:flex">
         {#each doc.requests as request, index (index)}
           <button
             type="button"
             class={cn(
               "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui transition-colors duration-150",
-              index === selected ? "bg-primary/15 text-primary" : "text-foreground/80 hover:bg-foreground/8 hover:text-foreground"
+              index === selected ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
             )}
             aria-current={index === selected}
             onclick={() => select(index)}
@@ -345,7 +345,7 @@
         <div class="grid min-h-0 flex-1 @6xl:grid-cols-2">
           <section
             aria-label="Request"
-            class={cn("min-h-0 flex-col gap-3 overflow-y-auto p-3 @6xl:flex @6xl:border-r @6xl:border-foreground/8", panel === Panel.REQUEST ? "flex" : "hidden")}
+            class={cn("min-h-0 flex-col gap-3 overflow-y-auto p-3 @6xl:flex @6xl:border-r @6xl:border-hairline", panel === Panel.REQUEST ? "flex" : "hidden")}
           >
             <Input size="sm" aria-label="Request name" placeholder="Untitled request" value={current.name} oninput={(event) => update({ name: event.currentTarget.value })} />
             <div class="flex flex-wrap gap-1.5">

@@ -21,7 +21,7 @@
     aria-modal="true"
     aria-label={title}
     tabindex="-1"
-    class="relative mx-auto flex max-h-[92%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-foreground/10 outline-none motion-safe:animate-sheet-in @2xl:rounded-2xl"
+    class="relative mx-auto flex max-h-[92%] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-background shadow-raised ring-1 ring-hairline outline-none motion-safe:animate-sheet-in @2xl:rounded-2xl"
     {@attach (element) => element.focus({ preventScroll: true })}
     {@attach swipe_dismiss({ on_dismiss: onclose })}
     onfocusout={(event) => {
@@ -43,7 +43,7 @@
       {@render children()}
     </div>
     {#if footer}
-      <div class="flex flex-wrap justify-end gap-2 border-t border-foreground/8 bg-background-light p-3">{@render footer()}</div>
+      <div class="flex flex-wrap justify-end gap-2 border-t border-hairline bg-background-light p-3">{@render footer()}</div>
     {/if}
   </div>
 </div>

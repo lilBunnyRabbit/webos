@@ -517,7 +517,7 @@
             {#if geometry}
               <div
                 bind:this={frame}
-                class="checker relative m-auto shrink-0 ring-1 ring-foreground/10"
+                class="checker relative m-auto shrink-0 ring-1 ring-hairline"
                 style:width="{size.width * zoom}px"
                 style:height="{size.height * zoom}px"
               >
@@ -551,7 +551,7 @@
         </div>
 
         <aside
-          class="flex max-h-[45cqh] flex-col gap-3 overflow-auto border-t border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-t-0 @2xl:border-l"
+          class="flex max-h-[45cqh] flex-col gap-3 overflow-auto border-t border-hairline bg-background-light p-3 @2xl:max-h-none @2xl:border-t-0 @2xl:border-l"
           aria-label="Edit"
         >
           <Segmented size="sm" label="Tool" class="w-full [&>label]:flex-1 [&>label]:justify-center" options={TOOL_OPTIONS} bind:value={() => tool.value, select_tool} />

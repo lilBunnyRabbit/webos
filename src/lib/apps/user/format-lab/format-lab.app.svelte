@@ -391,11 +391,11 @@
       <div class="stage grid min-h-0 place-items-center p-3 [container-type:size] @xl:p-6">
         <canvas
           {@attach paint(source.bitmap)}
-          class="checker max-h-[100cqh] max-w-[100cqw] rounded-xs object-contain ring-1 ring-foreground/10"
+          class="checker max-h-[100cqh] max-w-[100cqw] rounded-xs object-contain ring-1 ring-hairline"
           aria-label={source.name}
         ></canvas>
       </div>
-      <div class="min-h-0 overflow-auto border-t border-foreground/8 @3xl:border-t-0 @3xl:border-l">
+      <div class="min-h-0 overflow-auto border-t border-hairline @3xl:border-t-0 @3xl:border-l">
         <HeaderPanel
           name={source.name}
           size={source.file.size}
@@ -431,7 +431,7 @@
           />
         {/if}
       </div>
-      <aside class="flex min-h-0 flex-col gap-2 overflow-auto border-t border-foreground/8 bg-background p-2 @3xl:border-t-0 @3xl:border-l @xl:p-3">
+      <aside class="flex min-h-0 flex-col gap-2 overflow-auto border-t border-hairline bg-background p-2 @3xl:border-t-0 @3xl:border-l @xl:p-3">
         {#each LAB_FORMATS as format (format)}
           <FormatCard
             {format}

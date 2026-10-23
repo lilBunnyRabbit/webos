@@ -19,7 +19,7 @@
           "grid size-5 place-items-center rounded-full tabular-nums ring-1 ring-inset",
           done && "bg-primary text-background ring-primary",
           active && "text-primary ring-primary motion-safe:animate-pulse",
-          !done && !active && "ring-foreground/30"
+          !done && !active && "ring-edge"
         )}
       >
         {#if done}<CheckIcon weight="bold" class="size-3" />{:else}{index + 1}{/if}

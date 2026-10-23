@@ -6,7 +6,7 @@
   const card = $derived(meta.derived);
 </script>
 
-<a href={meta.url} target="_blank" rel="noopener noreferrer" class="block max-w-[32rem] overflow-hidden rounded-xs ring-1 ring-foreground/15 hover:opacity-85">
+<a href={meta.url} target="_blank" rel="noopener noreferrer" class="block max-w-[32rem] overflow-hidden rounded-xs ring-1 ring-hairline-strong hover:opacity-85">
   {#if card.image}<PreviewImage src={card.image} alt={card.image_alt} class="aspect-[1.91/1] w-full" />{/if}
   <div class="flex flex-col gap-1 px-3 pt-2 pb-3">
     {#if card.title}<span class="line-clamp-2 text-sm font-semibold">{card.title}</span>{/if}

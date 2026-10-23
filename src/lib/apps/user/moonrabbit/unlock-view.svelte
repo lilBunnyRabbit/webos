@@ -233,7 +233,7 @@
     </div>
 
     {#if journal.header}
-      <div class="grid w-full justify-items-center gap-1.5 border-t border-foreground/8 pt-4">
+      <div class="grid w-full justify-items-center gap-1.5 border-t border-hairline pt-4">
         <Button onclick={quick_add}><PencilIcon weight="bold" />Add a quick line</Button>
         <p class="text-center text-2xs text-foreground/80" aria-live="polite">{added ?? "Without unlocking: it's encrypted for this journal and only opens with it."}</p>
       </div>

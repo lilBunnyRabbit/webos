@@ -14,7 +14,7 @@
 
   const custom = $derived(value !== null && !swatches.includes(value));
   const keep_focus = (event: PointerEvent) => event.preventDefault();
-  const SWATCH = "grid size-6 shrink-0 cursor-pointer place-items-center rounded-md ring-1 ring-foreground/15 ring-inset focus-visible:outline-2 focus-visible:outline-cottontail pointer-coarse:size-10";
+  const SWATCH = "grid size-6 shrink-0 cursor-pointer place-items-center rounded-md ring-1 ring-hairline-strong ring-inset focus-visible:outline-2 focus-visible:outline-cottontail pointer-coarse:size-10";
 </script>
 
 <div class="flex flex-col gap-1">

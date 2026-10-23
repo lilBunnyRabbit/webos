@@ -271,7 +271,7 @@
         {/if}
       </div>
 
-      <div class="flex flex-col gap-2 border-t border-foreground/8 bg-background-light px-3 py-2">
+      <div class="flex flex-col gap-2 border-t border-hairline bg-background-light px-3 py-2">
         <div class="flex items-center gap-2 font-mono text-2xs text-foreground/80 tabular-nums">
           <span class="w-10 text-right">{mic ? "live" : format_time(current_time)}</span>
           <Slider

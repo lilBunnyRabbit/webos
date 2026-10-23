@@ -6,7 +6,7 @@
 </script>
 
 <div
-  class={cn("blocks h-1.5 overflow-hidden rounded-xs bg-foreground/10", class_name)}
+  class={cn("blocks h-1.5 overflow-hidden rounded-xs bg-field shadow-track", class_name)}
   role="progressbar"
   aria-valuemin={0}
   aria-valuemax={100}
