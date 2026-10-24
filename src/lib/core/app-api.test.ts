@@ -136,6 +136,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "AppCategory",
       "ArgKind",
       "FILE_PROPS",
+      "Mode",
       "NotificationType",
       "Platform",
       "ShellError",

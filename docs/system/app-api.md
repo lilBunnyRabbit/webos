@@ -137,7 +137,7 @@ Behaviour that's promised: a service command wins an id clash with an app comman
 
 ## Services through `kernel.service<T>()`
 
-`kernel.service<T>(key)` (throws on an unknown key) and `kernel.platform` (`Platform.DESKTOP | MOBILE`) are stable. Access it in `$derived`, never destructure: services can be swapped (ADR-016). Everything else on `kernel` (`services`, registration, boot) is internal.
+`kernel.service<T>(key)` (throws on an unknown key), `kernel.platform` (`Platform.DESKTOP | MOBILE`) and `kernel.mode` (`Mode.FULL | SOLO`, since 3.56: in a solo link `apps.launch()` of another app only points to Open WebOS, so an app that offers to open another one links to `#/app/{id}` in a new tab instead; Portfolio does) are stable. Access it in `$derived`, never destructure: services can be swapped (ADR-016). Everything else on `kernel` (`services`, registration, boot) is internal.
 
 The rule for methods: what at least two user apps call is stable. Methods only one app or only system apps use are internal, with the exceptions noted. Counts are user apps out of 42, from a grep on 2026-10-15.
 
@@ -156,7 +156,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 | `ai` | not reviewed yet (owner's call) | `extract` (Ask, Unsaid, Doodlehop, Warren), `prompt` (Ask, Alibi, Shopping List), `features` (Ask, Shopping List, Warren), `measure` (Ask); the kit's `AiGate` reads `features` and `availability` |
 | `shell`, `session`, `clipboard`, `ui`, `router`, `version` | nothing | Apps reach the shell through their manifest; the rest are OS-only |
 
-Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesService`, `FileSystemItem`, `FileSystemFileItem`, `FileSystemDirectoryItem`, `CreateFileOptions`, `ListOptions`, `NotificationsService`, `NotifyOptions`, `NotificationUpdate`, `NotificationAction`, `NotificationId`, `NotificationType`, `DesktopService`, `DesktopItem`, `DialogsService`, `DialogProps`, `DialogOptions`, `MenuItem`, `ShortcutsService`, `KeyShortcut`, `RunShortcut`, `CommandShortcut`, `ShortcutCategory`, `WindowsService`, `WindowId`, `SettingsService`, `Theme`, `Platform`. A service interface type being stable means the stable methods on it, not every member.
+Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesService`, `FileSystemItem`, `FileSystemFileItem`, `FileSystemDirectoryItem`, `CreateFileOptions`, `ListOptions`, `NotificationsService`, `NotifyOptions`, `NotificationUpdate`, `NotificationAction`, `NotificationId`, `NotificationType`, `DesktopService`, `DesktopItem`, `DialogsService`, `DialogProps`, `DialogOptions`, `MenuItem`, `ShortcutsService`, `KeyShortcut`, `RunShortcut`, `CommandShortcut`, `ShortcutCategory`, `WindowsService`, `WindowId`, `SettingsService`, `Theme`, `Platform`, `Mode`. A service interface type being stable means the stable methods on it, not every member.
 
 ## UI kit
 
