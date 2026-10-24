@@ -20,7 +20,7 @@ Tailwind utilities  bg-background-dark · text-foreground/65 · border-error …
 
 ### `color-scheme`
 
-After writing the variables, the token effect measures the applied background: a probe `<span>` with `color: oklch(from var(--background) l c h)`, read back through `getComputedStyle` (`background_lightness()` in `service.svelte.ts`). Any syntax works (hex, `oklch(from …)`, `color-mix`). Above 0.6 lightness `<html>` gets `color-scheme: light`, otherwise `dark`. The probe runs only when `background` changed or references another token (`var(`). Native scrollbars, date inputs and pickers follow the palette, not the OS preference, and so does CSS `light-dark()`: the kit's field surface is `light-dark(var(--background-lightest), var(--background-darker))`, raised in light themes and recessed in dark ones.
+After writing the variables, the token effect measures the applied `foreground` and `background`: a probe `<span>` with `color: oklch(from var(--…) l c h)`, read back through `getComputedStyle` (`lightness()` in `service.svelte.ts`). Any syntax works (hex, `oklch(from …)`, `color-mix`). When the text is darker than the background `<html>` gets `color-scheme: light`, otherwise `dark` (2026-10-24, found by the ADR-068 judges: by polarity, so dark text on a mid-tone red is a light palette; it used to be background lightness above 0.6). The probe runs only when either changed or references another token (`var(`). Native scrollbars, date inputs and pickers follow the palette, not the OS preference, and so does CSS `light-dark()`: the kit's field surface is `light-dark(var(--background-lightest), var(--background-darker))`, raised in light themes and recessed in dark ones.
 
 ## Tokens
 
@@ -58,12 +58,12 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 
   ```ts
   // darker (step < 0)
-  `oklch(from var(--background) abs(calc(l - ${-step * 0.034})) c h)`
+  `oklch(from var(--background) calc(l - min(${-step * 0.034}, l * ${-step * 0.3})) c h)`
   // lighter (step > 0)
-  `oklch(from var(--background) calc(1 - abs(calc(1 - l - ${step * 0.034}))) c h)`
+  `oklch(from var(--background) calc(max(l, 0.12) + min(${step * 0.034}, (1 - max(l, 0.12)) * ${step * 0.3})) c h)`
   ```
 
-  The stored value is the expression, so editing `background` in Settings moves the whole ladder. "Dark" is lower lightness, also in light presets, except at the extremes: a step that would pass 0 or 1 **reflects** back (`abs()`), so on pure black the "dark" shades come out lighter and on pure white the "light" shades come out darker, instead of collapsing onto `background`.
+  The stored value is the expression, so editing `background` in Settings moves the whole ladder. "Dark" is always lower lightness and "light" always higher (2026-10-24, found by the ADR-068 judges). In the middle each step is 0.034; near black or white a step shrinks toward the end instead of passing it, so the ladder never turns back. The light side starts from at least 0.12, so on pure black the chrome, cards and menus still separate from the body (the dark side stays black: there's nothing darker). Before that a step past 0 or 1 reflected back (`abs()`), which made "lighter" shades darker than `background` on near-white presets; `merge_theme()` in `persistence.ts` swaps those old expressions (`legacy_surface()`) for the new ones when a saved theme loads.
 
 ### Other `@theme` entries
 
@@ -105,6 +105,7 @@ Hardcoded colours outside the token system, all deliberate:
 | `index.html` body + `#splash`, `<meta name="theme-color">` | `#17252c` | Pre-boot, before any token exists. The brand requires splash and icon to be Brand Dark. |
 | `vite.config.ts` PWA manifest `theme_color` + `background_color` | `#17252C` | Same |
 | `index.html` `#splash-progress` (track, bar, label) | Brand Dark `background_lightest`, `primary`, `foreground` as OKLCH | Same: the boot progress bar shows before any token exists (ADR-036) |
+| `core/compat/screen.ts` (browser support warning) | Brand Dark `background`, `background_light`, `background_lightest`, `foreground`, `primary`, `cottontail`, `warning`, `error` as hex | Shows before any token exists, in engines that may not parse `oklch()` (Firefox before 113) (ADR-067) |
 | `--color-mark-ears` | fixed OKLCH | Logo ears are fixed by the brand |
 
 Components that need a token outside a utility read the variable directly: in a `<style>` block (`var(--background-lighter)` for the `<select>` picker in `ui/select.svelte`), in the CodeMirror theme (`$kit/components/code/editor.ts`, ADR-048), or in an arbitrary value (`bg-[light-dark(var(--background-lightest),var(--background-darker))]` in the `field` recipe and Segmented). The Style Guide's swatches use `var(--{token})` with the kebab-case names.

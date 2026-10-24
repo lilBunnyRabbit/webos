@@ -17,6 +17,8 @@
      * manager).
      */
     select_stem?: boolean;
+    /** Destructive action: red confirm button. The field keeps the initial focus. */
+    danger?: boolean;
   }
 
   let {
@@ -27,6 +29,7 @@
     confirm_label = "OK",
     validate,
     select_stem = false,
+    danger = false,
     resolve,
   }: DialogProps<string> & PromptOptions & { message: string } = $props();
 
@@ -71,6 +74,6 @@
 
   <div class="flex justify-end gap-2">
     <Button variant="quiet" onclick={() => resolve(null)}>Cancel</Button>
-    <Button variant="primary" type="submit" disabled={touched && invalid}>{confirm_label}</Button>
+    <Button variant={danger ? "danger" : "primary"} type="submit" disabled={touched && invalid}>{confirm_label}</Button>
   </div>
 </form>

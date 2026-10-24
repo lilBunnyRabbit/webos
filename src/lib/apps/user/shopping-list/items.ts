@@ -16,7 +16,7 @@ export function add_entry(list: List, text: string, now = Date.now()): boolean {
     existing.updated_at = stamp(existing, now);
     return true;
   }
-  list.items.push({ id: new_id(now), text: entry.text, qty: entry.qty, unit: entry.unit, checked: false, updated_at: stamp(undefined, now) });
+  list.items.push({ id: new_id(now), text: entry.text, qty: entry.qty, unit: entry.unit, checked: false, added_at: now, updated_at: stamp(undefined, now) });
   return true;
 }
 

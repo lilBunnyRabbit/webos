@@ -32,3 +32,6 @@ Chrome ships built-in AI that runs Gemini Nano on the device after a one-time mo
 - One more service with an inspector (ADR-020): state per feature, download progress, live sessions.
 - Language support depends on Chrome's model (Slovenian has to be checked on the owner's Chrome); `availability` answers that per pair.
 - The browser's API names may still shift between Chrome versions; the service is the one place to adapt.
+
+## Revision 2026-10-22: on the stable app API
+Every AiService call apps use is stable from 3.57: `features`, `availability`, `summarize`, `translate`, `detect`, `prompt`, `extract`, `measure`. Chrome's API is still experimental; the wrapper absorbs changes where it can, the rest is a WebOS major. `downloads` and `sessions` stay internal. Decided in [owner calls](../brainstorm/2026-10-22_owner-calls.md); listed in [app API](../system/app-api.md).

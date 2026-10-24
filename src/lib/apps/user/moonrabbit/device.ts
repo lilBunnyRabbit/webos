@@ -68,3 +68,12 @@ export async function patch_quick(journal_id: string, patch: Partial<QuickRecord
   await write_quick(next);
   return next;
 }
+
+/** Uninstall with "delete data": the device key and every quick-unlock record go; journals still open with the phrase. */
+export function delete_device_store(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}

@@ -15,6 +15,7 @@ import kernel, {
 } from "$lib/core/api";
 import type { FileSystemItem } from "$lib/core/api/services/files";
 import { mount_point_of } from "$lib/core/api/services/files/hierarchy";
+import { can_pick_folders } from "$lib/core/api/services/files/opfs";
 import { base_name, join_path } from "$lib/core/api/services/files/path";
 import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
 import type { WindowHandle } from "$lib/core/contexts/app";
@@ -219,6 +220,9 @@ export async function paste(handler: DirectoryHandler, window: WindowHandle): Pr
     report_file_error("Paste failed", error);
   }
 }
+
+/** A folder needs the browser's folder picker; a file always works, through the downloads without a Save dialog. */
+export const can_save_to_disk = (kind: "file" | "directory"): boolean => kind === "file" || can_pick_folders;
 
 /** Copies a file or folder out of WebOS onto the real disk; the browser's own dialogs pick where. */
 export async function save_to_disk(path: string): Promise<void> {

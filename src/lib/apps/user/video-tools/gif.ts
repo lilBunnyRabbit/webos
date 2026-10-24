@@ -1,6 +1,6 @@
-import { color_table_bits, lzw_encode } from "$lib/apps/user/hopsprite/gif";
+import { color_table_bits, lzw_encode } from "$kit/utils/codecs/gif";
 
-export { gif_delays, GIF_TRAILER } from "$lib/apps/user/hopsprite/gif";
+export { gif_delays, GIF_TRAILER } from "$kit/utils/codecs/gif";
 
 const u16 = (value: number) => [value & 0xff, (value >> 8) & 0xff];
 const ascii = (text: string) => [...text].map((char) => char.charCodeAt(0));

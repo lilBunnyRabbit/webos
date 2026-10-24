@@ -48,7 +48,7 @@ Tested: EAN-13 draws 30 bars, 2D codes are square, number only throws, a bad cod
 One detector per window, made on first use with every format Cards draws (`cards.app.svelte:94`, `formats.ts:47`). `create_barcode_detector(formats)` (`kit/utils/qr.ts:49`):
 
 1. The native `BarcodeDetector` with the asked formats it supports. A missing format is left out rather than giving up: macOS lists no `upc_a` or `codabar` and reads UPC-A as EAN-13.
-2. Only when it supports none of them (iOS Safari, Firefox): jsQR, imported lazily, QR only, on a frame scaled to 1024 px.
+2. Only when it supports none of them (Safari, Firefox, Chrome on Windows and Linux): jsQR for QR, then the hand-written 1D decoder (`$kit/utils/linear-barcode`) for EAN-13, UPC-A, EAN-8, UPC-E, Code 128 and Code 39, both imported lazily; jsQR reads the frame scaled to 1024 px, the 1D decoder at up to 2048 px, since bars a module or two wide blur away at 1024. The decoder reads 22 scan lines (rows and columns, each averaged over 5 neighbours, both directions), binarizes each three ways (the midpoint of the nearby darkest and lightest, which keeps blurred bars their width; a row histogram after ZXing; a local mean), and matches the runs against the symbology tables; checksums, quiet zones and, for Code 39 (no checksum), two agreeing lines keep misreads out. Like macOS, it reports UPC-A as EAN-13 when both are asked for. Tested on bwip-js's own drawings, clean, shrunk, blurred, noisy, flipped and unevenly lit (`linear-scan.test.ts`), and through the detector without a native one (`render.browser.test.ts`).
 
 | Source | Path |
 |--------|------|
@@ -124,7 +124,7 @@ Sort order: pinned, then most used, then most recently used, then name (`data.ts
 ## Limits
 
 - No real-till test is recorded: whether every drawn format scans at a checkout is untested beyond round-trips in the browser tests.
-- Without a native `BarcodeDetector` (iOS Safari, Firefox) only QR codes scan; 1D cards must be typed.
+- Without a native `BarcodeDetector` (Safari, Firefox, Chrome on Windows and Linux), QR and EAN/UPC, Code 128 and Code 39 scan; Code 93, ITF, Codabar, PDF417, Aztec and Data Matrix cards must be typed. The hand decoder is untested on real camera frames; on synthetic photos (JPEG, blur, a tilt up to 15°, any quarter turn) it reads codes at about 2 px a module or more, and misses smaller or blurrier ones.
 - macOS's detector reads UPC-A as EAN-13, so a UPC-A card scanned there is saved as EAN-13.
 - The one-card link's limit (2000 characters) is a rule of thumb, not measured per phone.
 - A shared list carries no timestamps: the review can't tell whose edit is newer, the user picks.

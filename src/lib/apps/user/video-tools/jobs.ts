@@ -26,7 +26,7 @@ import {
   type Size,
 } from "$kit/utils/video/plan";
 import type { Quality } from "./kinds";
-import { map_pixels, median_cut } from "./quantize";
+import { map_pixels, median_cut } from "$kit/utils/codecs/quantize";
 
 export const VIDEOS = "/home/Videos";
 

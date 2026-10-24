@@ -1,4 +1,5 @@
 import type { Bounds, Dimensions } from "$lib/core/utils/type";
+import { canvas_filter_works, draw_filtered, FilterKind, type FilterStep } from "$kit/utils/filter";
 import type { CameraAt } from "./path";
 
 export const EdgeFill = { BLUR: "blur", BLACK: "black", THEME: "theme" } as const;
@@ -62,6 +63,22 @@ export function read_token(token: ThemeColor): string {
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
+const SOFT_BLUR = 4;
+
+// Blurring every frame by hand at full size is too slow for playback, so the backdrop is blurred small and scaled up.
+function draw_soft_backdrop(context: Context2D, frame: CanvasImageSource, back: Bounds, output: Dimensions, radius: number): void {
+  const shrink = Math.max(1, radius / SOFT_BLUR);
+  const small = new OffscreenCanvas(Math.max(1, Math.ceil(output.width / shrink)), Math.max(1, Math.ceil(output.height / shrink)));
+  const small_context = small.getContext("2d", { willReadFrequently: true })!;
+  const steps: FilterStep[] = [
+    { kind: FilterKind.BLUR, radius: radius / shrink },
+    { kind: FilterKind.BRIGHTNESS, percent: BLUR_DIM * 100 },
+  ];
+  draw_filtered(small_context, steps, (target) => target.drawImage(frame, back.x / shrink, back.y / shrink, back.width / shrink, back.height / shrink));
+  context.imageSmoothingQuality = "high";
+  context.drawImage(small, 0, 0, output.width, output.height);
+}
+
 export function draw_locked(
   context: Context2D,
   frame: CanvasImageSource,
@@ -75,9 +92,13 @@ export function draw_locked(
     const radius = blur_radius(output);
     // Grown past the edges so the blur doesn't fade into transparent at the border.
     const back = cover_rect(source, output, radius * 2);
-    context.filter = `blur(${radius}px) brightness(${BLUR_DIM})`;
-    context.drawImage(frame, back.x, back.y, back.width, back.height);
-    context.filter = "none";
+    if (canvas_filter_works()) {
+      context.filter = `blur(${radius}px) brightness(${BLUR_DIM})`;
+      context.drawImage(frame, back.x, back.y, back.width, back.height);
+      context.filter = "none";
+    } else {
+      draw_soft_backdrop(context, frame, back, output, radius);
+    }
   } else {
     context.fillStyle = settings.fill === EdgeFill.BLACK ? BLACK : settings.color;
     context.fillRect(0, 0, output.width, output.height);

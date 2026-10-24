@@ -45,6 +45,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `shell` | ShellService | Commands contributed by services through `IService.shell()`, zod args, structured values and pipes, completion, shared history in `/var/lib/shell/history` (ADR-033) | files, dialogs, notifications |
 | `shortcuts` | ShortcutsService | Keyboard shortcuts: registry, one keydown dispatcher, OS defaults run shell commands, Mod+/ cheat sheet (ADR-012, ADR-017, ADR-033) | windows, dialogs, shell |
 | `tasks` | TasksService | Background jobs on `@lilbunnyrabbit/task-manager`: one manager per run, progress toast with Cancel, retry, Activity Monitor Tasks section and taskbar indicator; memory only (ADR-013) | notifications |
+| `offline` | OfflineService | Which user apps work offline (ADR-065): the service worker precaches only core and system apps; picked apps (`/etc/offline.json`) download after every update as a task, an app's first open in a build saves it quietly; saved set in `/var/lib/offline/state.json`, one Web Lock `webos.offline.sync`, older `webos-assets-*` caches pruned; launcher dims unsaved apps offline | files, apps, tasks, notifications, windows |
 | `backup` | BackupService | Zips `/home`, `/etc`, `/var/lib` and `app.*` localStorage (picked per area) to the device, never OPFS; restore replaces the areas a backup holds and reloads, holding FilesService writes meanwhile; both run as tasks (ADR-037) | files, dialogs, notifications, windows, tasks |
 | `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
 | `ai` | AiService | Chrome's on-device AI (Gemini Nano): availability per feature, summarize, translate, detect, streaming prompt; sessions kept and reused, model downloads as tasks. `MobileAiService` answers "no" on mobile (ADR-046) | files, tasks, notifications |
@@ -90,6 +91,10 @@ References: `src/lib/apps/user/example/task.ts` (parallel group, logs, `parse()`
 - No new dependency without asking. zod and `@lilbunnyrabbit/task-manager` are already approved by ADRs.
 - No backend. GitHub Pages is the host.
 - Use the latest web platform features (anchor positioning, popover, `@container`, View Transitions, and so on). The target is the owner's current browser: no polyfills, fallbacks or support checks for older ones. If it works on the owner's machine, it ships. Before building UI or browser behaviour by hand (dismissal, focus, positioning, stacking, animation), check whether a newer platform API does it natively, and bring it up.
+
+## Browser support list
+
+WebOS warns at start-up about features the browser lacks (ADR-067, [compat](docs/system/compat.md)). The list is `src/lib/core/compat/features.ts`. A commit that starts using a web API, CSS or HTML feature that isn't broadly supported (anything MDN doesn't mark Baseline widely available, or that WebOS uses in a newer form than the baseline one) adds or updates its entry in the same commit: `level` (`start`, `shell`, `apps`, `cosmetic`), `apps` (ids that use it directly), `min` for Chrome, Firefox and Safari (the version where it works the way WebOS uses it, from MDN browser-compat-data; `null` when not shipped), and a cheap synchronous `probe()`. A new app id there needs its name in `compat/app-names.ts`. Removing the last use removes the entry. The probes run before WebOS loads, so the file imports nothing.
 
 ## Shell integration: ask every time
 
@@ -198,6 +203,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `hop` | `docs/apps/hop.md` |
 | `plots` | `docs/apps/plots.md` |
 | `moonrabbit` | `docs/apps/moonrabbit.md` |
+| `image-tools` | `docs/apps/image-tools.md` |
 | `portfolio` | `docs/apps/portfolio.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.

@@ -3,15 +3,17 @@
   import { cn } from "$lib/core/utils";
   import { Minus as MinusIcon, Plus as PlusIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
+  import { format_added } from "./added";
   import type { Entry } from "./parse";
 
   interface Props {
     item: Entry;
+    added_at: number;
     onsave: (entry: Entry) => void;
     oncancel: () => void;
   }
 
-  let { item, onsave, oncancel }: Props = $props();
+  let { item, added_at, onsave, oncancel }: Props = $props();
 
   const id = $props.id();
 
@@ -47,10 +49,11 @@
 
 <form aria-label="Edit item" class="flex min-h-0 w-full flex-col" onsubmit={save}>
   <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-auto p-4 pt-3">
-    <label class="flex flex-col gap-1.5">
-      <span class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Name</span>
-      <Input bind:value={name} size="lg" autocomplete="off" enterkeyhint="done" />
-    </label>
+    <div class="flex flex-col gap-1.5">
+      <label for="{id}-name" class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Name</label>
+      <Input id="{id}-name" bind:value={name} size="lg" autocomplete="off" enterkeyhint="done" aria-describedby="{id}-added" />
+      <p id="{id}-added" class="text-2xs text-foreground/65">{format_added(added_at)}</p>
+    </div>
 
     <div class="flex flex-col gap-1.5">
       <span id="{id}-amount" class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Amount</span>

@@ -2,6 +2,14 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-22: apps on demand ([ADR-065](065-apps-on-demand.md))**
+> The "every app works offline" promise of the PWA revision is superseded. The worker precaches the core and the system apps only (`offline/core.json`), so an update installs in seconds; user apps load on demand into a per-build runtime cache, and the ones the user keeps offline are downloaded after the reload by OfflineService. The update overlay, its timers and the fallback are unchanged; it now waits for the core files alone.
+
+> **Revision 2026-10-22: service worker fixes on `generateSW` ([owner calls](../brainstorm/2026-10-22_owner-calls.md))**
+> - The worker stays generated (`generateSW`), no new dependencies; the own-worker branch with a parallel install was declined.
+> - "Update and reload" reloads straight away when the browser already installed and activated the new worker: a different active worker than the one the page booted under means the new precache is in place. It no longer unregisters and clears for that case.
+> - mammoth (Warren's `.docx` import) left the precache for a `CacheFirst` runtime cache, `webos-mammoth`. The Burrow fonts moved from `public/fonts/` to content-hashed asset URLs, so a fixed font reaches installs that cached the old one. The import map's chunk identity strips Rollup's `\0` and queries, so two checkouts name virtual modules the same. Details in [version.md](../system/services/version.md#service-worker).
+
 > **Revision 2026-10-22: CI pipeline status ([brainstorm](../brainstorm/2026-10-22_ci-status.md))**
 > `VersionService.pipeline()` reads the newest master Actions run and its jobs from GitHub's public API, no token. The 60-an-hour limit rejected above is fine for a status the user opens, never for update detection, which stays on `version.json`. Shown in Settings › About and as `ci status`.
 

@@ -7,6 +7,7 @@
     type AppsService,
     type DesktopService,
     type DialogsService,
+    type OfflineService,
   } from "$lib/core/api";
   import {
     DownloadSimple as DownloadSimpleIcon,
@@ -23,7 +24,10 @@
   import AppBadge from "../apps/app-badge.svelte";
   import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
   import RecentApps from "../apps/recent-apps.svelte";
+  import { cn } from "$lib/core/utils";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
+  import { explain_offline, keep_offline_item, KEEP_OFFLINE_ID, toggle_keep_offline } from "../apps/offline-actions";
+  import OfflineNote from "../apps/offline-note.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -32,6 +36,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const offline = $derived(kernel.service<OfflineService>("offline"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -50,7 +55,8 @@
   const sections = $derived(group_apps(installed));
 
   function launch(manifest: AppManifest) {
-    apps.launch(manifest.id);
+    if (offline.can_open(manifest.id)) apps.launch(manifest.id);
+    else explain_offline(manifest.id);
     onclose();
   }
 
@@ -64,6 +70,7 @@
       apps.is_installed(manifest.id)
         ? [
             { id: "pin", label: "Add to home screen", icon: PushPinIcon },
+            ...keep_offline_item(manifest.id),
             ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
             ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
@@ -74,6 +81,7 @@
     else if (choice === "open") launch(manifest);
     else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
     else if (choice === CLEAR_RECENT_ITEM.id) apps.clear_recent();
+    else if (choice === KEEP_OFFLINE_ID) toggle_keep_offline(manifest.id);
   }
 </script>
 
@@ -84,11 +92,12 @@
       class="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 pt-3 pb-2 transition-colors duration-150 active:bg-foreground/8"
       onclick={() => launch(manifest)}
     >
-      <span class="relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+      <span class={cn("relative grid size-14 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10", !offline.can_open(manifest.id) && "opacity-38")}>
         <manifest.icon class="size-7" weight="duotone" />
         <AppBadge app_id={manifest.id} />
       </span>
-      <span class="line-clamp-2 max-w-full text-center text-xs leading-tight font-medium">{manifest.name}</span>
+      <span class={cn("line-clamp-2 max-w-full text-center text-xs leading-tight font-medium", !offline.can_open(manifest.id) && "opacity-38")}>{manifest.name}</span>
+      {#if !offline.can_open(manifest.id)}<span class="sr-only">(not saved for offline)</span>{/if}
       {#if !apps.is_installed(manifest.id)}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
     </button>
   </li>
@@ -137,6 +146,7 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+      <OfflineNote class="mb-3" onopen={onclose} />
       {#if query.trim() && !best && !sentence.pending}
         <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10" />
       {:else if query.trim()}

@@ -24,6 +24,7 @@ import { ShellService } from "../services/shell/service.svelte";
 import { BackupService } from "../services/backup/service.svelte";
 import { TasksService } from "../services/tasks/service.svelte";
 import { SchedulerService } from "../services/scheduler/service.svelte";
+import { OfflineService } from "../services/offline/service.svelte";
 
 // Phones and tablets get their own windows, desktop and an AI service that answers "no" (ADR-016, ADR-046); the other
 // platform's code is never downloaded (ADR-036).
@@ -139,6 +140,12 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register("tasks", {
     instance: TasksService,
     dependencies: ["notifications"],
+  });
+
+  // windows: an app's first open in a build is what saves it quietly (ADR-065).
+  kernel.register("offline", {
+    instance: OfflineService,
+    dependencies: ["files", "apps", "tasks", "notifications", "windows"],
   });
 
   kernel.register("backup", {

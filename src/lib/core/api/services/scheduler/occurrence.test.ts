@@ -217,6 +217,116 @@ describe("next_occurrence: snooze", () => {
   });
 });
 
+describe("next_occurrence: before", () => {
+  const DAY = 1440;
+  const WEEK = 7 * DAY;
+  const lead = (repeat: JobRepeat | undefined, at: Job["at"], before: number, after: number, count: number) => {
+    const rule = job({ at, repeat, before });
+    const out: (number | null)[] = [];
+    for (let cursor = after; out.length < count; ) {
+      const next = next_occurrence(rule, cursor);
+      out.push(next);
+      if (next === null) break;
+      cursor = next;
+    }
+    return iso(out);
+  };
+
+  it("takes an epoch's minutes off plainly", () => {
+    expect(next_occurrence(job({ at: { epoch: utc("2026-10-21T10:00:00Z") }, before: 15 }), -Infinity)).toBe(utc("2026-10-21T09:45:00Z"));
+  });
+
+  it("fires a day ahead of a monthly 31st, whatever the month's length", () => {
+    expect(lead({ every: "month", day: 31 }, { date: "2026-01-31", time: "09:00", tz: "UTC" }, DAY, -Infinity, 5)).toEqual([
+      "2026-01-30T09:00:00.000Z",
+      "2026-02-27T09:00:00.000Z",
+      "2026-03-30T09:00:00.000Z",
+      "2026-04-29T09:00:00.000Z",
+      "2026-05-30T09:00:00.000Z",
+    ]);
+  });
+
+  it("fires a week ahead of the 1st to the 7th in the previous month", () => {
+    expect(lead({ every: "month", day: 1 }, { date: "2026-01-01", time: "09:00", tz: "UTC" }, WEEK, -Infinity, 3)).toEqual([
+      "2025-12-25T09:00:00.000Z",
+      "2026-01-25T09:00:00.000Z",
+      "2026-02-22T09:00:00.000Z",
+    ]);
+    expect(lead({ every: "month", day: 5 }, { date: "2028-01-05", time: "09:00", tz: "UTC" }, WEEK, utc("2028-01-01T00:00:00Z"), 3)).toEqual([
+      "2028-01-29T09:00:00.000Z",
+      "2028-02-27T09:00:00.000Z",
+      "2028-03-29T09:00:00.000Z",
+    ]);
+  });
+
+  it("fires a day ahead of 29 February, the 28th clamped in other years", () => {
+    expect(lead({ every: "year" }, { date: "2028-02-29", time: "09:00", tz: "UTC" }, DAY, -Infinity, 5)).toEqual([
+      "2028-02-28T09:00:00.000Z",
+      "2029-02-27T09:00:00.000Z",
+      "2030-02-27T09:00:00.000Z",
+      "2031-02-27T09:00:00.000Z",
+      "2032-02-28T09:00:00.000Z",
+    ]);
+  });
+
+  it("fires a day ahead of 1 March from a non-leap year, on 29 February in a leap one", () => {
+    expect(lead({ every: "year" }, { date: "2027-03-01", time: "09:00", tz: "UTC" }, DAY, -Infinity, 3)).toEqual([
+      "2027-02-28T09:00:00.000Z",
+      "2028-02-29T09:00:00.000Z",
+      "2029-02-28T09:00:00.000Z",
+    ]);
+  });
+
+  it("takes the minutes off the wall clock across spring-forward", () => {
+    // Ljubljana skips 02:00–03:00 on 29 March 2026.
+    expect(next_occurrence(job({ at: { date: "2026-03-29", time: "09:00", tz: LJ }, before: DAY }), -Infinity)).toBe(utc("2026-03-28T08:00:00Z"));
+    expect(next_occurrence(job({ at: { date: "2026-03-30", time: "09:00", tz: LJ }, before: DAY }), -Infinity)).toBe(utc("2026-03-29T07:00:00Z"));
+    expect(lead({ every: "day" }, { date: "2026-03-28", time: "03:30", tz: LJ }, 60, -Infinity, 3)).toEqual([
+      "2026-03-28T01:30:00.000Z",
+      // 02:30 doesn't exist that night: it fires shifted forward by the gap, at the event's own 03:30.
+      "2026-03-29T01:30:00.000Z",
+      "2026-03-30T00:30:00.000Z",
+    ]);
+  });
+
+  it("takes the minutes off the wall clock across fall-back", () => {
+    // Ljubljana runs 02:00–03:00 twice on 25 October 2026.
+    const event = utc("2026-10-25T08:00:00Z");
+    const reminder = next_occurrence(job({ at: { date: "2026-10-25", time: "09:00", tz: LJ }, before: DAY }), -Infinity)!;
+    expect(reminder).toBe(utc("2026-10-24T07:00:00Z"));
+    expect(event - reminder).toBe(25 * 3_600_000);
+    expect(lead({ every: "day" }, { date: "2026-10-24", time: "03:30", tz: LJ }, 60, -Infinity, 3)).toEqual([
+      "2026-10-24T00:30:00.000Z",
+      // 02:30 happens twice: the first pass, two hours before the event's 03:30.
+      "2026-10-25T00:30:00.000Z",
+      "2026-10-26T01:30:00.000Z",
+    ]);
+  });
+
+  it("reads until and skip as the rule's own days, not the fire's", () => {
+    const at = { date: "2026-10-20", time: "09:00", tz: "UTC" };
+    expect(lead({ every: "day", until: "2026-10-23", skip: ["2026-10-22"] }, at, DAY, -Infinity, 4)).toEqual([
+      "2026-10-19T09:00:00.000Z",
+      "2026-10-20T09:00:00.000Z",
+      "2026-10-22T09:00:00.000Z",
+      null,
+    ]);
+  });
+
+  it("counts armed_at, last_fired and missed_at as fire instants", () => {
+    const at = { date: "2026-10-20", time: "09:00", tz: "UTC" };
+    const armed_at = utc("2026-10-21T10:00:00Z");
+    const daily = job({ at, repeat: { every: "day" }, before: DAY, armed_at });
+    // The 22nd's reminder fired at 09:00 on the 21st, before it was armed: neither fired nor missed.
+    expect(pending(daily)).toBe(utc("2026-10-22T09:00:00Z"));
+    expect(plan([daily], armed_at).changed).toBe(false);
+    const fired = plan([daily], utc("2026-10-22T09:00:30Z"));
+    expect(fired.fired.map((entry) => entry.due)).toEqual([utc("2026-10-22T09:00:00Z")]);
+    expect(fired.jobs[0].last_fired).toBe(utc("2026-10-22T09:00:00Z"));
+    expect(pending(fired.jobs[0])).toBe(utc("2026-10-23T09:00:00Z"));
+  });
+});
+
 describe("plan", () => {
   const now = utc("2026-10-21T05:01:00Z");
 
@@ -312,5 +422,12 @@ describe("format_repeat", () => {
     expect(format_repeat({ every: "week", days: [5, 1] })).toBe("Mon, Fri");
     expect(format_repeat({ every: "month", day: 31, until: "2027-01-01" })).toBe("monthly on day 31 until 2027-01-01");
     expect(format_repeat({ every: "year" })).toBe("yearly");
+  });
+
+  it("adds the lead time", () => {
+    expect(format_repeat({ every: "month", day: 31 }, 1440)).toBe("monthly on day 31, 1 day before");
+    expect(format_repeat(undefined, 120)).toBe("once, 2 hours before");
+    expect(format_repeat({ every: "day" }, 15)).toBe("daily, 15 min before");
+    expect(format_repeat({ every: "day" }, 0)).toBe("daily");
   });
 });

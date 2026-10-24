@@ -55,4 +55,4 @@ The owner: "for moonrabbit only the text password is an option? why no other loc
 - **Rename and delete need no secret**, from the lock screen and settings. Delete: danger confirm plus the typed name, permanent like a folder delete in Files.
 - **Shell:** still only `journal lock`.
 - [x] Built (ADR-063 revision "quick unlock offered, rename and delete").
-- [ ] Owner: an uninstall hook so "delete data" also removes `webos.moonrabbit` in IndexedDB (needs an apps-service API).
+- [x] Owner: an uninstall hook so "delete data" also removes `webos.moonrabbit` in IndexedDB: `on_uninstall_data` ([owner calls](2026-10-22_owner-calls.md)).

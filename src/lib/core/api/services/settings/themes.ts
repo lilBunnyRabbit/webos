@@ -75,19 +75,30 @@ const SURFACE_STEPS: Record<ThemeSurfaceToken, number> = {
 
 /**
  * The surface ladder for themes that only define `background` (five-colour presets, older saves). Brand palettes list
- * their exact shades instead. Steps follow the brand: 0.034 lightness each; "dark" is always lower lightness.
- * A step past black or white reflects back (abs) instead of clamping, so a pure-black or pure-white preset still gets
- * distinct shades rather than seven copies of the same colour.
+ * their exact shades instead. Steps follow the brand: 0.034 lightness each; "dark" is always lower lightness and
+ * "light" always higher. Near white or black a step shrinks toward the end instead of reflecting off it, so the ladder
+ * never turns back on itself. The light side starts from at least 0.12, so chrome on a pure-black body still shows.
  */
 export function derive_surfaces(): Record<ThemeSurfaceToken, string> {
   return Object.fromEntries(
     Object.entries(SURFACE_STEPS).map(([token, step]) => [
       token,
       step < 0
-        ? `oklch(from var(--background) abs(calc(l - ${-step * 0.034})) c h)`
-        : `oklch(from var(--background) calc(1 - abs(calc(1 - l - ${step * 0.034}))) c h)`,
+        ? `oklch(from var(--background) calc(l - min(${-step * 0.034}, l * ${-step * 0.3})) c h)`
+        : `oklch(from var(--background) calc(max(l, 0.12) + min(${step * 0.034}, (1 - max(l, 0.12)) * ${step * 0.3})) c h)`,
     ])
   ) as Record<ThemeSurfaceToken, string>;
+}
+
+/** The ladder before 3.61.1: steps reflected off black and white. Saved themes still holding it are re-derived. */
+export function legacy_surface(step: number): string {
+  return step < 0
+    ? `oklch(from var(--background) abs(calc(l - ${-step * 0.034})) c h)`
+    : `oklch(from var(--background) calc(1 - abs(calc(1 - l - ${step * 0.034}))) c h)`;
+}
+
+export function surface_step(token: ThemeSurfaceToken): number {
+  return SURFACE_STEPS[token];
 }
 
 // Mirrors the brand derivation (states at brand lightness, fixed hues) so presets never hand-pick extra colours.

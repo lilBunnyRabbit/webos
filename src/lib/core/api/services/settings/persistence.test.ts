@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { DEFAULT_APPEARANCE } from "./appearance";
 import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_appearance, parse_live_options, parse_settings, parse_wallpaper } from "./persistence";
 import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turrets/options";
+import { derive_surfaces, legacy_surface } from "./themes";
 
 describe("parse_appearance", () => {
   test("keeps valid values", () => {
@@ -108,5 +109,16 @@ describe("live wallpapers", () => {
     expect(parse_live_options({ turrets: "loud" })).toEqual({ turrets: DEFAULT_TURRETS_OPTIONS });
     expect(parse_live_options(null)).toEqual({});
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.live_options).toEqual({});
+  });
+});
+
+describe("surface ladder migration", () => {
+  test("a saved theme with the old reflected ladder gets the new one; hand-picked shades stay", () => {
+    const derived = derive_surfaces();
+    const theme = { background: "oklch(0.98 0.01 250)", background_lightest: legacy_surface(3), background_darkest: legacy_surface(-3), background_light: "oklch(0.9 0 0)" };
+    const loaded = parse_settings(JSON.stringify({ version: SETTINGS_VERSION, theme }))!.theme;
+    expect(loaded.background_lightest).toBe(derived.background_lightest);
+    expect(loaded.background_darkest).toBe(derived.background_darkest);
+    expect(loaded.background_light).toBe("oklch(0.9 0 0)");
   });
 });

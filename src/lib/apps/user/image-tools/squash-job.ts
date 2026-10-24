@@ -8,6 +8,9 @@ import type { Size } from "../image-editor/edit";
 import { is_image_name, squashed_name } from "./naming";
 import { format_share, saved_share, squashed_size, type SquashOptions } from "./squash";
 import { pictures_folder } from "./test-image-job";
+import { encoder_for_mime } from "$kit/utils/codecs/formats";
+import { format_limit, type FitFormat } from "./fit";
+import { fit_image } from "./fit-job";
 
 const files = () => kernel.service<FilesService>("files");
 
@@ -30,6 +33,8 @@ export interface SquashRun {
   app_id: AppId;
   sources: SquashSource[];
   options: SquashOptions;
+  /** Fit each copy under `limit` instead: `options.quality` is the highest quality tried, `floor` the lowest. */
+  under?: { limit: number; floor: number } | null;
   /** `null` writes beside each source, and files without a folder go to Pictures. */
   folder: string | null;
   signal?: AbortSignal;
@@ -93,6 +98,25 @@ export async function squash_images(run: SquashRun): Promise<SquashOutcome> {
     (context) => {
       const gate = limit(Math.max(1, Math.min(4, navigator.hardwareConcurrency ?? 4)));
       const count = () => results.filter(Boolean).length;
+      const squash_one = async (source: SquashSource): Promise<{ blob: Blob; size: Size }> => {
+        const image = await load_image(source.file, source.path);
+        try {
+          const size = squashed_size({ width: image.bitmap.width, height: image.bitmap.height }, options.max);
+          return { blob: await encode_image(draw(image.bitmap, size), options.format, options.quality / 100), size };
+        } finally {
+          image.bitmap.close();
+        }
+      };
+      const fit_one = async (source: SquashSource, under: { limit: number; floor: number }): Promise<{ blob: Blob; size: Size }> => {
+        const format = encoder_for_mime(options.format) as FitFormat;
+        const fitted = await fit_image(
+          { name: source.name, path: source.path, file: source.file },
+          { limit: under.limit, format, max: options.max, floor: under.floor, ceiling: options.quality },
+          context.signal
+        );
+        if (!fitted.fitted) throw new Error(`${source.name} doesn't fit under ${format_limit(under.limit)}`);
+        return { blob: fitted.blob, size: { width: fitted.width, height: fitted.height } };
+      };
       const squash = (index: number) => {
         const source = sources[index];
         return createTask<void, void>({
@@ -106,22 +130,16 @@ export async function squash_images(run: SquashRun): Promise<SquashOutcome> {
           execute: () =>
             gate(async () => {
               context.signal.throwIfAborted();
-              const image = await load_image(source.file, source.path);
-              try {
-                const size = squashed_size({ width: image.bitmap.width, height: image.bitmap.height }, options.max);
-                const blob = await encode_image(draw(image.bitmap, size), options.format, options.quality / 100);
-                context.signal.throwIfAborted();
-                const folder = target_folder(source, run.folder) ?? (await pictures_folder());
-                const directory = await files().get_directory(folder);
-                if (!directory) throw new Error(`${folder}: no such folder`);
-                const handle = await files().create_file(directory, squashed_name(source.name, extension), { content: blob });
-                const result = { path: child_path(folder, handle.name), size: blob.size, ...size };
-                results[index] = result;
-                run.on_result?.(index, result);
-                context.message(`${count()} of ${total}`);
-              } finally {
-                image.bitmap.close();
-              }
+              const { blob, size } = run.under ? await fit_one(source, run.under) : await squash_one(source);
+              context.signal.throwIfAborted();
+              const folder = target_folder(source, run.folder) ?? (await pictures_folder());
+              const directory = await files().get_directory(folder);
+              if (!directory) throw new Error(`${folder}: no such folder`);
+              const handle = await files().create_file(directory, squashed_name(source.name, extension), { content: blob });
+              const result = { path: child_path(folder, handle.name), size: blob.size, ...size };
+              results[index] = result;
+              run.on_result?.(index, result);
+              context.message(`${count()} of ${total}`);
             }),
         })();
       };
@@ -129,7 +147,7 @@ export async function squash_images(run: SquashRun): Promise<SquashOutcome> {
       return createTaskGroup({ name: "Squash", mode: ExecutionMode.PARALLEL, tasks: () => pending.map(squash) })();
     },
     {
-      title: `Squashing ${total} ${total === 1 ? "image" : "images"}`,
+      title: `Squashing ${total} ${total === 1 ? "image" : "images"}${run.under ? ` under ${format_limit(run.under.limit)}` : ""}`,
       signal: run.signal,
       done: () => {
         const written = results.filter((result) => result !== null);

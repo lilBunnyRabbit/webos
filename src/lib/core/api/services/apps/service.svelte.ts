@@ -78,8 +78,7 @@ export class AppsService implements IAppsService {
   }
 
   async init(): Promise<void> {
-    requestIdleCallback(() => void this.meta_ready);
-    await this.init_installed();
+    await Promise.all([this.meta_ready, this.init_installed()]);
     await this.load_recent();
   }
 
@@ -180,6 +179,13 @@ export class AppsService implements IAppsService {
     const parent = await this.files_service.get_directory(`${PATHS.var_lib}/apps`);
     if (parent && (await this.files_service.exists(parent, id, "directory"))) {
       await this.files_service.delete_entry(parent, id, { recursive: true });
+    }
+    if (!manifest.on_uninstall_data) return;
+    try {
+      await (await manifest.on_uninstall_data()).default();
+    } catch (error) {
+      console.error(`[AppsService] ${id}'s uninstall cleanup failed`, error);
+      this.notifications_service.notify("apps", { type: "error", title: `Some of ${manifest.name}'s data is left`, message: String(error) });
     }
   }
 

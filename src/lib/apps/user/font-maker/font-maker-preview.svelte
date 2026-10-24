@@ -3,6 +3,7 @@
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, TextItalic as TextItalicIcon } from "phosphor-svelte";
   import { auto_kern_of, build_face } from "./build";
   import { KERN_STEP } from "./kerning";
+  import { caret_at_point } from "$kit/utils/caret";
   import { kern_adjustment, regular_weight, set_auto_kerning, set_kern_adjustment, style_name, type Face, type FontProject } from "./model";
 
   interface Props {
@@ -56,9 +57,9 @@
   }
 
   function pick(event: MouseEvent) {
-    const position = document.caretPositionFromPoint(event.clientX, event.clientY);
-    if (!position || position.offsetNode !== line?.firstChild) return;
-    picked = gap_at(text, position.offset);
+    const caret = caret_at_point(event.clientX, event.clientY);
+    if (!caret || caret.node !== line?.firstChild) return;
+    picked = gap_at(text, caret.offset);
   }
 
   function step_gap(direction: -1 | 1) {

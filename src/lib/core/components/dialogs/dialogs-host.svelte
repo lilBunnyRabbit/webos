@@ -95,9 +95,9 @@
     style:position-anchor={docked ? undefined : `--dialog-${entry.id}`}
     style:position-area={docked ? undefined : entry.anchored ? "bottom span-right" : "span-all"}
     style:position-try-fallbacks={!docked && entry.anchored ? "flip-block, flip-inline, flip-block flip-inline" : undefined}
-    {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible })}
+    {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible || entry.swipe_cancels })}
   >
     <entry.component {...entry.props} {...sheet && { sheet: true }} resolve={entry.resolve} />
-    {#if docked && entry.dismissible}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
+    {#if docked && (entry.dismissible || entry.swipe_cancels)}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
   </dialog>
 {/each}

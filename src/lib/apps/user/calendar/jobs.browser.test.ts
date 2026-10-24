@@ -93,7 +93,7 @@ test("cal add schedules a reminder that rings with no Calendar window, then lets
 test("a weekly reminder a day ahead rings every week and opens the coming occurrence's day", async () => {
   const id = reminder_job_id(await cal_add({ title: "Gym", day: "2026-10-21", at: "18:00", repeat: "weekly", remind: "1d" }));
   const first = new Date(2026, 9, 20, 18, 0).getTime();
-  expect(scheduler.get(id)).toMatchObject({ repeat: { every: "week", days: [2] }, open: { props: { day: "2026-10-21" } } });
+  expect(scheduler.get(id)).toMatchObject({ at: { date: "2026-10-21", time: "18:00" }, repeat: { every: "week", days: [3] }, before: 1440, open: { props: { day: "2026-10-21" } } });
   expect(scheduler.next(id)).toBe(first);
 
   await wake_at(first + 1_000);
@@ -105,6 +105,32 @@ test("a weekly reminder a day ahead rings every week and opens the coming occurr
   await wake_at(new Date(2026, 9, 27, 18, 0, 5).getTime());
   await vi.waitFor(() => expect(titles()).toEqual(["Gym", "Gym"]));
   await vi.waitFor(() => expect(scheduler.get(id)?.open?.props).toEqual({ day: "2026-11-04" }));
+});
+
+test("a reminder a day ahead of a monthly 31st rings on each month's eve", async () => {
+  const id = reminder_job_id(await cal_add({ title: "Rent", day: "2026-10-31", at: "10:00", repeat: "monthly", remind: "1d" }));
+  expect(scheduler.get(id)).toMatchObject({ at: { date: "2026-10-31" }, repeat: { every: "month", day: 31 }, before: 1440 });
+  expect(scheduler.next(id)).toBe(new Date(2026, 9, 30, 10, 0).getTime());
+
+  await wake_at(new Date(2026, 9, 30, 10, 0, 5).getTime());
+  await vi.waitFor(() => expect(titles()).toEqual(["Rent"]));
+  await vi.waitFor(() => expect(scheduler.get(id)?.open?.props).toEqual({ day: "2026-11-30" }));
+  expect(scheduler.next(id)).toBe(new Date(2026, 10, 29, 10, 0).getTime());
+});
+
+test("a reminder scheduled the old way is rewritten as the event after it rings", async () => {
+  const event_id = await cal_add({ title: "Gym", day: "2026-10-21", at: "18:00", repeat: "weekly", remind: "1d" });
+  const id = reminder_job_id(event_id);
+  const old_input = { key: `reminder-${event_id}`, title: "Gym", message: "18:00–19:00 · tomorrow", kind: "reminder" as const };
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  await scheduler.schedule(APP_ID, { ...old_input, at: { date: "2026-10-20", time: "18:00", tz: zone }, repeat: { every: "week", days: [2] }, open: { app: APP_ID, props: { day: "2026-10-21" } } });
+  expect(scheduler.get(id)?.before).toBeUndefined();
+
+  await wake_at(new Date(2026, 9, 20, 18, 0, 5).getTime());
+  await vi.waitFor(() => expect(titles()).toEqual(["Gym"]));
+  await vi.waitFor(() => expect(scheduler.get(id)).toMatchObject({ at: { date: "2026-10-21", time: "18:00" }, repeat: { every: "week", days: [3] }, before: 1440 }));
+  expect(scheduler.get(id)?.open?.props).toEqual({ day: "2026-10-28" });
+  expect(scheduler.next(id)).toBe(new Date(2026, 9, 27, 18, 0).getTime());
 });
 
 test("deleting the event cancels its reminder", async () => {

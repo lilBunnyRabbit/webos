@@ -24,7 +24,7 @@ afterAll(async () => {
   kernel.services.delete("files");
 });
 
-const item = (text: string, checked = false, extra: Partial<Item> = {}): Item => ({ id: text, text, checked, updated_at: 1, ...extra });
+const item = (text: string, checked = false, extra: Partial<Item> = {}): Item => ({ id: text, text, checked, added_at: 1, updated_at: 1, ...extra });
 
 async function seed(file: ListsFile) {
   let directory = await files.get_directory("/var/lib");

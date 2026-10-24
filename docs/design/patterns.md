@@ -93,7 +93,7 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 
 - **Loading:** `Spinner` centered for whole views; for lists, 5–6 skeleton rows (`bg-foreground/5 animate-pulse`) fading out downward.
 - **Empty:** `EmptyState` with a duotone icon, a short title ("This folder is empty"), one line on what to do next, and an action when there's an obvious one.
-- **Error:** the same component with `tone="error"`, saying what failed in plain words, with the technical message as the description.
+- **Error:** the same component with `tone="error"`. The title names the thing in plain words ("Snake didn't load", "Couldn't open the image"); the description is one sentence on the likely cause and what to do; the actions are the way out (Try again first when it can work, then the bigger hammer, then Close). Colour stays on the icon tile, never the title. A raw technical message (a URL, a stack) goes in `details`, never in the description.
 
 ## Selection and drag
 
@@ -135,7 +135,7 @@ On a phone, anything that rises from the bottom closes by swiping it down: menus
 - `{@attach swipe_dismiss({ on_dismiss, dismissible })}` (`$lib/core/utils/swipe-dismiss`) on the sheet's own box, which must be positioned (`relative`, `absolute` or `fixed`). `on_dismiss` is the same call as its Cancel, Back and scrim tap, never a second close path.
 - Touch only; the sheet follows the finger, and up it rubber-bands. Past a quarter of its height or on a flick it slides away, otherwise it springs back. With Motion off it closes without sliding.
 - An inner list scrolls first: the swipe only starts with the scroller at its top. Nothing inside a sheet should need a downward drag of its own (sliders are exempt).
-- `dismissible: false` (a confirm, Restore) keeps the gesture as feedback: it gives a little and comes back, with no grabber.
+- `dismissible: false` with a harmless Cancel (a confirm, save changes, the `sudo` question) sets `swipe_cancels`: swiping it away is Cancel, with a grabber. One whose dismissal would pick a real answer (Restore, the intro, a file conflict) keeps the gesture as feedback only: it gives a little and comes back, with no grabber.
 - The Style Guide shows one under Feedback. Behaviour in depth: [mobile shell](../system/shell/mobile.md#swipe-down-to-dismiss).
 
 ## Window sheets
@@ -144,7 +144,7 @@ Questions that belong to one window's task (confirm, prompt, the file picker) ar
 
 - Confirm: a tinted icon tile, the question as the title (with the item's name in curly quotes), one line on consequences, then Cancel + the verb ("Delete"). `danger` makes the verb red and focuses Cancel.
 - File picker: File Explorer in a `rounded-2xl` frame with a title bar on `background-lighter` showing what's accepted, sized to the window (`min(46rem, 100cqw - 2rem)`), with a footer of the chosen path, Cancel and Open. Unacceptable files stay visible but dimmed, so the folder still looks like itself.
-- Prompt: the title, a large field with the current value selected (`select_stem` for file names), inline validation under the field, then Cancel + the verb ("Create", "Rename").
+- Prompt: the title, a large field with the current value selected (`select_stem` for file names), inline validation under the field, then Cancel + the verb ("Create", "Rename"). A typed-name gate for a destructive action ("Type “x” to delete it") sets `danger`, so the verb is red like the confirm before it.
 
 ## Dates and times
 

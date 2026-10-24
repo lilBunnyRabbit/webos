@@ -218,7 +218,8 @@ export class SchedulerService implements ISchedulerService {
     }
     const retimed =
       ("at" in patch && JSON.stringify(patch.at) !== JSON.stringify(current.at)) ||
-      ("repeat" in patch && JSON.stringify(patch.repeat) !== JSON.stringify(current.repeat));
+      ("repeat" in patch && JSON.stringify(patch.repeat) !== JSON.stringify(current.repeat)) ||
+      ("before" in patch && (patch.before ?? 0) !== (current.before ?? 0));
     if (job.armed && (retimed || !current.armed)) job.armed_at = now;
     // Clearing a repeating job's missed_at mustn't bring back the occurrences it skipped.
     if (current.missed_at !== undefined && job.missed_at === undefined && job.repeat) {
@@ -358,11 +359,12 @@ export class SchedulerService implements ISchedulerService {
 
   private arm(): void {
     clearTimeout(this.timer);
-    // No jobs, nothing to fire or notice: a schedule, a re-read or another tab's ping runs a pass, which arms it again.
-    if (!this.is_leader || this.destroyed || this.jobs.length === 0) return;
-    const now = Date.now();
+    if (!this.is_leader || this.destroyed) return;
     const due = next_due(this.jobs);
-    const until_due = due === null ? Infinity : Math.max(due - now, 0);
+    // Nothing armed, nothing to fire or notice: a schedule, a re-read or another tab's ping runs a pass, which arms it again.
+    if (due === null) return;
+    const now = Date.now();
+    const until_due = Math.max(due - now, 0);
     // The idle wake-up lands on the minute, so a hidden tab shares the taskbar clock's tick instead of adding its own.
     const heartbeat = MAX_DELAY - (now % MAX_DELAY);
     const next = until_due < MAX_DELAY ? until_due : heartbeat;

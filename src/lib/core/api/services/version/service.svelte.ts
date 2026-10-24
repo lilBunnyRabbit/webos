@@ -56,6 +56,8 @@ export class VersionService implements IVersionService {
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
   public update_progress = $state<UpdateProgress | null>(null);
   private restart?: () => void;
+  /** The worker this page booted under. Another one active later means the browser installed an update on its own. */
+  private boot_worker: ServiceWorker | null = null;
 
   public changelog = $state.raw<Release[]>([]);
   private loading: Promise<Release[]> | null = null;
@@ -103,6 +105,7 @@ export class VersionService implements IVersionService {
   }
 
   async init() {
+    this.boot_worker = navigator.serviceWorker?.controller ?? null;
     const clean = strip_update_param(location.href);
     if (clean) history.replaceState(history.state, "", clean);
 
@@ -239,9 +242,19 @@ export class VersionService implements IVersionService {
     const before = await cached_keys(cache_name);
     await with_timeout(registration.update(), UPDATE_TIMEOUT, "sw.js didn't arrive");
     const worker = registration.installing ?? registration.waiting;
-    if (!worker || signal.aborted) return false;
+    if (signal.aborted) return false;
+    if (!worker) return this.installed_already(registration);
     void this.track_install(worker, cache_name, before, signal);
     await activated(worker);
+    return true;
+  }
+
+  // The browser's own update check got there first: the new worker already holds the new precache and claimed this page,
+  // so a reload boots the new build. Unknown when the page booted without a worker (first visit, hard reload).
+  private async installed_already(registration: ServiceWorkerRegistration): Promise<boolean> {
+    const active = registration.active;
+    if (!active || !this.boot_worker || active === this.boot_worker) return false;
+    await activated(active);
     return true;
   }
 

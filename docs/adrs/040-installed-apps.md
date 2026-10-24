@@ -48,3 +48,6 @@ WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the 
 - A default widget (Game Hub's) is placed when the desktop boots, so a new user who picks Play sees it from the next visit.
 - The tidy can miss an app used only before window frames were recorded, or only through the palette; Undo and Get bring it back.
 - Cross-tab: a second tab doesn't see an install until reload (cross-tab sync is open, ROADMAP).
+
+## Revision 2026-10-22: app cleanup on uninstall
+Owner's call in [owner calls](../brainstorm/2026-10-22_owner-calls.md): a lazy manifest hook `on_uninstall_data: () => import("./uninstall")` runs after `uninstall(id, { data: true })` cleared localStorage and `/var/lib/apps/{id}`, for stores the OS can't see. A throw is logged and toasted; the uninstall still completes. Moonrabbit deletes its IndexedDB database. Rejected: an `app.{id}` IndexedDB naming convention the OS deletes (needs a device-key migration for Moonrabbit).

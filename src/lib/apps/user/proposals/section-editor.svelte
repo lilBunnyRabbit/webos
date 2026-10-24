@@ -1,7 +1,8 @@
 <script lang="ts">
   import { field } from "$lib/core/components/ui";
   import { has_files, image_files } from "$kit/utils/image";
-  import { insert_image, range_at_point, read_runs, render_runs, toggle_display } from "./editor-dom";
+  import { insert_image, read_runs, render_runs, toggle_display } from "./editor-dom";
+  import { caret_range_at_point } from "$kit/utils/caret";
   import { picture_data_url } from "$kit/utils/picture";
   import { ImageDisplay, is_empty, type Content } from "./model";
 
@@ -90,7 +91,7 @@
     if (!has_files(event)) return;
     event.preventDefault();
     const files = image_files(event.dataTransfer);
-    if (files.length) void insert_pictures(files, range_at_point(event.clientX, event.clientY));
+    if (files.length) void insert_pictures(files, caret_range_at_point(event.clientX, event.clientY));
   }
 
   function on_click(event: MouseEvent) {

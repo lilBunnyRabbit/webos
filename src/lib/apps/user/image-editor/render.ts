@@ -1,4 +1,5 @@
-import { OperationType, filter_string, operation_size, type Adjustments, type Operation } from "./edit";
+import { draw_filtered } from "$kit/utils/filter";
+import { OperationType, adjustment_steps, operation_size, type Adjustments, type Operation } from "./edit";
 
 type Drawable = CanvasImageSource & { width: number; height: number };
 
@@ -36,8 +37,7 @@ export function render_final(source: Drawable, operations: readonly Operation[],
   const geometry = render_operations(source, operations);
   const canvas = new OffscreenCanvas(geometry.width, geometry.height);
   const context = canvas.getContext("2d")!;
-  context.filter = filter_string(adjustments);
-  context.drawImage(geometry, 0, 0);
+  draw_filtered(context, adjustment_steps(adjustments), (target) => target.drawImage(geometry, 0, 0));
   return canvas;
 }
 

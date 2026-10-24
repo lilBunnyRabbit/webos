@@ -33,7 +33,8 @@
   import HeaderPanel from "./header-panel.svelte";
   import { draw_heatmap } from "./heatmap";
   import { LAB_FORMATS, LabSettingsSchema, default_settings, type LabFormat } from "./settings";
-  import { IMAGE_ACCEPT, converted_name, has_alpha, is_image, is_inspectable, read_image } from "./source";
+  import { has_alpha, read_image } from "$kit/utils/codecs/source";
+  import { IMAGE_ACCEPT, converted_name, is_image, is_inspectable } from "./source";
   import { report_error } from "$kit/utils/report-error";
 
   const View = { COMPARE: "compare", INSPECT: "inspect" } as const;

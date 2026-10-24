@@ -23,6 +23,7 @@
     Scan as ScanIcon,
     Stack as StackIcon,
     ShoppingCart as ShoppingCartIcon,
+    SortAscending as SortAscendingIcon,
     Sticker as StickerIcon,
     Storefront as StorefrontIcon,
     Trash as TrashIcon,
@@ -58,6 +59,7 @@
   import PhotoCrop from "./photo-crop.svelte";
   import PhotoReview from "./photo-review.svelte";
   import { read_method, read_with_ai, read_with_ocr, ReadMethod, type ReviewRow } from "./read-image";
+  import { ItemSort, sort_items, SORT_LABELS } from "./sort";
   import { record_trip } from "./suggest";
   import { report_error } from "$kit/utils/report-error";
 
@@ -86,6 +88,7 @@
   const add_to = storage.window<string | null>("add_to", null, z.string().nullable());
   const store = storage.window("store", false, z.boolean());
   const cart_open = storage.window("cart_open", true, z.boolean());
+  const sort = storage.window<ItemSort>("sort", ItemSort.OLDEST, z.enum(ItemSort));
   // Props come back with a restored window; without this a reload would switch lists and ask for a photo again.
   const launched = storage.window("launched", false, z.boolean());
 
@@ -98,10 +101,10 @@
   const all = $derived(current.value === ALL);
   const home = $derived(!list && !all);
   const scope = $derived(list ? [list] : all ? lists : []);
-  const items = $derived(scope.flatMap((each) => live(each.items)));
+  const items = $derived(sort_items(scope.flatMap((each) => live(each.items)), sort.value));
   const done = $derived(items.filter((item) => item.checked));
   const open_items = $derived(items.filter((item) => !item.checked));
-  const groups = $derived(lists.map((each) => ({ list: each, open: live(each.items).filter((item) => !item.checked) })).filter((group) => group.open.length > 0));
+  const groups = $derived(lists.map((each) => ({ list: each, open: sort_items(live(each.items).filter((item) => !item.checked), sort.value) })).filter((group) => group.open.length > 0));
   const target = $derived(list ?? lists.find((candidate) => candidate.id === add_to.value) ?? lists[0]);
   const open_keys = $derived(new Set(target ? live(target.items).filter((item) => !item.checked).map((item) => history_key(item.text)) : []));
 
@@ -233,7 +236,8 @@
     const item = find(id);
     const target = lists.find((candidate) => candidate.id === to);
     if (!item || !target) return;
-    target.items.push({ id: new_id(), text: item.text, qty: item.qty, unit: item.unit, checked: item.checked, updated_at: stamp() });
+    const now = Date.now();
+    target.items.push({ id: new_id(now), text: item.text, qty: item.qty, unit: item.unit, checked: item.checked, added_at: now, updated_at: stamp(undefined, now) });
     remove(item);
   }
 
@@ -303,6 +307,23 @@
     if (choice) add_to.value = choice;
   }
 
+  const SORT_PREFIX = "sort:";
+
+  function sort_menu(): MenuItem {
+    return {
+      label: "Sort",
+      icon: SortAscendingIcon,
+      items: Object.values(ItemSort).map((option) => ({ id: SORT_PREFIX + option, label: SORT_LABELS[option], icon: sort.value === option ? CheckIcon : undefined })),
+    };
+  }
+
+  function pick_sort(choice: string | null): boolean {
+    if (!choice?.startsWith(SORT_PREFIX)) return false;
+    const option = choice.slice(SORT_PREFIX.length) as ItemSort;
+    if (option !== sort.value) view_transition(() => (sort.value = option));
+    return true;
+  }
+
   async function more_menu(event: MouseEvent) {
     if (!list) return all_menu(event);
     const entries: MenuItem[] = [
@@ -310,6 +331,7 @@
       { id: "receive", label: "Receive…", icon: ScanIcon },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
       { separator: true },
+      sort_menu(),
       { id: "settings", label: "List settings…", icon: GearSixIcon },
       widget_for(list.id)
         ? { id: "widget", label: on_phone ? "Remove from home screen" : "Remove from desktop", icon: StickerIcon }
@@ -319,6 +341,7 @@
     if (lists.length > 1) entries.push({ separator: true }, { id: "delete", label: "Delete list…", icon: TrashIcon, danger: true });
 
     const choice = await dialogs.menu(entries, { anchor: below(event) });
+    if (pick_sort(choice)) return;
     if (choice === "share") view = View.SHARE;
     else if (choice === "receive") view = View.RECEIVE;
     else if (choice === "photo") await photo();
@@ -335,9 +358,12 @@
       { separator: true },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
       { id: "new", label: "New list…", icon: ListPlusIcon },
+      { separator: true },
+      sort_menu(),
     ];
     if (done.length > 0) entries.push({ id: "clear", label: `Clear done (${done.length})`, icon: BroomIcon });
     const choice = await dialogs.menu(entries, { anchor: below(event) });
+    if (pick_sort(choice)) return;
     if (choice === "share") view = View.SHARE;
     else if (choice === "receive") view = View.RECEIVE;
     else if (choice === "photo") await photo();
@@ -723,7 +749,7 @@
       >
         <Grabber class="mt-2" />
         {#key editing.id}
-          <ItemEditor item={editing} onsave={save_edit} oncancel={close_side_view} />
+          <ItemEditor item={editing} added_at={editing.added_at} onsave={save_edit} oncancel={close_side_view} />
         {/key}
       </div>
     </div>

@@ -4,7 +4,8 @@ import type { Plugin } from "vite";
 import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
-import { version_plugin } from "./vite-plugin-version";
+import { get_version_info, version_plugin } from "./vite-plugin-version";
+import { offline_plugin } from "./vite-plugin-offline";
 import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
 import { core_modules } from "./vite-core-chunk";
 import { import_map_plugin } from "./vite-plugin-import-map";
@@ -32,6 +33,43 @@ function preload_font_plugin(file: RegExp): Plugin {
   };
 }
 
+// ADR-067: `boot.ts` imports `main.ts` only after the browser check, so its chunks would start downloading only then.
+// Preloading them from the HTML fetches them alongside the boot chunk. The stylesheet is only preloaded: applied, it
+// would restyle the warning screen.
+function preload_main_plugin(entry: string): Plugin {
+  let base = "/";
+  return {
+    name: "webos-preload-main",
+    apply: "build",
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml(_, { bundle }) {
+      const chunks = Object.values(bundle ?? {}).filter((file) => file.type === "chunk");
+      const main = chunks.find((chunk) => chunk.moduleIds.includes(entry));
+      if (!main) throw new Error(`preload main: no chunk holds ${entry}`);
+      const linked = new Set(chunks.filter((chunk) => chunk.isEntry).flatMap((chunk) => [chunk.fileName, ...chunk.imports]));
+      const files = new Set<string>();
+      const css = new Set<string>();
+      const walk = (file: string) => {
+        if (files.has(file)) return;
+        files.add(file);
+        const chunk = chunks.find((item) => item.fileName === file);
+        chunk?.viteMetadata?.importedCss.forEach((name) => css.add(name));
+        chunk?.imports.forEach(walk);
+      };
+      walk(main.fileName);
+      // ADR-049 revision 2026-10-24: AppsService awaits every app's meta at boot, so it downloads alongside main.
+      const meta = chunks.find((chunk) => chunk.name === "app-meta");
+      if (meta) walk(meta.fileName);
+      return [
+        ...[...files].filter((file) => !linked.has(file)).map((file) => ({ tag: "link", attrs: { rel: "modulepreload", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
+        ...[...css].map((file) => ({ tag: "link", attrs: { rel: "preload", as: "style", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
+      ];
+    },
+  };
+}
+
 // Change with every app edit or every build, so nothing that reaches them may sit in the shared `core` chunk.
 const VOLATILE = [
   "src/lib/apps/index.ts",
@@ -40,11 +78,14 @@ const VOLATILE = [
 ];
 const APP_INDEX = /\/apps\/(system|user)\/[^/]+\/index\.ts$/;
 const cores = new WeakMap<object, Set<string>>();
+const BASE = "/webos/";
+const info = get_version_info(process.cwd());
+const offline = offline_plugin(info.buildTimestamp);
 
 // https://vite.dev/config/
 export default defineConfig({
   // Served from lilbunnyrabbit.github.io/webos/ (GitHub Pages project site).
-  base: "/webos/",
+  base: BASE,
   plugins: [
     tailwindcss(),
     phosphor_plugin(),
@@ -55,15 +96,21 @@ export default defineConfig({
     //     runes: true,
     //   },
     // }
-    version_plugin(),
+    version_plugin(info),
     import_map_plugin(),
+    offline.plugin,
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
+    preload_main_plugin(path.resolve("src/main.ts")),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
       workbox: {
-        // mjs: the pdf.js worker (PDF Tools); woff2: Inter and Hack. Both so WebOS looks and works the same offline (owner, 2026-10-15).
+        // ADR-065: the install precaches only core and the system apps (offline/core.json), so an update takes seconds
+        // however many apps there are. User apps load on demand into the per-build runtime cache below.
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
+        manifestTransforms: [async (entries) => ({ manifest: entries.filter((entry) => offline.precached(entry.url)), warnings: [] })],
+        // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
+        globIgnores: ["**/mammoth-*.js"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Notification clicks (ADR-062): relative to sw.js, so it follows the base.
         importScripts: ["sw-notifications.js"],
@@ -75,9 +122,10 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-wasm", expiration: { maxEntries: 16 } },
           },
-          // Built-in app fonts (Burrow): about 0.5 MB, so cached when first chosen instead of in every install.
+          // Built-in app fonts (Burrow): about 0.5 MB, so cached when first chosen instead of in every install. Content-hashed
+          // names, so a fixed font is a new entry.
           {
-            urlPattern: /\/fonts\/[^/]+\.(ttf|ttc)$/,
+            urlPattern: /\.(ttf|ttc)$/,
             handler: "CacheFirst",
             options: { cacheName: "webos-fonts", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
           },
@@ -86,6 +134,25 @@ export default defineConfig({
             urlPattern: /\.(aff|dic)$/,
             handler: "CacheFirst",
             options: { cacheName: "webos-dictionaries", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 8 } },
+          },
+          // Warren's .docx import (~100 KB gzipped), which few installs ever use.
+          {
+            urlPattern: /\/assets\/mammoth-[^/]+\.js$/,
+            handler: "CacheFirst",
+            options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
+          },
+          // Last, so the rules above keep their files. One cache per build: OfflineService fills it with the picked apps
+          // and deletes older ones after a sync (ADR-065). No expiration, which could evict a picked app.
+          {
+            urlPattern: new RegExp(`^[^?#]*${BASE}assets/`),
+            handler: "CacheFirst",
+            // ignoreVary: OfflineService stores files it fetched itself, and a server's `Vary: Origin` would make a module
+            // import miss them. The names are content-hashed, so any stored copy is the right one.
+            options: {
+              cacheName: `webos-assets-${info.buildTimestamp}`,
+              cacheableResponse: { statuses: [200] },
+              matchOptions: { ignoreVary: true },
+            },
           },
         ],
       },
@@ -124,11 +191,18 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Every engine that can run WebOS has `modulepreload`; the polyfill only cost the boot chunk bytes.
+    modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
+        // A fixed name, so the precache can leave the chunk out.
+        chunkFileNames: (chunk) =>
+          chunk.moduleIds.some((id) => id.includes("/node_modules/mammoth/")) ? "assets/mammoth-[hash].js" : "assets/[name]-[hash].js",
         // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
         manualChunks(id, { getModuleInfo }) {
           if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
+          // `boot.ts` needs Vite's preload helper before the browser check; in `core` it would load all of core first.
+          if (id === "\0vite/preload-helper.js") return "preload-helper";
           if (!cores.has(getModuleInfo)) {
             cores.set(getModuleInfo, core_modules(getModuleInfo, path.resolve("src/main.ts"), VOLATILE, "src/lib/apps"));
           }
@@ -160,7 +234,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts"],
+          include: ["src/**/*.test.ts", "*.test.ts"],
           exclude: ["src/**/*.browser.test.ts"],
           environment: "node",
           // Seeded puzzle generators run 2 s here and 2-3x that on the CI runner: the default 5 s fails them at random.

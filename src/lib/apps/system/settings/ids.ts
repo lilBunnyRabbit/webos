@@ -7,6 +7,7 @@ export const PAGE_IDS = [
   "files",
   "shortcuts",
   "backup",
+  "offline",
   "whats-new",
   "roadmap",
   "about",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { crc32 } from "$lib/core/utils/zip/crc32";
-import { adler32, bmp_size, BmpEncoder, png_stored_size, PngStoredEncoder } from "./test-image-encode";
+import { adler32, png_stored_size, PngStoredEncoder } from "./test-image-encode";
 
 function concat(parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
@@ -22,7 +22,7 @@ function band(width: number, from: number, rows: number): Uint8Array {
   return out;
 }
 
-function encode(encoder: PngStoredEncoder | BmpEncoder, width: number, height: number, band_rows: number): Uint8Array {
+function encode(encoder: PngStoredEncoder, width: number, height: number, band_rows: number): Uint8Array {
   const parts = [...encoder.header()];
   for (let y = 0; y < height; y += band_rows) parts.push(...encoder.push(band(width, y, Math.min(band_rows, height - y))));
   parts.push(...encoder.finish());
@@ -121,42 +121,5 @@ describe("PngStoredEncoder", () => {
     expect(() => encoder.push(new Uint8Array(5))).toThrow();
     encoder.push(band(4, 0, 2));
     expect(() => encoder.finish()).toThrow(/2 rows missing/);
-  });
-});
-
-describe("BmpEncoder", () => {
-  function decode_bmp(bmp: Uint8Array) {
-    const view = new DataView(bmp.buffer, bmp.byteOffset, bmp.byteLength);
-    const width = view.getInt32(18, true);
-    const height = -view.getInt32(22, true);
-    const start = view.getUint32(10, true);
-    const stride = Math.ceil((width * 3) / 4) * 4;
-    const rgb = new Uint8Array(width * height * 3);
-    for (let y = 0; y < height; y++)
-      for (let x = 0; x < width; x++) {
-        const at = start + y * stride + x * 3;
-        rgb.set([bmp[at + 2], bmp[at + 1], bmp[at]], (y * width + x) * 3);
-      }
-    return { file_size: view.getUint32(2, true), width, height, bits: view.getUint16(28, true), rgb };
-  }
-
-  test("writes a top-down 24-bit BMP with padded rows", () => {
-    const bmp = encode(new BmpEncoder(5, 3), 5, 3, 2);
-    expect(String.fromCharCode(bmp[0], bmp[1])).toBe("BM");
-    expect(bmp.length).toBe(bmp_size(5, 3));
-    expect(bmp_size(5, 3)).toBe(54 + 16 * 3);
-    const decoded = decode_bmp(bmp);
-    expect(decoded).toMatchObject({ file_size: bmp.length, width: 5, height: 3, bits: 24 });
-    expect(decoded.rgb).toEqual(band(5, 0, 3));
-  });
-
-  test("puts padding between the header and the pixels", () => {
-    const bmp = encode(new BmpEncoder(2, 2, 10), 2, 2, 2);
-    expect(bmp.length).toBe(bmp_size(2, 2) + 10);
-    expect(decode_bmp(bmp).rgb).toEqual(band(2, 0, 2));
-  });
-
-  test("refuses files over 4 GB", () => {
-    expect(() => new BmpEncoder(40_000, 40_000)).toThrow(/4 GB/);
   });
 });

@@ -9,6 +9,7 @@
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, CopyButton, EmptyState, IconButton, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, format_bytes, error_message } from "$lib/core/utils";
+  import { on_idle } from "$lib/core/utils/idle";
   import { indentWithTab } from "@codemirror/commands";
   import { Compartment, EditorState, Text } from "@codemirror/state";
   import { EditorView, keymap } from "@codemirror/view";
@@ -300,8 +301,7 @@
   // Byte size needs the whole text encoded: done when the editor is idle, not per keystroke.
   $effect(() => {
     const current = doc;
-    const handle = requestIdleCallback(() => (byte_size = new TextEncoder().encode(current.toString()).length));
-    return () => cancelIdleCallback(handle);
+    return on_idle(() => (byte_size = new TextEncoder().encode(current.toString()).length));
   });
 
   $effect(() => win.set_title(name));

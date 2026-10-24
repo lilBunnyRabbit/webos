@@ -5,20 +5,202 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.56.0",
-    date: "2026-10-22",
+    version: "3.63.0",
+    date: "2026-10-24",
     title: "Meet the maker",
     introduces: ["portfolio"],
     changes: [
       {
         kind: NEW,
         apps: ["portfolio"],
-        text: "Portfolio introduces the person behind WebOS: a terminal tours their work, side projects, how they build and how to get in touch, and you can take over by typing at any point.",
+        text: "Portfolio introduces the person behind WebOS: a terminal tours their work, projects, how they build and how to get in touch, and you can take over by typing at any point.",
       },
       {
         kind: NEW,
         apps: ["portfolio"],
         text: "Type whoami in the Terminal to see who made WebOS.",
+      },
+    ],
+  },
+  {
+    version: "3.62.0",
+    date: "2026-10-24",
+    title: "Sorted lists and theme shades",
+    changes: [
+      {
+        kind: NEW,
+        text: "Shopping List sorts items by when they were added or by name, and the item editor shows when an item was added.",
+      },
+      {
+        kind: IMPROVED,
+        text: "When an app doesn't load, its window says why in plain words and offers Try again, Reload WebOS or Close, with the technical error tucked under Details.",
+      },
+      {
+        kind: FIXED,
+        text: "Near-white themes keep their lighter panels lighter, and pure-black themes tell menus, cards and the taskbar apart from the background.",
+      },
+      {
+        kind: FIXED,
+        text: "Themes with dark text on a coloured background, like Red & Black, get light scrollbars and pickers to match.",
+      },
+    ],
+  },
+  {
+    version: "3.61.0",
+    date: "2026-10-24",
+    title: "Icons right away",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "App icons and descriptions are there the moment WebOS opens, with no grey squares while they load.",
+      },
+      {
+        kind: FIXED,
+        text: "The browser check no longer tells you to update when your browser leaves a feature out on your system, like barcode reading in Chrome on Windows; it says it isn't available there.",
+      },
+    ],
+  },
+  {
+    version: "3.60.1",
+    date: "2026-10-23",
+    title: "More browsers",
+    changes: [
+      {
+        kind: FIXED,
+        text: "WebOS starts in Safari on the Mac, iPhone and iPad instead of stopping at the loading screen.",
+      },
+      {
+        kind: FIXED,
+        text: "Save to disk… works in Firefox and Safari too: a file lands in your downloads. A folder needs a browser with a folder picker, so compress it first there.",
+      },
+      {
+        kind: FIXED,
+        apps: ["image-editor"],
+        text: "Image Editor keeps brightness, contrast, saturation and the other adjustments in images saved from Safari.",
+      },
+      {
+        kind: FIXED,
+        apps: ["cards"],
+        text: "Cards scans EAN, UPC, Code 128 and Code 39 barcodes in browsers that can't read them on their own, like Firefox, Safari and Chrome on Windows.",
+      },
+      {
+        kind: FIXED,
+        apps: ["birdseye", "image-tools"],
+        text: "Birdseye's blurred edges and the soft edge of Image Tools' patches show in Safari too.",
+      },
+      {
+        kind: FIXED,
+        apps: ["gif-player", "hopsprite"],
+        text: "Where a browser can't step through a GIF's frames, GIF Player says so and Hopsprite imports the first frame instead of failing.",
+      },
+      {
+        kind: FIXED,
+        apps: ["paint", "doodlehop", "moonrabbit", "proposals", "font-maker"],
+        text: "Drawing in Paint and Doodlehop, dropping a picture into Moonrabbit or Proposals, and picking a letter pair in Font Maker work in older Safari.",
+      },
+      {
+        kind: FIXED,
+        apps: ["moonrabbit"],
+        text: "Moonrabbit photos added in Safari keep their real picture type, so exported journals show them everywhere.",
+      },
+      {
+        kind: FIXED,
+        apps: ["p2p-transfer"],
+        text: "P2P Transfer shows Share only where the browser can share, instead of a button that fails.",
+      },
+    ],
+  },
+  {
+    version: "3.60.0",
+    date: "2026-10-23",
+    title: "Browser check",
+    changes: [
+      {
+        kind: NEW,
+        text: "WebOS now tells you at start-up which features won't work in your browser, and Settings › About shows the full list.",
+      },
+    ],
+  },
+  {
+    version: "3.59.0",
+    date: "2026-10-22",
+    title: "Lighter start",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "WebOS starts a little faster: app icons now load only when they're shown.",
+      },
+    ],
+  },
+  {
+    version: "3.58.0",
+    date: "2026-10-22",
+    title: "Updates in seconds",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Updates now finish in seconds: apps load when you open them, and you choose which ones stay ready without a connection in Settings › Offline.",
+      },
+    ],
+  },
+  {
+    version: "3.57.0",
+    date: "2026-10-22",
+    title: "Swipe to cancel",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "On a phone, swiping a question like \"Delete this?\" or \"Save changes?\" down now cancels it, the same as tapping Cancel.",
+      },
+      {
+        kind: FIXED,
+        apps: ["calendar"],
+        text: "Calendar reminders ahead of events late in the month or on 29 February, like a day before rent on the 31st, now work instead of being refused.",
+      },
+    ],
+  },
+  {
+    version: "3.56.0",
+    date: "2026-10-22",
+    title: "Fit under a size, convert to anything",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["image-tools"],
+        text: "Image Tools can make a copy of a picture that fits under an upload limit, like 1 MB, lowering the quality first and shrinking it only when it has to.",
+      },
+      {
+        kind: NEW,
+        apps: ["image-tools"],
+        text: "Image Tools can convert a picture to every format at once, from PNG, JPEG, WebP, AVIF and JPEG XL to GIF, BMP, ICO, TIFF, QOI, TGA and PPM, and save any of them or all as a zip.",
+      },
+    ],
+  },
+  {
+    version: "3.55.2",
+    date: "2026-10-22",
+    title: "Fresher fonts, smoother updates",
+    changes: [
+      {
+        kind: FIXED,
+        text: "Fixes to the built-in Burrow font now reach a WebOS that already downloaded it, and updating after WebOS updated itself in the background no longer downloads everything again.",
+      },
+    ],
+  },
+  {
+    version: "3.55.1",
+    date: "2026-10-22",
+    title: "Cleaner uninstalls",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["moonrabbit"],
+        text: "Uninstalling Moonrabbit with its data now also forgets this device's quick unlock; your journals stay and still open with the phrase.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["moonrabbit"],
+        text: "The last step of deleting a journal has a red button, so it's clear there's no way back.",
       },
     ],
   },

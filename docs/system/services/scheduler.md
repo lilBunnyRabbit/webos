@@ -23,7 +23,7 @@ The same class runs in solo (ADR-047): a solo tab joins the leader lock but neve
 | `get(id)` / `list(app?)` | | From `jobs` |
 | `next(id)` | `(id) => number \| null` | The pending occurrence (`pending(job)`); in the past when it's overdue and about to fire |
 
-Pure helpers, exported from `$lib/core/api`: `next_occurrence(job, after)`, `pending(job)`, `format_repeat(repeat)`, `MISSED_AFTER`.
+Pure helpers, exported from `$lib/core/api`: `next_occurrence(job, after)`, `pending(job)`, `format_repeat(repeat, before?)` ("monthly on day 31, 1 day before"), `MISSED_AFTER`.
 
 ### Job
 
@@ -35,6 +35,7 @@ interface Job {
   message?: string;
   at: { epoch: number } | { date: string; time: string; tz: string };
   repeat?: Repeat & { until?: string; skip?: string[] };
+  before?: number;           // lead time in whole minutes, off the wall clock
   armed: boolean;
   snooze_until?: number;
   armed_at?: number;         // set by the scheduler: occurrences before it never count
@@ -50,6 +51,7 @@ type Repeat = { every: "day"; interval?: number } | { every: "week"; days: numbe
 
 - `at.epoch` is a one-shot instant (timers). `{ date, time, tz }` is a wall time in an IANA zone; for a repeating job `time` is every occurrence's time and `date` the first day the rule may fire on. A repeating job must use the wall form (schema refine).
 - `until` is the last day it may fire on, inclusive; `skip` lists days it doesn't. Both `YYYY-MM-DD` in the job's zone; a skip names the occurrence's real day (a clamped 31 in February is `…-02-28`).
+- `before` (minutes, a whole number ≥ 0) fires every occurrence that much earlier: the rule still describes the event, the notification comes ahead of it. It's taken off the wall clock in the job's zone (below), and off an epoch plainly. `until` and `skip` keep naming the rule's own days, not the days the lead time lands on; `armed_at`, `last_fired`, `missed_at`, `pending`, `next()` and the plan all work on the fire instants. Optional: older registries read as before, with no migration.
 - `actions` run as shell command lines in a WebOS tab ([shell](shell.md)), so they survive reloads and work from the service worker. `open` is what a body click opens; the owning app when absent.
 - `kind: "alarm"` sets `requireInteraction`: the notification stays until dismissed. The toast of an alarm also stays (`duration: null`).
 - `kind: "phase"` is a generic timed phase ending, one step of a routine (Pomodoro's focus and breaks today, any interval app tomorrow): it differs from `timer` only in its softer chime.
@@ -66,7 +68,7 @@ There's no scheduler call for it. An app calls `notifications.request_system()` 
 `next_occurrence(job, after)` is the first instant strictly after `after` at which the job fires:
 
 - Disarmed: `null`, snooze included. A snooze (`snooze_until > after`) fires ahead of the rule: the result is the earlier of the snooze and the rule's next occurrence. To snooze a fired one-shot, set `armed: true` with `snooze_until`; switching it on sets `armed_at` past the old `at`, so only the snooze is pending.
-- One-shot: `at` if it's after `after`.
+- One-shot: `at` (less `before`) if it's after `after`.
 - Repeating: candidate days from the first day (`at.date`), stepped on the calendar, each turned into an instant in the job's zone:
   - `day`: `at.date + k × interval`, so the interval stays aligned to the first day.
   - `week`: every listed weekday (`0` = Sunday) on or after the first day.
@@ -79,12 +81,13 @@ Wall time to instant is `wall_to_epoch(date, time, zone)` in `src/lib/core/utils
 - **Gap** (spring forward, a skipped day like Samoa's 2011-12-30): shifted forward by the gap. 02:30 on a night that jumps 02:00 → 03:00 fires at 03:30. On a skipped day, the next day at the same time.
 - **Overlap** (fall back): the first pass, the earlier instant. A daily 01:30 fires once that night.
 - Days step on the calendar, never by 24 h, so the wall time holds across DST.
+- **Lead time.** `before` comes off each occurrence's wall time before it's turned into an instant, borrowing days as needed: a monthly 31st at 09:00 with 1440 fires at 09:00 on the 30th, 27 or 28 February, the 29th of a 30-day month. Across DST, "1 day before 09:00" stays 09:00 the day before (23 or 25 h earlier), and "1 hour before" an event at 03:30 on a spring-forward night lands in the gap and fires at 03:30; on a fall-back night it takes the first 02:30. The candidates' two-day margin covers it, since a lead time only moves a fire earlier than its day.
 
 `pending(job)` is the occurrence waiting to fire, overdue when in the past: the first one at or after `armed_at`, after `last_fired` and after `missed_at`. The three fields, all written only by the scheduler:
 
 | Field | Set to | When |
 |-------|--------|------|
-| `armed_at` | now | `schedule()`, and `update()` that changes `at` or `repeat` or switches `armed` back on. Without it a daily 07:00 alarm set at 10:00 would count today's 07:00 as missed, and a one-shot set in the past would fire. An occurrence exactly at `armed_at` counts |
+| `armed_at` | now | `schedule()`, and `update()` that changes `at`, `repeat` or `before`, or switches `armed` back on. Without it a daily 07:00 alarm set at 10:00 would count today's 07:00 as missed, and a one-shot set in the past would fire. An occurrence exactly at `armed_at` counts |
 | `last_fired` | the occurrence's instant | it fired. Never anything else |
 | `missed_at` | the latest occurrence at or before now | it was counted as missed. The owning app reads it and clears it with `update(id, { missed_at: undefined })`; on a repeating job, clearing it moves `armed_at` just past it so the skipped occurrences don't come back |
 
@@ -104,7 +107,7 @@ Web Locks, `webos:scheduler`, one holder per browser profile:
 - A stolen tab stands down (timer cleared) and queues again.
 - `destroy()` aborts a queued request and releases a held lock.
 
-While there are jobs, the leader keeps one `setTimeout`: to the next due occurrence when it's less than 60 s away, otherwise to the next minute boundary (`60 s - now % 60 s`, the taskbar clock's tick), so a hidden tab's idle wake-up shares the clock's instead of adding its own. With no jobs there's no timer at all: the first `schedule()`, a re-read or another tab's ping runs a pass, which arms it again. Each wake-up runs a **pass**, then re-arms:
+While any job is armed, the leader keeps one `setTimeout`: to the next due occurrence when it's less than 60 s away, otherwise to the next minute boundary (`60 s - now % 60 s`, the taskbar clock's tick), so a hidden tab's idle wake-up shares the clock's instead of adding its own. With no jobs, or only switched-off ones, there's no timer at all: the first `schedule()`, switching a job on, a re-read or another tab's ping runs a pass, which arms it again. A hand edit of `jobs.json` while nothing is armed waits for one of those. Each wake-up runs a **pass**, then re-arms:
 
 1. Under the store lock: read `jobs.json`, `plan()`, write back if changed.
 2. Fire what fired, report what was missed (below), sync triggered notifications.
@@ -234,10 +237,9 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 
 ### Calendar
 
-- **Mapping** (`calendar/reminders.ts`, Node-tested). The reminder's wall time is the event's start (09:00 all day) minus its minutes, carried onto earlier days as needed: 00:30 with 1 hour is 23:30 the day before, `shift` 1. The job's `at.date` is the first occurrence's day minus `shift`, and its rule is the event's moved back by `shift` days: daily is `day`, weekly is `week` on the reminder's weekday, monthly is `month` on the day it lands on (or `31`, the month's end, when it always lands on the previous month's last day), yearly is `year`. `until` and every `skip` move back by `shift` too, so they stay one to one with the event's days.
-- **Exactness.** A shifted monthly or yearly rule is checked against the scheduler's own `next_occurrence` (in UTC) over 48 months or 8 years, against Calendar's own occurrences. When it doesn't match (a day ahead of a monthly event on the 29th–31st, a week ahead of one on the 1st–7th, a day ahead of a yearly event on 29 February or of 1 March from a non-leap year), nothing is scheduled: the editor shows why under Reminder and won't save, and `cal add` fails with the same reason. A reminder on the event's day always maps.
-- **Edit paths.** Saving an event, deleting one occurrence (`skip`), and `cal add` call `sync_reminder(event)` (`calendar/jobs.ts`); deleting an event cancels its job. A change that keeps the reminder's wall time and rule only updates the job's title and message, so it keeps its zone and `armed_at`; any other change schedules it afresh in the device's zone; no reminder, or none left from now on, cancels it.
-- **On fire** (`on-fire.ts`). After each fired or missed reminder the handler reads the event and points `open.props.day` at the next pending occurrence's day; with none left (a one-off, or past `until`) it cancels the job instead of leaving it disarmed. It uses the job, not `due`.
+- **Mapping** (`calendar/reminders.ts`, Node-tested). The job is the event itself: `at` is the event's day and start (09:00 all day) in the device's zone, the rule is the event's (daily `day`, weekly `week` on the event's weekday, monthly `month` on its day, yearly `year`) with its own `until` and `skip`, and `before` is the reminder's minutes (left out for "at the start"). Every combination is exact, month ends and 29 February included; a test checks it against Calendar's own occurrences in UTC.
+- **Edit paths.** Saving an event, deleting one occurrence (`skip`), and `cal add` call `sync_reminder(event)` (`calendar/jobs.ts`); deleting an event cancels its job. A change that keeps the event's wall time, rule and lead time only updates the job's title and message, so it keeps its zone and `armed_at`; any other change schedules it afresh in the device's zone; no reminder, or none left from now on, cancels it.
+- **On fire** (`on-fire.ts`). After each fired or missed reminder the handler reads the event and points `open.props.day` at the next pending occurrence's day (the fire's day plus the reminder's whole days); with none left (a one-off, or past `until`) it cancels the job instead of leaving it disarmed. It uses the job, not `due`. A job still in the form from before the lead time (the reminder's own time, the event's rule shifted by whole days) doesn't match the event's timing, so the handler, like any edit, schedules it afresh as the event: old jobs converge after their next reminder, and they fire at the same times until then.
 - **Text.** Title the event's; message its time and how far ahead the reminder is, the same for every occurrence: "14:30–15:30 · in 15 min", "All day · tomorrow". No buttons: a snooze would fire after the handler has moved `open` on to the next occurrence.
 - **Next reminder** in the status bar and on the widget is the soonest pending `calendar:` job.
 
@@ -245,13 +247,13 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 
 - Job gains `armed_at` and `missed_at`; the registry loses `migrated` and there's no migration (owner follow-up, ADR-062 revision 2026-10-21).
 - Added beyond the ADR's API: `missed`, `last_jump`, `triggers`, `is_leader`.
+- Job gains `before`, the lead time (owner call 2026-10-22, ADR-062 revision 2026-10-22).
 - Job gains `silent`, and apps gain the manifest's `on_fire` hook (owner follow-up, ADR-062 revision 2026-10-21).
 - The missed summary says "asleep" instead of "closed" when it's found after this tab's first pass.
-- The timer runs only while jobs exist and its idle wake-up lands on the minute; a leader with no jobs runs no pass on a wake-up; going hidden wakes nothing; a pending steal isn't repeated; the badge is cleared only when one is up (health pass, ADR-062 revision 2026-10-21).
+- The timer runs only while a job is armed (no timer for a registry of switched-off jobs, owner call 2026-10-22) and its idle wake-up lands on the minute; a leader with no jobs runs no pass on a wake-up; going hidden wakes nothing; a pending steal isn't repeated; the badge is cleared only when one is up (health pass, ADR-062 revision 2026-10-21).
 
 ## Known gaps
 
-- The idle heartbeat runs while any job exists, armed or not: a registry of only switched-off alarms still wakes the leader once a minute (on the minute) to catch a clock change it has nothing to fire for.
 - Nothing fires with every tab closed unless Triggers is on. On Android a background tab is frozen within about a minute, so only the foreground tab fires.
 - With Triggers on, a job delivered by its trigger while every tab was closed is still reported missed at the next boot: the registry never heard it fired.
 - Whether Chrome replaces a shown notification immediately when a triggered one with the same tag is added (rather than when it triggers) is unverified.
@@ -259,6 +261,5 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 - App files (`json_file`) don't sync across tabs. A tab with Pomodoro loaded that misses the moment a phase ended (frozen in the background on Android, say) and then sees the next phase already scheduled by the leader shows its stale plan until it reloads.
 - `LatestWriter` logs a failed write instead of throwing, so `schedule()` resolves even when the file couldn't be saved; the next pass or re-read shows the truth.
 - Calendar reminders count in wall time, not elapsed time: across a DST change between a reminder and its event, "1 day before" is the same clock time the day before (23 or 25 h), and "1 hour before" an event at 03:30 on a spring-forward night fires at 03:30. The old in-app check subtracted milliseconds.
-- A Calendar reminder whose shifted rule the scheduler can't express isn't scheduled (above); the editor refuses it.
 - A reminder created after its time has passed for the next occurrence never fires for that occurrence (`armed_at`); the old in-app check still showed it until 15 min after the event started.
 - A Calendar reminder fired while the leader closes before the handler runs keeps `open` on the day it just fired for; the next reminder opens that day.

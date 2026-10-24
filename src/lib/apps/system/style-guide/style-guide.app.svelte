@@ -46,6 +46,7 @@
     TextAa as TextAaIcon,
     Toolbox as ToolboxIcon,
     Trash as TrashIcon,
+    Warning as WarningIcon,
   } from "phosphor-svelte";
   import { z } from "zod";
   import { reveal_setting } from "$lib/core/components/ui/setting-anchor";
@@ -570,9 +571,19 @@
             {/if}
           </div>
         </Section>
-        <Section title="Empty state" description="Icon tile, one line of title, one of help, optional action.">
+        <Section title="Empty state" description="Icon tile, one line of title, one of help, optional actions. Errors tint the icon only and tuck the raw error into Details.">
           <EmptyState icon={FolderIcon} title="This folder is empty" description="Upload files or create a folder from the toolbar." class="py-8">
             {#snippet actions()}<Button size="sm" variant="primary"><PlusIcon weight="bold" /> New folder</Button>{/snippet}
+          </EmptyState>
+          <EmptyState
+            icon={WarningIcon}
+            tone="error"
+            title="Paint didn't load"
+            description="Its code didn't download. The connection may have dropped, or WebOS changed since this page opened."
+            details={"TypeError: Failed to fetch dynamically imported module: https://example.com/webos/assets/paint-3f2a.js"}
+            class="py-8"
+          >
+            {#snippet actions()}<Button size="sm" variant="primary">Try again</Button><Button size="sm" variant="quiet">Close window</Button>{/snippet}
           </EmptyState>
         </Section>
       {/if}

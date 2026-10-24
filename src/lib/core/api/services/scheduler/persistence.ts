@@ -31,6 +31,7 @@ export const JobSchema = z
     message: z.string().optional(),
     at: AtSchema,
     repeat: RepeatSchema.optional(),
+    before: z.number().int().min(0).optional(),
     armed: z.boolean(),
     snooze_until: z.number().finite().optional(),
     armed_at: z.number().finite().optional(),

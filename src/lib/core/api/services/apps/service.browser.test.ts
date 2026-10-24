@@ -115,6 +115,24 @@ describe("AppsService installed apps", () => {
     await expect(apps(kernel).uninstall("settings")).rejects.toThrow(/can't be uninstalled/);
   });
 
+  test("uninstall with data runs the app's own cleanup; a failing one leaves a toast", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    const kernel = await boot();
+    const cleanup = vi.fn(async () => {});
+    apps(kernel).register({ ...apps(kernel).get("notes")!, on_uninstall_data: async () => ({ default: cleanup }) });
+    apps(kernel).register({ ...apps(kernel).get("board")!, on_uninstall_data: async () => ({ default: async () => Promise.reject(new Error("locked")) }) });
+
+    await apps(kernel).uninstall("notes");
+    expect(cleanup).not.toHaveBeenCalled();
+    apps(kernel).install("notes");
+    await apps(kernel).uninstall("notes", { data: true });
+    expect(cleanup).toHaveBeenCalledOnce();
+
+    await apps(kernel).uninstall("board", { data: true });
+    expect(apps(kernel).is_installed("board")).toBe(false);
+    expect(toasts(kernel)).toContain("Some of Board's data is left");
+  });
+
   test("an app's shell commands need it installed", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();
@@ -211,6 +229,11 @@ describe("app find", () => {
 });
 
 describe("AppsService meta (ADR-049)", () => {
+  test("metas are loaded by the time boot finishes", async () => {
+    const service = apps(await boot());
+    expect(service.listings().find(({ id }) => id === "example")?.description).toBe("Test app");
+  });
+
   test("every app's meta loads once; an app without one, or an unknown id, resolves {}", async () => {
     const kernel = await boot();
     const service = apps(kernel);

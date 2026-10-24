@@ -9,7 +9,7 @@
   import { to_base64 } from "./crypto";
   import { export_html, export_markdown, in_range, type ExportInput } from "./export";
   import { APP_ID, media_of } from "./journal";
-  import type { JournalSession } from "./session.svelte";
+  import { media_type, type JournalSession } from "./session.svelte";
   import Sheet from "./sheet.svelte";
 
   interface Props {
@@ -35,7 +35,9 @@
     const entries = in_range(await session.all_entries(), from, to);
     const media = new Map<string, string>();
     for (const id of entries.flatMap((entry) => media_of(entry.body))) {
-      if (!media.has(id)) media.set(id, `data:image/webp;base64,${to_base64(await session.media_bytes(id))}`);
+      if (media.has(id)) continue;
+      const bytes = await session.media_bytes(id);
+      media.set(id, `data:${media_type(bytes)};base64,${to_base64(bytes)}`);
     }
     return { title: session.ref.name, from, to, entries, media, activities: new Map(session.activities.map((activity) => [activity.id, activity.label])) };
   }

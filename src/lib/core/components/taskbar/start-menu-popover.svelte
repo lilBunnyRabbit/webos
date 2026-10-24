@@ -9,6 +9,7 @@
     type AppsService,
     type DesktopService,
     type DialogsService,
+    type OfflineService,
     type SettingsService,
     type ShellService,
     type ShortcutsService,
@@ -32,7 +33,10 @@
   import { CLEAR_RECENT_ITEM, uninstall_app } from "../apps/app-actions";
   import RecentApps from "../apps/recent-apps.svelte";
   import { set_drag_app } from "../apps/drag";
+  import { cn } from "$lib/core/utils";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
+  import { explain_offline, keep_offline_item, KEEP_OFFLINE_ID, toggle_keep_offline } from "../apps/offline-actions";
+  import OfflineNote from "../apps/offline-note.svelte";
   import { with_pin, without_pin } from "$lib/core/api";
 
   const APP_LIBRARY = "app-library";
@@ -45,6 +49,7 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const ai = $derived(kernel.service<AiService>("ai"));
+  const offline = $derived(kernel.service<OfflineService>("offline"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);
@@ -77,7 +82,8 @@
   }
 
   function launch(manifest: AppManifest) {
-    apps.launch(manifest.id);
+    if (offline.can_open(manifest.id)) apps.launch(manifest.id);
+    else explain_offline(manifest.id);
     close();
   }
 
@@ -101,6 +107,7 @@
             settings.taskbar.pinned.includes(manifest.id)
               ? { id: "unpin-taskbar", label: "Unpin from taskbar", icon: PushPinSimpleSlashIcon }
               : { id: "pin-taskbar", label: "Pin to taskbar", icon: PushPinSimpleIcon },
+            ...keep_offline_item(manifest.id),
             ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
             ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
@@ -113,6 +120,7 @@
     else if (choice === "unpin-taskbar") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, manifest.id);
     else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
     else if (choice === CLEAR_RECENT_ITEM.id) apps.clear_recent();
+    else if (choice === KEEP_OFFLINE_ID) toggle_keep_offline(manifest.id);
   }
 </script>
 
@@ -129,11 +137,12 @@
         requestAnimationFrame(close);
       }}
     >
-      <span class="relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10">
+      <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10", !offline.can_open(manifest.id) && "opacity-38")}>
         <manifest.icon class="size-6" weight="duotone" />
         <AppBadge app_id={manifest.id} />
       </span>
-      <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
+      <span class={cn("line-clamp-1 max-w-full text-2xs font-medium", !offline.can_open(manifest.id) && "opacity-38")}>{manifest.name}</span>
+      {#if !offline.can_open(manifest.id)}<span class="sr-only">(not saved for offline)</span>{/if}
       {#if !apps.is_installed(manifest.id)}<span class="rounded-full bg-primary/14 px-1.5 text-2xs font-medium text-primary">Get</span>{/if}
       {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
     </button>
@@ -182,6 +191,7 @@
 </div>
 
 <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+  {#if !commanding}<OfflineNote class="mb-3" onopen={close} />{/if}
   {#if commanding}
     <CommandMode
       bind:this={command_mode}

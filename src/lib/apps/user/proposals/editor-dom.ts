@@ -64,12 +64,3 @@ export function insert_image(root: HTMLElement, range: Range | null, image: stri
   }
   return element;
 }
-
-export function range_at_point(x: number, y: number): Range | null {
-  const position = document.caretPositionFromPoint(x, y);
-  if (!position) return null;
-  const range = document.createRange();
-  range.setStart(position.offsetNode, position.offset);
-  range.collapse(true);
-  return range;
-}

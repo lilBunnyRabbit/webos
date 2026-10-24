@@ -68,6 +68,9 @@ export const SETTINGS: SettingEntry[] = [
   { id: "backup-restore", page: "backup", label: "Restore from a backup", keywords: ["import", "zip", "recover"] },
   { id: "reset-settings", page: "backup", label: "Reset settings", keywords: ["defaults", "factory", "start over"] },
 
+  page_entry("offline", ["no internet", "connection", "download", "cache", "airplane"]),
+  { id: "offline-apps", page: "offline", label: "Apps kept offline", keywords: ["keep offline", "download", "saved", "no internet"] },
+
   page_entry("whats-new", ["changelog", "release notes", "updates", "version history"]),
   page_entry("roadmap", ["plans", "next", "todo", "progress"]),
 
@@ -76,6 +79,7 @@ export const SETTINGS: SettingEntry[] = [
   { id: "build", page: "about", label: "Build", keywords: ["version", "commit", "branch"] },
   { id: "updates", page: "about", label: "Check for updates", keywords: ["update", "reload", "new version"] },
   { id: "pipeline", page: "about", label: "Pipeline", keywords: ["ci", "build status", "actions", "deploy", "github"] },
+  { id: "browser-support", page: "about", label: "Browser support", keywords: ["compatibility", "safari", "firefox", "unsupported", "features"] },
   { id: "introduction", page: "about", label: "Introduction", keywords: ["tour", "getting started", "welcome", "help"] },
   { id: "feedback", page: "about", label: "Feedback", keywords: ["bug", "issue", "feature request", "propose an app", "github"] },
   { id: "credits", page: "about", label: "Credits", keywords: ["authors", "who made"] },

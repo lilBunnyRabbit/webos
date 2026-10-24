@@ -31,6 +31,7 @@ Anything not decided in the ADR or brainstorm that would change shape is not you
 - Pointer drags end on `lostpointercapture`, not `pointerup`.
 - Lazy code: heavy modules load on use, the app component is a lazy import. Nothing new on the boot path.
 - Latest platform APIs (popover, anchor positioning, `@container`, View Transitions); no polyfills or fallbacks.
+- A web API, CSS or HTML feature that isn't broadly supported gets its entry in `src/lib/core/compat/features.ts` in the same commit (level, apps, min versions from MDN, a probe); removing its last use removes the entry (CLAUDE.md "Browser support list").
 - Slow work a user would watch runs through TasksService (CLAUDE.md "Long-running work").
 - No comments, except a non-obvious why.
 

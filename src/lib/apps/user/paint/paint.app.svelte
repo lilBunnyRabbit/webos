@@ -464,7 +464,7 @@
     if (!active || event.pointerId !== active.pointer_id) return;
 
     if (is_freehand(active.tool)) {
-      const events = event.getCoalescedEvents();
+      const events = event.getCoalescedEvents?.() ?? [];
       for (const sample of events.length ? events : [event]) {
         const point = canvas_point(sample);
         freehand(active.last, point, sample, active);

@@ -43,10 +43,10 @@
       tabindex="-1"
       class={cn("relative max-h-full max-w-full outline-none", docked ? "animate-sheet-in" : "animate-pop-in")}
       {@attach focus_first}
-      {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible })}
+      {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible || entry.swipe_cancels })}
     >
       <entry.component {...entry.props} resolve={entry.resolve} />
-      {#if docked && entry.dismissible}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
+      {#if docked && (entry.dismissible || entry.swipe_cancels)}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
     </div>
   </div>
 {/each}

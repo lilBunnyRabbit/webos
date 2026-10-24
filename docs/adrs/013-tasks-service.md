@@ -160,3 +160,6 @@ interface TaskOptions {
 - Adds `@lilbunnyrabbit/task-manager` as dependency
 - Task Manager app needs to handle potentially many tasks efficiently
 - Memory consideration for long-running sessions with many completed tasks (need cleanup strategy)
+
+## Revision 2026-10-22: on the stable app API
+`tasks.run` and its types (`TaskContext`, `TaskRunOptions`, `TaskReport`, `TaskJob`, `TaskJobStatus`) are stable from 3.57. `@lilbunnyrabbit/task-manager` is promised at the pinned version, so a breaking package upgrade is a WebOS major. Decided in [owner calls](../brainstorm/2026-10-22_owner-calls.md); listed in [app API](../system/app-api.md).

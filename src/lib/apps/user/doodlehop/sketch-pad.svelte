@@ -82,7 +82,7 @@
 
   function on_pointermove(event: PointerEvent) {
     if (!live || event.pointerId !== live.pointer_id) return;
-    const samples = event.getCoalescedEvents();
+    const samples = event.getCoalescedEvents?.() ?? [];
     for (const sample of samples.length ? samples : [event]) {
       const point = point_of(sample);
       const last = live.points[live.points.length - 1];

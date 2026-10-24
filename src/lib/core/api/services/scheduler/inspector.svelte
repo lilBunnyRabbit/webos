@@ -33,7 +33,7 @@
         <td><span class="font-mono">{job.id}</span> {job.title}</td>
         <td>{job.kind}</td>
         <td>{next === null ? (job.armed ? "never" : "off") : format_datetime(next)}</td>
-        <td>{format_repeat(job.repeat)}</td>
+        <td>{format_repeat(job.repeat, job.before)}</td>
         <td>{job.last_fired === undefined ? "" : format_datetime(job.last_fired)}</td>
       </tr>
     {/each}

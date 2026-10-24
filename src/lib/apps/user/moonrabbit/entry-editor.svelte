@@ -6,6 +6,7 @@
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { has_files, image_files } from "$kit/utils/image";
   import { picture_data_url } from "$kit/utils/picture";
+  import { caret_range_at_point } from "$kit/utils/caret";
   import { create_history, current as history_current, push as history_push, redo as history_redo, undo as history_undo, type History } from "$kit/utils/history";
   import {
     ArrowLeft as ArrowLeftIcon,
@@ -271,14 +272,7 @@
     if (!has_files(event)) return;
     event.preventDefault();
     const pictures = image_files(event.dataTransfer);
-    const position = document.caretPositionFromPoint(event.clientX, event.clientY);
-    let range: Range | null = null;
-    if (position) {
-      range = document.createRange();
-      range.setStart(position.offsetNode, position.offset);
-      range.collapse(true);
-    }
-    if (pictures.length) void insert_pictures(pictures, range);
+    if (pictures.length) void insert_pictures(pictures, caret_range_at_point(event.clientX, event.clientY));
   }
 
   async function remove() {

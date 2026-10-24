@@ -29,6 +29,8 @@ import {
 } from "./journal";
 import { track_unlocked } from "./sessions";
 import { child, read_bin, remove_bin, write_bin, type JournalRef } from "./store";
+import { image_kind } from "$kit/utils/exif/containers";
+import { ImageKind } from "$kit/utils/exif/type";
 
 export class LockedError extends Error {
   constructor() {
@@ -37,7 +39,10 @@ export class LockedError extends Error {
   }
 }
 
-const MEDIA_TYPE = "image/webp";
+// Photos are WebP where the browser encodes it; Safari hands back PNG, so the type comes from the bytes.
+export function media_type(bytes: Uint8Array): string {
+  return `image/${image_kind(bytes) ?? ImageKind.WEBP}`;
+}
 
 /**
  * One unlocked journal in one window. The data key and everything decrypted live here and nowhere else; `lock()` drops
@@ -240,7 +245,7 @@ export class JournalSession {
     for (const media of media_of(entry.body)) await this.remove_media(media);
   }
 
-  /** `data_url` is the downscaled WebP from `picture_data_url`; only its bytes are kept, encrypted. */
+  /** `data_url` is the downscaled picture from `picture_data_url`; only its bytes are kept, encrypted. */
   async add_media(data_url: string): Promise<string> {
     const id = random_id();
     const bytes = from_base64(data_url.slice(data_url.indexOf(",") + 1));
@@ -250,7 +255,7 @@ export class JournalSession {
       `${id}.bin`,
       await seal(this.unlocked_key, this.aad(Item.media(id)), bytes)
     );
-    this.urls.set(id, Promise.resolve(URL.createObjectURL(new Blob([bytes], { type: MEDIA_TYPE }))));
+    this.urls.set(id, Promise.resolve(URL.createObjectURL(new Blob([bytes], { type: media_type(bytes) }))));
     return id;
   }
 
@@ -272,7 +277,7 @@ export class JournalSession {
     if (!url) {
       url = this.media_bytes(id).then((bytes) => {
         if (this.locked) throw new LockedError();
-        return URL.createObjectURL(new Blob([bytes], { type: MEDIA_TYPE }));
+        return URL.createObjectURL(new Blob([bytes], { type: media_type(bytes) }));
       });
       this.urls.set(id, url);
       url.catch(() => this.urls.delete(id));

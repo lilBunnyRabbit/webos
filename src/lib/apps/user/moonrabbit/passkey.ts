@@ -54,7 +54,7 @@ interface SignalApi {
 /** A passkey that can't unlock anything shouldn't stay in the user's password manager. */
 async function forget(raw_id: ArrayBuffer): Promise<void> {
   const credentialId = to_base64(new Uint8Array(raw_id)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  await (PublicKeyCredential as unknown as SignalApi).signalUnknownCredential({ rpId: location.hostname, credentialId }).catch(() => undefined);
+  await (PublicKeyCredential as unknown as Partial<SignalApi>).signalUnknownCredential?.({ rpId: location.hostname, credentialId }).catch(() => undefined);
 }
 
 /** Some providers return the PRF output while creating; the rest only say `enabled` and need one sign-in. */

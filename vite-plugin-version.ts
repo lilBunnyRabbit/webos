@@ -11,7 +11,7 @@ export interface VersionInfo {
   buildTimestamp: number;
 }
 
-function get_version_info(root: string): VersionInfo {
+export function get_version_info(root: string): VersionInfo {
   const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf-8"));
   const now = new Date();
 
@@ -33,11 +33,10 @@ function get_version_info(root: string): VersionInfo {
   };
 }
 
-export function version_plugin(): Plugin {
+// One stamp per build or dev session: the bundle, version.json and the service worker's runtime cache name must match.
+export function version_plugin(info: VersionInfo): Plugin {
   let out_dir = "dist";
   let version_url = "/version.json";
-  // One stamp per build or dev session: the bundle and version.json must match, or every check reports an update.
-  let info: VersionInfo;
 
   return {
     name: "version-plugin",
@@ -61,8 +60,7 @@ export function version_plugin(): Plugin {
     },
 
     // Build: inject __VERSION_INFO__ define and write version.json to output
-    config(config) {
-      info = get_version_info(resolve(config.root ?? process.cwd()));
+    config() {
       return {
         define: {
           __VERSION_INFO__: JSON.stringify(info),

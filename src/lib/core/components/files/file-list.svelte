@@ -23,6 +23,7 @@
     open_with_items,
     paste,
     save_to_disk,
+    can_save_to_disk,
     set_wallpaper,
     is_image,
     rename_items,
@@ -192,7 +193,7 @@
       ...(single
         ? [
             { id: "rename", label: "Rename", icon: PencilSimpleIcon, shortcut: "F2", disabled: fixed },
-            { id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon },
+            ...(can_save_to_disk(item.kind) ? [{ id: "save_to_disk", label: "Save to disk…", icon: HardDrivesIcon }] : []),
           ]
         : [{ id: "rename", label: `Rename ${entries.length} items…`, icon: PencilSimpleIcon, shortcut: "F2", disabled: fixed }]),
       ...(single && item.kind === "file" && is_image(item.type) ? [{ id: "wallpaper", label: "Set as wallpaper", icon: ImageIcon }] : []),

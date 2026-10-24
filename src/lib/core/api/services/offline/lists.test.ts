@@ -1,0 +1,69 @@
+import { describe, expect, test } from "vitest";
+import { assets_cache, parse_list, pool, stale_caches } from "./lists";
+import { parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
+
+describe("caches", () => {
+  test("one cache per build, and only older webos-assets caches are stale", () => {
+    expect(assets_cache(42)).toBe("webos-assets-42");
+    const keys = ["webos-assets-41", "webos-assets-42", "webos-wasm", "workbox-precache-v2-https://x/webos/", "webos-assets-7", "other-site"];
+    expect(stale_caches(keys, 42)).toEqual(["webos-assets-41", "webos-assets-7"]);
+  });
+});
+
+describe("parse_list", () => {
+  test("the files of a list from this build", () => {
+    expect(parse_list(JSON.stringify({ build: 5, files: ["assets/a.js", "assets/a.css"] }), 5)).toEqual(["assets/a.js", "assets/a.css"]);
+  });
+
+  test("another build's list, or a broken one, is null", () => {
+    expect(parse_list(JSON.stringify({ build: 6, files: [] }), 5)).toBeNull();
+    expect(parse_list(JSON.stringify({ build: 5, files: [1] }), 5)).toBeNull();
+    expect(parse_list("<!doctype html>", 5)).toBeNull();
+  });
+});
+
+describe("pool", () => {
+  test("runs every item with at most `size` at once", async () => {
+    let running = 0;
+    let most = 0;
+    const done: number[] = [];
+    await pool([1, 2, 3, 4, 5, 6, 7], 3, async (item) => {
+      running++;
+      most = Math.max(most, running);
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      done.push(item);
+      running--;
+    });
+    expect(most).toBe(3);
+    expect(done.sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  test("the first failure rejects and stops starting new items", async () => {
+    const started: number[] = [];
+    const run = pool([1, 2, 3, 4, 5], 1, async (item) => {
+      started.push(item);
+      if (item === 2) throw new Error("nope");
+    });
+    await expect(run).rejects.toThrow("nope");
+    expect(started).toEqual([1, 2]);
+  });
+});
+
+describe("persistence", () => {
+  test("picked apps round-trip, sorted and unique", () => {
+    expect(serialize_picked(["paint", "cards"])).toBe(JSON.stringify({ version: 1, apps: ["cards", "paint"] }, null, 2));
+    expect(parse_picked(JSON.stringify({ version: 1, apps: ["cards", "cards", "paint"] }))).toEqual(["cards", "paint"]);
+  });
+
+  test("a missing, broken or unknown picked file is null", () => {
+    expect(parse_picked(null)).toBeNull();
+    expect(parse_picked("{")).toBeNull();
+    expect(parse_picked(JSON.stringify({ version: 2, apps: [] }))).toBeNull();
+  });
+
+  test("state keeps its build", () => {
+    const text = serialize_state({ build: 9, apps: ["paint", "cards"] });
+    expect(parse_state(text)).toEqual({ build: 9, apps: ["cards", "paint"] });
+    expect(parse_state(JSON.stringify({ apps: [] }))).toBeNull();
+  });
+});

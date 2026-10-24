@@ -20,7 +20,7 @@ export interface JobValue extends Tagged {
 }
 
 function value(scheduler: SchedulerService, job: Job): JobValue {
-  return { $type: "job", id: job.id, app: job.app, title: job.title, kind: job.kind, next: scheduler.next(job.id), repeat: format_repeat(job.repeat), armed: job.armed };
+  return { $type: "job", id: job.id, app: job.app, title: job.title, kind: job.kind, next: scheduler.next(job.id), repeat: format_repeat(job.repeat, job.before), armed: job.armed };
 }
 
 function find_job(jobs: Job[], typed: string): Job {

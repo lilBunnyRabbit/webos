@@ -29,7 +29,7 @@ So JPEG, WebP and PNG use the canvas encoder, and AVIF and JPEG XL need wasm: jS
 
 `kit/utils/codecs/formats.ts:32`, `codecs.worker.ts:21`, `codecs.worker.ts:40`. jSquash loads its multi-threaded build only when `wasm-feature-detect` finds wasm threads, which need cross-origin isolation; the site isn't isolated, so the single-threaded builds run.
 
-**Decode** (`codecs.worker.ts:64`): JPEG XL is recognised by signature (bare codestream `FF 0A` or the ISO container, `formats.ts:64`), so a `.jxl` with no MIME type still counts, and goes to `jxl_dec.wasm` (0.85 MB). Everything else tries `createImageBitmap` first; only an AVIF the browser can't read falls back to `avif_dec.wasm` (1.2 MB). SVG can't be decoded in a worker; `read_image` falls back to the page's `<img>` (`source.ts:28`).
+**Decode** (`codecs.worker.ts:64`): JPEG XL is recognised by signature (bare codestream `FF 0A` or the ISO container, `formats.ts:64`), so a `.jxl` with no MIME type still counts, and goes to `jxl_dec.wasm` (0.85 MB). Everything else tries `createImageBitmap` first; only an AVIF the browser can't read falls back to `avif_dec.wasm` (1.2 MB). SVG can't be decoded in a worker; `read_image` falls back to the page's `<img>` (`kit/utils/codecs/source.ts:6`, shared with Image Tools).
 
 Wasm is fetched on first use only, never at boot, and cached by the service worker in `webos-wasm` (`vite.config.ts`, `CacheFirst` on `.wasm`), so the formats work offline afterwards.
 
