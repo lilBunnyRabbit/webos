@@ -17,6 +17,7 @@ import {
   Command as CommandIcon,
   FolderOpen as FolderOpenIcon,
   House as HouseIcon,
+  IdentificationCard as IdentificationCardIcon,
   Keyboard as KeyboardIcon,
   Link as LinkIcon,
   ListChecks as ListChecksIcon,
@@ -193,6 +194,16 @@ export const TOPICS: Topic[] = [
     platforms: MOBILE,
     action: "Open the switcher",
     run: () => shell("ui switcher"),
+  },
+  {
+    id: "maker",
+    icon: IdentificationCardIcon,
+    title: "Who made this",
+    text: "Portfolio introduces the maker of WebOS: a short guided tour through their work, side projects and how they build.",
+    platforms: BOTH,
+    app: "portfolio",
+    action: "Open Portfolio",
+    run: () => apps().launch("portfolio"),
   },
 ];
 
