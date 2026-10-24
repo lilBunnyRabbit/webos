@@ -192,6 +192,7 @@ export const MORE: Project[] = [
       "optional: Java's Optional<T> for TypeScript, returning null instead of throwing when a value is missing.",
       "event-emitter: a lightweight, type-safe event emitter.",
       "utils: the helper classes and functions my other packages share.",
+      "service-observer: observe and react to events inside a service or an application.",
     ],
     stack: ["TypeScript", "Changesets"],
     shows: {
@@ -201,9 +202,13 @@ export const MORE: Project[] = [
       { kind: NPM, url: `${NPM_PACKAGE}/optional`, label: "optional" },
       { kind: NPM, url: `${NPM_PACKAGE}/event-emitter`, label: "event-emitter" },
       { kind: NPM, url: `${NPM_PACKAGE}/utils`, label: "utils" },
+      { kind: NPM, url: `${NPM_PACKAGE}/service-observer`, label: "service-observer" },
       { kind: SOURCE, url: `${REPO}/optional`, label: "optional" },
       { kind: SOURCE, url: `${REPO}/event-emitter`, label: "event-emitter" },
       { kind: SOURCE, url: `${REPO}/typescript-utils`, label: "utils" },
+      { kind: SOURCE, url: `${REPO}/service-observer`, label: "service-observer" },
+      { kind: DOCS, url: `${PAGES}/optional/`, label: "optional" },
+      { kind: DOCS, url: `${PAGES}/typescript-utils/api/`, label: "utils" },
     ],
   },
 ];
@@ -257,10 +262,34 @@ export const ALSO: MoreProject[] = [
     ],
   },
   {
+    name: "Work Hours",
+    badge: "Web",
+    status: OK,
+    line: "Clock in and out, see your hours per day, week and month, and print a time sheet.",
+    links: [
+      { kind: WEBOS, app: "work-hours" },
+      { kind: LIVE, url: `${PAGES}/work-hours/` },
+    ],
+  },
+  {
     name: "game-clip",
     badge: "Desktop",
     status: OK,
     line: "Rust screen recorder that saves the last few seconds as a GIF on a hotkey.",
     links: [{ kind: SOURCE, url: `${REPO}/game-clip` }],
+  },
+  {
+    name: "quno",
+    badge: "Terminal",
+    status: OK,
+    line: "Terminal notes and todos where any note can be handed to Claude Code to investigate, propose or implement. Now part of my private HQ.",
+    links: [{ kind: SOURCE, url: `${REPO}/quno` }],
+  },
+  {
+    name: "Polymorphic component",
+    badge: "Gist",
+    status: OK,
+    line: "A typed “as” prop for React: props follow the element, a mismatch won't compile.",
+    links: [{ kind: SOURCE, url: "https://gist.github.com/lilBunnyRabbit/f410653edcacec1b12cb44af346caddb" }],
   },
 ];

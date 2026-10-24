@@ -1,9 +1,17 @@
 <script lang="ts">
+  import { cn } from "$lib/core/utils";
+
   let { id, name }: { id: string; name: string } = $props();
 
   const SWATCHES = [0.32, 0.45, 0.58, 0.71, 0.84];
   const LISTENERS = 3;
   const HELPERS = ["fn", "{}", "[]", "<>", "?.", "=>"];
+  const DAYS = [0.55, 0.8, 0.7, 0.9, 0.35];
+  const NOTES = [
+    { done: true, text: "ship the widget" },
+    { done: false, text: "flaky login test" },
+    { done: false, text: "idea: offline sync" },
+  ];
   const FRAMES = 7;
   const RESETS = [0.08, 0.3, 0.38, 0.66, 0.9];
   const shade = (l: number) => `oklch(from var(--primary) ${l} c h)`;
@@ -83,6 +91,38 @@
       {#each HELPERS as helper, i (helper)}
         <span class="helper grid h-5 w-7 place-items-center rounded-sm" class:picked={i === 4} style:--i={i}>{helper}</span>
       {/each}
+    </span>
+  {:else if id === "service-observer"}
+    <span class="relative grid size-14 place-items-center">
+      <span class="orbit absolute inset-0 rounded-full"><span class="watcher absolute -top-1 left-1/2 size-2 -translate-x-1/2 rounded-full"></span></span>
+      <span class="service grid size-7 place-items-center rounded-md font-mono text-[0.5625rem] font-semibold">svc</span>
+    </span>
+  {:else if id === "Work Hours"}
+    <span class="flex flex-col items-center gap-1.5">
+      <span class="flex h-9 items-end gap-1">
+        {#each DAYS as share, i (i)}
+          <span class="day w-3 rounded-t-sm" class:today={i === DAYS.length - 1} style:height="{share * 100}%" style:background={shade(0.4 + i * 0.08)}></span>
+        {/each}
+      </span>
+      <span class="font-mono text-[0.625rem] leading-none text-foreground/70 tabular-nums">38h 15</span>
+    </span>
+  {:else if id === "quno"}
+    <span class="flex flex-col gap-1 font-mono text-[0.5625rem] leading-none">
+      {#each NOTES as note, i (note.text)}
+        <span class={cn("note flex items-center gap-1.5 rounded-sm px-1 py-0.5", i === 1 && "picked")}>
+          <span class={note.done ? "text-primary" : "text-foreground/45"}>{note.done ? "[x]" : "[ ]"}</span>
+          <span class="text-foreground/75">{note.text}</span>
+          {#if i === 1}<span class="hand rounded-[2px] px-0.5">↵</span>{/if}
+        </span>
+      {/each}
+    </span>
+  {:else if id === "Polymorphic component"}
+    <span class="flex flex-col items-center gap-1.5 font-mono text-[0.625rem] leading-none">
+      <span class="text-foreground/75">&lt;Box as="<span class="text-primary">a</span>"&gt;</span>
+      <span class="flex gap-1">
+        <span class="prop rounded-sm px-1 py-0.5">href</span>
+        <span class="prop rounded-sm px-1 py-0.5">onClick</span>
+      </span>
     </span>
   {:else}
     <span class="font-mono text-lg font-semibold text-primary">{name.charAt(0).toUpperCase()}</span>
@@ -217,7 +257,74 @@
     color: var(--background);
   }
 
+  .orbit {
+    border: 1px dashed color-mix(in oklch, var(--primary) 55%, transparent);
+  }
+
+  .watcher {
+    background: var(--primary);
+  }
+
+  .service {
+    background: var(--portfolio-card);
+    color: color-mix(in oklch, var(--foreground) 75%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+
+  .day {
+    transform-origin: bottom;
+    transition: scale 260ms var(--ease-out);
+  }
+
+  .day.today {
+    scale: 1 0.6;
+  }
+
+  .note.picked {
+    background: color-mix(in oklch, var(--primary) 12%, transparent);
+  }
+
+  .hand {
+    color: color-mix(in oklch, var(--foreground) 60%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 22%, transparent);
+    transition:
+      background-color 200ms var(--ease-out),
+      color 200ms var(--ease-out);
+  }
+
+  .prop {
+    background: color-mix(in oklch, var(--foreground) 10%, transparent);
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+    transition:
+      background-color 200ms var(--ease-out),
+      color 200ms var(--ease-out);
+  }
+
+  @keyframes orbit {
+    to {
+      rotate: 1turn;
+    }
+  }
+
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    :global(.tile:is(:hover, :focus-within)) .art .orbit {
+      animation: orbit 2.4s linear infinite;
+    }
+
+    :global(.tile:is(:hover, :focus-within)) .art .day.today {
+      scale: 1 1;
+    }
+
+    :global(.tile:is(:hover, :focus-within)) .art .hand {
+      background: var(--primary);
+      color: var(--background);
+    }
+
+    :global(.tile:is(:hover, :focus-within)) .art .prop {
+      background: color-mix(in oklch, var(--primary) 18%, transparent);
+      color: var(--primary);
+    }
+
     :global(.tile:is(:hover, :focus-within)) .art .value {
       scale: 1.15;
     }
@@ -270,7 +377,10 @@
     .value,
     .wire,
     .listener,
-    .helper {
+    .helper,
+    .day,
+    .hand,
+    .prop {
       transition: none;
     }
   }

@@ -7,11 +7,11 @@ describe("smaller things", () => {
   test("packages with an npm page and a repo each become one sub-row", () => {
     const packages = more_row(MORE.find((project) => project.id === "packages")!, true);
     expect(packages.layout).toBe(MoreLayout.GROUPED);
-    expect(packages.groups.map((group) => group.name)).toEqual(["optional", "event-emitter", "utils"]);
+    expect(packages.groups.map((group) => group.name)).toEqual(["optional", "event-emitter", "utils", "service-observer"]);
     expect(packages.groups.every((group) => !!group.line)).toBe(true);
     expect(packages.groups[1].line).toBe("A lightweight, type-safe event emitter.");
     for (const group of packages.groups) {
-      expect(group.links.map((link) => link.kind)).toEqual([LinkKind.NPM, LinkKind.SOURCE]);
+      expect(group.links.map((link) => link.kind).slice(0, 2)).toEqual([LinkKind.NPM, LinkKind.SOURCE]);
       expect(group.links.every((link) => link.label === undefined)).toBe(true);
     }
   });
@@ -22,7 +22,7 @@ describe("smaller things", () => {
   });
 
   test("the count names every tile, one per package", () => {
-    expect(tile_count([...MORE, ...ALSO])).toBe(MORE.length + ALSO.length + 2);
+    expect(tile_count([...MORE, ...ALSO])).toBe(MORE.length + ALSO.length + 3);
   });
 
   test("an in-progress project says what is being done now", () => {

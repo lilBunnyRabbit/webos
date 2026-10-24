@@ -196,3 +196,5 @@ Owner feedback on v3 and the content pass, and what was done:
 - **Work I and Packages B picked (2026-10-24), variants panel deleted.** Work A–H and their helpers (`work-entries`, `work-ladder`, `work-more-reveal`, the More/case-section half of `work-more`) deleted; the axis is newest first only. Packages B: one tile per package, a kind badge on every small tile. `variants.ts`, `variants.svelte.ts`, the panel, the `variants` terminal command and `app.portfolio.variants` gone.
 
 No open picks left. 2026-10-24: owner approved every draft; all content is `ok`, no Draft badges remain.
+
+2026-10-24, from the GitHub profile README: the owner added Work Hours (WebOS app and its own site), the Polymorphic React component gist (the one React piece), quno (back, its line says it is part of the private HQ now, reversing the earlier removal) and the service-observer package. X joined the contact links. Everything else in the README stays out (dated, private, off-topic or already dropped). No CV ships: the cv repo's export carries never-publish material.
