@@ -13,6 +13,10 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "App icons and descriptions are there the moment WebOS opens, with no grey squares while they load.",
       },
+      {
+        kind: FIXED,
+        text: "The browser check no longer tells you to update when your browser leaves a feature out on your system, like barcode reading in Chrome on Windows; it says it isn't available there.",
+      },
     ],
   },
   {

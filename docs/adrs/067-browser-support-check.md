@@ -2,6 +2,8 @@
 **Date:** 2026-10-23
 **Status:** Implemented
 
+> **Revision 2026-10-24: features a browser leaves out on an OS.** A friend on Chrome 155 on Windows was told "Update to Chrome 88 or later" for BarcodeDetector, which Chrome ships only on macOS, ChromeOS and Android; Chrome on Android would get the same advice for the AI and pop-out APIs. The owner picked wording only, no new field: when a probe fails on a version already at or past `min`, `fixed_by_update()` is false, the row says "Not available in Chrome on Windows", and the screen's lead promises an update fix only for the problems one would fix. Rejected: an `os` list per feature (data to maintain per entry), a fallback marker that skips the screen (new field). A flag-dependent feature turned off reads the same. [compat](../system/compat.md).
+
 ## Context
 WebOS targets the owner's current Chrome and uses many features other engines lack or ship late: OPFS writes, Web Locks, anchor positioning, Popover, `closedby`, relative colours, built-in AI, WebCodecs, and more. Nothing checks for them. In another browser it either fails at boot with a raw error, or boots into a shell with misplaced menus and apps that break without saying why. Discussion and the full inventory: [2026-10-23_browser-support](../brainstorm/2026-10-23_browser-support.md).
 

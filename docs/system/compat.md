@@ -13,7 +13,7 @@ WebOS targets the owner's current Chrome and uses features other engines lack or
 | `src/boot.ts` | The page's entry (`index.html` loads it instead of `main.ts`). Detects the browser, runs every probe, scopes to a solo app, then `import("./main")` or lazily loads the screen |
 | `core/compat/features.ts` | **The list**: every non-baseline web feature WebOS uses (`FEATURES`), `Level`, `LEVELS`, `LEVEL_LABELS`. Imports nothing |
 | `core/compat/browser.ts` | `parse_user_agent(ua, brands)` → `Browser` (`name`, `version`, `os`, `engine`, `engine_version`), `detect_browser()`, `browser_label()`, `compare_versions()`, `MIN_KEY` |
-| `core/compat/check.ts` | `status()`, `check()`, `solo_app(hash)`, `in_scope()`, `problems()`, `should_show()`, `next_dismissed()`, `parse_dismissed()`, `requirement()`, `min_text()`, `DISMISSED_KEY`, `SOLO_HASH` |
+| `core/compat/check.ts` | `status()`, `check()`, `solo_app(hash)`, `in_scope()`, `problems()`, `should_show()`, `next_dismissed()`, `parse_dismissed()`, `requirement()`, `fixed_by_update()`, `min_text()`, `DISMISSED_KEY`, `SOLO_HASH` |
 | `core/compat/storage.ts` | `read_dismissed()` / `write_dismissed()`, localStorage wrapped in try/catch |
 | `core/compat/app-names.ts` | `APP_NAMES` (display names of every app the list names) and `app_name(id)` |
 | `core/compat/screen.ts` | `show_compat_screen(options)`: the warning in plain DOM, lazy |
@@ -62,7 +62,7 @@ Pure parts have Node tests (`browser.test.ts`: real UA strings for Chrome on mac
 | `iPhone OS 17_5 … CriOS/141` (`FxiOS`, `EdgiOS`, `OPT`) | Chrome, Firefox, Edge, Opera | webkit | the iOS version; `null` when it reads 18.6, the value iOS 26 froze every iOS UA at |
 | anything else | `null` ("Unknown browser") | `null` | `null` |
 
-`browser_label()` gives "Safari 18.4 · iOS", "Edge 141 · Windows". `requirement()` turns `min` into the line under each row: "Update to Chrome 129 or later" (Chrome, Edge, Brave), "Needs Chromium 129 or later" (other Chromium browsers, whose own versions differ), "Update to Firefox 147 or later", "Update to Safari 26 or later", "Update to iOS 26 or later" (every iOS browser), "Not available in Safari yet" / "Not available on iOS yet" when `min` is `null`, and for an unknown browser "Works in Chrome 129, Firefox 147, Safari 26".
+`browser_label()` gives "Safari 18.4 · iOS", "Edge 141 · Windows". `requirement()` turns `min` into the line under each row: "Update to Chrome 129 or later" (Chrome, Edge, Brave), "Needs Chromium 129 or later" (other Chromium browsers, whose own versions differ), "Update to Firefox 147 or later", "Update to Safari 26 or later", "Update to iOS 26 or later" (every iOS browser), "Not available in Safari yet" / "Not available on iOS yet" when `min` is `null`, and for an unknown browser "Works in Chrome 129, Firefox 147, Safari 26". A feature missing from a version already at or past `min` is one the browser leaves out on this OS (BarcodeDetector in Chrome on Windows and Linux, the AI and pop-out APIs in Chrome on Android): `fixed_by_update()` is false and the line reads "Not available in Chrome on Windows" ("Not available on iOS" for iOS). A flag-dependent feature turned off reads the same; accepted (owner, 2026-10-24). The screen's lead ends with "Updating the browser fixes them." / "fixes N of them." only for the problems `fixed_by_update()` counts, and with nothing when none are.
 
 ## Boot
 

@@ -75,6 +75,18 @@ export function next_dismissed(existing: string[], results: CompatResult[], solo
   return [...new Set(solo ? [...existing, ...ids] : ids)].sort();
 }
 
+/**
+ * Whether a newer version of this browser would fix it. A feature missing from a version already past `min` is one the
+ * browser leaves out on this OS (BarcodeDetector in Chrome on Windows, the AI APIs in Chrome on Android): updating
+ * changes nothing.
+ */
+export function fixed_by_update(result: CompatResult, browser: Browser): boolean {
+  if (!browser.engine || !browser.engine_version) return true;
+  const min = result.feature.min[MIN_KEY[browser.engine]];
+  if (min === null) return false;
+  return result.status === Status.OUTDATED || compare_versions(browser.engine_version, min) < 0;
+}
+
 const ENGINE_NAME: Record<Engine, string> = {
   [Engine.CHROMIUM]: "Chromium",
   [Engine.GECKO]: "Firefox",
@@ -94,6 +106,11 @@ export function requirement(feature: Feature, browser: Browser): string {
   const min = feature.min[MIN_KEY[browser.engine]];
   const ios = browser.os === "iOS";
   if (min === null) return ios ? "Not available on iOS yet" : `Not available in ${ENGINE_NAME[browser.engine]} yet`;
+  if (!fixed_by_update({ feature, status: Status.MISSING }, browser)) {
+    const name = ios ? null : (browser.name ?? ENGINE_NAME[browser.engine]);
+    const where = [name && `in ${name}`, browser.os && `on ${browser.os}`].filter(Boolean).join(" ");
+    return `Not available ${where || "in this browser"}`;
+  }
   if (ios) return `Update to iOS ${min} or later`;
   if (browser.engine === Engine.CHROMIUM) {
     return browser.name === "Chrome" || browser.name === "Edge" || browser.name === "Brave"

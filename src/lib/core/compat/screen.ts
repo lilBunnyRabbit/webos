@@ -1,6 +1,6 @@
 import { app_name } from "./app-names";
 import { browser_label, type Browser } from "./browser";
-import { next_dismissed, problems, requirement, Status, type CompatResult } from "./check";
+import { fixed_by_update, next_dismissed, problems, requirement, Status, type CompatResult } from "./check";
 import { Level, LEVEL_LABELS, LEVELS } from "./features";
 import { read_dismissed, write_dismissed } from "./storage";
 
@@ -65,14 +65,16 @@ function title_of(wrong: CompatResult[]): string {
   return "Some things won't work in this browser";
 }
 
-function lead_of(wrong: CompatResult[], total: number): string {
+function lead_of(wrong: CompatResult[], total: number, browser: Browser): string {
   if (wrong.length === 0) return `All ${total} features it checks for are supported.`;
   const missing = wrong.filter((result) => result.status === Status.MISSING).length;
   const outdated = wrong.length - missing;
   const parts = [];
   if (missing > 0) parts.push(`${missing} ${missing === 1 ? "feature is" : "features are"} missing`);
   if (outdated > 0) parts.push(`${outdated} may misbehave in this version`);
-  return `${parts.join(" and ")}. A newer browser fixes most of them.`;
+  const fixable = wrong.filter((result) => fixed_by_update(result, browser)).length;
+  const fix = fixable === 0 ? "" : fixable === wrong.length ? " Updating the browser fixes them." : ` Updating the browser fixes ${fixable} of them.`;
+  return `${parts.join(" and ")}.${fix}`;
 }
 
 function row(result: CompatResult, browser: Browser): HTMLLIElement {
@@ -112,7 +114,7 @@ export function show_compat_screen(options: CompatScreenOptions): () => void {
   const title = element("h1", undefined, title_of(wrong));
   title.id = `${SCREEN_ID}-title`;
   const label = browser_label(browser);
-  header.append(logo, title, element("p", "c-browser", app ? `${app_name(app)} · ${label}` : label), element("p", "c-muted", lead_of(wrong, results.length)));
+  header.append(logo, title, element("p", "c-browser", app ? `${app_name(app)} · ${label}` : label), element("p", "c-muted", lead_of(wrong, results.length, browser)));
   if (error) header.append(element("p", "c-error", `WebOS couldn't load: ${error}`));
   main.append(header);
 

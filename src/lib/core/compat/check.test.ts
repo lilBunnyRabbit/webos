@@ -3,6 +3,7 @@ import { SOLO_PREFIX } from "../api/kernel/mode";
 import { Engine, type Browser } from "./browser";
 import {
   check,
+  fixed_by_update,
   in_scope,
   next_dismissed,
   parse_dismissed,
@@ -163,7 +164,25 @@ describe("requirement", () => {
     expect(requirement(popover, browser(Engine.WEBKIT, "17.5", "Firefox", "iOS"))).toBe("Update to iOS 18.3 or later");
   });
 
+  it("says the OS lacks it when the version is already past min", () => {
+    expect(requirement(anchor, browser(Engine.CHROMIUM, "155", "Chrome", "Windows"))).toBe("Not available in Chrome on Windows");
+    const popover = { ...anchor, min: { chrome: "114", firefox: "125", safari: "18.3" } };
+    expect(requirement(popover, browser(Engine.WEBKIT, "26", "Chrome", "iOS"))).toBe("Not available on iOS");
+  });
+
   it("lists every engine for an unknown browser", () => {
     expect(requirement(anchor, browser(null, null))).toBe("Works in Chrome 129, Firefox 147");
+  });
+});
+
+describe("fixed_by_update", () => {
+  const missing = (id: string): CompatResult => ({ feature: feature(id), status: Status.MISSING });
+
+  it("is true only when a newer version of this browser has it", () => {
+    expect(fixed_by_update(missing("a"), browser(Engine.CHROMIUM, "125"))).toBe(true);
+    expect(fixed_by_update(missing("a"), browser(Engine.CHROMIUM, "155", "Chrome", "Windows"))).toBe(false);
+    expect(fixed_by_update(missing("a"), browser(Engine.WEBKIT, "26", "Safari"))).toBe(false);
+    expect(fixed_by_update({ feature: feature("a"), status: Status.OUTDATED }, browser(Engine.CHROMIUM, "125"))).toBe(true);
+    expect(fixed_by_update(missing("a"), browser(null, null))).toBe(true);
   });
 });
