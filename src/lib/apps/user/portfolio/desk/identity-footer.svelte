@@ -58,9 +58,14 @@
     overflow-x: auto;
     scrollbar-width: none;
     overscroll-behavior-x: contain;
-    mask-image: linear-gradient(to right, black calc(100% - var(--fade-end)), transparent);
-    animation: links-fade linear both;
-    animation-timeline: scroll(self inline);
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .links {
+      mask-image: linear-gradient(to right, black calc(100% - var(--fade-end)), transparent);
+      animation: links-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
   }
 
   @keyframes links-fade {

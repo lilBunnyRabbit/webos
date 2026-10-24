@@ -175,9 +175,9 @@
       {#if item.line}<p class="text-xs text-pretty text-foreground/75">{item.line}</p>{/if}
       {#if marks.length > 0}<PrincipleMarks principles={marks} name={item.name} {session} />{/if}
     </div>
-    <div class="mt-auto flex items-center justify-between gap-1 px-1.5 pt-1 pb-1.5">
-      <ProjectLinks links={item.links} name={item.name} icons />
-      {#if item.row.badge}<Badge class="mr-1">{item.row.badge}</Badge>{/if}
+    <div class="mt-auto flex flex-wrap items-center gap-1 px-1.5 pt-1 pb-1.5">
+      <ProjectLinks links={item.links} name={item.name} icons class="flex-nowrap" />
+      {#if item.row.badge}<Badge class="mr-1 ml-auto">{item.row.badge}</Badge>{/if}
     </div>
   </li>
 {/snippet}

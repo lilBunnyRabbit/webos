@@ -238,9 +238,15 @@
     overflow-y: auto;
     scroll-padding-block: 1.5rem 2.75rem;
     overscroll-behavior: contain;
-    mask-image: linear-gradient(to bottom, transparent, black var(--fade-top), black calc(100% - var(--fade-bottom)), transparent);
-    animation: scroll-fade linear both;
-    animation-timeline: scroll(self);
+  }
+
+  /* Without scroll-driven animations (Firefox) the keyframes would sit on their last frame and fade the top for good. */
+  @supports (animation-timeline: scroll()) {
+    .floating .body {
+      mask-image: linear-gradient(to bottom, transparent, black var(--fade-top), black calc(100% - var(--fade-bottom)), transparent);
+      animation: scroll-fade linear both;
+      animation-timeline: scroll(self);
+    }
   }
 
   @keyframes scroll-fade {
