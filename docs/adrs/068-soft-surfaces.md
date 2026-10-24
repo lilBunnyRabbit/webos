@@ -42,3 +42,5 @@ Lessons for a future attempt:
 - A 3:1 resting ring makes wells read as outlined; hover rings break the depth illusion.
 - See-through state tints next to raised chips read as two styles; one state language (lift, chip, sunk) is needed throughout.
 - `in-active:` matches any active ancestor; scope press styles with `group-active/name:`.
+
+> **2026-10-24: theme fixes ported.** The monotonic ladder and the color-scheme by text polarity (commit `cbbf9f7a` on the branch) are on master in 3.61.1, without the Soft styling. See [theming](../system/theming.md).

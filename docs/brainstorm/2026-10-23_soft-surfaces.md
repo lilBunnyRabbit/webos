@@ -60,4 +60,4 @@ Compared live, Flat (master) against Soft (branch). Owner: "idk i dont think its
 - [x] Phase 2: app sweep in five parallel batches (system and kit, media and dev tools, productivity 1 and 2, games), merged into `soft-surfaces`; core dialogs and theme cards after. Media stages, cameras, QR and print previews kept as they were.
 
 ## Next session topics
-- Port the ladder and scheme fixes to master on their own? (owner call)
+- ~~Port the ladder and scheme fixes to master on their own?~~ Owner: yes; on master in 3.61.1 (2026-10-24). Soft agent branches deleted, `soft-surfaces` kept

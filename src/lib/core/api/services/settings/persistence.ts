@@ -17,7 +17,7 @@ import {
   type ThemeToken,
   type Wallpaper,
 } from "./type";
-import { BRAND_DARK, BRAND_LIGHT, derive_surfaces } from "./themes";
+import { BRAND_DARK, BRAND_LIGHT, derive_surfaces, legacy_surface, surface_step } from "./themes";
 import { PATHS } from "../files/hierarchy";
 import { DEFAULT_APPEARANCE } from "./appearance";
 import { BUILTIN_FONTS, DEFAULT_FONT, is_font_file_name } from "./fonts";
@@ -111,10 +111,13 @@ function merge_theme(saved: unknown): Theme {
   const source = (saved ?? {}) as Partial<Record<ThemeToken, unknown>>;
   // Tokens a save predates come from the matching brand palette, or are derived from its own background.
   const brand = [BRAND_DARK, BRAND_LIGHT].find((palette) => palette.background === source.background);
-  const theme = { ...BRAND_DARK, ...(brand ?? derive_surfaces()) };
+  const derived = derive_surfaces();
+  const theme = { ...BRAND_DARK, ...(brand ?? derived) };
   for (const token of Object.keys(theme) as ThemeToken[]) {
     const value = source[token];
-    if (typeof value === "string") theme[token] = value;
+    if (typeof value !== "string") continue;
+    const legacy = token in derived && value === legacy_surface(surface_step(token as keyof typeof derived));
+    theme[token] = legacy ? derived[token as keyof typeof derived] : value;
   }
   return theme;
 }
