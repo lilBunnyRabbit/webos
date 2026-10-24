@@ -230,7 +230,7 @@
             class={cn(
               "h-full min-h-0 px-0 font-mono text-lg @md:text-xl",
               pad.tone === "operator" && "text-primary",
-              pad.tone === "function" && "bg-foreground/4 text-foreground/80",
+              pad.tone === "function" && "bg-background-lighter text-foreground/80",
               pad.class
             )}
             onmousedown={(event) => event.preventDefault()}
