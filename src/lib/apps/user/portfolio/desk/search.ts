@@ -30,7 +30,7 @@ export interface Hit {
   terms: string;
 }
 
-const LINKED = new Set<string>([SocialKind.LINKEDIN, SocialKind.GITHUB, SocialKind.NPM]);
+const LINKED = new Set<string>([SocialKind.LINKEDIN, SocialKind.GITHUB, SocialKind.X, SocialKind.NPM]);
 
 
 // A framework names the library under it: work on Next.js is work in React, so a search for React finds that job too.

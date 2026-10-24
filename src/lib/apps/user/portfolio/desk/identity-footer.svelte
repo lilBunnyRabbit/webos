@@ -10,7 +10,7 @@
 
   let { session }: { session: PortfolioSession } = $props();
 
-  const FIRST: string[] = [SocialKind.LINKEDIN, SocialKind.GITHUB];
+  const FIRST: string[] = [SocialKind.LINKEDIN, SocialKind.GITHUB, SocialKind.X];
   const socials = [...PROFILE.socials]
     .sort((a, b) => Number(!FIRST.includes(a.kind)) - Number(!FIRST.includes(b.kind)));
   const drafted = socials.some((social) => social.status !== Publication.OK);

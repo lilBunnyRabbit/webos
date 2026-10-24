@@ -27,7 +27,7 @@ describe("search", () => {
 
   test("links point at the contact window", () => {
     const links = HITS.filter((hit) => hit.kind === HitKind.LINK);
-    expect(links.map((hit) => hit.label)).toEqual(["Email", "LinkedIn", "GitHub", "npm"]);
+    expect(links.map((hit) => hit.label)).toEqual(["Email", "LinkedIn", "GitHub", "X", "npm"]);
     expect(search("linked")[0].window).toBe(Win.CONTACT);
   });
 

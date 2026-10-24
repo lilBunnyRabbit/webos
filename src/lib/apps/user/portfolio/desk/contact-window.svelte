@@ -19,7 +19,7 @@
   let { session, ready }: { session: PortfolioSession; ready: boolean } = $props();
 
   const LOGO = shape_for(null);
-  const SHOWN: string[] = [SocialKind.LINKEDIN, SocialKind.GITHUB];
+  const SHOWN: string[] = [SocialKind.LINKEDIN, SocialKind.GITHUB, SocialKind.X];
   const socials = PROFILE.socials.filter((social) => SHOWN.includes(social.kind));
   const MAC = /Mac|iPhone|iPad/.test(navigator.userAgent);
   const ink = on_primary();
@@ -232,7 +232,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
-    margin-left: -0.5rem;
+    margin-left: -0.375rem;
   }
 
   .name {
@@ -287,10 +287,10 @@
   .social {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.375rem;
     min-width: 0;
     height: 2rem;
-    padding-inline: 0.5rem;
+    padding-inline: 0.375rem;
     border-radius: var(--radius-md);
     color: color-mix(in oklch, var(--foreground) 80%, transparent);
     font-size: var(--text-ui);
@@ -419,7 +419,7 @@
 
   @container win (width >= 40rem) {
     .contact {
-      grid-template-columns: 15.5rem minmax(0, 1fr);
+      grid-template-columns: 16.25rem minmax(0, 1fr);
     }
 
     .card {

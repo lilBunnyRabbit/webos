@@ -31,7 +31,7 @@
 
   const uid = $props.id();
   const anchor = `--portfolio-terminal-${uid.replace(/[^\w-]/g, "")}`;
-  const socials = PROFILE.socials.filter((social) => social.kind === SocialKind.LINKEDIN || social.kind === SocialKind.GITHUB);
+  const socials = PROFILE.socials.filter((social) => social.kind === SocialKind.LINKEDIN || social.kind === SocialKind.GITHUB || social.kind === SocialKind.X);
   const control = button({ variant: "quiet", size: "sm", class: "h-7 gap-1.5 px-2 font-mono text-xs pointer-coarse:h-10 pointer-coarse:min-w-10 pointer-coarse:px-2 [&_svg]:size-3.5" });
   const FALLBACK = HITS.filter((hit) => hit.kind === HitKind.LINK && hit.key === "link-email");
   const TITLE = "~/portfolio";

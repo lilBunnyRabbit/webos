@@ -39,6 +39,7 @@ export const PROFILE: Profile = {
   socials: [
     { kind: SocialKind.LINKEDIN, status: OK, label: "LinkedIn", handle: "andraz-mesaric-sirec", url: "https://www.linkedin.com/in/andraz-mesaric-sirec/" },
     { kind: SocialKind.GITHUB, status: OK, label: "GitHub", handle: "lilBunnyRabbit", url: "https://github.com/lilBunnyRabbit" },
+    { kind: SocialKind.X, status: OK, label: "X", handle: "amesaricsirec", url: "https://x.com/amesaricsirec" },
     { kind: SocialKind.STACK_OVERFLOW, status: OK, label: "Stack Overflow", handle: "lilBunnyRabbit", url: "https://stackoverflow.com/users/11786580" },
     { kind: SocialKind.TYPEHERO, status: OK, label: "TypeHero", handle: "lilBunnyRabbit", url: "https://typehero.dev/@lilBunnyRabbit" },
     { kind: SocialKind.NPM, status: OK, label: "npm", handle: "~lilbunnyrabbit", url: "https://www.npmjs.com/~lilbunnyrabbit" },
