@@ -22,6 +22,7 @@ export const WEBOS_CARD: Project = {
   ],
   stack: ["Svelte 5", "Vite 7", "Tailwind 4", "Bun", "OPFS", "PWA"],
   links: [
+    { kind: LIVE, url: `${PAGES}/webos/` },
     { kind: SOURCE, url: `${REPO}/webos` },
     { kind: DOCS, url: `${REPO}/webos/tree/master/docs/adrs`, label: "Decision records" },
   ],
