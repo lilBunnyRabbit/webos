@@ -43,6 +43,9 @@
 
   // Matches the `.retiling` entrance delay in the styles below.
   const ENTER_AFTER_RETILE = 320;
+  // Match the re-tile (460 ms) and a new window's entrance (420 ms) in the styles below.
+  const GLIDE = 460;
+  const ARRIVE = 420;
   // The re-tile morph, then the new window's entrance after it: the graphics start once both are done.
   const LANDING = 780;
   // A phone has no re-tile to wait for, only the window's rise.
@@ -220,9 +223,34 @@
   // they actually move.
   function morph(change: () => void, leaving: string[]): Promise<void> {
     const scope = stage;
-    if (!scope?.startViewTransition) {
+    if (!scope) {
       change();
       return Promise.resolve();
+    }
+    // Safari has no element-scoped view transitions: the windows slide on CSS transitions instead, the way the shades do.
+    if (!scope.startViewTransition) {
+      if (still) {
+        change();
+        return Promise.resolve();
+      }
+      const windows = () => [...scope.querySelectorAll<HTMLElement>(":scope > .window")];
+      const shades = () => [...(scope.previousElementSibling?.querySelectorAll<HTMLElement>(":scope > .shade") ?? [])];
+      const before = new Set(windows());
+      const shaded = new Set(shades());
+      scope.classList.add("gliding");
+      flushSync(change);
+      const enter = before.size > 0 ? ENTER_AFTER_RETILE : 0;
+      const arriving = windows().filter((node) => !before.has(node));
+      for (const node of arriving) {
+        node.style.setProperty("--enter", `${enter}ms`);
+        // An attribute, not a class: Svelte rewrites the window's class list as its state changes.
+        node.dataset.arriving = "";
+      }
+      for (const node of shades()) if (!shaded.has(node)) node.style.setProperty("--enter", `${enter}ms`);
+      return new Promise<void>((resolve) => setTimeout(resolve, Math.max(GLIDE, enter + ARRIVE))).finally(() => {
+        scope.classList.remove("gliding");
+        for (const node of arriving) delete node.dataset.arriving;
+      });
     }
     scope.classList.add("morphing");
     const windows = () => [...scope.querySelectorAll<HTMLElement>(":scope > .window")];
@@ -499,6 +527,25 @@
   .stage {
     position: absolute;
     inset: 0;
+  }
+
+  .stage.gliding > :global(.window) {
+    transition:
+      translate 460ms var(--portfolio-move),
+      width 460ms var(--portfolio-move),
+      height 460ms var(--portfolio-move);
+  }
+
+  /* `scale` and opacity only: the window's `translate` is its place on the stage. */
+  .stage.gliding > :global(.window[data-arriving]) {
+    animation: portfolio-glide-in 420ms var(--ease-out) var(--enter, 0ms) both;
+  }
+
+  @keyframes portfolio-glide-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
+    }
   }
 
   /* Tiled shadows live outside the stage, so a re-tile's snapshots never carry or rasterize them: each slides with its
