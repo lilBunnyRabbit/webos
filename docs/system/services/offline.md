@@ -83,7 +83,7 @@ Parse and serialize in `persistence.ts` (zod), list helpers in `lists.ts`, both 
 
 - **Launchers** (start menu and mobile app drawer): while offline, tiles of apps that `can_open` says no to render at `opacity-38` with an sr-only "(not saved for offline)"; tapping one doesn't launch, it toasts "{App} isn't saved for offline" with the note and **Choose apps** (`explain_offline`). `OfflineNote` (`components/apps/offline-note.svelte`) sits above the grid while offline: "You're offline. Dimmed apps aren't saved on this device yet." with a quiet **Choose apps** button.
 - **Keep offline** (`keep_offline_item`): in the start menu's tile menu, the drawer's long-press menu and the taskbar window menu, user apps only; the icon is a check while picked. Toggles `set_picked`.
-- **A window whose code fails to load while offline** (`update/load-failed.svelte`, any path: desktop icon, restored session, Terminal): "This app isn't saved for offline" with the same note and **Choose apps**, instead of the update or error text.
+- **A window whose code fails to load while offline** (`update/load-failed.svelte`, any path: desktop icon, restored session, Terminal): "{App} isn't saved for offline" with the same note, **Choose apps** and **Close window**, instead of the update or error text. When the connection comes back the screen turns into the online "didn't load" state with **Try again** ([window](../shell/window.md#content-and-app-context)).
 - **Settings › Offline** ([system apps](../system-apps.md#settings)).
 
 ## Divergence from ADR

@@ -14,6 +14,10 @@ export const CHANGELOG: Release[] = [
         text: "Shopping List sorts items by when they were added or by name, and the item editor shows when an item was added.",
       },
       {
+        kind: IMPROVED,
+        text: "When an app doesn't load, its window says why in plain words and offers Try again, Reload WebOS or Close, with the technical error tucked under Details.",
+      },
+      {
         kind: FIXED,
         text: "Near-white themes keep their lighter panels lighter, and pure-black themes tell menus, cards and the taskbar apart from the background.",
       },

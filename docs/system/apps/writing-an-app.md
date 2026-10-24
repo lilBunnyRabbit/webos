@@ -130,7 +130,7 @@ What this shows:
 | Situation | What happens |
 |-----------|--------------|
 | Launched with props that fail the schema | Window opens with no props, warning toast, zod issues in the console |
-| Component import fails | The window shows an error empty state, "This app failed to load", with the message |
+| Component import fails | The window shows "{App} didn't load" with a likely cause, Try again / Reload WebOS / Close window, and the error under Details ([window](../shell/window.md#content-and-app-context)) |
 | App throws while rendering, in an effect or a `$derived` | The window shows "This app crashed" with Restart app / Close window, plus an error toast. The OS keeps running. Event-handler errors aren't caught: report those yourself |
 | Same app opened twice | Two windows. Shared `persisted()` values, separate component state |
 | User closes the window | Unmount; clean up in `$effect` returns or `onDestroy`. A window marked dirty with `window.set_dirty(true, { save })` asks Save / Don't save / Cancel first (ADR-029) |

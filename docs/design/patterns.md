@@ -93,7 +93,7 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 
 - **Loading:** `Spinner` centered for whole views; for lists, 5–6 skeleton rows (`bg-foreground/5 animate-pulse`) fading out downward.
 - **Empty:** `EmptyState` with a duotone icon, a short title ("This folder is empty"), one line on what to do next, and an action when there's an obvious one.
-- **Error:** the same component with `tone="error"`, saying what failed in plain words, with the technical message as the description.
+- **Error:** the same component with `tone="error"`. The title names the thing in plain words ("Snake didn't load", "Couldn't open the image"); the description is one sentence on the likely cause and what to do; the actions are the way out (Try again first when it can work, then the bigger hammer, then Close). Colour stays on the icon tile, never the title. A raw technical message (a URL, a stack) goes in `details`, never in the description.
 
 ## Selection and drag
 
