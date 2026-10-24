@@ -196,7 +196,6 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
     "$lib/core/components/ui",
     () => import("$lib/core/components/ui"),
     [
-      "AppIcon",
       "Badge",
       "BoardOverlay",
       "Button",
@@ -396,8 +395,6 @@ const value_type_members: Members<ValueType, "cell" | "columns" | "open" | "rend
 const app_shell_form: NonNullable<AppConfig["shell"]> extends () => Promise<{ default: ShellContribution }> ? true : false = true;
 /** Display text is a module whose default export is the `AppMeta` (ADR-049). */
 const app_meta_form: NonNullable<AppConfig["meta"]> extends () => Promise<{ default: AppMeta }> ? true : false = true;
-/** The icon is the URL of the app's `icon.svg`, `import icon from "./icon.svg?no-inline"` (ADR-066, 3.59). */
-const app_icon_form: AppConfig["icon"] extends string ? true : false = true;
 /** `pick_file` resolves one path or `null`; with `multiple: true`, every chosen path (ADR-025 revision). */
 const pick_file_single: WindowHandle["pick_file"] extends (options?: PickOptions) => Promise<string | null> ? true : false = true;
 const pick_file_multiple: WindowHandle["pick_file"] extends (options: PickOptions & { multiple: true }) => Promise<string[]>

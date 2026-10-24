@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <style>.primary,.secondary,:target~*{display:none}#primary:target~.primary,#secondary:target~.secondary{display:inline}</style>
-  <view id="primary"/><view id="secondary"/>
-  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3.25 15.5l9.5-9.5 3.25-.75L15.25 8.5 5.75 18M3.75 13.5l4.25 4.25M2.75 19l1.75-1.75"/>
-    <ellipse cx="17" cy="13" rx="4.25" ry="1.75"/>
-    <path d="M12.75 13v5.5c0 1 1.9 1.75 4.25 1.75s4.25-.75 4.25-1.75V13M12.75 15.75c0 1 1.9 1.75 4.25 1.75s4.25-.75 4.25-1.75"/>
-  </g>
-</svg>

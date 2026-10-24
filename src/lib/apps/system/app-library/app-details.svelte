@@ -18,7 +18,7 @@
   import { untrack } from "svelte";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
-  import { AppIcon, Badge, Button, IconButton } from "$lib/core/components/ui";
+  import { Badge, Button, IconButton } from "$lib/core/components/ui";
   import {
     ArrowLeft as ArrowLeftIcon,
     DownloadSimple as DownloadSimpleIcon,
@@ -111,7 +111,7 @@
       <ArrowLeftIcon weight="bold" />
     </IconButton>
     <span class="relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
-      <AppIcon src={manifest.icon} class="size-8" />
+      <manifest.icon class="size-8" weight="duotone" />
       <AppBadge app_id={manifest.id} />
     </span>
     <div class="min-w-0 flex-1">

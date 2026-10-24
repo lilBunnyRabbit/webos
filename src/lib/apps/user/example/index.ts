@@ -1,12 +1,12 @@
 import { define_app, WindowFlag } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "example",
   name: "Example",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.DEVELOPER,
   defaults: {

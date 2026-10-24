@@ -4,6 +4,8 @@
 
 > **Revision 2026-10-18: AppsService owns listings** (owner, [brainstorm follow-up](../brainstorm/2026-10-18_lazy-app-metadata.md#follow-up-after-300-shipped)). The loaded metas are reactive state in AppsService, and `listings(filter?)` derives every manifest merged with its meta (bare manifests until the load lands). Readers use it instead of awaiting; the `load_metas` / `with_meta` helper is gone. `meta_ready` and `meta(id)` stay internal. `author`, `license` and `repository` are deprecated, removed in 4.0.
 
+> **Revision 2026-10-24: loaded at boot** (owner: "i don't mind that name, description, icon (everything needed for listing apps) gets loaded on initial load"). `init()` awaits `meta_ready` alongside the installed list instead of starting it at idle, and `preload_main_plugin` modulepreloads the `app-meta` chunk, so it downloads in parallel with `main`. Listings have their text from the first frame. `meta.ts` and the `meta` field stay: the text still lives outside the manifests and in one chunk. +13.6 KB gz counted in the boot budget. [Brainstorm](../brainstorm/2026-10-22_app-registry-scale.md#revisited-2026-10-24-reverted).
+
 ## Context
 
 App discovery is an eager glob (`src/lib/apps/index.ts`), so every manifest and what it imports is in the boot chunk (168 / 190 KB gz on 2026-10-18; manifests ~24 KB gz plus ~11 KB of code they import). Shell commands are already lazy (ADR-034, revised 2026-10-17). The rest boot never reads is display text: `description`, `keywords`, `pitch`, `authors`, ~9.5 KB gz and growing with every app's pitch. Algorithms' props enum pulls its 4 KB catalog into boot.

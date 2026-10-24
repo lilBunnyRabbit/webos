@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
-  import { AppIcon, Badge, Button, EmptyState } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState } from "$lib/core/components/ui";
   import { ArrowRight as ArrowRightIcon, MagnifyingGlass as MagnifyingGlassIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
   import { CATEGORY_ICONS } from "./category-icons";
   import { app_story, category_label, LIBRARY_CATEGORIES, LibraryCategory, SearchSection, type LibrarySection } from "./library";
@@ -78,7 +78,7 @@
               >
                 <div class="flex items-start gap-3">
                   <span class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10">
-                    <AppIcon src={manifest.icon} class="size-6" />
+                    <manifest.icon class="size-6" weight="duotone" />
                     <AppBadge app_id={manifest.id} />
                   </span>
                   <div class="min-w-0 flex-1">

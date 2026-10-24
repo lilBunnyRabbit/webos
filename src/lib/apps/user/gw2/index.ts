@@ -2,12 +2,12 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
 import { SECTION_IDS } from "./sections";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "gw2",
   name: "GW2 Tracker",
-  icon,
+  icon: AppIcon,
   version: "1.1.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,

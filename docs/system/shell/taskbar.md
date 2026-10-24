@@ -67,8 +67,8 @@ States:
 
 | State | Style |
 |-------|-------|
-| focused and not minimized (a group: any member) | `bg-foreground/10`, a 16px `primary` bar on the edge facing the desktop |
-| open, not focused | a small dot |
+| focused and not minimized (a group: any member) | `bg-foreground/10`, `fill` icon, a 16px `primary` bar on the edge facing the desktop |
+| open, not focused | `duotone` icon, a small dot |
 | minimized (a group: every member) | icon dimmed, dot |
 | menu open | `bg-foreground/10` |
 | hover | `bg-foreground/10` |
@@ -85,7 +85,7 @@ An item shows a small filled `PictureInPicture` mark in its bottom-left corner w
 
 ADR-042, [brainstorm](../../brainstorm/2026-10-16_quick-launch-and-random-theme.md). `quick-launch.svelte`, a `role="toolbar"` "Quick launch" between the start separator and the window items, laid out along the bar. Desktop only: the phone has no taskbar.
 
-- **Icons:** `settings.taskbar.pinned` in order, skipping ids the registry doesn't know. 40px `rounded-xl` buttons, the app's `AppIcon`, the app badge, and a small `foreground/45` dot (under, or left of, the icon) while the app has a window. `aria-label` is the app name; `title` adds "Shift-click for a new window".
+- **Icons:** `settings.taskbar.pinned` in order, skipping ids the registry doesn't know. 40px `rounded-xl` buttons, duotone icon, the app badge, and a small `foreground/45` dot (under, or left of, the icon) while the app has a window. `aria-label` is the app name; `title` adds "Shift-click for a new window".
 - **Click:** focus the app's window with the highest `order` (`toggle_minimize` in a view transition when it's minimized), else `apps.launch(id)`. Shift-click and middle-click always launch.
 - **Right-click:** Open, New window, Unpin from taskbar.
 - **Drag in:** any drag carrying `application/x-webos-app` (`components/apps/drag.ts`): start menu tiles, App Library cards, its own icons. On `dragover` the insertion index is the number of shown icons whose middle is before the pointer; a `primary/12` placeholder opens there and the icons slide with `animate:flip` (160 ms). An empty zone shows a dashed `+` slot while any app drag is over the page (a `document` `dragenter` sets it; `dragend` and `drop` clear it). The drop installs the app if needed (ADR-040) and stores `with_pin(pinned, id, index)`.

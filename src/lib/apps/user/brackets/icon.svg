@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <style>.primary,.secondary,:target~*{display:none}#primary:target~.primary,#secondary:target~.secondary{display:inline}</style>
-  <view id="primary"/><view id="secondary"/>
-  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2.75 4h4v6h-4M2.75 14h4v6h-4M6.75 7h4v10h-4"/>
-  </g>
-  <path class="primary" d="M16 7.5h4v3a2 2 0 0 1-4 0zM17.5 12.5h1v2.75h-1zM16 15.25h4v1.75h-4z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-  <path class="primary" d="M15.75 8.5h-.5a1 1 0 0 0 0 2h.5M20.25 8.5h.5a1 1 0 0 1 0 2h-.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>

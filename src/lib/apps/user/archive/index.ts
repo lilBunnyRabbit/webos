@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "archive",
   name: "Archive",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,

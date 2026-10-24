@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import kernel, {
     format_keys,
     group_apps,
@@ -139,7 +138,7 @@
       }}
     >
       <span class={cn("relative grid size-11 place-items-center rounded-xl bg-background-light shadow-raised ring-1 ring-foreground/10", !offline.can_open(manifest.id) && "opacity-38")}>
-        <AppIcon src={manifest.icon} class="size-6" />
+        <manifest.icon class="size-6" weight="duotone" />
         <AppBadge app_id={manifest.id} />
       </span>
       <span class={cn("line-clamp-1 max-w-full text-2xs font-medium", !offline.can_open(manifest.id) && "opacity-38")}>{manifest.name}</span>

@@ -1,7 +1,8 @@
 <script lang="ts">
   import kernel, { WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
+  import type { Component } from "svelte";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { AppIcon, Badge, Button, EmptyState, Section } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, Section } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     AppWindow as AppWindowIcon,
@@ -28,7 +29,7 @@
   interface Row {
     id: WindowId;
     name: string;
-    icon: string;
+    icon: Component;
     minimized: boolean;
     stats: DomStats | null;
   }
@@ -80,7 +81,7 @@
         {@const own = row.id === own_id}
         <div class={cn(GRID, "h-10 px-3 text-ui")}>
           <div class="flex min-w-0 items-center gap-2">
-            <AppIcon src={row.icon} class="size-4 shrink-0 text-foreground/70" />
+            <row.icon class="size-4 shrink-0 text-foreground/70" weight="duotone" />
             <span class="truncate" title="{row.name} · {row.id}">{row.name}</span>
             {#if own}<Badge tone="primary" class="shrink-0">this</Badge>{/if}
             {#if row.minimized}<Badge class="shrink-0">minimized</Badge>{/if}

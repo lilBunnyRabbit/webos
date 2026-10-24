@@ -1,12 +1,12 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { RECORDER_PROPS } from "./props";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "recorder",
   name: "Recorder",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),

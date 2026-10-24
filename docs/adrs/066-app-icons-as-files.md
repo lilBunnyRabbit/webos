@@ -1,6 +1,8 @@
 # ADR-066: App Icons as Files
 **Date:** 2026-10-22
-**Status:** Implemented
+**Status:** Reverted (2026-10-24)
+
+> **Revision 2026-10-24: reverted.** Owner: "the skeletons we have for icons. lets drop this idea and bring back the manifest loading in the initial load", "this load shouldn't take ages its just text and icons". The code of 3.59 was reverted in 3.61: `icon.svelte` components in the manifest again, `ai_icon` back, `AppIcon` and the offline icon sync gone. `app-boot` 6.9 → 13.7 KB gz; the boot budget went to 215 KB gz with ADR-049's revision of the same day. The scale rule (boot must not grow with the app count) gives way here: icons and listing text are small per app. Discussion: [2026-10-22_app-registry-scale](../brainstorm/2026-10-22_app-registry-scale.md#revisited-2026-10-24-reverted).
 
 > **Revision 2026-10-22: implementation.**
 > - **Colour layers.** 25 of the 94 icons draw an accent in `primary` (one in `secondary`), and the AI sparkle is `primary`. One mask in `currentColor` would have turned all of them monochrome, and a `var()` doesn't resolve inside an image anyway. The owner picked layered masks: `AppIcon` draws `icon.svg` in `currentColor`, `icon.svg#primary` in `--primary` and `icon.svg#secondary` in `--secondary`. Every file carries `<view id="primary"/><view id="secondary"/>` and one `:target` style rule, and marks its accent `class="primary"` or `class="secondary"`, colour written as `currentColor`. One request per file whatever the fragment; no JS per icon. Rejected: one monochrome mask (accents lost), fetching the SVG text and inlining it (JS per icon). `src/lib/apps/icons.test.ts` checks the convention. Before and after rendered within 7/255 per channel for all 94 at 16 and 48 px.

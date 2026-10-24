@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import kernel, { type AppId, type AppManifest, type AppsService, type DialogsService, type SettingsService, type WindowsService, with_pin, without_pin, WindowFlag } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { view_transition } from "$lib/core/utils/view-transition";
@@ -172,7 +171,7 @@
             ondragstart={(event) => on_start(manifest, Math.min(index, shown.length), event)}
             ondragend={() => on_end(manifest)}
           >
-            <AppIcon src={manifest.icon} class="size-[calc(var(--taskbar-item)*0.55)]" />
+            <manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight="duotone" />
             <AppBadge app_id={manifest.id} class="top-0.5 right-0.5 ring-background-light" />
             {#if running.has(manifest.id)}
               <span class={cn("absolute size-1 rounded-full bg-foreground/45", vertical ? "top-1/2 -left-0.5 -translate-y-1/2" : "-bottom-0.5 left-1/2 -translate-x-1/2")}></span>

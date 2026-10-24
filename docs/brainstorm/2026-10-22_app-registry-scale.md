@@ -43,6 +43,15 @@ Rejected: one monochrome mask (accents and the sparkle lose their colour); fetch
 ### Version (decided during the build)
 `icon` is a stable field, so its type change is a 4.0 break by app-api.md's rule. Shipped in 3.59.0 as an exception recorded there, with a migration row; 4.0's other removals stay for 4.0.
 
+### Revisited 2026-10-24 (reverted)
+Owner: "Okay this has been bothering me alot. the skeletons we have for icons. lets drop this idea and bring back the manifest loading in the initial load. i don't mind that name, description, icon (everything needed for listing apps) gets loaded on initial load", then "this load shouldn't take ages ist just text and icons".
+
+Measured: all 94 icons 5.8 KB gz, descriptions 3.8 KB gz, all of `app-meta` 11.7 KB gz (raw source, before bundling).
+
+- **Icons (decided):** revert 3.59's code to `icon.svelte` components in the manifest. Rejected: keeping `icon.svg` and importing `?raw` into an inline `{@html}` (keeps the files and the string type, but inserts markup); keeping the masks and preloading every file (94 requests, first boot still shows placeholders).
+- **Listing text (decided):** AppsService awaits the existing `app-meta` chunk at boot instead of at idle, preloaded alongside `main`. No API change. Rejected: `description` back in the manifest (a second stable-field change, and search keywords would still wait); keeping the idle load.
+- **Cost:** boot 189.3 → 210.1 KB gz; budget 190 → 215. Shipped as 3.61.0, a second recorded exception in app-api.md.
+
 ## Key takeaways
 - The scale rule applies to what is heavy and grows; small manifest data stays.
 - `define_app`'s `icon` changes type: a stable API change.
@@ -52,4 +61,4 @@ Rejected: one monochrome mask (accents and the sparkle lose their colour); fetch
 - [x] Build after ADR-065 merges (both touch OfflineService sync and `vite.config.ts`).
 
 ## Next session topics
-- `app-meta` still loads every app's text at idle; revisit if it outgrows a budget.
+- ~~`app-meta` still loads every app's text at idle~~: loads at boot since 2026-10-24; revisit if boot outgrows 215 KB gz.

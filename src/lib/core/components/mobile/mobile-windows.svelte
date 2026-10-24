@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import kernel, { type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Cards as CardsIcon, X as XIcon } from "phosphor-svelte";
@@ -112,7 +111,7 @@
       >
         {#if switcher}
           <div class="flex h-8 items-center gap-2 px-1 select-none">
-            <AppIcon src={instance.app.manifest.icon} class="size-5 shrink-0" />
+            <instance.app.manifest.icon class="size-5 shrink-0" weight="duotone" />
             <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
             {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
             <IconButton label="Close {instance.app.manifest.name}" size="sm" onclick={() => close(id)}>

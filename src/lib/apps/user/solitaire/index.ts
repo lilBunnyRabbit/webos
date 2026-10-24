@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export const SOLITAIRE_PROPS = z.object({
   daily: z
@@ -15,7 +15,7 @@ export const SOLITAIRE_PROPS = z.object({
 export default define_app({
   id: "solitaire",
   name: "Solitaire",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),

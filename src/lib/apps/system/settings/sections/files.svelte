@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService, type SettingsService } from "$lib/core/api";
-  import { AppIcon, Button, EmptyState, IconButton, Section, SettingRow } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Section, SettingRow } from "$lib/core/components/ui";
   import { FileDashed as FileDashedIcon, X as XIcon } from "phosphor-svelte";
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -28,7 +28,7 @@
       {@const manifest = apps.get(app_id)}
       <SettingRow label={extension} description={manifest ? `Opens in ${manifest.name}` : `${app_id} is no longer installed`}>
         {#snippet children({ id, describedby })}
-          {#if manifest}<AppIcon src={manifest.icon} class="size-4 shrink-0 text-foreground/80" />{/if}
+          {#if manifest}<manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />{/if}
           <IconButton {id} aria-describedby={describedby} label="Forget {extension}" size="sm" onclick={() => forget(extension)}>
             <XIcon weight="bold" />
           </IconButton>

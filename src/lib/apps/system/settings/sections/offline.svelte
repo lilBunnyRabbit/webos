@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { OfflineStatus, search_apps, type AppListing, type AppsService, type OfflineService } from "$lib/core/api";
-  import { AppIcon, Badge, Input, Section, Spinner, Switch } from "$lib/core/components/ui";
+  import { Badge, Input, Section, Spinner, Switch } from "$lib/core/components/ui";
   import { untrack } from "svelte";
   import { MagnifyingGlass as MagnifyingGlassIcon, WifiSlash as WifiSlashIcon } from "phosphor-svelte";
 
@@ -77,7 +77,7 @@
               {@const status = STATUS[offline.status(app.id)]}
               <li class="absolute inset-x-0 flex items-center gap-3 border-b border-foreground/6 px-3" style:top="{(first + index) * ROW}px" style:height="{ROW}px">
                 <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-background-light ring-1 ring-foreground/10">
-                  <AppIcon src={app.icon} class="size-5" />
+                  <app.icon class="size-5" weight="duotone" />
                 </span>
                 <label for="offline-{app.id}" class="flex min-w-0 flex-1 flex-col">
                   <span class="truncate text-ui font-medium">{app.name}</span>

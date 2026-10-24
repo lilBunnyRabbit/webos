@@ -229,6 +229,11 @@ describe("app find", () => {
 });
 
 describe("AppsService meta (ADR-049)", () => {
+  test("metas are loaded by the time boot finishes", async () => {
+    const service = apps(await boot());
+    expect(service.listings().find(({ id }) => id === "example")?.description).toBe("Test app");
+  });
+
   test("every app's meta loads once; an app without one, or an unknown id, resolves {}", async () => {
     const kernel = await boot();
     const service = apps(kernel);

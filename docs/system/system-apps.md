@@ -31,7 +31,7 @@ On first boot the desktop seeds shortcuts to `getting-started`, `settings`, `fil
 
 ## File Explorer
 
-`file-explorer` · own `icon.svg` · source `system/file-explorer/`
+`file-explorer` · own `icon.svelte` · source `system/file-explorer/`
 
 **Purpose.** Browse and manage OPFS.
 
@@ -63,7 +63,7 @@ On first boot the desktop seeds shortcuts to `getting-started`, `settings`, `fil
 
 ## Settings
 
-`settings` · own `icon.svg` · source `system/settings/`
+`settings` · own `icon.svelte` · source `system/settings/`
 
 **Purpose.** Change the theme, wallpaper, text and interface, taskbar, notifications and remembered default apps; back up, restore and reset; read every release's notes and the roadmap; see build info and who made the apps, install WebOS and check for updates. Every setting is findable by name ([search](#settings-search)).
 
@@ -144,7 +144,7 @@ Every write goes straight to service state. Persistence is the settings service'
 
 ## Kernel
 
-`kernel` · own `icon.svg` · source `system/kernel/`
+`kernel` · own `icon.svelte` · source `system/kernel/`
 
 **Purpose.** An inspector for the service registry (ADR-020).
 
@@ -196,7 +196,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 ## Text Editor
 
-`text-editor` · own `icon.svg` · source `system/text-editor/` · [ADR-030](../adrs/030-text-editor.md)
+`text-editor` · own `icon.svelte` · source `system/text-editor/` · [ADR-030](../adrs/030-text-editor.md)
 
 **Purpose.** Edit text and code files. Replaced Text Viewer on 2026-10-13 (id renamed, no alias: old `text-viewer` session entries are skipped on restore, a `text-viewer` file default falls back to the built-in).
 
@@ -230,7 +230,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 
 ## Media Preview
 
-`media-preview` · own `icon.svg` · source `system/media-preview/` · ported from v0 (`v0-react`) (ADR-009, ADR-018)
+`media-preview` · own `icon.svelte` · source `system/media-preview/` · ported from v0 (`v0-react`) (ADR-009, ADR-018)
 
 **Purpose.** Show images, play video and audio.
 
@@ -288,7 +288,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## PDF Viewer
 
-`pdf-viewer` · own `icon.svg` · source `system/pdf-viewer/` (ADR-018 revision: a separate app because it's a different interaction model)
+`pdf-viewer` · own `icon.svelte` · source `system/pdf-viewer/` (ADR-018 revision: a separate app because it's a different interaction model)
 
 **Purpose.** View PDFs with the browser's built-in viewer.
 
@@ -304,7 +304,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## HTML Preview
 
-`html-preview` · own `icon.svg` · source `system/html-preview/`
+`html-preview` · own `icon.svelte` · source `system/html-preview/`
 
 **Purpose.** Render an HTML file the way a browser would, or read its source.
 
@@ -329,7 +329,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## CSV Viewer
 
-`csv-viewer` · own `icon.svg` · source `system/csv-viewer/`
+`csv-viewer` · own `icon.svelte` · source `system/csv-viewer/`
 
 **Purpose.** Read CSV and TSV files as a table.
 
@@ -363,7 +363,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 ## Activity Monitor
 
-`activity-monitor` · own `icon.svg` · source `system/activity-monitor/`
+`activity-monitor` · own `icon.svelte` · source `system/activity-monitor/`
 
 **Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests, storage use and background tasks. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
@@ -429,7 +429,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 
 ## Style Guide
 
-`style-guide` · own `icon.svg` · source `system/style-guide/` (ADR-024)
+`style-guide` · own `icon.svelte` · source `system/style-guide/` (ADR-024)
 
 **Purpose.** Render every design token and UI kit component live in the current theme, as the in-OS companion to [docs/design](../design/README.md). Change the theme in Settings and the Style Guide follows. Its manifest sets `description` and `keywords` (`design`, `components`, `tokens`), so the start menu search finds it by those words.
 
@@ -443,7 +443,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 | Actions | `Button` variants and sizes, `IconButton`s, toggles (`pressed` on `Button` and `IconButton`), `CopyButton` (with text and empty) |
 | Inputs | `Input` (plain and with a leading icon), `Select`, `Segmented` (`md` and `sm`), `Slider` (`md` and `sm`), `Switch`, `Checkbox` inside `SettingRow`s; `Textarea` (prose and `mono`) |
 | Feedback | `Badge` tones, `Kbd`, `Spinner`, `BoardOverlay` over a sample board, a bottom sheet in a small frame (Open sheet: grabber, 12 rows, Done; swipes down by touch), the app announcement (in place with three sample apps, Paint with sample highlights; "Show as dialog" and "Show with 6 apps" open it for real), `EmptyState` with an action |
-| App kit | `SwipeCompare` from `$kit/components/swipe-compare`, wiping between a sharp and a blurred sample drawn from tokens (a Phosphor icon on `background-light`); `CropFrame`; `Waveform` with trim handles, a selection and a playhead; `AppIcon` with Calculator, Terminal, Paint, Color Games, Ask and Doodlehop (plain, accented and AI-sparkle icons; the system ones still show in a fork without user apps) at `size-4`, `size-6`, `size-9`, `size-12`, in `primary` ink on a `primary/15` strip, and its not-loaded placeholder; `AiGate` from `$kit/components/ai-gate` around a placeholder app, live in this device's AI state (checking, unavailable or the download notice); `QrFrames` from `$kit/components/qr-transfer`, cycling the frames of a made-up 12-list payload |
+| App kit | `SwipeCompare` from `$kit/components/swipe-compare`, wiping between a sharp and a blurred sample drawn from tokens (a Phosphor icon on `background-light`); `CropFrame`; `Waveform` with trim handles, a selection and a playhead; `ai_icon` from `$kit/components/ai-icon` wrapping four system apps' icons (Terminal, Calculator, Text Editor, File Explorer: not the AI apps, so it shows in a fork without them) at `size-4`, `size-6`, `size-9`, `size-12` and in `primary` ink on a `primary/15` strip; `AiGate` from `$kit/components/ai-gate` around a placeholder app, live in this device's AI state (checking, unavailable or the download notice); `QrFrames` from `$kit/components/qr-transfer`, cycling the frames of a made-up 12-list payload |
 
 The controls (and the sample panel's width) are bound to local `$state` and do nothing else. Nothing but the open section is persisted.
 
@@ -456,7 +456,7 @@ The controls (and the sample panel's width) are bound to local `$state` and do n
 
 ## Calculator
 
-`calculator` · own `icon.svg` · source `system/calculator/`
+`calculator` · own `icon.svelte` · source `system/calculator/`
 
 **Purpose.** A basic calculator: `+ − × ÷`, percent, sign change, decimals and brackets, with a history of results. Category Utilities; `description` and `keywords` (`math`, `calc`, `arithmetic`) feed launcher search.
 
@@ -498,7 +498,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## App Library
 
-`app-library` · own `icon.svg` · source `system/app-library/`
+`app-library` · own `icon.svelte` · source `system/app-library/`
 
 **Purpose.** The store (ADR-040): every app, installed or not, in one browsable window: categories with counts, search, filters, a grid or list, and a details panel per app. Its Showcase view tells each app's story, what it solves, for someone new to WebOS ([brainstorm](../brainstorm/2026-10-18_app-showcase.md)). The start menu's and the app drawer's "All apps" button opens it. Category Utilities. The id is `app-library`, not `apps`, so it can't be mistaken for the `apps` service or the `app list` command.
 
@@ -551,7 +551,7 @@ Keys are read by one `<svelte:window>` `keydown` listener, only while the window
 
 ## Terminal
 
-`terminal` · own `icon.svg` · source `system/terminal/` · [ADR-033](../adrs/033-shell.md)
+`terminal` · own `icon.svelte` · source `system/terminal/` · [ADR-033](../adrs/033-shell.md)
 
 A [shell](services/shell.md) session per window (opening it calls `shell.load()`, so app commands highlight and complete from the first keystroke), on the field surface (`light-dark(background-lightest, background-darker)`) in `font-mono text-ui`.
 
@@ -603,7 +603,7 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 
 ## Getting started
 
-`getting-started` · own `icon.svg` · source `system/getting-started/` · [ADR-041](../adrs/041-getting-started.md)
+`getting-started` · own `icon.svelte` · source `system/getting-started/` · [ADR-041](../adrs/041-getting-started.md)
 
 **Purpose.** A tour of what WebOS can do, one card per part, each with a Try it button that runs the real thing. On the desktop of every new device (first in `DEFAULT_SHORTCUTS`) and linked from Settings › About.
 

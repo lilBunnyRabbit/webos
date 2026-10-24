@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import type { AppsService, InspectorProps } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
   import { RECENT_PATH } from "./recent";
@@ -27,7 +26,7 @@
   <InspectorTable columns={["", "Id", "Name", "Version", "Props", "Opens"]} empty={manifests.length === 0}>
     {#each manifests as manifest (manifest.id)}
       <tr>
-        <td><AppIcon src={manifest.icon} class="size-4" /></td>
+        <td><manifest.icon class="size-4" /></td>
         <td>{manifest.id}</td>
         <td class="font-sans">{manifest.name}</td>
         <td>{manifest.version}</td>

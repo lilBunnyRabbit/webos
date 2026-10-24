@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import kernel, { type AppsService, type WidgetProps } from "$lib/core/api";
   import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
@@ -49,6 +48,7 @@
     <ul class="grid gap-1" style:grid-template-columns="repeat({columns}, minmax(0, 1fr))" aria-label="Puzzles of the day">
       {#each highlighted as entry (entry.key)}
         {@const solved = solved_today[entry.key]}
+        {@const Icon = entry.game.icon}
         <li>
           <button
             class="flex w-full flex-col items-center gap-1 rounded-lg px-1 py-1 hover:bg-foreground/6 focus-visible:outline-2 focus-visible:outline-cottontail"
@@ -56,7 +56,7 @@
             onclick={() => apps.launch(entry.game.id, daily_props(entry, today.value))}
           >
             <span class={cn("relative grid size-9 place-items-center rounded-lg ring-1", solved ? "bg-success/12 ring-success/40" : "bg-background ring-foreground/10 shadow-raised")}>
-              <AppIcon src={entry.game.icon} class="size-5" />
+              <Icon class="size-5" weight="duotone" />
               {#if solved}<CheckCircleIcon class="absolute -right-1 -bottom-1 size-3.5 rounded-full bg-background text-success" weight="fill" />{/if}
             </span>
             <span class="w-full truncate text-center text-2xs">{entry.short}</span>

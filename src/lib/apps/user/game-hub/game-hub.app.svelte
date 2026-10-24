@@ -7,7 +7,7 @@
     type DesktopService,
     type NotificationsService,
   } from "$lib/core/api";
-  import { AppIcon, Button, EmptyState, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
@@ -94,9 +94,9 @@
   }
 </script>
 
-{#snippet game_icon(icon: string, size: "sm" | "md")}
+{#snippet game_icon(Icon: (typeof games)[number]["icon"], size: "sm" | "md")}
   <span class={cn("grid shrink-0 place-items-center rounded-xl bg-background shadow-raised ring-1 ring-foreground/10", size === "md" ? "size-11" : "size-8 rounded-lg")}>
-    <AppIcon src={icon} class={size === "md" ? "size-6" : "size-4.5"} />
+    <Icon class={size === "md" ? "size-6" : "size-4.5"} weight="duotone" />
   </span>
 {/snippet}
 

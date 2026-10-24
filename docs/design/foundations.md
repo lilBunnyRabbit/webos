@@ -135,32 +135,13 @@ Hairlines are `ring-1 ring-foreground/8`–`/10` (or `border-foreground/8` for d
 
 ## App icons
 
-Every app draws its own icon in `icon.svg` next to its manifest (`import icon from "./icon.svg?no-inline"`, then `icon,`). The rules, settled with the owner in [app wave 7](../brainstorm/2026-10-17_app-wave-7.md):
+Every app draws its own icon in `icon.svelte` next to its manifest (`icon: AppIcon`). The rules, settled with the owner in [app wave 7](../brainstorm/2026-10-17_app-wave-7.md):
 
 - 24 grid, one 1.5 px line in `currentColor`, round caps and joins, `rx` 2 on rectangles, drawn to fill about 18–20 units.
 - One idea per app, the thing that app is about, in a handful of shapes. No text, tiny details or decoration. Core (system) apps are the plainest: one object in 3–5 strokes, never a scene.
-- Colour is rare (25 of 94): only on the element the app is about (the lander's flame, the dragged card), in `primary` or `secondary`, solid with no outline. It stands outside the line drawing: never inside an outline, never touching a line, at least 1.5 units clear. Primary and secondary never touch; accent and state colours never appear.
-- An app that needs on-device AI to work at all carries a `primary` sparkle in the top-right corner, the glyph cut away 1.5 units around it ([decided](../brainstorm/2026-10-21_ai-icon-mark.md)): Ask, Unsaid, Doodlehop and Alibi. Copy the `<defs>` mask, the `mask="url(#ai)"` on each element and the sparkle path from one of them. Keep that corner free of the app's own colour element: Doodlehop's dot moved left to make room. An app where AI is optional (Warren, Shopping List) keeps its plain icon.
-
-### The file
-
-`AppIcon` (UI kit) draws the file as three CSS masks over one box: `icon.svg` in `currentColor`, `icon.svg#primary` in `--primary`, `icon.svg#secondary` in `--secondary` ([ADR-066](../adrs/066-app-icons-as-files.md)). A mask reads only alpha, and a `var()` doesn't resolve inside an image, so the colour lives in the class, never in the file. Every `icon.svg` starts the same way:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <style>.primary,.secondary,:target~*{display:none}#primary:target~.primary,#secondary:target~.secondary{display:inline}</style>
-  <view id="primary"/><view id="secondary"/>
-  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">…</g>
-  <circle class="primary" cx="19" cy="19.75" r="1.75" fill="currentColor"/>
-</svg>
-```
-
-- With no fragment the style hides the `.primary` and `.secondary` elements; with `#primary` (or `#secondary`) it shows only those. A file without the views would draw its whole art in every layer.
-- Colour elements are direct children of the `<svg>`, after the views, and use `currentColor` like the rest.
-- No width, height or `aria-hidden`: `AppIcon` sizes the box (`1em` unless a `size-*` class says otherwise) and hides it from assistive tech.
-- `src/lib/apps/icons.test.ts` checks every file against this.
-
-Until the file has loaded, `AppIcon` shows a rounded `foreground/10` square. A drawn icon is in the memory cache, so later draws show it at once. A slot that takes an icon component (menu items, `EmptyState`) gets one from `app_icon(manifest.icon)` (`$lib/core/components/ui/app-icon`). Icons ignore Phosphor's `weight`.
+- Colour is rare (18 of 76): only on the element the app is about (the lander's flame, the dragged card), in `var(--primary)` or `var(--secondary)`, solid with no outline. It stands outside the line drawing: never inside an outline, never touching a line, at least 1.5 units clear. Primary and secondary never touch; accent and state colours never appear.
+- The component takes the same props a Phosphor icon does (`class`, and `weight`, which it ignores), so every place that draws `manifest.icon` keeps working. It sizes at `1em`.
+- An app that needs on-device AI to work at all wraps its icon in `ai_icon` (`$kit/components/ai-icon`, [decided](../brainstorm/2026-10-21_ai-icon-mark.md)): a `primary` sparkle in the top-right corner, the glyph cut away 1.5 units around it. Keep that corner free of the app's own colour element: Doodlehop's dot moved left to make room. An app where AI is optional (Warren, Shopping List) keeps its plain icon.
 
 ## Icons
 

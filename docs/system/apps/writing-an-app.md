@@ -20,12 +20,12 @@ The folder must sit directly under `system/` or `user/`; deeper folders aren't d
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "notes",
   name: "Notes",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   associations: [".note"],

@@ -1,0 +1,14 @@
+<script lang="ts">
+  import type { SVGAttributes } from "svelte/elements";
+
+  let { weight: _weight, ...rest }: SVGAttributes<SVGSVGElement> & { weight?: string } = $props();
+</script>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" {...rest}>
+  <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.75 9.75h18.5"/>
+    <path d="M4.5 9.75 6.25 19.5a1.5 1.5 0 0 0 1.5 1.25h8.5a1.5 1.5 0 0 0 1.5-1.25L19.5 9.75"/>
+    <path d="m7.75 9.75 3-6.5M16.25 9.75l-3-6.5"/>
+    <path d="M10 13.5v3.75M14 13.5v3.75"/>
+  </g>
+</svg>

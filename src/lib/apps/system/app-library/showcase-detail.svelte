@@ -2,7 +2,7 @@
   import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
-  import { AppIcon, Button, IconButton } from "$lib/core/components/ui";
+  import { Button, IconButton } from "$lib/core/components/ui";
   import { ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, Info as InfoIcon } from "phosphor-svelte";
   import { app_story, category_label } from "./library";
   import ShowcaseActions from "./showcase-actions.svelte";
@@ -23,7 +23,7 @@
     <div class="flex items-start gap-3">
       <IconButton label="Back to the showcase" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
       <span class="relative grid size-16 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
-        <AppIcon src={manifest.icon} class="size-9" />
+        <manifest.icon class="size-9" weight="duotone" />
         <AppBadge app_id={manifest.id} />
       </span>
       <div class="min-w-0 flex-1 pt-1">

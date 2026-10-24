@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AppIcon } from "$lib/core/components/ui";
   import {
     CornersIn as CornersInIcon,
     CornersOut as CornersOutIcon,
@@ -45,7 +44,7 @@
 </script>
 
 <div class={cn("flex min-w-0 items-center gap-2 transition-opacity duration-150", !focused && "opacity-80")}>
-  <AppIcon src={instance.app.manifest.icon} class="size-4 shrink-0 text-foreground/80" />
+  <instance.app.manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
   <span class="truncate text-ui font-medium" title={instance.title ? `${instance.title} — ${instance.app.manifest.name}` : undefined}>{instance.title ?? instance.app.manifest.name}</span>
   {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
 </div>

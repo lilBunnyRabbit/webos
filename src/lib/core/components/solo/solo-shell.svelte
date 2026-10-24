@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { app_icon } from "$lib/core/components/ui/app-icon";
   import kernel, { LinkOutcome, Platform, RouteKind, type AppsService, type RouterService, type WindowsService } from "$lib/core/api";
-  import { AppIcon, button, Button, EmptyState } from "$lib/core/components/ui";
+  import { button, Button, EmptyState } from "$lib/core/components/ui";
   import { ArrowClockwise as ArrowClockwiseIcon, ArrowSquareOut as ArrowSquareOutIcon, LinkBreak as LinkBreakIcon } from "phosphor-svelte";
   import { parse_hash, route_url } from "$lib/core/api/services/router/route";
   import LogoMark from "../brand/logo-mark.svelte";
@@ -33,7 +32,7 @@
   <header class="flex shrink-0 items-center gap-2 border-b border-foreground/10 bg-background px-3 pt-[env(safe-area-inset-top)]">
     <div class="flex h-11 min-w-0 flex-1 items-center gap-2 pointer-coarse:h-13">
       {#if manifest}
-        <AppIcon src={manifest.icon} class="size-4 shrink-0 text-foreground/80" />
+        <manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
         <span class="truncate text-ui font-medium" title={instance?.title ? `${instance.title} — ${manifest.name}` : undefined}>
           {instance?.title ?? manifest.name}
         </span>
@@ -54,7 +53,7 @@
     {:else if broken || !manifest}
       <EmptyState icon={LinkBreakIcon} tone="error" title="This link can't open" description="The app it points to doesn't exist, or its data doesn't fit." />
     {:else if router.last_link}
-      <EmptyState icon={app_icon(manifest.icon)} title="{manifest.name} is closed">
+      <EmptyState icon={manifest.icon} title="{manifest.name} is closed">
         {#snippet actions()}
           <Button variant="primary" onclick={reopen}><ArrowClockwiseIcon weight="bold" /> Reopen</Button>
         {/snippet}

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { open_todos } from "./badge.svelte";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export const QUICK_NOTES_PROPS = z.object({
   note: z.string().optional(),
@@ -12,7 +12,7 @@ export const QUICK_NOTES_PROPS = z.object({
 export default define_app({
   id: "quick-notes",
   name: "Quick Notes",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),

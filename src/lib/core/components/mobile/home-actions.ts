@@ -1,4 +1,3 @@
-import { app_icon } from "$lib/core/components/ui/app-icon";
 import kernel, {
   NotificationType,
   type AppsService,
@@ -69,7 +68,7 @@ export async function add_widget_menu(anchor: Position): Promise<void> {
     .filter((app) => app.widget);
   if (choices.length === 0) return;
   const choice = await dialogs().menu(
-    choices.map((app) => ({ id: app.id, label: app.name, icon: app_icon(app.icon) })),
+    choices.map((app) => ({ id: app.id, label: app.name, icon: app.icon })),
     { anchor }
   );
   const app = choices.find((entry) => entry.id === choice);

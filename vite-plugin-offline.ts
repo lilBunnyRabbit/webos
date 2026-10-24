@@ -22,8 +22,6 @@ export interface OfflineListFile {
 export const RUNTIME_CACHED = /(\.(wasm|onnx|ttf|ttc|aff|dic)$)|(^assets\/mammoth-[^/]+\.js$)/;
 
 const APP_INDEX = /\/apps\/(system|user)\/([^/]+)\/index\.ts$/;
-const ASSET_PLACEHOLDER = /__VITE_ASSET__([\w$]+)__/;
-const USER_ICON = /\/apps\/user\/([^/]+)\/icon\.svg\?no-inline$/;
 const SHARED_CHUNKS = new Set(["core", "app-boot", "app-meta"]);
 // Content-hashed file names (`name-HASH8.ext`), as a worker or a `new URL()` asset is named inside a file's source.
 const HASHED_NAME = /[\w.-]+-[\w-]{8}\.[a-z0-9]+/g;
@@ -42,24 +40,16 @@ function reach(files: Map<string, BundleFile>, start: Iterable<string>, stop: (n
   return seen;
 }
 
-// Core is what boot reaches without entering a user app's lazy code, so every system app is in it. A user app's icon is
-// named by its manifest in `app-boot`, but stays out of core so core doesn't grow with the app count (ADR-066).
-export function offline_lists(
-  files: BundleFile[],
-  boot: string[],
-  app_roots: Map<string, Set<string>>,
-  app_icons: Map<string, string> = new Map()
-): OfflineLists {
+// Core is what boot reaches without entering a user app's lazy code, so every system app is in it.
+export function offline_lists(files: BundleFile[], boot: string[], app_roots: Map<string, Set<string>>): OfflineLists {
   const by_name = new Map(files.map((file) => [file.name, file]));
   const roots = new Set([...app_roots.values()].flatMap((set) => [...set]));
-  const icons = new Set(app_icons.values());
-  const core = reach(by_name, boot, (name) => roots.has(name) || icons.has(name));
+  const core = reach(by_name, boot, (name) => roots.has(name));
   const keep = (name: string) => !core.has(name) && !RUNTIME_CACHED.test(name);
 
   const apps: Record<string, string[]> = {};
   for (const [id, own] of [...app_roots].sort(([a], [b]) => a.localeCompare(b))) {
-    const icon = app_icons.get(id);
-    apps[id] = [...reach(by_name, icon ? [...own, icon] : own, (name) => core.has(name))].filter(keep).sort();
+    apps[id] = [...reach(by_name, own, (name) => core.has(name))].filter(keep).sort();
   }
   return { core: [...core].filter((name) => !RUNTIME_CACHED.test(name)).sort(), apps };
 }
@@ -107,16 +97,8 @@ export function offline_plugin(build: number) {
     writeBundle(_, bundle) {
       const app_roots = new Map<string, Set<string>>();
       const chunk_of = new Map<string, string>();
-      const app_icons = new Map<string, string>();
       for (const file of Object.values(bundle)) {
-        if (file.type !== "chunk") continue;
-        for (const id of file.moduleIds) {
-          chunk_of.set(id, file.fileName);
-          const icon = USER_ICON.exec(id);
-          // A module's rendered code still holds Vite's asset placeholder; the chunk's code has the final name.
-          const ref = icon && ASSET_PLACEHOLDER.exec(file.modules[id]?.code ?? "");
-          if (icon && ref) app_icons.set(icon[1], this.getFileName(ref[1]));
-        }
+        if (file.type === "chunk") for (const id of file.moduleIds) chunk_of.set(id, file.fileName);
       }
       for (const id of chunk_of.keys()) {
         const match = APP_INDEX.exec(id);
@@ -133,7 +115,7 @@ export function offline_plugin(build: number) {
       const boot = Object.values(bundle)
         .filter((file) => file.fileName === "index.html" || (file.type === "chunk" && file.isEntry))
         .map((file) => file.fileName);
-      const lists = offline_lists(to_bundle_files(bundle), boot, app_roots, app_icons);
+      const lists = offline_lists(to_bundle_files(bundle), boot, app_roots);
       core = new Set(lists.core);
 
       const dir = path.join(out_dir, "offline");

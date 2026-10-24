@@ -2,12 +2,12 @@ import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
 import { SECTION_IDS } from "./ids";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "settings",
   name: "Settings",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),

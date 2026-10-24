@@ -1,11 +1,11 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory } from "$lib/core/api/services/apps/type";
-import icon from "./icon.svg?no-inline";
+import AppIcon from "./icon.svelte";
 
 export default define_app({
   id: "unit-converter",
   name: "Unit Converter",
-  icon,
+  icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),

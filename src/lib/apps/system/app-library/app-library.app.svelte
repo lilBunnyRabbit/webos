@@ -14,7 +14,7 @@
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
   import { set_drag_app } from "$lib/core/components/apps/drag";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
-  import { AppIcon, Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     ClockCounterClockwise as ClockCounterClockwiseIcon,
@@ -148,7 +148,7 @@
       size === "md" ? "size-11 rounded-xl pointer-coarse:size-14 pointer-coarse:rounded-2xl" : "size-6 rounded-md pointer-coarse:size-8"
     )}
   >
-    <AppIcon src={manifest.icon} class={size === "md" ? "size-6 pointer-coarse:size-7" : "size-4 pointer-coarse:size-5"} />
+    <manifest.icon class={size === "md" ? "size-6 pointer-coarse:size-7" : "size-4 pointer-coarse:size-5"} weight="duotone" />
     {#if size === "md"}<AppBadge app_id={manifest.id} />{/if}
   </span>
 {/snippet}

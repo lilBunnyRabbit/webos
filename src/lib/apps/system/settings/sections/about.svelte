@@ -7,7 +7,7 @@
     type VersionService,
   } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
-  import { AppIcon, Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
+  import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
   import { installer } from "$lib/core/utils/install.svelte";
   import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
@@ -175,7 +175,7 @@
         <ul class="flex flex-wrap gap-1 pl-12">
           {#each shown as manifest (manifest.id)}
             <li class="flex h-6 items-center gap-1.5 rounded-md bg-foreground/6 px-2 text-2xs text-foreground/80">
-              <AppIcon src={manifest.icon} class="size-3.5 text-foreground/65" />
+              <manifest.icon class="size-3.5 text-foreground/65" weight="duotone" />
               {manifest.name}
             </li>
           {/each}
