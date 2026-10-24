@@ -53,7 +53,7 @@
             aria-checked={color === option}
             aria-label={names[option]}
             title={names[option]}
-            class={cn("grid size-10 place-items-center rounded-full ring-2 transition-shadow ring-inset", color === option ? "ring-foreground" : "ring-transparent hover:ring-edge")}
+            class={cn("grid size-10 place-items-center rounded-full ring-2 transition-shadow ring-inset", color === option ? "ring-foreground" : "ring-transparent")}
             onclick={() => (color = option)}
           >
             <span class={cn("size-7 rounded-full", COLOR_DOT[option])}></span>

@@ -41,12 +41,12 @@ export const button = merge_tv({
 });
 export type ButtonVariants = VariantProps<typeof button>;
 
-/** Recessed field: a well below the surface, its depth carrying the shape at rest; hover and focus bring the 3:1 edge. */
+/** Recessed field: a well below the surface, its depth carrying the shape; only focus draws an edge. */
 export const field = merge_tv({
   base: [
     "w-full min-w-0 rounded-md text-ui text-foreground",
-    "bg-field shadow-recessed ring-1 ring-inset ring-transparent transition-[box-shadow,background-color] duration-150",
-    "placeholder:text-foreground/65 hover:ring-edge",
+    "bg-field shadow-recessed transition-[box-shadow,background-color] duration-150",
+    "placeholder:text-foreground/65",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
     "disabled:opacity-38",
   ],

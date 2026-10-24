@@ -349,7 +349,7 @@
                   tabindex="0"
                   aria-label="Signature on page {page + 1}"
                   aria-pressed={is_selected}
-                  class={cn("absolute cursor-move rounded-xs outline-none", is_selected ? "ring-2 ring-primary/70" : "hover:ring-1 hover:ring-primary/50", "focus-visible:ring-2 focus-visible:ring-cottontail")}
+                  class={cn("absolute cursor-move rounded-xs outline-none", is_selected ? "ring-2 ring-primary/70" : "", "focus-visible:ring-2 focus-visible:ring-cottontail")}
                   style:left="{stamp.placement.x * 100}%"
                   style:top="{stamp.placement.y * 100}%"
                   style:width="{stamp.placement.width * 100}%"

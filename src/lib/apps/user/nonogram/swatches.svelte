@@ -50,7 +50,7 @@
   </label>
 {/snippet}
 
-<div role="radiogroup" aria-label="Colour" class={cn("inline-flex gap-0.5 rounded-md bg-field p-0.5 shadow-recessed ring-1 ring-transparent ring-inset transition-shadow duration-150 hover:ring-edge", class_name)}>
+<div role="radiogroup" aria-label="Colour" class={cn("inline-flex gap-0.5 rounded-md bg-field p-0.5 shadow-recessed", class_name)}>
   {#each palette as ink, index (ink)}
     {@const color = index + 1}
     {#snippet swatch()}

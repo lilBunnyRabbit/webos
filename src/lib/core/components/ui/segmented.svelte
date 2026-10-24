@@ -34,12 +34,12 @@
 </script>
 
 <!-- A radio group drawn as one control: arrow keys, labels and form state come from the radios themselves. -->
-<div role="radiogroup" {id} aria-label={label} aria-describedby={describedby} class={cn("inline-flex bg-field p-0.5 shadow-recessed ring-1 ring-inset ring-transparent transition-shadow duration-150 hover:ring-edge", size === "sm" ? "rounded-md" : "rounded-lg", class_name)}>
+<div role="radiogroup" {id} aria-label={label} aria-describedby={describedby} class={cn("inline-flex bg-field p-[3px] shadow-recessed", size === "sm" ? "rounded-md" : "rounded-lg", class_name)}>
   {#each options as option (option.value)}
     <label
       class={cn(
         "relative flex cursor-pointer items-center gap-1.5 text-ui font-medium text-foreground/80 transition-[color,background-color,box-shadow] duration-150",
-        size === "sm" ? "h-6 rounded-sm px-2.5 pointer-coarse:h-8" : "h-7 rounded-md px-3 pointer-coarse:h-9",
+        size === "sm" ? "h-[22px] rounded-sm px-2.5 pointer-coarse:h-[30px]" : "h-[26px] rounded-md px-3 pointer-coarse:h-[34px]",
         "hover:text-foreground has-checked:bg-background-lighter has-checked:text-foreground has-checked:shadow-control",
         "has-focus-visible:outline-2 has-focus-visible:outline-cottontail"
       )}

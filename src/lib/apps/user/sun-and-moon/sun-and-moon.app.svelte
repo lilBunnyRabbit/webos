@@ -336,7 +336,7 @@
                     "cell relative grid place-items-center rounded-[12%] outline-none",
                     "ring-1 ring-inset transition-[background-color,box-shadow] duration-100",
                     "focus-visible:ring-2 focus-visible:ring-cottontail",
-                    given ? "bg-raised shadow-control ring-hairline" : "bg-field shadow-recessed ring-transparent pointer-fine:hover:ring-edge",
+                    given ? "bg-raised shadow-control ring-hairline" : "bg-field shadow-recessed ring-transparent",
                     selected && "ring-2 ring-primary",
                     wrong && "bg-error/10 ring-2 ring-error",
                     flash?.index === index && (flash.fix ? "flash-fix" : "flash")

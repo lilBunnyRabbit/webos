@@ -129,7 +129,7 @@
           {@const daily = daily_state.get(game.id)}
           <li class="flex">
             <button
-              class="flex w-full items-start gap-3 rounded-xl bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-[box-shadow,translate] duration-150 hover:ring-hairline-strong focus-visible:outline-2 focus-visible:outline-cottontail active:translate-y-px active:shadow-pressed"
+              class="flex w-full items-start gap-3 rounded-xl bg-background-light p-3 text-left shadow-card ring-1 ring-hairline transition-[box-shadow,translate] duration-150 focus-visible:outline-2 focus-visible:outline-cottontail active:translate-y-px active:shadow-pressed"
               onclick={() => apps.launch(game.id)}
             >
               {@render game_icon(game.icon, "md")}

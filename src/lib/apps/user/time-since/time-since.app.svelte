@@ -186,8 +186,8 @@
             {#each counters as counter (counter.id)}
               <li
                 class={cn(
-                  "flex items-center gap-1 rounded-xl bg-background-light pr-2 shadow-card ring-1 ring-hairline transition-colors hover:ring-hairline-strong",
-                  counter.id === selected_id.value && "bg-primary/10 ring-primary/40 hover:ring-primary/50"
+                  "flex items-center gap-1 rounded-xl bg-background-light pr-2 shadow-card ring-1 ring-hairline transition-colors",
+                  counter.id === selected_id.value && "bg-primary/10 ring-primary/40"
                 )}
                 {@attach long_press({ on_menu: (point) => counter_menu(counter, point) })}
               >

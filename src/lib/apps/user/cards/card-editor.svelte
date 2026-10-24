@@ -251,7 +251,7 @@
               {:else}
                 <button
                   type="button"
-                  class="grid aspect-[1.586] w-full place-items-center rounded-lg bg-field text-ui text-foreground/65 shadow-recessed ring-1 ring-transparent ring-inset transition-[box-shadow] duration-150 hover:ring-edge"
+                  class="grid aspect-[1.586] w-full place-items-center rounded-lg bg-field text-ui text-foreground/65 shadow-recessed"
                   onclick={() => add_photo(side, "device")}
                 >
                   <span class="flex flex-col items-center gap-1"><PlusIcon class="size-5" />Add {side}</span>

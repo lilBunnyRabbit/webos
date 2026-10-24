@@ -31,7 +31,7 @@
       data-char={char}
       class={[
         "relative h-12 w-10 shrink-0 snap-center overflow-hidden rounded-md ring-1 transition-[background-color,box-shadow] duration-150 ring-inset",
-        selected === char ? "bg-primary/14 ring-primary/70" : "bg-field ring-hairline hover:ring-edge",
+        selected === char ? "bg-primary/14 ring-primary/70" : "bg-field ring-hairline",
       ]}
       aria-label="{char}{strokes.length ? '' : ', empty'}"
       aria-current={selected === char ? "true" : undefined}

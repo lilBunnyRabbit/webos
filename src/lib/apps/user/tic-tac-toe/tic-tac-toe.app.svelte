@@ -200,7 +200,7 @@
                   class={cn(
                     "grid place-items-center rounded-[3cqmin] bg-field shadow-recessed ring-1 ring-transparent ring-inset transition-[background-color,opacity,box-shadow] duration-150",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cottontail",
-                    !mark && !result && !computer_turn && "cursor-pointer hover:ring-edge",
+                    !mark && !result && !computer_turn && "cursor-pointer",
                     result && !winning && "opacity-38",
                     winning && "bg-primary/12 ring-2 ring-primary"
                   )}

@@ -86,7 +86,7 @@
                 <Input
                   value={timer.label}
                   size="sm"
-                  class="min-w-0 flex-1 bg-transparent px-1 font-medium ring-transparent pointer-fine:hover:ring-foreground/20 focus-visible:ring-foreground/30"
+                  class="min-w-0 flex-1 bg-transparent px-1 font-medium ring-transparent focus-visible:ring-2 focus-visible:ring-cottontail"
                   placeholder={format_duration(timer.duration_ms)}
                   aria-label="Timer name"
                   maxlength={40}

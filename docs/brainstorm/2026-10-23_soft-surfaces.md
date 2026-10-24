@@ -53,3 +53,6 @@ Owner: "i like it but i dont love it": the field outline was "too thin random co
 
 ## Next session topics
 - Owner's verdict on phase 1; tuning `--edge-lit` and the recessed depth in Brand Light.
+
+### Hover outlines dropped (decided, 2026-10-24)
+Owner: "no hover outlines only focus with cottontail as it was", and the segmented chip touching the hovered well "drops the illusion". Every `hover:ring-*` went (kit wells, segmented, switch, checkbox, app tiles and cards); focus keeps the `cottontail` ring. `Segmented` pads 3px with chips 2px shorter, so the raised chip always floats with a visible gap and the control keeps its height.

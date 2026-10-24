@@ -44,7 +44,7 @@
             type="button"
             class={[
               "cell relative aspect-[5/6] overflow-hidden rounded-md text-left ring-1 transition-[background-color,box-shadow] duration-150 ring-inset",
-              selected === char ? "bg-primary/14 ring-primary/70" : "bg-field ring-hairline hover:ring-edge",
+              selected === char ? "bg-primary/14 ring-primary/70" : "bg-field ring-hairline",
             ]}
             aria-label="{char}{drawn ? '' : ', empty'}"
             aria-current={selected === char ? "true" : undefined}
