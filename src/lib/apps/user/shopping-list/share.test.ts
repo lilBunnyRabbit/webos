@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { ListColor, type Item, type List } from "./data";
 import { apply_changes, ChangeKind, read_share, review_share, share_of } from "./share";
 
-const item = (id: string, text: string, updated_at: number, extra: Partial<Item> = {}): Item => ({ id, text, checked: false, updated_at, ...extra });
+const item = (id: string, text: string, updated_at: number, extra: Partial<Item> = {}): Item => ({ id, text, checked: false, added_at: updated_at, updated_at, ...extra });
 const list = (items: Item[], extra: Partial<List> = {}): List => ({ id: "groceries", name: "Groceries", color: ListColor.PRIMARY, items, ...extra });
 
 function kinds(local: List[], incoming: List[]) {
@@ -25,6 +25,14 @@ describe("review_share", () => {
   test("the same list on both sides has nothing to review", () => {
     const both = list([item("a", "mleko", 1), item("b", "kruh", 2, { deleted_at: 2 })]);
     expect(kinds([both], [both])).toEqual([]);
+  });
+
+  test("a share from a version without dates gets them and shows no changes for it", () => {
+    const mine = list([item("0mh5x2p1s-0a0b0c0d", "mleko", 4, { added_at: 99 })]);
+    const old = { v: 1, lists: [{ ...mine, items: [{ id: "0mh5x2p1s-0a0b0c0d", text: "mleko", checked: false, updated_at: 4 }] }] };
+    const share = read_share(old);
+    expect(share.lists[0].items[0].added_at).toBe(parseInt("0mh5x2p1s", 36));
+    expect(review_share([mine], share)[0].changes).toEqual([]);
   });
 
   test("a list this device doesn't have arrives whole", () => {

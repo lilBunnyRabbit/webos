@@ -5,10 +5,14 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.61.1",
+    version: "3.62.0",
     date: "2026-10-24",
-    title: "Theme shades",
+    title: "Sorted lists and theme shades",
     changes: [
+      {
+        kind: NEW,
+        text: "Shopping List sorts items by when they were added or by name, and the item editor shows when an item was added.",
+      },
       {
         kind: FIXED,
         text: "Near-white themes keep their lighter panels lighter, and pure-black themes tell menus, cards and the taskbar apart from the background.",

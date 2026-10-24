@@ -6,6 +6,7 @@ const item = (id: string, text: string, updated_at: number, extra: Partial<Item>
   id,
   text,
   checked: false,
+  added_at: updated_at,
   updated_at,
   ...extra,
 });

@@ -49,15 +49,19 @@ export const LIST_ICONS = Object.values(ListIcon);
 
 const Id = z.string().min(1);
 
-export const ItemSchema = z.object({
-  id: Id,
-  text: z.string(),
-  qty: z.number().positive().optional(),
-  unit: z.string().min(1).optional(),
-  checked: z.boolean(),
-  updated_at: z.number(),
-  deleted_at: z.number().optional(),
-});
+/** `added_at` is optional on the way in only: items saved before it existed, here or in a share, get it on read. */
+export const ItemSchema = z
+  .object({
+    id: Id,
+    text: z.string(),
+    qty: z.number().positive().optional(),
+    unit: z.string().min(1).optional(),
+    checked: z.boolean(),
+    added_at: z.number().optional(),
+    updated_at: z.number(),
+    deleted_at: z.number().optional(),
+  })
+  .transform((item) => ({ ...item, added_at: item.added_at ?? added_from(item) }));
 export type Item = z.infer<typeof ItemSchema>;
 
 export const ListMetaSchema = z.object({ id: Id, name: z.string(), color: z.enum(ListColor), icon: z.enum(ListIcon).optional() });
@@ -92,6 +96,12 @@ export function empty_file(): ListsFile {
 export function new_id(now = Date.now()): string {
   const random = Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `${now.toString(36).padStart(9, "0")}-${random}`;
+}
+
+export function added_from(item: { id: string; updated_at: number }): number {
+  const [time, rest] = item.id.split("-", 2);
+  const parsed = rest !== undefined && /^[0-9a-z]{1,10}$/.test(time) ? parseInt(time, 36) : NaN;
+  return Number.isFinite(parsed) ? parsed : item.updated_at;
 }
 
 /** Never goes back in time for one item, even when this device's clock is behind the one that last changed it. */
