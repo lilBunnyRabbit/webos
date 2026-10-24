@@ -264,7 +264,7 @@
               <button
                 type="button"
                 title="Use this expression"
-                class="flex w-full flex-col items-end gap-0.5 rounded-md px-2 py-2 text-right font-mono tabular-nums transition-colors duration-150 hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none focus-visible:ring-inset"
+                class="flex w-full flex-col items-end gap-0.5 rounded-md px-2 py-2 text-right font-mono tabular-nums transition-colors duration-150 focus-visible:bg-primary/12 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none focus-visible:ring-inset"
                 onclick={() => reuse(entry)}
               >
                 <span class="max-w-full text-2xs break-all text-foreground/65">{display_expression(entry.expression)} =</span>

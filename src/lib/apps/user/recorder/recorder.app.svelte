@@ -309,7 +309,7 @@
               <li>
                 <button
                   type="button"
-                  class="flex h-11 w-full items-center gap-2.5 rounded-md px-2 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cottontail focus-visible:ring-inset"
+                  class="flex h-11 w-full items-center gap-2.5 rounded-md px-2 text-left focus-visible:bg-primary/12 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cottontail focus-visible:ring-inset"
                   onclick={(event) => void apps.open(`${RECORDINGS_DIR}/${item.name}`, { anchor: { x: event.clientX, y: event.clientY } })}
                 >
                   <Icon class="size-5 shrink-0 text-foreground/70" weight="duotone" />

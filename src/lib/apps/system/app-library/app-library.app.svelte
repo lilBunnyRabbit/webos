@@ -173,7 +173,7 @@
             title={manifest.description}
             class={cn(
               "flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-cottontail",
-              manifest.id === selected_id.value ? "bg-primary/14" : "hover:bg-foreground/8"
+              manifest.id === selected_id.value ? "bg-primary/14" : "hover:text-foreground"
             )}
             onclick={() => select(manifest)}
             ondblclick={() => apps.launch(manifest.id)}
@@ -203,7 +203,7 @@
             aria-current={manifest.id === selected_id.value ? "true" : undefined}
             class={cn(
               "flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors duration-150 pointer-coarse:h-12 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cottontail",
-              manifest.id === selected_id.value ? "bg-primary/14" : "hover:bg-foreground/6"
+              manifest.id === selected_id.value ? "bg-primary/14" : "hover:text-foreground"
             )}
             onclick={() => select(manifest)}
             ondblclick={() => apps.launch(manifest.id)}

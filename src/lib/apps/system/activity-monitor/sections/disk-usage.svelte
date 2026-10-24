@@ -203,8 +203,8 @@
           <button
             type="button"
             class={cn(
-              "flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-foreground/4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cottontail pointer-coarse:py-3",
-              picked?.path === child.path && "bg-foreground/6"
+              "flex w-full items-center gap-3 px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cottontail pointer-coarse:py-3",
+              picked?.path === child.path && "bg-background-lighter shadow-control"
             )}
             onclick={() => choose(child)}
             {onkeydown}

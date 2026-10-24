@@ -208,7 +208,7 @@
               <ul class="flex flex-col gap-0.5">
                 {#each regions as region, index (`${region.x},${region.y},${region.width},${region.height}`)}
                   <li
-                    class="flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6 pointer-coarse:h-10"
+                    class="flex h-8 items-center gap-2 rounded-md pl-2 pointer-coarse:h-10"
                     onpointerenter={() => (hovered = region)}
                     onpointerleave={() => (hovered = null)}
                   >

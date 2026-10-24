@@ -537,7 +537,7 @@
             <IconButton label="Zoom out" size="sm" onclick={() => zoom_at(step_zoom(zoom, -1))}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
             <button
               type="button"
-              class="h-7 w-12 rounded-sm font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-9"
+              class="h-7 w-12 rounded-sm font-mono text-2xs text-foreground/80 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed pointer-coarse:h-9"
               title="Actual size"
               onclick={() => zoom_at(1)}>{Math.round(zoom * 100)}%</button
             >

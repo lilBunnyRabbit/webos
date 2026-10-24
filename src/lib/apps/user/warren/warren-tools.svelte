@@ -507,7 +507,7 @@
       {#each repeats as repeat (repeat.word)}
         <button
           type="button"
-          class="flex h-8 items-center justify-between rounded-md px-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-10"
+          class="flex h-8 items-center justify-between rounded-md px-2 text-left text-ui focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-10"
           title="Select the next “{repeat.word}”"
           onclick={() => onword(repeat.word)}
         >
@@ -525,7 +525,7 @@
       {#each editor.outline as heading (heading.key)}
         <button
           type="button"
-          class="flex h-8 min-w-0 items-center rounded-md pr-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-11"
+          class="flex h-8 min-w-0 items-center rounded-md pr-2 text-left text-ui focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-11"
           class:font-semibold={heading.level === 1}
           style="padding-left: {0.5 + (heading.level - 1) * 0.875}rem"
           onclick={() => ongo(heading.key)}

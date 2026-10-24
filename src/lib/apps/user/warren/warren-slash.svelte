@@ -73,7 +73,7 @@
         aria-selected={index === editor.slash_index}
         class={cn(
           "flex h-8 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-ui select-none pointer-coarse:h-11",
-          index === editor.slash_index ? "bg-foreground/10" : "hover:bg-foreground/6"
+          index === editor.slash_index ? "bg-background-lighter shadow-control" : "hover:bg-background-lighter hover:shadow-control"
         )}
         onpointerdown={keep_focus}
         onpointermove={() => (editor.slash_index = index)}

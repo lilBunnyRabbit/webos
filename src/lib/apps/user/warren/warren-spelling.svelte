@@ -60,10 +60,10 @@
     {:else}
       <div class="flex flex-col" role="list" aria-label="Misspelt words">
         {#each list.words as item (item.word)}
-          <div role="listitem" class={["rounded-md", open === item.word && "bg-foreground/6"]}>
+          <div role="listitem" class={["rounded-md", open === item.word && "bg-background-lighter shadow-control"]}>
             <button
               type="button"
-              class="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-11"
+              class="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-ui focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-11"
               aria-expanded={open === item.word}
               title="Select the next “{item.word}”"
               onclick={() => pick(item.word)}

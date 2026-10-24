@@ -261,7 +261,7 @@
         role="option"
         aria-selected={index === popup.index}
         tabindex="-1"
-        class={cn("flex w-full items-baseline gap-4 rounded-md px-2 py-1 text-left", index === popup.index ? "bg-primary/12 text-foreground" : "text-foreground/80 hover:bg-foreground/6")}
+        class={cn("flex w-full items-baseline gap-4 rounded-md px-2 py-1 text-left", index === popup.index ? "bg-primary/12 text-foreground" : "text-foreground/80 hover:bg-background-lighter hover:text-foreground hover:shadow-control")}
         onpointerdown={(event) => event.preventDefault()}
         onclick={() => pick(index)}
       >

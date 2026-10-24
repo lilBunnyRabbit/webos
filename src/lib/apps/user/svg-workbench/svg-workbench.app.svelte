@@ -541,7 +541,7 @@
               <ul class="grid grid-cols-1 gap-x-4 @sm:grid-cols-2 @xl:grid-cols-3">
                 {#each [...new Set([...PNG_SIZES, ...chosen_sizes])].sort((a, b) => a - b) as value (value)}
                   <li>
-                    <label class="flex min-h-9 items-center gap-2.5 rounded-md px-1 text-ui hover:bg-foreground/6">
+                    <label class="flex min-h-9 items-center gap-2.5 rounded-md px-1 text-ui">
                       <Checkbox checked={chosen_sizes.includes(value)} onchange={(event) => toggle_size(value, event.currentTarget.checked)} />
                       <span class="w-12 font-mono tabular-nums">{value}</span>
                       <span class="font-mono text-2xs text-foreground/65 tabular-nums">{dimensions(value)} px</span>

@@ -29,7 +29,7 @@
     <tbody>
       {#each shown as row, row_index (row_index)}
         <tr
-          class={cn("group", open && "cursor-pointer hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none")}
+          class={cn("group", open && "cursor-pointer focus-visible:bg-primary/12 focus-visible:outline-none")}
           tabindex={open ? 0 : undefined}
           onclick={() => open?.(row as Tagged)}
           onkeydown={(event) => {
@@ -44,7 +44,7 @@
               class={cn(
                 "px-2 py-px whitespace-pre first:pl-0",
                 index === 0 && sticky,
-                index === 0 && open && "group-hover:bg-[color-mix(in_oklab,var(--color-foreground)_6%,var(--terminal-background))] group-focus-visible:bg-[color-mix(in_oklab,var(--color-primary)_12%,var(--terminal-background))]",
+                index === 0 && open && "group-focus-visible:bg-[color-mix(in_oklab,var(--color-primary)_12%,var(--terminal-background))]",
                 numeric[index] ? "text-right text-foreground/80 tabular-nums" : index === 0 && open && "text-primary"
               )}
             >{cell(row, column, value_type)}</td>

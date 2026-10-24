@@ -51,7 +51,7 @@
       {@const result = verdict(report)}
       {@const info = PLATFORMS[report.id]}
       <details class="group rounded-xl bg-background-light shadow-card ring-1 ring-hairline" open={report.id === focus}>
-        <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-3 hover:bg-foreground/4 [&::-webkit-details-marker]:hidden">
+        <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-3 [&::-webkit-details-marker]:hidden">
           <CaretRightIcon class="size-3.5 shrink-0 text-foreground/65 transition-transform group-open:rotate-90" weight="bold" />
           <span class="grid size-6 shrink-0 place-items-center rounded-md bg-foreground/8 text-foreground/80"><Icon class="size-3.5" weight="bold" /></span>
           <span class="min-w-0 flex-1 truncate text-ui font-medium">{info.name}</span>

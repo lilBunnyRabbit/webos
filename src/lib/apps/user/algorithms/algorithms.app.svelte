@@ -188,7 +188,7 @@
             aria-current={item.id === entry.id ? "page" : undefined}
             class={cn(
               "h-7 shrink-0 rounded-md px-2.5 text-ui font-medium whitespace-nowrap transition-colors duration-150 pointer-coarse:h-9",
-              item.id === entry.id ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+              item.id === entry.id ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:text-foreground"
             )}
             onclick={() => (section.value = item.id)}
           >

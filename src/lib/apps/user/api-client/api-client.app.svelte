@@ -316,7 +316,7 @@
             type="button"
             class={cn(
               "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui transition-colors duration-150",
-              index === selected ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+              index === selected ? "bg-background-lighter text-foreground shadow-control" : "text-foreground/80 hover:text-foreground"
             )}
             aria-current={index === selected}
             onclick={() => select(index)}

@@ -13,7 +13,7 @@
   const image = $derived(pair.images[slot]);
 </script>
 
-<div class="flex h-9 items-center gap-1 rounded-md pl-2 hover:bg-foreground/6">
+<div class="flex h-9 items-center gap-1 rounded-md pl-2">
   <span class="w-14 shrink-0 text-2xs font-medium text-foreground/65">{label}</span>
   {#if pair.loading[slot]}
     <span class="flex-1"><Spinner label="Loading {label.toLowerCase()}" /></span>

@@ -440,7 +440,7 @@
           <ol class="flex flex-col gap-0.5">
             {#each frames as frame, index (frame)}
               <li
-                class={["flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6 pointer-coarse:h-10", selected === index && "bg-foreground/6"]}
+                class={["flex h-8 items-center gap-2 rounded-md pl-2 pointer-coarse:h-10", selected === index && "bg-background-lighter shadow-control"]}
                 onpointerenter={() => (hovered = index)}
                 onpointerleave={() => (hovered = null)}
               >
@@ -459,7 +459,7 @@
             <IconButton label="Zoom out" size="sm" variant="quiet" disabled={camera.scale <= 1} onclick={() => zoom_by(1 / ZOOM_STEP)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
             <button
               type="button"
-              class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-9"
+              class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed pointer-coarse:h-9"
               title="Fit"
               onclick={() => (camera = FIT)}>{Math.round(camera.scale * 100)}%</button
             >

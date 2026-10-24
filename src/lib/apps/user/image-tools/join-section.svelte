@@ -224,7 +224,7 @@
           </div>
           <ol class="flex flex-col gap-0.5">
             {#each images as image, index (image)}
-              <li class="flex h-8 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6">
+              <li class="flex h-8 items-center gap-2 rounded-md pl-2">
                 <span class="w-4 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>
                 <span class="min-w-0 flex-1 truncate text-ui" title={image.path ?? image.name}>{image.name}</span>
                 <span class="shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{image.bitmap.width}×{image.bitmap.height}</span>

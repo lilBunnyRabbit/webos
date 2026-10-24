@@ -300,7 +300,7 @@
         <ol class="flex flex-col gap-0.5">
           {#each rows as { entry, target, result, after } (entry.id)}
             {@const resized = target.width !== entry.width || target.height !== entry.height}
-            <li class="flex h-9 items-center gap-2 rounded-md pl-2 hover:bg-foreground/6">
+            <li class="flex h-9 items-center gap-2 rounded-md pl-2">
               {#if result}
                 <button type="button" class="min-w-0 flex-1 truncate text-left text-ui hover:underline" title="Open {result.path}" onclick={() => kernel.service<AppsService>("apps").open(result.path)}>{entry.name}</button>
               {:else}

@@ -25,8 +25,8 @@
 <button
   type="button"
   class={cn(
-    "grid w-full grid-cols-[1fr_auto] items-center gap-x-2 gap-y-0.5 rounded-md px-2.5 py-2 text-left hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:py-2.5",
-    selected && "bg-primary/14 hover:bg-primary/14"
+    "grid w-full grid-cols-[1fr_auto] items-center gap-x-2 gap-y-0.5 rounded-md px-2.5 py-2 text-left focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:py-2.5",
+    selected && "bg-primary/14"
   )}
   onclick={() => onopen(meta)}
 >

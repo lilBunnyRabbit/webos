@@ -144,7 +144,7 @@
             <li>
               <button
                 type="button"
-                class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-ui hover:bg-foreground/6 focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-12"
+                class="flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-ui focus-visible:bg-primary/12 focus-visible:outline-none pointer-coarse:h-12"
                 onclick={() => pick(snapshot)}
               >
                 <span class="min-w-0 flex-1 truncate">{format_datetime(snapshot.at)}</span>

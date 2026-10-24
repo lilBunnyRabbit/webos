@@ -48,7 +48,7 @@
       {@const open = expanded.value.includes(key)}
       <li class="rounded-xl bg-background-light shadow-card ring-1 ring-hairline">
         <button
-          class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-foreground/4"
+          class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left"
           aria-expanded={open}
           aria-controls="inspector-{key}"
           onclick={() => toggle(key)}

@@ -443,7 +443,7 @@
             {:else}
               <ul class="flex flex-col gap-0.5">
                 {#each regions as region, index (`${region.x},${region.y},${region.width},${region.height}`)}
-                  <li class="flex items-center gap-1 rounded-md hover:bg-foreground/6" onpointerenter={() => (hovered = region)} onpointerleave={() => (hovered = null)}>
+                  <li class="flex items-center gap-1 rounded-md" onpointerenter={() => (hovered = region)} onpointerleave={() => (hovered = null)}>
                     <label class="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 px-2 pointer-coarse:h-10">
                       <Checkbox checked={is_restored(ops, region)} onchange={() => (ops = toggle_rect(ops, region))} />
                       <span class="w-5 shrink-0 font-mono text-2xs text-foreground/65 tabular-nums">{index + 1}</span>
@@ -502,7 +502,7 @@
               <IconButton label="Zoom out" size="sm" variant="quiet" disabled={camera.scale <= 1} onclick={() => zoom_by(1 / ZOOM_STEP)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
               <button
                 type="button"
-                class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums hover:bg-foreground/6 pointer-coarse:h-9"
+                class="h-7 min-w-11 rounded-md font-mono text-2xs text-foreground/80 tabular-nums transition-[background-color,box-shadow,color] hover:bg-background-lighter hover:text-foreground hover:shadow-control active:shadow-pressed pointer-coarse:h-9"
                 title="Fit"
                 onclick={() => (camera = FIT)}>{Math.round(camera.scale * 100)}%</button
               >

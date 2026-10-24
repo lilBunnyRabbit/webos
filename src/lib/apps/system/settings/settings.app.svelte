@@ -126,8 +126,8 @@
         aria-selected={index === active}
         tabindex="-1"
         class={cn(
-          "flex min-h-11 shrink-0 flex-col justify-center rounded-lg px-2.5 py-1.5 text-left transition-colors duration-150 @2xl:min-h-0 pointer-coarse:min-h-11",
-          index === active ? "bg-foreground/10" : "hover:bg-foreground/6"
+          "flex min-h-11 shrink-0 flex-col justify-center rounded-lg px-2.5 py-1.5 text-left transition-[background-color,box-shadow] duration-150 @2xl:min-h-0 pointer-coarse:min-h-11",
+          index === active ? "bg-background-lighter shadow-control" : "hover:bg-background-lighter hover:shadow-control"
         )}
         onclick={() => ((active = index), void go(entry))}
       >
