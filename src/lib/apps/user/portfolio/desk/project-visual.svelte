@@ -6,12 +6,14 @@
     petrace: "A phone showing a faint drawing of a house, and beside it a sheet of paper where a pencil traces the same house line by line.",
     "series-tracker": "Two seasons of episodes as a grid, ticked off one by one, with the next episode marked.",
     agtc: "Three coding-agent sessions whose status changes in place: busy, done, waiting for input.",
+    hq: "A quest is picked from a list and started, and each step of the session lights the part of hq it uses: the quest, the knowledge of past fixes, the code style, the skills, then the quest again when it's done.",
   };
 </script>
 
 <script lang="ts">
   import GraphicAgtc from "./graphic-agtc.svelte";
   import GraphicChromatics from "./graphic-chromatics.svelte";
+  import GraphicHq from "./graphic-hq.svelte";
   import GraphicPetrace from "./graphic-petrace.svelte";
   import GraphicSeasons from "./graphic-seasons.svelte";
   import GraphicTasks from "./graphic-tasks.svelte";
@@ -35,5 +37,7 @@
     <GraphicSeasons {player} />
   {:else if id === "agtc"}
     <GraphicAgtc {player} />
+  {:else if id === "hq"}
+    <GraphicHq {player} />
   {/if}
 </div>

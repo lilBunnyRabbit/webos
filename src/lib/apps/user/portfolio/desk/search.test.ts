@@ -17,7 +17,7 @@ describe("search", () => {
 
   test("a principle lights up its evidence instead of opening a window, and names where it shows up", () => {
     const [hit] = search("where it runs");
-    expect(hit).toMatchObject({ kind: HitKind.PRINCIPLE, principle: "tested", detail: "Astra AI, WebOS, Petrace, chrome-safe-inset" });
+    expect(hit).toMatchObject({ kind: HitKind.PRINCIPLE, principle: "tested", detail: "Astra AI, WebOS, Petrace, hq, chrome-safe-inset" });
     expect(hit.window).toBeUndefined();
   });
 

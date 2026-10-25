@@ -87,7 +87,7 @@
 
     <div class="links flex items-center justify-between gap-2 px-3.5 pt-2 pb-2.5">
       <ProjectLinks links={project.links} name={project.name} />
-      {#if project.badge}<Badge>{project.badge}</Badge>{/if}
+      {#if project.badge}<Badge class="ml-auto">{project.badge}</Badge>{/if}
     </div>
   </article>
 </div>

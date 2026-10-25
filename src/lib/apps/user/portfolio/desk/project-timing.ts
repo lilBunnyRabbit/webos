@@ -1,5 +1,13 @@
 import { PROJECTS } from "./evidence";
-import { PALETTE_DURATION, SEASONS_DURATION, SESSIONS_DURATION, TASKS_DURATION, TRACE_DURATION, WEBOS_DURATION } from "./project-scenes";
+import {
+  HQ_DURATION,
+  PALETTE_DURATION,
+  SEASONS_DURATION,
+  SESSIONS_DURATION,
+  TASKS_DURATION,
+  TRACE_DURATION,
+  WEBOS_DURATION,
+} from "./project-scenes";
 
 export const STAGGER = 250;
 export const SLIDE_MS = 400;
@@ -13,6 +21,7 @@ export const DURATIONS: Record<string, number> = {
   petrace: TRACE_DURATION,
   "series-tracker": SEASONS_DURATION,
   agtc: SESSIONS_DURATION,
+  hq: HQ_DURATION,
 };
 
 export const PROJECTS_PLAY_MS = Math.max(...PROJECTS.map((project, index) => (DURATIONS[project.id] ?? 0) + index * STAGGER));
