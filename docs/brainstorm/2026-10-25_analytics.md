@@ -36,5 +36,12 @@ Leave as is: only consented visitors are counted. Rejected: GoatCounter next to 
 ### Loading before the answer (decided)
 gtag loads only after Allow: `index.html` defines `webos_load_analytics()` and calls it at boot when the mirror says `allowed`; `set_consent("allowed")` calls it mid-session. The pre-answer pings gave nothing at this traffic and were the weakest part legally. Rejected: keep loading always.
 
+### Analytics service (decided)
+Owner asked whether analytics should be a service. Today it touches `index.html` (loader), `analytics.ts`, Settings (field + mirror effect), Version (the ask) and Apps (`track_launch`), each 5 to 10 lines, one event, one three-value answer; the loader must stay in `index.html` either way. A service would only pay off with an app `track()` API, which reopens the privacy promise.
+- **Shape:** keep the util. The mirror moves into `apply_consent()` so Settings only holds the field. Rejected: `AnalyticsService` with `/var/lib/analytics/state.json` (service plus migration for one field), service plus an app track API (public API change, speculation).
+- **Solo:** a solo tab sends `app_open` (`mode: solo`) when the stored answer is already `allowed`; solo never asks. Rejected: skip loading on `#/solo/`.
+- **Two tabs:** leave it; another tab stops at its next reload. Rejected: a `storage` listener (patches one field of settings' general last-writer-wins gap).
+- **Shell and inspector:** nothing. Rejected: `analytics status|allow|decline`, inspector rows.
+
 ## Next session topics
 - Which other events are worth it, if any, after a few weeks of data.

@@ -1,6 +1,6 @@
 import html from "../../../../index.html?raw";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { ANALYTICS_CONSENT_KEY, launch_event, set_consent, track_launch } from "./analytics";
+import { ANALYTICS_CONSENT_KEY, apply_consent, launch_event, set_consent, track_launch } from "./analytics";
 
 const holder = globalThis as { gtag?: (...args: unknown[]) => void; webos_load_analytics?: () => void };
 
@@ -51,6 +51,14 @@ describe("loading", () => {
     expect(load).not.toHaveBeenCalled();
     set_consent("allowed");
     expect(load).toHaveBeenCalledOnce();
+  });
+
+  test("applying an answer mirrors it for index.html", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", { setItem: (key: string, value: string) => store.set(key, value) });
+    apply_consent("declined");
+    expect(store.get(ANALYTICS_CONSENT_KEY)).toBe("declined");
+    vi.unstubAllGlobals();
   });
 });
 

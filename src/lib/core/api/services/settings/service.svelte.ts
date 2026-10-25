@@ -23,7 +23,7 @@ import {
   WALLPAPER_DIRECTORY_NAME,
 } from "./persistence";
 import { settings_shell } from "./shell";
-import { ANALYTICS_CONSENT_KEY, set_consent } from "$lib/core/utils/analytics";
+import { apply_consent } from "$lib/core/utils/analytics";
 
 export class SettingsService implements ISettingsService {
   name = "SettingsService";
@@ -115,15 +115,7 @@ export class SettingsService implements ISettingsService {
         });
       }
 
-      $effect(() => {
-        const answer = this.analytics;
-        try {
-          localStorage.setItem(ANALYTICS_CONSENT_KEY, answer);
-        } catch (error) {
-          console.warn("[SettingsService] Couldn't mirror the analytics answer", error);
-        }
-        set_consent(answer);
-      });
+      $effect(() => apply_consent(this.analytics));
 
       $effect(() => {
         this.writer.write(

@@ -32,6 +32,16 @@ export function track_launch(app_id: string, mode: Mode, platform: Platform): vo
   gtag()?.("event", "app_open", launch_event(app_id, mode, platform));
 }
 
+/** Mirrors the stored answer for `index.html`'s next load, then applies it to this page. */
+export function apply_consent(answer: AnalyticsConsent): void {
+  try {
+    localStorage.setItem(ANALYTICS_CONSENT_KEY, answer);
+  } catch (error) {
+    console.warn("[analytics] Couldn't mirror the answer", error);
+  }
+  set_consent(answer);
+}
+
 /** "allowed" loads gtag now; any other answer stops what this page already loaded, and the next load never loads it. */
 export function set_consent(answer: AnalyticsConsent): void {
   if (answer === "allowed") {
