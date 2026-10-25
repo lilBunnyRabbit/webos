@@ -17,6 +17,7 @@ export const EXAMPLE_APP = stand_in({
   meta: async () => ({ default: { description: "Test app" } }),
   category: AppCategory.DEVELOPER,
   props: z.object({ count: z.number() }),
+  replaces: [{ app: "old-games", props: { mode: "count" } }],
 });
 
 export const BOARD_APP = stand_in({
@@ -36,7 +37,7 @@ export const NOTES_APP = stand_in({
   }),
 });
 
-export const GAME_APP = stand_in({ id: "game", name: "Game", category: AppCategory.GAMES });
+export const GAME_APP = stand_in({ id: "game", name: "Game", category: AppCategory.GAMES, replaces: [{ app: "old-games" }] });
 
 /** The system apps plus these: the same registry whether or not the user apps exist. */
 export class TestAppsService extends AppsService {

@@ -127,7 +127,7 @@ The owner: "maybe a fun game showcasing all the color models". Every package mod
 - [x] Portfolio: rewrite the Chromatics card and drop culori from the stack.
 - [x] Portfolio: the package's own featured card beside the studio's, with its conversion-route graphic (owner reversal, 2026-10-25).
 - [ ] Portfolio: "See it in WebOS" on the package card, pointing to Colour Atlas once it ships.
-- [ ] Split Color Games (ADR-071).
+- [x] Split Color Games (ADR-071).
 - [x] Color Tools v1 (ADR-072), 2026-10-25. It can run in parallel with the split, since they share no files beyond the compat list.
 - [ ] The games swap culori for `color-tools/color.ts`, after both of the above merge. Out-of-gamut hexes shift, since CSS Color 4 gamut mapping differs from `clampChroma`. Check the `hex`, `odd` and `sort` tests.
 

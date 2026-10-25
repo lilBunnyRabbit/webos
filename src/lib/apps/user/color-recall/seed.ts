@@ -1,15 +1,15 @@
 import { daily_key } from "$kit/games/daily";
 import { daily_seed } from "$kit/games/time";
-import { APP_ID, type Mode } from "./modes";
+import { LEGACY_ID, type Mode } from "./modes";
 
 /** A day (`YYYY-MM-DD`) plays that day's puzzle; a number is a practice puzzle. */
 export type Seed = string | number;
 
 const FIRST_DAY = Date.UTC(2026, 9, 17);
 
-/** Each mode gets its own puzzle on the same day. */
+// Each game keeps the seed it had as a mode of Color Games, so a day plays the same puzzle as before the split (ADR-071).
 export function resolve_seed(mode: Mode, seed: Seed): number {
-  return typeof seed === "string" ? daily_seed(seed, daily_key(APP_ID, mode)) : seed >>> 0;
+  return typeof seed === "string" ? daily_seed(seed, daily_key(LEGACY_ID, mode)) : seed >>> 0;
 }
 
 /** The daily's number in a share line: the day the game came out is #1. */

@@ -39,7 +39,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | |
 | `register(manifest)` | `(manifest: AppManifest): void` | `registry.set`. Same id overwrites silently. No `unregister` |
-| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | Throws `App ${id} not found` for an unknown id. Installs an app that isn't, with an "{App} installed" toast. Always opens a new window |
+| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | An id no app has opens the app that [replaces](#replaced-app-ids-adr-071) it; throws `App ${id} not found` when none does. Installs an app that isn't, with an "{App} installed" toast. Always opens a new window |
 | `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
 | `meta_ready` | `Promise<void>` (getter) | Settles once every app's `meta` has loaded; the first read starts the load. [App meta](#app-meta-adr-049) |
@@ -64,6 +64,14 @@ Pure helpers, exported from the barrel:
 | `shortcut_label(file_name)` | `"Settings.desktop"` → `"Settings"`. Strips the last 8 characters without checking them |
 
 `SHORTCUT_EXTENSION` (`".desktop"`) and the `Shortcut` interface are exported too.
+
+`replaces.ts` (not in the barrel; AppsService, RouterService and OfflineService import it):
+
+| Function | Behaviour |
+|----------|-----------|
+| `resolve_replaced(manifests, id, props)` | `{ id, props } \| null`: the app whose `replaces` entry names `id` and whose entry props all equal the given ones, the entry naming most props winning; an entry without props matches anything. The returned props drop the matched keys (`undefined` when nothing is left). `null` when no entry matches |
+| `replacing_apps(manifests, id)` | Every app with a `replaces` entry for `id`, in registry order |
+| `current_ids(manifests, ids, known)` | Saved ids as today's: a known id stays, an unknown one becomes `replacing_apps`, deduplicated |
 
 ## Shortcuts (`.desktop` files)
 
@@ -94,7 +102,7 @@ The constructor also wires `$derived` references to its five dependencies. There
 
 ### `init()`: the installed list (ADR-040)
 
-1. `/var/lib/apps/installed.json` parses → load it, dropping ids no app has. Done.
+1. `/var/lib/apps/installed.json` parses → load it through `current_ids`: an id an app [replaces](#replaced-app-ids-adr-071) becomes every app replacing it, any other unknown id drops. The file isn't rewritten; the next install or uninstall saves the mapped list. Done.
 2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the system apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
 3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Library**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
@@ -117,7 +125,7 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 
 ### `launch(id, props?)`
 
-1. Look up the manifest. Missing → `throw`.
+1. Look up the manifest. Missing → try `resolve_replaced` ([below](#replaced-app-ids-adr-071)) and carry on with the app and props it gives. Still missing → `throw`.
 2. Not installed → `install(id)` and an info toast "{App} installed". Every UI way in (a file, a deep link, an announcement, Game Hub, search's Get group) is the intent to have it; the shell checks before calling.
 3. Validate props (below).
 4. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
@@ -126,6 +134,16 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 7. `track_launch(id, kernel.mode, kernel.platform)` (`core/utils/analytics.ts`, ADR-070): pushes gtag's `app_open` event with `app_id`, `mode` (`desktop` for the full OS, `solo`) and `platform` (`desktop` | `mobile`). Never props, paths, file names or command text. A no-op when `window.gtag` is missing (tests, dev, localhost, blocked). Session restore goes through `create_instance`, so restored windows aren't counted; a solo tab counts its one window, not the blocked launches after it.
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
+
+### Replaced app ids (ADR-071)
+
+A manifest's `replaces: { app, props? }[]` names ids it took over. An id that is in the registry always wins; only an id no app has is resolved, by `resolve_replaced`:
+
+- `launch(id, props)` and the `.desktop` / `.widget` paths of `open()` (a shortcut to the old id still opens);
+- RouterService for `#/app/` and `#/solo/` links, before it validates props ([router](router.md)); the solo shell's header names the app that opened, not the link's id;
+- `init()` for the installed list and OfflineService for the offline picks (`current_ids`: the old id becomes every replacing app).
+
+Today: Color Games became Color Recall (`{ app: "color-games" }` and `{ mode: "recall" }`), Odd One Out, Gradient Sort and Hex Guess (`{ mode: … }` each). `#/solo/color-games?mode=hex-guess&seed=12` opens Hex Guess with `{ seed: 12 }`; `#/solo/color-games` opens Color Recall.
 
 ### App meta (ADR-049)
 
@@ -187,8 +205,8 @@ Discarding does two things: `console.warn("[AppsService] \"{id}\" {reason}, disc
 
 1. `files.get_file(path)`. `null` → error notification "File not found" (app id `"apps"`, message = path) → resolve `null`. If `get_file` throws, the promise rejects; the caller handles it.
 2. `extension = file_extension(file.name)`.
-3. **Shortcut.** If the extension is `.desktop`: read the file and `parse_shortcut()` it. Unparseable, or the `app_id` isn't registered → error notification "Broken shortcut" (app id `"apps"`, message = path) → `null`. Otherwise → `launch(app_id, props)`, with the shortcut's props, not `{ path }`. This runs before remembered defaults and associations, so no default or Open-with choice can capture `.desktop`.
-   **Widget.** Same for `.widget`: `parse_widget()`, and an unparseable file or unregistered `app` → error notification "Broken widget" → `null`. Otherwise → `launch(app, props)` with the widget's props, so opening a widget opens its app in a window.
+3. **Shortcut.** If the extension is `.desktop`: read the file and `parse_shortcut()` it. Unparseable, or the `app_id` is neither registered nor replaced → error notification "Broken shortcut" (app id `"apps"`, message = path) → `null`. Otherwise → `launch(app_id, props)`, with the shortcut's props, not `{ path }`. This runs before remembered defaults and associations, so no default or Open-with choice can capture `.desktop`.
+   **Widget.** Same for `.widget`: `parse_widget()`, and an unparseable file or an `app` neither registered nor replaced → error notification "Broken widget" → `null`. Otherwise → `launch(app, props)` with the widget's props, so opening a widget opens its app in a window.
 4. **Remembered default.** Skipped when an app claims the file by a compound extension (`has_compound_match`, `.form.md`). Otherwise, if there is an extension, `settings.file_defaults[extension]` names an app, and that app is in the registry → `launch(default_id, { path })`. The default app does not have to list the extension in its associations. A default pointing at a missing app is skipped, not deleted.
 5. **Candidates.** `best_apps_for(registry.values(), file)`, matching on `file.name` and `file.type` (the MIME the browser assigns to the OPFS `File`).
 6. Zero candidates → warning notification "No app can open {name}" (app id `"apps"`) → `null`.
@@ -227,6 +245,8 @@ The shell never installs (ADR-040):
 - `open` is a file open, so it installs the file's app like any other (through `launch`).
 
 ## Known gaps
+
+- `replaces` reaches launches, files, links, the installed list and the offline picks only. A saved session window, a taskbar pin, a mobile home or dock entry, a recent-list entry or a `file_defaults` entry for the old id isn't mapped, and the desktop draws a `.desktop` shortcut to it without the new app's icon until opened. `create_instance` doesn't resolve either.
 
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.

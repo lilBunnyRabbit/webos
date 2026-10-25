@@ -9,6 +9,7 @@ import { TaskJobStatus } from "../tasks/type";
 import { BUILD_INFO } from "../version/build-info";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { stale_caches } from "./lists";
+import { current_ids } from "../apps/replaces";
 import { OFFLINE_STATE_PATH, PICKED_PATH, parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
 import { OfflineStatus, type OfflineService as IOfflineService } from "./type";
 
@@ -248,7 +249,8 @@ export class OfflineService implements IOfflineService {
   }
 
   private apply_picked(ids: AppId[]): void {
-    const next = new Set(ids.filter((id) => this.apps_service.get(id)?.system === false));
+    const manifests = Array.from(this.apps_service.list(), ([, manifest]) => manifest);
+    const next = new Set(current_ids(manifests, ids, (id) => this.apps_service.get(id) !== undefined).filter((id) => this.apps_service.get(id)?.system === false));
     for (const id of [...this.picked]) if (!next.has(id)) this.picked.delete(id);
     for (const id of next) this.picked.add(id);
   }

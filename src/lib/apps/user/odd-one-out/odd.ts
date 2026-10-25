@@ -1,7 +1,7 @@
 import { create_rng } from "$lib/core/utils/random";
 import { z } from "zod";
-import { hex_lch, lch_hex } from "./color";
-import { sub_seed } from "./seed";
+import { hex_lch, lch_hex } from "../color-recall/color";
+import { sub_seed } from "../color-recall/seed";
 
 export const ODD_MS = 60_000;
 export const MISS_PENALTY_MS = 3_000;

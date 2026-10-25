@@ -5,8 +5,8 @@
   import { cn } from "$lib/core/utils";
   import { tick, untrack } from "svelte";
   import { MISS_PENALTY_MS, ODD_MS, odd_round, remaining_ms, type OddState } from "./odd";
-  import type { RunProps } from "./run";
-  import ShareCard from "./share-card.svelte";
+  import type { RunProps } from "../color-recall/run";
+  import ShareCard from "../color-recall/share-card.svelte";
   import { odd_share } from "./share";
 
   let { seed, daily, head, link, saved, onsave, onfinish, next }: RunProps<OddState> = $props();

@@ -1,6 +1,6 @@
 import { create_rng, random_int } from "$lib/core/utils/random";
 import { z } from "zod";
-import { hsb_hex } from "./color";
+import { hsb_hex } from "../color-recall/color";
 
 export const HEX_GUESSES = 5;
 export const HEX_LENGTH = 6;

@@ -86,6 +86,22 @@ describe("AppsService installed apps", () => {
     expect([...apps(kernel).list({ installed: false })].map(([id]) => id)).toContain("board");
   });
 
+  test("a replaced id in the saved list becomes every app that replaced it (ADR-071)", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["notes", "old-games"]));
+    const kernel = await boot();
+    expect(user_apps(kernel).filter((id) => apps(kernel).is_installed(id)).sort()).toEqual(["example", "game", "notes"]);
+  });
+
+  test("launching a replaced id opens the app its props name, without them; no match takes the bare entry", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["example", "game"]));
+    const kernel = await boot();
+    const windows = kernel.service<WindowsService>("windows");
+    const opened = (id: string) => windows.get(id)?.app;
+    expect(opened(apps(kernel).launch("old-games", { mode: "count", count: 2 }))).toMatchObject({ id: "example", props: { count: 2 } });
+    expect(opened(apps(kernel).launch("old-games"))).toMatchObject({ id: "game", props: undefined });
+    expect(() => apps(kernel).launch("gone")).toThrow("App gone not found");
+  });
+
   test("launching an app that isn't installed installs it, with a toast", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();

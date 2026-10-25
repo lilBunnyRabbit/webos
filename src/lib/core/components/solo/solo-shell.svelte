@@ -24,9 +24,10 @@
   const version = $derived(kernel.service<VersionService>("version"));
 
   const route = parse_hash(location.hash);
-  const manifest = $derived(route ? apps.get(route.id) : undefined);
   const current = $derived(windows.list()[0] ?? null);
   const instance = $derived(current ? windows.get(current) : undefined);
+  // The opened window's app, not the link's id: a link to a replaced id opens another app (ADR-071).
+  const manifest = $derived(instance?.app.manifest ?? (route ? apps.get(route.id) : undefined));
   const broken = $derived(router.last_link !== null && router.last_link.outcome !== LinkOutcome.OPENED);
 
   const os_link = $derived(

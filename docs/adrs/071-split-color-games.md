@@ -1,6 +1,6 @@
 # ADR-071: Split Color Games and Replaced App Ids
 **Date:** 2026-10-25
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -45,3 +45,11 @@ Discussion: [brainstorm](../brainstorm/2026-10-25_chromatics.md).
 - `define_app` grows a stable optional field (app-api.md, `app-api.test.ts`). Future renames use it, for example Wordle → Letterer, which had none.
 - ADR-050's per-mode keys remain for Sudoku. Color Games' use of them becomes history.
 - There are four launcher entries in Games instead of one.
+
+## Revision 2026-10-25: implemented (3.70)
+
+- **Where the resolving lives.** `apps/replaces.ts` holds three pure helpers: `resolve_replaced(manifests, id, props)`, `replacing_apps` and `current_ids`. AppsService uses them in `launch()`, in `open()` for `.desktop` and `.widget` targets, and in `init()` for the installed list. RouterService and OfflineService call them over `apps.list()`, so the AppsService interface gains no method. A registered id always wins; only an unknown one resolves. When several entries match, the one naming most props wins, and the matched props are dropped from what the app receives.
+- **Not rewritten.** The installed list and `/etc/offline.json` are mapped on read and saved in the new shape on their next write.
+- **Not covered.** Saved session windows, taskbar pins, mobile home and dock entries, the recent list and `file_defaults` naming `color-games` aren't mapped (apps.md, Known gaps). The old `app.color-games.*` localStorage (the slider space, practice level, today's saved daily attempt) isn't carried over, so a daily played on split day before updating can be played again under the new id.
+- **Shared code.** Before Color Tools exists, culori stays Color Recall's dependency. `color.ts`, `seed.ts`, `modes.ts` (now with `LEGACY_ID` and the shared prop schemas), `run.ts`, the share helpers, `share-card.svelte` and the shared frame `color-game.svelte` (Daily/Practice, level, New puzzle, status bar) live in `color-recall/`, and the other three import them. Nothing moved to `$kit/games`: no piece was generic beyond these four games.
+- **Changelog.** The Color Games release lines are retagged to the four ids, following the precedent for retired apps, so each game's App Library history starts there. Share heads read "Color Recall #12" instead of "Color Games · Recall #12".

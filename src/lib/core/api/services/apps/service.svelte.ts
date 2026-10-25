@@ -29,6 +29,7 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { current_ids, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
 import { track_launch } from "$lib/core/utils/analytics";
@@ -86,7 +87,7 @@ export class AppsService implements IAppsService {
   private async init_installed(): Promise<void> {
     const saved = parse_installed(await this.read(INSTALLED_PATH));
     if (saved) {
-      for (const id of saved) if (this.registry.has(id)) this.installed.add(id);
+      for (const id of current_ids(this.registry.values(), saved, (id) => this.registry.has(id))) this.installed.add(id);
       return;
     }
     // No list yet. A first boot starts with the system apps (the intro adds the picked interests); a device from before
@@ -224,7 +225,8 @@ export class AppsService implements IAppsService {
     return this.registry.get(id);
   }
 
-  public launch(id: AppId, props?: unknown): WindowId {
+  public launch(requested: AppId, requested_props?: unknown): WindowId {
+    const { id, props } = this.target(requested, requested_props) ?? { id: requested, props: requested_props };
     const manifest = this.registry.get(id);
     if (!manifest) {
       throw new Error(`App ${id} not found`);
@@ -238,6 +240,13 @@ export class AppsService implements IAppsService {
     this.remember(id);
     track_launch(id, this.kernel.mode, this.kernel.platform);
     return window_id;
+  }
+
+  /** A known id as is; a replaced one (ADR-071) as the app that took it over, with the props left after matching. */
+  private target(id: AppId, props: unknown): { id: AppId; props: unknown } | null {
+    if (this.registry.has(id)) return { id, props };
+    const record = typeof props === "object" && props !== null && !Array.isArray(props) ? (props as AppProps) : undefined;
+    return resolve_replaced(this.registry.values(), id, record);
   }
 
   public create_instance(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance | null {
@@ -272,7 +281,7 @@ export class AppsService implements IAppsService {
     // A shortcut is an OS concept, not a file type an app opens: launch its target instead (ADR-022).
     if (extension === SHORTCUT_EXTENSION) {
       const shortcut = parse_shortcut(await file.text());
-      if (!shortcut || !this.registry.has(shortcut.app_id)) {
+      if (!shortcut || !this.target(shortcut.app_id, shortcut.props)) {
         this.notifications_service.notify("apps", { type: "error", title: "Broken shortcut", message: path });
         return null;
       }
@@ -282,7 +291,7 @@ export class AppsService implements IAppsService {
     // A widget opens its app with the widget's props, like a shortcut.
     if (extension === WIDGET_EXTENSION) {
       const widget = parse_widget(await file.text());
-      if (!widget || !this.registry.has(widget.app)) {
+      if (!widget || !this.target(widget.app, widget.props)) {
         this.notifications_service.notify("apps", { type: "error", title: "Broken widget", message: path });
         return null;
       }

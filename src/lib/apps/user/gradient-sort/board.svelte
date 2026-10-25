@@ -3,8 +3,8 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { tick, untrack } from "svelte";
-  import type { RunProps } from "./run";
-  import ShareCard from "./share-card.svelte";
+  import type { RunProps } from "../color-recall/run";
+  import ShareCard from "../color-recall/share-card.svelte";
   import { sort_share } from "./share";
   import { is_solved, scramble, sort_puzzle, SORT_CONFIGS, swap, valid_order, type SortState } from "./sort";
 

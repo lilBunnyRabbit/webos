@@ -7,8 +7,8 @@
   import { ArrowDown as ArrowDownIcon, ArrowUp as ArrowUpIcon, Backspace as BackspaceIcon, Check as CheckIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { HEX_DIGITS, HEX_GUESSES, HEX_LENGTH, hex_hints, hex_status, hex_target, HexStatus, Hint, is_hex_digit, type HexState } from "./hex";
-  import type { RunProps } from "./run";
-  import ShareCard from "./share-card.svelte";
+  import type { RunProps } from "../color-recall/run";
+  import ShareCard from "../color-recall/share-card.svelte";
   import { hex_share } from "./share";
   import { Flash } from "$kit/utils/flash.svelte";
 

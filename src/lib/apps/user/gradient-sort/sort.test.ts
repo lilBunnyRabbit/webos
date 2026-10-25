@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Level } from "./modes";
+import { Level } from "../color-recall/modes";
 import { is_solved, scramble, sort_puzzle, SORT_CONFIGS, swap, valid_order } from "./sort";
 
 describe("gradient sort", () => {

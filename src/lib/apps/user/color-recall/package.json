@@ -1,5 +1,5 @@
 {
-  "name": "@webos/color-games",
+  "name": "@webos/color-recall",
   "private": true,
   "dependencies": {
     "culori": "^4.0.2"

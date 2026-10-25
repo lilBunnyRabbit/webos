@@ -118,6 +118,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    */
   daily_rank?: DailyRank | DailyRanks;
   /**
+   * Ids this app took over (ADR-071). A launch, file, link, installed or offline entry for an id no app has opens the
+   * app whose entry's `props` it carries, minus those props; an entry without `props` takes the rest.
+   */
+  replaces?: AppReplacement[];
+  /**
    * Commands, completers and value types that work with no window open (ADR-034), as `import("./commands")`: the
    * module's default export is the contribution. Lazy: the shell loads every app's the first time it needs commands.
    * Service commands win an id clash.
@@ -178,6 +183,11 @@ export interface AppMeta {
 }
 
 export type AppListing = AppManifest & AppMeta;
+
+export interface AppReplacement {
+  app: AppId;
+  props?: AppProps;
+}
 
 export interface AppAuthor {
   name: string;

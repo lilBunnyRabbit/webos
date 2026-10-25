@@ -1,8 +1,8 @@
 import { create_rng, shuffle, type Rng } from "$lib/core/utils/random";
 import { z } from "zod";
-import { lch_hex, type Lch } from "./color";
-import { Level } from "./modes";
-import { sub_seed } from "./seed";
+import { lch_hex, type Lch } from "../color-recall/color";
+import { Level } from "../color-recall/modes";
+import { sub_seed } from "../color-recall/seed";
 
 export const Locks = { BORDER: "border", CORNERS: "corners" } as const;
 export type Locks = (typeof Locks)[keyof typeof Locks];

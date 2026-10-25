@@ -1,6 +1,6 @@
 # RouterService
 
-Key `router` · Depends on: windows, apps, session, clipboard, notifications · ADR: [ADR-010](../../adrs/010-url-deep-linking.md), [ADR-047](../../adrs/047-solo-app-open.md) · Source: `src/lib/core/api/services/router/` · Inspector: `inspector.svelte` (ADR-020)
+Key `router` · Depends on: windows, apps, session, clipboard, notifications · ADR: [ADR-010](../../adrs/010-url-deep-linking.md), [ADR-047](../../adrs/047-solo-app-open.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/router/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Props aren't validated here; the app's schema decides in the service.
 2. Hash doesn't start with `#/`: left alone.
 3. In full mode `history.replaceState` removes the hash (keeping `search`), so a reload doesn't open it again. A solo hash stays, so a reload reopens the app.
 4. Not an app link: error toast "This link isn't one WebOS knows".
-5. Unknown app id: error toast "The link points to an app that doesn't exist".
+5. An id no app has goes through `resolve_replaced` (`apps/replaces.ts`, [replaced app ids](apps.md#replaced-app-ids-adr-071)): a manifest whose `replaces` entry matches takes the link, with the props its entry didn't name. `#/solo/color-games?mode=odd-one-out&seed=2026-10-20` opens Odd One Out with `{ seed: "2026-10-20" }`. Still unknown: error toast "The link points to an app that doesn't exist".
 6. Props given and the app has no schema, or they fail it: error toast "The link to {name} is broken". **Nothing opens.** That's stricter than `apps.launch()`, which opens the app without its data.
 7. Otherwise `apps.launch(id, props)`. On mobile that brings the app on screen like any launch.
 

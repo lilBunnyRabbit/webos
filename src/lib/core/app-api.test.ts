@@ -9,6 +9,7 @@ import type {
   AppMeta,
   AppPitch,
   AppProps,
+  AppReplacement,
   AppsService,
   Command,
   CommandContext,
@@ -331,6 +332,7 @@ const manifest_fields: Members<
   | "on_uninstall_data"
   | "preview"
   | "props"
+  | "replaces"
   | "repository"
   | "restore"
   | "shell"
@@ -369,6 +371,7 @@ const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
 const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
+const app_replacement_members: Members<AppReplacement, "app" | "props"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size" | "style"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -412,6 +415,7 @@ type StableTypes = [
   AppMeta,
   AppPitch,
   AppProps,
+  AppReplacement,
   AppsService,
   Command,
   CommandContext,

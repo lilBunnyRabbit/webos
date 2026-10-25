@@ -1,6 +1,6 @@
 # App API
 
-ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md), [049](../adrs/049-lazy-app-metadata.md), [050](../adrs/050-per-mode-dailies.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md), [lazy app metadata](../brainstorm/2026-10-18_lazy-app-metadata.md) · Pinned by: `src/lib/core/app-api.test.ts`
+ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context.md), [008](../adrs/008-app-props-validation.md), [018](../adrs/018-file-associations.md), [034](../adrs/034-app-extension-points.md), [035](../adrs/035-app-platform-wave-2.md), [048](../adrs/048-app-kit-layer.md), [049](../adrs/049-lazy-app-metadata.md), [050](../adrs/050-per-mode-dailies.md), [071](../adrs/071-split-color-games.md) · Decided: [1.0 release](../brainstorm/2026-10-15_v1-release.md), [lazy app metadata](../brainstorm/2026-10-18_lazy-app-metadata.md) · Pinned by: `src/lib/core/app-api.test.ts`
 
 What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. Anything not listed is internal: use it if you want, but it can change in any release.
 
@@ -63,6 +63,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `props` | yes | A zod object schema |
 | `daily_rank` | yes (1.20; per-mode record 3.1) | `DailyRank`: `time` (default), `score-asc`, `score-desc`. How the game's daily results rank, time breaking a tie. Or a `DailyRanks` record, mode id → rank: the game has one daily per mode (ADR-050), Game Hub lists a row per mode |
 | `restore` | yes | `false` keeps windows out of saved sessions |
+| `replaces` | yes (3.70) | `AppReplacement[]`, `{ app, props? }`: ids this app took over (ADR-071). Launches, files, links, the installed list and offline picks naming a removed id open the app whose entry's props match, without those props; an entry without props takes the rest. Rename an app by giving the new one `replaces: [{ app: "old-id" }]`; its `app.{id}.*` data doesn't move ([manifest](apps/manifest.md)) |
 | `shell` | yes | `() => import("./commands")`, the module default-exporting a `ShellContribution`. [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
 | `on_uninstall_data` | yes (3.57) | `() => import("./uninstall")`, the module default-exporting `() => Promise<void>`, run after an uninstall with data cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS can't see (IndexedDB, caches). A throw is toasted; the uninstall stands ([manifest](apps/manifest.md)) |
@@ -72,7 +73,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 
 `define_app` throws at boot on an invalid `widget_size`. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
-Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `WindowOptions`, `WindowFlag`.
+Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `AppReplacement`, `WindowOptions`, `WindowFlag`.
 
 ## Props and file associations
 
@@ -199,7 +200,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | `$kit/utils/audio` | | Kernel-free PCM: `Pcm`, `pcm_of(AudioBuffer)`, `encode_wav` / `wav_blob` (16-bit PCM WAV, channels interleaved), `normalize_regions`, `subtract_regions`, `cut_regions` (keeps regions in order, each seam a 10 ms linear crossfade, so the result is shorter by that much per seam), `peaks`, `peak_index` + `peaks_between` (min/max per 256 frames, so a zoomed view draws only its range) (Soundboard) |
 | `$kit/utils/view` | | 2D camera math: `View`, `Point`, `to_screen`, `to_image`, `clamp_scale`, `fit_view`, `zoom_view`, `pinch_view` (`SwipeCompare`, Image Tools, Jigsaw) |
 | `$kit/utils/report-error` | `report_error(app_id, title, reason)` (3.57) | `report_error`: an error toast whose message is `error_message(reason)`, the one-liner apps use for a failed save, open or copy (most apps; Clock's and Calendar's `attempt()`) |
-| `$kit/utils/flash.svelte` | `Flash` (`text`, `show`, `clear`) (3.57) | `Flash(ms)`: a short status line that clears itself `ms` after `show(text)`; `clear()` drops it early. Construct it during component init, its timer is an `$effect` (Alibi, Crack the Code, Color Games › Hex Guess, Letterer) |
+| `$kit/utils/flash.svelte` | `Flash` (`text`, `show`, `clear`) (3.57) | `Flash(ms)`: a short status line that clears itself `ms` after `show(text)`; `clear()` drops it early. Construct it during component init, its timer is an `$effect` (Alibi, Crack the Code, Hex Guess, Letterer) |
 
 The old paths `$lib/core/games` (and its `time`, `daily`, `direction`) and `$lib/core/utils/image` re-exported these until 3.0, which removed them. `history`, `qr`, `qr-scan`, `exif`, `image-format` and `components/code` were internal before the move, so their old paths are gone.
 

@@ -1,6 +1,6 @@
 # OfflineService
 
-Key `offline` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md) · Source: `src/lib/core/api/services/offline/`, `vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
+Key `offline` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/offline/`, `vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -73,7 +73,7 @@ The loop runs again if an app was ticked while a job ran. The lazy `sync.ts` hol
 
 | Where | What | Format |
 |-------|------|--------|
-| `/etc/offline.json` | Picked apps. Config, so it's part of backups | `{ "version": 1, "apps": ["cards", "paint"] }`, sorted, through `LatestWriter`. Missing or invalid → nothing picked. System app ids are dropped on read |
+| `/etc/offline.json` | Picked apps. Config, so it's part of backups | `{ "version": 1, "apps": ["cards", "paint"] }`, sorted, through `LatestWriter`. Missing or invalid → nothing picked. System app ids are dropped on read; an id another app [replaces](apps.md#replaced-app-ids-adr-071) reads as every app replacing it (`current_ids`), saved that way on the next write |
 | `/var/lib/offline/state.json` | Apps saved in this build | `{ "build": 1792699153883, "apps": [...] }`, through `LatestWriter`. Another build's file counts as empty |
 | Cache Storage `webos-assets-{build}` | The files | Written by the service worker (any `/assets/` request) and by this service (`cache.put`) |
 

@@ -69,8 +69,8 @@
         "bwip-js": "4.11.4",
       },
     },
-    "src/lib/apps/user/color-games": {
-      "name": "@webos/color-games",
+    "src/lib/apps/user/color-recall": {
+      "name": "@webos/color-recall",
       "dependencies": {
         "culori": "^4.0.2",
       },
@@ -730,7 +730,7 @@
 
     "@webos/cards": ["@webos/cards@workspace:src/lib/apps/user/cards"],
 
-    "@webos/color-games": ["@webos/color-games@workspace:src/lib/apps/user/color-games"],
+    "@webos/color-recall": ["@webos/color-recall@workspace:src/lib/apps/user/color-recall"],
 
     "@webos/color-tools": ["@webos/color-tools@workspace:src/lib/apps/user/color-tools"],
 

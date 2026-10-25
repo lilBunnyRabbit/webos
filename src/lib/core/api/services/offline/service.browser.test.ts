@@ -10,9 +10,9 @@ import { OfflineService } from "./service.svelte";
 import { OfflineStatus } from "./type";
 
 const BUILD = BUILD_INFO.buildTimestamp;
-const APPS: Record<string, { system: boolean; name: string }> = {
-  paint: { system: false, name: "Paint" },
-  cards: { system: false, name: "Cards" },
+const APPS: Record<string, { system: boolean; name: string; replaces?: { app: string }[] }> = {
+  paint: { system: false, name: "Paint", replaces: [{ app: "old-art" }] },
+  cards: { system: false, name: "Cards", replaces: [{ app: "old-art" }] },
   settings: { system: true, name: "Settings" },
 };
 const shutdowns: Array<() => Promise<void>> = [];
@@ -34,6 +34,7 @@ async function open_tab() {
     apps: stub_service("apps", {
       launch,
       get: (id: string) => (APPS[id] ? { id, ...APPS[id] } : undefined) as never,
+      list: () => Object.entries(APPS).map(([id, app]) => [id, { id, ...app }])[Symbol.iterator]() as never,
       is_installed: () => true,
     }),
     tasks: stub_service("tasks", {}),
@@ -104,6 +105,12 @@ describe("boot", () => {
     tab.offline.online = false;
     expect(tab.offline.can_open("settings")).toBe(true);
     expect(tab.offline.can_open("cards")).toBe(false);
+  });
+
+  test("a pick of a replaced app becomes the apps that replaced it (ADR-071)", async () => {
+    await seed(PICKED_PATH, serialize_picked(["old-art", "gone"]));
+    const tab = await open_tab();
+    expect([...tab.offline.picked].sort()).toEqual(["cards", "paint"]);
   });
 });
 

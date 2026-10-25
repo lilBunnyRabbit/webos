@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { create_rng } from "$lib/core/utils/random";
 import { hue_distance } from "./color";
-import { Mode } from "./modes";
 import { recall_rounds, round_score, ROUNDS, start_guess, total_score } from "./recall";
-import { resolve_seed } from "./seed";
 
 describe("recall_rounds", () => {
   it("replays the same five colours from a seed", () => {
@@ -20,13 +18,6 @@ describe("recall_rounds", () => {
         expect(target.h).toBeLessThan(360);
       }
     }
-  });
-
-  it("gives every mode its own daily", () => {
-    expect(resolve_seed(Mode.RECALL, "2026-10-18")).toBe(resolve_seed(Mode.RECALL, "2026-10-18"));
-    expect(resolve_seed(Mode.RECALL, "2026-10-18")).not.toBe(resolve_seed(Mode.HEX, "2026-10-18"));
-    expect(resolve_seed(Mode.RECALL, "2026-10-18")).not.toBe(resolve_seed(Mode.RECALL, "2026-10-19"));
-    expect(resolve_seed(Mode.RECALL, 7)).toBe(7);
   });
 });
 

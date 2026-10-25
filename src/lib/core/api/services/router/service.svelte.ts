@@ -5,6 +5,7 @@ import { Mode, detect_mode } from "../../kernel/mode";
 import { RouteKind, parse_hash, route_url, shareable_props, type Route } from "./route";
 import { LinkOutcome, type RouterService as IRouterService } from "./type";
 import { router_shell } from "./shell";
+import { resolve_replaced } from "../apps/replaces";
 
 export class RouterService implements IRouterService {
   name = "RouterService";
@@ -90,7 +91,9 @@ export class RouterService implements IRouterService {
     if (!route) this.notifications_service.notify("router", { type: "error", title: "This link isn't one WebOS knows" });
   };
 
-  private open(route: Route): LinkOutcome {
+  private open(link: Route): LinkOutcome {
+    const replaced = this.apps_service.get(link.id) ? null : resolve_replaced(Array.from(this.apps_service.list(), ([, manifest]) => manifest), link.id, link.props);
+    const route = replaced ? { ...link, ...replaced } : link;
     const manifest = this.apps_service.get(route.id);
     if (!manifest) {
       this.notifications_service.notify("router", { type: "error", title: "The link points to an app that doesn't exist", message: route.id });

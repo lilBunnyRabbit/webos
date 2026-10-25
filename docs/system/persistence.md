@@ -56,7 +56,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.blocks.{mode,stats}` | `user/blocks` | Last mode; marathon and sprint stats, top five marathon scores |
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
 | `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). Copied in once when the file has none, then removed |
-| `app.color-games.{mode,level,space,daily-recall,daily-odd-one-out,daily-gradient-sort,daily-hex-guess}` | `user/color-games` | Last mode; last practice level; Recall's slider space (HSB or OKLCH); each mode's daily attempt `{ day, state }`, so a daily is played once |
+| `app.color-recall.{level,space,daily}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once. Before the split (ADR-071) these were `app.color-games.*`, which stay unread |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
@@ -64,6 +64,8 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
+| `app.gradient-sort.{level,daily}` | `user/gradient-sort` | Last practice level; the daily attempt `{ day, state }` |
+| `app.hex-guess.daily` | `user/hex-guess` | The daily attempt `{ day, state }` |
 | `app.hop.{stats,daily,game,size}` | `user/hop` | Stats per size; daily puzzle; path in progress; last size |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
@@ -80,6 +82,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.music-visualizer.{mode,volume,smoothing,sensitivity}` | `user/music-visualizer` | Visualizer settings |
 | `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
 | `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
+| `app.odd-one-out.daily` | `user/odd-one-out` | The daily attempt `{ day, state }` |
 | `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
 | `app.plots.{stats,daily,game,size}` | `user/plots` | Stats per size; daily puzzle; plots in progress; last size |
 | `app.pdf-tools.{sign,export,images,test-pdf}` | `user/pdf-tools` | Sign ink and date option; Export, Images and Test PDF section settings |
