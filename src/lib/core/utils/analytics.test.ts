@@ -2,10 +2,11 @@ import html from "../../../../index.html?raw";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ANALYTICS_CONSENT_KEY, launch_event, set_consent, track_launch } from "./analytics";
 
-const holder = globalThis as { gtag?: (...args: unknown[]) => void };
+const holder = globalThis as { gtag?: (...args: unknown[]) => void; webos_load_analytics?: () => void };
 
 afterEach(() => {
   delete holder.gtag;
+  delete holder.webos_load_analytics;
 });
 
 describe("without gtag", () => {
@@ -39,6 +40,22 @@ describe("with gtag", () => {
       ["consent", "update", { analytics_storage: "denied" }],
     ]);
   });
+});
+
+describe("loading", () => {
+  test("only allowed loads gtag", () => {
+    const load = vi.fn();
+    holder.webos_load_analytics = load;
+    set_consent("declined");
+    set_consent("unasked");
+    expect(load).not.toHaveBeenCalled();
+    set_consent("allowed");
+    expect(load).toHaveBeenCalledOnce();
+  });
+});
+
+test("index.html defines the loader set_consent calls", () => {
+  expect(html).toContain("window.webos_load_analytics = ");
 });
 
 test("index.html reads the same mirror key", () => {

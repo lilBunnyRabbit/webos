@@ -616,7 +616,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Demo mode preview images
 
 ### Usage analytics
-- [x] Google Analytics with Consent Mode ([ADR-070](adrs/070-usage-analytics.md), [brainstorm](brainstorm/2026-10-25_analytics.md)): cookieless by default, `app_open` per launch (app, mode, platform), asked once after the Restore answer and the intro, Settings › About › Share usage stats
+- [x] Google Analytics with consent ([ADR-070](adrs/070-usage-analytics.md), [brainstorm](brainstorm/2026-10-25_analytics.md)): gtag loads only after Allow, `app_open` per launch (app, mode, platform), asked once after the Restore answer and the intro, Settings › About › Share usage stats
 
 ### CI/CD
 - [-] GitHub Actions build pipeline (check, unit tests, build on push to master; no PR trigger)

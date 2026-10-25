@@ -16,11 +16,25 @@ WebOS differs: one URL with hash routes, so page views alone don't show which ap
 
 ## Key takeaways
 - Launch events are the whole point; page views on a hash-routed OS are near empty.
-- Consent Mode keeps the script loaded without cookies, so declining still counts visits anonymously.
+- ~~Consent Mode keeps the script loaded without cookies, so declining still counts visits anonymously.~~ Wrong, see the follow-up below.
 
 ## Action items
 - [x] Owner: create the GA4 web stream for `lilbunnyrabbit.github.io/webos` and send the `G-…` ID.
 - [x] Build with one app-builder agent once the ID is in. [ADR-070](../adrs/070-usage-analytics.md).
+
+## Follow-up: counting visits without consent (same day)
+Owner: "we cant even track page view without consent? so that i know that X amount of people opened the webpage? just that - and keep the rest of analytics under consent".
+
+Findings:
+- GA4 turns cookieless (denied) pings into numbers only through behavioral modeling, which needs about 1,000 denied events a day and 1,000 consented daily users for 7 days. WebOS is far below that, so those pings never show in reports. Only visitors who click Allow are counted; solo opens and everything before the answer are invisible.
+- GitHub Pages has no visitor numbers (repo Traffic counts github.com repo views).
+- A consent-free count needs a second, cookieless counter (GoatCounter, Cloudflare Web Analytics). Its legal footing rests on national audience-measurement exemptions; GA4 doesn't fit them.
+
+### Visits without consent (decided)
+Leave as is: only consented visitors are counted. Rejected: GoatCounter next to GA (second vendor, two dashboards that disagree), GoatCounter only (loses GA and returning visitors), Cloudflare Web Analytics (visits, not people; unclear whether it strips the hash).
+
+### Loading before the answer (decided)
+gtag loads only after Allow: `index.html` defines `webos_load_analytics()` and calls it at boot when the mirror says `allowed`; `set_consent("allowed")` calls it mid-session. The pre-answer pings gave nothing at this traffic and were the weakest part legally. Rejected: keep loading always.
 
 ## Next session topics
 - Which other events are worth it, if any, after a few weeks of data.

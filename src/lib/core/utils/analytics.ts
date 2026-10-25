@@ -17,15 +17,27 @@ export function launch_event(app_id: string, mode: Mode, platform: Platform): La
   return { app_id, mode: mode === Mode.SOLO ? "solo" : "desktop", platform };
 }
 
-// Missing in tests, in development, on localhost and when index.html's script didn't run.
+interface AnalyticsGlobals {
+  gtag?: Gtag;
+  /** Defined by `index.html` outside development and localhost; creates gtag and loads the script once. */
+  webos_load_analytics?: () => void;
+}
+
+// Missing in tests, in development, on localhost, and until the visitor allows it.
 function gtag(): Gtag | undefined {
-  return (globalThis as { gtag?: Gtag }).gtag;
+  return (globalThis as AnalyticsGlobals).gtag;
 }
 
 export function track_launch(app_id: string, mode: Mode, platform: Platform): void {
   gtag()?.("event", "app_open", launch_event(app_id, mode, platform));
 }
 
+/** "allowed" loads gtag now; any other answer stops what this page already loaded, and the next load never loads it. */
 export function set_consent(answer: AnalyticsConsent): void {
-  gtag()?.("consent", "update", { analytics_storage: answer === "allowed" ? "granted" : "denied" });
+  if (answer === "allowed") {
+    (globalThis as AnalyticsGlobals).webos_load_analytics?.();
+    gtag()?.("consent", "update", { analytics_storage: "granted" });
+    return;
+  }
+  gtag()?.("consent", "update", { analytics_storage: "denied" });
 }
