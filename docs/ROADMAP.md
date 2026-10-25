@@ -341,6 +341,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
 - [x] Lunar Lander: three ships with per-thruster physics, gravity presets, air, wind, infinite fuel (2026-10-16)
+- [x] Checkout Challenge (idea from LaxDOTexe) (2026-10-25, [brainstorm](brainstorm/2026-10-25_checkout-challenge.md), [page](apps/checkout-challenge.md)): number typing practice as a shop; scan items, type the total exactly on any digit keys or the register keypad, ✓/✗ lamps and customer faces, health bar, Sorry tokens from streaks for a half-damage retype, one-minute days with stars, customer rate and spend follow health, three closures lose the shop, best run. Seeded daily and numpad-only mode later
 - [x] Other puzzles, all generated with a proven single answer (2026-10-13): Word Search, Futoshiki, Sudoku, Kakuro, Nurikabe
 - [x] Sun & Moon (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): LinkedIn Tango-style suns and moons with `=`/`×` signs, 6×6 and 8×8, daily, hints that name the rule
 - [x] Hutches (2026-10-21, [brainstorm](brainstorm/2026-10-21_daily-puzzles.md)): one rabbit per row, column and meadow, none touching (LinkedIn Queens style); generated so the deduction rules alone solve it, hints show the next step, daily at 8×8. Region borders in `$kit/games` (`region_edges`)
