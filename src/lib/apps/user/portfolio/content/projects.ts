@@ -38,20 +38,21 @@ export const FEATURED: Project[] = [
     tagline: "Build a palette from a short colour script, test its contrast, and preview it in a real interface.",
     points: [
       "Grew from learning every colour model by defining it myself into a small language my own theme is built with.",
-      "Its own small language, with autocomplete, hover docs and inline diagnostics in CodeMirror.",
-      "Colours are stored once in OKLCH; every other model (about 100) is a lazy view through one registry.",
-      "WCAG 2 and APCA contrast, colour-vision-deficiency simulation, ΔE metrics, CMYK coverage for print.",
-      "Design decisions are kept in an ADR-style vault in the repo.",
+      "The colour math is its own npm package: 70 models, one class each, converted through a graph whose matrices are derived in exact rational arithmetic.",
+      "Every formula cites its source, and every test vector comes from an independent cited one.",
+      "The studio's language is the package's API, with autocomplete, hover docs and inline diagnostics in CodeMirror.",
+      "WCAG 2 and APCA audit, colour-vision-deficiency previews, and exports to CSS variables, design tokens and Tailwind.",
     ],
-    stack: ["SvelteKit", "Svelte 5", "CodeMirror 6", "acorn", "culori", "Tailwind 4"],
+    stack: ["TypeScript", "SvelteKit", "Svelte 5", "CodeMirror 6", "acorn", "Tailwind 4"],
     shows: {
       decisions: "Chromatics keeps its design decisions in an ADR-style vault in the repo.",
-      performance: "Chromatics stores a colour once, in OKLCH; every other model is a lazy view through one registry.",
+      performance: "Chromatics' package has an import path per colour model, so an app bundles only the conversions that model reaches.",
       feel: "Chromatics' editor answers as you type: autocomplete, hover docs and inline diagnostics.",
     },
     links: [
       { kind: LIVE, url: `${PAGES}/chromatics/` },
       { kind: SOURCE, url: `${REPO}/chromatics` },
+      { kind: NPM, url: `${NPM_PACKAGE}/chromatics` },
     ],
   },
   {

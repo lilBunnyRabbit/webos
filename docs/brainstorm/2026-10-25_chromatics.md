@@ -99,7 +99,7 @@ The ADR is [ADR-071](../adrs/071-split-color-games.md). Color Tools is [ADR-072]
 - The package enters core only through the kit picker grill.
 
 ## Action items
-- [ ] Portfolio: rewrite the Chromatics card for the package (70 models, conversion graph, exact rational matrices, cited test vectors), add the npm link, and drop culori from the stack. Add "See it in WebOS" (`color-tools`) once Color Tools ships.
+- [-] Portfolio: rewrite the Chromatics card for the package (70 models, conversion graph, exact rational matrices, cited test vectors), add the npm link, and drop culori from the stack. Add "See it in WebOS" (`color-tools`) once Color Tools ships. Done except the WebOS link.
 - [ ] Split Color Games (ADR-071).
 - [ ] Color Tools v1 (ADR-072). It can run in parallel with the split, since they share no files beyond the compat list.
 - [ ] The games swap culori for `color-tools/color.ts`, after both of the above merge. Out-of-gamut hexes shift, since CSS Color 4 gamut mapping differs from `clampChroma`. Check the `hex`, `odd` and `sort` tests.
