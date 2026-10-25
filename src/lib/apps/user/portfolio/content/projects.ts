@@ -74,6 +74,7 @@ export const FEATURED: Project[] = [
     links: [
       { kind: NPM, url: `${NPM_PACKAGE}/chromatics` },
       { kind: SOURCE, url: `${REPO}/chromatics/tree/master/packages/chromatics` },
+      { kind: WEBOS, app: "colour-atlas", label: "Play it in WebOS" },
     ],
   },
   {
