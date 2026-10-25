@@ -1,5 +1,5 @@
 import type { Color, ColorModel } from "@lilbunnyrabbit/chromatics";
-import { models, parse } from "@lilbunnyrabbit/chromatics/all";
+import { models, parse, path } from "@lilbunnyrabbit/chromatics/all";
 import { Oklch } from "@lilbunnyrabbit/chromatics/oklch";
 
 export type { ColorModel };
@@ -27,6 +27,11 @@ export function parse_css(input: string): Color | null {
 
 export function model_by_id(id: string): ColorModel | null {
   return MODELS.find((model) => model.id === id) ?? null;
+}
+
+/** The models a conversion from `from` to `to` passes through, both ends included; empty when the graph has no route. */
+export function route(from: ColorModel, to: ColorModel): ColorModel[] {
+  return path(from, to) ?? [];
 }
 
 export function channels_of(model: ColorModel): ChannelInfo[] {

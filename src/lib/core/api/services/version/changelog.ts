@@ -8,12 +8,17 @@ export const CHANGELOG: Release[] = [
     version: "3.70.0",
     date: "2026-10-25",
     title: "Colour, packaged",
-    introduces: ["color-tools"],
+    introduces: ["color-tools", "colour-atlas"],
     changes: [
       {
         kind: NEW,
         apps: ["color-tools"],
         text: "Color Tools: pick a colour from the screen, a photo or the camera, see it in 70 colour models, check text contrast, preview it with colour blindness, build harmonies and save palettes as files.",
+      },
+      {
+        kind: NEW,
+        apps: ["colour-atlas"],
+        text: "Colour Atlas: match a colour with the sliders of a different colour model each round, from HSL to CAM16, in a daily run of five, and collect all 70 models in an atlas.",
       },
       {
         kind: IMPROVED,

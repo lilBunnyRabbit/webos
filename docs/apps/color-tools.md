@@ -23,7 +23,7 @@ Pure logic is in `color.ts`, `models.ts`, `contrast.ts`, `harmony.ts`, `vision.t
 | `delta_e2000(a, b)` | `Lab65.deltaE2000`, the white point culori's `differenceCiede2000` uses |
 | `contrast_ratio(fg, bg)` | both gamut-mapped, background made opaque, `fg.over(bg)` then `contrast(bg)` |
 
-A string input to these is a hex or a CSS colour name. Any other syntax goes through `models.ts`, which imports `/all` (`parse`, `models`) and so bundles all 70 models: `parse_css`, `convert` (`null` on the package's `RangeError`, e.g. part of sRGB has no `Ryb`), `channels_of` (from each model's `channels` metadata), `with_channel` / `with_alpha` (a new instance from the constructor, channels in constructor order) and `format_color` (the model's `toString()` with every number rounded to 4 decimals; only digits change, so it still parses).
+A string input to these is a hex or a CSS colour name. Any other syntax goes through `models.ts`, which imports `/all` (`parse`, `models`) and so bundles all 70 models: `parse_css`, `convert` (`null` on the package's `RangeError`, e.g. part of sRGB has no `Ryb`), `channels_of` (from each model's `channels` metadata), `with_channel` / `with_alpha` (a new instance from the constructor, channels in constructor order), `route(from, to)` (the package's `path`, the models a conversion passes through; Colour Atlas shows it) and `format_color` (the model's `toString()` with every number rounded to 4 decimals; only digits change, so it still parses).
 
 ### The current colour
 

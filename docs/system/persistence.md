@@ -57,6 +57,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
 | `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). Copied in once when the file has none, then removed |
 | `app.color-recall.{level,space,daily}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once. Before the split (ADR-071) these were `app.color-games.*`, which stay unread |
+| `app.colour-atlas.{dex,daily}` | `user/colour-atlas` | Collected models, model id → best ΔE2000; the daily attempt `{ day, state }` (each submitted round's slider values and the time), so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
