@@ -32,10 +32,10 @@ describe("evidence", () => {
   });
 
   test("comes from each principle's proof text, the projects' `shows` and the mapped work case studies", () => {
-    expect(EVIDENCE.decisions).toEqual({ jobs: [], projects: ["webos", "chromatics", "petrace", "hq", "brand"] });
+    expect(EVIDENCE.decisions).toEqual({ jobs: [], projects: ["webos", "chromatics", "chromatics-package", "petrace", "hq", "brand"] });
     expect(EVIDENCE.team).toEqual({ jobs: ["astra"], projects: ["task-manager", "hq", "packages"] });
     expect(EVIDENCE.feel).toEqual({ jobs: ["astra"], projects: ["chromatics", "petrace", "series-tracker"] });
-    expect(EVIDENCE.performance).toEqual({ jobs: ["astra"], projects: ["webos", "chromatics"] });
+    expect(EVIDENCE.performance).toEqual({ jobs: ["astra"], projects: ["webos", "chromatics-package"] });
     for (const p of PROVING) for (const id of Object.keys(p.shows ?? {})) expect(EVIDENCE[id].projects).toContain(p.id);
   });
 
@@ -46,7 +46,8 @@ describe("evidence", () => {
   test("jobs and projects list the principles they prove", () => {
     expect(principles_for_job("astra").map((p) => p.id)).toEqual(["team", "performance", "feel"]);
     expect(principles_for_job("while-true")).toEqual([]);
-    expect(principles_for_project("chromatics").map((p) => p.id)).toEqual(["decisions", "performance", "feel"]);
+    expect(principles_for_project("chromatics").map((p) => p.id)).toEqual(["decisions", "feel"]);
+    expect(principles_for_project("chromatics-package").map((p) => p.id)).toEqual(["decisions", "performance", "tested"]);
     expect(principles_for_project("agtc").map((p) => p.id)).toEqual(["lightest"]);
   });
 
@@ -62,7 +63,7 @@ describe("evidence", () => {
 
   test("what the tour lights is always labelled where it lights, on every card that shows it", () => {
     for (const id of TOUR_PRINCIPLES) expect(SHOWN[id].jobs.length + SHOWN[id].projects.length).toBeGreaterThan(0);
-    expect(SHOWN.decisions).toEqual({ jobs: [], projects: ["webos", "chromatics", "petrace", "hq", "brand"] });
+    expect(SHOWN.decisions).toEqual({ jobs: [], projects: ["webos", "chromatics", "chromatics-package", "petrace", "hq", "brand"] });
     expect(SHOWN.team.jobs).toEqual(["astra"]);
     expect(SHOWN.feel.projects).toEqual(["chromatics", "petrace", "series-tracker"]);
     for (const p of FEATURED) if (p.shows) expect(principles_for_project(p.id).length).toBeGreaterThan(0);
@@ -89,7 +90,7 @@ describe("evidence", () => {
   test("the proof is told at one labelled place: a project first, then a job", () => {
     expect(proof_place("decisions")).toBe("WebOS");
     expect(proof_place("feel")).toBe("Chromatics");
-    expect(proof_place("tested")).toBe("hq");
+    expect(proof_place("tested")).toBe("chromatics");
     for (const id of TOUR_PRINCIPLES) expect(proof_place(id)).not.toBeNull();
   });
 

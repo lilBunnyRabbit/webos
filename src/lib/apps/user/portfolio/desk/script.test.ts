@@ -31,6 +31,7 @@ describe("parse", () => {
   test("projects opens the one projects window, focused on a card when named", () => {
     expect(parse("projects")).toEqual({ kind: ActionKind.OPEN, windows: [Win.PROJECTS], project: undefined });
     expect(parse("projects agtc")).toEqual({ kind: ActionKind.OPEN, windows: [Win.PROJECTS], project: "agtc" });
+    expect(parse("projects chromatics-package")).toEqual({ kind: ActionKind.OPEN, windows: [Win.PROJECTS], project: "chromatics-package" });
   });
 
   test("how opens no window; it takes a principle to light", () => {

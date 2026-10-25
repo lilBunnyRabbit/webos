@@ -2,6 +2,7 @@ import { PROJECTS } from "./evidence";
 import {
   HQ_DURATION,
   PALETTE_DURATION,
+  ROUTE_DURATION,
   SEASONS_DURATION,
   SESSIONS_DURATION,
   TASKS_DURATION,
@@ -17,6 +18,7 @@ export const CARD_CAP = 1300;
 export const DURATIONS: Record<string, number> = {
   webos: WEBOS_DURATION,
   chromatics: PALETTE_DURATION,
+  "chromatics-package": ROUTE_DURATION,
   "task-manager": TASKS_DURATION,
   petrace: TRACE_DURATION,
   "series-tracker": SEASONS_DURATION,

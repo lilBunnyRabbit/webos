@@ -17,7 +17,7 @@ export const CHANGELOG: Release[] = [
       },
       {
         kind: IMPROVED,
-        text: "The Portfolio's Chromatics card now describes its colour library and links to it on npm.",
+        text: "The Portfolio gives the chromatics colour library its own card, with a graphic that follows one colour through its conversions.",
       },
     ],
   },

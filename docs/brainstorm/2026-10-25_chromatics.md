@@ -14,12 +14,14 @@ What WebOS has today:
 
 ## Topics discussed
 
-### Portfolio (decided)
-Fold the package into the existing Chromatics featured card, like Task Manager: add an npm link, rewrite the points for the package, drop culori from the stack, and add "See it in WebOS" once WebOS uses it. Rejected:
+### Portfolio (decided, changed the same day)
+First decision: fold the package into the existing Chromatics featured card, like Task Manager: add an npm link, rewrite the points for the package, drop culori from the stack, and add "See it in WebOS" once WebOS uses it. Rejected then:
 - a separate small tile, which undersells the substance behind the studio;
 - two featured cards, which break the bento layout.
 
-The card is stale either way: it still describes the culori engine ("about 100 models, lazy views").
+The card was stale either way: it still described the culori engine ("about 100 models, lazy views").
+
+**Changed:** the owner, after seeing the folded card: "i mean its just a link to npm package. the npm package is a big deal". As one npm link on the studio's card the package read as a footnote, while it's the larger piece of work (70 models, exact rational matrices, cited formulas and test vectors, V8 and JavaScriptCore). So the package gets its own featured card, `chromatics-package` (name `chromatics`, kicker `@lilbunnyrabbit/chromatics`, badge npm), beside the studio's, with its own graphic: one colour travelling Oklch → Oklab → Xyz65 → Rec2020, each hop's value from the package. The studio card is slimmed back to the studio (language, editor, audit, exports) and says it's built on the package; the npm link lives only on the package card. The bento layout was re-planned for eight cards instead of being a reason against two. Its "See it in WebOS" link will point to Colour Atlas once that ships.
 
 ### Dependency (decided)
 Approved. Each app that uses the package lists it in its own `package.json` (ADR-045), pinned to `^0.1.0`. It goes in the root only when core adopts it, after a separate grill.
@@ -122,7 +124,9 @@ The owner: "maybe a fun game showcasing all the color models". Every package mod
 - The package enters core only through the kit picker grill.
 
 ## Action items
-- [-] Portfolio: rewrite the Chromatics card for the package (70 models, conversion graph, exact rational matrices, cited test vectors), add the npm link, and drop culori from the stack. Add "See it in WebOS" (`color-tools`) once Color Tools ships. Done except the WebOS link.
+- [x] Portfolio: rewrite the Chromatics card and drop culori from the stack.
+- [x] Portfolio: the package's own featured card beside the studio's, with its conversion-route graphic (owner reversal, 2026-10-25).
+- [ ] Portfolio: "See it in WebOS" on the package card, pointing to Colour Atlas once it ships.
 - [ ] Split Color Games (ADR-071).
 - [x] Color Tools v1 (ADR-072), 2026-10-25. It can run in parallel with the split, since they share no files beyond the compat list.
 - [ ] The games swap culori for `color-tools/color.ts`, after both of the above merge. Out-of-gamut hexes shift, since CSS Color 4 gamut mapping differs from `clampChroma`. Check the `hex`, `odd` and `sort` tests.

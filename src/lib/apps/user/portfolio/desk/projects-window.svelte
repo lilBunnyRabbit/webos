@@ -331,7 +331,7 @@
       --tile: 7rem;
     }
 
-    .cards.tiled > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
+    .cards.tiled > .item:is(:nth-child(1), :nth-child(8)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -347,7 +347,7 @@
       --tile: 7rem;
     }
 
-    .cards.stacked > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
+    .cards.stacked > .item:is(:nth-child(1), :nth-child(8)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -358,12 +358,7 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .cards:is(.tiled, .stacked) > .item:nth-child(5) {
-      grid-column: span 2;
-      --tile: 10rem;
-    }
-
-    .cards:is(.tiled, .stacked) > .item:nth-child(7) {
+    .cards:is(.tiled, .stacked) > .item:is(:nth-child(1), :nth-child(8)) {
       grid-column: span 3;
     }
   }

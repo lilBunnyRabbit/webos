@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { PROJECTS } from "./evidence";
-import { PALETTE_DURATION, palette_frame, SEASONS, SEASONS_DURATION, watched_at, WEBOS, WEBOS_DURATION, webos_frame } from "./project-scenes";
+import { PALETTE_DURATION, palette_frame, ROUTE, ROUTE_DURATION, route_frame, SEASONS, SEASONS_DURATION, watched_at, WEBOS, WEBOS_DURATION, webos_frame } from "./project-scenes";
 import { DURATIONS } from "./project-timing";
 
 describe("project graphics", () => {
@@ -49,6 +49,22 @@ describe("project graphics", () => {
       const frame = palette_frame(t);
       if (frame.swatches[0] > 0) expect(frame.typed).toBe(1);
       if (frame.tint > 0) expect(frame.swatches.every((p) => p === 1)).toBe(true);
+    }
+  });
+
+  test("the package's route starts at its first model and reaches each next one in turn, settled inside its length", () => {
+    expect(route_frame(0)).toEqual({ position: 0, reached: 0 });
+
+    const end = route_frame(ROUTE_DURATION - 200);
+    expect(end).toEqual(route_frame(ROUTE_DURATION));
+    expect(end).toEqual({ position: ROUTE.length - 1, reached: ROUTE.length - 1 });
+
+    let reached = 0;
+    for (let t = 0; t <= ROUTE_DURATION; t += 20) {
+      const frame = route_frame(t);
+      expect(frame.reached - reached).toBeLessThanOrEqual(1);
+      expect(frame.reached).toBeGreaterThanOrEqual(reached);
+      reached = frame.reached;
     }
   });
 });
