@@ -83,6 +83,29 @@ export const SESSIONS: { name: string; steps: [number, SessionStatus][] }[] = [
 export const TRACE_DURATION = 2000;
 export const TRACE = { ghost: 300, from: 300, length: 1500 };
 
+export const HQ_DURATION = 2800;
+export const HQ_COMMAND = "hq q flaky login test";
+export const HQ_PHASES = ["raw", "ready", "adr", "done"];
+export const HQ_REPOS = ["web-app", "api", "cli"];
+export const HQ = { type: { at: 150, length: 500 }, phases: { at: 800, every: 300 }, learn: { at: 2000, length: 250 }, repos: { at: 2150, every: 150, length: 200 } } as const;
+
+export interface HqFrame {
+  typed: number;
+  phase: number;
+  learn: number;
+  repos: number[];
+}
+
+export function hq_frame(t: number): HqFrame {
+  const { type, phases, learn, repos } = HQ;
+  return {
+    typed: progress(t, type.at, type.length),
+    phase: t < phases.at ? -1 : Math.min(HQ_PHASES.length - 1, Math.floor((t - phases.at) / phases.every)),
+    learn: ease_out(progress(t, learn.at, learn.length)),
+    repos: HQ_REPOS.map((_, index) => ease_out(progress(t, repos.at + index * repos.every, repos.length))),
+  };
+}
+
 export const SEASONS_DURATION = 2000;
 export const SEASONS = [
   { name: "S1", episodes: 8, watched: 8 },

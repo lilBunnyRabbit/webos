@@ -152,6 +152,30 @@ export const FEATURED: Project[] = [
       { kind: SOURCE, url: `${REPO}/series-tracker` },
     ],
   },
+  {
+    id: "hq",
+    name: "hq",
+    badge: "Go CLI",
+    kicker: "Memory for every repo",
+    status: OK,
+    tagline: "Coding agents start every session knowing nothing. hq is one git repo of my ideas, decisions and lessons that every agent, in every repo, reads first.",
+    points: [
+      "A lesson is stored once: after a non-obvious fix, /learn adds one line to a knowledge index, and later sessions in any repo find it from the symptom alone.",
+      "Code style corrections become rules the next session follows, so the same correction never comes twice.",
+      "An idea is a quest: one markdown file that grows from a one-line capture into a brief, an investigation, a decision record and what landed.",
+      "The hq CLI, in Go: capture from any shell with hq q, a Bubble Tea terminal UI, and hq start opens a coding session in the quest's repo with the quest as its context.",
+      "A retrieval eval checks that the memory works: a fresh session gets only the symptom, and passes when it opens the right note and applies the stored fix.",
+      "Plain markdown in git, opened in Obsidian; it commits and pushes itself every five minutes on macOS, Linux and Windows.",
+    ],
+    stack: ["Go", "Bubble Tea", "Markdown", "Obsidian", "Claude Code", "Codex"],
+    shows: {
+      decisions: "In hq a decision is a section of the quest it settles, with the options passed over and why.",
+      team: "hq stores a lesson once, and the coding agents in every repo I work on read it before repeating the mistake.",
+      lightest: "hq is markdown files in git: no database, no server.",
+    },
+    note: "Private repo, so there's no link.",
+    links: [],
+  },
 ];
 
 export const MORE: Project[] = [
