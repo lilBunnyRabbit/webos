@@ -6,10 +6,7 @@
     petrace: "A phone showing a faint drawing of a house, and beside it a sheet of paper where a pencil traces the same house line by line.",
     "series-tracker": "Two seasons of episodes as a grid, ticked off one by one, with the next episode marked.",
     agtc: "Three coding-agent sessions whose status changes in place: busy, done, waiting for input.",
-    "hq-quests": "A list of quests with their status; one is started, and a session clarifies it, investigates, records a decision and writes findings while its status steps to done.",
     "hq-loop": "A quest is started, and each step of the session lights the part of hq it uses: the quest, the lessons, the code style rules, the skills, then the quest again when it's done.",
-    "hq-tree": "The folders of the hq repo are stepped through, each showing what it holds and a sample: quests, lessons, code style rules, skills and the CLI.",
-    "hq-session": "A session reads a quest brief, matching lessons, code style rules and a skill, works, then writes back findings, a new lesson, a new style rule and its status.",
   };
 </script>
 
@@ -17,9 +14,6 @@
   import GraphicAgtc from "./graphic-agtc.svelte";
   import GraphicChromatics from "./graphic-chromatics.svelte";
   import GraphicHqLoop from "./graphic-hq-loop.svelte";
-  import GraphicHqQuests from "./graphic-hq-quests.svelte";
-  import GraphicHqSession from "./graphic-hq-session.svelte";
-  import GraphicHqTree from "./graphic-hq-tree.svelte";
   import GraphicPetrace from "./graphic-petrace.svelte";
   import GraphicSeasons from "./graphic-seasons.svelte";
   import GraphicTasks from "./graphic-tasks.svelte";
@@ -43,14 +37,12 @@
     <GraphicSeasons {player} />
   {:else if id === "agtc"}
     <GraphicAgtc {player} />
-  {:else if id === "hq-quests"}
-    <GraphicHqQuests {player} />
   {:else if id === "hq-loop"}
     <GraphicHqLoop {player} />
-  {:else if id === "hq-tree"}
-    <GraphicHqTree {player} />
-  {:else if id === "hq-session"}
-    <GraphicHqSession {player} />
+  {:else if id === "hq-loop-b"}
+    <GraphicHqLoop {player} status peek />
+  {:else if id === "hq-loop-c"}
+    <GraphicHqLoop {player} ls={false} peek />
   {/if}
 </div>
 

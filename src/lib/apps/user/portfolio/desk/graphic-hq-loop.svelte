@@ -3,7 +3,14 @@
   import type { GraphicPlayer } from "./project-player.svelte";
   import { HQ_PARTS, LOOP, LOOP_RUN, QUEST_LIST, step_at } from "./project-scenes";
 
-  let { player }: { player: GraphicPlayer } = $props();
+  interface Props {
+    player: GraphicPlayer;
+    ls?: boolean;
+    status?: boolean;
+    peek?: boolean;
+  }
+
+  let { player, ls = true, status = false, peek = false }: Props = $props();
 
   const picked = $derived(player.t >= LOOP.pick);
   const step = $derived(step_at(player.t, LOOP.run, LOOP.every, LOOP_RUN.length));
@@ -13,19 +20,23 @@
 
 <div class="hq-scene grid h-full place-items-center py-3 font-mono">
   <div class="hq-flow flex w-full items-start">
-    <div class="hq-pane hq-wide">
-      <p class="hq-caption">$ hq ls</p>
-      <ul class="flex flex-col gap-0.5">
-        {#each QUEST_LIST as quest, index (quest.id)}
-          <li class={cn("row", index === 0 && picked && "picked")}>
-            <span class="text-foreground/45">{quest.id}</span>
-            <span class="min-w-0 flex-1 truncate">{quest.title}</span>
-          </li>
-        {/each}
-      </ul>
-    </div>
+    {#if ls}
+      <div class="hq-pane hq-wide">
+        <p class="hq-caption">$ hq ls</p>
+        <ul class="flex flex-col gap-0.5">
+          {#each QUEST_LIST as quest, index (quest.id)}
+            {@const live = index === 0 && step >= 0}
+            <li class={cn("row", index === 0 && picked && "picked")}>
+              <span class="text-foreground/45">{quest.id}</span>
+              <span class="min-w-0 flex-1 truncate">{quest.title}</span>
+              {#if status}<span class={cn("status", live && "live")}>{live ? LOOP_RUN[step].status : quest.status}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </div>
 
-    <span class="hq-wire hq-wide"><span style:scale="{step >= 0 ? 1 : 0} 1"></span></span>
+      <span class="hq-wire hq-wide"><span style:scale="{step >= 0 ? 1 : 0} 1"></span></span>
+    {/if}
 
     <div class="hq-pane">
       <p class="hq-caption truncate">$ hq start 3fa</p>
@@ -38,13 +49,18 @@
 
     <span class="hq-wire"><span style:scale="{step >= 0 ? 1 : 0} 1"></span></span>
 
-    <div class="hq-pane parts">
+    <div class={cn("hq-pane", peek ? "peeking" : "parts")}>
       <p class="hq-caption">hq</p>
-      <ul class="flex flex-col gap-0.5">
+      <ul class={cn("flex", peek ? "flex-wrap gap-1" : "flex-col gap-0.5")}>
         {#each HQ_PARTS as part (part)}
           <li class={cn("part truncate", touched.has(part) && "touched", now === part && "now")}>{part}</li>
         {/each}
       </ul>
+      {#if peek && step >= 0}
+        {#key step}
+          <p class="peek">{LOOP_RUN[step].peek}</p>
+        {/key}
+      {/if}
     </div>
   </div>
 </div>
@@ -68,6 +84,15 @@
   .row.picked {
     color: var(--foreground);
     background: color-mix(in oklch, var(--primary) 12%, transparent);
+  }
+
+  .status {
+    flex: none;
+    color: color-mix(in oklch, var(--foreground) 50%, transparent);
+  }
+
+  .status.live {
+    color: var(--primary);
   }
 
   .run {
@@ -102,11 +127,40 @@
     background: color-mix(in oklch, var(--primary) 14%, transparent);
   }
 
+  .peeking .part {
+    background: color-mix(in oklch, var(--foreground) 6%, transparent);
+  }
+
+  .peeking .part.now {
+    background: color-mix(in oklch, var(--primary) 14%, transparent);
+  }
+
+  .peek {
+    margin-top: 0.25rem;
+    white-space: normal;
+    text-wrap: pretty;
+    padding: 0.0625rem 0.375rem;
+    border-left: 2px solid var(--primary);
+    color: color-mix(in oklch, var(--foreground) 80%, transparent);
+    animation: rise 300ms var(--ease-out);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      translate: 0 0.25rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .row,
     .run,
     .part {
       transition: none;
+    }
+
+    .peek {
+      animation: none;
     }
   }
 </style>

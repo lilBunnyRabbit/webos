@@ -2,13 +2,10 @@ import { PROJECTS } from "./evidence";
 import {
   LOOP_DURATION,
   PALETTE_DURATION,
-  QUEST_DURATION,
   SEASONS_DURATION,
-  SESSION_DURATION,
   SESSIONS_DURATION,
   TASKS_DURATION,
   TRACE_DURATION,
-  TREE_DURATION,
   WEBOS_DURATION,
 } from "./project-scenes";
 
@@ -24,10 +21,9 @@ export const DURATIONS: Record<string, number> = {
   petrace: TRACE_DURATION,
   "series-tracker": SEASONS_DURATION,
   agtc: SESSIONS_DURATION,
-  "hq-quests": QUEST_DURATION,
+  "hq-loop-b": LOOP_DURATION,
   "hq-loop": LOOP_DURATION,
-  "hq-tree": TREE_DURATION,
-  "hq-session": SESSION_DURATION,
+  "hq-loop-c": LOOP_DURATION,
 };
 
 export const PROJECTS_PLAY_MS = Math.max(...PROJECTS.map((project, index) => (DURATIONS[project.id] ?? 0) + index * STAGGER));

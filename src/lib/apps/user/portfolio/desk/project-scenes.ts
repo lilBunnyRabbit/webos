@@ -105,11 +105,11 @@ export const HQ_PARTS = ["quests/", "knowledge/", "AGENTS.md", "skills/"];
 
 export const LOOP_DURATION = 3100;
 export const LOOP_RUN = [
-  { line: "read the brief", part: "quests/" },
-  { line: "matched 2 lessons", part: "knowledge/" },
-  { line: "wrote it my way", part: "AGENTS.md" },
-  { line: "/learn: +1 lesson", part: "skills/" },
-  { line: "## Findings, done", part: "quests/" },
+  { line: "read the brief", part: "quests/", status: "in-progress", peek: "## Brief: scope, entry points, done-when" },
+  { line: "matched 2 lessons", part: "knowledge/", status: "in-progress", peek: "found by the symptom, fix applied" },
+  { line: "wrote it my way", part: "AGENTS.md", status: "in-progress", peek: "interface over type · tokens, never hex" },
+  { line: "/learn: +1 lesson", part: "skills/", status: "in-progress", peek: "knowledge/ +1 line: symptom, then fix" },
+  { line: "## Findings, done", part: "quests/", status: "done", peek: "offline-sync.md  status: done" },
 ];
 export const LOOP = { pick: 300, run: 600, every: 480 } as const;
 
