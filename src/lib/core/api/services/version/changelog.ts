@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "3.70.0",
-    date: "2026-10-25",
+    date: "2026-10-26",
     title: "Colour, packaged",
     introduces: ["color-tools", "colour-atlas"],
     changes: [
