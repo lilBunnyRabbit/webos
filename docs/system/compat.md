@@ -172,7 +172,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `barcode-detector` | Barcode detection | Cards reads EAN, UPC, Code 128 and Code 39 itself; other barcode types need typing. QR codes still work. | `cards` | 88 | no | no |
 | `passkey-prf` | Passkey encryption (PRF) | Unlocking Moonrabbit with a passkey. PIN, pattern and phrase still work. | `moonrabbit` | 133 | 139 | 18 |
 | `webhid` | WebHID | The HID device inspector. | `hid-lab` | 89 | no | no |
-| `eyedropper` | EyeDropper | Picking a colour from the screen. | `paint` | 95 | no | no |
+| `eyedropper` | EyeDropper | Picking a colour from the screen; Color Tools still picks from a picture or the camera. | `paint`, `color-tools` | 95 | no | no |
 
 ### Cosmetic (`cosmetic`)
 

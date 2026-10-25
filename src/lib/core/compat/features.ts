@@ -454,9 +454,9 @@ export const FEATURES: Feature[] = [
   {
     id: "eyedropper",
     name: "EyeDropper",
-    lost: "Picking a colour from the screen.",
+    lost: "Picking a colour from the screen; Color Tools still picks from a picture or the camera.",
     level: Level.APPS,
-    apps: ["paint"],
+    apps: ["paint", "color-tools"],
     min: min("95", null, null),
     probe: () => global("EyeDropper"),
   },

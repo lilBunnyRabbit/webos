@@ -124,7 +124,7 @@ The owner: "maybe a fun game showcasing all the color models". Every package mod
 ## Action items
 - [-] Portfolio: rewrite the Chromatics card for the package (70 models, conversion graph, exact rational matrices, cited test vectors), add the npm link, and drop culori from the stack. Add "See it in WebOS" (`color-tools`) once Color Tools ships. Done except the WebOS link.
 - [ ] Split Color Games (ADR-071).
-- [ ] Color Tools v1 (ADR-072). It can run in parallel with the split, since they share no files beyond the compat list.
+- [x] Color Tools v1 (ADR-072), 2026-10-25. It can run in parallel with the split, since they share no files beyond the compat list.
 - [ ] The games swap culori for `color-tools/color.ts`, after both of the above merge. Out-of-gamut hexes shift, since CSS Color 4 gamut mapping differs from `clampChroma`. Check the `hex`, `odd` and `sort` tests.
 
 ## Next session topics

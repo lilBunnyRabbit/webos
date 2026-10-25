@@ -1,6 +1,6 @@
 # ADR-072: Color Tools
 **Date:** 2026-10-25
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 
@@ -44,3 +44,16 @@ Discussion: [brainstorm](../brainstorm/2026-10-25_chromatics.md).
 - WebOS's first use of the package. The portfolio's Chromatics card gets "See it in WebOS" pointing at Color Tools.
 - `docs/apps/color-tools.md` covers the `.palette` format and the pick fallback.
 - The EyeDropper entry in `compat/features.ts` gains `color-tools`.
+
+## Revision 2026-10-25: built
+
+Implemented as decided ([internals](../apps/color-tools.md)). Choices the build made inside the decision:
+
+- **Pick offers the picture and the camera everywhere,** not only where EyeDropper is missing. On a desktop with EyeDropper, "Pick from screen" comes first; a photo or a webcam is still useful there.
+- **The current colour is a string in the model it was last set in** (`hsv(…)`, `#…`, `oklch(…)`), kept in window storage with the open section and the other section settings. Two windows keep their own colour; a restored window gets it back. A slider edit in HSV stays exact in HSV instead of drifting through OKLCH.
+- **Palettes live in Documents** and open through `json_file`, saved as you go, like Brackets. The list, New palette (seeded with the current colour), Open… and From device… follow that app. A colour that `parse()` can't read makes the whole file invalid (zod `refine`); the file is shown as unreadable, not repaired.
+- **Sliders are the kit `Slider`** with a thin gradient strip under each (the channel's colours with the others held), since the kit slider draws its own `primary` track. Color Games' gradient-track `channel-slider` stays in that app; moving a colour slider into the kit is the kit picker's grill.
+- **Contrast composites a translucent text colour over the background** (`Srgb.over`) before `contrast()`; both sides are gamut-mapped first, since WCAG is about what the screen shows.
+- **Harmony rotates in OKLCH, Okhsl or HSL,** picked per window. "Add to palette" appears on each scheme while a palette is open.
+- No new web API entry beyond EyeDropper: `getUserMedia` and `OffscreenCanvas` are Baseline widely available.
+

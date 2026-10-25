@@ -78,6 +78,12 @@
         "@types/culori": "^4.0.1",
       },
     },
+    "src/lib/apps/user/color-tools": {
+      "name": "@webos/color-tools",
+      "dependencies": {
+        "@lilbunnyrabbit/chromatics": "^0.1.0",
+      },
+    },
     "src/lib/apps/user/diff": {
       "name": "@webos/diff",
       "dependencies": {
@@ -518,6 +524,8 @@
 
     "@lezer/yaml": ["@lezer/yaml@1.0.4", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.4.0" } }, "sha512-2lrrHqxalACEbxIbsjhqGpSW8kWpUKuY6RHgnSAFZa6qK62wvnPxA8hGOwOoDbwHcOFs5M4o27mjGu+P7TvBmw=="],
 
+    "@lilbunnyrabbit/chromatics": ["@lilbunnyrabbit/chromatics@0.1.0", "", { "dependencies": { "@lilbunnyrabbit/optional": "^1.1.0" } }, "sha512-T4A5fqEg6G0GilIc00kha4Gd7sSmPZbAnOv5YIc8JGnPLtH0Fxcgs6KYfnXxvnVOejl7aOmtYLph6Dd/pa4PjQ=="],
+
     "@lilbunnyrabbit/event-emitter": ["@lilbunnyrabbit/event-emitter@0.1.2", "", {}, "sha512-Nt1vqFNk+ZItyHZg3AkmlbqG9eMXKDcxS6H8Yr4ZJdmDbYahVXeVzs60KNLWZ50iSQ0fVW2Q3iEHwKclewIrOw=="],
 
     "@lilbunnyrabbit/optional": ["@lilbunnyrabbit/optional@1.0.1", "", {}, "sha512-E2zTGpDhTl9wQdQUn40hnvRGAHzCJSyihKVoKrmNABSlo234zjp1Jt1rEJErq9WyO5prparf0n/iAeYSRE0fhQ=="],
@@ -723,6 +731,8 @@
     "@webos/cards": ["@webos/cards@workspace:src/lib/apps/user/cards"],
 
     "@webos/color-games": ["@webos/color-games@workspace:src/lib/apps/user/color-games"],
+
+    "@webos/color-tools": ["@webos/color-tools@workspace:src/lib/apps/user/color-tools"],
 
     "@webos/diff": ["@webos/diff@workspace:src/lib/apps/user/diff"],
 
@@ -1505,6 +1515,8 @@
     "@jridgewell/gen-mapping/@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping/@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
+
+    "@lilbunnyrabbit/chromatics/@lilbunnyrabbit/optional": ["@lilbunnyrabbit/optional@1.1.0", "", {}, "sha512-yy5XnqjscBeDrmqNjJ01UpBNHQAanwwJToCDHgqaw/Kcz/jjem9rn36Y5f5yOaRMnubAQ28IbMt/B7/36YhEzA=="],
 
     "@lilbunnyrabbit/task-manager/uuid": ["uuid@11.1.1", "", { "bin": { "uuid": "dist/esm/bin/uuid" } }, "sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ=="],
 

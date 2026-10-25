@@ -1,0 +1,7 @@
+{
+  "name": "@webos/color-tools",
+  "private": true,
+  "dependencies": {
+    "@lilbunnyrabbit/chromatics": "^0.1.0"
+  }
+}

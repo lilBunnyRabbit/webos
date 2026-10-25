@@ -8,7 +8,13 @@ export const CHANGELOG: Release[] = [
     version: "3.70.0",
     date: "2026-10-25",
     title: "Colour, packaged",
+    introduces: ["color-tools"],
     changes: [
+      {
+        kind: NEW,
+        apps: ["color-tools"],
+        text: "Color Tools: pick a colour from the screen, a photo or the camera, see it in 70 colour models, check text contrast, preview it with colour blindness, build harmonies and save palettes as files.",
+      },
       {
         kind: IMPROVED,
         text: "The Portfolio's Chromatics card now describes its colour library and links to it on npm.",

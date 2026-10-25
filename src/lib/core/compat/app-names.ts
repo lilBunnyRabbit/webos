@@ -9,6 +9,7 @@ export const APP_NAMES: Record<string, string> = {
   calendar: "Calendar",
   cards: "Cards",
   clock: "Clock",
+  "color-tools": "Color Tools",
   "csv-viewer": "CSV Viewer",
   doodlehop: "Doodlehop",
   "font-maker": "Font Maker",
