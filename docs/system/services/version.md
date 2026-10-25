@@ -84,7 +84,7 @@ Seven `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`
 
 `destroy()` clears the interval, removes the listener, stops a pending introduction from writing the marker, and disposes the wait for the Restore answer.
 
-In solo mode `SoloVersionService` (`version/solo.svelte.ts`, ADR-047) replaces this class with an empty `init()`: no polling, no listeners, no introduction, no samples, no notices, and the seen marker isn't written, so the person's own WebOS still shows what's new. Changelog loading and `check()` still work on demand.
+In solo mode `SoloVersionService` (`version/solo.svelte.ts`, ADR-047) replaces this class with an empty `init()`: no polling, no listeners, no introduction, no samples, no notices, and the seen marker isn't written, so the person's own WebOS still shows what's new. Changelog loading and `check()` still work on demand: the solo shell runs `check()` on a broken link and offers the update in place ([solo shell](../shell/solo.md)).
 
 `init()` starts one check at boot, not awaited, because a boot can be served from the precache of an older build. After that it checks when the tab becomes visible (throttled to once a minute through `last_check`), on the 30-minute tick, or when the Settings app button is clicked.
 

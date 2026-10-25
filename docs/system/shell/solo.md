@@ -11,7 +11,7 @@ solo-shell.svelte        flex column, h-dvh, safe-area insets left/right
 ├─ header                the window's app icon, title (or app name), unsaved dot; Open WebOS (primary link, new tab)
 ├─ main                  isolate
 │  ├─ solo-window.svelte the first window: app context, WindowContent at zoom 1, its sheets; no chrome
-│  ├─ EmptyState         closed: "{App} is closed" + Reopen · broken link: "This link can't open"
+│  ├─ EmptyState         closed: "{App} is closed" + Reopen · broken link: "This link can't open", or "This link needs a newer WebOS" + Update and reload
 │  └─ ToastArea          top-right (desktop) or top-centre (mobile)
 └─ DialogsHost           dropdown on desktop, sheet on mobile
 ```
@@ -25,6 +25,7 @@ The header pads the top safe area. Touch makes it 52 px tall (`pointer-coarse:h-
 | Open WebOS | `<a target="_blank">` to `router.link_for(window)`, the same `#/app/` link Copy link gives. The solo tab stays as it is, so a half-filled form isn't lost. With no window: the link's app link, or the bare OS for a broken link |
 | Close the app (its own close, `windows.close`) | Empty state with Reopen, which launches the link's route again |
 | Launch another app, open a file | Opens nothing; toast with Open WebOS ([apps](../services/apps.md#solo-mode)) |
+| Broken link | Runs `version.check()` once (solo never polls). With a newer build out, the empty state names both versions and offers Update and reload (`apply_update()`), since an app or prop newer than this cached build looks like a broken link; while checking it says so |
 | Reload | Same app again: the solo hash isn't cleared |
 | Browser back | Closes the top sheet or dialog, else runs the app's back ([ui](../services/ui.md#back)); with nothing to take it, the next back leaves the tab |
 | Change the hash | Reload ([router](../services/router.md#handling-a-link)) |

@@ -20,6 +20,10 @@ export const CHANGELOG: Release[] = [
         apps: ["portfolio"],
         text: "Portfolio's How I build has a new principle about testing on real browsers and phones, shown in WebOS, Petrace and chrome-safe-inset.",
       },
+      {
+        kind: IMPROVED,
+        text: "A shared app link that can't open now checks for a newer WebOS and offers the update when the link needs it.",
+      },
     ],
   },
   {

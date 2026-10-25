@@ -62,3 +62,6 @@ Files and settings are the person's own (same origin): their theme, their OPFS. 
 - A solo app can't reach other apps; it says so and points to Open WebOS.
 - The solo tab never writes the session or the version marker, so it can't disturb the person's own WebOS in another tab.
 - Revises ADR-010: embed mode is replaced by solo.
+
+## Revision 2026-10-25
+Solo still never polls, but a broken link runs one `version.check()`: an app or prop newer than the cached build looks like a broken link, so the empty state offers Update and reload when a newer build is out.

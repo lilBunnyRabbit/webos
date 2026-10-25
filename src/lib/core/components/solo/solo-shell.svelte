@@ -1,7 +1,17 @@
 <script lang="ts">
-  import kernel, { LinkOutcome, Platform, RouteKind, type AppsService, type RouterService, type WindowsService } from "$lib/core/api";
+  import kernel, {
+    LinkOutcome,
+    Platform,
+    RouteKind,
+    type AppsService,
+    type RouterService,
+    type VersionService,
+    type WindowsService,
+  } from "$lib/core/api";
+  import { UpdateStage } from "$lib/core/api/services/version/type";
   import { button, Button, EmptyState } from "$lib/core/components/ui";
-  import { ArrowClockwise as ArrowClockwiseIcon, ArrowSquareOut as ArrowSquareOutIcon, LinkBreak as LinkBreakIcon } from "phosphor-svelte";
+  import { untrack } from "svelte";
+  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowClockwise as ArrowClockwiseIcon, ArrowSquareOut as ArrowSquareOutIcon, LinkBreak as LinkBreakIcon } from "phosphor-svelte";
   import { parse_hash, route_url } from "$lib/core/api/services/router/route";
   import LogoMark from "../brand/logo-mark.svelte";
   import ToastArea from "../notifications/toast-area.svelte";
@@ -11,6 +21,7 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const router = $derived(kernel.service<RouterService>("router"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const version = $derived(kernel.service<VersionService>("version"));
 
   const route = parse_hash(location.hash);
   const manifest = $derived(route ? apps.get(route.id) : undefined);
@@ -22,6 +33,11 @@
     (current && router.link_for(current)) ??
       (route && !broken ? route_url({ kind: RouteKind.APP, id: route.id, props: route.props }) : `${location.origin}${location.pathname}`)
   );
+
+  // Solo never polls, and a link to an app or prop added after this build was cached looks broken here: ask once.
+  $effect(() => {
+    if (!current && (broken || !manifest)) untrack(() => void version.check());
+  });
 
   function reopen() {
     if (route) apps.launch(route.id, route.props);
@@ -50,8 +66,26 @@
   <main class="relative isolate min-h-0 flex-1">
     {#if current}
       {#key current}<SoloWindow id={current} />{/key}
+    {:else if (broken || !manifest) && version.update_available}
+      <EmptyState
+        icon={ArrowCircleUpIcon}
+        title="This link needs a newer WebOS"
+        description="WebOS v{version.update_available.version} is out, and this copy is v{version.info.version}. Update to open the link."
+      >
+        {#snippet actions()}
+          <Button
+            variant="primary"
+            class="pointer-coarse:h-11"
+            disabled={version.update_stage !== UpdateStage.IDLE}
+            onclick={() => void version.apply_update()}
+          >
+            <ArrowCircleUpIcon weight="bold" />
+            {version.update_stage === UpdateStage.IDLE ? "Update and reload" : "Updating…"}
+          </Button>
+        {/snippet}
+      </EmptyState>
     {:else if broken || !manifest}
-      <EmptyState icon={LinkBreakIcon} tone="error" title="This link can't open" description="The app it points to doesn't exist, or its data doesn't fit." />
+      <EmptyState icon={LinkBreakIcon} tone="error" title="This link can't open" description={version.is_checking ? "Checking for a newer version of WebOS…" : "The app it points to doesn't exist, or its data doesn't fit."} />
     {:else if router.last_link}
       <EmptyState icon={manifest.icon} title="{manifest.name} is closed">
         {#snippet actions()}
