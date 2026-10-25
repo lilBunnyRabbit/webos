@@ -1,6 +1,6 @@
 import { PROJECTS } from "./evidence";
 import {
-  LOOP_DURATION,
+  HQ_DURATION,
   PALETTE_DURATION,
   SEASONS_DURATION,
   SESSIONS_DURATION,
@@ -21,9 +21,7 @@ export const DURATIONS: Record<string, number> = {
   petrace: TRACE_DURATION,
   "series-tracker": SEASONS_DURATION,
   agtc: SESSIONS_DURATION,
-  "hq-loop-b": LOOP_DURATION,
-  "hq-loop": LOOP_DURATION,
-  "hq-loop-c": LOOP_DURATION,
+  hq: HQ_DURATION,
 };
 
 export const PROJECTS_PLAY_MS = Math.max(...PROJECTS.map((project, index) => (DURATIONS[project.id] ?? 0) + index * STAGGER));

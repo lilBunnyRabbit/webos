@@ -12,7 +12,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["portfolio"],
-        text: "Portfolio shows hq, a private repo of ideas, decisions and lessons that every coding agent reads before it starts.",
+        text: "Portfolio shows hq, the private repo behind every coding session: quests, past fixes, code style rules and the skills that tie them together.",
       },
     ],
   },

@@ -83,65 +83,23 @@ export const SESSIONS: { name: string; steps: [number, SessionStatus][] }[] = [
 export const TRACE_DURATION = 2000;
 export const TRACE = { ghost: 300, from: 300, length: 1500 };
 
-export const QUEST_DURATION = 2700;
-export const QUEST_LIST = [
-  { id: "3fa", title: "offline sync", status: "ready" },
-  { id: "a91", title: "flaky login test", status: "raw" },
-  { id: "c07", title: "theme picker", status: "adr" },
+export const HQ_DURATION = 3100;
+export const HQ_QUESTS = [
+  { id: "3fa", title: "offline sync" },
+  { id: "a91", title: "flaky login test" },
+  { id: "c07", title: "theme picker" },
 ];
-export const QUEST_RUN = [
-  { line: "clarified the brief", status: "ready" },
-  { line: "## Investigation", status: "investigating" },
-  { line: "## ADR", status: "adr" },
-  { line: "## Findings", status: "done" },
+export const HQ_PARTS = ["quests", "knowledge", "code style", "skills"];
+export const HQ_RUN = [
+  { line: "read the brief", part: "quests" },
+  { line: "checked known fixes", part: "knowledge" },
+  { line: "wrote it my way", part: "code style" },
+  { line: "/learn: saved the fix", part: "skills" },
+  { line: "## Findings, done", part: "quests" },
 ];
-export const QUEST = { pick: 300, run: 700, every: 480 } as const;
+export const HQ = { pick: 300, run: 600, every: 480 } as const;
 
-export const quest_step = (t: number) => (t < QUEST.run ? -1 : Math.min(QUEST_RUN.length - 1, Math.floor((t - QUEST.run) / QUEST.every)));
-
-export const step_at = (t: number, at: number, every: number, count: number) => (t < at ? -1 : Math.min(count - 1, Math.floor((t - at) / every)));
-
-export const HQ_PARTS = ["quests/", "knowledge/", "AGENTS.md", "skills/"];
-
-export const LOOP_DURATION = 3100;
-export const LOOP_RUN = [
-  { line: "read the brief", part: "quests/", status: "in-progress", peek: "## Brief: scope, entry points, done-when" },
-  { line: "matched 2 lessons", part: "knowledge/", status: "in-progress", peek: "found by the symptom, fix applied" },
-  { line: "wrote it my way", part: "AGENTS.md", status: "in-progress", peek: "interface over type · tokens, never hex" },
-  { line: "/learn: +1 lesson", part: "skills/", status: "in-progress", peek: "knowledge/ +1 line: symptom, then fix" },
-  { line: "## Findings, done", part: "quests/", status: "done", peek: "offline-sync.md  status: done" },
-];
-export const LOOP = { pick: 300, run: 600, every: 480 } as const;
-
-export const TREE_DURATION = 3200;
-export const TREE = [
-  { part: "quests/", holds: "one file per idea, its status the phase", sample: "offline-sync.md  in-progress" },
-  { part: "knowledge/", holds: "lessons, found from the error alone", sample: "workflow scope: push over SSH" },
-  { part: "AGENTS.md", holds: "how I write code: rule, then why", sample: "interface over type" },
-  { part: "skills/", holds: "the steps any agent can run", sample: "/hq:start  /learn  /prefer" },
-  { part: "tool/", holds: "the hq CLI, in Go", sample: "hq q  hq ls  hq start" },
-];
-export const TREE_STEP = { at: 150, every: 600 } as const;
-
-export const SESSION_DURATION = 2900;
-export const SESSION_READS = ["quest brief", "2 matching lessons", "code style rules", "skill: /hq:start"];
-export const SESSION_WRITES = ["## Findings", "+1 lesson", "+1 style rule", "status: done"];
-export const SESSION = { reads: { at: 150, every: 260 }, work: { at: 1200, length: 600 }, writes: { at: 1900, every: 220 } } as const;
-
-export interface SessionFrame {
-  reads: number;
-  work: number;
-  writes: number;
-}
-
-export function session_frame(t: number): SessionFrame {
-  const { reads, work, writes } = SESSION;
-  return {
-    reads: step_at(t, reads.at, reads.every, SESSION_READS.length),
-    work: progress(t, work.at, work.length),
-    writes: step_at(t, writes.at, writes.every, SESSION_WRITES.length),
-  };
-}
+export const hq_step = (t: number) => (t < HQ.run ? -1 : Math.min(HQ_RUN.length - 1, Math.floor((t - HQ.run) / HQ.every)));
 
 export const SEASONS_DURATION = 2000;
 export const SEASONS = [
