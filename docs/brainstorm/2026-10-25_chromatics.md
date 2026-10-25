@@ -93,6 +93,29 @@ The owner: "i would put color games as their own apps but tools in one". This re
 
 The ADR is [ADR-071](../adrs/071-split-color-games.md). Color Tools is [ADR-072](../adrs/072-color-tools.md).
 
+### Colour Atlas (decided)
+The owner: "maybe a fun game showcasing all the color models". Every package model has static `channels` with a `range` and a `hue` flag, so one generic slider UI covers all 70 models without model-specific code. The game is also the package card's "See it in WebOS" target.
+
+- **Game:** dial plus a collection. Each round shows a target swatch and the sliders of one model. Match the target; the score is `max(0, 100 - 8·ΔE2000)`. A round with ΔE under 5 collects that model into a 70-slot dex. Each dex page shows the model's family, its source, its channels and ranges, and its route through the conversion graph.
+- **Tiers:**
+  - Familiar: RGB, HSL, HSV, CMYK and the like.
+  - Perceptual: OKLCH, Lab, HCT and the like.
+  - Exotic: XYB, ICtCp, ACEScc, CAM16 and the like.
+
+  A run of 5 is 2 Familiar, 2 Perceptual and 1 Exotic. Slider tracks show live gradients, so any model is solvable by eye. Targets are gamut-mapped sRGB.
+- **Daily and practice:** the daily is a seeded run, which Game Hub ranks by score, highest first. Practice can pick a tier, or a model from the dex.
+- **Home:** its own game app (the fifth colour game, one game per app), importing `color-tools/color.ts`.
+  - Rejected: a Color Tools section, which would put a game in a utility with no daily.
+- **Persistence:** the daily goes through `PlayTracker` (`plays.json`). The dex lives in app storage, `app.colour-atlas.dex` (model id → best ΔE), which backup already covers.
+- **Name:** Colour Atlas, id `colour-atlas`. The owner picked the British spelling over the US "Color" the other colour apps use.
+- **Shell:** nothing.
+- **Rejected:**
+  - "Which space?": many models give near-identical strips, so it can't cover all of them.
+  - All modes at once: too big, and against one game per app.
+  - Pure random rounds: exotic-heavy runs feel unfair.
+  - A fixed campaign: no replay variety.
+- **Order:** after Color Tools merges. ADR: [ADR-073](../adrs/073-colour-atlas.md).
+
 ## Key takeaways
 - The package is the only source of colour math in WebOS. Anything it lacks waits for the package.
 - The DSL theme builder waits on the owner's DSL package.
