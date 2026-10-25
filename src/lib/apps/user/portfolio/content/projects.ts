@@ -71,7 +71,6 @@ export const FEATURED: Project[] = [
     stack: ["Bun", "TypeScript", "tmux"],
     shows: {
       lightest: "AGTC has zero runtime dependencies; it reads each tool's own transcripts and process state.",
-      correct: "AGTC's worktree cleanup checks the remote, because squash merges leave nothing in local history for git branch --merged to find.",
     },
     note: "Requires macOS and Bun.",
     links: [
@@ -122,6 +121,7 @@ export const FEATURED: Project[] = [
       decisions: "Petrace's architecture is written down as a module contract.",
       lightest: "Petrace detects edges on the device and works offline as a PWA, with no server.",
       feel: "In Petrace, pinch, twist and tilt follow your fingers; controls appear only when the hardware supports them.",
+      tested: "Petrace's whole interface was polished on simulated phones.",
     },
     note: "Made for phones: open it on one.",
     note_desktop_only: true,
@@ -179,6 +179,9 @@ export const MORE: Project[] = [
     tagline: "Test safe-area-inset-* layouts in desktop Chrome, no phone or simulator needed.",
     points: ["Drives Chrome's experimental DevTools Protocol override."],
     stack: ["Bun", "Chrome DevTools Protocol"],
+    shows: {
+      tested: "chrome-safe-inset is a tool I built to test notch and home-bar layouts in desktop Chrome, without a phone.",
+    },
     links: [{ kind: SOURCE, url: `${REPO}/chrome-safe-inset` }],
   },
   {

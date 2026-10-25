@@ -26,7 +26,7 @@ describe("evidence", () => {
   test("a project shows a principle when the proof names it or its own `shows` says how", () => {
     expect(shows_in(principle("decisions"), project("webos"))).toBe(true);
     expect(shows_in(principle("decisions"), project("chromatics"))).toBe(true);
-    expect(shows_in(principle("correct"), project("chromatics"))).toBe(false);
+    expect(shows_in(principle("tested"), project("chromatics"))).toBe(false);
     expect(shows_in(principle("decisions"), project("brand"))).toBe(true);
     expect(shows_in(principle("team"), project("task-manager"))).toBe(true);
   });
@@ -47,7 +47,7 @@ describe("evidence", () => {
     expect(principles_for_job("astra").map((p) => p.id)).toEqual(["team", "performance", "feel"]);
     expect(principles_for_job("while-true")).toEqual([]);
     expect(principles_for_project("chromatics").map((p) => p.id)).toEqual(["decisions", "performance", "feel"]);
-    expect(principles_for_project("agtc").map((p) => p.id)).toEqual(["lightest", "correct"]);
+    expect(principles_for_project("agtc").map((p) => p.id)).toEqual(["lightest"]);
   });
 
   test("names read jobs first, then projects", () => {
@@ -72,7 +72,7 @@ describe("evidence", () => {
     const decisions = principle("decisions");
     expect(proof_for(decisions, "Chromatics")).toBe(project("chromatics").shows!.decisions);
     expect(how_for(decisions, "Petrace")).toEqual({ text: project("petrace").shows!.decisions, status: project("petrace").status });
-    expect(proof_for(principle("correct"), "Chromatics")).toBeNull();
+    expect(proof_for(principle("tested"), "Chromatics")).toBeNull();
   });
 
   test("the how is the part of the proof about that one place", () => {
@@ -89,7 +89,7 @@ describe("evidence", () => {
   test("the proof is told at one labelled place: a project first, then a job", () => {
     expect(proof_place("decisions")).toBe("WebOS");
     expect(proof_place("feel")).toBe("Chromatics");
-    expect(proof_place("correct")).toBe("AGTC");
+    expect(proof_place("tested")).toBe("chrome-safe-inset");
     for (const id of TOUR_PRINCIPLES) expect(proof_place(id)).not.toBeNull();
   });
 

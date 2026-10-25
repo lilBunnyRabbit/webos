@@ -15,6 +15,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tea-timer"],
         text: "Tea Timer knows the right water temperature and steeping time for the common teas: pick a strength, brew several cups at once, and it rings when each is ready and offers the next steep for teas that brew again.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["portfolio"],
+        text: "Portfolio's How I build has a new principle about testing on real browsers and phones, shown in WebOS, Petrace and chrome-safe-inset.",
+      },
     ],
   },
   {
