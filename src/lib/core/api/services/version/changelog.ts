@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.65.0",
+    date: "2026-10-25",
+    title: "Time for tea",
+    introduces: ["tea-timer"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tea-timer"],
+        text: "Tea Timer knows the right water temperature and steeping time for the common teas: pick a strength, brew several cups at once, and it rings when each is ready and offers the next steep for teas that brew again.",
+      },
+    ],
+  },
+  {
     version: "3.64.0",
     date: "2026-10-25",
     title: "Open for business",

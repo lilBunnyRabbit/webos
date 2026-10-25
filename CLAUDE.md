@@ -205,6 +205,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `moonrabbit` | `docs/apps/moonrabbit.md` |
 | `image-tools` | `docs/apps/image-tools.md` |
 | `checkout-challenge` | `docs/apps/checkout-challenge.md` |
+| `tea-timer` | `docs/apps/tea-timer.md` |
 | `portfolio` | `docs/apps/portfolio.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.

@@ -220,10 +220,11 @@ Every full tab watches `apps.is_installed` for the apps its jobs belong to (an `
 | Recipe Box | `recipe-box:timer-{id}`, kind `timer`, `{ epoch }`, title the step's timer name, message the recipe | `recipe timer stop {key}` (Stop) | Recipe Box on that recipe (`open.props.path`) | nothing |
 | Pomodoro | `pomodoro:phase`, kind `phase`, `{ epoch }`: the running phase's end; disarmed while paused | `pomo start` (Start break / Start focus), `pomo skip` (Skip, Skip break), `pomo pause` (Pause) | Pomodoro | `timer.json`: settings, task, the plan (phase, round, `left` while paused, `total`, the `settled` end) and a missed phase's `ended`; `stats.json` |
 | Calendar | `calendar:reminder-{event id}`, kind `reminder`: `{ date, time, tz }` of the first occurrence's reminder, tz the device's when it's made; `repeat` is the event's rule moved back by the reminder's whole days | none | Calendar on the day of the occurrence it's for (`open.props.day`) | `events.json`: every event detail, including the reminder's minutes; nothing about when it last fired |
+| Tea Timer | `tea-timer:brew-{id}`, kind `timer`, `{ epoch }` at the end of the steep; title "{tea} is ready", message the steep, strength and time | none | Tea Timer | `teas.json`: `brews` by job id: the tea, steep and strength. Armed is brewing, disarmed is ready; Steep N schedules the same job again |
 
 - **Clock timer state** comes from the job first: armed is running (ends at `at.epoch`); otherwise `left_ms` says paused or reset, and no `left_ms` is done. Each change writes the job and the extras in the order that keeps that true in between: start arms first, pause and reset write `left_ms` first.
 - **Switching a one-off alarm back on** re-times it to the next time the clock reads its time, in its own zone. `alarm stop` drops a snooze and switches a one-off off when nothing is left to ring; `alarm snooze` arms the job with `snooze_until`, so a one-off that already rang rings once more.
-- **Permission.** Clock's Save and Start, Recipe Box's timer buttons and Pomodoro's Start (window and widget) and Calendar's Save of an event with a reminder call `notifications.request_system()` in the click, before scheduling.
+- **Permission.** Clock's Save and Start, Recipe Box's timer buttons and Pomodoro's Start (window and widget), Calendar's Save of an event with a reminder, and Tea Timer's Brew and Steep call `notifications.request_system()` in the click, before scheduling.
 
 ### Pomodoro
 
