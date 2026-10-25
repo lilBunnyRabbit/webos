@@ -8,12 +8,17 @@ export const CHANGELOG: Release[] = [
     version: "3.65.0",
     date: "2026-10-25",
     title: "Time for tea",
-    introduces: ["tea-timer"],
+    introduces: ["tea-timer", "tape-sketch"],
     changes: [
       {
         kind: NEW,
         apps: ["tea-timer"],
         text: "Tea Timer knows the right water temperature and steeping time for the common teas: pick a strength, brew several cups at once, and it rings when each is ready and offers the next steep for teas that brew again.",
+      },
+      {
+        kind: NEW,
+        apps: ["tape-sketch"],
+        text: "Tape Sketch is for measuring around the house: tap the corners of a room, a drawer or a fence, type each length on a big numpad, and it tells you when the numbers don't add up, with area and perimeter for closed shapes.",
       },
       {
         kind: IMPROVED,
