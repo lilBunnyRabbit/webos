@@ -83,28 +83,56 @@ export const SESSIONS: { name: string; steps: [number, SessionStatus][] }[] = [
 export const TRACE_DURATION = 2000;
 export const TRACE = { ghost: 300, from: 300, length: 1500 };
 
-export const HQ_DURATION = 2800;
-export const HQ_COMMAND = "hq q flaky login test";
-export const HQ_PHASES = ["raw", "ready", "adr", "done"];
-export const HQ_REPOS = ["web-app", "api", "cli"];
-export const HQ = { type: { at: 150, length: 500 }, phases: { at: 800, every: 300 }, learn: { at: 2000, length: 250 }, repos: { at: 2150, every: 150, length: 200 } } as const;
+export const RECALL_DURATION = 2800;
+export const RECALL_SYMPTOM = "push rejected: workflow scope";
+export const RECALL = { type: { at: 150, length: 550 }, pointer: 850, index: 1200, fix: { at: 1550, length: 250 }, score: { at: 1900, length: 700, from: 6, to: 10 } } as const;
 
-export interface HqFrame {
+export interface RecallFrame {
   typed: number;
-  phase: number;
-  learn: number;
-  repos: number[];
+  pointer: boolean;
+  index: boolean;
+  fix: number;
+  score: number;
 }
 
-export function hq_frame(t: number): HqFrame {
-  const { type, phases, learn, repos } = HQ;
+export function recall_frame(t: number): RecallFrame {
+  const { type, pointer, index, fix, score } = RECALL;
   return {
     typed: progress(t, type.at, type.length),
-    phase: t < phases.at ? -1 : Math.min(HQ_PHASES.length - 1, Math.floor((t - phases.at) / phases.every)),
-    learn: ease_out(progress(t, learn.at, learn.length)),
-    repos: HQ_REPOS.map((_, index) => ease_out(progress(t, repos.at + index * repos.every, repos.length))),
+    pointer: t >= pointer,
+    index: t >= index,
+    fix: ease_out(progress(t, fix.at, fix.length)),
+    score: Math.round(score.from + (score.to - score.from) * progress(t, score.at, score.length)),
   };
 }
+
+export const QUEST_DURATION = 2700;
+export const QUEST_LIST = [
+  { id: "3fa", title: "offline sync", status: "ready" },
+  { id: "a91", title: "flaky login test", status: "raw" },
+  { id: "c07", title: "theme picker", status: "adr" },
+];
+export const QUEST_RUN = [
+  { line: "clarified the brief", status: "ready" },
+  { line: "## Investigation", status: "investigating" },
+  { line: "## ADR", status: "adr" },
+  { line: "## Findings", status: "done" },
+];
+export const QUEST = { pick: 300, run: 700, every: 480 } as const;
+
+export const quest_step = (t: number) => (t < QUEST.run ? -1 : Math.min(QUEST_RUN.length - 1, Math.floor((t - QUEST.run) / QUEST.every)));
+
+export const SKILLS_DURATION = 2700;
+export const SKILLS = [
+  { name: "/hq:parse", does: "raw notes become briefs that point into the code" },
+  { name: "/hq:start", does: "a quest becomes a clarified, routed session" },
+  { name: "/learn", does: "a fix becomes one line every repo reads" },
+  { name: "/prefer", does: "a correction becomes a code style rule" },
+  { name: "/hq:lint", does: "stale, duplicate and dead notes get flagged" },
+];
+export const SKILL = { at: 150, every: 500 } as const;
+
+export const skill_at = (t: number) => (t < SKILL.at ? -1 : Math.min(SKILLS.length - 1, Math.floor((t - SKILL.at) / SKILL.every)));
 
 export const SEASONS_DURATION = 2000;
 export const SEASONS = [
