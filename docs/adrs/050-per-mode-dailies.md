@@ -39,3 +39,7 @@ Discussion: [brainstorm](../brainstorm/2026-10-18_color-games.md).
 
 - Second user: Sudoku, whose modes are its sizes, `9x9` and `6x6` (props `{ daily, mode }`). A per-mode record makes every row a mode, so the 9×9 daily's result moved from `sudoku` to `sudoku/9x9`; older days stay under `sudoku`, which streak and totals still count. The 9×9 puzzle seed stays `daily_seed(day, "sudoku")`, so its dailies are unchanged; 6×6 seeds on `sudoku/6x6` like Color Games.
 - `mode_label` writes a size id as a size: `6x6` → "6×6", so the rows read "Sudoku · 9×9" and "Sudoku · 6×6".
+
+## Revision 2026-10-25: Color Games split
+
+The owner split Color Games into four apps ([ADR-071](071-split-color-games.md)). Each mode becomes its own app with a single `daily_rank`. Its daily keeps the seed `color-games/{mode}`, and older results stay under those keys. Per-mode keys stay in use for Sudoku.

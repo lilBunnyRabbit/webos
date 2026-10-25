@@ -277,8 +277,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [ ] Theme sharing via URL
 - [x] Settings redesign (2026-10-21, [brainstorm](brainstorm/2026-10-21_settings-redesign.md)): macOS-style panes in a grouped sidebar (Appearance split into Theme, Wallpaper, Text & interface, Taskbar), Create a theme and Edit colours as Theme subpages, search that opens the page and rings the row, `settings [setting]` and `?setting=` links, Reset moved to Backup & reset with a confirm, Related links; the kit `SideNav` drill-in mode for narrow windows and phones (also Style Guide and Activity Monitor)
 - [x] Random theme generator (owner, 2026-10-16; ADR-015 revisions): first as Shuffle, then (same day, [brainstorm](brainstorm/2026-10-16_theme-generator.md)) a Generate panel in Appearance: mode, harmony, vibrance, contrast, a lock per base colour, preview, the last 3 generations, saved themes in "Your themes" with rename and delete; `theme random` on the same generator, `theme save` / `theme delete`. Readable lightness gaps always hold. Originally: a Randomize button that makes a new theme, not fully random: keep the logic that makes a theme work (contrast between token pairs, a coherent hue relationship such as analogous or complementary, sane lightness for light and dark), randomize within it
-- [ ] Chromatics in WebOS (owner, 2026-10-15). Bring the whole Chromatics API (OKLCH engine, colour DSL, ~100 colour models, WCAG/APCA analysis, schemes, mixer, export) into WebOS, likely as an app plus a core colour layer. Open questions: depend on the `chromatics` package (not published yet: a new dependency) or vendor its source; what lives in core (theme maths, `derive_theme` today) and what stays in an app; shell commands (`color` values, convert, contrast); how it sits next to Culori (style default)
-- [ ] Build WebOS themes with Chromatics: write a theme in the Chromatics DSL or studio, preview it live on the desktop, check contrast of every token pair, save it as a WebOS theme (feeds export/import and sharing above, and may replace `derive_theme`)
+- [ ] Chromatics in WebOS (owner, 2026-10-15; decided 2026-10-25, [brainstorm](brainstorm/2026-10-25_chromatics.md)). `@lilbunnyrabbit/chromatics` is on npm and approved per app (ADR-045). WebOS uses only the package's maths, never copies. Order: split Color Games (ADR-071), Color Tools (ADR-072), games swap culori, kit colour picker (root dep, own grill), theme audit and desktop CVD (own grill), Mix section. Was:  Bring the whole Chromatics API (OKLCH engine, colour DSL, ~100 colour models, WCAG/APCA analysis, schemes, mixer, export) into WebOS, likely as an app plus a core colour layer. Open questions: depend on the `chromatics` package (not published yet: a new dependency) or vendor its source; what lives in core (theme maths, `derive_theme` today) and what stays in an app; shell commands (`color` values, convert, contrast); how it sits next to Culori (style default)
+- [ ] Build WebOS themes with Chromatics (waits on the owner's Chromatics DSL package, 2026-10-25): write a theme in the Chromatics DSL or studio, preview it live on the desktop, check contrast of every token pair, save it as a WebOS theme (feeds export/import and sharing above, and may replace `derive_theme`)
 - [ ] Sound effects (window open/close, notifications) — low priority
 
 ---
@@ -336,7 +336,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Sokoban (2026-10-17): generated levels, solvable by construction, solver-checked minimum pushes, daily. Left: Hint (the solver can power it), tap-to-walk
 - [x] Blocks (2026-10-17): falling blocks, Marathon and Sprint 40; the daily is a 40-line sprint because Game Hub's daily record keeps the lowest time. Recording a score instead changes `plays.json` (owner's call)
 - [x] Color Games (2026-10-18, [brainstorm](brainstorm/2026-10-18_color-games.md), [ADR-050](adrs/050-per-mode-dailies.md)): Recall (Dialed), Odd one out, Gradient sort, Hex guess; a daily per mode with its own Game Hub row, practice, share line with a solo challenge link; culori as the app's own dependency
-  - [ ] Swap culori for the chromatics package when published; colour shell commands
+  - [ ] Split into four apps: Color Recall, Odd One Out, Gradient Sort, Hex Guess, with `replaces` for the old id ([ADR-071](adrs/071-split-color-games.md))
+  - [ ] Swap culori for `color-tools/color.ts` (chromatics) after Color Tools. Colour shell commands: nothing for now (2026-10-25)
 - [x] Brackets (2026-10-17, owner's ideas notes): knockout, double elimination, round robin, race-points cup, `.bracket` files
 - [x] Maze (generate, solve, play; 2026-10-12)
 - [x] Minesweeper, 2048, Snake (2026-10-12)
@@ -419,8 +420,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
-- [ ] Color Tools (Chromatics) — picker, palette, contrast checker, color blindness sim. Waits on chromatics as an npm package
-- [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios (Kubelka–Munk). Waits on the Chromatics decision; overlaps its mixer
+- [ ] Color Tools ([ADR-072](adrs/072-color-tools.md), [brainstorm](brainstorm/2026-10-25_chromatics.md)): one app, sections Pick (EyeDropper, camera or image fallback), Convert (70 models), Contrast (WCAG 2), Vision (CVD), Harmony, Palette (`.palette` file); owns the chromatics wrappers
+- [ ] Kit colour picker on chromatics (OKLCH, theme swatches, eyedropper), replacing the 9 native `<input type="color">`; package moves to root; own grill
+- [ ] Theme audit in Settings › Theme: WCAG of every token pair, CVD of the 17 tokens, optional whole-desktop CVD filter; own grill
+- [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios. Decided 2026-10-25: Mix section of Color Tools after v1, on the package's `Ryb` ranked by ΔE2000, labelled approximate; Kubelka–Munk only if it lands in the package
 - [x] wget (owner's ideas notes, 2026-10-17): download a URL into OPFS as a task with progress, Cancel and Retry, `wget <url> [--to] [-o name]`. Only CORS-enabled hosts work. Owned by API Client (2026-10-17)
 - [x] API Client (app wave 7, 2026-10-17): request builder (method, query, headers, JSON/text/form body), response view (status, time, size, headers, pretty/raw, images), Cancel, `.http` files (REST Client format) with Open with, download to files as a task, `http` and `wget` in the shell
 - [x] RNG Tools — number, dice, coin, list, password (2026-10-12)
