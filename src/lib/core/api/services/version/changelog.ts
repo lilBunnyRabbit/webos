@@ -5,10 +5,15 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.66.1",
+    version: "3.67.0",
     date: "2026-10-25",
-    title: "Tea fixes",
+    title: "Up a dimension",
     changes: [
+      {
+        kind: IMPROVED,
+        apps: ["tape-sketch"],
+        text: "Tape Sketch draws your measurements in 3D: give any shape a height and turn it around to check it, tapping a line to measure it; the box is gone.",
+      },
       {
         kind: FIXED,
         apps: ["tea-timer"],

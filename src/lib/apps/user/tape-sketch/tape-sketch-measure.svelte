@@ -26,8 +26,8 @@
       return `Shape ${index + 1} · edge ${target.index + 1}`;
     }
     if (target.kind === "dim") return `Dimension ${sketch.dims.findIndex((dim) => dim.id === target.id) + 1}`;
-    const box = sketch.boxes.findIndex((each) => each.id === target.id) + 1;
-    return `Box ${box} · ${{ w: "width", d: "depth", h: "height" }[target.side]}`;
+    const path = target.path;
+    return `Shape ${sketch.paths.findIndex((each) => each.id === path) + 1} · height`;
   });
 
   const implied = $derived.by(() => {

@@ -1,12 +1,9 @@
 import { add, closure_tolerance, distance, rebuild, scale, sketch_scale, type Direction } from "./geometry";
 import {
-  BOX_SIDES,
   edge_count,
   new_id,
   point_map,
   same_target,
-  type Box,
-  type BoxSide,
   type Dim,
   type Point,
   type Sketch,
@@ -43,7 +40,10 @@ export function move_point(sketch: Sketch, id: string, at: Point): Sketch {
 
 export function start_path(sketch: Sketch, point: string): Added {
   const id = new_id();
-  return { sketch: { ...sketch, paths: [...sketch.paths, { id, points: [point], closed: false, lengths: [] }] }, id };
+  return {
+    sketch: { ...sketch, paths: [...sketch.paths, { id, points: [point], closed: false, lengths: [], height: null }] },
+    id,
+  };
 }
 
 export function append_point(sketch: Sketch, path: string, point: string, value: number | null = null): Sketch {
@@ -178,27 +178,13 @@ export function delete_note(sketch: Sketch, id: string): Sketch {
   return { ...sketch, notes: sketch.notes.filter((note) => note.id !== id) };
 }
 
-export function add_box(sketch: Sketch, at: Point): Added {
-  const id = new_id();
-  const box: Box = { id, x: at.x, y: at.y, w: null, d: null, h: null, note: "" };
-  return { sketch: { ...sketch, boxes: [...sketch.boxes, box] }, id };
-}
-
-export function set_box(sketch: Sketch, id: string, change: Partial<Omit<Box, "id">>): Sketch {
-  return { ...sketch, boxes: sketch.boxes.map((box) => (box.id === id ? { ...box, ...change } : box)) };
-}
-
-export function delete_box(sketch: Sketch, id: string): Sketch {
-  return { ...sketch, boxes: sketch.boxes.filter((box) => box.id !== id) };
-}
-
 export function measure_targets(sketch: Sketch): Target[] {
   const targets: Target[] = [];
   for (const path of sketch.paths) {
     for (let index = 0; index < edge_count(path); index++) targets.push({ kind: "edge", path: path.id, index });
+    targets.push({ kind: "height", path: path.id });
   }
   for (const dim of sketch.dims) targets.push({ kind: "dim", id: dim.id });
-  for (const box of sketch.boxes) for (const side of BOX_SIDES) targets.push({ kind: "box", id: box.id, side });
   return targets;
 }
 
@@ -210,7 +196,7 @@ export function length_of(sketch: Sketch, target: Target): number | null {
   if (target.kind === "edge")
     return sketch.paths.find((path) => path.id === target.path)?.lengths[target.index] ?? null;
   if (target.kind === "dim") return sketch.dims.find((dim) => dim.id === target.id)?.length ?? null;
-  return sketch.boxes.find((box) => box.id === target.id)?.[target.side] ?? null;
+  return sketch.paths.find((path) => path.id === target.path)?.height ?? null;
 }
 
 export function set_length(sketch: Sketch, target: Target, value: number | null): Sketch {
@@ -223,7 +209,7 @@ export function set_length(sketch: Sketch, target: Target, value: number | null)
   }
   if (target.kind === "dim")
     return { ...sketch, dims: sketch.dims.map((dim) => (dim.id === target.id ? { ...dim, length: rounded } : dim)) };
-  return set_box(sketch, target.id, { [target.side]: rounded } as Partial<Record<BoxSide, number | null>>);
+  return map_path(sketch, target.path, (path) => ({ ...path, height: rounded }));
 }
 
 /**

@@ -6,7 +6,6 @@
     | { kind: "edge"; path: string; index: number }
     | { kind: "label"; id: string }
     | { kind: "dim"; id: string }
-    | { kind: "box"; id: string }
     | { kind: "note"; id: string }
     | { kind: "marker"; id: string }
     | { kind: "target"; target: Target };
@@ -21,10 +20,10 @@
   import { pinch_view, to_image, zoom_view, type View } from "$kit/utils/view";
   import { untrack } from "svelte";
   import { Pick, Tool, type Editor } from "./editor.svelte";
-  import { move_point, set_box, set_dim_offset, set_note } from "./edit";
+  import { move_point, set_dim_offset, set_note } from "./edit";
   import { add, align, dot, sub } from "./geometry";
   import { same_target } from "./model";
-  import { build_scene, label_center, LABEL_FONT, NOTE_FONT, type SceneLabel } from "./scene";
+  import { build_scene, into_view, label_center, LABEL_FONT, NOTE_FONT, type SceneLabel } from "./scene";
 
   interface Props {
     editor: Editor;
@@ -46,7 +45,7 @@
 
   let svg = $state<SVGSVGElement>();
 
-  const DragKind = { POINT: "point", DIM: "dim", BOX: "box", NOTE: "note", PAN: "pan" } as const;
+  const DragKind = { POINT: "point", DIM: "dim", NOTE: "note", PAN: "pan" } as const;
   type DragKind = (typeof DragKind)[keyof typeof DragKind];
 
   interface Gesture {
@@ -78,7 +77,7 @@
     if (!element) return null;
     const { hit, id = "", path = "", index = "0" } = element.dataset;
     if (hit === "edge") return { kind: "edge", path, index: Number(index) };
-    if (hit === "point" || hit === "label" || hit === "dim" || hit === "box" || hit === "note" || hit === "marker") return { kind: hit, id };
+    if (hit === "point" || hit === "label" || hit === "dim" || hit === "note" || hit === "marker") return { kind: hit, id };
     return null;
   }
 
@@ -91,7 +90,6 @@
   function label_owner(label: SceneLabel | undefined): Hit | null {
     const target = label?.target;
     if (target?.kind === "dim") return { kind: "dim", id: target.id };
-    if (target?.kind === "box") return { kind: "box", id: target.id };
     return null;
   }
 
@@ -103,7 +101,6 @@
     if (hit.kind === "marker") return DragKind.POINT;
     const owner = hit.kind === "label" ? label_owner(labels.get(hit.id)) : hit;
     if (owner?.kind === "dim") return DragKind.DIM;
-    if (owner?.kind === "box") return DragKind.BOX;
     if (owner?.kind === "note") return DragKind.NOTE;
     return DragKind.PAN;
   }
@@ -139,10 +136,6 @@
     if (kind === DragKind.POINT) {
       const point = sketch.points.find((each) => each.id === point_of(hit))!;
       current.grab = sub(point, at);
-    } else if (kind === DragKind.BOX) {
-      const id = hit.kind === "label" ? (label_owner(labels.get(hit.id)) as { id: string }).id : (hit as { id: string }).id;
-      const box = sketch.boxes.find((each) => each.id === id)!;
-      current.grab = sub(box, at);
     } else if (kind === DragKind.NOTE) {
       const note = sketch.notes.find((each) => each.id === (hit as { id: string }).id)!;
       current.grab = sub(note, at);
@@ -170,10 +163,6 @@
       if (!dim || !a || !shown) return;
       const base = sub(p, { x: a.x * view.scale + view.offset_x, y: a.y * view.scale + view.offset_y });
       editor.preview = set_dim_offset(sketch, id, Math.round(dot(base, shown.normal) / view.scale));
-    } else if (current.kind === DragKind.BOX) {
-      const id = hit.kind === "label" ? (label_owner(labels.get(hit.id)) as { id: string }).id : (hit as { id: string }).id;
-      const to = add(at, current.grab);
-      editor.preview = set_box(sketch, id, { x: to.x, y: to.y });
     } else if (current.kind === DragKind.NOTE) {
       const to = add(at, current.grab);
       editor.preview = set_note(sketch, (hit as { id: string }).id, { x: to.x, y: to.y });
@@ -263,7 +252,7 @@
   $effect(() => {
     const target = editor.target;
     if (!target) return;
-    untrack(() => keep_visible(label_center(scene, target)));
+    untrack(() => keep_visible(label_center(scene.labels, target)));
   });
 
   $effect(() => {
@@ -275,12 +264,8 @@
 
   function keep_visible(at: Point | null): void {
     if (!at || !width || !height) return;
-    const side = Math.min(56, width / 4);
-    const top = Math.min(48, height / 4);
-    const bottom = Math.min(150, height / 3);
-    const dx = at.x < side ? side - at.x : at.x > width - side ? width - side - at.x : 0;
-    const dy = at.y < top ? top - at.y : at.y > height - bottom ? height - bottom - at.y : 0;
-    if (dx || dy) view = { ...view, offset_x: view.offset_x + dx, offset_y: view.offset_y + dy };
+    const shift = into_view(at, width, height);
+    if (shift.x || shift.y) view = { ...view, offset_x: view.offset_x + shift.x, offset_y: view.offset_y + shift.y };
   }
 
   function is_target(label: SceneLabel): boolean {
@@ -305,21 +290,6 @@
     onpointercancel={on_pointercancel}
     onlostpointercapture={on_pointerend}
   >
-    {#each scene.boxes as box (box.id)}
-      {@const active = picked(Pick.BOX, box.id)}
-      <g data-hit="box" data-id={box.id}>
-        {#each box.faces as face, i (i)}
-          <polygon points={face.map((p) => `${p.x},${p.y}`).join(" ")} class={active ? "fill-primary/10" : "fill-foreground/5"} />
-        {/each}
-        {#each box.hidden as line, i (i)}
-          <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="stroke-foreground/45" stroke-width="1.25" stroke-dasharray="4 4" />
-        {/each}
-        {#each box.visible as line, i (i)}
-          <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class={active ? "stroke-primary" : "stroke-foreground"} stroke-width="2" stroke-linecap="round" />
-        {/each}
-      </g>
-    {/each}
-
     {#each scene.dims as dim (dim.id)}
       {@const active = picked(Pick.DIM, dim.id) || (editor.target?.kind === "dim" && editor.target.id === dim.id)}
       <g data-hit="dim" data-id={dim.id} class={active ? "stroke-primary fill-primary" : "stroke-foreground/60 fill-foreground/60"}>
@@ -383,7 +353,7 @@
     {#each scene.labels as label (label.id)}
       {@const current = is_target(label)}
       {@const hit_id = label.kind === "marker" ? label.owner : label.id}
-      <g data-hit={label.kind === "marker" ? "marker" : label.kind === "box-note" ? "box" : "label"} data-id={label.kind === "box-note" ? label.owner : hit_id}>
+      <g data-hit={label.kind === "marker" ? "marker" : "label"} data-id={hit_id}>
         <rect
           x={label.rect.x}
           y={label.rect.y}

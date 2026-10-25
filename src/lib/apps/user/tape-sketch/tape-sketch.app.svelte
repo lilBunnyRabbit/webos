@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { Platform, ShortcutCategory, type AppsService, type DialogsService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
-  import { Button, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { Button, IconButton, Segmented, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, file_stem, parent_path } from "$lib/core/api/services/files/path";
@@ -13,7 +13,6 @@
     ArrowsOutLineHorizontal as ArrowsOutLineHorizontalIcon,
     CaretDown as CaretDownIcon,
     CornersOut as CornersOutIcon,
-    Cube as CubeIcon,
     Cursor as CursorIcon,
     Export as ExportIcon,
     FilePlus as FilePlusIcon,
@@ -32,14 +31,12 @@
   import { onMount, untrack, type Component } from "svelte";
   import { z } from "zod";
   import {
-    add_box,
     add_dim,
     add_marker,
     add_note,
     add_point,
     append_point,
     close_path,
-    delete_box,
     delete_dim,
     delete_marker,
     delete_note,
@@ -49,7 +46,6 @@
     length_of,
     redraw_to_scale,
     reverse_path,
-    set_box,
     set_length,
     set_marker_note,
     set_note,
@@ -62,10 +58,13 @@
   import { EXTENSION, serialize_sketch, sketch_name_for } from "./format";
   import { closure, DIRECTIONS, measures, path_scale, snap_45, type Direction } from "./geometry";
   import { read_path, write_file } from "./io";
-  import { BOX_SIDES, create_sketch, edge_count, point_map, Unit, UNITS, type Point, type Sketch } from "./model";
-  import { BOX_BASE, sketch_bounds } from "./scene";
+  import { create_sketch, edge_count, point_map, Unit, UNITS, type Point, type Sketch, type Target } from "./model";
+  import { PRESETS, preset_of, ViewPreset, type Orbit } from "./projection";
+  import { height_text, sketch_bounds } from "./scene";
+  import { solid_bounds } from "./solid";
   import TapeSketchCanvas, { type Hit, type TapEvent } from "./tape-sketch-canvas.svelte";
   import TapeSketchMeasure from "./tape-sketch-measure.svelte";
+  import TapeSketchSolid from "./tape-sketch-solid.svelte";
   import TapeSketchWalk from "./tape-sketch-walk.svelte";
   import { format_area, format_length, input_for, parse_input, UNIT_LABELS } from "./units";
 
@@ -80,7 +79,17 @@
   const editor = new Editor();
   const snap = storage.persisted("snap", true, z.boolean());
 
+  const Space = { FLAT: "2d", SOLID: "3d" } as const;
+  type Space = (typeof Space)[keyof typeof Space];
+  const SPACES: { value: Space; label: string }[] = [
+    { value: Space.FLAT, label: "2D" },
+    { value: Space.SOLID, label: "3D" },
+  ];
+
   let view = $state<View>({ scale: 1, offset_x: 0, offset_y: 0 });
+  let space = $state<Space>(Space.FLAT);
+  let orbit = $state<Orbit>(PRESETS[ViewPreset.THREE_QUARTER]);
+  let solid_view = $state<View>({ scale: 1, offset_x: 0, offset_y: 0 });
   let width = $state(0);
   let height = $state(0);
   let fitted = false;
@@ -107,6 +116,10 @@
 
   function fit() {
     if (!width || !height) return;
+    if (space === Space.SOLID) {
+      fit_solid();
+      return;
+    }
     const bounds = sketch_bounds(editor.sketch);
     if (!bounds) {
       view = { scale: 1, offset_x: width / 2, offset_y: height / 2 };
@@ -121,6 +134,56 @@
     };
   }
 
+  function fit_solid() {
+    const bounds = solid_bounds(editor.sketch, orbit);
+    if (!bounds) {
+      solid_view = { scale: 1, offset_x: width / 2, offset_y: height / 2 };
+      return;
+    }
+    const fitted_view = fit_view(Math.max(bounds.w, 40), Math.max(bounds.h, 40), width, height, 64);
+    const scale = Math.min(fitted_view.scale, 3);
+    solid_view = {
+      scale,
+      offset_x: width / 2 - (bounds.x + bounds.w / 2) * scale,
+      offset_y: height / 2 - (bounds.y + bounds.h / 2) * scale,
+    };
+  }
+
+  // A height typed in 3D can grow the model past the window; once the numpad closes the whole of it comes back.
+  $effect(() => {
+    const sketch_now = editor.committed;
+    if (space !== Space.SOLID || editor.target || !width || !height) return;
+    untrack(() => {
+      const bounds = solid_bounds(sketch_now, orbit);
+      if (!bounds) return;
+      const left = bounds.x * solid_view.scale + solid_view.offset_x;
+      const top = bounds.y * solid_view.scale + solid_view.offset_y;
+      const right = left + bounds.w * solid_view.scale;
+      const bottom = top + bounds.h * solid_view.scale;
+      if (left < 0 || top < 0 || right > width || bottom > height) fit_solid();
+    });
+  });
+
+  function set_space(next: Space) {
+    if (next === space) return;
+    if (next === Space.SOLID) set_tool(Tool.SELECT);
+    space = next;
+    if (next === Space.SOLID) fit_solid();
+  }
+
+  function look(preset: ViewPreset) {
+    orbit = PRESETS[preset];
+    fit_solid();
+  }
+
+  const VIEW_CHIPS: { id: ViewPreset; label: string; title: string }[] = [
+    { id: ViewPreset.THREE_QUARTER, label: "¾", title: "Three-quarter view" },
+    { id: ViewPreset.TOP, label: "Top", title: "From above" },
+    { id: ViewPreset.FRONT, label: "Front", title: "From the front" },
+    { id: ViewPreset.SIDE, label: "Side", title: "From the side" },
+  ];
+  const preset = $derived(preset_of(orbit));
+
   $effect(() => {
     if (fitted || !width || !height) return;
     fitted = true;
@@ -134,8 +197,10 @@
     const size = { width, height, panel: panel_open };
     untrack(() => {
       if (last_size.width && last_size.height && size.width && size.height) {
+        const dx = (size.width - last_size.width) / 2;
         const dy = size.panel === last_size.panel ? (size.height - last_size.height) / 2 : 0;
-        view = { ...view, offset_x: view.offset_x + (size.width - last_size.width) / 2, offset_y: view.offset_y + dy };
+        view = { ...view, offset_x: view.offset_x + dx, offset_y: view.offset_y + dy };
+        solid_view = { ...solid_view, offset_x: solid_view.offset_x + dx, offset_y: solid_view.offset_y + dy };
       }
       last_size = size;
     });
@@ -161,7 +226,14 @@
     try {
       const opened = await read_path(path);
       if (id !== open_request) return;
-      editor.load(opened);
+      editor.load(opened.sketch);
+      if (opened.dropped_boxes) {
+        const count = opened.dropped_boxes;
+        notifications.notify(app_id, {
+          title: `${count} ${count === 1 ? "box" : "boxes"} left out`,
+          message: "Boxes are gone from Tape Sketch. Draw the shape and give it a height to see it in 3D.",
+        });
+      }
       file_path = path;
       untitled = base_name(path);
       fit();
@@ -218,7 +290,7 @@
 
   async function export_as(format: "png" | "svg") {
     editor.commit_input();
-    const svg = sketch_svg(editor.committed);
+    const svg = sketch_svg(editor.committed, space === Space.SOLID ? orbit : null);
     if (!svg) {
       notice = "Nothing to export yet";
       return;
@@ -292,7 +364,6 @@
     { id: Tool.DIM, label: "Measure", icon: ArrowsOutLineHorizontalIcon, key: "d" },
     { id: Tool.MARKER, label: "Marker", icon: MapPinIcon, key: "m" },
     { id: Tool.NOTE, label: "Note", icon: TextTIcon, key: "n" },
-    { id: Tool.BOX, label: "Box", icon: CubeIcon, key: "b" },
   ];
 
   function is_orphan(value: Sketch, id: string): boolean {
@@ -342,6 +413,21 @@
     if (!item) return;
     const index = item.lengths.findIndex((each) => each === null);
     if (index >= 0) editor.open_numpad({ kind: "edge", path, index });
+    else if (item.height === null) editor.open_numpad({ kind: "height", path });
+  }
+
+  function measure(target: Target) {
+    editor.selection = target.kind === "dim" ? { kind: Pick.DIM, id: target.id } : { kind: Pick.PATH, id: target.path };
+    editor.open_numpad(target);
+  }
+
+  function tap_solid(target: Target | null) {
+    root?.querySelector<SVGElement>("svg")?.focus({ preventScroll: true });
+    if (target) measure(target);
+    else {
+      editor.close_numpad();
+      editor.selection = null;
+    }
   }
 
   function tap_select(hit: Hit | null) {
@@ -351,9 +437,7 @@
       return;
     }
     if (hit.kind === "target") {
-      const target = hit.target;
-      editor.selection = target.kind === "edge" ? { kind: Pick.PATH, id: target.path } : { kind: target.kind === "dim" ? Pick.DIM : Pick.BOX, id: target.id };
-      editor.open_numpad(target);
+      measure(hit.target);
       return;
     }
     if (hit.kind === "edge") {
@@ -364,13 +448,6 @@
     if (hit.kind === "dim") {
       editor.selection = { kind: Pick.DIM, id: hit.id };
       editor.open_numpad({ kind: "dim", id: hit.id });
-      return;
-    }
-    if (hit.kind === "box") {
-      editor.selection = { kind: Pick.BOX, id: hit.id };
-      const box = editor.committed.boxes.find((each) => each.id === hit.id);
-      const side = BOX_SIDES.find((each) => box?.[each] === null) ?? "w";
-      editor.open_numpad({ kind: "box", id: hit.id, side });
       return;
     }
     editor.close_numpad();
@@ -567,19 +644,6 @@
     editor.selection = { kind: Pick.NOTE, id };
   }
 
-  function tap_box(at: Point) {
-    const half = (BOX_BASE * 0.6) / 2;
-    let id = "";
-    editor.apply((s) => {
-      const added = add_box(s, { x: at.x - half, y: at.y + half });
-      id = added.id;
-      return added.sketch;
-    });
-    editor.tool = Tool.SELECT;
-    editor.selection = { kind: Pick.BOX, id };
-    editor.open_numpad({ kind: "box", id, side: "w" });
-  }
-
   function on_tap({ hit, at }: TapEvent) {
     root?.querySelector<SVGElement>("svg")?.focus({ preventScroll: true });
     const tool = editor.tool;
@@ -589,7 +653,6 @@
     else if (tool === Tool.DIM) tap_dim(hit, at);
     else if (tool === Tool.MARKER) void tap_marker(hit, at);
     else if (tool === Tool.NOTE) void tap_note(hit, at);
-    else if (tool === Tool.BOX) tap_box(at);
   }
 
 
@@ -603,8 +666,7 @@
       if (kind === Pick.PATH) return delete_path(s, id);
       if (kind === Pick.DIM) return delete_dim(s, id);
       if (kind === Pick.MARKER) return delete_marker(s, id);
-      if (kind === Pick.NOTE) return delete_note(s, id);
-      return delete_box(s, id);
+      return delete_note(s, id);
     });
     editor.selection = null;
   }
@@ -614,13 +676,6 @@
     if (!marker) return;
     const note = await win.prompt("What's here?", { initial: marker.note, confirm_label: "Save" });
     if (note !== null) editor.apply((s) => set_marker_note(s, id, note.trim()));
-  }
-
-  async function edit_box_note(id: string) {
-    const box = editor.committed.boxes.find((each) => each.id === id);
-    if (!box) return;
-    const note = await win.prompt("Box note", { initial: box.note, placeholder: "Wardrobe, fence panel…", confirm_label: "Save" });
-    if (note !== null) editor.apply((s) => set_box(s, id, { note: note.trim() }));
   }
 
   function add_marker_here(point: string) {
@@ -652,7 +707,7 @@
       check,
       result,
       gap,
-      can_redraw: path_scale(path, points) !== null,
+      can_redraw: path_scale(path, points) !== null && space === Space.FLAT,
     };
   });
 
@@ -681,6 +736,7 @@
   const selected_point = $derived(editor.selection?.kind === Pick.POINT ? editor.selection.id : null);
 
   const hint = $derived.by(() => {
+    if (space === Space.SOLID) return sketch.paths.length ? (mobile ? "Drag to turn · tap a line to measure" : "Drag to turn · tap a line to measure · double-click resets") : "Draw a shape in 2D first";
     const tool = editor.tool;
     if (tool === Tool.CORNERS) {
       const drawing = sketch.paths.find((path) => path.id === editor.drawing);
@@ -690,7 +746,6 @@
     if (tool === Tool.DIM) return editor.dim_from ? "Tap the second point" : "Tap two points to measure between";
     if (tool === Tool.MARKER) return "Tap a corner or a spot to mark";
     if (tool === Tool.NOTE) return "Tap where the note goes";
-    if (tool === Tool.BOX) return "Tap where the box goes";
     if (!editor.selection) return sketch.points.length ? "Tap a number to measure it" : "Pick Corners or Walk to start";
     return "";
   });
@@ -745,7 +800,7 @@
       if (editor.drawing) finish_drawing();
       else if (editor.dim_from) editor.dim_from = null;
       else editor.selection = null;
-    } else if ((event.key === "Delete" || event.key === "Backspace") && editor.selection) delete_selection();
+    } else if ((event.key === "Delete" || event.key === "Backspace") && editor.selection && space === Space.FLAT) delete_selection();
     else return;
     event.preventDefault();
   }
@@ -763,7 +818,7 @@
       scoped("fit", "mod+0", "Fit the sketch", fit),
       ...TOOLS.map((tool) =>
         scoped(`tool.${tool.id}`, tool.key, tool.label, () => {
-          if (!editor.target && editor.tool !== Tool.WALK) set_tool(tool.id);
+          if (!editor.target && editor.tool !== Tool.WALK && space === Space.FLAT) set_tool(tool.id);
         })
       ),
     ];
@@ -775,6 +830,7 @@
       if (editor.target) editor.close_numpad();
       else if (editor.tool === Tool.WALK) set_tool(Tool.SELECT);
       else if (editor.drawing) finish_drawing();
+      else if (space === Space.SOLID) set_space(Space.FLAT);
       else if (editor.selection) editor.selection = null;
       else return false;
       return true;
@@ -808,6 +864,7 @@
     <IconButton label="Undo (Mod+Z)" size="sm" class="shrink-0" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
     <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.redoable} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
+    <Segmented size="sm" class="shrink-0" label="View" options={SPACES} bind:value={() => space, set_space} />
     {#if editor.tool === Tool.CORNERS}
       <IconButton label="Snap to 45°" size="sm" class="shrink-0" pressed={snap.value} onclick={() => (snap.value = !snap.value)}>
         <MagnetStraightIcon weight="bold" />
@@ -820,7 +877,11 @@
   </Toolbar>
 
   <div class="area-stage relative grid min-h-0 min-w-0">
-    <TapeSketchCanvas {editor} bind:view bind:width bind:height ontap={on_tap} />
+    {#if space === Space.SOLID}
+      <TapeSketchSolid {editor} bind:orbit bind:view={solid_view} bind:width bind:height ontap={tap_solid} onreset={() => look(ViewPreset.THREE_QUARTER)} />
+    {:else}
+      <TapeSketchCanvas {editor} bind:view bind:width bind:height ontap={on_tap} />
+    {/if}
 
     {#if summary}
       <div class="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
@@ -830,6 +891,7 @@
             <span class="text-2xs text-foreground/65">
               {summary.path.closed ? "closed" : "open"} · {summary.edges} edges{summary.open ? ` · ${summary.open} to measure` : ""}
             </span>
+            <span class="font-mono text-2xs tabular-nums text-foreground/65">{height_text(summary.path.height, sketch.unit)}</span>
           </div>
           {#if summary.result}
             <div class="font-mono text-2xs tabular-nums text-foreground/80">
@@ -843,14 +905,14 @@
           {:else if summary.check?.complete}
             <div class="text-2xs text-success">The lengths close</div>
           {/if}
-          {#if summary.check?.implied.length || summary.can_redraw || summary.open}
+          {#if summary.check?.implied.length || summary.can_redraw || ((summary.open || summary.path.height === null) && !editor.target)}
             <div class="flex flex-wrap gap-1 pt-0.5">
               {#each summary.check?.implied ?? [] as item (item.index)}
                 <Button size="sm" variant="secondary" onclick={() => use_implied(summary.path.id, item.index, item.value)}>
                   Edge {item.index + 1} = {format_length(item.value, sketch.unit)}
                 </Button>
               {/each}
-              {#if summary.open && !editor.target}
+              {#if (summary.open || summary.path.height === null) && !editor.target}
                 <Button size="sm" variant="secondary" onclick={() => open_first(summary.path.id)}>Measure</Button>
               {/if}
               {#if summary.can_redraw}
@@ -864,7 +926,7 @@
       </div>
     {/if}
 
-    {#if !sketch.points.length && !sketch.boxes.length && !sketch.notes.length && !loading}
+    {#if space === Space.FLAT && !sketch.points.length && !sketch.notes.length && !loading}
       <div class="pointer-events-none absolute inset-0 grid place-items-center p-6 text-center">
         <div class="max-w-64 text-ui text-foreground/65">
           {editor.tool === Tool.WALK ? "Tap where to start, type a length and pick a direction." : "Tap the corners of a room, a drawer or a fence. Numbers come after."}
@@ -907,7 +969,7 @@
             <Button size="sm" variant="secondary" onclick={() => tap_corner({ kind: "point", id: drawing.points[0] }, { x: 0, y: 0 })}>Close shape</Button>
           {/if}
           <Button size="sm" variant="primary" onclick={finish_drawing}>Finish</Button>
-        {:else if editor.selection && editor.tool === Tool.SELECT}
+        {:else if editor.selection && editor.tool === Tool.SELECT && space === Space.FLAT}
           {@const selected = editor.selection}
           {#if selected.kind === Pick.POINT && selected_point}
             <Button size="sm" variant="secondary" onclick={() => set_tool(Tool.WALK)}><FootprintsIcon weight="bold" />Walk from here</Button>
@@ -916,14 +978,31 @@
             <Button size="sm" variant="secondary" onclick={() => edit_marker(selected.id)}>Edit note</Button>
           {:else if selected.kind === Pick.NOTE}
             <Button size="sm" variant="secondary" onclick={() => edit_note(selected.id)}>Edit</Button>
-          {:else if selected.kind === Pick.BOX}
-            <Button size="sm" variant="secondary" onclick={() => edit_box_note(selected.id)}>Note</Button>
           {/if}
           <IconButton label="Delete" size="md" onclick={delete_selection}><TrashIcon weight="bold" /></IconButton>
         {/if}
       </div>
     {/if}
-    <div class="grid grid-cols-7 gap-0.5 px-1 pt-1 pb-1.5" role="toolbar" aria-label="Tools">
+    {#if space === Space.SOLID}
+      <div class="flex gap-1.5 px-2 pt-1 pb-1.5" role="toolbar" aria-label="Views">
+        {#each VIEW_CHIPS as chip (chip.id)}
+          {@const active = preset === chip.id}
+          <button
+            type="button"
+            class={cn(
+              "h-11 min-w-0 flex-1 rounded-full text-ui font-medium transition-colors",
+              active ? "bg-primary/15 text-primary" : "bg-foreground/5 text-foreground/80 hover:bg-foreground/10"
+            )}
+            aria-pressed={active}
+            title={chip.title}
+            onclick={() => look(chip.id)}
+          >
+            {chip.label}
+          </button>
+        {/each}
+      </div>
+    {:else}
+    <div class="grid grid-cols-6 gap-0.5 px-1 pt-1 pb-1.5" role="toolbar" aria-label="Tools">
       {#each TOOLS as tool (tool.id)}
         {@const Icon = tool.icon}
         {@const active = editor.tool === tool.id}
@@ -942,6 +1021,7 @@
         </button>
       {/each}
     </div>
+    {/if}
   </div>
 </div>
 

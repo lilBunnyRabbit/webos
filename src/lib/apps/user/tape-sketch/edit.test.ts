@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import {
-  add_box,
   add_dim,
   add_marker,
   add_point,
@@ -87,21 +86,25 @@ describe("paths", () => {
 });
 
 describe("targets", () => {
-  test("lists edges, then dimensions, then box sides", () => {
+  test("lists each path's edges then its height, then dimensions", () => {
     let { sketch, corners } = square();
     sketch = add_dim(sketch, corners[0], corners[2], 10).sketch;
-    sketch = add_box(sketch, { x: 0, y: 0 }).sketch;
     expect(measure_targets(sketch).map((target) => target.kind)).toEqual([
       "edge",
       "edge",
       "edge",
       "edge",
+      "height",
       "dim",
-      "box",
-      "box",
-      "box",
     ]);
-    expect(unmeasured_count(sketch)).toBe(8);
+    expect(unmeasured_count(sketch)).toBe(6);
+  });
+
+  test("the height comes after the path's last edge when stepping", () => {
+    const { sketch, path } = square([1000, 2000, 1000, null]);
+    const last = step_target(sketch, null, 1)!;
+    expect(last).toEqual({ kind: "edge", path, index: 3 });
+    expect(step_target(sketch, last, 1)).toEqual({ kind: "height", path });
   });
 
   test("← and → step through what's still unmeasured", () => {
@@ -109,21 +112,23 @@ describe("targets", () => {
     const first = step_target(sketch, null, 1)!;
     expect(first).toEqual({ kind: "edge", path, index: 1 });
     expect(step_target(sketch, first, 1)).toEqual({ kind: "edge", path, index: 3 });
-    expect(step_target(sketch, first, -1)).toEqual({ kind: "edge", path, index: 3 });
+    expect(step_target(sketch, first, -1)).toEqual({ kind: "height", path });
   });
 
   test("with everything measured they step through all of it", () => {
-    const { sketch, path } = square([1, 2, 3, 4]);
-    expect(step_target(sketch, { kind: "edge", path, index: 3 }, 1)).toEqual({ kind: "edge", path, index: 0 });
+    const { sketch: base, path } = square([1, 2, 3, 4]);
+    const sketch = set_length(base, { kind: "height", path }, 2500);
+    expect(step_target(sketch, { kind: "edge", path, index: 3 }, 1)).toEqual({ kind: "height", path });
+    expect(step_target(sketch, { kind: "height", path }, 1)).toEqual({ kind: "edge", path, index: 0 });
   });
 
   test("set_length writes the right slot", () => {
     let { sketch, path } = square();
-    const box = add_box(sketch, { x: 0, y: 0 });
-    sketch = set_length(box.sketch, { kind: "edge", path, index: 2 }, 2450);
-    sketch = set_length(sketch, { kind: "box", id: box.id, side: "h" }, 900);
+    sketch = set_length(sketch, { kind: "edge", path, index: 2 }, 2450);
+    sketch = set_length(sketch, { kind: "height", path }, 900);
     expect(length_of(sketch, { kind: "edge", path, index: 2 })).toBe(2450);
-    expect(sketch.boxes[0]).toMatchObject({ w: null, d: null, h: 900 });
+    expect(length_of(sketch, { kind: "height", path })).toBe(900);
+    expect(sketch.paths[0].lengths[3]).toBeNull();
   });
 });
 

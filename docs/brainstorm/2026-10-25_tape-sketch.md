@@ -30,7 +30,28 @@ Today: Paint is freehand only. Nothing stores measured lengths.
 ## Action items
 - [x] Build with one app-builder agent, mobile first. Docs page `docs/apps/tape-sketch.md`: the format, the closure check, the area rebuild, the oblique box.
 
+## Session 2: 3D view replaces the box (2026-10-25)
+Owner, after using 3.65.0: "i dont like the "box" - i think its best if we go with option for 3d view. will that be hard?" The rejected option from the first grill was a room extruded by a height with a rotatable 3D view.
+
+### Decisions
+- **Box: dropped.** Format `version: 2` has no `boxes`. A v1 file still opens; its boxes are left out with a toast that says so. Rejected: converting each box to a rectangle path with a height (code for files that hardly exist), keeping the box beside 3D (two ways to say one thing).
+- **Height: any path, open or closed.** `path.height: mm | null`. A closed path plus a height is a room, a drawer or a box; an open path plus a height is a fence or a single wall. The height is one more numpad target, stepped after the path's edges. Rejected: closed paths only (a fence needs a thin rectangle), one height per sketch (a drawer and a lamp in one sketch).
+- **Shape in 3D comes from the numbers.** Each path is rebuilt to scale from its lengths (the existing `rebuild`); unmeasured edges at the drawn ratio, an unmeasured height at a placeholder shown as `?`. Rejected: the drawing as drawn (3D would lie about proportions).
+- **Layout: placed by drawing, sized by numbers.** Each rebuilt path sits where its first corner is in the drawing, through the sketch's median scale. Rejected: only the selected path in 3D.
+- **3D view: a 2D / 3D toggle, measuring works in 3D.** Tap an edge or a height and the numpad opens on it, ← / → step as in 2D. Drawing and moving corners stay in 2D. Rejected: read-only orbit, fixed isometric (hides the back walls of an L-room), full editing in 3D (unprojecting touches onto the floor).
+- **Also in 3D:** dimensions and markers on the floor. Free notes stay 2D only.
+- **Shell:** nothing new; `open` through the association covers it.
+- **Mobile interaction** (owner: "what is best for mobile use - think of something good"), picked by Claude:
+  - one-finger drag on empty space orbits (yaw all round, pitch clamped between a near-top view and a near-side view); pinch zooms and pans as in 2D; double-tap on empty space resets to the default ¾ view;
+  - a row of view chips at the bottom, in thumb reach: ¾, Top, Front, Side;
+  - taps hit the nearest line within a touch-sized radius, so thin edges are easy to hit; a floor edge and its top edge are the same length target, a vertical edge is the path's height;
+  - a path without a height shows a `↑ ?` handle at its first corner, a full touch target, so adding a height is one tap;
+  - walls are translucent faces sorted back to front, edges drawn on top; the current target is in `primary` on both its floor and top copies;
+  - each length is labelled once, on the floor edge; the height once, on the vertical edge nearest the viewer; a label whose edge is seen nearly end-on is hidden until that edge is tapped.
+
+### Action items
+- [x] One app-builder agent: format v2, height in 2D and 3D, 3D view, box removal, docs page and ADR-069 revision.
+
 ## Next session topics
 - Photo underlay (measure on a photo).
 - Shell commands, if wanted.
-- Rooms with a height, extruded in 3D.

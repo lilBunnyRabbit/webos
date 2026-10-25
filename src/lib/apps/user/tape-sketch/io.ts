@@ -1,9 +1,8 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
-import { parse_sketch } from "./format";
-import type { Sketch } from "./model";
+import { parse_sketch, type Parsed } from "./format";
 
-export async function read_path(path: string): Promise<Sketch> {
+export async function read_path(path: string): Promise<Parsed> {
   const file = await kernel.service<FilesService>("files").get_file(path);
   if (!file) throw new Error(`File not found: ${path}`);
   return parse_sketch(await file.text());

@@ -1,7 +1,7 @@
 import { to_screen, type View } from "$kit/utils/view";
 import { add, distance, inside_polygon, midpoint, scale, segments, sub, unit } from "./geometry";
 import { place_labels, text_width, type LabelRequest, type Line, type Rect } from "./labels";
-import { BoxSide, point_map, same_target, type Box, type Point, type Sketch, type Target } from "./model";
+import { point_map, same_target, type Point, type Sketch, type Target } from "./model";
 import { format_length } from "./units";
 
 export const LABEL_FONT = 13;
@@ -10,11 +10,6 @@ const LABEL_PAD_X = 5;
 const LABEL_HEIGHT = 20;
 const ARROW = 7;
 const R = Math.SQRT1_2;
-
-export const BOX_BASE = 120;
-const BOX_UNMEASURED = 0.6;
-const BOX_MIN = 0.25;
-const OBLIQUE = 0.5;
 
 export interface SceneEdge {
   path: string;
@@ -31,13 +26,6 @@ export interface SceneDim {
   extensions: Line[];
   arrows: Point[][];
   normal: Point;
-}
-
-export interface SceneBox {
-  id: string;
-  faces: Point[][];
-  visible: Line[];
-  hidden: Line[];
 }
 
 export interface ScenePoint {
@@ -57,7 +45,7 @@ export interface SceneNote {
   text: string;
 }
 
-export const LabelKind = { LENGTH: "length", MARKER: "marker", BOX_NOTE: "box-note" } as const;
+export const LabelKind = { LENGTH: "length", MARKER: "marker" } as const;
 export type LabelKind = (typeof LabelKind)[keyof typeof LabelKind];
 
 export interface SceneLabel {
@@ -73,7 +61,6 @@ export interface SceneLabel {
 export interface Scene {
   edges: SceneEdge[];
   dims: SceneDim[];
-  boxes: SceneBox[];
   points: ScenePoint[];
   markers: SceneMarker[];
   notes: SceneNote[];
@@ -81,46 +68,8 @@ export interface Scene {
   bounds: Rect | null;
 }
 
-export function box_size(box: Box): { w: number; d: number; h: number } {
-  const known = [box.w, box.d, box.h].filter((value): value is number => value !== null);
-  const largest = Math.max(0, ...known);
-  const part = (value: number | null) =>
-    value === null || !largest ? BOX_UNMEASURED : Math.max(BOX_MIN, value / largest);
-  return { w: BOX_BASE * part(box.w), d: BOX_BASE * part(box.d) * OBLIQUE, h: BOX_BASE * part(box.h) };
-}
-
-/** Front bottom left, front bottom right, front top right, front top left, then the same four at the back. */
-export function box_corners(box: Box): Point[] {
-  const { w, d, h } = box_size(box);
-  const depth = { x: d * R, y: -d * R };
-  const front = [
-    { x: box.x, y: box.y },
-    { x: box.x + w, y: box.y },
-    { x: box.x + w, y: box.y - h },
-    { x: box.x, y: box.y - h },
-  ];
-  return [...front, ...front.map((corner) => add(corner, depth))];
-}
-
-const BOX_VISIBLE: [number, number][] = [
-  [0, 1],
-  [1, 2],
-  [2, 3],
-  [3, 0],
-  [3, 7],
-  [2, 6],
-  [1, 5],
-  [7, 6],
-  [6, 5],
-];
-const BOX_HIDDEN: [number, number][] = [
-  [0, 4],
-  [4, 5],
-  [4, 7],
-];
-
-function label_box(text: string): { width: number; height: number } {
-  return { width: text_width(text, LABEL_FONT) + LABEL_PAD_X * 2, height: LABEL_HEIGHT };
+export function height_text(height: number | null, unit: Sketch["unit"]): string {
+  return `↑ ${format_length(height, unit)}`;
 }
 
 function left_normal(a: Point, b: Point): Point {
@@ -128,7 +77,18 @@ function left_normal(a: Point, b: Point): Point {
   return { x: d.y, y: -d.x };
 }
 
-const AROUND: Point[] = [
+export function outward_normal(a: Point, b: Point, corners: readonly Point[], closed: boolean): Point {
+  const mid = midpoint(a, b);
+  const normal = left_normal(a, b);
+  const center = corners.reduce((sum, p) => add(sum, scale(p, 1 / corners.length)), { x: 0, y: 0 });
+  const outward =
+    closed && corners.length >= 3
+      ? !inside_polygon(add(mid, scale(normal, 2)), corners)
+      : normal.x * (mid.x - center.x) + normal.y * (mid.y - center.y) >= 0;
+  return outward ? normal : scale(normal, -1);
+}
+
+export const AROUND: Point[] = [
   { x: 0, y: -1 },
   { x: R, y: -R },
   { x: 1, y: 0 },
@@ -139,64 +99,144 @@ const AROUND: Point[] = [
   { x: -R, y: -R },
 ];
 
+export function around_from(prefer: Point): Point[] {
+  const start = AROUND.reduce(
+    (best, side, i) =>
+      side.x * prefer.x + side.y * prefer.y > AROUND[best].x * prefer.x + AROUND[best].y * prefer.y ? i : best,
+    0
+  );
+  return [...AROUND.slice(start), ...AROUND.slice(0, start)];
+}
+
 export function note_rect(at: Point, text: string): Rect {
   const lines = text.split("\n");
   const width = Math.max(...lines.map((line) => text_width(line, NOTE_FONT))) + 12;
   return { x: at.x, y: at.y, w: width, h: lines.length * NOTE_FONT * 1.35 + 10 };
 }
 
-function union(a: Rect | null, b: Rect): Rect {
+export function union(a: Rect | null, b: Rect): Rect {
   if (!a) return b;
   const x = Math.min(a.x, b.x);
   const y = Math.min(a.y, b.y);
   return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 }
 
-function point_rect(p: Point, by = 6): Rect {
+export function point_rect(p: Point, by = 6): Rect {
   return { x: p.x - by, y: p.y - by, w: by * 2, h: by * 2 };
+}
+
+export function dim_shape(id: string, sa: Point, sb: Point, normal: Point, shift: number): SceneDim {
+  const a = add(sa, scale(normal, shift));
+  const b = add(sb, scale(normal, shift));
+  const side = shift < 0 ? -1 : 1;
+  const overshoot = scale(normal, side * 6);
+  const extensions =
+    Math.abs(shift) > 4
+      ? [
+          { a: add(sa, scale(normal, side * 3)), b: add(a, overshoot) },
+          { a: add(sb, scale(normal, side * 3)), b: add(b, overshoot) },
+        ]
+      : [];
+  const along = unit(sub(b, a));
+  const wing = scale(normal, ARROW * 0.45);
+  const arrows = [
+    [a, add(add(a, scale(along, ARROW)), wing), add(add(a, scale(along, ARROW)), scale(wing, -1))],
+    [b, add(add(b, scale(along, -ARROW)), wing), add(add(b, scale(along, -ARROW)), scale(wing, -1))],
+  ];
+  return { id, a, b, extensions, arrows, normal: scale(normal, side) };
+}
+
+export class Labeller {
+  readonly lines: Line[] = [];
+  private readonly requests: LabelRequest[] = [];
+  private readonly meta = new Map<string, Omit<SceneLabel, "rect">>();
+
+  request(label: Omit<SceneLabel, "rect">, anchor: Point, sides: Point[]): void {
+    const width = text_width(label.text, LABEL_FONT) + LABEL_PAD_X * 2;
+    this.requests.push({ id: label.id, anchor, sides, width, height: LABEL_HEIGHT });
+    this.meta.set(label.id, label);
+  }
+
+  place(blocked: readonly Rect[]): SceneLabel[] {
+    const placed = place_labels(this.requests, this.lines, blocked);
+    return this.requests.map((item) => ({ ...this.meta.get(item.id)!, rect: placed.get(item.id)! }));
+  }
+}
+
+export function dim_label(id: string, length: number | null, unit: Sketch["unit"]): Omit<SceneLabel, "rect"> {
+  return {
+    id: `dim:${id}`,
+    kind: LabelKind.LENGTH,
+    text: format_length(length, unit),
+    target: { kind: "dim", id },
+    owner: null,
+    measured: length !== null,
+  };
+}
+
+export function marker_label(id: string, note: string): Omit<SceneLabel, "rect"> {
+  return { id: `marker:${id}`, kind: LabelKind.MARKER, text: note, target: null, owner: id, measured: true };
+}
+
+export function edge_label(
+  path: string,
+  index: number,
+  value: number | null,
+  unit: Sketch["unit"]
+): Omit<SceneLabel, "rect"> {
+  return {
+    id: `edge:${path}:${index}`,
+    kind: LabelKind.LENGTH,
+    text: format_length(value, unit),
+    target: { kind: "edge", path, index },
+    owner: null,
+    measured: value !== null,
+  };
+}
+
+export function height_label(path: string, height: number | null, unit: Sketch["unit"]): Omit<SceneLabel, "rect"> {
+  return {
+    id: `height:${path}`,
+    kind: LabelKind.LENGTH,
+    text: height_text(height, unit),
+    target: { kind: "height", path },
+    owner: null,
+    measured: height !== null,
+  };
+}
+
+export function bounds_of(lines: readonly Line[], rects: readonly Rect[]): Rect | null {
+  let bounds: Rect | null = null;
+  for (const line of lines) bounds = union(union(bounds, point_rect(line.a, 0)), point_rect(line.b, 0));
+  for (const rect of rects) bounds = union(bounds, rect);
+  return bounds;
 }
 
 /** Everything the sketch draws, in screen pixels for `view`: lines keep their weight and labels their size at any zoom. */
 export function build_scene(sketch: Sketch, view: View): Scene {
   const points = point_map(sketch);
   const screen = (p: Point) => to_screen(view, p.x, p.y);
-  const lines: Line[] = [];
-  const requests: LabelRequest[] = [];
-  const meta = new Map<string, Omit<SceneLabel, "rect">>();
-  const request = (label: Omit<SceneLabel, "rect">, anchor: Point, sides: Point[]) => {
-    const { width, height } = label_box(label.text);
-    requests.push({ id: label.id, anchor, sides, width, height });
-    meta.set(label.id, label);
-  };
+  const labeller = new Labeller();
+  const lines = labeller.lines;
 
   const edges: SceneEdge[] = [];
   for (const path of sketch.paths) {
     const parts = segments(path, points).map((segment) => ({ ...segment, a: screen(segment.a), b: screen(segment.b) }));
     const corners = path.points.map((id) => screen(points.get(id)!));
-    const center = corners.reduce((sum, p) => add(sum, scale(p, 1 / corners.length)), { x: 0, y: 0 });
     for (const segment of parts) {
       const value = path.lengths[segment.index] ?? null;
       edges.push({ path: path.id, index: segment.index, a: segment.a, b: segment.b, measured: value !== null });
       lines.push({ a: segment.a, b: segment.b });
-      const mid = midpoint(segment.a, segment.b);
-      let normal = left_normal(segment.a, segment.b);
-      const outward =
-        path.closed && corners.length >= 3
-          ? !inside_polygon(add(mid, scale(normal, 2)), corners)
-          : normal.x * (mid.x - center.x) + normal.y * (mid.y - center.y) >= 0;
-      if (!outward) normal = scale(normal, -1);
-      request(
-        {
-          id: `edge:${path.id}:${segment.index}`,
-          kind: LabelKind.LENGTH,
-          text: format_length(value, sketch.unit),
-          target: { kind: "edge", path: path.id, index: segment.index },
-          owner: null,
-          measured: value !== null,
-        },
-        mid,
-        [normal, scale(normal, -1)]
-      );
+      const normal = outward_normal(segment.a, segment.b, corners, path.closed);
+      labeller.request(edge_label(path.id, segment.index, value, sketch.unit), midpoint(segment.a, segment.b), [
+        normal,
+        scale(normal, -1),
+      ]);
+    }
+    if (parts.length) {
+      const center = corners.reduce((sum, p) => add(sum, scale(p, 1 / corners.length)), { x: 0, y: 0 });
+      const away = distance(corners[0], center) > 1e-6 ? unit(sub(corners[0], center)) : { x: 0, y: -1 };
+      labeller.request(height_label(path.id, path.height, sketch.unit), corners[0], around_from(away));
     }
   }
 
@@ -208,90 +248,13 @@ export function build_scene(sketch: Sketch, view: View): Scene {
     const sa = screen(pa);
     const sb = screen(pb);
     const normal = distance(sa, sb) > 1e-6 ? left_normal(sa, sb) : { x: 0, y: -1 };
-    const shift = scale(normal, dim.offset * view.scale);
-    const a = add(sa, shift);
-    const b = add(sb, shift);
-    const side = dim.offset < 0 ? -1 : 1;
-    const overshoot = scale(normal, side * 6);
-    const extensions =
-      Math.abs(dim.offset * view.scale) > 4
-        ? [
-            { a: add(sa, scale(normal, side * 3)), b: add(a, overshoot) },
-            { a: add(sb, scale(normal, side * 3)), b: add(b, overshoot) },
-          ]
-        : [];
-    const along = unit(sub(b, a));
-    const wing = scale(normal, ARROW * 0.45);
-    const arrows = [
-      [a, add(add(a, scale(along, ARROW)), wing), add(add(a, scale(along, ARROW)), scale(wing, -1))],
-      [b, add(add(b, scale(along, -ARROW)), wing), add(add(b, scale(along, -ARROW)), scale(wing, -1))],
-    ];
-    dims.push({ id: dim.id, a, b, extensions, arrows, normal });
-    lines.push({ a, b }, ...extensions);
-    const outer = scale(normal, side);
-    request(
-      {
-        id: `dim:${dim.id}`,
-        kind: LabelKind.LENGTH,
-        text: format_length(dim.length, sketch.unit),
-        target: { kind: "dim", id: dim.id },
-        owner: null,
-        measured: dim.length !== null,
-      },
-      midpoint(a, b),
-      [outer, scale(outer, -1)]
-    );
-  }
-
-  const boxes: SceneBox[] = [];
-  for (const box of sketch.boxes) {
-    const corners = box_corners(box).map(screen);
-    const visible = BOX_VISIBLE.map(([i, j]) => ({ a: corners[i], b: corners[j] }));
-    const hidden = BOX_HIDDEN.map(([i, j]) => ({ a: corners[i], b: corners[j] }));
-    const faces = [
-      [corners[0], corners[1], corners[2], corners[3]],
-      [corners[3], corners[2], corners[6], corners[7]],
-      [corners[1], corners[5], corners[6], corners[2]],
-    ];
-    boxes.push({ id: box.id, faces, visible, hidden });
-    lines.push(...visible, ...hidden);
-    const sides: [BoxSide, Point, Point][] = [
-      [BoxSide.W, midpoint(corners[0], corners[1]), { x: 0, y: 1 }],
-      [BoxSide.D, midpoint(corners[1], corners[5]), { x: R, y: R }],
-      [BoxSide.H, midpoint(corners[0], corners[3]), { x: -1, y: 0 }],
-    ];
-    for (const [side, anchor, normal] of sides) {
-      const value = box[side];
-      request(
-        {
-          id: `box:${box.id}:${side}`,
-          kind: LabelKind.LENGTH,
-          text: `${side.toUpperCase()} ${format_length(value, sketch.unit)}`,
-          target: { kind: "box", id: box.id, side },
-          owner: box.id,
-          measured: value !== null,
-        },
-        anchor,
-        [normal, scale(normal, -1)]
-      );
-    }
-    if (box.note) {
-      request(
-        {
-          id: `box-note:${box.id}`,
-          kind: LabelKind.BOX_NOTE,
-          text: box.note,
-          target: null,
-          owner: box.id,
-          measured: true,
-        },
-        midpoint(corners[0], corners[1]),
-        [
-          { x: 0, y: 1 },
-          { x: 0, y: -1 },
-        ]
-      );
-    }
+    const shape = dim_shape(dim.id, sa, sb, normal, dim.offset * view.scale);
+    dims.push({ ...shape, normal });
+    lines.push({ a: shape.a, b: shape.b }, ...shape.extensions);
+    labeller.request(dim_label(dim.id, dim.length, sketch.unit), midpoint(shape.a, shape.b), [
+      shape.normal,
+      scale(shape.normal, -1),
+    ]);
   }
 
   const markers: SceneMarker[] = [];
@@ -300,20 +263,7 @@ export function build_scene(sketch: Sketch, view: View): Scene {
     if (!point) continue;
     const at = screen(point);
     markers.push({ id: marker.id, point: marker.point, at });
-    if (marker.note) {
-      request(
-        {
-          id: `marker:${marker.id}`,
-          kind: LabelKind.MARKER,
-          text: marker.note,
-          target: null,
-          owner: marker.id,
-          measured: true,
-        },
-        at,
-        AROUND
-      );
-    }
+    if (marker.note) labeller.request(marker_label(marker.id, marker.note), at, AROUND);
   }
 
   const notes: SceneNote[] = sketch.notes.map((note) => ({
@@ -322,29 +272,36 @@ export function build_scene(sketch: Sketch, view: View): Scene {
     rect: note_rect(screen(note), note.text),
   }));
   const scene_points: ScenePoint[] = sketch.points.map((point) => ({ id: point.id, at: screen(point) }));
-  const blocked = [...notes.map((note) => note.rect), ...scene_points.map((point) => point_rect(point.at))];
-
-  const placed = place_labels(requests, lines, blocked);
-  const labels: SceneLabel[] = requests.map((item) => ({ ...meta.get(item.id)!, rect: placed.get(item.id)! }));
-
-  let bounds: Rect | null = null;
-  for (const line of lines) bounds = union(union(bounds, point_rect(line.a, 0)), point_rect(line.b, 0));
-  for (const point of scene_points) bounds = union(bounds, point_rect(point.at));
-  for (const rect of [...labels.map((label) => label.rect), ...notes.map((note) => note.rect)])
-    bounds = union(bounds, rect);
-
-  return { edges, dims, boxes, points: scene_points, markers, notes, labels, bounds };
+  const labels = labeller.place([
+    ...notes.map((note) => note.rect),
+    ...scene_points.map((point) => point_rect(point.at)),
+  ]);
+  const bounds = bounds_of(lines, [
+    ...scene_points.map((point) => point_rect(point.at)),
+    ...labels.map((label) => label.rect),
+    ...notes.map((note) => note.rect),
+  ]);
+  return { edges, dims, points: scene_points, markers, notes, labels, bounds };
 }
 
 export function sketch_bounds(sketch: Sketch): Rect | null {
   let bounds: Rect | null = null;
   for (const point of sketch.points) bounds = union(bounds, point_rect(point, 0));
-  for (const box of sketch.boxes) for (const corner of box_corners(box)) bounds = union(bounds, point_rect(corner, 0));
   for (const note of sketch.notes) bounds = union(bounds, point_rect(note, 0));
   return bounds;
 }
 
-export function label_center(scene: Scene, target: Target): Point | null {
-  const label = scene.labels.find((each) => same_target(each.target, target));
+export function label_center(labels: readonly SceneLabel[], target: Target): Point | null {
+  const label = labels.find((each) => same_target(each.target, target));
   return label ? { x: label.rect.x + label.rect.w / 2, y: label.rect.y + label.rect.h / 2 } : null;
+}
+
+// The numpad sheet rises from below, so the bottom keeps the most room clear.
+export function into_view(at: Point, width: number, height: number): Point {
+  const side = Math.min(56, width / 4);
+  const top = Math.min(48, height / 4);
+  const bottom = Math.min(150, height / 3);
+  const x = at.x < side ? side - at.x : at.x > width - side ? width - side - at.x : 0;
+  const y = at.y < top ? top - at.y : at.y > height - bottom ? height - bottom - at.y : 0;
+  return { x, y };
 }

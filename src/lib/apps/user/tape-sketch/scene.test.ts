@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { add_box, add_dim, add_point, append_point, close_path, set_length, start_path } from "./edit";
+import { add_dim, add_point, append_point, close_path, set_length, start_path } from "./edit";
 import { line_hits_rect, rects_overlap } from "./labels";
 import { create_sketch, type Sketch } from "./model";
-import { box_corners, build_scene } from "./scene";
+import { build_scene } from "./scene";
 
 const VIEW = { scale: 1, offset_x: 0, offset_y: 0 };
 
@@ -26,17 +26,12 @@ function room(): Sketch {
   for (const id of ids.slice(1)) sketch = append_point(sketch, path.id, id);
   sketch = close_path(sketch, path.id);
   sketch = set_length(sketch, { kind: "edge", path: path.id, index: 0 }, 4000);
-  sketch = add_dim(sketch, ids[0], ids[2], 30).sketch;
-  return add_box(sketch, { x: 500, y: 300 }).sketch;
+  return add_dim(sketch, ids[0], ids[2], 30).sketch;
 }
 
 describe("build_scene", () => {
   const scene = build_scene(room(), VIEW);
-  const lines = [
-    ...scene.edges,
-    ...scene.dims.flatMap((dim) => [{ a: dim.a, b: dim.b }, ...dim.extensions]),
-    ...scene.boxes.flatMap((box) => [...box.visible, ...box.hidden]),
-  ];
+  const lines = [...scene.edges, ...scene.dims.flatMap((dim) => [{ a: dim.a, b: dim.b }, ...dim.extensions])];
 
   test("no label crosses a line", () => {
     for (const label of scene.labels) for (const line of lines) expect(line_hits_rect(line, label.rect)).toBe(false);
@@ -60,19 +55,12 @@ describe("build_scene", () => {
     expect(scene.labels.filter((label) => !label.measured && label.target?.kind === "edge")).toHaveLength(5);
   });
 
-  test("a box shows W, D and H", () => {
-    expect(scene.labels.filter((label) => label.target?.kind === "box").map((label) => label.text)).toEqual([
-      "W ?",
-      "D ?",
-      "H ?",
-    ]);
+  test("the height reads as a question by the first corner until measured", () => {
+    const height = scene.labels.find((label) => label.target?.kind === "height")!;
+    expect(height.text).toBe("↑ ?");
+    expect(height.measured).toBe(false);
+    expect(Math.hypot(height.rect.x + height.rect.w / 2 - 100, height.rect.y + height.rect.h / 2 - 100)).toBeLessThan(
+      60
+    );
   });
-});
-
-test("box corners: a measured box keeps its proportions, depth recedes up and right", () => {
-  const corners = box_corners({ id: "b", x: 0, y: 0, w: 2000, d: 1000, h: 1000, note: "" });
-  expect(corners[1].x).toBe(120);
-  expect(corners[3].y).toBe(-60);
-  expect(corners[4].x).toBeGreaterThan(0);
-  expect(corners[4].y).toBeLessThan(0);
 });

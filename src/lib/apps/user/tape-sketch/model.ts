@@ -11,12 +11,16 @@ export interface SketchPoint extends Point {
   id: string;
 }
 
-/** `lengths[i]` is the edge from `points[i]` to the next point, wrapping to the first on a closed path. In mm. */
+/**
+ * `lengths[i]` is the edge from `points[i]` to the next point, wrapping to the first on a closed path. In mm, as is
+ * `height`: how far the path rises off the floor, a room's walls or a fence's boards.
+ */
 export interface SketchPath {
   id: string;
   points: string[];
   closed: boolean;
   lengths: (number | null)[];
+  height: number | null;
 }
 
 export interface Dim {
@@ -40,38 +44,21 @@ export interface TextNote {
   text: string;
 }
 
-export interface Box {
-  id: string;
-  x: number;
-  y: number;
-  w: number | null;
-  d: number | null;
-  h: number | null;
-  note: string;
-}
-
 export interface Sketch {
-  version: 1;
+  version: 2;
   unit: Unit;
   points: SketchPoint[];
   paths: SketchPath[];
   dims: Dim[];
   markers: Marker[];
   notes: TextNote[];
-  boxes: Box[];
 }
 
-export const BoxSide = { W: "w", D: "d", H: "h" } as const;
-export type BoxSide = (typeof BoxSide)[keyof typeof BoxSide];
-export const BOX_SIDES: BoxSide[] = [BoxSide.W, BoxSide.D, BoxSide.H];
-
 export type Target =
-  | { kind: "edge"; path: string; index: number }
-  | { kind: "dim"; id: string }
-  | { kind: "box"; id: string; side: BoxSide };
+  { kind: "edge"; path: string; index: number } | { kind: "dim"; id: string } | { kind: "height"; path: string };
 
 export function create_sketch(unit: Unit = Unit.CM): Sketch {
-  return { version: 1, unit, points: [], paths: [], dims: [], markers: [], notes: [], boxes: [] };
+  return { version: 2, unit, points: [], paths: [], dims: [], markers: [], notes: [] };
 }
 
 export function new_id(): string {
@@ -91,10 +78,10 @@ export function same_target(a: Target | null, b: Target | null): boolean {
   if (!a || !b || a.kind !== b.kind) return false;
   if (a.kind === "edge" && b.kind === "edge") return a.path === b.path && a.index === b.index;
   if (a.kind === "dim" && b.kind === "dim") return a.id === b.id;
-  if (a.kind === "box" && b.kind === "box") return a.id === b.id && a.side === b.side;
+  if (a.kind === "height" && b.kind === "height") return a.path === b.path;
   return false;
 }
 
 export function is_empty(sketch: Sketch): boolean {
-  return !sketch.points.length && !sketch.notes.length && !sketch.boxes.length;
+  return !sketch.points.length && !sketch.notes.length;
 }

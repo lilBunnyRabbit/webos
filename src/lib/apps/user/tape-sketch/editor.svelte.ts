@@ -10,7 +10,6 @@ export const Tool = {
   DIM: "dim",
   MARKER: "marker",
   NOTE: "note",
-  BOX: "box",
 } as const;
 export type Tool = (typeof Tool)[keyof typeof Tool];
 
@@ -20,7 +19,6 @@ export const Pick = {
   DIM: "dim",
   MARKER: "marker",
   NOTE: "note",
-  BOX: "box",
 } as const;
 export type Pick = (typeof Pick)[keyof typeof Pick];
 
@@ -55,7 +53,7 @@ export class Editor {
     this.saved = sketch;
     this.preview = null;
     this.reset_modes();
-    this.tool = sketch.points.length || sketch.boxes.length || sketch.notes.length ? Tool.SELECT : Tool.CORNERS;
+    this.tool = sketch.points.length || sketch.notes.length ? Tool.SELECT : Tool.CORNERS;
   }
 
   mark_saved(sketch: Sketch): void {
@@ -101,7 +99,6 @@ export class Editor {
       dim: sketch.dims,
       marker: sketch.markers,
       note: sketch.notes,
-      box: sketch.boxes,
     };
     return lists[selection.kind].some((item) => item.id === selection.id);
   }

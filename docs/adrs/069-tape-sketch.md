@@ -56,3 +56,18 @@ Implemented as specified. Details the ADR left open, decided in the build ([inte
 - **Numpad:** ✓ (Enter) commits and closes, ← / → (also Tab) commit and step; Clear unmeasures. Walk keys on a keyboard: arrows, and Home / PgUp / End / PgDn for the diagonals (a numpad's 7, 9, 1, 3 with Num Lock off).
 - **Labels:** placed in screen pixels each time the view changes, greedily: edge lengths first (outside a closed path by a point-in-polygon test), then dimensions, box sides, marker and box notes; each takes the nearest spot that crosses no line and no earlier label.
 - **Export:** the theme's colours at the time of export, as sRGB hex; the PNG is the SVG drawn at 2×.
+
+## Revision 2026-10-25: 3D view replaces the box
+The owner dropped the box after using it and picked the rejected alternative, an extruded 3D view ([brainstorm, session 2](../brainstorm/2026-10-25_tape-sketch.md)).
+- **Format `version: 2`:** `paths[].height: number | null` (mm), no `boxes`. A v1 file opens; boxes in it are left out with a toast.
+- **Height on any path**, open (fence, wall) or closed (room, drawer, box), measured on the numpad after the path's edges.
+- **3D view** behind a 2D / 3D toggle: each path rebuilt to scale from its lengths, placed at its first corner's drawn position, extruded by its height; dimensions and markers on the floor. Orbit, pinch, view chips. Measuring (lengths and heights) works in 3D; drawing and moving stay 2D. Hand-written projection drawn as SVG, no dependency.
+
+Built the same day ([internals](../apps/tape-sketch.md#the-3d-view)). Details the revision left open, decided in the build:
+- **Unmeasured height:** "a placeholder shown as `?`" and "flat on the floor" are one thing: a path with no height lies flat, with a `↑ ?` handle (a short dashed stub and a label) at its first corner.
+- **Height in 2D:** a `↑ 250 cm` / `↑ ?` label by the path's first corner, placed with the other labels after the path's edges; the summary card shows it and its Measure button reaches it.
+- **Projection:** orthographic; the floor is the sketch plane, so Top at yaw 0 reads as the 2D sketch. Pitch clamped to 4°–90°. Chips: ¾ (yaw −30°, pitch 32°), Top, Front (from the bottom of the page), Side (from the left).
+- **End-on:** an edge projecting under 24 px has no label unless it's the one being measured. **Hit radius:** 22 px on touch, 10 with a mouse; a label counts first, padded by half the radius.
+- **Refit:** entering 3D, picking a chip and a double tap fit the model; so does closing the numpad when a new height has grown it past the view.
+- **Also in 3D:** dimensions are tappable like edges; Delete and the tool keys do nothing; the system Back leaves 3D after closing the numpad.
+- **Version 1 boxes:** left out with a notification, not the app's own transient notice, since it has to outlast the open.

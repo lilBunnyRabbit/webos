@@ -8,7 +8,7 @@ function room(
   closed = true
 ): { sketch: Sketch; path: SketchPath } {
   const points = corners.map(([x, y], i) => ({ id: `p${i}`, x, y }));
-  const path: SketchPath = { id: "room", points: points.map((point) => point.id), closed, lengths };
+  const path: SketchPath = { id: "room", points: points.map((point) => point.id), closed, lengths, height: null };
   return { sketch: { ...create_sketch(), points, paths: [path] }, path };
 }
 

@@ -24,7 +24,7 @@ export default [
   },
   {
     icon: CubeIcon,
-    title: "Dimensions, markers and boxes",
-    text: "Measure between any two points, pin a note on a socket, or sketch furniture as a box with width, depth and height.",
+    title: "Turn it around in 3D",
+    text: "Give any shape a height and see it built from your numbers, with dimensions and markers on the floor; tap a line in 3D to measure it.",
   },
 ] satisfies AppHighlight[];

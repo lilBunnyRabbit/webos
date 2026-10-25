@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { add_point, append_point, close_path, set_length, start_path } from "./edit";
 import { sketch_svg, svg_to_png, theme_palette } from "./export";
 import { create_sketch, type Sketch } from "./model";
+import { PRESETS, ViewPreset } from "./projection";
 
 function room(): Sketch {
   let sketch = create_sketch();
@@ -46,6 +47,16 @@ describe("export", () => {
     const bitmap = await createImageBitmap(blob);
     const width = Number(/width="(\d+)"/.exec(svg)![1]);
     expect(bitmap.width).toBe(width * 2);
+  });
+
+  it("writes the 3D view at the given angle", () => {
+    const sketch = room();
+    const path = sketch.paths[0].id;
+    const svg = sketch_svg(set_length(sketch, { kind: "height", path }, 2500), PRESETS[ViewPreset.THREE_QUARTER])!;
+    const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
+    expect(parsed.querySelector("parsererror")).toBeNull();
+    expect(svg).toContain("↑ 250 cm");
+    expect(parsed.querySelectorAll("polygon").length).toBeGreaterThanOrEqual(6);
   });
 
   it("has nothing to export from an empty sketch", () => {
