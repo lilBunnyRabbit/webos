@@ -12,7 +12,7 @@ The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon.
 | `folder.svelte.ts` | `DesktopFolder`: the folder state and operations both layouts share, `DEFAULT_SHORTCUTS`, `write_var_lib()` |
 | `service.svelte.ts` | Desktop implementation (`GridDesktopService`) |
 | `mobile.svelte.ts` | Mobile home implementation (`MobileDesktopService`), see [Mobile home](#mobile-home) |
-| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()`, `resize_target()` and `sort_moves()`, all pure; `snap_cells()`, `item_span()`, `grid_items()`, `ResizeTarget`, `DesktopMove`, `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
+| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()`, `resize_target()` and `sort_moves()`, all pure; `display_name()` (a shortcut's or widget's label, else the entry name), `snap_cells()`, `item_span()`, `grid_items()`, `ResizeTarget`, `DesktopMove`, `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
 | `layout.ts` | `LAYOUT_DIRECTORY_NAME` (`desktop`), `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions`, `take_v0_pins()` |
 | `additions.ts` | Default widgets: `default_widgets()`, `pending_widgets()`, `ADDITIONS_FILE` (`additions.json`), `ADDITIONS_PATH`, `parse_additions()`, `serialize_additions()` |
 | `home-layout.ts` | Mobile home model: `HOME_LAYOUT_FILE` (`home-layout.json`), `HOME_LAYOUT_PATH`, `HomeLayout`, `parse_home_layout()` (with the dock migration), `serialize_home_layout()`, `arrange_home()` |
@@ -185,10 +185,11 @@ Keyboard: with the widget's title strip focused, Shift+→/← grows or shrinks 
 | `home` | `() => DesktopItem[]` | Every entry in the saved order, then entries the order doesn't know in folder order |
 | `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end) |
 | `set_widget_style` | `(name, style) => Promise<boolean>` | Same as the desktop's: writes `style` through `DesktopFolder.write_widget_style`; `false` when `name` isn't a widget |
+| `resize_widget` | `(name, size) => Promise<boolean>` | Clamps `size` into the app's `widget_size` and writes it through `DesktopFolder.write_widget_size` (in memory at once, the file queued), the same `.widget` file the desktop reads. `false` when `name` isn't a widget or its app has no `widget_size`. No grid, so nothing to collide with |
 | `rename_item` | `(name, new_name)` | Swaps the name in the order and saves before renaming, so the entry keeps its place |
 | base members | | Forward to `DesktopFolder` |
 
-No resize on the phone: a widget shows full width, `size.h` rows of 104px tall, and its size is set on the desktop.
+A widget shows full width, `size.h` rows of 104px tall. The home's resize handle changes only `h`; `w` keeps whatever the desktop set ([shell/mobile.md](../shell/mobile.md#home)).
 
 **Layout file** `/var/lib/desktop/home-layout.json`: `{ "version": 1, "order": ["Settings.desktop", …] }`. zod-validated; anything invalid is an empty layout (folder order), not an error. Every change rebuilds the order from what's shown, so stale names drop out, assigns the state at once and writes in the background (`[MobileDesktopService] Failed to save the home layout`).
 
@@ -210,7 +211,7 @@ Contributes no commands.
 
 ## Known gaps
 
-- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. On the phone they show full width and don't resize ([shell/mobile.md](../shell/mobile.md#home)).
+- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. On the phone they show full width and resize in height only ([shell/mobile.md](../shell/mobile.md#home)).
 - The context menu has no Resize item; the keyboard path is Shift+arrows on the title strip.
 - Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.

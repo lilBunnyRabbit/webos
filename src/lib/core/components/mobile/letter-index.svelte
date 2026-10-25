@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { search_app_names, UiOverlay, type AppId, type AppListing, type AppsService, type UiService, type WindowsService } from "$lib/core/api";
+  import kernel, { search_apps, UiOverlay, type AppId, type AppListing, type AppsService, type UiService, type WindowsService } from "$lib/core/api";
   import { group_by_letter, LETTERS } from "$lib/core/api/services/apps/letters";
   import { clamp, cn } from "$lib/core/utils";
   import { motion_ms } from "$lib/core/utils/motion";
@@ -9,6 +9,7 @@
   import AppRow from "../apps/app-row.svelte";
   import { app_menu } from "../apps/app-actions";
   import OfflineNote from "../apps/offline-note.svelte";
+  import { SentenceSearch } from "../apps/sentence-search.svelte";
   import { IconButton, Input } from "../ui";
 
   let { onlaunch }: { onlaunch: (id: AppId) => void } = $props();
@@ -26,10 +27,13 @@
 
   let query = $state("");
   const filtering = $derived(query.trim() !== "");
-  const matches = $derived(filtering ? search_app_names(installed, query) : installed);
+  const matches = $derived(filtering ? search_apps(installed, query) : installed);
   const shown = $derived(filtering ? group_by_letter(matches) : by_letter);
   const sections = $derived(LETTERS.filter((letter) => shown.has(letter)));
-  const gettable = $derived(filtering ? search_app_names(apps.listings({ installed: false }), query) : []);
+  const gettable = $derived(filtering ? search_apps(apps.listings({ installed: false }), query) : []);
+  // No AI row: phones have no on-device model.
+  const sentence = new SentenceSearch<AppListing>({ apps: () => apps.listings(), query: () => query, shown: () => [...matches, ...gettable] });
+  const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);
 
   /** Lives only while a finger is down, so it stays here rather than in `ui`. */
   interface Scrub {
@@ -135,9 +139,11 @@
     else release();
   }
 
-  // A cancel is the browser taking the touch (Android's edge back swipe), not a tap: nothing opens.
+  // A cancel is the browser taking the touch (Android's edge back swipe), not a tap: nothing opens, and a list the scrub started from stays.
   function scrub_cancel(event: PointerEvent) {
-    if (scrub && event.pointerId === scrub.pointer) close();
+    if (!scrub || event.pointerId !== scrub.pointer) return;
+    flushSync(() => (scrub = null));
+    follow();
   }
 
   /** The held section must not move: the list scrolls by however far filling in the other letters shifted it. */
@@ -156,6 +162,9 @@
     });
     const after = panel.querySelector<HTMLElement>(`[data-scrub-letter="${anchor}"]`)?.getBoundingClientRect().top;
     if (after !== undefined) panel.scrollTop += after - before;
+    // The panel opened under the finger, so the effect's arrival never ran; the field would raise the keyboard.
+    // The rail's mousedown is prevented, or a tap's compatibility mousedown would blur this back to the body.
+    panel.focus({ preventScroll: true });
   }
 
   function follow() {
@@ -228,7 +237,6 @@
             aria-label="Filter apps"
             enterkeyhint="go"
             onkeydown={(event) => {
-              const best = matches[0] ?? gettable[0];
               if (event.key === "Enter" && filtering && best) launch(best.id);
             }}
           >
@@ -263,7 +271,17 @@
         </ul>
       </section>
     {/if}
-    {#if !scrub && filtering && sections.length === 0 && gettable.length === 0}
+    {#if !scrub && sentence.related.length > 0}
+      <section class="pb-5" aria-labelledby="letter-index-related">
+        <p id="letter-index-related" class="px-2 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Related</p>
+        <ul class="flex flex-col gap-0.5">
+          {#each sentence.related as app (app.id)}
+            {@render row(app)}
+          {/each}
+        </ul>
+      </section>
+    {/if}
+    {#if !scrub && filtering && !best && !sentence.pending}
       <p class="px-2 py-3 text-base text-foreground/65">No apps match</p>
     {/if}
   </div>
@@ -281,6 +299,7 @@
     onpointercancel={scrub_cancel}
     onlostpointercapture={(event) => event.pointerId === scrub?.pointer && release()}
     oncontextmenu={(event) => event.preventDefault()}
+    onmousedown={(event) => event.preventDefault()}
   >
     {#each LETTERS as entry (entry)}
       <span

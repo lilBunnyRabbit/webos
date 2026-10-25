@@ -89,6 +89,12 @@ export interface MobileDesktopService extends DesktopService {
 
   /** Moves an entry in the home order to just before `before` (`null`: the end). */
   move_item(name: string, before: string | null): void;
+
+  /**
+   * Writes `size`, clamped into the app's `widget_size`, into the `.widget` file. Resolves `false` when `name` isn't a
+   * widget of an app with a `widget_size`. The size is shared with the desktop; the list home shows only its height.
+   */
+  resize_widget(name: string, size: WidgetSize): Promise<boolean>;
 }
 
 export type DesktopGrid = Array<Array<DesktopItem | undefined>>;

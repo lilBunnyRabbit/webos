@@ -17,7 +17,7 @@
       <tr>
         <td>{index + 1}</td>
         <td class="font-sans">{item.name}</td>
-        <td>{item.kind}</td>
+        <td>{item.kind}{#if item.kind === "widget"} {item.size.w}×{item.size.h}{/if}</td>
       </tr>
     {/each}
   </InspectorTable>

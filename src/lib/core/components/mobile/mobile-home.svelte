@@ -13,7 +13,9 @@
   import type { Position } from "$lib/core/utils/type";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { motion_ms } from "$lib/core/utils/motion";
-  import { DotsSixVertical as DotsSixVerticalIcon, Plus as PlusIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+  import { clamp_widget_size } from "$lib/core/api/services/apps/widget";
+  import type { WidgetSize } from "$lib/core/api/services/apps/type";
+  import { ArrowsVertical as ArrowsVerticalIcon, DotsSixVertical as DotsSixVerticalIcon, Plus as PlusIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import { background_menu } from "../desktop/desktop-actions";
   import WidgetBody from "../desktop/widget-body.svelte";
   import { widget_surface } from "../desktop/widget-style";
@@ -62,7 +64,6 @@
   const editing = $derived(ui.overlay === UiOverlay.HOME_EDIT);
   const edit = () => ui.open(UiOverlay.HOME_EDIT);
 
-
   const browsing = $derived(ui.overlay === UiOverlay.LAUNCHER);
   const missing = (item: DesktopItem) => item.kind === "shortcut" && !apps.get(item.app_id);
 
@@ -82,10 +83,53 @@
   }
   let drag = $state<Drag | null>(null);
 
+  /** Height only: a widget here is always the list's width, so a drag changes rows and `size.w` stays as the desktop set it. */
+  interface Resize {
+    name: string;
+    start: number;
+    from: WidgetSize;
+    size: WidgetSize;
+  }
+  let resize = $state<Resize | null>(null);
+
   // Leaving removes the grips under a held pointer, so their capture is never lost.
   $effect(() => {
-    if (!editing) drag = null;
+    if (editing) return;
+    drag = null;
+    resize = null;
   });
+
+  type Widget = Extract<DesktopItem, { kind: "widget" }>;
+  const limits_of = (item: Widget) => apps.get(item.app_id)?.widget_size;
+  const height_of = (item: Widget) => (resize?.name === item.name ? resize.size.h : item.size.h);
+
+  function resize_start(event: PointerEvent, item: Widget) {
+    if (!event.isPrimary) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    resize = { name: item.name, start: event.clientY, from: item.size, size: item.size };
+  }
+
+  function resize_move(event: PointerEvent, item: Widget) {
+    if (!resize || resize.name !== item.name) return;
+    const rows = resize.from.h + Math.round((event.clientY - resize.start) / WIDGET_ROW);
+    const next = clamp_widget_size({ w: resize.from.w, h: rows }, limits_of(item));
+    if (next.h !== resize.size.h) navigator.vibrate?.(4);
+    resize.size = next;
+  }
+
+  function resize_end() {
+    const finished = resize;
+    resize = null;
+    if (!finished || finished.size.h === finished.from.h) return;
+    void desktop.resize_widget(finished.name, finished.size);
+  }
+
+  function resize_key(event: KeyboardEvent, item: Widget) {
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    void desktop.resize_widget(item.name, { w: item.size.w, h: item.size.h + step });
+  }
 
   function drag_start(event: PointerEvent, item: DesktopItem) {
     if (!event.isPrimary) return;
@@ -172,19 +216,40 @@
             <div
               {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, point, edit), ignore: "input, textarea, select, [contenteditable]" })}
               class={cn(
-                "my-2 flex flex-col overflow-hidden rounded-2xl",
+                "relative my-2 flex flex-col overflow-hidden rounded-2xl",
                 widget_surface(item.style),
                 editing && "mr-12",
                 editing && item.style === WidgetStyle.CLEAR && "outline-1 -outline-offset-1 outline-foreground/30 outline-dashed"
               )}
-              style:height="{item.size.h * WIDGET_ROW}px"
+              style:height="{height_of(item) * WIDGET_ROW}px"
               role="group"
               aria-label={item.label}
             >
               <div class="min-h-0 flex-1 overflow-hidden" inert={editing}>
                 <WidgetBody {item} size={item.size} />
               </div>
+              {#if resize?.name === item.name}
+                <span class="absolute top-2 left-2 rounded-md bg-primary px-1.5 py-0.5 font-mono text-2xs text-background tabular-nums">
+                  {resize.size.h} {resize.size.h === 1 ? "row" : "rows"}
+                </span>
+              {/if}
             </div>
+            {#if editing && limits_of(item)}
+              {@const limits = limits_of(item)!}
+              <button
+                type="button"
+                aria-label="Resize {item.label}, {item.size.h} of {limits.min.h} to {limits.max.h} rows"
+                title="Drag or use the arrow keys to change the height"
+                class="absolute right-0 bottom-2 z-10 grid size-11 cursor-ns-resize touch-none place-items-center rounded-full bg-background-light/90 text-primary shadow-raised"
+                onpointerdown={(event) => resize_start(event, item)}
+                onpointermove={(event) => resize_move(event, item)}
+                onlostpointercapture={resize_end}
+                onkeydown={(event) => resize_key(event, item)}
+                oncontextmenu={(event) => event.preventDefault()}
+              >
+                <ArrowsVerticalIcon class="size-5" weight="bold" />
+              </button>
+            {/if}
           {:else}
             <button
               {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, point, edit) })}
@@ -219,7 +284,10 @@
             <button
               type="button"
               aria-label="Move {display_name(item)}"
-              class="absolute top-1/2 right-0 z-10 grid size-11 -translate-y-1/2 cursor-grab touch-none place-items-center rounded-full bg-background-light/90 text-foreground/80 shadow-raised active:cursor-grabbing"
+              class={cn(
+                "absolute right-0 z-10 grid size-11 cursor-grab touch-none place-items-center rounded-full bg-background-light/90 text-foreground/80 shadow-raised active:cursor-grabbing",
+                item.kind === "widget" ? "top-2" : "top-1/2 -translate-y-1/2"
+              )}
               onpointerdown={(event) => drag_start(event, item)}
               onpointermove={drag_move}
               onpointerup={drag_end}

@@ -4,6 +4,7 @@ import { arrange_home, EMPTY_HOME_LAYOUT, HOME_LAYOUT_FILE, HOME_LAYOUT_PATH, pa
 import { LAYOUT_DIRECTORY_NAME, LAYOUT_PATH } from "./layout";
 import type { DesktopItem, MobileDesktopService as IMobileDesktopService } from "./type";
 import type { WidgetSize, WidgetStyle } from "../apps/type";
+import { clamp_widget_size } from "../apps/widget";
 
 export class MobileDesktopService implements IMobileDesktopService {
   name = "MobileDesktopService";
@@ -94,6 +95,17 @@ export class MobileDesktopService implements IMobileDesktopService {
     const index = before === null ? -1 : order.indexOf(before);
     order.splice(index === -1 ? order.length : index, 0, name);
     this.commit(order);
+  }
+
+  public async resize_widget(name: string, size: WidgetSize): Promise<boolean> {
+    const entry = this.folder.get(name);
+    if (entry?.kind !== "widget") return false;
+    const limits = this.apps_service.get(entry.app_id)?.widget_size;
+    if (!limits) return false;
+    const next = clamp_widget_size(size, limits);
+    if (next.w === entry.size.w && next.h === entry.size.h) return true;
+    await this.folder.write_widget_size(name, next);
+    return true;
   }
 
   public async set_widget_style(name: string, style: WidgetStyle): Promise<boolean> {

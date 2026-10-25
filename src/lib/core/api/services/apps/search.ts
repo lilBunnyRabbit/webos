@@ -36,12 +36,6 @@ export function search_apps<T extends AppListing>(apps: Iterable<T>, query: stri
   return search_ranked(apps, query, text_of, by_name);
 }
 
-/** The apps whose name matches `query`, best first (`search_ranked` on the name alone); every app sorted by name when it's blank. */
-export function search_app_names<T extends AppListing>(apps: Iterable<T>, query: string): T[] {
-  if (query.trim() === "") return [...apps].sort(by_name);
-  return search_ranked(apps, query, (manifest) => ({ name: manifest.name, keywords: [], other: [] }), by_name);
-}
-
 /** Apps grouped for the launcher: one section per category in declaration order, system apps last. Empty ones are left out. */
 export function group_apps<T extends AppManifest>(apps: Iterable<T>): AppSection<T>[] {
   const sections: AppSection<T>[] = [

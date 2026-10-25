@@ -18,8 +18,8 @@ beforeEach(async () => {
 
 afterEach(() => desktop?.destroy());
 
-function create() {
-  const apps = { get: () => undefined } as unknown as AppsService;
+function create(get: (id: string) => unknown = () => undefined) {
+  const apps = { get } as unknown as AppsService;
   const kernel = { service: (key: string) => (key === "files" ? files : apps) } as unknown as Kernel;
   return new MobileDesktopService(kernel);
 }
@@ -35,4 +35,19 @@ test("a saved dock joins the end of the home order once and leaves the file", as
 
   expect(desktop.home().map((item) => item.name)).toEqual(["c", "b", "a", "d"]);
   await vi.waitFor(async () => expect(JSON.parse((await (await files.get_file(HOME_LAYOUT_PATH))!.text()))).toEqual({ version: 1, order: ["c", "b", "a"] }));
+});
+
+test("resize_widget clamps into the app's widget_size and writes the shared .widget file", async () => {
+  const manifest = { widget: async () => ({}), widget_size: { min: { w: 2, h: 1 }, max: { w: 4, h: 3 }, default: { w: 3, h: 1 } } };
+  desktop = create((id) => (id === "notes" ? manifest : undefined));
+  await desktop.init();
+  const name = (await desktop.pin_widget("notes", { label: "Notes" }))!;
+  await files.create_directory((await files.get_directory("/home/Desktop"))!, "folder");
+  await vi.waitFor(() => expect(desktop.names()).toContain("folder"));
+
+  expect(await desktop.resize_widget(name, { w: 3, h: 9 })).toBe(true);
+  expect(desktop.home().find((item) => item.name === name)).toMatchObject({ size: { w: 3, h: 3 } });
+  await vi.waitFor(async () => expect(JSON.parse((await (await files.get_file(`/home/Desktop/${name}`))!.text()))).toMatchObject({ app: "notes", w: 3, h: 3 }));
+
+  expect(await desktop.resize_widget("folder", { w: 2, h: 2 })).toBe(false);
 });

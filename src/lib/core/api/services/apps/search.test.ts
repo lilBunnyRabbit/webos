@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { AppCategory, type AppListing } from "./type";
-import { group_apps, search_app_names, search_apps, within_one_edit } from "./search";
+import { group_apps, search_apps, within_one_edit } from "./search";
 
 const app = (name: string, extra: Partial<AppListing> = {}) =>
   ({ id: name.toLowerCase().replace(/\s+/g, "-"), name, category: AppCategory.UTILITIES, system: false, ...extra }) as AppListing;
@@ -30,18 +30,6 @@ describe("search_apps", () => {
 
   test("no match is an empty list", () => {
     expect(search_apps([app("Snake")], "zzz")).toEqual([]);
-  });
-});
-
-describe("search_app_names", () => {
-  test("matches the name only, never keywords, description or category", () => {
-    const apps = [app("Settings"), app("Funky", { keywords: ["settle"], description: "Set the beat" }), app("Snake", { category: AppCategory.GAMES })];
-    expect(names(search_app_names(apps, "set"))).toEqual(["Settings"]);
-    expect(search_app_names(apps, "games")).toEqual([]);
-  });
-
-  test("a blank query lists every app by name", () => {
-    expect(names(search_app_names([app("Snake"), app("Calculator")], " "))).toEqual(["Calculator", "Snake"]);
   });
 });
 
