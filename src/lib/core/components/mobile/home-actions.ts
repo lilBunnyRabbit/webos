@@ -8,7 +8,9 @@ import kernel, {
 } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
 import {
+  ArrowDown as ArrowDownIcon,
   ArrowSquareOut as ArrowSquareOutIcon,
+  ArrowUp as ArrowUpIcon,
   Info as InfoIcon,
   PencilSimple as PencilSimpleIcon,
   SquaresFour as SquaresFourIcon,
@@ -24,13 +26,23 @@ const notifications = () => kernel.service<NotificationsService>("notifications"
 
 export const EDIT_HOME_ITEM = { id: "edit", label: "Edit home screen", icon: SquaresFourIcon };
 
-/** The long-press menu of a home entry or a widget. Rename, delete and properties are the desktop's own flows. */
-export async function home_item_menu(item: DesktopItem, anchor: Position, on_edit: () => void): Promise<void> {
+/**
+ * The menu of a home entry or a widget: a right-click, or a tap in edit mode, where Move up and Move down stand in for
+ * the drag on a keyboard. Rename, delete and properties are the desktop's own flows.
+ */
+export async function home_item_menu(item: DesktopItem, anchor: Position, options: { editing: boolean; on_edit: () => void }): Promise<void> {
   const shortcut = item.kind === "shortcut";
+  const order = desktop().home().map((entry) => entry.name);
+  const index = order.indexOf(item.name);
   const choice = await dialogs().menu(
     [
       { id: "open", label: "Open", icon: ArrowSquareOutIcon },
-      EDIT_HOME_ITEM,
+      ...(options.editing
+        ? [
+            { id: "up", label: "Move up", icon: ArrowUpIcon, disabled: index <= 0 },
+            { id: "down", label: "Move down", icon: ArrowDownIcon, disabled: index === -1 || index === order.length - 1 },
+          ]
+        : [EDIT_HOME_ITEM]),
       ...style_item(item),
       { separator: true },
       { id: "rename", label: "Rename", icon: PencilSimpleIcon },
@@ -43,7 +55,9 @@ export async function home_item_menu(item: DesktopItem, anchor: Position, on_edi
   );
   if (apply_style_choice(item, choice)) return;
   if (choice === "open") desktop().open(item, { anchor });
-  else if (choice === "edit") on_edit();
+  else if (choice === "edit") options.on_edit();
+  else if (choice === "up") desktop().move_item(item.name, order[index - 1]);
+  else if (choice === "down") desktop().move_item(item.name, order[index + 2] ?? null);
   else if (choice === "rename") rename_item(item);
   else if (choice === "delete") remove_item(item);
   else if (choice === "properties") show_properties(item);

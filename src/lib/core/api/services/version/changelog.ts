@@ -5,6 +5,25 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.69.1",
+    date: "2026-10-25",
+    title: "Hold to rearrange",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "On phones, hold anything on the home screen and it starts to jiggle: keep your finger down to drag it to a new spot, tap the minus to remove it, or tap it for more options. Tap Done or empty space when you're finished.",
+      },
+      {
+        kind: IMPROVED,
+        text: "While rearranging, the other items slide aside to show where the dragged one will land, the list scrolls when you reach its edge, and widgets get a handle on their corner to change their height.",
+      },
+      {
+        kind: FIXED,
+        text: "Holding and dragging home screen items works on Samsung Internet, where the page used to scroll instead.",
+      },
+    ],
+  },
+  {
     version: "3.69.0",
     date: "2026-10-25",
     title: "A list for a home",

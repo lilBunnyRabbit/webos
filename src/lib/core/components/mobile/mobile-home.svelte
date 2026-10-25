@@ -15,8 +15,8 @@
   import { motion_ms } from "$lib/core/utils/motion";
   import { clamp_widget_size } from "$lib/core/api/services/apps/widget";
   import type { WidgetSize } from "$lib/core/api/services/apps/type";
-  import { ArrowsVertical as ArrowsVerticalIcon, DotsSixVertical as DotsSixVerticalIcon, Plus as PlusIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
-  import { background_menu } from "../desktop/desktop-actions";
+  import { ArrowsVertical as ArrowsVerticalIcon, Minus as MinusIcon, Plus as PlusIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+  import { background_menu, remove_item } from "../desktop/desktop-actions";
   import WidgetBody from "../desktop/widget-body.svelte";
   import { widget_surface } from "../desktop/widget-style";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
@@ -27,8 +27,10 @@
   import { launch_or_explain } from "../apps/offline-actions";
   import { Button } from "../ui";
   import { add_widget_menu, EDIT_HOME_ITEM, home_item_menu } from "./home-actions";
+  import { autoscroll_step, before_of, clamp_offset, drop_index, shift_of, type Slot } from "./home-drag";
+  import { home_gesture } from "./home-gesture";
   import LetterIndex from "./letter-index.svelte";
-  import { long_press } from "$lib/core/utils/long-press";
+  import { HOLD_MS, long_press } from "$lib/core/utils/long-press";
   import { fade } from "svelte/transition";
 
   const desktop = $derived(kernel.service<MobileDesktopService>("desktop"));
@@ -38,6 +40,8 @@
 
   /** Widgets were sized for the grid's 104px rows; one row of height per cell keeps them readable in a full-width list. */
   const WIDGET_ROW = 104;
+  /** In edit mode a short press picks an item up, so a quick swipe still scrolls the list. */
+  const PICK_MS = 200;
   const DRAG_SLOP = 8;
   const RECENT_COUNT = 4;
 
@@ -56,32 +60,43 @@
   const time = $derived(new Date(clock.now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }));
   const date = $derived(new Date(clock.now).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }));
 
-  /**
-   * Edit mode exists because a drag after a hold never started on Samsung Internet: until the hold fired the browser
-   * owned the touch and claimed it as a scroll. Here the grips carry `touch-action: none` from the start, so the press is ours.
-   * It lives in `ui` as an overlay so Back and Escape leave it.
-   */
+  /** An overlay in `ui`, so Back and Escape leave it like any layer. */
   const editing = $derived(ui.overlay === UiOverlay.HOME_EDIT);
   const edit = () => ui.open(UiOverlay.HOME_EDIT);
 
   const browsing = $derived(ui.overlay === UiOverlay.LAUNCHER);
   const missing = (item: DesktopItem) => item.kind === "shortcut" && !apps.get(item.app_id);
+  const at = (event: MouseEvent): Position => ({ x: event.clientX, y: event.clientY });
 
   function background(point: Position) {
     void background_menu(point, [
-      { item: EDIT_HOME_ITEM, run: edit },
+      ...(editing ? [] : [{ item: EDIT_HOME_ITEM, run: edit }]),
       { item: { id: "add_widget", label: "Add widget", icon: PlusIcon }, run: () => void add_widget_menu(point) },
     ]);
   }
 
+  const menu = (item: DesktopItem, point: Position) => void home_item_menu(item, point, { editing, on_edit: edit });
+
+  let scroller = $state<HTMLElement>();
+  let list = $state<HTMLElement>();
+
   interface Drag {
     name: string;
+    from: number;
     start: Position;
     point: Position;
+    /** This hold opened edit mode, so letting go without moving just leaves the item there. */
+    entered: boolean;
     moving: boolean;
-    before: string | null | undefined;
+    /** Measured once the item first moves, in list coordinates; transforms don't touch `offsetTop`. */
+    origin: number;
+    slots: Slot[];
+    stride: number;
+    offset: number;
+    to: number;
   }
   let drag = $state<Drag | null>(null);
+  let frame = 0;
 
   /** Height only: a widget here is always the list's width, so a drag changes rows and `size.w` stays as the desktop set it. */
   interface Resize {
@@ -92,12 +107,86 @@
   }
   let resize = $state<Resize | null>(null);
 
-  // Leaving removes the grips under a held pointer, so their capture is never lost.
+  // Leaving removes the handles under a held pointer, so their capture is never lost.
   $effect(() => {
     if (editing) return;
     drag = null;
     resize = null;
   });
+
+  function pick(name: string, point: Position) {
+    const from = items.findIndex((item) => item.name === name);
+    if (from === -1) return;
+    const entered = !editing;
+    if (entered) edit();
+    navigator.vibrate?.(8);
+    drag = { name, from, start: point, point, entered, moving: false, origin: 0, slots: [], stride: 0, offset: 0, to: from };
+  }
+
+  function follow() {
+    if (!drag?.moving || !list) return;
+    const y = drag.point.y - list.getBoundingClientRect().top;
+    drag.offset = clamp_offset(drag.slots, drag.from, y - drag.origin);
+    const to = drop_index(drag.slots, drag.from, drag.offset);
+    if (to !== drag.to) navigator.vibrate?.(4);
+    drag.to = to;
+  }
+
+  function move(point: Position) {
+    if (!drag || !list) return;
+    drag.point = point;
+    if (!drag.moving) {
+      if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) <= DRAG_SLOP) return;
+      const rows = Array.from(list.querySelectorAll<HTMLElement>(":scope > [data-home-name]"));
+      drag.slots = rows.map((row) => ({ top: row.offsetTop, height: row.offsetHeight }));
+      drag.stride = drag.slots[drag.from].height + (parseFloat(getComputedStyle(list).rowGap) || 0);
+      drag.origin = drag.start.y - list.getBoundingClientRect().top;
+      drag.moving = true;
+      frame = requestAnimationFrame(autoscroll);
+    }
+    follow();
+  }
+
+  function autoscroll() {
+    if (!drag?.moving || !scroller) return;
+    const rect = scroller.getBoundingClientRect();
+    const step = autoscroll_step(drag.point.y, rect.top, rect.bottom);
+    if (step !== 0) {
+      scroller.scrollTop += step;
+      follow();
+    }
+    frame = requestAnimationFrame(autoscroll);
+  }
+
+  function drop(point: Position) {
+    const finished = drag;
+    drag = null;
+    cancelAnimationFrame(frame);
+    if (!finished) return;
+    if (finished.moving) {
+      const names = items.map((item) => item.name);
+      if (finished.to !== finished.from) desktop.move_item(finished.name, before_of(names, finished.from, finished.to));
+      return;
+    }
+    const item = items[finished.from];
+    if (!finished.entered && item) menu(item, point);
+  }
+
+  function cancel() {
+    drag = null;
+    cancelAnimationFrame(frame);
+  }
+
+  function translate_of(index: number): string | undefined {
+    if (!drag?.moving) return undefined;
+    const y = index === drag.from ? drag.offset : shift_of(index, drag.from, drag.to, drag.stride);
+    return y === 0 ? undefined : `0 ${y}px`;
+  }
+
+  function tap_outside(event: MouseEvent) {
+    if (!editing || (event.target as Element).closest("[data-home-name], [data-home-keep]")) return;
+    ui.close();
+  }
 
   type Widget = Extract<DesktopItem, { kind: "widget" }>;
   const limits_of = (item: Widget) => apps.get(item.app_id)?.widget_size;
@@ -130,61 +219,47 @@
     event.preventDefault();
     void desktop.resize_widget(item.name, { w: item.size.w, h: item.size.h + step });
   }
-
-  function drag_start(event: PointerEvent, item: DesktopItem) {
-    if (!event.isPrimary) return;
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    const point = { x: event.clientX, y: event.clientY };
-    drag = { name: item.name, start: point, point, moving: false, before: undefined };
-  }
-
-  function drag_move(event: PointerEvent) {
-    if (!drag) return;
-    drag.point = { x: event.clientX, y: event.clientY };
-    if (!drag.moving && Math.abs(drag.point.y - drag.start.y) <= DRAG_SLOP) return;
-    if (!drag.moving) navigator.vibrate?.(4);
-    drag.moving = true;
-    const row = document.elementFromPoint(drag.point.x, drag.point.y)?.closest<HTMLElement>("[data-home-name]");
-    if (!row) return (drag.before = undefined);
-    const rect = row.getBoundingClientRect();
-    const name = row.dataset.homeName!;
-    const position = items.findIndex((item) => item.name === name);
-    drag.before = drag.point.y < rect.top + rect.height / 2 ? name : (items[position + 1]?.name ?? null);
-    if (drag.before === drag.name) drag.before = undefined;
-  }
-
-  function drag_end() {
-    const finished = drag;
-    drag = null;
-    if (!finished?.moving || finished.before === undefined) return;
-    desktop.move_item(finished.name, finished.before);
-  }
 </script>
 
-<div class="relative isolate flex h-full flex-col pt-[env(safe-area-inset-top)] select-none [-webkit-touch-callout:none]">
-  {#if editing}
-    <div class="flex items-center justify-between gap-2 px-4 pt-3" transition:fade={{ duration: motion_ms(150) }}>
-      <Button variant="secondary" onclick={(event) => add_widget_menu({ x: event.clientX, y: event.clientY })}>
-        <PlusIcon weight="bold" /> Add widget
-      </Button>
-      <Button onclick={() => ui.close()}>Done</Button>
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -- a tap on empty space leaves edit mode; Escape and Done do from the keyboard. -->
+<div class="relative isolate flex h-full flex-col pt-[env(safe-area-inset-top)] select-none [-webkit-touch-callout:none]" onclick={tap_outside}>
+  <header class="relative px-6 pt-8 pb-3" data-wallpaper-label inert={browsing}>
+    <div class={cn("transition-opacity duration-150", editing && "opacity-0")} aria-hidden={editing}>
+      <p class="text-6xl leading-none font-light tracking-tight tabular-nums">{time}</p>
+      <p class="mt-2 text-sm font-medium text-foreground/80">{date}</p>
     </div>
-  {/if}
-
-  <header class="px-6 pt-8 pb-3" data-wallpaper-label inert={browsing}>
-    <p class="text-6xl leading-none font-light tracking-tight tabular-nums">{time}</p>
-    <p class="mt-2 text-sm font-medium text-foreground/80">{date}</p>
+    {#if editing}
+      <div data-home-keep class="absolute inset-x-4 top-1/2 flex items-center justify-between gap-2" transition:fade={{ duration: motion_ms(150) }}>
+        <Button size="lg" onclick={(event) => add_widget_menu(at(event))}>
+          <PlusIcon weight="bold" /> Add widget
+        </Button>
+        <Button size="lg" variant="primary" onclick={() => ui.close()}>Done</Button>
+      </div>
+    {/if}
   </header>
 
   <div
-    {@attach long_press({ on_menu: background, ignore: "[data-home-name], [data-home-row]" })}
-    class={cn("flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-3 pl-4 [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] [scrollbar-width:none]", editing ? "pr-4" : "pr-14")}
+    bind:this={scroller}
+    {@attach long_press({ on_menu: background, ignore: "[data-home-name], [data-home-row], [data-home-keep]" })}
+    {@attach home_gesture({
+      hold_ms: () => (editing ? PICK_MS : HOLD_MS),
+      mouse_drags: () => editing,
+      on_pick: pick,
+      on_move: move,
+      on_drop: drop,
+      on_cancel: cancel,
+      on_menu: (name, point) => {
+        const item = items.find((entry) => entry.name === name);
+        if (item) menu(item, point);
+      },
+    })}
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pr-14 pb-3 pl-4 [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] [scrollbar-width:none]"
     aria-label="Home screen"
     role="region"
     inert={browsing}
   >
-    {#if !editing && recent.length > 0}
-      <section class="pt-4" aria-labelledby="home-recent" transition:fade={{ duration: motion_ms(150) }}>
+    {#if recent.length > 0}
+      <section class={cn("pt-4 transition-opacity duration-150", editing && "opacity-40")} aria-labelledby="home-recent" inert={editing}>
         <p id="home-recent" class="px-2 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase" data-wallpaper-label>Recent</p>
         <ul class="flex flex-col">
           {#each recent as manifest (manifest.id)}
@@ -202,100 +277,114 @@
       </section>
     {/if}
 
-    <ul class="mt-auto flex flex-col gap-0.5 pt-6" aria-label="Pinned">
-      {#each items as item (item.name)}
+    <ul bind:this={list} class="relative mt-auto flex flex-col gap-0.5 pt-6" aria-label="Pinned">
+      {#each items as item, index (item.name)}
+        {@const lifted = drag?.name === item.name}
         <li
           data-home-name={item.name}
-          class={cn(
-            "relative rounded-2xl transition-opacity duration-150",
-            drag?.moving && drag.name === item.name && "opacity-30",
-            drag?.moving && drag.before === item.name && "before:absolute before:inset-x-2 before:-top-1 before:h-0.5 before:rounded-full before:bg-primary"
-          )}
+          class={cn("relative", drag?.moving && !lifted && "transition-[translate] duration-200 ease-out", lifted && "z-10")}
+          style:translate={translate_of(index)}
         >
-          {#if item.kind === "widget"}
-            <div
-              {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, point, edit), ignore: "input, textarea, select, [contenteditable]" })}
-              class={cn(
-                "relative my-2 flex flex-col overflow-hidden rounded-2xl",
-                widget_surface(item.style),
-                editing && "mr-12",
-                editing && item.style === WidgetStyle.CLEAR && "outline-1 -outline-offset-1 outline-foreground/30 outline-dashed"
-              )}
-              style:height="{height_of(item) * WIDGET_ROW}px"
-              role="group"
-              aria-label={item.label}
-            >
-              <div class="min-h-0 flex-1 overflow-hidden" inert={editing}>
-                <WidgetBody {item} size={item.size} />
-              </div>
-              {#if resize?.name === item.name}
-                <span class="absolute top-2 left-2 rounded-md bg-primary px-1.5 py-0.5 font-mono text-2xs text-background tabular-nums">
-                  {resize.size.h} {resize.size.h === 1 ? "row" : "rows"}
-                </span>
-              {/if}
-            </div>
-            {#if editing && limits_of(item)}
-              {@const limits = limits_of(item)!}
-              <button
-                type="button"
-                aria-label="Resize {item.label}, {item.size.h} of {limits.min.h} to {limits.max.h} rows"
-                title="Drag or use the arrow keys to change the height"
-                class="absolute right-0 bottom-2 z-10 grid size-11 cursor-ns-resize touch-none place-items-center rounded-full bg-background-light/90 text-primary shadow-raised"
-                onpointerdown={(event) => resize_start(event, item)}
-                onpointermove={(event) => resize_move(event, item)}
-                onlostpointercapture={resize_end}
-                onkeydown={(event) => resize_key(event, item)}
-                oncontextmenu={(event) => event.preventDefault()}
+          <div
+            class={cn("relative", item.kind === "widget" && "py-2", editing && !lifted && "animate-jiggle")}
+            style:--jiggle={item.kind === "widget" ? "0.3deg" : "0.7deg"}
+            style:animation-delay="{-(index % 4) * 60}ms"
+            style:animation-direction={index % 2 === 0 ? "alternate" : "alternate-reverse"}
+          >
+            {#if item.kind === "widget"}
+              <div
+                class={cn(
+                  "relative flex flex-col overflow-hidden rounded-2xl transition-[scale,box-shadow] duration-150",
+                  widget_surface(item.style),
+                  editing && item.style === WidgetStyle.CLEAR && "outline-1 -outline-offset-1 outline-foreground/30 outline-dashed",
+                  lifted && "scale-[1.02] shadow-popover"
+                )}
+                style:height="{height_of(item) * WIDGET_ROW}px"
+                role="group"
+                aria-label={item.label}
               >
-                <ArrowsVerticalIcon class="size-5" weight="bold" />
+                <div class="min-h-0 flex-1 overflow-hidden" inert={editing}>
+                  <WidgetBody {item} size={item.size} />
+                </div>
+                {#if editing}
+                  <button type="button" class="absolute inset-0 rounded-2xl" aria-label="{item.label} options" onclick={(event) => menu(item, at(event))}></button>
+                {/if}
+                {#if resize?.name === item.name}
+                  <span class="absolute top-2 left-2 rounded-md bg-primary px-1.5 py-0.5 font-mono text-2xs text-background tabular-nums">
+                    {resize.size.h} {resize.size.h === 1 ? "row" : "rows"}
+                  </span>
+                {/if}
+              </div>
+              {#if editing && limits_of(item)}
+                {@const limits = limits_of(item)!}
+                <button
+                  type="button"
+                  data-home-control
+                  aria-label="Resize {item.label}, {item.size.h} of {limits.min.h} to {limits.max.h} rows"
+                  title="Drag or use the arrow keys to change the height"
+                  class="absolute -right-5.5 -bottom-3.5 z-10 grid size-11 cursor-ns-resize touch-none place-items-center"
+                  onpointerdown={(event) => resize_start(event, item)}
+                  onpointermove={(event) => resize_move(event, item)}
+                  onlostpointercapture={resize_end}
+                  onkeydown={(event) => resize_key(event, item)}
+                  oncontextmenu={(event) => event.preventDefault()}
+                >
+                  <span
+                    class={cn(
+                      "grid size-8 place-items-center rounded-full bg-background-lighter text-primary shadow-raised ring-1 ring-foreground/12",
+                      resize?.name === item.name && "bg-primary text-background"
+                    )}
+                  >
+                    <ArrowsVerticalIcon class="size-4.5" weight="bold" />
+                  </span>
+                </button>
+              {/if}
+            {:else}
+              <button
+                onclick={(event) => (editing ? menu(item, at(event)) : desktop.open(item, { anchor: at(event) }))}
+                class={cn(
+                  "flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left transition-[background-color,scale,box-shadow] duration-150 active:bg-foreground/8",
+                  lifted && "scale-[1.02] bg-background-light/90 shadow-popover"
+                )}
+              >
+                {#if item.kind === "shortcut"}
+                  <span class={cn("grid size-11 shrink-0 place-items-center", !offline.can_open(item.app_id) && "opacity-38")}>
+                    <span class="relative">
+                      <ShortcutIcon app_id={item.app_id} badge={false} class="size-7" />
+                      <AppBadge app_id={item.app_id} />
+                    </span>
+                  </span>
+                {:else}
+                  <span class="grid size-11 shrink-0 place-items-center">
+                    <FileIcon
+                      name={item.name}
+                      kind={item.kind}
+                      mime_type={item.kind === "file" ? item.type : undefined}
+                      class={cn("bare-glyph size-7 shrink-0", item.kind === "directory" ? "text-primary" : "text-foreground/85")}
+                      weight={item.kind === "directory" ? "fill" : "duotone"}
+                    />
+                  </span>
+                {/if}
+                <span data-wallpaper-label class="truncate text-2xl tracking-tight">
+                  {display_name(item)}{#if missing(item)}<span class="text-error"> · missing</span>{/if}
+                </span>
               </button>
             {/if}
-          {:else}
-            <button
-              {@attach editing ? undefined : long_press({ on_menu: (point) => home_item_menu(item, point, edit) })}
-              onclick={editing ? undefined : (event) => desktop.open(item, { anchor: { x: event.clientX, y: event.clientY } })}
-              tabindex={editing ? -1 : undefined}
-              class={cn("flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left transition-colors duration-150 active:bg-foreground/8", editing && "pr-14")}
-            >
-              {#if item.kind === "shortcut"}
-                <span class={cn("grid size-11 shrink-0 place-items-center", !offline.can_open(item.app_id) && "opacity-38")}>
-                  <span class="relative">
-                    <ShortcutIcon app_id={item.app_id} badge={false} class="size-7" />
-                    <AppBadge app_id={item.app_id} />
-                  </span>
+            {#if editing && !lifted}
+              <button
+                type="button"
+                data-home-control
+                aria-label="Remove {display_name(item)}"
+                class={cn("absolute z-10 grid size-11 place-items-center", item.kind === "widget" ? "-top-3.5 -left-5.5" : "-top-2 -left-1.5")}
+                onclick={() => void remove_item(item)}
+                transition:fade={{ duration: motion_ms(120) }}
+              >
+                <span class="grid size-6 place-items-center rounded-full bg-background-lighter text-foreground shadow-raised ring-1 ring-foreground/12">
+                  <MinusIcon class="size-3.5" weight="bold" />
                 </span>
-              {:else}
-                <span class="grid size-11 shrink-0 place-items-center">
-                  <FileIcon
-                    name={item.name}
-                    kind={item.kind}
-                    mime_type={item.kind === "file" ? item.type : undefined}
-                    class={cn("bare-glyph size-7 shrink-0", item.kind === "directory" ? "text-primary" : "text-foreground/85")}
-                    weight={item.kind === "directory" ? "fill" : "duotone"}
-                  />
-                </span>
-              {/if}
-              <span data-wallpaper-label class="truncate text-2xl tracking-tight">
-                {display_name(item)}{#if missing(item)}<span class="text-error"> · missing</span>{/if}
-              </span>
-            </button>
-          {/if}
-          {#if editing}
-            <button
-              type="button"
-              aria-label="Move {display_name(item)}"
-              class={cn(
-                "absolute right-0 z-10 grid size-11 cursor-grab touch-none place-items-center rounded-full bg-background-light/90 text-foreground/80 shadow-raised active:cursor-grabbing",
-                item.kind === "widget" ? "top-2" : "top-1/2 -translate-y-1/2"
-              )}
-              onpointerdown={(event) => drag_start(event, item)}
-              onpointermove={drag_move}
-              onpointerup={drag_end}
-              onlostpointercapture={() => (drag = null)}
-            >
-              <DotsSixVerticalIcon class="size-5" weight="bold" />
-            </button>
-          {/if}
+              </button>
+            {/if}
+          </div>
         </li>
       {:else}
         <li class="flex flex-col gap-1 px-2 pb-2" data-wallpaper-label>
@@ -305,17 +394,18 @@
       {/each}
     </ul>
 
-    {#if !editing}
-      <button
-        data-home-row
-        onclick={() => launch_or_explain("app-library")}
-        class="mt-1 flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left text-foreground/65 transition-colors duration-150 active:bg-foreground/8"
-        transition:fade={{ duration: motion_ms(150) }}
-      >
-        <span class="grid size-11 shrink-0 place-items-center"><SquaresFourIcon class="size-6" weight="duotone" /></span>
-        <span data-wallpaper-label class="text-xl tracking-tight">All apps</span>
-      </button>
-    {/if}
+    <button
+      data-home-row
+      onclick={() => launch_or_explain("app-library")}
+      class={cn(
+        "mt-1 flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left text-foreground/65 transition-[background-color,opacity] duration-150 active:bg-foreground/8",
+        editing && "opacity-40"
+      )}
+      inert={editing}
+    >
+      <span class="grid size-11 shrink-0 place-items-center"><SquaresFourIcon class="size-6" weight="duotone" /></span>
+      <span data-wallpaper-label class="text-xl tracking-tight">All apps</span>
+    </button>
   </div>
 
   {#if !editing}

@@ -50,7 +50,7 @@ Sheets come before the app's own back, so an app can't navigate behind its sheet
 | `taskbar/taskbar-tray.svelte` | The same two-way mirror for `notifications` and the notification center popover |
 | `mobile/mobile-shell.svelte` | `overlay` is its layer: `switcher` and `notifications` both show the switcher, which lists notifications above the cards. It closes the overlay when an app comes on screen, and sends the on-screen app home when `launcher` opens (the list lives in the home) |
 | `mobile/letter-index.svelte` | Browse mode (the full app list) is `overlay === "launcher"` (2026-10-25): a rail tap, a release on the rail and the All apps row `open` it; the scrim, empty panel space and a launch `close` it. The finger-down scrub stays local |
-| `mobile/mobile-home.svelte` | Edit mode is `overlay === "home-edit"`: Edit home screen opens it, Done closes it, so Back leaves it like the app list |
+| `mobile/mobile-home.svelte` | Edit mode is `overlay === "home-edit"`: holding a home item or Edit home screen opens it; Done, a tap on empty space and Back close it like the app list |
 | `notifications/notification-list.svelte` | `close()` after a notification's action or the Tasks line opens Activity Monitor |
 | ShortcutsService | Mod+K toggles `launcher` (on mobile: the full app list with its filter focused), Alt+Shift+N toggles `notifications` |
 | `mobile/nav-bar.svelte` via `mobile-shell.svelte` | Back calls `back()`; Esc with an overlay open too |
