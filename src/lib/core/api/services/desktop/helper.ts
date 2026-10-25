@@ -195,7 +195,7 @@ export class DesktopHelper {
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
-const display_name = (item: DesktopItem) => (item.kind === "shortcut" || item.kind === "widget" ? item.label : item.name);
+export const display_name = (item: DesktopItem) => (item.kind === "shortcut" || item.kind === "widget" ? item.label : item.name);
 const compare_names = (a: DesktopItem, b: DesktopItem) => collator.compare(display_name(a), display_name(b));
 const kind_rank = (item: DesktopItem) => (item.kind === "directory" ? 0 : item.kind === "shortcut" || item.kind === "widget" ? 1 : 2);
 

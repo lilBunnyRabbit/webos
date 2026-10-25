@@ -1,29 +1,17 @@
 import type { AppId, AppProps, AppsService, FilesService, Kernel, OpenOptions } from "$lib/core/api";
 import { DEFAULT_SHORTCUTS, DesktopFolder, write_var_lib } from "./folder.svelte";
-import {
-  arrange_home,
-  DOCK_SIZE,
-  EMPTY_HOME_LAYOUT,
-  HOME_LAYOUT_FILE,
-  HOME_LAYOUT_PATH,
-  paginate_spans,
-  parse_home_layout,
-  serialize_home_layout,
-  type HomeLayout,
-  type HomeSlot,
-} from "./home-layout";
+import { arrange_home, EMPTY_HOME_LAYOUT, HOME_LAYOUT_FILE, HOME_LAYOUT_PATH, parse_home_layout, serialize_home_layout, type HomeLayout } from "./home-layout";
 import { LAYOUT_DIRECTORY_NAME, LAYOUT_PATH } from "./layout";
 import type { DesktopItem, MobileDesktopService as IMobileDesktopService } from "./type";
 import type { WidgetSize, WidgetStyle } from "../apps/type";
-import { clamp_widget_size } from "../apps/widget";
 
 export class MobileDesktopService implements IMobileDesktopService {
   name = "MobileDesktopService";
-  description = "Home screen: /home/Desktop as pages of icons plus a dock";
+  description = "Home screen: /home/Desktop as one ordered list of entries and widgets";
   inspector = () => import("./mobile-inspector.svelte");
 
   to_string(): string {
-    return `MobileDesktopService: ${this.arranged.home.length} on home, ${this.arranged.dock.length} in the dock`;
+    return `MobileDesktopService: ${this.arranged.length} on home`;
   }
 
   private files_service!: FilesService;
@@ -39,15 +27,16 @@ export class MobileDesktopService implements IMobileDesktopService {
     apps: () => this.apps_service,
     read_layout: async () => (await (await this.files_service.get_file(HOME_LAYOUT_PATH))?.text()) ?? null,
     seed: (folder) => this.seed(folder),
-    loaded: (layout) => {
-      this.layout = layout === null ? EMPTY_HOME_LAYOUT : parse_home_layout(layout);
+    loaded: (text) => {
+      if (text === null) return;
+      const { layout, migrated } = parse_home_layout(text);
+      this.layout = layout;
+      if (migrated) this.save(layout).catch((error) => console.error("[MobileDesktopService] Failed to save the migrated home layout", error));
     },
   });
 
   private layout = $state<HomeLayout>(EMPTY_HOME_LAYOUT);
   private arranged = $derived(arrange_home(this.folder.entries, this.layout));
-
-  public readonly dock_full = $derived(this.arranged.dock.length >= DOCK_SIZE);
 
   async init(): Promise<void> {
     await this.folder.init();
@@ -72,7 +61,7 @@ export class MobileDesktopService implements IMobileDesktopService {
       const name = await folder.write_shortcut(app_id);
       if (name) order.push(name);
     }
-    await this.save({ order, dock: [] });
+    await this.save({ order });
   }
 
   private async save(layout: HomeLayout): Promise<void> {
@@ -80,8 +69,8 @@ export class MobileDesktopService implements IMobileDesktopService {
   }
 
   /** Applies at once, writes in the background. Stale names are pruned because the layout is rebuilt from what's shown. */
-  private commit(home: string[], dock: string[]): void {
-    const layout = { order: home, dock };
+  private commit(order: string[]): void {
+    const layout = { order };
     this.layout = layout;
     this.save(layout).catch((error) => console.error("[MobileDesktopService] Failed to save the home layout", error));
   }
@@ -95,52 +84,16 @@ export class MobileDesktopService implements IMobileDesktopService {
   }
 
   public home(): DesktopItem[] {
-    return this.arranged.home;
-  }
-
-  public pages(columns: number, rows: number): HomeSlot[][] {
-    return paginate_spans(this.arranged.home, columns, rows);
-  }
-
-  public dock(): DesktopItem[] {
-    return this.arranged.dock;
+    return this.arranged;
   }
 
   public move_item(name: string, before: string | null): void {
     if (!this.folder.get(name) || name === before) return;
 
-    const home = this.arranged.home.map((entry) => entry.name).filter((entry) => entry !== name);
-    const dock = this.arranged.dock.map((entry) => entry.name).filter((entry) => entry !== name);
-    const index = before === null ? -1 : home.indexOf(before);
-    home.splice(index === -1 ? home.length : index, 0, name);
-    this.commit(home, dock);
-  }
-
-  public set_docked(name: string, docked: boolean, before: string | null = null): void {
-    const entry = this.folder.get(name);
-    if (!entry || name === before || (docked && entry.kind === "widget")) return;
-
-    const home = this.arranged.home.map((entry) => entry.name).filter((entry) => entry !== name);
-    const dock = this.arranged.dock.map((entry) => entry.name).filter((entry) => entry !== name);
-    if (docked) {
-      if (dock.length >= DOCK_SIZE) return;
-      const index = before === null ? -1 : dock.indexOf(before);
-      dock.splice(index === -1 ? dock.length : index, 0, name);
-    } else {
-      home.push(name);
-    }
-    this.commit(home, dock);
-  }
-
-  public async resize_widget(name: string, size: WidgetSize): Promise<boolean> {
-    const entry = this.folder.get(name);
-    if (entry?.kind !== "widget") return false;
-    const limits = this.apps_service.get(entry.app_id)?.widget_size;
-    if (!limits) return false;
-    const next = clamp_widget_size(size, limits);
-    if (next.w === entry.size.w && next.h === entry.size.h) return true;
-    await this.folder.write_widget_size(name, next);
-    return true;
+    const order = this.arranged.map((entry) => entry.name).filter((entry) => entry !== name);
+    const index = before === null ? -1 : order.indexOf(before);
+    order.splice(index === -1 ? order.length : index, 0, name);
+    this.commit(order);
   }
 
   public async set_widget_style(name: string, style: WidgetStyle): Promise<boolean> {
@@ -159,10 +112,7 @@ export class MobileDesktopService implements IMobileDesktopService {
 
     // Carry the place over to the new name before the rename's reload reads the layout, so the icon doesn't jump.
     const swap = (names: string[]) => names.map((entry) => (entry === name ? new_name : entry));
-    const layout = {
-      order: swap(this.arranged.home.map((entry) => entry.name)),
-      dock: swap(this.arranged.dock.map((entry) => entry.name)),
-    };
+    const layout = { order: swap(this.arranged.map((entry) => entry.name)) };
     this.layout = layout;
     await this.save(layout);
     await this.folder.rename(name, new_name);

@@ -35,7 +35,7 @@
   import { set_drag_app } from "../apps/drag";
   import { cn } from "$lib/core/utils";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
-  import { explain_offline, keep_offline_item, KEEP_OFFLINE_ID, toggle_keep_offline } from "../apps/offline-actions";
+  import { keep_offline_item, KEEP_OFFLINE_ID, launch_or_explain, toggle_keep_offline } from "../apps/offline-actions";
   import OfflineNote from "../apps/offline-note.svelte";
   import { with_pin, without_pin } from "$lib/core/api";
 
@@ -82,8 +82,7 @@
   }
 
   function launch(manifest: AppManifest) {
-    if (offline.can_open(manifest.id)) apps.launch(manifest.id);
-    else explain_offline(manifest.id);
+    launch_or_explain(manifest.id);
     close();
   }
 

@@ -180,8 +180,8 @@ export const TOPICS: Topic[] = [
   {
     id: "home",
     icon: HouseIcon,
-    title: "Home and dock",
-    text: "Swipe between home pages. Hold an icon to move it, add it to the dock or uninstall its app.",
+    title: "Home and letters",
+    text: "Slide along the letters on the right to find an app, and let go on one to open it. Hold anything on home to move, restyle or remove it.",
     platforms: MOBILE,
     action: "Open all apps",
     run: () => shell("ui launcher"),

@@ -1,6 +1,6 @@
 # Mobile shell
 
-Source: `src/lib/core/components/mobile/` · ADR: [ADR-016](../../adrs/016-mobile-support.md) (revision 2026-10-12) · [Brainstorm](../../brainstorm/2026-10-12_mobile-shell.md)
+Source: `src/lib/core/components/mobile/` · ADR: [ADR-016](../../adrs/016-mobile-support.md) (revisions 2026-10-12, 2026-10-25) · Brainstorms: [shell](../../brainstorm/2026-10-12_mobile-shell.md), [list home](../../brainstorm/2026-10-25_niagara-home.md)
 
 The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`) imports it instead of `desktop-shell.svelte` when `kernel.platform` is `mobile`, and `os.svelte` renders what it loaded. That's the shell's one platform branch; below it, a few components and apps still read `kernel.platform` for touch behaviour (File Explorer's file list, Media Preview, App Library details, Activity Monitor's widgets section and several user apps). Each shell is its own chunk, so a phone never downloads the desktop shell and the other way round (ADR-036). Everything inside types against the mobile services: [`MobileWindowsService`](../services/windows.md#mobile) and [`MobileDesktopService`](../services/desktop.md#mobile-home). Try it on a desktop with `?platform=mobile`.
 
@@ -10,9 +10,9 @@ The shell phones and tablets get. `load_shell()` (`components/platform-shell.ts`
 mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touch-action: manipulation
 ├─ DialogsHost anchored="sheet"   menus as bottom sheets, questions docked to the bottom; both swipe down
 ├─ main (stage)           container-type: size, isolate; the wallpaper (shell/desktop.md#wallpaper); logo mark watermark in the centre (any wallpaper but an image; a live wallpaper draws as the grid here, ADR-057)
-│  ├─ mobile-home.svelte  pages + page dots + dock
+│  ├─ mobile-home.svelte  clock, Recent, pinned list, All apps row
+│  │  └─ letter-index.svelte  letter rail; the held-letter panel and the full app list (browse) over the home
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
-│  ├─ app-drawer.svelte   when open
 │  └─ ToastArea           top, centred, below the safe area
 └─ nav-bar.svelte         back, home, running apps
 ```
@@ -24,10 +24,11 @@ No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=c
 | What | Where |
 |------|-------|
 | Which app is on screen | `windows.get_focused()`. `null` = home |
-| Drawer or switcher open | [UiService](../services/ui.md) `overlay`: `launcher` (drawer), `switcher` or `notifications` (also the switcher) (ADR-028; was local `$state` until the shortcuts service needed to reach it) |
-| Current page | Local in `mobile-home.svelte`, from the scroll position |
+| Full app list, switcher or edit mode open | [UiService](../services/ui.md) `overlay`: `launcher` (the letter panel's browse mode), `switcher` or `notifications` (also the switcher), `home-edit` (ADR-028) |
+| A finger held on the letter rail | Local `scrub` in `letter-index.svelte` (letter, pointer, picked app): it only lives while the finger is down |
+| Filter text, lit letter while browsing | Local in `letter-index.svelte`; the filter clears whenever the panel closes |
 
-An effect closes the overlay whenever a window comes on screen (drawer launch, a card picked, a file opened from elsewhere). Going home leaves it alone, so closing the on-screen app's card keeps the switcher open.
+Two effects in the shell: a window coming on screen (a launch, a card picked, a file opened from elsewhere) closes the overlay, and `launcher` opening while an app is on screen (Mod+K, `ui launcher`, Getting started) sends the app home first, since the list is part of the home and sits under the windows. Going home leaves the overlay alone, so closing the on-screen app's card keeps the switcher open.
 
 ## Navigation
 
@@ -35,11 +36,11 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 
 | Button | Does |
 |--------|------|
-| Back | `ui.back()` ([ui](../services/ui.md#back)): closes the drawer or switcher; dismisses the top system dialog or menu, then the app's top sheet, when dismissible (a required one swallows back); asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); sends the app home (it keeps running). Nothing on home. The device's back gesture runs the same chain through the history guard |
+| Back | `ui.back()` ([ui](../services/ui.md#back)): closes the full app list, edit mode or the switcher; dismisses the top system dialog or menu, then the app's top sheet, when dismissible (a required one swallows back); asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); sends the app home (it keeps running). Nothing on home. The device's back gesture runs the same chain through the history guard |
 | Home | Closes any layer and goes home |
 | Running apps | Opens the switcher, or closes it (or the notification view of it). A `primary` badge shows the count of running apps; a `primary` dot (ringed in the bar colour) on the other corner means unread notifications |
 
-Escape also closes an open layer. Every change runs through `view_transition()` (`$lib/core/utils/view-transition.ts`, shared with the desktop window motion): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion` or Motion off (`motion_reduced()`). A rejected `ready` (hidden tab, a newer transition) is swallowed. The dock's All apps button is the exception: it opens the drawer with a bare `flushSync`, because the transition's callback runs a frame later, outside the tap, and mobile browsers raise the keyboard only for a `focus()` made inside the gesture. The drawer focuses its search field in an `$effect` that `flushSync` runs synchronously, and flies in by itself.
+Escape also closes an open layer, unless a menu or system dialog is up (a modal `<dialog>`: its Escape closes only itself). Every change runs through `view_transition()` (`$lib/core/utils/view-transition.ts`, shared with the desktop window motion): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion` or Motion off (`motion_reduced()`). A rejected `ready` (hidden tab, a newer transition) is swallowed. The full app list opens and closes without one: it fades on its own, and a release on the rail must measure the held letter in the same frame.
 
 ## Windows and switcher
 
@@ -58,24 +59,31 @@ Escape also closes an open layer. Every change runs through `view_transition()` 
 
 ## Home
 
-`mobile-home.svelte`:
+`mobile-home.svelte` (2026-10-25, [brainstorm](../../brainstorm/2026-10-25_niagara-home.md)): one vertical list, Niagara-style, over the wallpaper. Labels sitting on the wallpaper carry `data-wallpaper-label`, so a photo wallpaper gives them a backing.
 
-- **Pages:** a horizontal scroll-snap row, one page per `desktop.pages(columns, rows)` page. `columns = clamp(floor(width / 88), 4, 8)`, `rows = max(1, floor(height / 104))`, measured from the row with `bind:clientWidth/Height`. A phone gets 4 columns; a tablet more; rotation just reflows. Each page is a CSS grid of `columns × rows` cells (104px rows) and every slot is placed at the cell the packer gave it (`grid-column`/`grid-row`), never by auto-placement.
-- **Widgets** (2026-10-19): a rounded frame over its span in the widget's style (`widget_surface`, shared with the desktop: card, glass or clear, ADR-034 revision 2026-10-21), the app's widget component inside (`components/desktop/widget-body.svelte`, shared with the desktop frame). No title strip: holding the frame (outside inputs) opens the item menu. In edit mode a Clear widget gets a dashed `foreground/30` outline so its bounds show. `overscroll-x-contain` stops a fling at the last page from turning into browser back. Dots under the pages when there's more than one; tapping one scrolls there.
-- **Icons:** `home-icon.svelte`, the desktop's rule: apps get a 56px `rounded-2xl` tile on `background-light` with `shadow-raised` and a hairline around a 28px `ShortcutIcon` (no badge); files and folders a bare 48px `FileIcon` (`.bare-glyph`, folders `primary` fill). A two-line `text-xs` label below. Tap opens through `desktop.open`.
-- **Dock:** the taskbar's look (`rounded-2xl bg-background-light/90 shadow-popover backdrop-blur-xl`): an All apps button (`SquaresFour`), a separator, then up to four docked items without labels. Empty, it says "Hold an icon, then Add to dock".
-- **Long press** (`$lib/core/utils/long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (page swipe). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the page doesn't scroll under the finger, and the click after release swallowed. Android's own long-press `contextmenu` is suppressed but used as a backstop: Samsung Internet's long press (on elements with text, like home icons) beats the 450ms timer, so a touch `contextmenu` while the timer is pending holds at once, and one arriving after the browser already sent `pointercancel` opens the menu right there (`pressed` survives the cancel; a release or a move past the slop clears it). A mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
-  - **Item menu** (`home-actions.ts`): Open, Add to dock (disabled when full; not for widgets) / Remove from dock, Edit home screen, Style › Card / Glass / Clear (widgets only, current one checked; the sheet opens it inline), Rename, Delete / Remove shortcut / Remove widget, Properties. Rename, delete and properties are `desktop-actions.ts`'s flows.
-  - **Empty space menu:** Edit home screen and Add widget, then the desktop's background menu (`background_menu(point, lead)`: New folder, Paste, Change wallpaper or theme). Sort by isn't offered: the home is an ordered flow.
-- **Edit mode** (2026-10-19, [brainstorm](../../brainstorm/2026-10-19_mobile-home-widgets.md)). The `home-edit` overlay in [ui](../services/ui.md), so Back, the device's back gesture and Escape leave it like any layer; opening the drawer or switcher, or an app coming on screen, ends it too. Items wiggle (`animate-wiggle`, off under reduced motion), a top row shows Add widget and Done. Escape during a drag or resize is held back (`preventDefault` in a capture listener) so the gesture finishes first; leaving mid-gesture drops it. Each item gets a covering button with `touch-action: none`, so a press is ours from pointer-down and the browser never claims it as a scroll; that's why the hold-then-drag of 2026-10-13 failed on Samsung Internet and this doesn't.
-  - Press and move past 8px: drag. A ghost follows the finger, the source dims, the drop target shows a primary bar (home) or a ring (dock). Over an item = just before it; over a page's empty space = the end of that page; over the dock = docked (never widgets, not when full). Holding within 56px of a side for 550ms turns the page. Settles on `pointerup` (the dropped item's element is often gone before its capture would be lost); `lostpointercapture` only clears. Moves go through `move_item` / `set_docked(before)`.
-  - Press and release without moving: the item menu.
-  - Widgets of apps with a `widget_size` get a 44px corner grip: dragging it snaps to cells measured from the frame, clamped into `widget_size` and to the page from the widget's cell, with a `w × h` chip. Release writes it through `resize_widget` (shared with the desktop: the `.widget` file's `w`/`h`).
-  - Add widget (top row or empty-space menu): a menu of installed apps with a widget; the pick is pinned at its default size and lands at the end of the home.
+- **Clock:** a 24-hour `text-6xl` light time and the long date under it, ticking each minute (`Ticker`).
+- **Recent:** up to four `AppRow`s (`components/apps/app-row.svelte`: a 44px tile with the app's icon and badge, the name in `text-xl`; dimmed when not saved for offline) from `apps.recent`, skipping apps pinned on home and apps not installed. Hidden when empty and in edit mode. Long press: the shared `app_menu` with Clear recent.
+- **Pinned:** `desktop.home()`, bottom-aligned (`mt-auto`) so a short home sits near the thumb. Shortcuts, files and folders are text rows: a 28px `ShortcutIcon` with its badge or a bare `FileIcon` (folders `primary` fill), the name in `text-2xl`, " · missing" in `error` for a shortcut to an unknown app. Tap opens through `desktop.open`.
+- **Widgets** (2026-10-19): a full-width rounded frame `size.h × 104px` tall in the widget's style (`widget_surface`, shared with the desktop: card, glass or clear, ADR-034 revision 2026-10-21), the app's widget component inside (`components/desktop/widget-body.svelte`). No title strip: holding the frame (outside inputs) opens the item menu. The width is the list's, so `size.w` only matters on the desktop.
+- **All apps:** a quiet row at the end (`SquaresFour`, `foreground/65`) that opens App Library, the way to apps not installed yet. The letter list stays on the rail and `ui launcher` (Mod+K). Hidden in edit mode.
+- **Empty:** "Nothing pinned yet", with a line on finding apps on the letters and holding the background for a widget.
+- The list scrolls under a 1rem top fade (`mask-image`), leaves room on the right for the rail, and goes `inert` (with the clock) while the letter panel is up.
+- **Long press** (`$lib/core/utils/long-press.ts`): 450ms without moving more than 16px (a still finger on Samsung Internet drifts past 8px). Moving earlier hands the gesture to the browser (scroll). Once it fires: a short vibration, pointer capture, `touchmove` cancelled so the list doesn't scroll under the finger, and the click after release swallowed. Android's own long-press `contextmenu` is suppressed but used as a backstop: Samsung Internet's long press (on elements with text) beats the 450ms timer, so a touch `contextmenu` while the timer is pending holds at once, and one arriving after the browser already sent `pointercancel` opens the menu right there (`pressed` survives the cancel; a release or a move past the slop clears it). A mouse right-click opens the menu. `-webkit-touch-callout: none` and `select-none` keep iOS from adding its callout.
+  - **Item menu** (`home-actions.ts`): Open, Edit home screen, Style › Card / Glass / Clear (widgets only, current one checked; the sheet opens it inline), Rename, Delete / Remove shortcut / Remove widget, Uninstall… (shortcuts and widgets of user apps), Properties. Rename, delete and properties are `desktop-actions.ts`'s flows.
+  - **Empty space menu:** Edit home screen and Add widget, then the desktop's background menu (`background_menu(point, lead)`: New folder, Paste, Change wallpaper or theme). Sort by isn't offered: the home is an ordered list.
+- **Edit mode** (2026-10-19, [brainstorm](../../brainstorm/2026-10-19_mobile-home-widgets.md)): the `home-edit` overlay in [ui](../services/ui.md), so Back, the device's back gesture and Escape leave it like any layer; opening the list or switcher, or an app coming on screen, ends it too. A top row shows Add widget and Done; Recent, All apps and the rail hide; taps on rows and widgets do nothing. Each entry gets a 44px grip on its right with `touch-action: none`, so a press is ours from pointer-down and the browser never claims it as a scroll (why the hold-then-drag of 2026-10-13 failed on Samsung Internet and this doesn't). Dragging a grip past 8px dims the entry and shows a primary bar where it will land (the upper or lower half of the row under the finger); release moves it through `move_item(name, before)`. Leaving mid-drag drops it. Add widget: a menu of installed apps with a widget; the pick is pinned at its default size and lands at the end.
 
-## App drawer
+### Letter rail and full app list
 
-`app-drawer.svelte`: the start menu's counterpart. A `rounded-t-3xl bg-background-lighter` sheet on the scrim, flying up 48px, below the top safe area plus 2rem. Search field (focused on open; Enter launches the first match) with an **All apps** button beside it that launches [App Library](../system-apps.md#app-library) and closes the drawer, then the apps in auto-fill grids of the home's tiles: with no query, a **Recent** row first (the start menu's `recent-apps.svelte`, [taskbar](taskbar.md#start-menu): four tiles per page, one row tall, a swipe snaps to the next page, dots when there's more than one), then sectioned by `group_apps()`, a ranked "Results" grid while searching, then "Not installed" matches with a "Get" pill (`services/apps/search.ts`, shared with the start menu), then a "Related" grid from the sentence search ([apps](../services/apps.md#sentence-search)). No AI suggests row: phones have no on-device model, so the drawer passes no `ai`. Only installed apps show without a query (ADR-040). While offline (ADR-065) the start menu's `OfflineNote` sits above the grids and tiles of apps that aren't saved are dimmed; tapping one toasts why instead of launching ([offline](../services/offline.md#ui)). Tap launches (a Get tile installs first); long press offers "Add to home screen" (`desktop.pin`), "Keep offline" for user apps, on a Recent tile "Clear recent", and, for user apps, "Uninstall…", or "Get and open" on a Get tile. Tapping the scrim closes it. So does swiping it down (the shared `swipe_dismiss`, below), from anywhere on it while the grid is scrolled to the top.
+`letter-index.svelte`: a 44px rail on the right edge with `#` and A–Z (`LETTERS`, `services/apps/letters.ts`; a name files under its first letter with accents folded, anything else under `#`). Letters with no installed app are dimmed. The rail is pointer only (`aria-hidden`); keyboard and screen-reader users reach the letter list through `ui launcher` (Mod+K).
+
+- **Hold and slide** (`touch-action: none`, pointer capture): a panel over a blurred scrim shows only the held letter's apps, its heading at a fixed line 30% down the stage (`pt-[30cqh]`); "No apps under X" for an empty letter. A primary bubble with the letter follows the finger beside the rail, each new letter vibrates. Sliding more than 32px left of the rail picks the app row under the finger (lit `primary/14`); letting go there launches it.
+- **Let go on the rail:** opens browse with every other letter filled in above and below without moving the held one: the heading's position is measured before and after one `flushSync`, and the list scrolls by the difference. An empty letter anchors on the next letter with apps (else the previous). A short tap is the same thing, so it opens the full list at that letter.
+- **Pointer cancel** (Android's edge back swipe takes the touch): nothing opens.
+- **Browse** is `UiOverlay.LAUNCHER` (owner, 2026-10-25): shown exactly while `ui.overlay === "launcher"`, so Back, Home, Escape and an app taking focus close it through `ui` (ADR-028). Every way out inside it calls `ui.close()`: tapping the scrim or empty panel space, launching an app. All sections show, each heading lit (and its rail letter) as it passes the 30% line. A header in the panel's top padding (so it never shifts the held letter) holds "All apps · N installed", the **filter** field with an icon-only App Library button (`SquaresFour`) beside it (the way to apps not installed yet) and, offline, the shared `OfflineNote`.
+- **Filter:** `search_app_names()` (`services/apps/search.ts`): the shared ranking on the name alone, one typo forgiven in long words. Matching installed apps keep their letter sections, empty sections hide; a "Not installed" section follows with a "Get" pill on each row (tap gets and opens; the menu offers "Get and open"); nothing at all says "No apps match". Enter opens the best match. Clearing the field restores every letter; closing the panel clears it.
+- **Focus:** opened from a keyboard (the All apps row with Enter, Mod+K) the filter takes focus; opened by touch the panel does, so the phone's keyboard doesn't come up over the list. Whatever had focus before is remembered before the home goes `inert` and gets it back on close, unless an app came on screen.
+- Rows are `AppRow`s with the shared `app_menu` on long press: Add to home screen (disabled when pinned), Keep offline for user apps, Uninstall… for user apps; Get and open when not installed.
 
 ## Swipe down to dismiss
 
@@ -89,7 +97,6 @@ Every bottom sheet on the phone closes with a downward swipe (2026-10-22, owner:
 
 | Surface | Before | Now |
 |---------|--------|-----|
-| App drawer | Back, scrim, pull the header down 96px | Back, scrim, swipe |
 | Context menus, Open with (system, anchored) | Back, scrim | + swipe, grabber |
 | System questions: Properties, Rename, new-app announcements, Restore, home Delete, the introduction | Centred; Back, scrim, buttons | Docked to the bottom; dismissible ones + swipe and grabber; required ones (`dismissible: false`: Restore, Delete and other confirms, the introduction) only rubber-band |
 | Window sheets: prompt, file and save pickers, app sheets (Warren's templates, Soundboard's clip and pad dialogs, Bulk Rename, Properties) | Centred in the window; Back, Esc, Cancel | Docked to the window's bottom (`animate-sheet-in`); + swipe, grabber |
@@ -106,7 +113,7 @@ Not given the swipe, on purpose:
 
 ## Services read
 
-`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`, or the base in the drawer), `apps`, `dialogs`, `notifications` (toasts, the nav bar's unread dot), `ui` (launcher and switcher overlays, `back()`), `settings` (wallpaper).
+`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`), `apps` (listings, recent, install state), `offline` (dimming, `can_open`), `dialogs`, `notifications` (toasts, the nav bar's unread dot), `ui` (launcher, switcher and edit overlays, `back()`), `settings` (wallpaper).
 
 ## Known gaps
 
@@ -115,5 +122,7 @@ Not given the swipe, on purpose:
 - No virtual keyboard handling beyond what `h-dvh` gives.
 - Docked questions keep their desktop widths (a confirm is 24rem, capped to the screen), so they float as cards rather than spanning the width.
 - Swipe to dismiss is checked with CDP touch in emulated Chromium, not yet on a phone.
-- Edit mode drag is checked with a mouse in Chromium only; not yet on a Samsung phone.
-- A widget that doesn't fit the rest of a page leaves a gap: the packer never backfills, so the order stays the user's.
+- Edit mode drag and the rail scrub are checked with a mouse in Chromium only; not yet on a Samsung phone (edge back swipe, diagonal exits).
+- The rail has no keyboard or screen reader path of its own; the All apps row and its filter stand in.
+- Widgets get the full width whatever their `size.w`, and there's no resize on the phone; a widget's size is set on the desktop.
+- No sentence-search "Related" results in the phone's list (the old drawer had them); the filter matches names only. App Library opens from the home's All apps row.

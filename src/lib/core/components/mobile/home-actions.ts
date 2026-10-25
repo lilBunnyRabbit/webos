@@ -9,8 +9,6 @@ import kernel, {
 import type { Position } from "$lib/core/utils/type";
 import {
   ArrowSquareOut as ArrowSquareOutIcon,
-  PushPin as PushPinIcon,
-  PushPinSlash as PushPinSlashIcon,
   Info as InfoIcon,
   PencilSimple as PencilSimpleIcon,
   SquaresFour as SquaresFourIcon,
@@ -26,19 +24,12 @@ const notifications = () => kernel.service<NotificationsService>("notifications"
 
 export const EDIT_HOME_ITEM = { id: "edit", label: "Edit home screen", icon: SquaresFourIcon };
 
-/** The long-press menu of a home or dock icon or a widget. Rename, delete and properties are the desktop's own flows. */
-export async function home_item_menu(item: DesktopItem, docked: boolean, anchor: Position, on_edit: () => void): Promise<void> {
+/** The long-press menu of a home entry or a widget. Rename, delete and properties are the desktop's own flows. */
+export async function home_item_menu(item: DesktopItem, anchor: Position, on_edit: () => void): Promise<void> {
   const shortcut = item.kind === "shortcut";
   const choice = await dialogs().menu(
     [
       { id: "open", label: "Open", icon: ArrowSquareOutIcon },
-      ...(item.kind === "widget"
-        ? []
-        : [
-            docked
-              ? { id: "undock", label: "Remove from dock", icon: PushPinSlashIcon }
-              : { id: "dock", label: "Add to dock", icon: PushPinIcon, disabled: desktop().dock_full },
-          ]),
       EDIT_HOME_ITEM,
       ...style_item(item),
       { separator: true },
@@ -52,8 +43,6 @@ export async function home_item_menu(item: DesktopItem, docked: boolean, anchor:
   );
   if (apply_style_choice(item, choice)) return;
   if (choice === "open") desktop().open(item, { anchor });
-  else if (choice === "dock") desktop().set_docked(item.name, true);
-  else if (choice === "undock") desktop().set_docked(item.name, false);
   else if (choice === "edit") on_edit();
   else if (choice === "rename") rename_item(item);
   else if (choice === "delete") remove_item(item);

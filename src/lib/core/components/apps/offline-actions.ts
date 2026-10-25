@@ -30,3 +30,9 @@ export function explain_offline(id: AppId): void {
     actions: [{ label: "Choose apps", on_click: open_offline_settings }],
   });
 }
+
+/** Launches the app, or says why it can't open while offline. */
+export function launch_or_explain(id: AppId): void {
+  if (offline().can_open(id)) apps().launch(id);
+  else explain_offline(id);
+}

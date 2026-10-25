@@ -3,6 +3,8 @@
 **Date:** 2026-02-01
 **Status:** Implemented 2026-10-12 (core shell, apps pass, OS back 2026-10-14)
 
+> **Revision 2026-10-25: list home** (owner, [brainstorm](../brainstorm/2026-10-25_niagara-home.md)). The grid home is replaced by a Niagara-style list: clock, recent apps, the pinned entries and widgets in order, an All apps row, and a letter rail that shows one letter's apps while held. The dock and pages are gone: `MobileDesktopService` drops `pages()`, `dock()`, `set_docked`, `dock_full`, `resize_widget` and `HomeSlot`; a saved dock is appended to the end of the home order once on load and `home-layout.json` keeps only `order`. The full app list is the letter panel's browse mode and is `UiOverlay.LAUNCHER` on mobile, so Back, Home and an app taking focus close it (ADR-028); it has a name filter. The mobile app drawer is deleted.
+
 > **Revision 2026-10-15: shared base class** ([brainstorm](../brainstorm/2026-10-15_code-quality-pass.md)). `WindowsService` and `MobileWindowsService` both extend the abstract `BaseWindowsService` (`windows/base.svelte.ts`), which holds the members they had byte-identical: back handlers, the close guard, `set_title`, `set_dirty`, `has_dirty` and `page_hidden`. Platform behaviour stays in each class; the public interface and registration are unchanged.
 
 > **Revision 2026-10-15: lazy platform modules** ([ADR-036](./036-boot-loading-screen.md)). The platform's shell (`load_shell()` in `components/platform-shell.ts`) and its `WindowsService` / `DesktopService` classes (`kernel/init.ts`) are `import()`ed for `kernel.platform` only, so a phone never downloads the desktop shell and the other way round. `main.ts` awaits the shell during boot and hands it to `os.svelte` as a prop, so it renders with the first paint.

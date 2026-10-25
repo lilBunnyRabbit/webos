@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, {
     UiOverlay,
+    type DialogsService,
     type MobileWindowsService,
     type NotificationsService,
     type SettingsService,
@@ -10,29 +11,34 @@
   import LogoMark from "../brand/logo-mark.svelte";
   import ToastArea from "../notifications/toast-area.svelte";
   import DialogsHost from "../dialogs/dialogs-host.svelte";
-  import AppDrawer from "./app-drawer.svelte";
   import MobileHome from "./mobile-home.svelte";
   import MobileWindows from "./mobile-windows.svelte";
   import NavBar from "./nav-bar.svelte";
   import Wallpaper from "../desktop/wallpaper.svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
-  import { flushSync } from "svelte";
+  import { untrack } from "svelte";
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
   const focused = $derived(windows.get_focused());
   const running = $derived(windows.list().length);
 
-  /** The drawer (launcher) and switcher live in `ui`, so shortcuts can open them too (ADR-028). */
+  /** The full app list (launcher) and switcher live in `ui`, so shortcuts can open them too (ADR-028). */
   const ui = $derived(kernel.service<UiService>("ui"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const layer = $derived(ui.overlay);
   /** The switcher hosts the notification center, so either overlay opens it (ADR-006 revision). */
   const switcher = $derived(layer === UiOverlay.SWITCHER || layer === UiOverlay.NOTIFICATIONS);
   const unread = $derived(kernel.service<NotificationsService>("notifications").unread_count > 0);
 
-  // An app coming on screen (launched from the drawer, a file opened, a card picked) closes whatever was over it.
+  // An app coming on screen (launched from the list, a file opened, a card picked) closes whatever was over it.
   $effect(() => {
     if (focused) ui.close();
+  });
+
+  // The full app list is part of the home, under the windows: a shortcut or command opening it over an app goes home.
+  $effect(() => {
+    if (layer === UiOverlay.LAUNCHER) untrack(() => windows.go_home());
   });
 
   function home() {
@@ -46,12 +52,6 @@
     view_transition(() => (switcher ? ui.close() : ui.open(UiOverlay.SWITCHER)));
   }
 
-  // No view transition: its callback runs a frame later, outside the tap, and mobile browsers only raise the
-  // keyboard for a focus() made inside the gesture. The drawer flies in on its own.
-  function open_drawer() {
-    flushSync(() => ui.open(UiOverlay.LAUNCHER));
-  }
-
   function pick(id: WindowId) {
     view_transition(() => {
       ui.close();
@@ -62,7 +62,8 @@
 
 <svelte:window
   onkeydown={(event) => {
-    if (event.key === "Escape" && layer && !event.defaultPrevented) ui.back();
+    // A menu above a layer is a modal <dialog>: its Escape closes only itself.
+    if (event.key === "Escape" && layer && !event.defaultPrevented && dialogs.system.length === 0) ui.back();
   }}
 />
 
@@ -78,11 +79,8 @@
       aria-hidden="true"
     />
     {/if}
-    <MobileHome ondrawer={open_drawer} />
+    <MobileHome />
     <MobileWindows {switcher} onpick={pick} />
-    {#if layer === UiOverlay.LAUNCHER}
-      <AppDrawer onclose={() => ui.close()} />
-    {/if}
     <ToastArea from="top" class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
   </main>
 

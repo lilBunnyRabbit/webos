@@ -4,7 +4,7 @@ Key `ui` · Depends on: windows, dialogs · ADR: [ADR-028](../../adrs/028-ui-ser
 
 ## Purpose
 
-The shell's overlay state, so a service or a shell command (shortcuts, the Terminal, the launcher's command mode) can open what used to be component state: the launcher (the desktop start menu, the mobile app drawer), the mobile running-apps switcher and the notification center. It also owns back: one chain for the phone's nav bar, the device's back gesture and the desktop browser's Back ([brainstorm](../../brainstorm/2026-10-14_os-back.md)).
+The shell's overlay state, so a service or a shell command (shortcuts, the Terminal, the launcher's command mode) can open what used to be component state: the launcher (the desktop start menu; on mobile the home's full app list, the letter panel in browse mode), the mobile running-apps switcher and the notification center. It also owns back: one chain for the phone's nav bar, the device's back gesture and the desktop browser's Back ([brainstorm](../../brainstorm/2026-10-14_os-back.md)).
 
 ## Public API
 
@@ -48,10 +48,11 @@ Sheets come before the app's own back, so an app can't navigate behind its sheet
 |-------|-----|
 | `taskbar/start-menu.svelte` | Mirrors both ways: the popover's `toggle` event writes `open` / `close` (light dismiss and Esc included), and an effect calls `showPopover()` / `hidePopover()` when `overlay` changes. The popover keeps its own open state too, for mounting the contents |
 | `taskbar/taskbar-tray.svelte` | The same two-way mirror for `notifications` and the notification center popover |
-| `mobile/mobile-shell.svelte` | `overlay` is its layer: `launcher` renders the app drawer; `switcher` and `notifications` both show the switcher, which lists notifications above the cards. It closes the overlay when an app comes on screen |
-| `mobile/mobile-home.svelte` | Edit mode is `overlay === "home-edit"`: Edit home screen opens it, Done closes it, so Back leaves it like the drawer |
+| `mobile/mobile-shell.svelte` | `overlay` is its layer: `switcher` and `notifications` both show the switcher, which lists notifications above the cards. It closes the overlay when an app comes on screen, and sends the on-screen app home when `launcher` opens (the list lives in the home) |
+| `mobile/letter-index.svelte` | Browse mode (the full app list) is `overlay === "launcher"` (2026-10-25): a rail tap, a release on the rail and the All apps row `open` it; the scrim, empty panel space and a launch `close` it. The finger-down scrub stays local |
+| `mobile/mobile-home.svelte` | Edit mode is `overlay === "home-edit"`: Edit home screen opens it, Done closes it, so Back leaves it like the app list |
 | `notifications/notification-list.svelte` | `close()` after a notification's action or the Tasks line opens Activity Monitor |
-| ShortcutsService | Mod+K toggles `launcher`, Alt+Shift+N toggles `notifications` |
+| ShortcutsService | Mod+K toggles `launcher` (on mobile: the full app list with its filter focused), Alt+Shift+N toggles `notifications` |
 | `mobile/nav-bar.svelte` via `mobile-shell.svelte` | Back calls `back()`; Esc with an overlay open too |
 
 ## Shell

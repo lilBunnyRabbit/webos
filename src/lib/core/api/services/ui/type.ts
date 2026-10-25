@@ -20,13 +20,13 @@ export interface UiService extends IService {
 }
 
 export const UiOverlay = {
-  /** The desktop start menu, the mobile app drawer. */
+  /** The desktop start menu; on mobile the home's full app list (the letter panel in browse mode). */
   LAUNCHER: "launcher",
   /** The mobile running-apps switcher. */
   SWITCHER: "switcher",
   /** The notification center: the tray popover on desktop, the switcher (which lists them) on mobile. */
   NOTIFICATIONS: "notifications",
-  /** The mobile home's edit mode: move, resize and remove icons and widgets. */
+  /** The mobile home's edit mode: reorder entries and widgets, add a widget. */
   HOME_EDIT: "home-edit",
 } as const;
 export type UiOverlay = (typeof UiOverlay)[keyof typeof UiOverlay];

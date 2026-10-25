@@ -129,7 +129,7 @@ Built with `dialogs.menu(items, { anchor })`, never by hand. Rows are 32px (44px
 
 ## Bottom sheets
 
-On a phone, anything that rises from the bottom closes by swiping it down: menus, Open with, system questions, window sheets, the app drawer, an app's own sheet (Warren's More, Ask's commands, Shopping List's item editor) and a game's stats panel over the board.
+On a phone, anything that rises from the bottom closes by swiping it down: menus, Open with, system questions, window sheets, an app's own sheet (Warren's More, Ask's commands, Shopping List's item editor) and a game's stats panel over the board.
 
 - A `Grabber` (kit) on top: a 36×4px pill at `foreground/25`, inside the sheet's top padding. Only on sheets that can be dismissed.
 - `{@attach swipe_dismiss({ on_dismiss, dismissible })}` (`$lib/core/utils/swipe-dismiss`) on the sheet's own box, which must be positioned (`relative`, `absolute` or `fixed`). `on_dismiss` is the same call as its Cancel, Back and scrim tap, never a second close path.
