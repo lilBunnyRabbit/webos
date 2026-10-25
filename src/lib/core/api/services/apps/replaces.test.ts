@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { current_ids, replacing_apps, resolve_replaced } from "./replaces";
+import { current_ids, current_list, current_records, current_target, replacing_apps, resolve_replaced } from "./replaces";
 import type { AppManifest } from "./type";
 
 const app = (id: string, replaces?: AppManifest["replaces"]) => ({ id, replaces }) as AppManifest;
@@ -56,5 +56,33 @@ describe("current_ids", () => {
       "odd-one-out",
       "hex-guess",
     ]);
+  });
+});
+
+const known = (id: string) => apps.some((manifest) => manifest.id === id);
+
+describe("current_target", () => {
+  test("a known id stays with its props; a replaced one resolves; an unknown one is left as is", () => {
+    expect(current_target(apps, "notes", { mode: "hex-guess" }, known)).toEqual({ id: "notes", props: { mode: "hex-guess" } });
+    expect(current_target(apps, "color-games", { mode: "hex-guess", level: 4 }, known)).toEqual({ id: "hex-guess", props: { level: 4 } });
+    expect(current_target(apps, "gone", undefined, known)).toEqual({ id: "gone", props: undefined });
+  });
+});
+
+describe("current_list", () => {
+  test("a pinned or recent old id becomes the app a bare launch opens, once, in place", () => {
+    expect(current_list(apps, ["notes", "color-games", "color-recall", "gone"], known)).toEqual(["notes", "color-recall", "gone"]);
+  });
+});
+
+describe("current_records", () => {
+  test("an old id's record goes to each replacing app without its own", () => {
+    const frame = (x: number) => ({ x });
+    expect(current_records(apps, { "color-games": frame(1), "odd-one-out": frame(2), gone: frame(3) }, known)).toEqual({
+      "odd-one-out": frame(2),
+      "color-recall": frame(1),
+      "hex-guess": frame(1),
+      gone: frame(3),
+    });
   });
 });

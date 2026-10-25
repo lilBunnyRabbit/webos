@@ -93,6 +93,8 @@ The owner: "i would put color games as their own apps but tools in one". This re
 - **Shared code:** chromatics wrappers live in `color-tools/color.ts` and the games import them (the ADR-045 cross-app pattern, like Image Tools → PDF Tools). Generic game bits go to `$kit/games`; colour-game-only bits stay in one game's module that the others import.
 - **Order:** split first, on culori (same behaviour), then Color Tools, then the games swap.
 
+- **Leftovers:** the owner: "Map pins + session, drop old data". Session windows, pins, file defaults, recents and desktop or home shortcuts naming `color-games` map to the new apps on read; old `app.color-games.*` data stays behind.
+
 The ADR is [ADR-071](../adrs/071-split-color-games.md). Color Tools is [ADR-072](../adrs/072-color-tools.md).
 
 ### Colour Atlas (decided)
@@ -128,6 +130,7 @@ The owner: "maybe a fun game showcasing all the color models". Every package mod
 - [x] Portfolio: the package's own featured card beside the studio's, with its conversion-route graphic (owner reversal, 2026-10-25).
 - [x] Portfolio: "Play it in WebOS" on the package card, pointing to Colour Atlas.
 - [x] Split Color Games (ADR-071).
+- [x] Map the old id in session windows, pins, file defaults, recents and desktop or home shortcuts (ADR-071 revision 2026-10-26).
 - [x] Color Tools v1 (ADR-072), 2026-10-25. It can run in parallel with the split, since they share no files beyond the compat list.
 - [ ] The games swap culori for `color-tools/color.ts`, after both of the above merge. Out-of-gamut hexes shift, since CSS Color 4 gamut mapping differs from `clampChroma`. Check the `hex`, `odd` and `sort` tests.
 

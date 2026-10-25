@@ -336,7 +336,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Sokoban (2026-10-17): generated levels, solvable by construction, solver-checked minimum pushes, daily. Left: Hint (the solver can power it), tap-to-walk
 - [x] Blocks (2026-10-17): falling blocks, Marathon and Sprint 40; the daily is a 40-line sprint because Game Hub's daily record keeps the lowest time. Recording a score instead changes `plays.json` (owner's call)
 - [x] Color Games (2026-10-18, [brainstorm](brainstorm/2026-10-18_color-games.md), [ADR-050](adrs/050-per-mode-dailies.md)): Recall (Dialed), Odd one out, Gradient sort, Hex guess; a daily per mode with its own Game Hub row, practice, share line with a solo challenge link; culori as the app's own dependency
-  - [x] Split into four apps: Color Recall, Odd One Out, Gradient Sort, Hex Guess, with `replaces` for the old id ([ADR-071](adrs/071-split-color-games.md), 2026-10-25): same daily seeds, old links, installed and offline entries map to the new apps; shared code in `color-recall/`, still on culori
+  - [x] Split into four apps: Color Recall, Odd One Out, Gradient Sort, Hex Guess, with `replaces` for the old id ([ADR-071](adrs/071-split-color-games.md), 2026-10-25): same daily seeds, old links, installed and offline entries, saved windows, taskbar pins, file defaults, recents and desktop or home shortcuts map to the new apps; shared code in `color-recall/`, still on culori
   - [ ] Swap culori for `color-tools/color.ts` (chromatics) after Color Tools. Colour shell commands: nothing for now (2026-10-25)
 - [x] Brackets (2026-10-17, owner's ideas notes): knockout, double elimination, round robin, race-points cup, `.bracket` files
 - [x] Maze (generate, solve, play; 2026-10-12)

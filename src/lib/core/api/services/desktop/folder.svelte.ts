@@ -1,4 +1,5 @@
 import type { AppId, AppProps, AppsService, FilesService, OpenOptions } from "$lib/core/api";
+import { resolve_replaced } from "../apps/replaces";
 import { parse_shortcut, serialize_shortcut, shortcut_label, SHORTCUT_EXTENSION } from "../apps/shortcut";
 import {
   clamp_widget_size,
@@ -140,16 +141,25 @@ export class DesktopFolder {
 
     const widget = file_extension(item.name) === WIDGET_EXTENSION && text !== null ? parse_widget(text) : null;
     if (widget) {
-      const { app, props, w, h, style = WidgetStyle.CARD } = widget;
+      const { w, h, style = WidgetStyle.CARD } = widget;
+      const { id: app, props } = this.current(widget.app, widget.props);
       // Clamped for display only; the file keeps what it says until the user resizes it.
       const size = clamp_widget_size({ w, h }, this.options.apps().get(app)?.widget_size);
       return { kind: "widget", name: item.name, label: widget_label(item.name), app_id: app, props, size, style };
     }
 
     const shortcut = file_extension(item.name) === SHORTCUT_EXTENSION && text !== null ? parse_shortcut(text) : null;
-    return shortcut
-      ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), ...shortcut }
+    const target = shortcut && this.current(shortcut.app_id, shortcut.props);
+    return target
+      ? { kind: "shortcut", name: item.name, label: shortcut_label(item.name), app_id: target.id, props: target.props }
       : { kind: "file", name: item.name, type: item.type ?? "" };
+  }
+
+  /** A shortcut or widget to a replaced app id (ADR-071) shows and opens as the app that took it over; the file stays as is. */
+  private current(id: AppId, props: AppProps | undefined): { id: AppId; props: AppProps | undefined } {
+    const apps = this.options.apps();
+    if (apps.get(id)) return { id, props };
+    return resolve_replaced(Array.from(apps.list(), ([, manifest]) => manifest), id, props) ?? { id, props };
   }
 
   /** The current object when nothing about the entry changed, so icons and widgets keep their props across reloads. */

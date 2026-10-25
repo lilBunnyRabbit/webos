@@ -134,6 +134,8 @@ A failure in step 2 or 3 during `init()` rejects it and fails the boot ([kernel.
 
 Positions are keyed by entry name, so renaming an entry in File Explorer loses its position.
 
+A shortcut or widget naming a replaced app id (ADR-071) is read as the app that took it over: `DesktopFolder.to_entry()` resolves it over `apps.list()` by its props (`resolve_replaced`), so the desktop and the mobile home draw the new app's icon and widget and open it. The file isn't rewritten; the name (`Color Games.desktop`) stays until the user renames it.
+
 ## Behaviour & invariants
 
 **Seeding.** A new default reaches only new devices: existing desktops already have a layout file, so the seed never runs again (owner's call, 2026-10-14). An empty folder (dotfiles don't count) with no layout file is treated as never set up. `seed()` first takes the v0 React pins (`take_v0_pins()` in `layout.ts`: localStorage `desktop`, read and removed) and writes one shortcut per pin at its v0 grid cell. Without v0 pins it writes one shortcut per `DEFAULT_SHORTCUTS` (`getting-started`, `settings`, `file-explorer`, `terminal`) at `{ x: i, y: 0 }`. Shortcuts are named after the manifest (`Settings.desktop`, `File Explorer.desktop`); then it saves the layout. Unknown ids are skipped. A user who empties the desktop keeps an empty desktop, because the layout file still exists. Deleting the layout file too, or `files.clear()`, seeds again.

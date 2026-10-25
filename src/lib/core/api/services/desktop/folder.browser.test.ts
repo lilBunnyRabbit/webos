@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AppsService } from "$lib/core/api";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
+import { parse_shortcut, serialize_shortcut } from "../apps/shortcut";
+import { serialize_widget } from "../apps/widget";
 import { DesktopFolder } from "./folder.svelte";
 
 let folder: DesktopFolder;
@@ -80,4 +82,31 @@ test("a widget's style is shown at once and kept in its file next to the size", 
   expect(JSON.parse((await file?.text()) ?? "")).toMatchObject({ app: "clock", w: 2, h: 2, style: "clear" });
   flushSync();
   await vi.waitFor(() => expect(folder.get(name)).toMatchObject({ style: "clear", size: { w: 2, h: 2 } }));
+});
+
+test("a shortcut or widget to a replaced app id shows as the app that took it over; the file stays (ADR-071)", async () => {
+  const manifests = [
+    { id: "game", replaces: [{ app: "old-games" }] },
+    { id: "example", widget: async () => ({}), replaces: [{ app: "old-games", props: { mode: "count" } }] },
+  ];
+  folder = new DesktopFolder({
+    files: () => files,
+    apps: () =>
+      ({
+        get: (id: string) => manifests.find((manifest) => manifest.id === id),
+        list: () => manifests.map((manifest) => [manifest.id, manifest]).values(),
+      }) as unknown as AppsService,
+    read_layout: async () => "{}",
+    seed: async () => {},
+    loaded: () => {},
+  });
+  const desktop = await files.get_directory("/home/Desktop");
+  await files.create_file(desktop!, "Old Games.desktop", { content: serialize_shortcut({ app_id: "old-games" }) });
+  await files.create_file(desktop!, "Count.widget", { content: serialize_widget({ app: "old-games", props: { mode: "count", count: 2 }, w: 2, h: 2 }) });
+  await folder.init();
+
+  expect(folder.get("Old Games.desktop")).toMatchObject({ kind: "shortcut", app_id: "game" });
+  expect(folder.get("Count.widget")).toMatchObject({ kind: "widget", app_id: "example", props: { count: 2 } });
+  const file = await files.get_file("/home/Desktop/Old Games.desktop");
+  expect(parse_shortcut(await file!.text())?.app_id).toBe("old-games");
 });

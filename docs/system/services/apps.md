@@ -142,6 +142,10 @@ A manifest's `replaces: { app, props? }[]` names ids it took over. An id that is
 - `launch(id, props)` and the `.desktop` / `.widget` paths of `open()` (a shortcut to the old id still opens);
 - RouterService for `#/app/` and `#/solo/` links, before it validates props ([router](router.md)); the solo shell's header names the app that opened, not the link's id;
 - `init()` for the installed list and OfflineService for the offline picks (`current_ids`: the old id becomes every replacing app).
+- Single launch targets resolve to the app a bare launch opens (`current_list`, `current_target`): `load_recent()` for the recent list, and `init()` for the taskbar pins and the `file_defaults` values in settings. Pins and defaults are rewritten in settings only when one changed, so settings saves the new shape; the recent list saves it with the next launch.
+- SessionService for saved windows (by props) and frames, and the desktop folder for `.desktop` shortcuts and `.widget` files on the desktop and the mobile home ([session](session.md), [desktop](desktop.md)). Shortcut and widget files aren't rewritten.
+
+Not mapped: scheduler jobs (`/var/lib/scheduler/jobs.json`, none of the replaced apps schedules any), an app's data folder `/var/lib/apps/{id}` and its `app.{id}.*` localStorage. Old data stays behind on purpose: Color Games' slider space, practice level and saved daily attempt don't carry over (owner, 2026-10-25).
 
 Today: Color Games became Color Recall (`{ app: "color-games" }` and `{ mode: "recall" }`), Odd One Out, Gradient Sort and Hex Guess (`{ mode: … }` each). `#/solo/color-games?mode=hex-guess&seed=12` opens Hex Guess with `{ seed: 12 }`; `#/solo/color-games` opens Color Recall.
 
@@ -246,8 +250,7 @@ The shell never installs (ADR-040):
 
 ## Known gaps
 
-- `replaces` reaches launches, files, links, the installed list and the offline picks only. A saved session window, a taskbar pin, a mobile home or dock entry, a recent-list entry or a `file_defaults` entry for the old id isn't mapped, and the desktop draws a `.desktop` shortcut to it without the new app's icon until opened. `create_instance` doesn't resolve either.
-
+- `create_instance` doesn't resolve replaced ids; its callers (session restore, reopen closed) pass ids that are already current.
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.
 - A second tab doesn't see an install or uninstall until it reloads (cross-tab sync is open).

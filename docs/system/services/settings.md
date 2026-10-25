@@ -109,6 +109,7 @@ Nothing is derived inside the service. Consumers derive from it. For example, `d
 | Fonts | `/etc/fonts/`, copies owned by the OS, kept until removed in Settings › Text & interface › Fonts. Backups carry them with `/etc` |
 | Mirror | localStorage `webos.analytics`: a copy of `analytics` for `index.html` (ADR-070). Never read back by the service; the file wins |
 | Version | `SETTINGS_VERSION = 1` |
+| Replaced ids | Pins and `file_defaults` values naming an app id a manifest `replaces` (ADR-071) are rewritten by AppsService at the end of its `init()` to the app a bare launch opens ([apps](apps.md#replaced-app-ids-adr-071)), which saves the new shape |
 | Written | 300 ms after the last change (debounced), flushed when the tab hides. Also right after `init()` when the file is missing or its normalized text differs from what was read; an unchanged file isn't rewritten. |
 | Legacy | localStorage `webos.settings` (same format), then v0 `settings` (zustand). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
 

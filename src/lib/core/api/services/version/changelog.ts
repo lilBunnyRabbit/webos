@@ -23,7 +23,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["color-recall", "odd-one-out", "gradient-sort", "hex-guess"],
-        text: "Color Recall, Odd One Out, Gradient Sort and Hex Guess are now apps of their own instead of modes of Color Games, with the same daily puzzles, and old Color Games links still open the right game.",
+        text: "Color Recall, Odd One Out, Gradient Sort and Hex Guess are now apps of their own instead of modes of Color Games, with the same daily puzzles, and old Color Games links, pins, shortcuts and saved windows still open the right game.",
       },
       {
         kind: IMPROVED,

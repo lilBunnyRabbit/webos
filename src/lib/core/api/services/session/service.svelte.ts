@@ -1,5 +1,6 @@
 import { untrack } from "svelte";
 import type {
+  AppId,
   AppsService,
   DialogsService,
   FilesService,
@@ -12,7 +13,8 @@ import type {
 import { WindowFlag } from "../windows/type";
 import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
-import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session, shows_mount } from "./persistence";
+import { current_records, current_target } from "../apps/replaces";
+import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session, shows_mount, type SessionFile } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
 import { session_shell } from "./shell";
 
@@ -59,7 +61,7 @@ export class SessionService implements ISessionService {
     const file = await this.files_service.get_file(SESSION_PATH);
     const text = file ? await file.text() : null;
     this.writer.seed(text);
-    const { windows: saved, frames } = text !== null ? parse_session(text) : { windows: [], frames: {} };
+    const { windows: saved, frames } = this.current(text !== null ? parse_session(text) : { windows: [], frames: {} });
     this.saved_count = saved.length;
     // Frames apply whatever the restore answer: Start fresh drops windows, not where apps like to open.
     this.windows_service.load_frames(frames);
@@ -81,6 +83,19 @@ export class SessionService implements ISessionService {
       console.error("[SessionService] Restore failed:", error);
       this.start_saving();
     });
+  }
+
+  /** Windows and frames of a replaced app id (ADR-071) as the app that took it over; the next save writes the new ids. */
+  private current({ windows, frames }: SessionFile): SessionFile {
+    const manifests = Array.from(this.apps_service.list(), ([, manifest]) => manifest);
+    const known = (id: AppId) => this.apps_service.get(id) !== undefined;
+    return {
+      windows: windows.map((snapshot) => {
+        const { id, props } = current_target(manifests, snapshot.app_id, snapshot.props, known);
+        return id === snapshot.app_id ? snapshot : { ...snapshot, app_id: id, props };
+      }),
+      frames: current_records(manifests, frames, known),
+    };
   }
 
   destroy(): void {

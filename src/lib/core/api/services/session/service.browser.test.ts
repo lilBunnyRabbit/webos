@@ -98,6 +98,19 @@ describe("SessionService", () => {
     expect(warning.type).toBe("warning");
   });
 
+  test("a window of a replaced app id restores as the app its props name, and the next save writes the new id (ADR-071)", async () => {
+    const frame = { x: 10, y: 20, width: 300, height: 200 };
+    const old_window = { ...settings_window, app_id: "old-games", props: { mode: "count", count: 3 }, state: { level: 2 } };
+    const kernel = await boot([old_window], true, { "old-games": frame, game: { ...frame, x: 40 } });
+    await vi.waitFor(() => expect(session(kernel).status).toBe(SessionStatus.RESTORED));
+
+    const [restored] = windows(kernel).list().map((id) => windows(kernel).get(id)!);
+    expect(restored.app).toMatchObject({ id: "example", props: { count: 3 }, state: { level: 2 } });
+    expect(windows(kernel).frames).toEqual({ example: frame, game: { ...frame, x: 40 } });
+    flushSync();
+    await vi.waitFor(async () => expect((await saved_on_disk(kernel)).map((w) => [w.app_id, w.props])).toEqual([["example", { count: 3 }]]));
+  });
+
   test("frames load whatever the answer, and closing a window records and saves its frame", async () => {
     // Small enough to fit the test page, so it isn't clamped.
     const frame = { x: 10, y: 20, width: 300, height: 200 };

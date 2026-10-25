@@ -32,3 +32,28 @@ export function current_ids(manifests: Iterable<AppManifest>, ids: Iterable<AppI
   const list = [...manifests];
   return [...new Set([...ids].flatMap((id) => (known(id) ? [id] : replacing_apps(list, id))))];
 }
+
+/** A stored id and props as they open today: a known id as is, a replaced one resolved, an unknown one left for the store's own check. */
+export function current_target(manifests: Iterable<AppManifest>, id: AppId, props: AppProps | undefined, known: (id: AppId) => boolean): ReplacedTarget {
+  return known(id) ? { id, props } : (resolve_replaced(manifests, id, props) ?? { id, props });
+}
+
+/** A list of single launch targets (pins, recents): each replaced id becomes the app a bare launch opens, once. */
+export function current_list(manifests: Iterable<AppManifest>, ids: Iterable<AppId>, known: (id: AppId) => boolean): AppId[] {
+  const list = [...manifests];
+  return [...new Set([...ids].map((id) => current_target(list, id, undefined, known).id))];
+}
+
+/** Per-app records (window frames): a replaced id's value goes to every replacing app that has none of its own. */
+export function current_records<T>(manifests: Iterable<AppManifest>, records: Record<AppId, T>, known: (id: AppId) => boolean): Record<AppId, T> {
+  const list = [...manifests];
+  const result: Record<AppId, T> = {};
+  for (const [id, value] of Object.entries(records)) if (known(id)) result[id] = value;
+  for (const [id, value] of Object.entries(records)) {
+    if (known(id)) continue;
+    const targets = replacing_apps(list, id);
+    if (targets.length === 0) result[id] = value;
+    for (const target of targets) if (!(target in result)) result[target] = value;
+  }
+  return result;
+}

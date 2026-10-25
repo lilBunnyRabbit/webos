@@ -29,7 +29,7 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
-import { current_ids, resolve_replaced } from "./replaces";
+import { current_ids, current_list, current_target, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
 import { track_launch } from "$lib/core/utils/analytics";
@@ -82,6 +82,18 @@ export class AppsService implements IAppsService {
   async init(): Promise<void> {
     await Promise.all([this.meta_ready, this.init_installed()]);
     await this.load_recent();
+    this.map_replaced_settings();
+  }
+
+  /** Taskbar pins and file defaults naming a replaced id (ADR-071) point at its replacement; settings saves the new shape. */
+  private map_replaced_settings(): void {
+    const known = (id: AppId) => this.registry.has(id);
+    const pinned = current_list(this.registry.values(), this.settings_service.taskbar.pinned, known);
+    if (pinned.join() !== this.settings_service.taskbar.pinned.join()) this.settings_service.taskbar.pinned = pinned;
+    const defaults = Object.entries(this.settings_service.file_defaults).map(([extension, id]) => [extension, current_target(this.registry.values(), id, undefined, known).id]);
+    if (defaults.some(([extension, id]) => this.settings_service.file_defaults[extension] !== id)) {
+      this.settings_service.file_defaults = Object.fromEntries(defaults);
+    }
   }
 
   private async init_installed(): Promise<void> {
@@ -116,7 +128,8 @@ export class AppsService implements IAppsService {
   protected async load_recent(): Promise<void> {
     const text = await this.read(RECENT_PATH);
     this.recent_writer.seed(text);
-    this.recent_ids = parse_recent(text).filter((id) => this.registry.get(id)?.system === false);
+    const ids = current_list(this.registry.values(), parse_recent(text), (id) => this.registry.has(id));
+    this.recent_ids = ids.filter((id) => this.registry.get(id)?.system === false);
   }
 
   protected remember(id: AppId): void {

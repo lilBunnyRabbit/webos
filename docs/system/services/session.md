@@ -40,7 +40,7 @@ Read-only state plus `reopen_closed()`.
 `init()`, async:
 
 0. `remove_legacy_view_keys()`: deletes the five localStorage keys that held view state before `storage.window()` (`LEGACY_VIEW_KEYS`). Cheap no-op once they're gone.
-1. `files.get_file(SESSION_PATH)` → `parse_session()`, or empty when missing. `saved_count` = the windows' length. `windows.load_frames(frames)` runs now, whatever the restore answer: Start fresh drops windows, not where apps open.
+1. `files.get_file(SESSION_PATH)` → `parse_session()`, or empty when missing. Then `current()` maps replaced app ids (ADR-071) over `apps.list()`: a window whose `app_id` no app has but a manifest `replaces` becomes that app, with `current_target` picking it by props and dropping the matched ones (`color-games` with `{ mode: "hex-guess", … }` restores as Hex Guess with the rest); window `state` comes along as is. A replaced id's frame goes to each replacing app that has none of its own (`current_records`). The file keeps the old ids until the next save, which writes the live windows. `saved_count` = the windows' length. `windows.load_frames(frames)` runs now, whatever the restore answer: Start fresh drops windows, not where apps open.
 2. Nothing saved → `start_saving()`, `status` stays `none`, done.
 3. Otherwise it starts importing each saved app's component (`manifest.component()`, once per app, errors ignored), so the chunks load while the rest of boot runs and the Restore dialog is up (ADR-036). Then `status = pending` and `offer_restore(saved)` starts **without being awaited**: the kernel awaits `init()` before mounting, and the dialogs host only renders after mount. A rejection is logged (`[SessionService] Restore failed:`) and saving starts anyway.
 

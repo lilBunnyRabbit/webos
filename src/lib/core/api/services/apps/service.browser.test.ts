@@ -1,9 +1,11 @@
+import { flushSync } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Kernel } from "$lib/core/api";
 import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
+import { parse_settings, SETTINGS_PATH } from "../settings/persistence";
 import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
@@ -100,6 +102,19 @@ describe("AppsService installed apps", () => {
     expect(opened(apps(kernel).launch("old-games", { mode: "count", count: 2 }))).toMatchObject({ id: "example", props: { count: 2 } });
     expect(opened(apps(kernel).launch("old-games"))).toMatchObject({ id: "game", props: undefined });
     expect(() => apps(kernel).launch("gone")).toThrow("App gone not found");
+  });
+
+  test("pins and file defaults naming a replaced id point at the app a bare launch opens, and settings saves them (ADR-071)", async () => {
+    await write(SETTINGS_PATH, JSON.stringify({ version: 1, taskbar: { pinned: ["notes", "old-games", "game"] }, file_defaults: { ".md": "notes", ".lvl": "old-games" } }));
+    const kernel = await boot();
+    const settings = kernel.service<SettingsService>("settings");
+    expect(settings.taskbar.pinned).toEqual(["notes", "game"]);
+    expect(settings.file_defaults).toEqual({ ".md": "notes", ".lvl": "game" });
+    flushSync();
+    await vi.waitFor(async () => {
+      const file = await kernel.service<FilesService>("files").get_file(SETTINGS_PATH);
+      expect(parse_settings(await file!.text())?.taskbar.pinned).toEqual(["notes", "game"]);
+    });
   });
 
   test("launching an app that isn't installed installs it, with a toast", async () => {
@@ -201,6 +216,13 @@ describe("AppsService recent apps", () => {
     expect(apps(kernel).recent).toEqual(["board"]);
     apps(kernel).install("notes");
     expect(apps(kernel).recent).toEqual(["notes", "board"]);
+  });
+
+  test("a replaced id in the saved list shows as the app a bare launch opens (ADR-071)", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["example", "game", "notes"]));
+    await write(RECENT_PATH, serialize_recent(["old-games", "notes", "game"]));
+    const kernel = await boot();
+    expect(apps(kernel).recent).toEqual(["game", "notes"]);
   });
 
   test("clear_recent empties and saves the list", async () => {
