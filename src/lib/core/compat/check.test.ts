@@ -109,7 +109,7 @@ describe("solo scope", () => {
   });
 
   it("leaves an app with no entries only the start blockers", () => {
-    const scoped = FEATURES.filter((item) => in_scope(item, "portfolio"));
+    const scoped = FEATURES.filter((item) => in_scope(item, "tic-tac-toe"));
     expect(scoped.length).toBeGreaterThan(0);
     expect(scoped.every((item) => item.level === Level.START)).toBe(true);
   });

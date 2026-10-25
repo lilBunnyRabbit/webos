@@ -32,6 +32,7 @@ export const APP_NAMES: Record<string, string> = {
   paint: "Paint",
   "pdf-tools": "PDF Tools",
   pomodoro: "Pomodoro",
+  portfolio: "Portfolio",
   proposals: "Proposals",
   "qr-reader": "QR Reader",
   "qr-studio": "QR Studio",

@@ -173,6 +173,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
       "FILE_PROPS",
       "FireOutcome",
       "JobKind",
+      "Mode",
       "NotificationType",
       "Platform",
       "ShellError",

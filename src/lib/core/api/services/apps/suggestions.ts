@@ -33,6 +33,12 @@ export const INTERESTS: Interest[] = [
     description: "Dev tools, diffs, randomness and QR codes",
     apps: ["dev-tools", "diff", "rng-tools", "qr-reader"],
   },
+  {
+    id: "maker",
+    label: "Meet the maker",
+    description: "Who built WebOS, and the projects behind it",
+    apps: ["portfolio"],
+  },
 ];
 
 /** The apps the picked interests install, in group order, without repeats. */

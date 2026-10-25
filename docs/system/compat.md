@@ -133,8 +133,8 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | id | Feature | Lost without it | Apps | Chrome | Firefox | Safari |
 |----|---------|-----------------|------|--------|---------|--------|
 | `modern-css` | Modern CSS | The interface loses colours, spacing and shadows. |  | 111 | 128 | 16.4 |
-| `popover` | Popover | The start menu, notification centre, terminal suggestions and app menus don't open or close properly. | `terminal` `font-maker` `hopsprite` `image-editor` `kanban` `lunar-lander` `markdown-pdf` `moonrabbit` `paint` `quick-notes` `soundboard` `warren` `web-app` | 114 | 125 | 18.3 |
-| `anchor-positioning` | Anchor positioning | Menus, dialogs, the start menu and tooltips open in the wrong place. | `terminal` `font-maker` `hopsprite` `image-editor` `lunar-lander` `paint` `soundboard` `warren` | 129 | 147 | 26 |
+| `popover` | Popover | The start menu, notification centre, terminal suggestions and app menus don't open or close properly. | `terminal` `font-maker` `hopsprite` `image-editor` `kanban` `lunar-lander` `markdown-pdf` `moonrabbit` `paint` `quick-notes` `soundboard` `warren` `web-app` `portfolio` | 114 | 125 | 18.3 |
+| `anchor-positioning` | Anchor positioning | Menus, dialogs, the start menu and tooltips open in the wrong place. | `terminal` `font-maker` `hopsprite` `image-editor` `lunar-lander` `paint` `soundboard` `warren` `portfolio` | 129 | 147 | 26 |
 | `dialog-closedby` | Dialog light dismiss | Menus and dialogs don't close when you click outside them. |  | 134 | 141 | no |
 | `relative-colors` | Relative colours | Themes other than Brand Dark and Brand Light get wrong surface and state colours. | `settings` | 138 | 128 | 18 |
 | `light-dark` | light-dark() | Some controls get the wrong colours. |  | 123 | 120 | 17.5 |

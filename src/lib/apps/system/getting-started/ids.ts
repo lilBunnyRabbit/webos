@@ -13,5 +13,6 @@ export const TOPIC_IDS = [
   "backup",
   "home",
   "switcher",
+  "maker",
 ] as const;
 export type TopicId = (typeof TOPIC_IDS)[number];
