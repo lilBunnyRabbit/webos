@@ -1,20 +1,20 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils";
   import type { GraphicPlayer } from "./project-player.svelte";
-  import { SKILLS, skill_at } from "./project-scenes";
+  import { step_at, TREE, TREE_STEP } from "./project-scenes";
 
   let { player }: { player: GraphicPlayer } = $props();
 
-  const at = $derived(skill_at(player.t));
+  const at = $derived(step_at(player.t, TREE_STEP.at, TREE_STEP.every, TREE.length));
 </script>
 
 <div class="hq-scene grid h-full place-items-center py-3 font-mono">
   <div class="hq-flow flex w-full items-start">
-    <div class="hq-pane names">
-      <p class="hq-caption">skills</p>
+    <div class="hq-pane parts">
+      <p class="hq-caption">~/dev/hq</p>
       <ul class="flex flex-col gap-0.5">
-        {#each SKILLS as skill, index (skill.name)}
-          <li class={cn("skill truncate", index === at && "now", index < at && "past")}>{skill.name}</li>
+        {#each TREE as entry, index (entry.part)}
+          <li class={cn("part truncate", index < at && "past", index === at && "now")}>{entry.part}</li>
         {/each}
       </ul>
     </div>
@@ -22,10 +22,13 @@
     <span class="hq-wire"><span style:scale="{at >= 0 ? 1 : 0} 1"></span></span>
 
     <div class="hq-pane">
-      <p class="hq-caption">what it does</p>
+      <p class="hq-caption">holds</p>
       {#if at >= 0}
         {#key at}
-          <p class="does text-foreground">{SKILLS[at].does}</p>
+          <div class="detail flex flex-col gap-1.5">
+            <p class="text-pretty text-foreground">{TREE[at].holds}</p>
+            <p class="sample truncate">{TREE[at].sample}</p>
+          </div>
         {/key}
       {/if}
     </div>
@@ -33,34 +36,36 @@
 </div>
 
 <style>
-  .names {
-    flex: 0 1 9rem;
+  .parts {
+    flex: 0 1 8.5rem;
   }
 
-  .skill {
+  .part {
     padding: 0.0625rem 0.3125rem;
     border-radius: var(--radius-sm);
     color: color-mix(in oklch, var(--foreground) 50%, transparent);
     transition: color 200ms, background-color 200ms;
   }
 
-  .skill.past {
-    color: color-mix(in oklch, var(--foreground) 75%, transparent);
+  .part.past {
+    color: var(--tertiary);
   }
 
-  .skill.now {
+  .part.now {
     color: var(--primary);
     background: color-mix(in oklch, var(--primary) 14%, transparent);
   }
 
-  @container card (width < 28rem) {
-    .names {
-      flex-basis: 6.5rem;
-    }
+  .sample {
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-sm);
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+    background: color-mix(in oklch, var(--foreground) 6%, transparent);
   }
 
-  .does {
-    text-wrap: pretty;
+  .detail {
     animation: rise 300ms var(--ease-out);
   }
 
@@ -71,12 +76,18 @@
     }
   }
 
+  @container card (width < 28rem) {
+    .parts {
+      flex-basis: 6.5rem;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .skill {
+    .part {
       transition: none;
     }
 
-    .does {
+    .detail {
       animation: none;
     }
   }

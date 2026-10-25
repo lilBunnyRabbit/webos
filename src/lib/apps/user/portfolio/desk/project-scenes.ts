@@ -83,29 +83,6 @@ export const SESSIONS: { name: string; steps: [number, SessionStatus][] }[] = [
 export const TRACE_DURATION = 2000;
 export const TRACE = { ghost: 300, from: 300, length: 1500 };
 
-export const RECALL_DURATION = 2800;
-export const RECALL_SYMPTOM = "push rejected: workflow scope";
-export const RECALL = { type: { at: 150, length: 550 }, pointer: 850, index: 1200, fix: { at: 1550, length: 250 }, score: { at: 1900, length: 700, from: 6, to: 10 } } as const;
-
-export interface RecallFrame {
-  typed: number;
-  pointer: boolean;
-  index: boolean;
-  fix: number;
-  score: number;
-}
-
-export function recall_frame(t: number): RecallFrame {
-  const { type, pointer, index, fix, score } = RECALL;
-  return {
-    typed: progress(t, type.at, type.length),
-    pointer: t >= pointer,
-    index: t >= index,
-    fix: ease_out(progress(t, fix.at, fix.length)),
-    score: Math.round(score.from + (score.to - score.from) * progress(t, score.at, score.length)),
-  };
-}
-
 export const QUEST_DURATION = 2700;
 export const QUEST_LIST = [
   { id: "3fa", title: "offline sync", status: "ready" },
@@ -122,17 +99,49 @@ export const QUEST = { pick: 300, run: 700, every: 480 } as const;
 
 export const quest_step = (t: number) => (t < QUEST.run ? -1 : Math.min(QUEST_RUN.length - 1, Math.floor((t - QUEST.run) / QUEST.every)));
 
-export const SKILLS_DURATION = 2700;
-export const SKILLS = [
-  { name: "/hq:parse", does: "raw notes become briefs that point into the code" },
-  { name: "/hq:start", does: "a quest becomes a clarified, routed session" },
-  { name: "/learn", does: "a fix becomes one line every repo reads" },
-  { name: "/prefer", does: "a correction becomes a code style rule" },
-  { name: "/hq:lint", does: "stale, duplicate and dead notes get flagged" },
-];
-export const SKILL = { at: 150, every: 500 } as const;
+export const step_at = (t: number, at: number, every: number, count: number) => (t < at ? -1 : Math.min(count - 1, Math.floor((t - at) / every)));
 
-export const skill_at = (t: number) => (t < SKILL.at ? -1 : Math.min(SKILLS.length - 1, Math.floor((t - SKILL.at) / SKILL.every)));
+export const HQ_PARTS = ["quests/", "knowledge/", "AGENTS.md", "skills/"];
+
+export const LOOP_DURATION = 3100;
+export const LOOP_RUN = [
+  { line: "read the brief", part: "quests/" },
+  { line: "matched 2 lessons", part: "knowledge/" },
+  { line: "wrote it my way", part: "AGENTS.md" },
+  { line: "/learn: +1 lesson", part: "skills/" },
+  { line: "## Findings, done", part: "quests/" },
+];
+export const LOOP = { pick: 300, run: 600, every: 480 } as const;
+
+export const TREE_DURATION = 3200;
+export const TREE = [
+  { part: "quests/", holds: "one file per idea, its status the phase", sample: "offline-sync.md  in-progress" },
+  { part: "knowledge/", holds: "lessons, found from the error alone", sample: "workflow scope: push over SSH" },
+  { part: "AGENTS.md", holds: "how I write code: rule, then why", sample: "interface over type" },
+  { part: "skills/", holds: "the steps any agent can run", sample: "/hq:start  /learn  /prefer" },
+  { part: "tool/", holds: "the hq CLI, in Go", sample: "hq q  hq ls  hq start" },
+];
+export const TREE_STEP = { at: 150, every: 600 } as const;
+
+export const SESSION_DURATION = 2900;
+export const SESSION_READS = ["quest brief", "2 matching lessons", "code style rules", "skill: /hq:start"];
+export const SESSION_WRITES = ["## Findings", "+1 lesson", "+1 style rule", "status: done"];
+export const SESSION = { reads: { at: 150, every: 260 }, work: { at: 1200, length: 600 }, writes: { at: 1900, every: 220 } } as const;
+
+export interface SessionFrame {
+  reads: number;
+  work: number;
+  writes: number;
+}
+
+export function session_frame(t: number): SessionFrame {
+  const { reads, work, writes } = SESSION;
+  return {
+    reads: step_at(t, reads.at, reads.every, SESSION_READS.length),
+    work: progress(t, work.at, work.length),
+    writes: step_at(t, writes.at, writes.every, SESSION_WRITES.length),
+  };
+}
 
 export const SEASONS_DURATION = 2000;
 export const SEASONS = [
