@@ -331,7 +331,7 @@
       --tile: 7rem;
     }
 
-    .cards.tiled > .item:is(:nth-child(1), :nth-child(4)) {
+    .cards.tiled > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -347,7 +347,7 @@
       --tile: 7rem;
     }
 
-    .cards.stacked > .item:is(:nth-child(1), :nth-child(4)) {
+    .cards.stacked > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -361,6 +361,10 @@
     .cards:is(.tiled, .stacked) > .item:nth-child(5) {
       grid-column: span 2;
       --tile: 10rem;
+    }
+
+    .cards:is(.tiled, .stacked) > .item:nth-child(7) {
+      grid-column: span 3;
     }
   }
 

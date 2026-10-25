@@ -83,6 +83,24 @@ export const SESSIONS: { name: string; steps: [number, SessionStatus][] }[] = [
 export const TRACE_DURATION = 2000;
 export const TRACE = { ghost: 300, from: 300, length: 1500 };
 
+export const HQ_DURATION = 3100;
+export const HQ_QUESTS = [
+  { id: "3fa", title: "offline sync" },
+  { id: "a91", title: "flaky login test" },
+  { id: "c07", title: "theme picker" },
+];
+export const HQ_PARTS = ["quests", "knowledge", "code style", "skills"];
+export const HQ_RUN = [
+  { line: "read the brief", part: "quests" },
+  { line: "checked known fixes", part: "knowledge" },
+  { line: "wrote it my way", part: "code style" },
+  { line: "/learn: saved the fix", part: "skills" },
+  { line: "## Findings, done", part: "quests" },
+];
+export const HQ = { pick: 300, run: 600, every: 480 } as const;
+
+export const hq_step = (t: number) => (t < HQ.run ? -1 : Math.min(HQ_RUN.length - 1, Math.floor((t - HQ.run) / HQ.every)));
+
 export const SEASONS_DURATION = 2000;
 export const SEASONS = [
   { name: "S1", episodes: 8, watched: 8 },
