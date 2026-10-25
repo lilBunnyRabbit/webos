@@ -89,9 +89,9 @@ describe("terminal session", () => {
 
   test("how opens the How I build window and lights a principle when named", () => {
     const session = fresh();
-    session.submit("how correct");
+    session.submit("how tested");
     expect(session.is_open(Win.HOW)).toBe(true);
-    expect(session.lit).toBe("correct");
+    expect(session.lit).toBe("tested");
   });
 
   test("a lit principle raises the windows whose cards label it, without moving the focus to one of them", () => {

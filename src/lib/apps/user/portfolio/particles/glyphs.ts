@@ -4,7 +4,7 @@ export const PRINCIPLE_GLYPHS: Record<string, ShapeKind> = {
   decisions: ShapeKind.DOCUMENT,
   team: ShapeKind.LAYERS,
   lightest: ShapeKind.FEATHER,
-  correct: ShapeKind.CHECK,
+  tested: ShapeKind.CHECK,
   performance: ShapeKind.BOLT,
   feel: ShapeKind.WAVE,
 };

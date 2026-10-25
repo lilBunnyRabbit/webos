@@ -35,7 +35,7 @@ describe("parse", () => {
 
   test("how opens no window; it takes a principle to light", () => {
     expect(parse("how --i-build")).toEqual({ kind: ActionKind.HOW, principle: undefined });
-    expect(parse("how --i-build correct")).toEqual({ kind: ActionKind.HOW, principle: "correct" });
+    expect(parse("how --i-build tested")).toEqual({ kind: ActionKind.HOW, principle: "tested" });
     expect(parse("work astra")).toMatchObject({ windows: [Win.TIMELINE], job: "astra" });
     expect(parse("timeline")).toMatchObject({ windows: [Win.TIMELINE] });
   });

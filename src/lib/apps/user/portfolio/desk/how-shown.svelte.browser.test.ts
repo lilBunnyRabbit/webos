@@ -24,7 +24,7 @@ describe("HowShown", () => {
     const { session, view, stop } = setup();
     view.toggle("team");
     flushSync();
-    for (const id of ["decisions", "lightest", "performance", "correct", "feel"]) {
+    for (const id of ["decisions", "lightest", "performance", "tested", "feel"]) {
       const handlers = view.peek(id);
       handlers.onpointerenter(pointer("mouse"));
       vi.advanceTimersByTime(60);

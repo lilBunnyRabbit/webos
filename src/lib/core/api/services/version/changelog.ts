@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.64.1",
+    date: "2026-10-25",
+    title: "Tested where it runs",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["portfolio"],
+        text: "Portfolio's How I build has a new principle about testing on real browsers and phones, shown in WebOS, Petrace and chrome-safe-inset.",
+      },
+    ],
+  },
+  {
     version: "3.64.0",
     date: "2026-10-25",
     title: "Open for business",

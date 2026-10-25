@@ -13,7 +13,7 @@
     decisions: FileTextIcon,
     team: StackIcon,
     lightest: FeatherIcon,
-    correct: CheckCircleIcon,
+    tested: CheckCircleIcon,
     performance: LightningIcon,
     feel: WaveformIcon,
   };
