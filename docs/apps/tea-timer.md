@@ -56,7 +56,7 @@ One scheduler job per cup, `tea-timer:brew-{id}`, kind `timer`, `{ epoch }` at t
 - **Steep N** (a ready cup whose tea has steeps left) schedules the same job again for the next steep, then writes `steep`. It uses the tea as it is now, so an edit made meanwhile counts.
 - **Stop** (brewing) and **Done** (ready) cancel the job and drop extras whose job is gone.
 
-Cups sort ready first, then by end. There's no pause: tea doesn't wait.
+Cups sort ready first, then by end. A cup started in the last 3 s scrolls itself into view, so Brew pressed far down the list shows its cup; one restored at open doesn't. A tea with a cup brewing shows that countdown on its own card. There's no pause: tea doesn't wait.
 
 ## Data
 

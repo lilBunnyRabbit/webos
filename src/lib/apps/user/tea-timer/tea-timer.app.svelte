@@ -52,6 +52,10 @@
   const shown = $derived(teas.filter((tea) => show_hidden || !tea.hidden));
   const brewing = $derived(brews.filter((brew) => !brew.ready).length);
   const ready = $derived(brews.length - brewing);
+  const running = $derived(new Map(brews.filter((brew) => !brew.ready).map((brew) => [brew.tea_id, brew])));
+
+  // A cup started a moment ago scrolls into view; one restored at open doesn't.
+  const FRESH_MS = 3000;
 
   // A brew ends between seconds; the countdown only needs the fast clock while one runs.
   const ticker = new Ticker(
@@ -141,6 +145,7 @@
               <ul class="grid gap-2 @xl:grid-cols-2">
                 {#each brews as entry (entry.id)}
                   <BrewCard
+                    fresh={!entry.ready && entry.end_at - entry.duration_ms > Date.now() - FRESH_MS}
                     brew={entry}
                     now={ticker.now}
                     onsteep={(next) => steep(entry, next)}
@@ -166,6 +171,8 @@
                     unit={file.value.unit}
                     strength={strength_of(file.value, tea.id)}
                     onstrength={(next) => choose_strength(tea, next)}
+                    brewing={running.get(tea.id)}
+                    now={ticker.now}
                     onbrew={() => brew(tea)}
                     onmenu={(anchor) => menu(tea, anchor)}
                   />

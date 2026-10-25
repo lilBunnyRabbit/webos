@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.66.1",
+    date: "2026-10-25",
+    title: "Tea fixes",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["tea-timer"],
+        text: "Pressing Brew in Tea Timer now shows the new cup and counts down on the tea itself, and the temperature unit no longer wraps onto its own line.",
+      },
+    ],
+  },
+  {
     version: "3.66.0",
     date: "2026-10-25",
     title: "The repo behind every session",

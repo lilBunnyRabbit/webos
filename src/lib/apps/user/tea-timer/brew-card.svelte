@@ -5,7 +5,17 @@
   import { Check as CheckIcon, Repeat as RepeatIcon, X as XIcon } from "phosphor-svelte";
   import { brew_remaining, next_steep, strength_label, type Brew } from "./tea";
 
-  let { brew, now, onsteep, onstop }: { brew: Brew; now: number; onsteep: (steep: number) => void; onstop: () => void } = $props();
+  let {
+    brew,
+    now,
+    fresh,
+    onsteep,
+    onstop,
+  }: { brew: Brew; now: number; fresh: boolean; onsteep: (steep: number) => void; onstop: () => void } = $props();
+
+  function reveal(node: HTMLElement) {
+    if (fresh) node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 
   const remaining = $derived(brew_remaining(brew, now));
   const progress = $derived(brew.ready ? 1 : Math.min(1, 1 - remaining / brew.duration_ms));
@@ -13,7 +23,7 @@
   const steeps = $derived(brew.tea && brew.tea.steeps > 1 ? `Steep ${brew.steep} of ${brew.tea.steeps}` : "");
 </script>
 
-<li class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
+<li {@attach reveal} class="flex items-center gap-3 rounded-xl bg-background-light p-3 ring-1 ring-foreground/8">
   <div class="relative size-14 shrink-0" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Brewed">
     <svg viewBox="0 0 36 36" class="size-full -rotate-90" aria-hidden="true">
       <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="3" class="stroke-foreground/10" />
