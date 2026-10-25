@@ -422,6 +422,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [x] Color Tools ([ADR-072](adrs/072-color-tools.md), [brainstorm](brainstorm/2026-10-25_chromatics.md), [internals](apps/color-tools.md), 2026-10-25): one app, sections Pick (EyeDropper, picture or camera with a loupe, typed CSS, sliders in any model), Convert (70 models), Contrast (WCAG 2), Vision (CVD with severity), Harmony (schemes, ramp, steps), Palette (`.palette` files in Documents); owns the chromatics wrappers (`color-tools/color.ts`). Mix section and shell commands later
 - [ ] Colour Atlas ([ADR-073](adrs/073-colour-atlas.md)): match a target in a different colour model each round, collect all 70 models in a dex, daily run; after Color Tools
+- [ ] Boot-weight pass (owner, 2026-10-25): budget raised 215 → 218 KB gz at 216.0; find room in `core` (145.9 KB gz) and `main` before raising again
 - [ ] Kit colour picker on chromatics (OKLCH, theme swatches, eyedropper), replacing the 9 native `<input type="color">`; package moves to root; own grill
 - [ ] Theme audit in Settings › Theme: WCAG of every token pair, CVD of the 17 tokens, optional whole-desktop CVD filter; own grill
 - [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios. Decided 2026-10-25: Mix section of Color Tools after v1, on the package's `Ryb` ranked by ΔE2000, labelled approximate; Kubelka–Munk only if it lands in the package
