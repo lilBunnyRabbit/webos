@@ -606,6 +606,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [x] Apps pass: every app at phone width, touch paths for File Explorer, Media Preview pinch, Sprite Extract, QR via `jsqr`
 - [x] Dock reorder, menus as bottom sheets, `pointer-coarse:` kit sizes
 - [x] Swipe down to dismiss every bottom sheet: menus, dialogs and window sheets docked to the bottom, the app drawer, in-app sheets and game stats panels; one `swipe_dismiss` attachment and a kit `Grabber` (2026-10-22, [mobile](system/shell/mobile.md#swipe-down-to-dismiss)); a swipe on a confirm or save-changes sheet is Cancel (`swipe_cancels`, 3.57.0)
+- [x] List home, Niagara-style (2026-10-25, [brainstorm](brainstorm/2026-10-25_niagara-home.md), 3.69.0): clock, Recent rows, pinned entries and widgets in one list, All apps row; a letter rail that shows the held letter's apps in place and fills in the rest on release; the full list is `UiOverlay.LAUNCHER` with the old drawer's filter; widgets resize in height in edit mode; the app drawer, dock and pages are gone, a saved dock migrates to the end of the home order. Rail scrub still to check on the Samsung phone
 - [x] Conditional service registration in `init.ts`
 - [ ] Virtual keyboard handling
 - [ ] Touch gesture support

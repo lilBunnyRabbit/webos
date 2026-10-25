@@ -12,10 +12,10 @@ The desktop is the folder `/home/Desktop`. Every visible entry in it is an icon.
 | `folder.svelte.ts` | `DesktopFolder`: the folder state and operations both layouts share, `DEFAULT_SHORTCUTS`, `write_var_lib()` |
 | `service.svelte.ts` | Desktop implementation (`GridDesktopService`) |
 | `mobile.svelte.ts` | Mobile home implementation (`MobileDesktopService`), see [Mobile home](#mobile-home) |
-| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()`, `resize_target()` and `sort_moves()`, all pure; `snap_cells()`, `item_span()`, `grid_items()`, `ResizeTarget`, `DesktopMove`, `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
+| `helper.ts` | `DesktopHelper.arrange()`, `fit()`, `resolve_moves()`, `resize_target()` and `sort_moves()`, all pure; `display_name()` (a shortcut's or widget's label, else the entry name), `snap_cells()`, `item_span()`, `grid_items()`, `ResizeTarget`, `DesktopMove`, `DesktopSort`. `index.ts` exports `DesktopHelper` and `DesktopSort` for the desktop's Sort by |
 | `layout.ts` | `LAYOUT_DIRECTORY_NAME` (`desktop`), `LAYOUT_DIRECTORY` (`/var/lib/desktop`), `LAYOUT_FILE` (`layout.json`), `LAYOUT_PATH`, `parse_layout()`, `serialize_layout()`, `Positions`, `take_v0_pins()` |
 | `additions.ts` | Default widgets: `default_widgets()`, `pending_widgets()`, `ADDITIONS_FILE` (`additions.json`), `ADDITIONS_PATH`, `parse_additions()`, `serialize_additions()` |
-| `home-layout.ts` | Mobile home model: `HOME_LAYOUT_FILE` (`home-layout.json`), `HOME_LAYOUT_PATH`, `DOCK_SIZE`, `HomeLayout`, `parse_home_layout()`, `serialize_home_layout()`, `arrange_home()`, `paginate()` |
+| `home-layout.ts` | Mobile home model: `HOME_LAYOUT_FILE` (`home-layout.json`), `HOME_LAYOUT_PATH`, `HomeLayout`, `parse_home_layout()` (with the dock migration), `serialize_home_layout()`, `arrange_home()` |
 | `inspector.svelte`, `mobile-inspector.svelte` | Kernel app inspectors for each implementation |
 
 Shortcut files themselves (`.desktop`) are an apps concept: `services/apps/shortcut.ts`, see [apps.md](apps.md#shortcuts-desktop-files).
@@ -26,7 +26,7 @@ Same split as [windows](windows.md#public-api) (ADR-016, owner 2026-10-12, [brai
 
 - **`DesktopService`**, the platform-neutral base. Items are addressed by **entry name**: `items()`, `names()`, `remove_item(name)`, `rename_item(name, new_name)`, `create_folder`, `pin`, `pin_widget`, `set_widget_style`, `open`. Shared callers type against it: the start menu (`pin`) and `desktop-actions.ts` (rename, delete, properties, menus).
 - **`GridDesktopService`** adds the desktop shell's grid: `container`, `set_container`, `list()`, `has_item_in_position`, `move_items(moves)`, `resize_target`, `resize_widget`. The desktop shell (`desktop.svelte`) and this inspector use it.
-- **`MobileDesktopService`**: the mobile home: ordered pages and a dock. See [Mobile home](#mobile-home).
+- **`MobileDesktopService`**: the mobile home: one ordered list. See [Mobile home](#mobile-home).
 
 Both implementations own a `DesktopFolder` (composition, not a base class). It holds `entries`, the revision watch, reload, seeding trigger, and the file operations. The owner passes `read_layout`, `seed` and `loaded` callbacks, so each layout file stays with its service.
 
@@ -178,28 +178,26 @@ Keyboard: with the widget's title strip focused, Shift+→/← grows or shrinks 
 
 ## Mobile home
 
-`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revision 2026-10-12). Same folder, same `DesktopFolder`, its own layout. Widgets show (2026-10-19): they span cells inside the ordered flow. Rendering is in [shell/mobile.md](../shell/mobile.md#home).
+`MobileDesktopService` (`mobile.svelte.ts`, model in `home-layout.ts`, inspector `mobile-inspector.svelte`) is registered under `desktop` on mobile (ADR-016 revisions 2026-10-12 and 2026-10-25). Same folder, same `DesktopFolder`, its own layout: one ordered list of entries and widgets. No dock and no pages since the list home (2026-10-25, [brainstorm](../../brainstorm/2026-10-25_niagara-home.md)). Rendering is in [shell/mobile.md](../shell/mobile.md#home).
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `home` | `() => DesktopItem[]` | Home items (not docked) in the saved order, then entries the order doesn't know in folder order |
-| `pages` | `(columns, rows) => HomeSlot[][]` | `home()` placed by `paginate_spans` (below): `{ item, x, y, size }` per item. Always at least one page; no size gives one empty page |
-| `dock` | `() => DesktopItem[]` | Docked items in dock order, at most `DOCK_SIZE` (4) |
-| `dock_full` | `readonly boolean` | `$derived` |
-| `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end), taking it out of the dock if it was there |
-| `set_docked` | `(name, docked, before?) => void` | Docks just before `before` (`null`/absent: the end); an already docked entry just moves. Ignored when full and for widgets. `docked: false` moves it back to the end of home |
-| `resize_widget` | `(name, size) => Promise<boolean>` | Clamps into the app's `widget_size` and writes `w`/`h` through `DesktopFolder.write_widget_size`, like the desktop. `false` when `name` isn't a widget of an app with a `widget_size` |
+| `home` | `() => DesktopItem[]` | Every entry in the saved order, then entries the order doesn't know in folder order |
+| `move_item` | `(name, before: string \| null) => void` | Puts the entry just before `before` in the home order (`null` or unknown: the end) |
 | `set_widget_style` | `(name, style) => Promise<boolean>` | Same as the desktop's: writes `style` through `DesktopFolder.write_widget_style`; `false` when `name` isn't a widget |
-| `rename_item` | `(name, new_name)` | Swaps the name in the order and dock and saves before renaming, so the icon keeps its place |
+| `resize_widget` | `(name, size) => Promise<boolean>` | Clamps `size` into the app's `widget_size` and writes it through `DesktopFolder.write_widget_size` (in memory at once, the file queued), the same `.widget` file the desktop reads. `false` when `name` isn't a widget or its app has no `widget_size`. No grid, so nothing to collide with |
+| `rename_item` | `(name, new_name)` | Swaps the name in the order and saves before renaming, so the entry keeps its place |
 | base members | | Forward to `DesktopFolder` |
 
-**Layout file** `/var/lib/desktop/home-layout.json`: `{ "version": 1, "order": ["Settings.desktop", …], "dock": ["File Explorer.desktop"] }`. zod-validated (dock max 4); anything invalid is an empty layout (folder order, empty dock), not an error. Every change rebuilds both lists from what's shown, so stale names drop out, assigns the state at once and writes in the background (`[MobileDesktopService] Failed to save the home layout`).
+A widget shows full width, `size.h` rows of 104px tall. The home's resize handle changes only `h`; `w` keeps whatever the desktop set ([shell/mobile.md](../shell/mobile.md#home)).
 
-**Arrange** (`arrange_home(entries, layout)`, pure, unit-tested): dock names that exist, capped at 4; then home = saved order minus docked, stale and duplicate names; then every other entry in folder order. Rotating or a bigger screen just reflows.
+**Layout file** `/var/lib/desktop/home-layout.json`: `{ "version": 1, "order": ["Settings.desktop", …] }`. zod-validated; anything invalid is an empty layout (folder order), not an error. Every change rebuilds the order from what's shown, so stale names drop out, assigns the state at once and writes in the background (`[MobileDesktopService] Failed to save the home layout`).
 
-**Pack** (`paginate_spans(items, columns, rows)`, pure, unit-tested). CSS grid's sparse auto-placement by hand: a widget spans `home_span` (its size cut to `columns × rows`), everything else one cell. A cursor walks row by row and only moves forward, so icons after a widget fill the cells beside it but never a gap before it. An item that fits nowhere after the cursor starts the next page. The widget's file keeps its own size; the cut is only how the phone shows it.
+**Dock migration** (2026-10-25): a file from the grid home still has `"dock": [...]`. `parse_home_layout()` appends those names to the end of the order (duplicates dropped) and reports `migrated`; the service then writes the file back without `dock`, once, right after the first load. The old dock items show at the end of the list.
 
-**Seeding** runs for an empty folder with no `home-layout.json`. If the desktop's `layout.json` exists, the desktop was set up and emptied on purpose, so only an empty home layout is written. Otherwise it writes the `DEFAULT_SHORTCUTS` and saves them as the home order. A folder the desktop already filled isn't seeded: those items show in folder order with an empty dock.
+**Arrange** (`arrange_home(entries, layout)`, pure, unit-tested): the saved order minus stale and duplicate names, then every other entry in folder order.
+
+**Seeding** runs for an empty folder with no `home-layout.json`. If the desktop's `layout.json` exists, the desktop was set up and emptied on purpose, so only an empty home layout is written. Otherwise it writes the `DEFAULT_SHORTCUTS` and saves them as the home order. A folder the desktop already filled isn't seeded: those items show in folder order.
 
 ## Divergence from ADR
 
@@ -213,7 +211,7 @@ Contributes no commands.
 
 ## Known gaps
 
-- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. On the phone they show and resize in edit mode ([shell/mobile.md](../shell/mobile.md#home)).
+- Widgets resize only from the bottom-right corner, growing right and down; there's no resize from the other edges. On the phone they show full width and resize in height only ([shell/mobile.md](../shell/mobile.md#home)).
 - The context menu has no Resize item; the keyboard path is Shift+arrows on the title strip.
 - Hidden items (more entries than cells) can't be seen, opened or removed until the grid grows. Nothing tells the user they exist.
 - Unplaced icons aren't stable: adding a file that sorts earlier shifts every unplaced icon after it.

@@ -4,29 +4,20 @@
 
   let { service, detailed }: InspectorProps<MobileDesktopService> = $props();
 
-  const dock = $derived(service.dock());
   const home = $derived(service.home());
 </script>
 
 <InspectorStats>
   <InspectorStat label="Home" value={home.length} />
-  <InspectorStat label="Dock" value={dock.length} />
 </InspectorStats>
 
 {#if detailed}
-  <InspectorTable columns={["Place", "Entry", "Kind"]} empty={home.length + dock.length === 0} empty_text="Desktop folder is empty.">
-    {#each dock as item, index (item.name)}
-      <tr>
-        <td>dock {index + 1}</td>
-        <td class="font-sans">{item.name}</td>
-        <td>{item.kind}</td>
-      </tr>
-    {/each}
+  <InspectorTable columns={["Place", "Entry", "Kind"]} empty={home.length === 0} empty_text="Desktop folder is empty.">
     {#each home as item, index (item.name)}
       <tr>
         <td>{index + 1}</td>
         <td class="font-sans">{item.name}</td>
-        <td>{item.kind}</td>
+        <td>{item.kind}{#if item.kind === "widget"} {item.size.w}×{item.size.h}{/if}</td>
       </tr>
     {/each}
   </InspectorTable>

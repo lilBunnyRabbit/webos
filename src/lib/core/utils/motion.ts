@@ -6,3 +6,8 @@
 export function motion_reduced(): boolean {
   return document.documentElement.dataset.motion === "off" || matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
+
+/** `ms`, or 0 when motion is reduced: the duration for a script-driven transition. */
+export function motion_ms(ms: number): number {
+  return motion_reduced() ? 0 : ms;
+}

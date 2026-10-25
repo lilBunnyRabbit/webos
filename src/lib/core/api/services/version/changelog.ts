@@ -10,6 +10,22 @@ export const CHANGELOG: Release[] = [
     title: "A list for a home",
     changes: [
       {
+        kind: NEW,
+        text: "On phones the home screen is now a simple list: the time, your recent apps, then your pinned apps and widgets, with All apps at the end to open the App Library.",
+      },
+      {
+        kind: NEW,
+        text: "Slide a finger down the letters on the right to see the apps under each one; slide left onto an app and let go to open it, or let go on the letters to see every app around that spot.",
+      },
+      {
+        kind: IMPROVED,
+        text: "The full app list on phones has a filter at the top, and Back or Home closes it.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Apps you had in the phone dock now sit at the end of your home list.",
+      },
+      {
         kind: IMPROVED,
         text: "Usage stats now load only after you allow them; until then, and after No thanks, nothing is sent.",
       },

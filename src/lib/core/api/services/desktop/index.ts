@@ -1,2 +1,2 @@
 export * from "./type";
-export { DesktopHelper, DesktopSort } from "./helper";
+export { DesktopHelper, DesktopSort, display_name } from "./helper";
