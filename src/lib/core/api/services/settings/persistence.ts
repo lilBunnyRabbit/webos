@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  AnalyticsConsent,
   AppearanceMotion,
   AppearanceRadius,
   AppearanceShadow,
@@ -58,6 +59,7 @@ export interface PersistedSettings {
   saved_themes: SavedTheme[];
   appearance: Appearance;
   live_options: LiveOptions;
+  analytics: AnalyticsConsent;
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -86,6 +88,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
       saved_themes: parse_saved_themes(data.saved_themes),
       appearance: parse_appearance(data.appearance),
       live_options: parse_live_options(data.live_options),
+      analytics: parse_analytics(data.analytics),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
@@ -182,6 +185,11 @@ const appearance_schema = z.object({
 export function parse_appearance(saved: unknown): Appearance {
   const result = appearance_schema.safeParse(typeof saved === "object" && saved !== null ? saved : {});
   return result.success ? result.data : { ...DEFAULT_APPEARANCE };
+}
+
+// Added after version 1 shipped: anything but a known answer means the question is still open.
+export function parse_analytics(saved: unknown): AnalyticsConsent {
+  return Object.values(AnalyticsConsent).find((answer) => answer === saved) ?? AnalyticsConsent.UNASKED;
 }
 
 export function serialize_settings(settings: PersistedSettings): string {

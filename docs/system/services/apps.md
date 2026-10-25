@@ -122,6 +122,7 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 4. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
 5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
 6. `remember(id)`: a user app moves to the front of the recent list ([below](#recent-apps)).
+7. `track_launch(id, kernel.mode, kernel.platform)` (`core/utils/analytics.ts`, ADR-070): pushes gtag's `app_open` event with `app_id`, `mode` (`desktop` for the full OS, `solo`) and `platform` (`desktop` | `mobile`). Never props, paths, file names or command text. A no-op when `window.gtag` is missing (tests, dev, localhost, blocked). Session restore goes through `create_instance`, so restored windows aren't counted; a solo tab counts its one window, not the blocked launches after it.
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
 

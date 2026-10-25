@@ -103,6 +103,7 @@ What are the implications of this decision?
 | [067](./067-browser-support-check.md) | Browser Support Check | 2026-10-23 | Implemented |
 | [068](./068-soft-surfaces.md) | Soft Surfaces | 2026-10-23 | Rejected |
 | [069](./069-tape-sketch.md) | Tape Sketch | 2026-10-25 | Implemented |
+| [070](./070-usage-analytics.md) | Usage analytics with consent | 2026-10-25 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

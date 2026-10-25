@@ -31,6 +31,7 @@ import { VERSION_STATE_PATH } from "../version/persistence";
 import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
+import { track_launch } from "$lib/core/utils/analytics";
 
 export class AppsService implements IAppsService {
   name = "AppsService";
@@ -235,6 +236,7 @@ export class AppsService implements IAppsService {
 
     const window_id = this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
     this.remember(id);
+    track_launch(id, this.kernel.mode, this.kernel.platform);
     return window_id;
   }
 

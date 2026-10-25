@@ -8,6 +8,7 @@ import { NotificationsService } from "../notifications/service.svelte";
 import { serialize_session } from "../session/persistence";
 import { SessionService } from "../session/service.svelte";
 import { SettingsService } from "../settings/service.svelte";
+import { SETTINGS_PATH } from "../settings/persistence";
 import { WindowsService } from "../windows/service.svelte";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { INSTALLED_PATH, serialize_installed } from "../apps/installed";
@@ -41,7 +42,7 @@ async function write(path: string, text: string) {
   await opfs.write_file(await handle.getFileHandle(name, { create: true }), text);
 }
 
-async function boot(seen?: string, { restore }: { restore?: Promise<boolean> } = {}): Promise<Kernel> {
+async function boot(seen?: string, { restore, intro }: { restore?: Promise<boolean>; intro?: Promise<void> } = {}): Promise<Kernel> {
   if (seen) {
     await write(VERSION_STATE_PATH, serialize_seen(seen));
     // Past the move to installed apps, so AppsService doesn't tidy and toast (ADR-040).
@@ -52,7 +53,7 @@ async function boot(seen?: string, { restore }: { restore?: Promise<boolean> } =
     await write("/var/lib/session/session.json", serialize_session({ windows: [window], frames: {} }));
   }
 
-  show = vi.fn(async (_component: unknown, props: AnyProps) => (is_announcement(props) ? undefined : (restore ?? false)));
+  show = vi.fn(async (_component: unknown, props: AnyProps) => (is_announcement(props) ? undefined : (intro ?? restore ?? false)));
   const booted = await boot_test_kernel({
     files: FilesService,
     settings: SettingsService,
@@ -72,6 +73,9 @@ interface AnyProps {
 }
 
 const is_announcement = (props: AnyProps) => Boolean(props.apps?.[0]?.manifest);
+const ASK = "Share which apps you open?";
+const asks = (kernel: Kernel) => kernel.service<NotificationsService>("notifications").all.filter((item) => item.title === ASK);
+const others = (kernel: Kernel) => kernel.service<NotificationsService>("notifications").all.filter((item) => item.title !== ASK);
 const announcements = () => show.mock.calls.map(([, props]) => props as AnyProps).filter(is_announcement);
 
 async function seen_on_disk(kernel: Kernel): Promise<string | null> {
@@ -87,7 +91,7 @@ describe("VersionService at boot", () => {
     const kernel = await boot();
     await vi.waitFor(() => expect(show).toHaveBeenCalledOnce());
     await vi.waitFor(async () => expect(await seen_on_disk(kernel)).toBe(current));
-    expect(kernel.service<NotificationsService>("notifications").all).toHaveLength(0);
+    expect(others(kernel)).toHaveLength(0);
   });
 
   test("an older seen version lists what's new and posts the Updated toast", async () => {
@@ -139,8 +143,44 @@ describe("VersionService at boot", () => {
   test("the current version already seen does nothing", async () => {
     const kernel = await boot(current);
     expect(kernel.service<VersionService>("version").unseen).toEqual([]);
-    expect(kernel.service<NotificationsService>("notifications").all).toHaveLength(0);
+    expect(others(kernel)).toHaveLength(0);
     expect(show).not.toHaveBeenCalled();
+  });
+});
+
+describe("usage stats ask", () => {
+  test("first boot asks once the introduction is closed", async () => {
+    let close!: () => void;
+    const closed = new Promise<void>((resolve) => (close = resolve));
+    const kernel = await boot(undefined, { intro: closed });
+    await vi.waitFor(() => expect(show).toHaveBeenCalled());
+    expect(asks(kernel)).toHaveLength(0);
+    close();
+    await vi.waitFor(() => expect(asks(kernel)).toHaveLength(1));
+  });
+
+  test("waits for the Restore answer, then Allow keeps the answer", async () => {
+    let answer!: (restore: boolean) => void;
+    const restore = new Promise<boolean>((resolve) => (answer = resolve));
+    const kernel = await boot(current, { restore });
+    await vi.waitFor(() => expect(show).toHaveBeenCalledOnce());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(asks(kernel)).toHaveLength(0);
+
+    answer(false);
+    await vi.waitFor(() => expect(asks(kernel)).toHaveLength(1));
+    const [ask] = asks(kernel);
+    expect(ask.duration).toBeNull();
+    ask.actions?.find((action) => action.label === "Allow")?.on_click();
+    expect(kernel.service<SettingsService>("settings").analytics).toBe("allowed");
+    await vi.waitFor(() => expect(localStorage.getItem("webos.analytics")).toBe("allowed"));
+  });
+
+  test("an answered question isn't asked again", async () => {
+    await write(SETTINGS_PATH, JSON.stringify({ version: 1, analytics: "declined" }));
+    const kernel = await boot(current);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(asks(kernel)).toHaveLength(0);
   });
 });
 

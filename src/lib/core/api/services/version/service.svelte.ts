@@ -6,11 +6,13 @@ import type {
   NotificationId,
   NotificationsService,
   SessionService,
+  SettingsService,
 } from "$lib/core/api";
 import { untrack } from "svelte";
-import { ArrowCircleUp as ArrowCircleUpIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
+import { ArrowCircleUp as ArrowCircleUpIcon, ChartBar as ChartBarIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { SessionStatus } from "../session/type";
+import { AnalyticsConsent } from "../settings/type";
 import { introduced_apps } from "./history";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
@@ -73,13 +75,14 @@ export class VersionService implements IVersionService {
   private update_toast: NotificationId | null = null;
   private poll_interval?: ReturnType<typeof setInterval>;
   private destroyed = false;
-  private dispose_announcement?: () => void;
+  private disposers: (() => void)[] = [];
 
   private files_service!: FilesService;
   private notifications_service!: NotificationsService;
   private dialogs_service!: DialogsService;
   private apps_service!: AppsService;
   private session_service!: SessionService;
+  private settings_service!: SettingsService;
 
   private writer = new LatestWriter(() => this.files_service, VERSION_STATE_PATH, "version state");
 
@@ -102,6 +105,7 @@ export class VersionService implements IVersionService {
     this.dialogs_service = $derived(this.kernel.service<DialogsService>("dialogs"));
     this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
     this.session_service = $derived(this.kernel.service<SessionService>("session"));
+    this.settings_service = $derived(this.kernel.service<SettingsService>("settings"));
   }
 
   async init() {
@@ -127,11 +131,14 @@ export class VersionService implements IVersionService {
       await Promise.all([intro_dialog(), this.apps_service.meta_ready]);
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
       this.show_intro().then(() => {
-        if (!this.destroyed) this.writer.write(serialize_seen(this.info.version));
+        if (this.destroyed) return;
+        this.writer.write(serialize_seen(this.info.version));
+        this.after_restore(() => this.ask_analytics());
       });
       return;
     }
 
+    this.after_restore(() => this.ask_analytics());
     if (compare_versions(seen, this.info.version) >= 0) return;
 
     await this.load_changelog();
@@ -143,12 +150,12 @@ export class VersionService implements IVersionService {
     if (this.unseen.length > 0) this.notify_updated();
 
     this.announced = introduced_apps(this.unseen).filter(({ app }) => this.apps_service.get(app));
-    if (this.announced.length > 0) this.announce_after_restore();
+    if (this.announced.length > 0) this.after_restore(() => this.show_announcement());
   }
 
   destroy() {
     this.destroyed = true;
-    this.dispose_announcement?.();
+    this.disposers.forEach((dispose) => dispose());
     clearInterval(this.poll_interval);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
     window.removeEventListener("vite:preloadError", this.on_preload_error);
@@ -294,14 +301,31 @@ export class VersionService implements IVersionService {
   }
 
   // Like RouterService's links: after the Restore answer, so an app opened from it lands above the restored windows.
-  private announce_after_restore(): void {
+  private after_restore(run: () => void): void {
     let shown = false;
-    this.dispose_announcement = $effect.root(() => {
-      $effect(() => {
-        if (shown || this.session_service.status === SessionStatus.PENDING) return;
-        shown = true;
-        untrack(() => this.show_announcement());
-      });
+    this.disposers.push(
+      $effect.root(() => {
+        $effect(() => {
+          if (shown || this.session_service.status === SessionStatus.PENDING) return;
+          shown = true;
+          untrack(run);
+        });
+      })
+    );
+  }
+
+  // No answer keeps it unasked, so a dismissed toast asks again next boot.
+  private ask_analytics(): void {
+    if (this.destroyed || this.settings_service.analytics !== AnalyticsConsent.UNASKED) return;
+    this.notifications_service.notify("settings", {
+      title: "Share which apps you open?",
+      message: "Anonymous stats on which apps get used, nothing from your files. Change it any time in Settings.",
+      icon: ChartBarIcon,
+      duration: null,
+      actions: [
+        { label: "Allow", on_click: () => (this.settings_service.analytics = AnalyticsConsent.ALLOWED) },
+        { label: "No thanks", on_click: () => (this.settings_service.analytics = AnalyticsConsent.DECLINED) },
+      ],
     });
   }
 

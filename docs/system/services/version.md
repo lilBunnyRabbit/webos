@@ -1,6 +1,6 @@
 # VersionService
 
-Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo), [ADR-049](../../adrs/049-lazy-app-metadata.md) (waits for app meta) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/components/update/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
+Key `version` · Depends on: `files`, `notifications`, `dialogs`, `apps`, `session`, `settings` · ADR: [ADR-004](../../adrs/004-version-update-system.md), [ADR-026](../../adrs/026-release-notes-intro.md), [ADR-038](../../adrs/038-app-announcements.md), [ADR-041](../../adrs/041-getting-started.md) (samples), [ADR-047](../../adrs/047-solo-app-open.md) (solo), [ADR-049](../../adrs/049-lazy-app-metadata.md) (waits for app meta), [ADR-070](../../adrs/070-usage-analytics.md) (usage stats ask) · Source: `src/lib/core/api/services/version/`, `src/lib/core/components/intro/`, `src/lib/core/components/announcement/`, `src/lib/core/components/update/`, `src/lib/core/utils/install{,.svelte}.ts`, `vite-plugin-version.ts` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -69,7 +69,7 @@ The bundle and `version.json` always carry the same `buildTimestamp`. Only a new
 
 ## State
 
-Seven `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `update_progress`, `unseen`, `announced`), `changelog` as `$state.raw`, and private `restart` (resolves the current wait as given up), `loading` (the kept `load_changelog()` promise), `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `update_toast`, `poll_interval`, `destroyed`, `dispose_announcement`, `writer` (`LatestWriter` for the seen marker). Nothing derived.
+Seven `$state` fields (`info`, `update_available`, `is_checking`, `update_stage`, `update_progress`, `unseen`, `announced`), `changelog` as `$state.raw`, and private `restart` (resolves the current wait as given up), `loading` (the kept `load_changelog()` promise), `last_check` (ms), `notified_build` (the `buildTimestamp` last toasted), `update_toast`, `poll_interval`, `destroyed`, `disposers` (the after-Restore effect roots), `writer` (`LatestWriter` for the seen marker). Nothing derived.
 
 ## Lifecycle
 
@@ -121,6 +121,8 @@ At boot (`init()`), after reading the seen marker:
 Tagging rules for `changelog.ts`: `apps` names the apps whose own UI or own commands the line is about. Shell-wide, launcher and desktop lines stay untagged, as do lines about a service (backups, tasks) rather than an app. A line about a retired app is tagged with its successor (Image Tools' history keeps the five image apps' lines; Text Viewer's lines belong to `text-editor`). `introduces` lists apps first shipped in that release; Style Guide and Example were never announced and have none.
 
 Announcement: when `announced` isn't empty, `init()` starts an `$effect.root` that waits for `session.status !== PENDING` (RouterService's pattern), so an app opened from it lands above the restored windows. It then imports `components/announcement/app-announcement.svelte` and, in parallel, awaits the apps' `meta_ready` (ADR-049), then takes each announced app from `apps.listings()`, so it arrives with its description and authors; then calls `dialogs.show(AppAnnouncement, { apps })` once, dismissible (Esc, outside click, the phone's Back). Nothing is persisted: it shows once because the seen marker moves at boot. The component loads every paged app's `preview` and `highlights` in one await and renders the card only then, so it opens at full size instead of growing (separate `{#await}` blocks rendered empty for a frame). The "Updated to vX" toast still shows. First boot shows the introduction and no announcement.
+
+Usage stats ask (ADR-070): private `after_restore(run)` is the effect above, shared by the announcement and the ask. On first boot it starts once the introduction closes; on any other boot (full mode only: `SoloVersionService.init()` is empty) it starts in `init()`. When `settings.analytics` is still `unasked`, it posts a sticky `settings` notification "Share which apps you open?" with Allow (`allowed`) and No thanks (`declined`). Closing it without an answer leaves `unasked`, so the next boot asks again. Nothing of its own is persisted; the answer lives in SettingsService.
 
 `AppAnnouncement` (`{ apps: { manifest, version }[] }`):
 

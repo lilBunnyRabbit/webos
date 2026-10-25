@@ -1,4 +1,4 @@
-import type { Appearance, FileDefaults, FontChoice, LiveOptions, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
+import type { AnalyticsConsent, Appearance, FileDefaults, FontChoice, LiveOptions, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
 import { FontRole, TaskbarPosition, TaskbarSize } from "./type";
 import { BRAND_DARK } from "./themes";
 import { DEFAULT_APPEARANCE, RADIUS_SCALE, SHADOW_STRENGTH, TEXT_SCALE } from "./appearance";
@@ -23,6 +23,7 @@ import {
   WALLPAPER_DIRECTORY_NAME,
 } from "./persistence";
 import { settings_shell } from "./shell";
+import { ANALYTICS_CONSENT_KEY, set_consent } from "$lib/core/utils/analytics";
 
 export class SettingsService implements ISettingsService {
   name = "SettingsService";
@@ -41,6 +42,7 @@ export class SettingsService implements ISettingsService {
   public saved_themes = $state<SavedTheme[]>([]);
   public appearance = $state<Appearance>({ ...DEFAULT_APPEARANCE });
   public live_options = $state<LiveOptions>({});
+  public analytics = $state<AnalyticsConsent>("unasked");
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -72,6 +74,7 @@ export class SettingsService implements ISettingsService {
       this.saved_themes = saved.saved_themes;
       this.appearance = saved.appearance;
       this.live_options = saved.live_options;
+      this.analytics = saved.analytics;
     }
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
@@ -113,6 +116,16 @@ export class SettingsService implements ISettingsService {
       }
 
       $effect(() => {
+        const answer = this.analytics;
+        try {
+          localStorage.setItem(ANALYTICS_CONSENT_KEY, answer);
+        } catch (error) {
+          console.warn("[SettingsService] Couldn't mirror the analytics answer", error);
+        }
+        set_consent(answer);
+      });
+
+      $effect(() => {
         this.writer.write(
           serialize_settings({
             version: SETTINGS_VERSION,
@@ -123,6 +136,7 @@ export class SettingsService implements ISettingsService {
             saved_themes: this.saved_themes,
             appearance: this.appearance,
             live_options: this.live_options,
+            analytics: this.analytics,
           })
         );
       });

@@ -14,6 +14,8 @@ export interface SettingsService extends IService {
   appearance: Appearance;
   /** Options of each live wallpaper used, by id, kept when switching away (ADR-057). Replace an entry wholesale; load parses each with its wallpaper's schema. */
   live_options: LiveOptions;
+  /** Whether usage stats may use cookies (ADR-070). Mirrored to localStorage so `index.html` can read it before OPFS. */
+  analytics: AnalyticsConsent;
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
   /**
@@ -26,6 +28,13 @@ export interface SettingsService extends IService {
   /** Font files in `/etc/fonts/`, by name. */
   installed_fonts(): Promise<string[]>;
 }
+
+export const AnalyticsConsent = {
+  UNASKED: "unasked",
+  ALLOWED: "allowed",
+  DECLINED: "declined",
+} as const;
+export type AnalyticsConsent = (typeof AnalyticsConsent)[keyof typeof AnalyticsConsent];
 
 export type FileDefaults = Record<string, AppId>;
 

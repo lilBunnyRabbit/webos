@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_APPEARANCE } from "./appearance";
-import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_appearance, parse_live_options, parse_settings, parse_wallpaper } from "./persistence";
+import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_analytics, parse_appearance, parse_live_options, parse_settings, parse_wallpaper } from "./persistence";
 import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turrets/options";
 import { derive_surfaces, legacy_surface } from "./themes";
 
@@ -120,5 +120,18 @@ describe("surface ladder migration", () => {
     expect(loaded.background_lightest).toBe(derived.background_lightest);
     expect(loaded.background_darkest).toBe(derived.background_darkest);
     expect(loaded.background_light).toBe("oklch(0.9 0 0)");
+  });
+});
+
+describe("analytics", () => {
+  test("keeps a known answer", () => {
+    expect(parse_analytics("allowed")).toBe("allowed");
+    expect(parse_analytics("declined")).toBe("declined");
+  });
+
+  test("settings saved before the question existed, or a broken answer, are still unasked", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.analytics).toBe("unasked");
+    expect(parse_analytics("yes")).toBe("unasked");
+    expect(parse_analytics(true)).toBe("unasked");
   });
 });

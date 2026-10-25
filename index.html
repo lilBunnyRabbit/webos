@@ -23,6 +23,35 @@
     <meta name="twitter:title" content="WebOS">
     <meta name="twitter:description" content="A desktop in your browser. Windows, files, a terminal and 40+ apps.">
     <meta name="twitter:image" content="https://lilbunnyrabbit.github.io/webos/og.png">
+    <script>
+      (() => {
+        const id = "G-YZEVME6886";
+        // Development and local previews never reach the real property; analytics.ts no-ops without gtag.
+        if ("%DEV%" === "true" || ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) return;
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () {
+          dataLayer.push(arguments);
+        };
+        gtag("consent", "default", {
+          analytics_storage: "denied",
+          ad_storage: "denied",
+          ad_user_data: "denied",
+          ad_personalization: "denied",
+        });
+        let answer = null;
+        try {
+          answer = localStorage.getItem("webos.analytics");
+        } catch {}
+        if (answer === "allowed") gtag("consent", "update", { analytics_storage: "granted" });
+        gtag("js", new Date());
+        // The hash and query can carry app props and file paths (#/app/{id}?path=…); only the page itself is sent.
+        gtag("config", id, { page_location: location.origin + location.pathname });
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
+        document.head.append(script);
+      })();
+    </script>
   </head>
   <body style="margin: 0; background: #17252c">
     <div

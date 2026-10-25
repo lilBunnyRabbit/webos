@@ -61,7 +61,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `settings` | `SettingsService` | `files`, `notifications` |
 | `windows` | `WindowsService` | none |
 | `files` | `FilesService` | none |
-| `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps`, `session` |
+| `version` | `VersionService` | `files`, `notifications`, `dialogs`, `apps`, `session`, `settings` |
 | `notifications` | `NotificationsService` | none |
 | `dialogs` | `DialogsService` | `windows` |
 | `apps` | `AppsService` | `windows`, `notifications`, `files`, `settings`, `dialogs` |
@@ -96,7 +96,7 @@ files, dialogs, notifications, windows, tasks ──────► backup
 files, tasks, notifications ────────────────────────► ai
 windows, apps, session, clipboard, notifications ───► router
 windows, dialogs, notifications ────────────────────► extract (desktop)
-files, notifications, dialogs, apps, session ───────► version
+files, notifications, dialogs, apps, session, settings ► version
 ```
 
 ### Init order

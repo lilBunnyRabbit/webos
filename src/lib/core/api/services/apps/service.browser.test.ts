@@ -146,6 +146,18 @@ describe("AppsService installed apps", () => {
   });
 });
 
+describe("AppsService usage stats", () => {
+  afterEach(() => delete (globalThis as { gtag?: unknown }).gtag);
+
+  test("a launch sends app_open with the app, mode and platform, never its props", async () => {
+    const kernel = await boot();
+    const gtag = vi.fn();
+    (globalThis as { gtag?: unknown }).gtag = gtag;
+    apps(kernel).launch("settings", { section: "about" });
+    expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "app_open", { app_id: "settings", mode: "desktop", platform: kernel.platform });
+  });
+});
+
 describe("AppsService recent apps", () => {
   async function recent_on_disk(kernel: Kernel): Promise<string[]> {
     const file = await kernel.service<FilesService>("files").get_file(RECENT_PATH);

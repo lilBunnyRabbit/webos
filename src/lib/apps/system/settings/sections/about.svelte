@@ -1,13 +1,15 @@
 <script lang="ts">
   import kernel, {
+    AnalyticsConsent,
     author_link,
     credits,
     OWNER,
     type AppsService,
+    type SettingsService,
     type VersionService,
   } from "$lib/core/api";
   import LogoLockup from "$lib/core/components/brand/logo-lockup.svelte";
-  import { Badge, Button, Section, SettingRow } from "$lib/core/components/ui";
+  import { Badge, Button, Section, SettingRow, Switch } from "$lib/core/components/ui";
   import { format_datetime } from "$lib/core/utils";
   import { installer } from "$lib/core/utils/install.svelte";
   import { FeedbackKind, issue_url, REPOSITORY } from "../feedback";
@@ -30,6 +32,7 @@
 
   const version = $derived(kernel.service<VersionService>("version"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
 
   const CREDIT_PREVIEW = 12;
   const credit_list = $derived(credits(apps.listings()));
@@ -140,6 +143,18 @@
       <Button onclick={() => open_issue(FeedbackKind.BUG)}>
         <BugIcon /> Report <ArrowSquareOutIcon class="size-3.5" />
       </Button>
+    </SettingRow>
+  </Section>
+
+  <Section setting="usage-stats" title="Usage stats">
+    <SettingRow label="Share usage stats" description="Which apps you open, anonymously. Nothing from your files is sent.">
+      {#snippet children({ id, describedby })}
+        <Switch
+          {id}
+          aria-describedby={describedby}
+          bind:checked={() => settings.analytics === AnalyticsConsent.ALLOWED, (on) => (settings.analytics = on ? AnalyticsConsent.ALLOWED : AnalyticsConsent.DECLINED)}
+        />
+      {/snippet}
     </SettingRow>
   </Section>
 

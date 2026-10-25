@@ -1,6 +1,6 @@
 # SettingsService
 
-Key `settings` · Depends on: `files`, `notifications` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens), [ADR-042](../../adrs/042-quick-launch.md) (`taskbar.pinned`), [ADR-057](../../adrs/057-live-wallpapers.md) (`live` wallpaper, `live_options`), ADR-015 revisions (`taskbar.size`, `taskbar.auto_hide`, `taskbar.seconds`; app fonts, 2026-10-21) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
+Key `settings` · Depends on: `files`, `notifications` · ADR: [ADR-002](../../adrs/002-service-lifecycle.md) (lifecycle), [ADR-011](../../adrs/011-desktop-enhancements.md) (wallpaper), [ADR-021](../../adrs/021-file-system-hierarchy.md) (`/etc`), [ADR-015](../../adrs/015-customization-theming.md) (theming), [ADR-018](../../adrs/018-file-associations.md) (`file_defaults`), [ADR-024](../../adrs/024-design-system.md) (surface tokens), [ADR-042](../../adrs/042-quick-launch.md) (`taskbar.pinned`), [ADR-057](../../adrs/057-live-wallpapers.md) (`live` wallpaper, `live_options`), [ADR-070](../../adrs/070-usage-analytics.md) (`analytics`), ADR-015 revisions (`taskbar.size`, `taskbar.auto_hide`, `taskbar.seconds`; app fonts, 2026-10-21) · Source: `src/lib/core/api/services/settings/` · Inspector: `inspector.svelte` (ADR-020)
 
 | File | Contents |
 |------|----------|
@@ -8,7 +8,7 @@ Key `settings` · Depends on: `files`, `notifications` · ADR: [ADR-002](../../a
 | `fonts.ts` | `FONT_DIRECTORY` (`/etc/fonts`), `FONT_EXTENSIONS`, `FONT_FILE_ACCEPT`, `BUILTIN_FONTS` (`burrow`: two variable faces, upright and italic), `DEFAULT_FONT_NAMES` (`Inter`, `Hack`), `DEFAULT_FONT`, `is_font_file_name()`, `font_label()`, `same_font()` |
 | `core/utils/font-loader.ts` | Shared with apps that render a chosen font themselves: Warren imports it in its own lazy chunk. Never on the boot path: SettingsService `import()`s it on the first non-default font. `fetch_faces()` downloads a built-in's faces with their descriptors; `sfnt_style()` reads weight (`OS/2` `usWeightClass`, or a variable font's `fvar` `wght` range) and italic (`OS/2` `fsSelection` bit 0 or `head` `macStyle` bit 1); `file_faces()` splits a `.ttc` with `split_collection()` (`core/utils/font-collection.ts`); `descriptors_of()` turns that into `FontFace` descriptors; `load_faces()` builds and loads the `FontFace`s |
 | `service.svelte.ts` | The class |
-| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `PersistedSettings`, `parse_settings()`, `parse_wallpaper()`, `parse_live_options()`, `parse_appearance()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
+| `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `PersistedSettings`, `parse_settings()`, `parse_wallpaper()`, `parse_live_options()`, `parse_appearance()`, `parse_analytics()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
 | `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `WHILE_TRUE`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `appearance.ts` | `DEFAULT_APPEARANCE`, `RADIUS_SCALE` (`sharp` 0.4, `default` 1, `round` 1.5), `SHADOW_STRENGTH` (`none` 0, `subtle` 0.5, `default` 1, `strong` 1.4), `TEXT_SCALE` (`s` 0.9375, `m` 1, `l` 1.0625) |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
@@ -24,7 +24,7 @@ Owns the user's persisted OS preferences: theme colour tokens, saved themes, tas
 
 ## Public API
 
-The API is seven plain reactive fields, which consumers assign to directly, plus methods for what needs a file copied: wallpaper images and fonts.
+The API is eight plain reactive fields, which consumers assign to directly, plus methods for what needs a file copied: wallpaper images and fonts.
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
@@ -35,6 +35,7 @@ The API is seven plain reactive fields, which consumers assign to directly, plus
 | `saved_themes` | `saved_themes: SavedTheme[]` (`{ name, theme: Theme }`) | Themes the user named, in the order saved. Change through the `saved-themes.ts` helpers and assign the result. Written by Settings › Theme (Save…, Rename…, Delete…, importing a `.webos-theme` file) and `theme save` / `theme delete`. Exported and imported as `.webos-theme` files by the Settings app ([Settings](../system-apps.md#settings)); the service has no file format of its own for them. Kept by Backup & reset › Reset settings |
 | `appearance` | `appearance: Appearance` = `{ radius: "sharp" \| "default" \| "round", motion: "system" \| "off", shadow: "none" \| "subtle" \| "default" \| "strong", text: "s" \| "m" \| "l", font: { sans: FontChoice, mono: FontChoice } }` | The non-colour look (ADR-015 revision). Not part of a theme: presets, the generator and saved themes never touch it. Mutate a field (`settings.appearance.radius = "round"`); replace `font` wholesale (`settings.appearance.font = { ...font, sans: choice }`). `FontChoice` is `{ kind: "default" }` (Inter / Hack), `{ kind: "builtin", id }` (a `BUILTIN_FONTS` key) or `{ kind: "file", name }` (a file in `/etc/fonts`). Written by Settings › Text & interface; reset by Backup & reset › Reset settings |
 | `live_options` | `live_options: LiveOptions` (`Partial<Record<LiveWallpaperId, unknown>>`) | Each live wallpaper's options by id (ADR-057), kept when switching away so switching back restores them. Replace an entry wholesale (`settings.live_options = { ...settings.live_options, [id]: next }`). Values are parsed by the entry's schema on load; readers parse again with `live_options_of(id, value)`, which gives the defaults for a missing entry. Written by the selected wallpaper's options form in Settings › Wallpaper › Live wallpapers; cleared by Backup & reset › Reset settings |
+| `analytics` | `analytics: AnalyticsConsent` (`"unasked" \| "allowed" \| "declined"`) | Whether usage stats may use cookies (ADR-070). `unasked` until the visitor answers the ask (VersionService) or flips Settings › About › Usage stats › Share usage stats (on = `allowed`, off = `declined`). Mirrored to localStorage, see Lifecycle. Reset settings leaves it alone |
 | `set_wallpaper_image` | `(source: string \| File) => Promise<void>` | Copies a path or a device file (ADR-031 `string \| File`) to `/var/lib/wallpaper/{base36 time}-{name}`, sets `wallpaper` to it keeping the previous image's fit, dim and blur (else fill, 0, 0), then prunes the folder. Throws when the path doesn't exist. Callers: Settings › Wallpaper, `set_wallpaper()` in `file-actions.ts` (Explorer, desktop, Media Preview) |
 | `use_font` | `(role: FontRole, source: string \| File) => Promise<void>` | Copies a path or a device file (`.ttc .ttf .otf .woff .woff2`, checked by name) to `/etc/fonts/{name}`, overwriting a file of that name (creating the folder on first use), and sets `appearance.font[role]` to it. Reinstalling a name a role already uses loads it again. Throws when the path doesn't exist or the name isn't a font file. Callers: Settings › Text & interface › Fonts, Font Viewer and Font Maker "Use as app font" |
 | `remove_font` | `(name: string) => Promise<void>` | Deletes `/etc/fonts/{name}`; every role that used it goes back to `default` |
@@ -71,6 +72,7 @@ wallpaper     = $state<Wallpaper>({ kind: "preset", preset: "grid" });
 saved_themes  = $state<SavedTheme[]>([]);
 appearance    = $state<Appearance>({ ...DEFAULT_APPEARANCE });
 live_options  = $state<LiveOptions>({});
+analytics     = $state<AnalyticsConsent>("unasked");
 ```
 
 Private: `files_service` (`$derived` in the constructor), `dispose_effects`, and `writer: LatestWriter` for `SETTINGS_PATH`.
@@ -84,12 +86,13 @@ Nothing is derived inside the service. Consumers derive from it. For example, `d
 1. `files.get_file("/etc/settings.json")`.
 2. `take_legacy_settings()`: read and **remove** the old localStorage key `webos.settings`. This runs on every boot, file or not, so a stale legacy copy can never come back later.
    `take_v0_settings()` does the same for the v0 React key `settings` (zustand `{ state: { theme, taskbar } }`): it keeps the taskbar position, and the theme only if it differs from v0's saved defaults (otherwise Brand Dark). `webos.settings` wins if both exist.
-3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar`, `file_defaults`, `wallpaper`, `saved_themes`, `appearance` and `live_options`. Then prune `/var/lib/wallpaper` without awaiting: every file but the current image is deleted, so an image left behind when a preset was chosen goes at the next boot. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
-4. Start an `$effect.root` with five effects:
+3. Use the file's `parse_settings()` result if the file exists, otherwise the legacy result. If that's non-null, assign `theme`, `taskbar`, `file_defaults`, `wallpaper`, `saved_themes`, `appearance`, `live_options` and `analytics`. Then prune `/var/lib/wallpaper` without awaiting: every file but the current image is deleted, so an image left behind when a preset was chosen goes at the next boot. A file that exists but doesn't parse means defaults, even when a legacy copy was there.
+4. Start an `$effect.root` with six effects:
    - **Token writer:** for each `[key, value]` of `theme`, call `document.documentElement.style.setProperty("--" + key.replaceAll("_", "-"), value)`, so `background_dark` is written as `--background-dark`. Then set `documentElement.style.colorScheme` to `light` when the applied background's lightness is above 0.6, otherwise `dark`. The lightness comes from a probe element (`background_lightness()`), so hex and relative colour syntax work too ([theming](../theming.md#color-scheme)). The probe forces a style recalc, so it's skipped (the previous `color-scheme` kept) when `theme.background` is the same string as last run and contains no `var(`: editing any other token doesn't probe.
    - **Appearance writer:** sets `--radius-scale`, `--shadow-strength` and `--text-scale` on `<html>` from `RADIUS_SCALE`, `SHADOW_STRENGTH` and `TEXT_SCALE`, and `data-motion="off"` on `<html>` while `appearance.motion` is `off` (removed otherwise).
    - **Font loaders**, one per role (`sans`, `mono`): when `appearance.font[role]` changes to another choice (or `use_font` reinstalled its file), load it without blocking. See [Fonts](#fonts).
-   - **Saver:** `writer.write(serialize_settings({ version: 1, theme, taskbar, file_defaults, wallpaper, saved_themes, appearance, live_options }))`. It tracks every field deeply, because `JSON.stringify` reads every property.
+   - **Analytics mirror** (ADR-070): writes `analytics` to localStorage `webos.analytics` (`ANALYTICS_CONSENT_KEY` in `core/utils/analytics.ts`) and calls `set_consent(analytics)`, which updates gtag's `analytics_storage` (granted only for `allowed`; a no-op without gtag). `index.html` reads the mirror before gtag's `config`, because OPFS isn't readable that early. Runs at boot too, so a restored backup or a reset file re-syncs the mirror.
+   - **Saver:** `writer.write(serialize_settings({ version: 1, theme, taskbar, file_defaults, wallpaper, saved_themes, appearance, live_options, analytics }))`. It tracks every field deeply, because `JSON.stringify` reads every property.
 
 `destroy()` disposes the root. A write already queued still finishes. Nothing extra is saved on destroy, because the saver has already run after every change.
 
@@ -101,9 +104,10 @@ Nothing is derived inside the service. Consumers derive from it. For example, `d
 |-|-|
 | Store | OPFS, through FilesService |
 | Path | `/etc/settings.json` (ADR-021: OS config lives in `/etc`) |
-| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"], "size": "medium", "auto_hide": false, "seconds": false }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": …, "shadow": …, "text": …, "font": { "sans": FontChoice, "mono": FontChoice } }, "live_options": { "turrets": { "mode": "shield", "pace": "normal", "sound": false, "volume": 0.5 } } }`, pretty-printed (2 spaces) |
+| Format | `{ "version": 1, "theme": Theme, "taskbar": { "position": …, "pinned": ["app-id"], "size": "medium", "auto_hide": false, "seconds": false }, "file_defaults": { ".ext": "app-id" }, "wallpaper": Wallpaper, "saved_themes": [{ "name": …, "theme": Theme }], "appearance": { "radius": …, "motion": …, "shadow": …, "text": …, "font": { "sans": FontChoice, "mono": FontChoice } }, "live_options": { "turrets": { "mode": "shield", "pace": "normal", "sound": false, "volume": 0.5 } }, "analytics": "unasked" }`, pretty-printed (2 spaces) |
 | Images | `/var/lib/wallpaper/`, copies owned by the OS. Only the current image is kept |
 | Fonts | `/etc/fonts/`, copies owned by the OS, kept until removed in Settings › Text & interface › Fonts. Backups carry them with `/etc` |
+| Mirror | localStorage `webos.analytics`: a copy of `analytics` for `index.html` (ADR-070). Never read back by the service; the file wins |
 | Version | `SETTINGS_VERSION = 1` |
 | Written | 300 ms after the last change (debounced), flushed when the tab hides. Also right after `init()` when the file is missing or its normalized text differs from what was read; an unchanged file isn't rewritten. |
 | Legacy | localStorage `webos.settings` (same format), then v0 `settings` (zustand). Imported once when `/etc/settings.json` doesn't exist, removed on every boot |
@@ -124,6 +128,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - `file_defaults`: keeps entries whose key starts with `.` and whose value is a string. It's an additive field, so v1 blobs without it load as `{}`. The app id is not checked against the registry here. `apps.open()` deals with stale ids.
 - `wallpaper` (`parse_wallpaper`, zod): additive like `file_defaults`, so a missing or invalid value is the grid preset. An image path must be inside `/var/lib/wallpaper/`; a bad `fit` becomes `fill`, an out-of-range `dim` or `blur` becomes 0. The image file isn't checked here; a missing one draws the glow. A `live` wallpaper must name an id in `LIVE_WALLPAPERS` (own keys only), else it's the grid preset.
 - `live_options` (`parse_live_options`): additive; missing or not an object → `{}`. Ids not in the registry are dropped; each kept entry goes through `live_options_of()`: the entry's zod schema with a `.catch` per field, so a broken field falls back alone, and a value that isn't an object is all defaults.
+- `analytics` (`parse_analytics`): additive; anything but `unasked`, `allowed` or `declined` is `unasked`, so an older file asks once.
 - `saved_themes`: additive; entries need a non-empty trimmed name, the first of each name (case ignored) wins, each theme merged like `theme`. Missing → `[]`.
 - `appearance` (`parse_appearance`, zod): additive; each field falls back to its default (`default`, `system`, `default`, `m`) on its own, so one unknown value doesn't reset the others. Missing or not an object → `DEFAULT_APPEARANCE`. `font.sans` and `font.mono` fall back to `default` on their own too: a `builtin` id must be a `BUILTIN_FONTS` key, a `file` name a plain base name (no `/` or `\`, not dotted, at most 120 characters) ending in a font extension. Whether the file exists is found out when it loads.
 - Write errors (quota, OPFS failure) → `console.error("Failed to save settings:")`; the writer moves on to the next queued text. A legacy-key read or remove that throws counts as no legacy copy.
@@ -158,7 +163,7 @@ The UI font (`sans`) and the code font (`mono`) are chosen per role in `appearan
 
 ## Divergence from ADR
 
-- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide` / `taskbar.seconds`, `saved_themes` and `appearance` (ADR-015 revisions) and `live_options` (ADR-057) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
+- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide` / `taskbar.seconds`, `saved_themes` and `appearance` (ADR-015 revisions) , `live_options` (ADR-057) and `analytics` (ADR-070) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
 
 ## Shell
 

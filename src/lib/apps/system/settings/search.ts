@@ -82,6 +82,7 @@ export const SETTINGS: SettingEntry[] = [
   { id: "browser-support", page: "about", label: "Browser support", keywords: ["compatibility", "safari", "firefox", "unsupported", "features"] },
   { id: "introduction", page: "about", label: "Introduction", keywords: ["tour", "getting started", "welcome", "help"] },
   { id: "feedback", page: "about", label: "Feedback", keywords: ["bug", "issue", "feature request", "propose an app", "github"] },
+  { id: "usage-stats", page: "about", label: "Share usage stats", keywords: ["analytics", "privacy", "tracking", "cookies", "consent"] },
   { id: "credits", page: "about", label: "Credits", keywords: ["authors", "who made"] },
 ];
 
