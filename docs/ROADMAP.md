@@ -252,7 +252,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Shell: `task list`, `task cancel`, `task retry`, `task clear`
 - [ ] Keyboard shortcut: owner said none for now
 - [x] PDF Tools as task groups: a task per page, part, PDF or image, then a write step
-- [ ] Image Tools batches as a task group
+- [x] Image Tools batches as a task group (Convert, Fit, Squash run as task groups)
 - [x] Backup create and restore as tasks (owner, 2026-10-16; [ADR-037 revision](adrs/037-backups.md), [brainstorm](brainstorm/2026-10-16_backup-as-tasks.md)): create is a task per area, then Save to device; restore unpacks each area into `/tmp/restore` (cancellable, nothing changed), then replaces and reloads (ignores Cancel)
 
 ### URL Deep Linking & Share System
@@ -486,6 +486,21 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   3. Render-time clamp: display = clamp(stored, container); stored bounds change only on drag, so growing back restores the layout. Needs a stored vs displayed split.
   4. Recovery action ("Gather windows" in a taskbar menu or a shortcut). Combines with 2.
 
+## Open owner calls (2026-10-26)
+
+Decisions waiting on the owner from the Speech, Docs and Paste builds. Nothing here gets built before the answer.
+
+- [ ] Paint and Hopsprite paste: a pasted image opens as a new file, or lands as a selection in the open one ([brainstorm](brainstorm/2026-10-26_paste.md))
+- [ ] `cat notes.md | say` reads the markdown symbols aloud: the shell `say` has no markdown option yet ([ADR-074](adrs/074-speech-service.md))
+
+Not checked yet (needs a real device or the owner's eyes):
+
+- [ ] A real phone's clipboard permission prompt (Paste… in the picker, Ctrl+V)
+- [ ] The file picker inside a popped-out mini window (ADR-043)
+- [ ] Docs in the light theme; Docs pinch-zoom on a real device
+- [ ] Speech with real voices on a phone
+- [ ] The README banner in GitHub's light theme
+
 ## Known bugs (system reference pass, 2026-10-11)
 
 Found while writing `docs/system/`. Details and file:line on each page's "Known gaps".
@@ -621,8 +636,8 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [ ] Touch gesture support
 
 ### SEO & Social
-- [ ] Open Graph meta tags (dynamic per route)
-- [ ] Twitter card support
+- [-] Open Graph meta tags: static ones in `index.html` with `og.png`; per-route ones need a build step per solo link
+- [x] Twitter card support (`summary_large_image` in `index.html`)
 - [ ] Demo mode preview images
 
 ### Usage analytics
@@ -632,7 +647,7 @@ Found while writing `docs/system/`. Details and file:line on each page's "Known 
 - [-] GitHub Actions build pipeline (check, unit tests, build on push to master; no PR trigger)
 - [ ] Automated testing on PR
 - [x] Automated deployment to GitHub Pages (`deploy.yml`: check, build, deploy on push to `master`)
-- [ ] Version tagging
+- [x] Version tagging: CI tags the newest `v*` after a deploy (`scripts/discord-release.ts`)
 - [x] Pipeline status in Settings › About and `ci status` (newest master run and its jobs, public GitHub API, no token; [brainstorm](brainstorm/2026-10-22_ci-status.md))
 
 ---
