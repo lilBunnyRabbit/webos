@@ -17,8 +17,7 @@ src/assets/version.json
 public/version.json
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+.vscode
 .idea
 .DS_Store
 *.suo
@@ -31,3 +30,6 @@ _old/
 .vitest/
 
 .claude/worktrees/
+
+# Playwright MCP browser checks
+.playwright-mcp/

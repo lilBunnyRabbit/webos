@@ -1,3 +1,0 @@
-Read CLAUDE.md, then docs/PRINCIPLES.md and docs/CONVENTIONS.md. They are the source of truth for this repo.
-
-Short version: Svelte 5 runes only, no `any`, snake_case identifiers, kebab-case files, services via `kernel.service<T>("key")` (never destructured), theme tokens only, no new dependencies without asking, and NEVER make an architectural decision yourself: stop and question the owner (see CLAUDE.md, "Architecture is the owner's call, always").
