@@ -14,7 +14,6 @@
   import Generate from "./sections/generate.svelte";
   import Interface from "./sections/interface.svelte";
   import Notifications from "./sections/notifications.svelte";
-  import Offline from "./sections/offline.svelte";
   import Related from "./sections/related.svelte";
   import Roadmap from "./sections/roadmap.svelte";
   import Shortcuts from "./sections/shortcuts.svelte";
@@ -186,8 +185,6 @@
         <Speech />
       {:else if current.value === "backup"}
         <Backup />
-      {:else if current.value === "offline"}
-        <Offline />
       {:else if current.value === "whats-new"}
         <WhatsNew />
       {:else if current.value === "roadmap"}

@@ -2,43 +2,38 @@ import type { IService } from "../../type";
 import type { AppId } from "../apps/type";
 
 export const StoreStatus = {
-  /** A system app: precached with the core, always there. */
-  SYSTEM: "system",
+  /** Every file the app reaches is in this build's cache: it opens offline. */
   SAVED: "saved",
   DOWNLOADING: "downloading",
+  /** Installed, but its files aren't all on this device yet (offline, or a download still to come). */
   NOT_SAVED: "not-saved",
+  NOT_INSTALLED: "not-installed",
 } as const;
 export type StoreStatus = (typeof StoreStatus)[keyof typeof StoreStatus];
 
 /**
- * Which user apps work offline (ADR-065). The service worker precaches only the core and the system apps; a user app
- * loads on demand into a per-build cache. Picked apps are downloaded whole after every update, and an app opened in a
- * build is downloaded whole too, so both open offline until the next update.
+ * Keeps installed apps on the device (ADR-077). The service worker precaches only the core; every app, system apps
+ * included, loads into a per-build cache. Installing an app downloads its whole file list, an update downloads every
+ * installed app again (unchanged files copied), and uninstalling deletes the files no other installed app lists.
  */
 export interface StoreService extends IService {
   readonly online: boolean;
 
-  /** User apps the user keeps offline, from `/etc/offline.json`. System apps are never in it. */
-  readonly picked: ReadonlySet<AppId>;
-
+  /** True while this tab runs a download job. */
   readonly syncing: boolean;
 
-  is_picked(id: AppId): boolean;
-
-  /** Every file the app's window can reach is in this build's cache. System apps always are. A set lookup. */
+  /** Every file the app's window can reach is in this build's cache. A set lookup. */
   is_saved(id: AppId): boolean;
-
-  can_open(id: AppId): boolean;
 
   status(id: AppId): StoreStatus;
 
-  /** Ticks or unticks an app. Ticking one that isn't saved starts a sync. System apps are ignored. */
-  set_picked(id: AppId, keep: boolean): void;
+  /** 0 to 1 while the app downloads in this tab, `null` otherwise. Reactive: the icons' progress ring reads it. */
+  progress(id: AppId): number | null;
 
   /**
-   * Downloads the picked apps that aren't saved as one task (a task per app, Cancel, Retry), then deletes older builds'
-   * caches. Only the tab holding the `webos.offline.sync` lock runs it; another tab's call waits its turn and finds
-   * the work done. Never throws.
+   * Downloads the installed apps that aren't saved as one task (a task per app, Cancel, Retry), then deletes older
+   * builds' caches. Only the tab holding the `webos.store.sync` lock runs it; another tab's call waits its turn and
+   * finds the work done. Never throws; a no-op in dev.
    */
   sync(): Promise<void>;
 }

@@ -5,6 +5,22 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.74.0",
+    date: "2026-10-26",
+    title: "App Store",
+    changes: [
+      { kind: NEW, apps: ["app-library"], text: "The App Library is now the App Store: Install an app to keep it, or just Open it without installing." },
+      {
+        kind: IMPROVED,
+        text: "Installed apps download right away and work offline, and they update on their own, with a ring on each app's icon while it downloads.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Opening a file or a link with an app you haven't installed opens it without installing it, and offers Install.",
+      },
+    ],
+  },
+  {
     version: "3.73.0",
     date: "2026-10-26",
     title: "Paste to open",

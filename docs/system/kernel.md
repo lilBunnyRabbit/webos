@@ -73,7 +73,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `shell` | `ShellService` | `files`, `dialogs`, `notifications` |
 | `shortcuts` | `ShortcutsService` | `windows`, `dialogs`, `shell` |
 | `tasks` | `TasksService` | `notifications` |
-| `store` | `StoreService` | `files`, `apps`, `tasks`, `notifications`, `windows` (an app's first open saves it, ADR-065) |
+| `store` | `StoreService` | `files`, `apps`, `tasks` (ADR-077) |
 | `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows`, `tasks` |
 | `ai` | `AiService` | `files`, `tasks`, `notifications`. `MobileAiService` on mobile, picked by `platform_services` (ADR-046) |
 | `speech` | `SpeechService` | `settings`, `windows`, `files`. One class everywhere, `import()`ed beside the boot chunk like `ai` (ADR-074) |
@@ -92,7 +92,7 @@ windows, apps, files, dialogs, notifications ───────► session
 files, dialogs, notifications ──────────────────────► shell
 windows, dialogs, shell ────────────────────────────► shortcuts
 notifications ──────────────────────────────────────► tasks
-files, apps, tasks, notifications, windows ─────────► offline
+files, apps, tasks ───────────────────────────────► store
 files, notifications, apps, shell ──────────────────► scheduler
 files, dialogs, notifications, windows, tasks ──────► backup
 files, tasks, notifications ────────────────────────► ai
@@ -145,7 +145,7 @@ Which services implement which hooks today:
 | windows (both, in `BaseWindowsService`) | `beforeunload` listener (warns while a window is dirty, ADR-029), `visibilitychange` listener (page hidden state) | remove them |
 | shortcuts | register the OS defaults, global `keydown` listener ([shortcuts](services/shortcuts.md)) | remove the listener, dispose the defaults |
 | scheduler | read `/var/lib/scheduler/jobs.json`, open the `webos:scheduler` BroadcastChannel, wake-up listeners (`visibilitychange`, `resume`, `pageshow`, `focus`), the folder-revision and uninstalled-app effects, the notification-click listener, post `webos:ready` to the service worker, request the leader lock **without awaiting it** ([scheduler](services/scheduler.md#lifecycle)) | clear the timer, abort the lock request or release the lock, close the channel, remove every listener and effect |
-| store | `online`/`offline` and `visibilitychange` listeners; read `/etc/offline.json` and `/var/lib/offline/state.json` (a new build resets the saved set; the migration toast on an existing install), the folder-revision and open-windows effects, then a sync on idle after an update or with picked apps left to save ([store](services/store.md#lifecycle)) | remove the listeners, dispose the effects |
+| store | `online`/`offline` and `visibilitychange` listeners; read `/var/lib/store/state.json` (or the old `/var/lib/offline/state.json` once; a new build resets the saved set), install the apps of an old `/etc/offline.json` and delete it, the folder-revision and installed-set effects, then a sync on idle after an update or with installed apps left to save ([store](services/store.md#lifecycle)) | remove the listeners, dispose the effects |
 | apps, clipboard, tasks, backup | none | none |
 | ai | asks the browser which features it has, **without awaiting** (every feature reads `no` until it answers) ([ai](services/ai.md#lifecycle)); the mobile variant has no `init` | destroy kept model sessions |
 | speech | lists the browser's voices and listens for `voiceschanged`; starts the effect that stops a closed window's speech ([speech](services/speech.md#lifecycle)) | cancel speech, remove the listener |

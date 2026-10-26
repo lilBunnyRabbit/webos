@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { assets_cache, parse_list, pool, stale_caches } from "./lists";
+import { assets_cache, parse_list, pool, stale_caches, unshared } from "./lists";
 import { parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
 
 describe("caches", () => {
@@ -46,6 +46,14 @@ describe("pool", () => {
     });
     await expect(run).rejects.toThrow("nope");
     expect(started).toEqual([1, 2]);
+  });
+});
+
+describe("unshared", () => {
+  test("keeps only the files no other list holds", () => {
+    const own = ["assets/paint.js", "assets/canvas.js", "assets/paint.css"];
+    expect(unshared(own, [["assets/canvas.js", "assets/cards.js"], ["assets/x.js"]])).toEqual(["assets/paint.js", "assets/paint.css"]);
+    expect(unshared(own, [])).toEqual(own);
   });
 });
 

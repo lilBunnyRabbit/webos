@@ -21,7 +21,7 @@ export interface OfflineListFile {
 /** Cached by their own runtime rules in `vite.config.ts` (or never), so never part of a list. */
 export const RUNTIME_CACHED = /(\.(wasm|onnx|ttf|ttc|aff|dic)$)|(^assets\/mammoth-[^/]+\.js$)/;
 
-const APP_INDEX = /\/apps\/(system|user)\/([^/]+)\/index\.ts$/;
+const APP_INDEX = /\/apps\/(?:system|user)\/([^/]+)\/index\.ts$/;
 const SHARED_CHUNKS = new Set(["core", "app-boot", "app-meta"]);
 // Content-hashed file names (`name-HASH8.ext`), as a worker or a `new URL()` asset is named inside a file's source.
 const HASHED_NAME = /[\w.-]+-[\w-]{8}\.[a-z0-9]+/g;
@@ -40,7 +40,7 @@ function reach(files: Map<string, BundleFile>, start: Iterable<string>, stop: (n
   return seen;
 }
 
-// Core is what boot reaches without entering a user app's lazy code, so every system app is in it.
+// Core is what boot reaches without entering an app's lazy code; system apps are apps like any other (ADR-077).
 export function offline_lists(files: BundleFile[], boot: string[], app_roots: Map<string, Set<string>>): OfflineLists {
   const by_name = new Map(files.map((file) => [file.name, file]));
   const roots = new Set([...app_roots.values()].flatMap((set) => [...set]));
@@ -102,14 +102,14 @@ export function offline_plugin(build: number) {
       }
       for (const id of chunk_of.keys()) {
         const match = APP_INDEX.exec(id);
-        if (!match || match[1] !== "user") continue;
+        if (!match) continue;
         const own = new Set<string>();
         for (const lazy of this.getModuleInfo(id)?.dynamicallyImportedIds ?? []) {
           const chunk = chunk_of.get(lazy);
           const shared = chunk && bundle[chunk]?.type === "chunk" && SHARED_CHUNKS.has((bundle[chunk] as Rollup.OutputChunk).name);
           if (chunk && !shared) own.add(chunk);
         }
-        app_roots.set(match[2], own);
+        app_roots.set(match[1], own);
       }
 
       const boot = Object.values(bundle)

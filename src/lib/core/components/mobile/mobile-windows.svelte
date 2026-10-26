@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
+  import kernel, { type AppsService, type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Cards as CardsIcon, X as XIcon } from "phosphor-svelte";
   import { Button, IconButton } from "../ui";
@@ -10,6 +10,7 @@
   let { switcher, onpick }: { switcher: boolean; onpick: (id: WindowId) => void } = $props();
 
   const windows = $derived(kernel.service<MobileWindowsService>("windows"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
   const list = $derived(windows.list());
   const recent = $derived(windows.recent());
   const rank = $derived(new Map(recent.map((id, index) => [id, index])));
@@ -114,6 +115,9 @@
             <instance.app.manifest.icon class="size-5 shrink-0" weight="duotone" />
             <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
             {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
+            {#if !apps.is_installed(instance.app.id)}
+              <Button size="sm" pressed aria-label="Install {instance.app.manifest.name}" onclick={() => apps.install(instance.app.id)}>Install</Button>
+            {/if}
             <IconButton label="Close {instance.app.manifest.name}" size="sm" onclick={() => close(id)}>
               <XIcon weight="bold" />
             </IconButton>

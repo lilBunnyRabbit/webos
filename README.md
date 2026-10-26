@@ -53,7 +53,7 @@ flowchart TD
     extract["extract<br/>pop-out window, desktop only"]
     scheduler["scheduler<br/>alarms and timers"]
     tasks["tasks<br/>background jobs"]
-    store["store<br/>apps kept offline"]
+    store["store<br/>installed apps, downloads"]
     backup["backup<br/>zip to the device"]
     ai["ai<br/>on-device model"]
     speech["speech<br/>read aloud"]

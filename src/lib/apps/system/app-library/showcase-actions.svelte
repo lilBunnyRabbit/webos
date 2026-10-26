@@ -47,7 +47,8 @@
   {:else if installed}
     <Button variant="primary" {size} onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Open</Button>
   {:else}
-    <Button variant="primary" {size} onclick={() => apps.install(manifest.id)}><DownloadSimpleIcon weight="bold" /> Get</Button>
+    <Button variant="primary" {size} onclick={() => apps.install(manifest.id)}><DownloadSimpleIcon weight="bold" /> Install</Button>
+    <Button {size} onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Open</Button>
   {/if}
   {#if size === "sm"}
     <IconButton label="Copy solo link" {size} onclick={copy_link}><LinkSimpleIcon weight="bold" /></IconButton>

@@ -102,7 +102,7 @@ Dialogs ([dialogs.md](dialogs.md)) are in the top layer and cover toasts.
 | [TasksService](tasks.md) jobs (zip and unzip, PDF Tools) | the calling app's id | A `progress` toast with Cancel, updated through `update()` at most every 150 ms, then done, cancelled or failed (Archive adds Discard / Keep for a partial file) |
 | `AppsService.open()` | `"apps"` | File not found (error), broken `.desktop` shortcut or `.widget` (error), no app can open it (warning) |
 | `AppsService` props validation | the app's id | Props discarded (warning) |
-| `AppsService.install()` through `launch()` | `"apps"` | "{App} installed" (info); the one-time tidy, "Tidied N apps you never opened" with Undo and App Library |
+| `AppsService.launch()` of an app that isn't installed | `"apps"` | "{App} isn't installed" (info) with Install (ADR-077); the one-time tidy, "Tidied N apps you never opened" with Undo and App Store |
 | `SoloAppsService.launch()` | `"apps"` | Solo mode: a second launch, "Open WebOS to use other apps" with Open WebOS (ADR-047) |
 | `SessionService` restore | `"session"` | Some saved windows couldn't be restored (warning, one toast with the count) |
 | `RouterService` | `"router"` | Link copied (info) or couldn't be copied; a deep link that's unknown, names a missing app or has bad props (error) |

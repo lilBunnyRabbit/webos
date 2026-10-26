@@ -12,6 +12,7 @@
   } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
+  import AppProgress from "$lib/core/components/apps/app-progress.svelte";
   import { set_drag_app } from "$lib/core/components/apps/drag";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -149,13 +150,13 @@
     )}
   >
     <manifest.icon class={size === "md" ? "size-6 pointer-coarse:size-7" : "size-4 pointer-coarse:size-5"} weight="duotone" />
-    {#if size === "md"}<AppBadge app_id={manifest.id} />{/if}
+    {#if size === "md"}<AppProgress app_id={manifest.id} /><AppBadge app_id={manifest.id} />{/if}
   </span>
 {/snippet}
 
 {#snippet freshness(manifest: AppListing)}
   {#if !installed.has(manifest.id)}
-    <Badge tone="primary">Get</Badge>
+    <Badge tone="primary">Install</Badge>
   {:else if fresh.has(manifest.id)}
     <Badge tone="primary">New</Badge>
   {:else if updated.has(manifest.id)}
@@ -252,7 +253,7 @@
 {/snippet}
 
 {#snippet view_switch()}
-  <Segmented size="sm" label="Library view" options={VIEWS} bind:value={page.value} />
+  <Segmented size="sm" label="App Store view" options={VIEWS} bind:value={page.value} />
 {/snippet}
 
 <div class="flex h-full flex-col">

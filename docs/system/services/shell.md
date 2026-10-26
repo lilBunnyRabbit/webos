@@ -26,7 +26,7 @@ The command system behind the OS shortcuts, the [Terminal](../system-apps.md#ter
 |--------|-----------|-------|
 | `commands` | `readonly Command[]` | Every contributed command, sorted by id. The apps' only once `load()` has resolved |
 | `loaded` | `boolean` (`$state`) | Whether the contributions' `lazy` parts are in |
-| `load` | `() => Promise<void>` | Resolves every contribution's `lazy` once, through one shared promise. A run and `complete` await it; Terminal, the palette, `ShortcutsService.list()` and App Library's details call it when they open ([lazy parts](#lazy-parts)) |
+| `load` | `() => Promise<void>` | Resolves every contribution's `lazy` once, through one shared promise. A run and `complete` await it; Terminal, the palette, `ShortcutsService.list()` and App Store's details call it when they open ([lazy parts](#lazy-parts)) |
 | `find` | `(id) => Command \| undefined` | Exact id (`"win close"`) |
 | `value_type` | `(type) => ValueType \| undefined` | Merged across contributions |
 | `completer` | `(kind) => Completer \| undefined` | |
@@ -148,7 +148,7 @@ values: { window: { /* columns, text, cell stay here */ open: (value) => void lo
 
 A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribution>`. The shell calls it once, the first time it needs every command, and merges what it resolves to with the rest. AppsService puts the apps' commands there (ADR-034 revision, 2026-10-17): each manifest's `shell` is `() => import("./commands")`, and its `lazy` loads every app's module in parallel (`allSettled`: an app whose module fails loses only its own commands).
 
-- **What triggers it.** `load()` is one shared promise. A session run awaits it before planning, so a line typed, pasted, run from the palette, a shortcut or Getting started finds app commands. `complete()` awaits it. Terminal, the palette (with a "Loading commands…" row until it's in), `ShortcutsService.list()` (cheat sheet, Settings, palette key hints) and App Library's details call it when they open.
+- **What triggers it.** `load()` is one shared promise. A session run awaits it before planning, so a line typed, pasted, run from the palette, a shortcut or Getting started finds app commands. `complete()` awaits it. Terminal, the palette (with a "Loading commands…" row until it's in), `ShortcutsService.list()` (cheat sheet, Settings, palette key hints) and App Store's details call it when they open.
 - **Shortcuts.** A key bound to a command the shell doesn't know yet (`quno q` before the apps load) is held: the dispatcher prevents its default, awaits `load()`, then picks the shortcut again. A known command that's unavailable leaves its key alone, as before.
 - **Values.** App value types only show on values app commands yield, and those run after `load()`.
 - **Merge order.** Lazy parts merge first, so a service's completers and values win a clash with an app's, and the command pass still adds app commands after every service command.
@@ -159,7 +159,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 |---------|----------|------------|-------------|
 | shell | `help clear history echo sudo where sort select first last count get kernel services compat` | | `command`, `history`, `service`, `compat` |
 | files | `ls cd pwd cat cp mv rm mkdir touch du [-d N] df mount umount mounts`, `rename <pattern> [paths…] [--find] [--replace] [--match-case] [--start] [--step] [--dry]` (piped files; `--dry` previews) | `path` | `file`, `rename`, `storage`, `mount` |
-| apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `app find <words…>` (`ai: "read"`; strict then sentence search over every app, at most 10), `app recent` (yields `app` values, newest first; `--clear` forgets them), `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, `taskbar seconds`, plus every app's `shell` (ADR-034) | `app` (open: launch, or the App Library for an app that isn't installed) | `app`, `file.open` |
+| apps | `app list` (columns id, name, category, authors), `app info` (with `author`), `app launch`, `app find <words…>` (`ai: "read"`; strict then sentence search over every app, at most 10), `app recent` (yields `app` values, newest first; `--clear` forgets them), `open`, `taskbar list`, `taskbar pin`, `taskbar unpin`, `taskbar position`, `taskbar size`, `taskbar autohide`, `taskbar seconds`, plus every app's `shell` (ADR-034) | `app` (open: launch, or the App Store for an app that isn't installed) | `app`, `file.open` |
 | windows | `win list close focus minimize previous cycle desktop`, plus `maximize snap gather` on desktop | `window` | `window` |
 | extract (desktop) | `win pop`, `win back` | | |
 | session | `win reopen` | | |

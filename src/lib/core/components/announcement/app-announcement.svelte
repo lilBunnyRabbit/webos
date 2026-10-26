@@ -131,7 +131,7 @@
         <header class="relative flex flex-col items-center gap-2 px-6 pt-7 pb-5 text-center">
           <Badge tone="primary"><SparkleIcon weight="fill" /> {apps.length} new apps</Badge>
           <h2 class="text-xl font-semibold text-balance">New since your last visit</h2>
-          <p class="max-w-sm text-ui text-pretty text-foreground/65">Open any of them now, or find them later in the start menu and the App Library.</p>
+          <p class="max-w-sm text-ui text-pretty text-foreground/65">Open any of them now, or find them later in the start menu and the App Store.</p>
         </header>
         <ul class="relative flex flex-col gap-1.5 px-4 pb-4">
           {#each apps as { manifest, version }, index (manifest.id)}

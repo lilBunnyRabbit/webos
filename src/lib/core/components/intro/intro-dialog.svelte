@@ -251,7 +251,7 @@
               {/each}
             </ul>
           {:else}
-            <p class="text-ui text-foreground/65">Nothing picked yet: you start with the core apps. The App Library has the rest.</p>
+            <p class="text-ui text-foreground/65">Nothing picked yet: you start with the core apps. The App Store has the rest.</p>
           {/if}
         {:else if PAGES[page] === "yours"}
           {@render heading("Make it yours", "Pick a look", "Changes apply right away. Fine-tune every colour later in Settings › Theme.")}

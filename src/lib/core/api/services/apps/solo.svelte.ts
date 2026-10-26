@@ -27,6 +27,8 @@ export class SoloAppsService extends AppsService {
 
   protected override remember(): void {}
 
+  protected override offer_install(): void {}
+
   override launch(id: AppId, props?: unknown): WindowId {
     const current = this.solo_windows.list()[0];
     if (!current) return super.launch(id, props);

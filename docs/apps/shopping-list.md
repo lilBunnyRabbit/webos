@@ -179,7 +179,7 @@ Both are `ai: "read"`, so Ask's assistant can answer "what's on my shopping list
 
 At h=1 everything uses the kit's `sm` sizes; at h=2 `md`, with more padding. Measured on the desktop at 3×1: 263×60 px body, the field 183 px wide, nothing overflows.
 
-Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Renaming a list renames its widget file (`rename_list`, same `/ \ :` cleanup as `pin_widget`), so the desktop frame's title follows; a taken name keeps the old one. Deleting a list removes its widget too. A widget added from App Library has no `list` prop and isn't counted.
+Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Renaming a list renames its widget file (`rename_list`, same `/ \ :` cleanup as `pin_widget`), so the desktop frame's title follows; a taken name keeps the old one. Deleting a list removes its widget too. A widget added from the App Store has no `list` prop and isn't counted.
 
 ### Suggestions and buy again
 

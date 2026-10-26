@@ -17,6 +17,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { untrack } from "svelte";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
+  import AppProgress from "$lib/core/components/apps/app-progress.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
   import {
@@ -112,6 +113,7 @@
     </IconButton>
     <span class="relative grid size-14 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
       <manifest.icon class="size-8" weight="duotone" />
+      <AppProgress app_id={manifest.id} />
       <AppBadge app_id={manifest.id} />
     </span>
     <div class="min-w-0 flex-1">
@@ -153,8 +155,8 @@
         </Button>
       {/if}
     {:else}
-      <Button variant="primary" onclick={() => apps.install(manifest.id)}><DownloadSimpleIcon weight="bold" /> Get</Button>
-      <Button onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Get and open</Button>
+      <Button variant="primary" onclick={() => apps.install(manifest.id)}><DownloadSimpleIcon weight="bold" /> Install</Button>
+      <Button onclick={() => apps.launch(manifest.id)}><PlayIcon weight="fill" /> Open</Button>
     {/if}
   </div>
 

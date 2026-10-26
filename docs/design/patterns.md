@@ -25,7 +25,7 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 │ items   │  Related                      │
 ```
 
-`SideNav` with the page as its child (drill-in): side by side from `@2xl`; below, a list of pages that drills into one, with a Back bar and the phone's Back. Group the pages under overlines when there are more than about seven. Persist the open section and `open` in window storage. Apps whose nav filters one view (App Library's categories) or switches tools inside a toolbar keep the tab row.
+`SideNav` with the page as its child (drill-in): side by side from `@2xl`; below, a list of pages that drills into one, with a Back bar and the phone's Back. Group the pages under overlines when there are more than about seven. Persist the open section and `open` in window storage. Apps whose nav filters one view (App Store's categories) or switches tools inside a toolbar keep the tab row.
 
 **Dashboard app** (Kernel, Example): a centered column (`mx-auto max-w-3xl`/`max-w-4xl p-6`) of `Section`s or cards.
 

@@ -5,7 +5,7 @@ import { APP_LIBRARY_PROPS } from "./props";
 
 export default define_app({
   id: "app-library",
-  name: "App Library",
+  name: "App Store",
   icon: AppIcon,
   version: "1.0.0",
   category: AppCategory.UTILITIES,

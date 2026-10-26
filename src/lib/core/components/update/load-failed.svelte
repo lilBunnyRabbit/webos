@@ -8,8 +8,9 @@
     Warning as WarningIcon,
     WifiSlash as WifiSlashIcon,
   } from "phosphor-svelte";
-  import { OFFLINE_NOTE, open_offline_settings } from "../apps/offline-actions";
   import { failure_details, load_failure, LoadFailure } from "./load-error";
+
+  const OFFLINE_NOTE = "Installed apps download while you're online, then work offline. An app opened without installing needs a connection.";
 
   interface Props {
     error: unknown;
@@ -23,7 +24,7 @@
   let { error, name, what = "app", compact = false, onretry, onclose }: Props = $props();
 
   const version = $derived(kernel.service<VersionService>("version"));
-  const offline = $derived(kernel.service<StoreService>("store"));
+  const store = $derived(kernel.service<StoreService>("store"));
 
   // A failed lazy import is usually a deploy: this page asks for chunks the new build replaced. Waiting for the
   // half-hourly poll would leave the window dead, so check now and offer the update in place.
@@ -50,8 +51,8 @@
 
 {#if compact}
   <div class="grid h-full place-content-center justify-items-center gap-2 p-3 text-center text-ui">
-    {#if !offline.online}
-      <p class="text-foreground/80">Not saved for offline.</p>
+    {#if !store.online}
+      <p class="text-foreground/80">Not on this device yet.</p>
     {:else if update}
       <p class="text-foreground/80">WebOS v{update.version} is out. Update to load this {what}.</p>
       <Button size="sm" onclick={() => void version.apply_update()}>Update and reload</Button>
@@ -59,10 +60,9 @@
       <p class="flex items-center gap-1.5 text-foreground/80"><WarningIcon weight="duotone" class="size-4 shrink-0 text-error" /> Couldn't load this {what}.</p>
     {/if}
   </div>
-{:else if !offline.online}
-  <EmptyState icon={WifiSlashIcon} title={name ? `${name} isn't saved for offline` : `This ${what} isn't saved for offline`} description={OFFLINE_NOTE}>
+{:else if !store.online}
+  <EmptyState icon={WifiSlashIcon} title={name ? `${name} isn't on this device yet` : `This ${what} isn't on this device yet`} description={OFFLINE_NOTE}>
     {#snippet actions()}
-      <Button variant="primary" class="pointer-coarse:h-11" onclick={open_offline_settings}>Choose apps</Button>
       {@render close_button()}
     {/snippet}
   </EmptyState>

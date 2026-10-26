@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, {
+    type AppsService,
     type DialogsService,
     type ExtractService,
     type SettingsService,
@@ -17,13 +18,15 @@
   import { flushSync } from "svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import AppBadge from "../apps/app-badge.svelte";
-  import { keep_offline_item, KEEP_OFFLINE_ID, toggle_keep_offline } from "../apps/offline-actions";
+  import AppProgress from "../apps/app-progress.svelte";
+  import { install_items, INSTALL_ITEM } from "../apps/app-actions";
 
   let { group, vertical, position }: { group: WindowInstance[]; vertical: boolean; position: TaskbarPosition } = $props();
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
   const extract = $derived(kernel.services.has("extract") ? kernel.service<ExtractService>("extract") : null);
 
   const app = $derived(group[0].app);
@@ -131,8 +134,8 @@
     const choice = await open_menu(
       single
         ? [
+            ...install_items(app.id),
             pin_item,
-            ...keep_offline_item(app.id),
             { separator: true },
             ...(out
               ? [{ id: "back", label: "Bring back", icon: ArrowSquareInIcon }]
@@ -141,12 +144,12 @@
                 : []),
             { id: "close", label: "Close window", icon: XIcon },
           ]
-        : [pin_item, ...keep_offline_item(app.id), { separator: true }, { id: "close-all", label: "Close all", icon: XIcon }],
+        : [...install_items(app.id), pin_item, { separator: true }, { id: "close-all", label: "Close all", icon: XIcon }],
       { anchor: { x: event.clientX, y: event.clientY } }
     );
     if (choice === "pin") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, app.id);
     else if (choice === "unpin") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, app.id);
-    else if (choice === KEEP_OFFLINE_ID) toggle_keep_offline(app.id);
+    else if (choice === INSTALL_ITEM.id) apps.install(app.id);
     else if (choice === "back") void extract?.bring_back();
     else if (choice === "pop" && single) void extract?.pop(single.id);
     else if (choice === "close" && single) void windows.close(single.id);
@@ -172,6 +175,7 @@
   onclick={() => (single ? activate(single) : pick())}
 >
   <app.manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight={active ? "fill" : "duotone"} />
+  <AppProgress app_id={app.id} />
   <AppBadge app_id={app.id} class="top-0.5 right-0.5 ring-background-light" />
   {#if is_out}
     <PictureInPictureIcon class="absolute bottom-0.5 left-0.5 size-3.5 text-primary" weight="fill" aria-label="Popped out" />

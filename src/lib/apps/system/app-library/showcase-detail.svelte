@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AppListing } from "$lib/core/api";
   import AppBadge from "$lib/core/components/apps/app-badge.svelte";
+  import AppProgress from "$lib/core/components/apps/app-progress.svelte";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { Button, IconButton } from "$lib/core/components/ui";
   import { ArrowLeft as ArrowLeftIcon, ArrowRight as ArrowRightIcon, Info as InfoIcon } from "phosphor-svelte";
@@ -24,6 +25,7 @@
       <IconButton label="Back to the showcase" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
       <span class="relative grid size-16 shrink-0 place-items-center rounded-2xl bg-background-light shadow-raised ring-1 ring-foreground/10">
         <manifest.icon class="size-9" weight="duotone" />
+        <AppProgress app_id={manifest.id} />
         <AppBadge app_id={manifest.id} />
       </span>
       <div class="min-w-0 flex-1 pt-1">

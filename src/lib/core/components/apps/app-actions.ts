@@ -10,17 +10,23 @@ import kernel, {
 } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
 import {
+  ArrowSquareOut as ArrowSquareOutIcon,
   Broom as BroomIcon,
   DownloadSimple as DownloadSimpleIcon,
   PushPin as PushPinIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
-import { keep_offline_item, KEEP_OFFLINE_ID, launch_or_explain, toggle_keep_offline } from "./offline-actions";
 
 const apps = () => kernel.service<AppsService>("apps");
 const dialogs = () => kernel.service<DialogsService>("dialogs");
 
 export const CLEAR_RECENT_ITEM = { id: "clear-recent", label: "Clear recent", icon: BroomIcon };
+export const OPEN_ITEM = { id: "open", label: "Open", icon: ArrowSquareOutIcon };
+export const INSTALL_ITEM = { id: "install", label: "Install", icon: DownloadSimpleIcon };
+
+export function install_items(id: AppId): (typeof INSTALL_ITEM)[] {
+  return apps().get(id) && !apps().is_installed(id) ? [INSTALL_ITEM] : [];
+}
 
 /**
  * Asks, closes the app's windows (guarded: a dirty one can keep it), removes its desktop shortcuts and widgets, then
@@ -47,7 +53,7 @@ export async function uninstall_app(id: AppId, anchor?: Position): Promise<boole
   await apps().uninstall(id, { data: choice.data });
   kernel.service<NotificationsService>("notifications").notify("apps", {
     title: `${manifest.name} uninstalled`,
-    message: choice.data ? "Its saved data was deleted too." : "Get it again from the App Library.",
+    message: choice.data ? "Its saved data was deleted too." : "Install it again from the App Store.",
   });
   return true;
 }
@@ -55,11 +61,11 @@ export async function uninstall_app(id: AppId, anchor?: Position): Promise<boole
 export interface AppMenuOptions {
   /** The app was picked from a recent list: offers Clear recent. */
   recent?: boolean;
-  /** Runs after Get and open launched the app, so the surface can close. */
+  /** Runs after Open launched the app, so the surface can close. */
   on_launch?: () => void;
 }
 
-/** The long-press menu of an app on the phone: add to home screen, keep offline, uninstall; Get and open when not installed. */
+/** The long-press menu of an app on the phone: add to home screen, uninstall; Open and Install when not installed. */
 export async function app_menu(
   manifest: AppManifest,
   anchor: Position,
@@ -71,13 +77,12 @@ export async function app_menu(
     apps().is_installed(manifest.id)
       ? [
           { id: "pin", label: "Add to home screen", icon: PushPinIcon, disabled: pinned },
-          ...keep_offline_item(manifest.id),
           ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
           ...(manifest.system
             ? []
             : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
         ]
-      : [{ id: "open", label: "Get and open", icon: DownloadSimpleIcon }],
+      : [OPEN_ITEM, INSTALL_ITEM],
     { anchor }
   );
   if (choice === "pin") {
@@ -88,10 +93,10 @@ export async function app_menu(
         message: String(reason),
       })
     );
-  } else if (choice === "open") {
-    launch_or_explain(manifest.id);
+  } else if (choice === OPEN_ITEM.id) {
+    apps().launch(manifest.id);
     on_launch?.();
-  } else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
+  } else if (choice === INSTALL_ITEM.id) apps().install(manifest.id);
+  else if (choice === "uninstall") void uninstall_app(manifest.id, anchor);
   else if (choice === CLEAR_RECENT_ITEM.id) apps().clear_recent();
-  else if (choice === KEEP_OFFLINE_ID) toggle_keep_offline(manifest.id);
 }

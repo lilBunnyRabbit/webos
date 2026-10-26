@@ -148,10 +148,10 @@ export class AppsService implements IAppsService {
     if (removed === 0) return;
     this.notifications_service.notify("apps", {
       title: `Tidied ${removed} apps you never opened`,
-      message: "They're still in the App Library and in search.",
+      message: "They're still in the App Store and in search.",
       actions: [
         { label: "Undo", on_click: () => void this.install(all) },
-        { label: "App Library", on_click: () => void this.launch("app-library") },
+        { label: "App Store", on_click: () => void this.launch("app-library") },
       ],
     });
   }
@@ -244,15 +244,21 @@ export class AppsService implements IAppsService {
     if (!manifest) {
       throw new Error(`App ${id} not found`);
     }
-    // Opening an app from the UI (a file, a link, a store tile) is the intent to have it (ADR-040). The shell checks first.
-    if (this.install(id).length > 0) {
-      this.notifications_service.notify("apps", { title: `${manifest.name} installed`, message: "It's in the start menu now." });
-    }
+    // Opening isn't installing (ADR-077): the app runs on demand, out of the menus and not offline, until Install.
+    if (!this.is_installed(id)) this.offer_install(manifest);
 
     const window_id = this.windows_service.open(this.instantiate(manifest, this.validate_props(manifest, props)));
     this.remember(id);
     track_launch(id, this.kernel.mode, this.kernel.platform);
     return window_id;
+  }
+
+  protected offer_install(manifest: AppManifest): void {
+    this.notifications_service.notify("apps", {
+      title: `${manifest.name} isn't installed`,
+      message: "Install it to keep it in your apps and use it offline.",
+      actions: [{ label: "Install", on_click: () => void this.install(manifest.id) }],
+    });
   }
 
   /** A known id as is; a replaced one (ADR-071) as the app that took it over, with the props left after matching. */

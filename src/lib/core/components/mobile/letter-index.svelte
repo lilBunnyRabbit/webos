@@ -8,9 +8,8 @@
   import { flushSync, untrack } from "svelte";
   import AppRow from "../apps/app-row.svelte";
   import { app_menu } from "../apps/app-actions";
-  import OfflineNote from "../apps/offline-note.svelte";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
-  import { IconButton, Input } from "../ui";
+  import { Button, IconButton, Input } from "../ui";
 
   let { onlaunch }: { onlaunch: (id: AppId) => void } = $props();
 
@@ -183,16 +182,17 @@
 <svelte:window onpointerdowncapture={(event) => (touch = event.pointerType === "touch")} onkeydowncapture={() => (touch = false)} />
 
 {#snippet row(app: AppListing)}
-  <li>
+  <li class="flex items-center gap-2">
     <AppRow
       manifest={app}
       data-scrub-app={app.id}
       on_menu={(point) => void app_menu(app, point, { on_launch: close })}
       onclick={() => launch(app.id)}
-      class={cn(scrub?.pick === app.id && "bg-primary/14 text-primary")}
-    >
-      {#if !apps.is_installed(app.id)}<span class="ml-auto shrink-0 rounded-full bg-primary/14 px-2 text-2xs font-medium text-primary">Get</span>{/if}
-    </AppRow>
+      class={cn("min-w-0 flex-1", scrub?.pick === app.id && "bg-primary/14 text-primary")}
+    />
+    {#if !apps.is_installed(app.id)}
+      <Button size="sm" pressed class="shrink-0" aria-label="Install {app.name}" onclick={() => apps.install(app.id)}>Install</Button>
+    {/if}
   </li>
 {/snippet}
 
@@ -242,9 +242,8 @@
           >
             {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
           </Input>
-          <IconButton label="App Library" size="lg" class="size-11 shrink-0 [&_svg]:size-6" onclick={() => launch("app-library")}><SquaresFourIcon weight="duotone" /></IconButton>
+          <IconButton label="App Store" size="lg" class="size-11 shrink-0 [&_svg]:size-6" onclick={() => launch("app-library")}><SquaresFourIcon weight="duotone" /></IconButton>
         </div>
-        <OfflineNote onopen={close} />
       </header>
     {/if}
     {#each scrub ? [scrub.letter] : sections as section (section)}

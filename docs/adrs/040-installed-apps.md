@@ -51,3 +51,7 @@ WebOS ships 52 apps (13 system, 39 user), and every list shows all of them: the 
 
 ## Revision 2026-10-22: app cleanup on uninstall
 Owner's call in [owner calls](../brainstorm/2026-10-22_owner-calls.md): a lazy manifest hook `on_uninstall_data: () => import("./uninstall")` runs after `uninstall(id, { data: true })` cleared localStorage and `/var/lib/apps/{id}`, for stores the OS can't see. A throw is logged and toasted; the uninstall still completes. Moonrabbit deletes its IndexedDB database. Rejected: an `app.{id}` IndexedDB naming convention the OS deletes (needs a device-key migration for Moonrabbit).
+
+
+## Revision 2026-10-26: no silent installs ([ADR-077](077-app-store.md))
+Opening a file, a deep link, an announcement's Open or Game Hub's Play no longer installs. The app opens on demand, not in menus and not offline, with a toast "{App} isn't installed" offering Install; Install is also in the taskbar item menu (desktop) and on the switcher card (phone). "Get" is now **Install**, and the store's "Get and open" is **Open**. The App Library is the App Store (id `app-library` unchanged). Installing also downloads the app for offline use (StoreService).

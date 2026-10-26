@@ -10,7 +10,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release.
+**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release; stage 1 (installed = cached, Install / Open, App Store) is done.
 
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
@@ -697,7 +697,8 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [ ] App isolation via Shadow DOM
 - [ ] Kernel custom events with zod-validated payloads
 - [ ] Window events for file upload (and similar app-level events)
-- [-] "App store": designed 2026-10-26 as [ADR-077](adrs/077-app-store.md) ([brainstorm](brainstorm/2026-10-26_app-store.md)). Installed = cached, catalogue and flat boot, app updates without reload; three stages, none built
+- [-] "App store": designed 2026-10-26 as [ADR-077](adrs/077-app-store.md) ([brainstorm](brainstorm/2026-10-26_app-store.md)). Installed = cached, catalogue and flat boot, app updates without reload; three stages.
+  - [x] Stage 1 (2026-10-26, 3.74.0): installed means downloaded and kept offline, StoreService, Install and Open, App Library renamed App Store, system apps out of the precache
 
 ---
 

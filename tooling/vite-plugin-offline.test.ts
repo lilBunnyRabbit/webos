@@ -20,27 +20,23 @@ const bundle = [
   file("assets/worker-chunk-l.js"),
   file("assets/paint-commands-e.js", ["assets/core-b.js"]),
 ];
-const roots = new Map([["paint", new Set(["assets/paint.app-d.js", "assets/paint-commands-e.js"])]]);
+const roots = new Map([
+  ["paint", new Set(["assets/paint.app-d.js", "assets/paint-commands-e.js"])],
+  ["settings", new Set(["assets/settings.app-c.js"])],
+]);
 
 describe("offline_lists", () => {
   const lists = offline_lists(bundle, ["index.html"], roots);
 
-  test("core is what boot reaches without entering a user app, system apps included", () => {
-    expect(lists.core).toEqual([
-      "assets/Inter-f.woff2",
-      "assets/core-b.js",
-      "assets/dialog-g.js",
-      "assets/index-a.css",
-      "assets/index-a.js",
-      "assets/kit-h.js",
-      "assets/settings.app-c.js",
-      "index.html",
-    ]);
+  test("core is what boot reaches without entering an app, system apps too (ADR-077)", () => {
+    expect(lists.core).toEqual(["assets/Inter-f.woff2", "assets/core-b.js", "assets/dialog-g.js", "assets/index-a.css", "assets/index-a.js", "index.html"]);
+    expect(lists.apps.settings).toEqual(["assets/kit-h.js", "assets/settings.app-c.js"]);
   });
 
   test("an app gets every file its lazy imports reach, workers and CSS included, minus core and runtime-cached files", () => {
     expect(lists.apps.paint).toEqual([
       "assets/brush-i.js",
+      "assets/kit-h.js",
       "assets/paint-commands-e.js",
       "assets/paint.app-d.css",
       "assets/paint.app-d.js",

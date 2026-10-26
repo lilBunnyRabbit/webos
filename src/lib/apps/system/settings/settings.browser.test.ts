@@ -32,7 +32,6 @@ const STUBS = {
   }),
   shell: stub_service("shell", {}),
   speech: stub_service("speech", { supported: true, voices: [], speaking: null, queued: 0, speak: () => {}, stop: () => {} }),
-  store: stub_service("store", { online: true, syncing: false, picked: new Set(), is_picked: () => false, status: () => "not-saved" }),
 };
 
 let host: ReturnType<typeof mount> | null = null;

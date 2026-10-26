@@ -41,3 +41,10 @@ export async function pool<T>(items: T[], size: number, work: (item: T) => Promi
   };
   await Promise.all(Array.from({ length: Math.min(size, items.length) }, lane));
 }
+
+/** App chunks are shared, so an uninstall may delete only the files no other installed app's list holds. */
+export function unshared(files: string[], others: Iterable<string[]>): string[] {
+  const kept = new Set<string>();
+  for (const list of others) for (const file of list) kept.add(file);
+  return files.filter((file) => !kept.has(file));
+}

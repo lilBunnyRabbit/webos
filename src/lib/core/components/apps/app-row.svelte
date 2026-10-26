@@ -1,11 +1,12 @@
 <script lang="ts">
-  import kernel, { type AppManifest, type StoreService } from "$lib/core/api";
+  import type { AppManifest } from "$lib/core/api";
   import type { HTMLButtonAttributes } from "svelte/elements";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
   import type { Position } from "$lib/core/utils/type";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
   import AppBadge from "./app-badge.svelte";
+  import AppProgress from "./app-progress.svelte";
 
   interface Props extends HTMLButtonAttributes {
     manifest: AppManifest;
@@ -15,9 +16,6 @@
   }
 
   let { manifest, on_menu, wallpaper = false, class: class_name, children, ...rest }: Props = $props();
-
-  const offline = $derived(kernel.service<StoreService>("store"));
-  const ready = $derived(offline.can_open(manifest.id));
 </script>
 
 <button
@@ -26,11 +24,11 @@
   {@attach long_press({ on_menu })}
   class={cn("flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left transition-colors duration-150 active:bg-foreground/8", class_name)}
 >
-  <span class={cn("relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10", !ready && "opacity-38")}>
+  <span class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10">
     <ShortcutIcon app_id={manifest.id} badge={false} class="size-6" />
+    <AppProgress app_id={manifest.id} />
     <AppBadge app_id={manifest.id} />
   </span>
-  <span data-wallpaper-label={wallpaper ? "" : undefined} class={cn("truncate text-xl tracking-tight", !ready && "opacity-38")}>{manifest.name}</span>
-  {#if !ready}<span class="sr-only">(not saved for offline)</span>{/if}
+  <span data-wallpaper-label={wallpaper ? "" : undefined} class="truncate text-xl tracking-tight">{manifest.name}</span>
   {@render children?.()}
 </button>

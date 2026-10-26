@@ -10,7 +10,7 @@ export interface AppsService extends IService {
   register(manifest: AppManifest): void;
   /**
    * Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). An app that isn't
-   * installed gets installed first, with a toast (ADR-040).
+   * installed opens without installing, with a toast offering Install (ADR-077).
    */
   launch(id: AppId, props?: unknown): WindowId;
   /**
@@ -154,7 +154,7 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    */
   default_widget?: boolean;
   /**
-   * What the app does, as three or four cards: the new-app announcement and the App Library details show them (ADR-038).
+   * What the app does, as three or four cards: the new-app announcement and the App Store details show them (ADR-038).
    * Lazy like `preview`: manifests load at boot, and the cards' icons and text are worth ~1 KB gz each app.
    */
   highlights?: () => Promise<{ default: AppHighlight[] }>;
@@ -174,11 +174,11 @@ export interface AppMeta {
   description?: string;
   keywords?: string[];
   /**
-   * The problem the app solves and how, one short sentence each: the App Library's showcase tells each app's story with
+   * The problem the app solves and how, one short sentence each: the App Store's showcase tells each app's story with
    * it, and falls back to `description` without it.
    */
   pitch?: AppPitch;
-  /** Who made the app, credited in the App Library, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
+  /** Who made the app, credited in the App Store, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
   authors?: AppAuthor[];
 }
 

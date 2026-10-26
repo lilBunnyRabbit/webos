@@ -302,7 +302,7 @@ export class DesktopHandler {
     this.hover = null;
     this.drag = null;
 
-    // An app from the start menu or the App Library: pinned where it was dropped (ADR-042).
+    // An app from the start menu or the App Store: pinned where it was dropped (ADR-042).
     const app = !local && has_drag_app(event) && !is_quick_launch_drag(event) ? read_drag_app(event) : null;
     if (app) {
       kernel.service<AppsService>("apps").install(app);

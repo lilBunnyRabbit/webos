@@ -4,7 +4,6 @@
     type AppsService,
     type DesktopItem,
     type MobileDesktopService,
-    type StoreService,
     type UiService,
     WidgetStyle,
   } from "$lib/core/api";
@@ -22,9 +21,9 @@
   import ShortcutIcon from "../files/shortcut-icon.svelte";
   import FileIcon from "../files/file-icon.svelte";
   import AppBadge from "../apps/app-badge.svelte";
+  import AppProgress from "../apps/app-progress.svelte";
   import AppRow from "../apps/app-row.svelte";
   import { app_menu } from "../apps/app-actions";
-  import { launch_or_explain } from "../apps/offline-actions";
   import { Button } from "../ui";
   import { add_widget_menu, EDIT_HOME_ITEM, home_item_menu } from "./home-actions";
   import { autoscroll_step, before_of, clamp_offset, drop_index, shift_of, type Slot } from "./home-drag";
@@ -35,7 +34,6 @@
 
   const desktop = $derived(kernel.service<MobileDesktopService>("desktop"));
   const apps = $derived(kernel.service<AppsService>("apps"));
-  const offline = $derived(kernel.service<StoreService>("store"));
   const ui = $derived(kernel.service<UiService>("ui"));
 
   /** Widgets were sized for the grid's 104px rows; one row of height per cell keeps them readable in a full-width list. */
@@ -269,7 +267,7 @@
                 wallpaper
                 data-home-row
                 on_menu={(point) => void app_menu(manifest, point, { recent: true })}
-                onclick={() => launch_or_explain(manifest.id)}
+                onclick={() => apps.launch(manifest.id)}
               />
             </li>
           {/each}
@@ -348,9 +346,10 @@
                 )}
               >
                 {#if item.kind === "shortcut"}
-                  <span class={cn("grid size-11 shrink-0 place-items-center", !offline.can_open(item.app_id) && "opacity-38")}>
+                  <span class="grid size-11 shrink-0 place-items-center">
                     <span class="relative">
                       <ShortcutIcon app_id={item.app_id} badge={false} class="size-7" />
+                      <AppProgress app_id={item.app_id} />
                       <AppBadge app_id={item.app_id} />
                     </span>
                   </span>
@@ -396,7 +395,7 @@
 
     <button
       data-home-row
-      onclick={() => launch_or_explain("app-library")}
+      onclick={() => apps.launch("app-library")}
       class={cn(
         "mt-1 flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left text-foreground/65 transition-[background-color,opacity] duration-150 active:bg-foreground/8",
         editing && "opacity-40"
@@ -409,6 +408,6 @@
   </div>
 
   {#if !editing}
-    <LetterIndex onlaunch={launch_or_explain} />
+    <LetterIndex onlaunch={(id) => apps.launch(id)} />
   {/if}
 </div>

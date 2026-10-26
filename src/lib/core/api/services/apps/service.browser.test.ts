@@ -117,13 +117,18 @@ describe("AppsService installed apps", () => {
     });
   });
 
-  test("launching an app that isn't installed installs it, with a toast", async () => {
+  test("launching an app that isn't installed opens it without installing, and the toast's Install installs it", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();
     apps(kernel).launch("example");
+    expect(apps(kernel).is_installed("example")).toBe(false);
+    expect(toasts(kernel)).toEqual(["Example isn't installed"]);
+    const notifications = kernel.service<NotificationsService>("notifications");
+    notifications.all[0].actions?.find((action) => action.label === "Install")?.on_click();
     expect(apps(kernel).is_installed("example")).toBe(true);
-    expect(toasts(kernel)).toEqual(["Example installed"]);
     await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["example"]));
+    apps(kernel).launch("example");
+    expect(toasts(kernel)).toEqual(["Example isn't installed"]);
   });
 
   test("uninstall keeps data unless asked; system apps refuse", async () => {
@@ -170,7 +175,7 @@ describe("AppsService installed apps", () => {
     const contribution = apps(kernel).shell!();
     const commands = contribution.commands ?? [];
     const command = ((await contribution.lazy!()).commands ?? []).find((candidate) => candidate.app === "notes")!;
-    expect(command.available?.()).toBe("Notes isn't installed. Get it in the App Library");
+    expect(command.available?.()).toBe("Notes isn't installed. Install it in the App Store");
     apps(kernel).install("notes");
     expect(command.available?.() ?? true).toBe(true);
     expect(() => commands.find((candidate) => candidate.id === "app launch")!.run({ args: { id: "board" } } as never)).toThrow(/isn't installed/);
@@ -266,7 +271,7 @@ describe("app find", () => {
     await expect(find(kernel, [])).rejects.toThrow(/say what the app should do/);
   });
 
-  test("clicking an app that isn't installed opens it in the App Library", async () => {
+  test("clicking an app that isn't installed opens it in the App Store", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();
     const launch = vi.spyOn(apps(kernel), "launch").mockReturnValue("w");

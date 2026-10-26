@@ -88,6 +88,18 @@ Each stage is its own release and updates its docs in the same commit.
 
 ## Revisions
 
+### 2026-10-26: stage 1 built
+Installed = cached, StoreService, Install / Open and the App Store name shipped in 3.74.0 ([store](../system/services/store.md)). Decided within scope:
+- **OfflineService became StoreService** (`services/store`, key `store`), depending on `files`, `apps` and `tasks` only: with the quiet save on first open gone, it no longer watches windows. It follows `apps.list({ installed: true })` with an effect; AppsService's API didn't change.
+- **State moved to `/var/lib/store/state.json`**; the old `/var/lib/offline/state.json` is read once when the new file is missing, then the folder is deleted. `/etc/offline.json`'s apps are installed through `apps.install` and the file deleted, not in a solo tab (solo installs nothing). The ADR-065 migration toast ("Apps now load when you open them") is gone with Settings › Offline.
+- **System apps get offline lists** (`tooling/vite-plugin-offline.ts` takes `apps/system/*` as roots): the precache went from 305 entries (4.2 MB) to 202 (2.7 MB). On a fresh install they download on the first idle moment, system apps first, as "Setting up apps"; a boot fetched none of their files before an app opened. A chunk a system app shares with core (File Explorer's components, which the file picker uses) stays in core.
+- **Job titles** say why: "Setting up apps" (no state file), "Updating N apps" (new build), "Installing {App}".
+- **Uninstall** deletes the files only the app's list holds: `drop_app` fetches that list and every other installed app's list, under the sync lock and only online; otherwise the files go with the build's cache at the next update.
+- **Open of a not-installed app** toasts "{App} isn't installed" with Install from AppsService's `launch` (a protected `offer_install`, a no-op in solo). The not-installed tile's Install in search is its own button under the tile (start menu) or beside the row (phone), since the tile itself opens.
+- **Install on a running window:** the taskbar item's menu on desktop. Phones have no switcher menu, so the switcher card's header gets an Install button.
+- **Progress ring:** `components/apps/app-progress.svelte` next to `AppBadge`, a scrim and a `primary` ring over the icon tile, reading `store.progress(id)`.
+- **The App Store's grid badge** says Install (was Get); its details and Showcase cards have Install and Open.
+
 ### 2026-10-26: stage 2 build side built
 The build writes `store/catalogue.json`, `store/icons.svg`, a chunk per manifest, and `core` and `notes` in `version.json` (`tooling/vite-plugin-catalogue.ts`, [overview](../system/overview.md#build--deploy)). The runtime doesn't read them yet; boot is unchanged. Decided within scope:
 - **Manifests load through a second, bare Vite server** (`ssrLoadModule`, `svelte()` plus the build's aliases), not the project config, whose plugins would run their hooks twice. Only `apps/{system,user}/*`. The dev server answers `store/*` from the same code with its own loader; Node tests call `collect_apps()` with `import()`.

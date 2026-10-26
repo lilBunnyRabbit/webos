@@ -41,7 +41,7 @@ export interface Change {
   kind: ChangeKind;
   /** User-facing wording, one sentence. */
   text: string;
-  /** The apps this line is about; it shows in each one's history in the App Library (ADR-038). */
+  /** The apps this line is about; it shows in each one's history in the App Store (ADR-038). */
   apps?: AppId[];
 }
 

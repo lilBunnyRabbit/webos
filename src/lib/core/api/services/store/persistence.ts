@@ -2,10 +2,13 @@ import { z } from "zod";
 import { PATHS } from "../files/hierarchy";
 import type { AppId } from "../apps/type";
 
-export const PICKED_PATH = `${PATHS.etc}/offline.json`;
-export const OFFLINE_STATE_PATH = `${PATHS.var_lib}/offline/state.json`;
+export const STORE_STATE_PATH = `${PATHS.var_lib}/store/state.json`;
+// Read once to migrate (ADR-077), then deleted.
+export const LEGACY_PICKED_PATH = `${PATHS.etc}/offline.json`;
+export const LEGACY_STATE_DIR = `${PATHS.var_lib}/offline`;
+export const LEGACY_STATE_PATH = `${LEGACY_STATE_DIR}/state.json`;
 
-export interface OfflineState {
+export interface StoreState {
   build: number;
   apps: AppId[];
 }
@@ -32,11 +35,11 @@ export function serialize_picked(apps: Iterable<AppId>): string {
   return JSON.stringify({ version: 1, apps: [...apps].sort() }, null, 2);
 }
 
-export function parse_state(text: string | null): OfflineState | null {
+export function parse_state(text: string | null): StoreState | null {
   const parsed = parse(state_schema, text);
   return parsed ? { build: parsed.build, apps: [...new Set(parsed.apps)] } : null;
 }
 
-export function serialize_state(state: OfflineState): string {
+export function serialize_state(state: StoreState): string {
   return JSON.stringify({ build: state.build, apps: [...state.apps].sort() }, null, 2);
 }

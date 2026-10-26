@@ -4,6 +4,7 @@
   import FileIcon from "../files/file-icon.svelte";
   import ShortcutIcon from "../files/shortcut-icon.svelte";
   import AppBadge from "../apps/app-badge.svelte";
+  import AppProgress from "../apps/app-progress.svelte";
 
   let { item }: { item: DesktopItem } = $props();
 
@@ -18,6 +19,7 @@
     class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10 transition-transform duration-150 group-hover:-translate-y-0.5"
   >
     <ShortcutIcon app_id={item.app_id} badge={false} class="size-6" />
+    <AppProgress app_id={item.app_id} />
     <AppBadge app_id={item.app_id} />
   </div>
 {:else}

@@ -147,10 +147,9 @@ export async function register_default_services(kernel: Kernel) {
     dependencies: ["notifications"],
   });
 
-  // windows: an app's first open in a build is what saves it quietly (ADR-065).
   kernel.register("store", {
     instance: StoreService,
-    dependencies: ["files", "apps", "tasks", "notifications", "windows"],
+    dependencies: ["files", "apps", "tasks"],
   });
 
   kernel.register("backup", {

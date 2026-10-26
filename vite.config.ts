@@ -110,8 +110,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "favicon.svg", "apple-touch-icon-180x180.png"],
       workbox: {
-        // ADR-065: the install precaches only core and the system apps (offline/core.json), so an update takes seconds
-        // however many apps there are. User apps load on demand into the per-build runtime cache below.
+        // ADR-077: the install precaches only core (offline/core.json), so an update takes seconds however many apps
+        // there are. Every app, system apps included, loads on demand into the per-build runtime cache below.
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         manifestTransforms: [async (entries) => ({ manifest: entries.filter((entry) => offline.precached(entry.url)), warnings: [] })],
         // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
@@ -148,12 +148,12 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
           },
-          // Last, so the rules above keep their files. One cache per build: OfflineService fills it with the picked apps
-          // and deletes older ones after a sync (ADR-065). No expiration, which could evict a picked app.
+          // Last, so the rules above keep their files. One cache per build: StoreService fills it with the installed apps
+          // and deletes older ones after a sync (ADR-077). No expiration, which could evict an installed app.
           {
             urlPattern: new RegExp(`^[^?#]*${BASE}assets/`),
             handler: "CacheFirst",
-            // ignoreVary: OfflineService stores files it fetched itself, and a server's `Vary: Origin` would make a module
+            // ignoreVary: StoreService stores files it fetched itself, and a server's `Vary: Origin` would make a module
             // import miss them. The names are content-hashed, so any stored copy is the right one.
             options: {
               cacheName: `webos-assets-${info.buildTimestamp}`,

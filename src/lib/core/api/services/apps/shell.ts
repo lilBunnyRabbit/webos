@@ -33,8 +33,8 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
     return manifest;
   };
 
-  /** The shell never installs (ADR-040): an app that isn't installed has no commands until the App Library gets it. */
-  const not_installed = (manifest: AppManifest) => `${manifest.name} isn't installed. Get it in the App Library`;
+  /** The shell never installs (ADR-040): an app that isn't installed has no commands until it's installed. */
+  const not_installed = (manifest: AppManifest) => `${manifest.name} isn't installed. Install it in the App Store`;
 
   /** Folders open in File Explorer; files in their associated app (ADR-018). */
   async function open_path(path: string): Promise<void> {
@@ -73,7 +73,7 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
       app: {
         columns: ["id", "name", "category", "authors"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
-        // The shell never installs (ADR-040): an app that isn't installed opens in the App Library to be got.
+        // The shell never installs (ADR-040): an app that isn't installed opens in the App Store to be installed.
         open: (app) => void (apps.is_installed(String(app.id)) ? apps.launch(String(app.id)) : apps.launch(LIBRARY, { app: String(app.id) })),
       },
       file: {

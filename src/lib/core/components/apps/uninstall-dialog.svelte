@@ -15,7 +15,7 @@
     <div class="min-w-0 pt-0.5">
       <h2 class="text-sm font-semibold break-words">Uninstall {manifest.name}?</h2>
       <p class="mt-0.5 text-ui break-words text-foreground/65">
-        It leaves the start menu, and its windows, desktop icons and widgets close. Get it again from the App Library.
+        It leaves the start menu, and its windows, desktop icons and widgets close. Install it again from the App Store.
       </p>
     </div>
   </div>

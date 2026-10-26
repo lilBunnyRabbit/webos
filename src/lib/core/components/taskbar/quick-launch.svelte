@@ -5,6 +5,7 @@
   import { ArrowSquareOut as ArrowSquareOutIcon, Plus as PlusIcon, PushPinSlash as PushPinSlashIcon } from "phosphor-svelte";
   import { flip } from "svelte/animate";
   import AppBadge from "../apps/app-badge.svelte";
+  import AppProgress from "../apps/app-progress.svelte";
   import { has_drag_app, is_quick_launch_drag, read_drag_app, set_drag_app } from "../apps/drag";
 
   let { vertical }: { vertical: boolean } = $props();
@@ -172,6 +173,7 @@
             ondragend={() => on_end(manifest)}
           >
             <manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight="duotone" />
+            <AppProgress app_id={manifest.id} />
             <AppBadge app_id={manifest.id} class="top-0.5 right-0.5 ring-background-light" />
             {#if running.has(manifest.id)}
               <span class={cn("absolute size-1 rounded-full bg-foreground/45", vertical ? "top-1/2 -left-0.5 -translate-y-1/2" : "-bottom-0.5 left-1/2 -translate-x-1/2")}></span>

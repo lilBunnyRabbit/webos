@@ -14,6 +14,8 @@
 > - The window menu entry is the taskbar item's right-click menu (desktop). Phones have no window menu; the drawer's long press has it.
 > - Measured: precache 844 entries (12.4 MB) → 305 (4.2 MB); 80 app lists of 3 to 42 files; a preview update with one app changed installed 9 files and reloaded in about 2 s.
 
+> **Revision 2026-10-26: installed = cached ([ADR-077](077-app-store.md)).** The picked set, `/etc/offline.json`, Settings › Offline, Keep offline, the dimmed offline launcher, its note and the first-open quiet save are gone. OfflineService is StoreService (`store`): it keeps every installed app downloaded, system apps included, which left the precache (core only, 202 entries). Picked apps joined the installed set once. Details in [store.md](../system/services/store.md).
+
 ## Context
 The service worker precaches every file the build makes: 833 files, 4.9 MB gzipped, every app, section and dialog (`vite.config.ts` `globPatterns`). workbox-precaching installs them one at a time, so an update that renames a few hundred files keeps the update screen up for minutes on a phone (3.48.0 → 3.57.0: 175 of 319 files in 88 s, then the 120 s fallback threw them away and the fresh worker downloaded all 833 again in the background).
 

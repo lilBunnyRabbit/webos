@@ -73,8 +73,6 @@ export const SETTINGS: SettingEntry[] = [
   { id: "backup-restore", page: "backup", label: "Restore from a backup", keywords: ["import", "zip", "recover"] },
   { id: "reset-settings", page: "backup", label: "Reset settings", keywords: ["defaults", "factory", "start over"] },
 
-  page_entry("offline", ["no internet", "connection", "download", "cache", "airplane"]),
-  { id: "offline-apps", page: "offline", label: "Apps kept offline", keywords: ["keep offline", "download", "saved", "no internet"] },
 
   page_entry("whats-new", ["changelog", "release notes", "updates", "version history"]),
   page_entry("roadmap", ["plans", "next", "todo", "progress"]),

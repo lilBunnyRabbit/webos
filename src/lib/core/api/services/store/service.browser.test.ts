@@ -4,8 +4,7 @@ import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
 import { BUILD_INFO } from "../version/build-info";
-import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
-import { OFFLINE_STATE_PATH, PICKED_PATH, parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
+import { LEGACY_PICKED_PATH, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_state, serialize_picked, serialize_state } from "./persistence";
 import { StoreService } from "./service.svelte";
 import { StoreStatus } from "./type";
 
@@ -26,27 +25,34 @@ async function seed(path: string, text: string): Promise<void> {
   await opfs.write_file(await handle.getFileHandle(segments.at(-1)!, { create: true }), text);
 }
 
-async function open_tab() {
-  const launch = vi.fn();
+async function open_tab(installed: string[] = ["paint"]) {
+  const set = new Set([...installed, ...Object.keys(APPS).filter((id) => APPS[id].system)]);
+  const install = vi.fn((ids: string | string[]) => {
+    for (const id of [ids].flat()) set.add(id);
+    return [ids].flat();
+  });
+  const entries = () => Object.entries(APPS).map(([id, app]) => [id, { id, ...app }] as const);
   const booted = await boot_test_kernel({
     files: FilesService,
     notifications: NotificationsService,
     apps: stub_service("apps", {
-      launch,
+      install,
       get: (id: string) => (APPS[id] ? { id, ...APPS[id] } : undefined) as never,
-      list: () => Object.entries(APPS).map(([id, app]) => [id, { id, ...app }])[Symbol.iterator]() as never,
-      is_installed: () => true,
+      list: ((filter: { installed?: boolean } = {}) =>
+        entries()
+          .filter(([id]) => filter.installed === undefined || set.has(id) === filter.installed)
+          [Symbol.iterator]()) as never,
+      is_installed: (id: string) => set.has(id),
     }),
     tasks: stub_service("tasks", {}),
-    windows: stub_service("windows", { list: () => [], get: () => null }),
     store: StoreService,
   });
   shutdowns.push(booted.shutdown);
   return {
     files: booted.kernel.service<FilesService>("files"),
-    offline: booted.kernel.service<StoreService>("store"),
+    store: booted.kernel.service<StoreService>("store"),
     notifications: booted.kernel.service<NotificationsService>("notifications"),
-    launch,
+    install,
   };
 }
 
@@ -63,71 +69,53 @@ afterEach(async () => {
 });
 
 describe("boot", () => {
-  test("a fresh install keeps nothing offline, says nothing and records this build", async () => {
+  test("a fresh install has nothing saved, says nothing and records this build", async () => {
     const tab = await open_tab();
-    expect(tab.offline.picked.size).toBe(0);
+    expect(tab.store.is_saved("paint")).toBe(false);
     expect(tab.notifications.all).toEqual([]);
-    await vi.waitFor(async () => expect(parse_state(await read(tab.files, OFFLINE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
-  });
-
-  test("the first boot of this version on an existing install says apps now load on demand, once", async () => {
-    await seed(VERSION_STATE_PATH, serialize_seen("3.57.0"));
-    const tab = await open_tab();
-    expect(tab.notifications.all.map((notification) => notification.title)).toEqual(["Apps now load when you open them"]);
-    tab.notifications.all[0].actions?.[0].on_click();
-    expect(tab.launch).toHaveBeenCalledWith("settings", { section: "offline" });
-
-    await vi.waitFor(async () => expect(await read(tab.files, OFFLINE_STATE_PATH)).not.toBeNull());
-    const again = await open_tab();
-    expect(again.notifications.all).toEqual([]);
+    await vi.waitFor(async () => expect(parse_state(await read(tab.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
   });
 
   test("apps saved in this build stay saved; another build's are forgotten", async () => {
-    await seed(OFFLINE_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
+    await seed(STORE_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
     const tab = await open_tab();
-    expect(tab.offline.is_saved("paint")).toBe(true);
-    expect(tab.offline.status("paint")).toBe(StoreStatus.SAVED);
-    expect(tab.offline.status("cards")).toBe(StoreStatus.NOT_SAVED);
+    expect(tab.store.is_saved("paint")).toBe(true);
+    expect(tab.store.status("paint")).toBe(StoreStatus.SAVED);
+    expect(tab.store.status("settings")).toBe(StoreStatus.NOT_SAVED);
+    expect(tab.store.status("cards")).toBe(StoreStatus.NOT_INSTALLED);
+    expect(tab.store.progress("paint")).toBeNull();
 
     await opfs.clear_opfs();
-    await seed(OFFLINE_STATE_PATH, serialize_state({ build: BUILD - 1, apps: ["paint"] }));
+    await seed(STORE_STATE_PATH, serialize_state({ build: BUILD - 1, apps: ["paint"] }));
     const updated = await open_tab();
-    expect(updated.offline.is_saved("paint")).toBe(false);
-    await vi.waitFor(async () => expect(parse_state(await read(updated.files, OFFLINE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
-  });
-
-  test("system apps are always saved and never picked", async () => {
-    await seed(PICKED_PATH, serialize_picked(["settings", "paint"]));
-    const tab = await open_tab();
-    expect([...tab.offline.picked]).toEqual(["paint"]);
-    expect(tab.offline.status("settings")).toBe(StoreStatus.SYSTEM);
-    expect(tab.offline.is_saved("settings")).toBe(true);
-    tab.offline.online = false;
-    expect(tab.offline.can_open("settings")).toBe(true);
-    expect(tab.offline.can_open("cards")).toBe(false);
-  });
-
-  test("a pick of a replaced app becomes the apps that replaced it (ADR-071)", async () => {
-    await seed(PICKED_PATH, serialize_picked(["old-art", "gone"]));
-    const tab = await open_tab();
-    expect([...tab.offline.picked].sort()).toEqual(["cards", "paint"]);
+    expect(updated.store.is_saved("paint")).toBe(false);
+    await vi.waitFor(async () => expect(parse_state(await read(updated.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
   });
 });
 
-describe("picking", () => {
-  test("set_picked writes /etc/offline.json, ignoring system apps", async () => {
+describe("migration (ADR-077)", () => {
+  test("apps kept offline join the installed apps, and the old file goes", async () => {
+    await seed(LEGACY_PICKED_PATH, serialize_picked(["cards"]));
     const tab = await open_tab();
-    tab.offline.set_picked("cards", true);
-    tab.offline.set_picked("settings", true);
-    await vi.waitFor(async () => expect(parse_picked(await read(tab.files, PICKED_PATH))).toEqual(["cards"]));
-    tab.offline.set_picked("cards", false);
-    await vi.waitFor(async () => expect(parse_picked(await read(tab.files, PICKED_PATH))).toEqual([]));
+    expect(tab.install).toHaveBeenCalledWith(["cards"]);
+    expect(tab.store.status("cards")).toBe(StoreStatus.NOT_SAVED);
+    expect(await read(tab.files, LEGACY_PICKED_PATH)).toBeNull();
+
+    const again = await open_tab();
+    expect(again.install).not.toHaveBeenCalled();
   });
 
-  test("an edit to the file through FilesService is followed", async () => {
+  test("a kept app that was replaced installs the apps that replaced it (ADR-071)", async () => {
+    await seed(LEGACY_PICKED_PATH, serialize_picked(["old-art", "gone"]));
+    const tab = await open_tab([]);
+    expect([tab.install.mock.calls[0][0]].flat().sort()).toEqual(["cards", "paint"]);
+  });
+
+  test("the old state file moves to /var/lib/store", async () => {
+    await seed(LEGACY_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
     const tab = await open_tab();
-    const etc = await tab.files.get_directory("/etc");
-    await tab.files.create_file(etc!, "offline.json", { content: serialize_picked(["paint"]), overwrite: true });
-    await vi.waitFor(() => expect(tab.offline.is_picked("paint")).toBe(true));
+    expect(tab.store.is_saved("paint")).toBe(true);
+    expect(await tab.files.get_directory("/var/lib/offline")).toBeNull();
+    await vi.waitFor(async () => expect(parse_state(await read(tab.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: ["paint"] }));
   });
 });
