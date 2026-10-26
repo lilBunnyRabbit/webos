@@ -1,5 +1,7 @@
 # WebOS
 
+**Open it: [lilbunnyrabbit.github.io/webos](https://lilbunnyrabbit.github.io/webos/)**
+
 A desktop environment in the browser: windows, a taskbar, a desktop grid, a sandboxed file system, and apps that load on demand. Built with Svelte 5 runes, TypeScript, Tailwind v4 and Vite. The file system is the Origin Private File System. Hosting is static (GitHub Pages) with no backend.
 
 It's a personal learning project and a home for my side projects. The architecture and the decisions behind it are the point as much as the features are.
